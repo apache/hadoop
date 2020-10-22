@@ -138,7 +138,17 @@ MAY support them to the extent of interpreting the values.
 This means that it is not a requirement for the stores to actually read the
 the fadvise or file length values and use them when opening files.
 
-They MUST be viewed as hints.
+Unless otherwise stated, they SHOULD be viewed as hints.
+
+#### `fs.option.openfile.buffer.size`
+
+Buffer size in bytes.
+
+This overrides the default value set in the configuration with the option
+`io.file.buffer.size`.
+
+It is supported by all filesystems which allow for stream-specific buffer sizes
+to be set via `open(path, buffersize)`.
 
 #### `fs.option.openfile.fadvise`
 
@@ -153,8 +163,13 @@ data is more efficient -so may be used instead.
 | `normal` | The "Normal" policy for this store. |
 | `sequential` | Optimized for sequential access. |
 | `random` | Optimized purely for random seek+read/positionedRead operations. |
+| `adaptive` | Any adaptive policy implemented by the store. |
 
 Choosing the wrong read policy for an input source may be inefficient.
+
+A list of seek policies MAY be supplied; the first one recognized by the filesystem
+SHALL be the one used. This allows for custom policies to be supported, for example
+an `hbase-hfile` policy optimized for HBase HFiles.
 
 <b>Tip:</b> log the `toString()` value of input streams at `DEBUG`. The S3A and ABFS Input
 Streams log read statistics, which can provide insight about whether reads are being

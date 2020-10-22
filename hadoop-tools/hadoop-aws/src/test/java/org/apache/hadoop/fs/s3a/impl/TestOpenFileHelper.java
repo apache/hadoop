@@ -20,10 +20,10 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ObjectAssert;
-import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -35,15 +35,21 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static java.util.Collections.singleton;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_ADAPTIVE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_NORMAL;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_RANDOM;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Unit tests for {@link S3AOpenFileOperation}.
+ * Unit tests for {@link S3AOpenFileOperation} and the associated
+ * seek policy lookup in {@link S3AInputPolicy}.
  */
 public class TestOpenFileHelper extends HadoopTestBase {
 
@@ -61,18 +67,18 @@ public class TestOpenFileHelper extends HadoopTestBase {
 
   private static final Path TESTPATH = new Path(TESTFILE);
 
-  private S3AOpenFileOperation helper;
-
-  @Before
-  public void setup() {
-    helper = new S3AOpenFileOperation(INPUT_POLICY,
-        CHANGE_POLICY, READ_AHEAD_RANGE, USERNAME);
-  }
+  private static final S3AOpenFileOperation OPERATION =
+      new S3AOpenFileOperation(
+          INPUT_POLICY,
+          CHANGE_POLICY,
+          READ_AHEAD_RANGE,
+          USERNAME,
+          IO_FILE_BUFFER_SIZE_DEFAULT);
 
   @Test
   public void testSimpleFile() throws Throwable {
     ObjectAssert<S3AOpenFileOperation.OpenFileInformation>
-        asst = assertFI(helper.openSimpleFile());
+        asst = assertFI(OPERATION.openSimpleFile(1024));
 
     asst.extracting(f -> f.getChangePolicy())
         .isEqualTo(CHANGE_POLICY);
@@ -93,6 +99,13 @@ public class TestOpenFileHelper extends HadoopTestBase {
         .describedAs("File Information %s", fi);
   }
 
+  /**
+   * Create an assertion about the openFile information from a configuration
+   * with the given key/value option.
+   * @param key key to set.
+   * @param option option value.
+   * @return the constructed OpenFileInformation.
+   */
   public ObjectAssert<S3AOpenFileOperation.OpenFileInformation> assertOpenFile(
       final String key, final String option) throws IOException {
     return assertFI(prepareToOpenFile(params(key, option)));
@@ -113,22 +126,28 @@ public class TestOpenFileHelper extends HadoopTestBase {
     String option = FS_OPTION_OPENFILE_FADVISE_RANDOM;
 
     // is picked up
-    assertOpenFile(INPUT_FADVISE, option).extracting(f -> f.getInputPolicy())
+    assertOpenFile(INPUT_FADVISE, option)
+        .extracting(f -> f.getInputPolicy())
         .isEqualTo(S3AInputPolicy.Random);
     // and as neither status nor length was set: no file status
-    assertOpenFile(INPUT_FADVISE, option).extracting(f -> f.getStatus())
+    assertOpenFile(INPUT_FADVISE, option)
+        .extracting(f -> f.getStatus())
         .isNull();
   }
 
 
+  /**
+   * There's a standard policy name. 'adaptive',
+   * meaning 'whatever this stream does to adapt to the client's use'.
+   * On the S3A connector that is mapped to Normal.
+   */
   @Test
   public void testSeekPolicyAdaptive() throws Throwable {
 
     // when caller asks for adaptive, they get "normal"
-    ObjectAssert<S3AOpenFileOperation.OpenFileInformation> asst =
-        assertOpenFile(INPUT_FADVISE, FS_OPTION_OPENFILE_FADVISE_ADAPTIVE);
-
-    asst.extracting(f -> f.getInputPolicy())
+    assertOpenFile(FS_OPTION_OPENFILE_FADVISE,
+        FS_OPTION_OPENFILE_FADVISE_ADAPTIVE)
+        .extracting(f -> f.getInputPolicy())
         .isEqualTo(S3AInputPolicy.Normal);
   }
 
@@ -136,26 +155,94 @@ public class TestOpenFileHelper extends HadoopTestBase {
    * Verify that an unknown seek policy falls back to "normal".
    */
   @Test
-  public void testUnknownSeekPolicy() throws Throwable {
-
+  public void testUnknownSeekPolicyS3AOption() throws Throwable {
     // fall back to the normal seek policy.
-
     assertOpenFile(INPUT_FADVISE, "undefined")
         .extracting(f -> f.getInputPolicy())
+        .isEqualTo(INPUT_POLICY);
+  }
+
+  /**
+   * The S3A option also supports a list of values.
+   */
+  @Test
+  public void testSeekPolicyListS3AOption() throws Throwable {
+    // fall back to the normal seek policy.
+    assertOpenFile(INPUT_FADVISE, "hbase, random")
+        .extracting(f -> f.getInputPolicy())
+        .isEqualTo(S3AInputPolicy.Random);
+  }
+
+  /**
+   * Verify that if a list of policies is supplied in a configuration,
+   * the first recognized policy will be adopted.
+   */
+  @Test
+  public void testSeekPolicyExtractionFromList() throws Throwable {
+    String plist = "a, b, RandOm, other ";
+    Configuration conf = conf(FS_OPTION_OPENFILE_FADVISE, plist);
+    Collection<String> options = conf.getTrimmedStringCollection(
+        FS_OPTION_OPENFILE_FADVISE);
+    Assertions.assertThat(S3AInputPolicy.getFirstSupportedPolicy(options, null))
+        .describedAs("Policy from " + plist)
+        .isEqualTo(S3AInputPolicy.Random);
+  }
+
+  @Test
+  public void testAdaptiveSeekPolicyRecognized() throws Throwable {
+    Assertions.assertThat(S3AInputPolicy.getPolicy("adaptive", null))
+        .describedAs("adaptive")
         .isEqualTo(S3AInputPolicy.Normal);
   }
+
+  @Test
+  public void testUnknownSeekPolicyFallback() throws Throwable {
+    Assertions.assertThat(S3AInputPolicy.getPolicy("unknown", null))
+        .describedAs("unkown policy")
+        .isNull();
+  }
+
+  /**
+   * Test the mapping of the standard option names.
+   */
+  @Test
+  public void testWellKnownPolicyMapping() throws Throwable {
+    Object[][] policyMapping = {
+        {"normal", S3AInputPolicy.Normal},
+        {FS_OPTION_OPENFILE_FADVISE_NORMAL, S3AInputPolicy.Normal},
+        {FS_OPTION_OPENFILE_FADVISE_ADAPTIVE, S3AInputPolicy.Normal},
+        {FS_OPTION_OPENFILE_FADVISE_RANDOM, S3AInputPolicy.Random},
+        {FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL, S3AInputPolicy.Sequential},
+    };
+    for (Object[] mapping : policyMapping) {
+      String name = (String) mapping[0];
+      Assertions.assertThat(S3AInputPolicy.getPolicy(name, null))
+          .describedAs("Policy %s", name)
+          .isEqualTo(mapping[1]);
+    }
+  }
+
 
   /**
    * Verify readahead range is picked up.
    */
   @Test
   public void testReadahead() throws Throwable {
-
     // readahead range option
-
     assertOpenFile(READAHEAD_RANGE, "4096")
         .extracting(f -> f.getReadAheadRange())
         .isEqualTo(4096L);
+  }
+
+  /**
+   * Verify readahead range is picked up.
+   */
+  @Test
+  public void testBufferSize() throws Throwable {
+    // readahead range option
+    assertOpenFile(FS_OPTION_OPENFILE_BUFFER_SIZE, "4096")
+        .extracting(f -> f.getBufferSize())
+        .isEqualTo(4096);
   }
 
   @Test
@@ -216,11 +303,17 @@ public class TestOpenFileHelper extends HadoopTestBase {
                 new Path(TESTFILE + "-"), USERNAME))));
   }
 
+  /**
+   * Prepare to open a file with the set of parameters.
+   * @param parameters open a file
+   * @return
+   * @throws IOException
+   */
   public S3AOpenFileOperation.OpenFileInformation prepareToOpenFile(
       final OpenFileParameters parameters)
       throws IOException {
-    return helper.prepareToOpenFile(TESTPATH,
-        parameters, 0);
+    return OPERATION.prepareToOpenFile(TESTPATH,
+        parameters, IO_FILE_BUFFER_SIZE_DEFAULT);
   }
 
   /**
@@ -277,4 +370,5 @@ public class TestOpenFileHelper extends HadoopTestBase {
     c.set(key, val.toString());
     return c;
   }
+
 }

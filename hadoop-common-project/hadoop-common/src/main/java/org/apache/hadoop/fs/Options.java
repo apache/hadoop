@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -550,6 +551,12 @@ public final class Options {
         FS_OPTION_OPENFILE + "length";
 
     /**
+     * OpenFile option for buffer size: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_BUFFER_SIZE =
+        FS_OPTION_OPENFILE + "buffer.size";
+
+    /**
      * OpenFile option for seek policies: {@value}.
      */
     public static final String FS_OPTION_OPENFILE_FADVISE =
@@ -584,10 +591,11 @@ public final class Options {
      * MUST recognize, even if they ignore the actual values.
      */
     public static final Set<String> FS_OPTION_OPENFILE_STANDARD_OPTIONS =
-        Stream.of(
+        Collections.unmodifiableSet(Stream.of(
+            FS_OPTION_OPENFILE_BUFFER_SIZE,
             FS_OPTION_OPENFILE_FADVISE,
             FS_OPTION_OPENFILE_LENGTH)
-            .collect(Collectors.toSet());
+            .collect(Collectors.toSet()));
 
   }
 }

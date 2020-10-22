@@ -35,6 +35,11 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
+
 /**
  * Reads in history events from the JobHistoryFile and sends them out again
  * to be recorded.
@@ -118,7 +123,11 @@ public class JobHistoryCopyService extends CompositeService implements HistoryEv
         fc.makeQualified(JobHistoryUtils.getStagingJobHistoryFile(histDirPath,
           jobId, (applicationAttemptId.getAttemptId() - 1)));
     LOG.info("History file is at " + historyFile);
-    in = fc.open(historyFile);
+    in = awaitFuture(
+        fc.openFile(historyFile)
+            .opt(FS_OPTION_OPENFILE_FADVISE,
+                FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL)
+            .build());
     return in;
   }
   

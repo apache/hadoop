@@ -168,6 +168,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -424,7 +426,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       doBucketProbing();
 
       inputPolicy = S3AInputPolicy.getPolicy(
-          conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
+          conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL),
+          S3AInputPolicy.Normal);
       LOG.debug("Input fadvise policy = {}", inputPolicy);
       changeDetectionPolicy = ChangeDetectionPolicy.getPolicy(conf);
       LOG.debug("Change detection policy = {}", changeDetectionPolicy);
@@ -488,7 +491,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           inputPolicy,
           changeDetectionPolicy,
           readAhead,
-          username);
+          username,
+          intOption(getConf(), IO_FILE_BUFFER_SIZE_KEY,
+              IO_FILE_BUFFER_SIZE_DEFAULT, 0));
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       stopAllServices();
@@ -1112,7 +1117,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
     entryPoint(INVOCATION_OPEN);
-    return open(qualify(f), openFileHelper.openSimpleFile());
+    return open(qualify(f), openFileHelper.openSimpleFile(bufferSize));
   }
 
   /**

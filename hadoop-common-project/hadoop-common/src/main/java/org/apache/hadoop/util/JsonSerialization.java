@@ -35,6 +35,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
+
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
@@ -257,11 +260,29 @@ public class JsonSerialization<T> {
       if (dataInputStream.available() == 0) {
         throw new EOFException("No data in " + path);
       }
+      return fromDataInputStream(path, dataInputStream);
+    }
+  }
+
+  /**
+   * Read from a data input stream; convert all exceptions to
+   * IOExceptions.
+   * The stream is not explicitly closed.
+   * @param path path for errors
+   * @param dataInputStream source of data
+   * @return a loaded object
+   * @throws PathIOException IO or JSON parse problems
+   */
+  public T fromDataInputStream(final Path path,
+      final FSDataInputStream dataInputStream)
+      throws IOException {
+    // throw an EOF exception if there is no data available.
+    try {
       return fromJsonStream(dataInputStream);
     } catch (JsonProcessingException e) {
-      throw new IOException(
-          String.format("Failed to read JSON file \"%s\": %s", path, e),
-          e);
+      throw (IOException) new PathIOException(path.toString(),
+          "Failed to read JSON file " + e)
+          .initCause(e);
     }
   }
 
