@@ -665,7 +665,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);
     MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUESTS);
-    MetricDiff deleteObjectCount = new MetricDiff(roleFS, OBJECT_DELETE_OBJECTS);
+    MetricDiff deleteObjectCount = new MetricDiff(roleFS,
+        OBJECT_DELETE_OBJECTS);
 
     describe("Trying to delete read only directory");
     AccessDeniedException ex = expectDeleteForbidden(readOnlyDir);
@@ -673,7 +674,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       // multi-delete status checks
       extractCause(MultiObjectDeleteException.class, ex);
       deleteVerbCount.assertDiffEquals("Wrong delete request count", 1);
-      deleteObjectCount.assertDiffEquals("Wrong count of objects in delete request",
+      deleteObjectCount.assertDiffEquals("Number of keys in delete request",
           readOnlyFiles.size());
       rejectionCount.assertDiffEquals("Wrong rejection count",
           readOnlyFiles.size());

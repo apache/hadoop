@@ -89,8 +89,8 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
       final MultiObjectDeleteException deleteException) {
     List<MultiObjectDeleteException.DeleteError> errors
         = deleteException.getErrors();
-    LOG.warn(
-        "Bulk delete operation failed to delete all objects; failure count = {}",
+    LOG.warn("Bulk delete operation failed to delete all objects;"
+            + " failure count = {}",
         errors.size());
     final StringBuilder result = new StringBuilder(
         errors.size() * 256);
@@ -328,7 +328,8 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
       final Collection<KeyPath> pathsBeingDeleted,
       final Function<String, Path> qualifier) {
     // get the undeleted values
-    List<KeyPath> undeleted = extractUndeletedKeyPaths(deleteException, qualifier);
+    List<KeyPath> undeleted = extractUndeletedKeyPaths(deleteException,
+        qualifier);
     // and remove them from the undeleted list, matching on key
     for (KeyPath undel : undeleted) {
       pathsBeingDeleted.removeIf(kp -> kp.getPath().equals(undel.getPath()));
@@ -357,9 +358,12 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
    * </p>
    */
   public static final class KeyPath {
-    public final String key;
-    public final Path path;
-    public final boolean directoryMarker;
+    /** Key in bucket. */
+    private final String key;
+    /** Full path. */
+    private final Path path;
+    /** Is this a directory marker? */
+    private final boolean directoryMarker;
 
     public KeyPath(final String key,
         final Path path,
@@ -395,8 +399,12 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
      */
     @Override
     public boolean equals(final Object o) {
-      if (this == o) { return true; }
-      if (o == null || getClass() != o.getClass()) { return false; }
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
       KeyPath keyPath = (KeyPath) o;
       return key.equals(keyPath.key);
     }
