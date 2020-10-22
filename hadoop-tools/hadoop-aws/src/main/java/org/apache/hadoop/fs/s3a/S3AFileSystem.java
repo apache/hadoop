@@ -1602,6 +1602,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
+    @Retries.RetryMixed
     public DeleteObjectsResult removeKeys(
         final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
         final boolean deleteFakeDir,
@@ -2274,30 +2275,32 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Byte length is calculated from the file length, or, if there is no
    * file, from the content length of the header.
    *
-   * Retry Policy: none.
+   * Retry Policy: RetryTranslated.
    * <i>Important: this call will close any input stream in the request.</i>
    * @param putObjectRequest the request
    * @return the upload initiated
-   * @throws AmazonClientException on problems
+   * @throws IOException on problems
    * @throws MetadataPersistenceException if metadata about the write could
    * not be saved to the metadata store and
    * fs.s3a.metadatastore.fail.on.write.error=true
    */
   @VisibleForTesting
-  @Retries.OnceRaw("For PUT; post-PUT actions are RetryTranslated")
+  @Retries.RetryTranslated
   PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest)
-      throws AmazonClientException, MetadataPersistenceException {
+      throws IOException {
     long len = getPutRequestLength(putObjectRequest);
-    LOG.debug("PUT {} bytes to {}", len, putObjectRequest.getKey());
+    String key = putObjectRequest.getKey();
+    LOG.debug("PUT {} bytes to {}", len, key);
     incrementPutStartStatistics(len);
     try {
-      PutObjectResult result = s3.putObject(putObjectRequest);
+      PutObjectResult result = invoker.retry("PUT object ", key,
+          true, ()-> s3.putObject(putObjectRequest));
       incrementPutCompletedStatistics(true, len);
       // update metadata
-      finishedWrite(putObjectRequest.getKey(), len,
+      finishedWrite(key, len,
           result.getETag(), result.getVersionId(), null);
       return result;
-    } catch (AmazonClientException e) {
+    } catch (IOException e) {
       incrementPutCompletedStatistics(false, len);
       throw e;
     }
@@ -3322,10 +3325,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     final String key = pathToKey(dst);
     final ObjectMetadata om = newObjectMetadata(srcfile.length());
-    Progressable progress = null;
     PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
-    invoker.retry("copyFromLocalFile(" + src + ")", dst.toString(), true,
-        () -> executePut(putObjectRequest, progress));
+    executePut(putObjectRequest, null);
     if (delSrc) {
       local.delete(src, false);
     }
@@ -3344,12 +3345,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * not be saved to the metadata store and
    * fs.s3a.metadatastore.fail.on.write.error=true
    */
-  @Retries.OnceRaw("For PUT; post-PUT actions are RetryTranslated")
+  @Retries.RetryTranslated
   UploadResult executePut(PutObjectRequest putObjectRequest,
       Progressable progress)
-      throws InterruptedIOException, MetadataPersistenceException {
+      throws IOException, MetadataPersistenceException {
     String key = putObjectRequest.getKey();
-    UploadInfo info = putObject(putObjectRequest);
+    UploadInfo info = invoker.retry("Writing Object", key, true,
+        () -> putObject(putObjectRequest));
     Upload upload = info.getUpload();
     ProgressableProgressListener listener = new ProgressableProgressListener(
         this, key, upload, progress);
@@ -3959,9 +3961,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     PutObjectRequest putObjectRequest = newPutObjectRequest(objectName,
         newObjectMetadata(0L),
         im);
-    invoker.retry("PUT 0-byte object ", objectName,
-         true,
-        () -> putObjectDirect(putObjectRequest));
+    putObjectDirect(putObjectRequest);
     incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }
