@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import java.io.IOException;
 import java.net.URI;
 
 /**
@@ -49,7 +48,7 @@ public final class DomainNameResolverFactory {
    * @return Domain name resolver.
    */
   public static DomainNameResolver newInstance(
-      Configuration conf, URI uri, String configKey) throws IOException {
+      Configuration conf, URI uri, String configKey) {
     String host = uri.getHost();
     String confKeyWithHost = configKey + "." + host;
     return newInstance(conf, confKeyWithHost);
@@ -61,7 +60,6 @@ public final class DomainNameResolverFactory {
    * @param conf Configuration
    * @param configKey config key name.
    * @return Domain name resolver.
-   * @throws IOException when the class cannot be found or initiated.
    */
   public static DomainNameResolver newInstance(
       Configuration conf, String configKey) {
