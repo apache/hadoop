@@ -38,7 +38,7 @@ public enum StorageType {
   DISK(false, false),
   ARCHIVE(false, false),
   PROVIDED(false, false),
-  NVDIMM(false, true);  
+  NVDIMM(false, true); 
 
   private final boolean isTransient;
   private final boolean isRAM;
