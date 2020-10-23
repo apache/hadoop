@@ -32,6 +32,7 @@ import static org.apache.hadoop.test.Whitebox.setInternalState;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -67,6 +68,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -433,5 +435,46 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     // Restore the HA context and the Router
     setInternalState(ns0, "haContext", nn0haCtx);
     setInternalState(router0ClientProtocol, "allowPartialList", true);
+  }
+
+  @Test
+  public void testCallerContextWithMultiDestinations() throws IOException {
+    GenericTestUtils.LogCapturer auditLog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+
+    // set client context
+    CallerContext.setCurrent(
+        new CallerContext.Builder("clientContext").build());
+    // assert the initial caller context as expected
+    assertEquals("clientContext", CallerContext.getCurrent().getContext());
+
+    DistributedFileSystem routerFs =
+        (DistributedFileSystem) getRouterFileSystem();
+    // create a directory via the router
+    Path dirPath = new Path("/test_caller_context_with_multi_destinations");
+    routerFs.mkdirs(dirPath);
+    // invoke concurrently in RouterRpcClient
+    routerFs.listStatus(dirPath);
+    // invoke sequentially in RouterRpcClient
+    routerFs.getFileStatus(dirPath);
+
+    String auditFlag = "src=" + dirPath.toString();
+    String clientIpInfo = "clientIp:"
+        + InetAddress.getLocalHost().getHostAddress();
+    for (String line : auditLog.getOutput().split("\n")) {
+      if (line.contains(auditFlag)) {
+        // assert origin caller context exist in audit log
+        assertTrue(line.contains("callerContext=clientContext"));
+        String callerContext = line.substring(
+            line.indexOf("callerContext=clientContext"));
+        // assert client ip info exist in caller context
+        assertTrue(callerContext.contains(clientIpInfo));
+        // assert client ip info appears only once in caller context
+        assertEquals(callerContext.indexOf(clientIpInfo),
+            callerContext.lastIndexOf(clientIpInfo));
+      }
+    }
+    // clear client context
+    CallerContext.setCurrent(null);
   }
 }
