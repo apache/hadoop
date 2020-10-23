@@ -37,7 +37,7 @@ public class TracingContext {
   private String streamID = "";
   private int retryCount;
   private String hadoopOpName = "";
-  private final java.util.ArrayList<String> headers = new java.util.ArrayList<String>();
+  public java.util.ArrayList<String> headers = new java.util.ArrayList<String>();
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
@@ -108,12 +108,7 @@ public class TracingContext {
         + ":" + streamID + ":" + hadoopOpName + ":" + retryCount;
   }
 
-  public void updateRequestHeader(String requestHeader) {
-    headers.add(requestHeader);
-  }
-
-  public List<String> getRequestHeaders() {
+  public ArrayList<String> getRequestHeaders() {
     return headers;
   }
-
 }

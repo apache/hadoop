@@ -70,6 +70,8 @@ public class AbfsRestOperation {
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
+//  public TracingContext tracingContext;
+  public String requestHeader = "";
 
   public AbfsHttpOperation getResult() {
     return result;
@@ -195,6 +197,8 @@ public class AbfsRestOperation {
         Thread.currentThread().interrupt();
       }
     }
+//    this.tracingContext = tracingContext; //if retried, will reflect final header
+     this.requestHeader = tracingContext.toString();
 
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),

@@ -487,11 +487,17 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
+//        op = conditionalCreateOverwriteFile(relativePath,
+//            statistics,
+//            isNamespaceEnabled ? getOctalNotation(permission) : null,
+//            isNamespaceEnabled ? getOctalNotation(umask) : null,
+//            isAppendBlob, new TracingContext(tracingContext)
+//        );
         op = conditionalCreateOverwriteFile(relativePath,
-            statistics,
-            isNamespaceEnabled ? getOctalNotation(permission) : null,
-            isNamespaceEnabled ? getOctalNotation(umask) : null,
-            isAppendBlob, new TracingContext(tracingContext)
+                statistics,
+                isNamespaceEnabled ? getOctalNotation(permission) : null,
+                isNamespaceEnabled ? getOctalNotation(umask) : null,
+                isAppendBlob, tracingContext
         );
 
       } else {
@@ -501,6 +507,7 @@ public class AzureBlobFileSystemStore implements Closeable {
             isNamespaceEnabled ? getOctalNotation(umask) : null,
             isAppendBlob,
             null, tracingContext);
+        tracingContext.headers.add(tracingContext.toString());
 
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -540,15 +547,23 @@ public class AzureBlobFileSystemStore implements Closeable {
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
 
-      op = client.createPath(relativePath, true,
-          false, permission, umask, isAppendBlob, null, new TracingContext(tracingContext));
+//      op = client.createPath(relativePath, true, false,
+//              permission, umask, isAppendBlob, null, new TracingContext(tracingContext));
+      op = client.createPath(relativePath, true, false,
+              permission, umask, isAppendBlob, null, tracingContext);
+      tracingContext.headers.add(tracingContext.toString());
 
     } catch (AbfsRestOperationException e) {
       if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
         try {
-          op = client.getPathStatus(relativePath, false, new TracingContext(tracingContext));
+          tracingContext.headers.add(tracingContext.toString());
+          System.out.println("added");
+//          op = client.getPathStatus(relativePath, false, new TracingContext(tracingContext));
+          op = client.getPathStatus(relativePath, false, tracingContext);
+          tracingContext.headers.add(tracingContext.toString());
         } catch (AbfsRestOperationException ex) {
+          tracingContext.headers.add(tracingContext.toString());
           if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
             // Is a parallel access case, as file which was found to be
             // present went missing by this request.
@@ -565,9 +580,13 @@ public class AzureBlobFileSystemStore implements Closeable {
 
         try {
           // overwrite only if eTag matches with the file properties fetched befpre
+//          op = client.createPath(relativePath, true,
+//              true, permission, umask, isAppendBlob, eTag, new TracingContext(tracingContext));
           op = client.createPath(relativePath, true,
-              true, permission, umask, isAppendBlob, eTag, new TracingContext(tracingContext));
+                  true, permission, umask, isAppendBlob, eTag, tracingContext);
+          tracingContext.headers.add(tracingContext.toString());
         } catch (AbfsRestOperationException ex) {
+          tracingContext.headers.add(tracingContext.toString());
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
             // and precondition failure can happen only when another file with
@@ -639,8 +658,6 @@ public class AzureBlobFileSystemStore implements Closeable {
       final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
       final long contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
       final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-      tracingContext.updateRequestHeader(op.getResult()
-              .getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
@@ -907,6 +924,10 @@ public class AzureBlobFileSystemStore implements Closeable {
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
+//        originalTracingContext.updateRequestHeader(op.getResult().getRequestHeader(
+//                HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
+//        originalTracingContext.headers.add(op.tracingContext.toString());
+        originalTracingContext.headers.add(op.requestHeader);
         if (retrievedSchema == null) {
           throw new AbfsRestOperationException(
                   AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),

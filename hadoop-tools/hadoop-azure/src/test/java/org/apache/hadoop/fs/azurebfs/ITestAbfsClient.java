@@ -57,9 +57,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private static final int LIST_MAX_RESULTS = 500;
   private static final int LIST_MAX_RESULTS_SERVER = 5000;
-  private static final int HTTP_CREATED = 201;
-  private static final String[] CLIENT_CORRELATIONID_LIST = {
-      "valid-corr-id-123", "inval!d", ""};
 
   public ITestAbfsClient() throws Exception {
     super();
@@ -99,68 +96,6 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             () -> FileSystem.get(conf.getRawConfiguration()));
   }
 
-  @Test
-  public void testClientCorrelation() throws IOException {
-    checkRequest(CLIENT_CORRELATIONID_LIST[0], true);
-    checkRequest(CLIENT_CORRELATIONID_LIST[1], false);
-    checkRequest(CLIENT_CORRELATIONID_LIST[2], false);
-  }
-
-  private String getOctalNotation(FsPermission fsPermission) {
-    Preconditions.checkNotNull(fsPermission, "fsPermission");
-    return String.format(AbfsHttpConstants.PERMISSION_FORMAT, fsPermission.toOctal());
-  }
-
-  private String getRelativePath(final Path path) {
-    Preconditions.checkNotNull(path, "path");
-    return path.toUri().getPath();
-  }
-
-  public void checkRequest(String clientCorrelationId, boolean includeInHeader)
-      throws IOException {
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
-
-    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
-        .newInstance(this.getFileSystem().getUri(), config);
-    AbfsClient client = fs.getAbfsClient();
-//    TracingContext
-    String path = getRelativePath(new Path("/testDir"));
-    boolean isNamespaceEnabled = fs.getIsNamespaceEnabled();
-    String permission = isNamespaceEnabled ? getOctalNotation(FsPermission.getDirDefault()) : null;
-    String umask = isNamespaceEnabled ? getOctalNotation(FsPermission.getUMask(fs.getConf())) : null;
-    AbfsRestOperation op = client.createPath(path, false, true,
-        permission, umask, false, null,
-            new TracingContext(clientCorrelationId,
-                    fs.getFileSystemID(), "CR"));
-
-    int responseCode = op.getResult().getStatusCode();
-    Assertions.assertThat(responseCode).describedAs("Status code").isEqualTo(HTTP_CREATED);
-
-//    op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
-    Assertions.assertThat(responseCode).describedAs("Status code").isEqualTo(HTTP_CREATED);
-
-    String requestHeader = op.getResult().getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
-    List<String> clientRequestIds = java.util.Arrays.asList(
-        requestHeader.replace("[","")
-            .replace("]", "")
-            .split(":"));
-    if (includeInHeader) {
-      Assertions.assertThat(clientRequestIds)
-              .describedAs("There should be 7 items in the header when valid clientCorrelationId is set")
-              .hasSize(7);
-      Assertions.assertThat(clientRequestIds)
-              .describedAs("clientCorrelation should be included in the header")
-              .contains(clientCorrelationId);
-    } else if (clientCorrelationId.length() > 0){
-      Assertions.assertThat(clientRequestIds)
-              .describedAs("There should be only 6 item in the header when invalid clientCorrelationId is set")
-              .hasSize(6);
-      Assertions.assertThat(clientRequestIds)
-              .describedAs("Invalid or empty correlationId value should not be included in header")
-              .doesNotContain(clientCorrelationId);
-    }
-  }
 
   @Test
   public void testListPathWithValidListMaxResultsValues()

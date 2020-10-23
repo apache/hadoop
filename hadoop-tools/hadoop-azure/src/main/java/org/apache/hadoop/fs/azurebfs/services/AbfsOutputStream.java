@@ -277,6 +277,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     }
   }
 
+  public String getStreamID() {
+    return outputStreamID;
+  }
+
   /**
    * Force all data in the output stream to be written to Azure storage.
    * Wait to return until this is complete. Close the access to the stream and
