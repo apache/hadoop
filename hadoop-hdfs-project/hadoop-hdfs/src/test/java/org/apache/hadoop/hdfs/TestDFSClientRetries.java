@@ -839,14 +839,18 @@ public class TestDFSClientRetries {
   public void testGetFileChecksum() throws Exception {
     final String f = "/testGetFileChecksum";
     final Path p = new Path(f);
-
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    // HDFS-15461: the number of datanode is higher than the number of replicas.
+    //             That way when a DN fails, the pipeline can recover.
+    final int numReplicas = 3;
+    final int numDatanodes = numReplicas + 1;
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
     try {
       cluster.waitActive();
 
-      //create a file
+      // create a file
       final FileSystem fs = cluster.getFileSystem();
-      DFSTestUtil.createFile(fs, p, 1L << 20, (short)3, 20100402L);
+      DFSTestUtil.createFile(fs, p, 1L << 20, (short) numReplicas, 20100402L);
 
       //get checksum
       final FileChecksum cs1 = fs.getFileChecksum(p);
