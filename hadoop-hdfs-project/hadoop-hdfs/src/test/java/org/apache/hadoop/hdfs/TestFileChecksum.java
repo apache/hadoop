@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -89,8 +90,10 @@ public class TestFileChecksum {
         false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 1);
     customizeConf(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
+    cluster.waitClusterUp();
     Path ecPath = new Path(ecDir);
     cluster.getFileSystem().mkdir(ecPath, FsPermission.getDirDefault());
     cluster.getFileSystem().getClient().setErasureCodingPolicy(ecDir,
@@ -107,6 +110,14 @@ public class TestFileChecksum {
 
   @After
   public void tearDown() {
+    if (client != null) {
+      try {
+        client.close();
+      } catch (IOException e) {
+        LOG.error("Error closing the fsClient", e);
+      }
+    }
+
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
@@ -475,7 +486,6 @@ public class TestFileChecksum {
       throws Exception {
     int fileLength = 100;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
         fileLength - 1);
   }
@@ -487,9 +497,7 @@ public class TestFileChecksum {
   @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocksRangeQuery17()
       throws Exception {
-    int fileLength = 100;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3, 1);
   }
 
@@ -502,7 +510,6 @@ public class TestFileChecksum {
       throws Exception {
     int fileLength = 100;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3, 10);
   }
 
@@ -515,7 +522,6 @@ public class TestFileChecksum {
       throws Exception {
     int fileLength = 100;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
         fileLength * 2);
   }
@@ -527,9 +533,7 @@ public class TestFileChecksum {
   @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocksRangeQuery20()
       throws Exception {
-    int fileLength = bytesPerCRC;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
         bytesPerCRC - 1);
   }
@@ -575,6 +579,10 @@ public class TestFileChecksum {
       dnIdxToDie = getDataNodeToKill(filePath);
       DataNode dnToDie = cluster.getDataNodes().get(dnIdxToDie);
       shutdownDataNode(dnToDie);
+      // wait for reconstruction to happen
+      final FSNamesystem ns = cluster.getNamesystem();
+      GenericTestUtils.waitFor(() -> ns.getPendingReconstructionBlocks() == 0,
+          10, 10000);
     }
 
     Path testPath = new Path(filePath);
