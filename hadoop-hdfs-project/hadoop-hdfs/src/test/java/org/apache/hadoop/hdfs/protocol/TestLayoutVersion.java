@@ -146,7 +146,7 @@ public class TestLayoutVersion {
           NameNodeLayoutVersion.Feature.ERASURE_CODING,
           NameNodeLayoutVersion.Feature.EXPANDED_STRING_TABLE);
     compatibleFeatures.addAll(compatibleFeaturesOfTruncate);
- 
+
     List<LayoutFeature> features = new ArrayList<>();
     features.addAll(EnumSet.allOf(LayoutVersion.Feature.class));
     features.addAll(EnumSet.allOf(NameNodeLayoutVersion.Feature.class));
