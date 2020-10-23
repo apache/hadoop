@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.AddBlockFlag;
@@ -82,7 +83,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   // The interval for marking a datanode as stale,
   private static final long staleInterval =
       DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT;
-
+  private static AtomicLong mockINodeId = new AtomicLong(0);
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
@@ -825,7 +826,15 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   }
 
   private BlockInfo genBlockInfo(long id) {
-    return new BlockInfoContiguous(new Block(id), (short) 3);
+    return genBlockInfo(id, false);
+  }
+
+  private BlockInfo genBlockInfo(long id, boolean isBlockCorrupted) {
+    BlockInfo bInfo = new BlockInfoContiguous(new Block(id), (short) 3);
+    if (!isBlockCorrupted) {
+      bInfo.setBlockCollectionId(mockINodeId.incrementAndGet());
+    }
+    return bInfo;
   }
 
   /**
@@ -848,7 +857,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
         // Adding the blocks directly to normal priority
 
         neededReconstruction.add(genBlockInfo(ThreadLocalRandom.current().
-            nextLong()), 2, 0, 0, 3);
+            nextLong(), true), 2, 0, 0, 3);
       }
       // Lets wait for the replication interval, to start process normal
       // priority blocks
@@ -856,7 +865,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       
       // Adding the block directly to high priority list
       neededReconstruction.add(genBlockInfo(ThreadLocalRandom.current().
-          nextLong()), 1, 0, 0, 3);
+          nextLong(), true), 1, 0, 0, 3);
 
       // Lets wait for the replication interval
       Thread.sleep(DFS_NAMENODE_REPLICATION_INTERVAL);
