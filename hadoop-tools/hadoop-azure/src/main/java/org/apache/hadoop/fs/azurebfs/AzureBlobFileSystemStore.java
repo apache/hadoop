@@ -507,7 +507,7 @@ public class AzureBlobFileSystemStore implements Closeable {
             isNamespaceEnabled ? getOctalNotation(umask) : null,
             isAppendBlob,
             null, tracingContext);
-        tracingContext.headers.add(tracingContext.toString());
+//        tracingContext.headers.add(tracingContext.toString());
 
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -551,19 +551,19 @@ public class AzureBlobFileSystemStore implements Closeable {
 //              permission, umask, isAppendBlob, null, new TracingContext(tracingContext));
       op = client.createPath(relativePath, true, false,
               permission, umask, isAppendBlob, null, tracingContext);
-      tracingContext.headers.add(tracingContext.toString());
+//      tracingContext.headers.add(tracingContext.toString());
 
     } catch (AbfsRestOperationException e) {
       if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
         try {
-          tracingContext.headers.add(tracingContext.toString());
+//          tracingContext.headers.add(tracingContext.toString());
           System.out.println("added");
 //          op = client.getPathStatus(relativePath, false, new TracingContext(tracingContext));
           op = client.getPathStatus(relativePath, false, tracingContext);
-          tracingContext.headers.add(tracingContext.toString());
+//          tracingContext.headers.add(tracingContext.toString());
         } catch (AbfsRestOperationException ex) {
-          tracingContext.headers.add(tracingContext.toString());
+//          tracingContext.headers.add(tracingContext.toString());
           if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
             // Is a parallel access case, as file which was found to be
             // present went missing by this request.
@@ -584,9 +584,9 @@ public class AzureBlobFileSystemStore implements Closeable {
 //              true, permission, umask, isAppendBlob, eTag, new TracingContext(tracingContext));
           op = client.createPath(relativePath, true,
                   true, permission, umask, isAppendBlob, eTag, tracingContext);
-          tracingContext.headers.add(tracingContext.toString());
+//          tracingContext.headers.add(tracingContext.toString());
         } catch (AbfsRestOperationException ex) {
-          tracingContext.headers.add(tracingContext.toString());
+//          tracingContext.headers.add(tracingContext.toString());
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
             // and precondition failure can happen only when another file with
@@ -927,7 +927,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 //        originalTracingContext.updateRequestHeader(op.getResult().getRequestHeader(
 //                HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
 //        originalTracingContext.headers.add(op.tracingContext.toString());
-        originalTracingContext.headers.add(op.requestHeader);
+//        originalTracingContext.headers.add(op.requestHeader);
         if (retrievedSchema == null) {
           throw new AbfsRestOperationException(
                   AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),

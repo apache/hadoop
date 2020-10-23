@@ -52,8 +52,8 @@ public final class ITestClientCorrelationHeader extends AbstractAbfsIntegrationT
             new Path("/testFolder"), fs.getFsStatistics(),true,
             FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()),
             tracingContext);
-    tracingContext.headers.clear();
-    System.out.println("now second call");
+//    tracingContext.headers.clear();
+//    System.out.println("now second call");
     out = (AbfsOutputStream) abfsStore.createFile(
             new Path("/testFolder"), fs.getFsStatistics(),true,
             FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()),
@@ -186,7 +186,6 @@ public final class ITestClientCorrelationHeader extends AbstractAbfsIntegrationT
     int responseCode = op.getResult().getStatusCode();
     Assertions.assertThat(responseCode).describedAs("Status code").isEqualTo(HTTP_CREATED);
 
-//    op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     Assertions.assertThat(responseCode).describedAs("Status code").isEqualTo(HTTP_CREATED);
 
     String requestHeader = op.getResult().getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
@@ -210,58 +209,4 @@ public final class ITestClientCorrelationHeader extends AbstractAbfsIntegrationT
               .doesNotContain(clientCorrelationId);
     }
   }
-
-
-/*
-  @Test
-//  @PrepareForTest(AbfsRestOperation.class)
-  public void testRetryCount() throws IOException {
-//        AbfsRestOperation op = PowerMock.spy(AbfsRestOperation.class, "executeHttpOperation");
-//        PowerMockito.doThrow(new AbfsRestOperationException(new HttpException()))
-//                .when(op, "executeHttpOperation", any(int),
-//        any(TracingContext.class));
-
-    AbfsClient client = mock(AbfsClient.class);
-
-    AbfsRestOperation restop = new AbfsRestOperation(
-        org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.CreatePath,
-        client,
-        HTTP_METHOD_PUT,
-        new java.net.URL("url"),
-        new java.util.ArrayList<org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader>());
-    AbfsRestOperation op = spy(restop);
-
-
-//    AbfsRestOperation op = spy(restop);
-//    when(op.executeHttpOperation(any(int.class), any(TracingContext.class)))
-//        .thenReturn(false);
-//        .thenThrow(AzureBlobFileSystemException.class);
-
-    op.execute(new TracingContext("test-corr-id", "fsid","op"));
-
-    String path = getRelativePath(new Path("/testDir"));
-    boolean isNamespaceEnabled = true;//fs.getIsNamespaceEnabled();
-    String permission = null;// isNamespaceEnabled ? getOctalNotation(FsPermission.getDirDefault()) : null;
-    String umask = null; //isNamespaceEnabled ? getOctalNotation(FsPermission.getUMask(fs.getConf())) : null;
-
-//    AbfsClient client = mock(AbfsClient.class);
-    when(client.createPath(any(String.class), eq(true), eq(false),
-        eq(null), eq(null),
-        any(boolean.class), eq(null), any(TracingContext.class))).thenReturn(op);
-    AbfsRestOperation op1 = client.createPath(path, false, true,
-        permission, umask, false, null,
-        new TracingContext("test-corr-id", "fsid", "CR"));
-
-  }
-
-  private String getOctalNotation(FsPermission fsPermission) {
-    Preconditions.checkNotNull(fsPermission, "fsPermission");
-    return String.format(AbfsHttpConstants.PERMISSION_FORMAT, fsPermission.toOctal());
-  }
-
-  private String getRelativePath(final Path path) {
-    Preconditions.checkNotNull(path, "path");
-    return path.toUri().getPath();
-  }*/
-
 }
