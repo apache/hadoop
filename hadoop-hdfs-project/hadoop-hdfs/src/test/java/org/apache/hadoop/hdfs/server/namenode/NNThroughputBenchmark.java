@@ -169,6 +169,7 @@ public class NNThroughputBenchmark implements Tool {
 
     protected final String baseDir;
     protected short replication;
+    protected int blockSize;
     protected int  numThreads = 0;        // number of threads
     protected int  numOpsRequired = 0;    // number of operations requested
     protected int  numOpsExecuted = 0;    // number of operations executed
@@ -230,6 +231,7 @@ public class NNThroughputBenchmark implements Tool {
     OperationStatsBase() {
       baseDir = BASE_DIR_NAME + "/" + getOpName();
       replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
+      blockSize = config.getInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
       numOpsRequired = 10;
       numThreads = 3;
       logLevel = Level.ERROR;
@@ -598,7 +600,7 @@ public class NNThroughputBenchmark implements Tool {
           FsPermission.getDefault(), clientName,
           new EnumSetWritable<CreateFlag>(EnumSet
               .of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true,
-          replication, BLOCK_SIZE, CryptoProtocolVersion.supported(), null,
+          replication, blockSize, CryptoProtocolVersion.supported(), null,
           null);
       long end = Time.now();
       for (boolean written = !closeUponCreate; !written;
@@ -782,7 +784,7 @@ public class NNThroughputBenchmark implements Tool {
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = Time.now();
-      clientProto.getBlockLocations(fileNames[daemonId][inputIdx], 0L, BLOCK_SIZE);
+      clientProto.getBlockLocations(fileNames[daemonId][inputIdx], 0L, blockSize);
       long end = Time.now();
       return end-start;
     }
@@ -1149,7 +1151,7 @@ public class NNThroughputBenchmark implements Tool {
         String fileName = nameGenerator.getNextFileName("ThroughputBench");
         clientProto.create(fileName, FsPermission.getDefault(), clientName,
             new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication,
-            BLOCK_SIZE, CryptoProtocolVersion.supported(), null, null);
+            blockSize, CryptoProtocolVersion.supported(), null, null);
         ExtendedBlock lastBlock = addBlocks(fileName, clientName);
         clientProto.complete(fileName, clientName, lastBlock, HdfsConstants.GRANDFATHER_INODE_ID);
       }
