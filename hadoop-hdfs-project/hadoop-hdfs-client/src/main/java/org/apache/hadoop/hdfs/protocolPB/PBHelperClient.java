@@ -1953,7 +1953,7 @@ public class PBHelperClient {
     return new StorageReport(p.hasStorage() ? convert(p.getStorage())
         : new DatanodeStorage(p.getStorageUuid()), p.getFailed(),
         p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
-        p.getBlockPoolUsed(), nonDfsUsed);
+        p.getBlockPoolUsed(), nonDfsUsed, p.getMount());
   }
 
   public static DatanodeStorage convert(DatanodeStorageProto s) {
@@ -2688,7 +2688,8 @@ public class PBHelperClient {
         .setDfsUsed(r.getDfsUsed()).setRemaining(r.getRemaining())
         .setStorageUuid(r.getStorage().getStorageID())
         .setStorage(convert(r.getStorage()))
-        .setNonDfsUsed(r.getNonDfsUsed());
+        .setNonDfsUsed(r.getNonDfsUsed())
+        .setMount(r.getMount());
     return builder.build();
   }
 

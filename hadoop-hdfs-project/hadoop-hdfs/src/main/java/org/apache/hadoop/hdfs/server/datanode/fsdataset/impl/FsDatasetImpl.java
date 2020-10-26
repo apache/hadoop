@@ -171,7 +171,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             volume.getDfsUsed(),
             volume.getAvailable(),
             volume.getBlockPoolUsed(bpid),
-            volume.getNonDfsUsed());
+            volume.getNonDfsUsed(),
+            volume.getMount()
+        );
         reports.add(sr);
       } catch (ClosedChannelException e) {
         continue;
@@ -190,10 +192,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  // Get volume by device and storage type.
-  // Only used when turning on same disk tiering feature.
-  FsVolumeReference getVolumeRef(String device, StorageType storageType) {
-    return volumes.getVolumeRefByMountAndStorageType(device, storageType);
+  MountVolumeMap getMountVolumeMap() {
+    return volumes.getMountVolumeMap();
   }
 
   @Override // FsDatasetSpi
@@ -473,8 +473,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // Check if there is same storage type on the mount.
       // Only useful when same disk tiering is turned on.
       FsVolumeImpl volumeImpl = (FsVolumeImpl) ref.getVolume();
-      FsVolumeReference checkRef = volumes.getVolumeRefByMountAndStorageType(
-          volumeImpl.getMount(), volumeImpl.getStorageType());
+      FsVolumeReference checkRef = volumes
+          .getMountVolumeMap()
+          .getVolumeRefByMountAndStorageType(
+              volumeImpl.getMount(), volumeImpl.getStorageType());
       if (checkRef != null) {
         final String errorMsg = String.format(
             "Storage type %s already exists on same mount: %s.",

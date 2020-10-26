@@ -198,14 +198,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
             DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
     if (enableSameDiskTiering) {
       this.mount = usage.getMount();
-      reservedForArchive = conf.getDouble(
-          DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
-          DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT);
-      if (reservedForArchive > 1) {
-        FsDatasetImpl.LOG.warn("Value of reserve-for-archival is > 100% for "
-            + currentDir + ". Setting it to 100%.");
-        reservedForArchive = 1;
-      }
     } else {
       mount = "";
     }
@@ -451,12 +443,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
       capacity = configuredCapacity;
     }
 
-    if (enableSameDiskTiering) {
-      if (storageType == StorageType.ARCHIVE) {
-        capacity = (long) (capacity * reservedForArchive);
-      } else {
-        capacity = (long) (capacity * (1 - reservedForArchive));
-      }
+    if (enableSameDiskTiering && dataset.getMountVolumeMap() != null) {
+      double capacityRatio = dataset.getMountVolumeMap()
+          .getCapacityRatioByMountAndStorageType(mount, storageType);
+      capacity = (long) (capacity * capacityRatio);
     }
 
     return capacity;
@@ -500,7 +490,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
       StorageType counterpartStorageType = storageType == StorageType.DISK
           ? StorageType.ARCHIVE : StorageType.DISK;
       FsVolumeReference counterpartRef = dataset
-          .getVolumeRef(mount, counterpartStorageType);
+          .getMountVolumeMap()
+          .getVolumeRefByMountAndStorageType(mount, counterpartStorageType);
       if (counterpartRef != null) {
         FsVolumeImpl counterpartVol = (FsVolumeImpl) counterpartRef.getVolume();
         long used = getDfUsed() - getDfsUsed() - counterpartVol.getDfsUsed();

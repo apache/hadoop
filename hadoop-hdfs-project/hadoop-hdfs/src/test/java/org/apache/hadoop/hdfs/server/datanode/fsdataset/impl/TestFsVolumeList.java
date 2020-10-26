@@ -60,8 +60,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -495,18 +493,21 @@ public class TestFsVolumeList {
 
     // 1) getVolumeRef should return correct reference.
     assertEquals(diskVolume,
-        volumeList.getVolumeRefByMountAndStorageType(
+        volumeList.getMountVolumeMap()
+            .getVolumeRefByMountAndStorageType(
             device, StorageType.DISK).getVolume());
     assertEquals(archivalVolume,
-        volumeList.getVolumeRefByMountAndStorageType(
+        volumeList.getMountVolumeMap()
+            .getVolumeRefByMountAndStorageType(
             device, StorageType.ARCHIVE).getVolume());
 
     // 1) removeVolume should work as expected
     volumeList.removeVolume(diskVolume.getStorageLocation(), true);
-    assertEquals(null,
-        volumeList.getVolumeRefByMountAndStorageType(
+    assertNull(volumeList.getMountVolumeMap()
+            .getVolumeRefByMountAndStorageType(
             device, StorageType.DISK));
-    assertEquals(archivalVolume, volumeList.getVolumeRefByMountAndStorageType(
+    assertEquals(archivalVolume, volumeList.getMountVolumeMap()
+        .getVolumeRefByMountAndStorageType(
         device, StorageType.ARCHIVE).getVolume());
   }
 
@@ -556,6 +557,11 @@ public class TestFsVolumeList {
     Mockito.doReturn(dfAvailable).when(spyDiskVolume).getDfAvailable();
     Mockito.doReturn(dfAvailable).when(spyArchivalVolume).getDfAvailable();
 
+    MountVolumeMap mountVolumeMap = new MountVolumeMap(conf);
+    mountVolumeMap.addVolume(spyDiskVolume);
+    mountVolumeMap.addVolume(spyArchivalVolume);
+    Mockito.doReturn(mountVolumeMap).when(dataset).getMountVolumeMap();
+
     // 1) getCapacity() should reflect configured archive storage percentage.
     long diskStorageTypeCapacity =
         (long) ((dfCapacity - duReserved) * (1 - reservedForArchival));
@@ -567,11 +573,6 @@ public class TestFsVolumeList {
     // 2) getActualNonDfsUsed() should count in both DISK and ARCHIVE.
     // expectedActualNonDfsUsage =
     // diskUsage - archivalDfsUsage - diskDfsUsage
-    Mockito.doReturn(spyArchivalVolume.obtainReference())
-        .when(dataset).getVolumeRef(anyString(), eq(StorageType.ARCHIVE));
-    Mockito.doReturn(spyDiskVolume.obtainReference())
-        .when(dataset).getVolumeRef(anyString(), eq(StorageType.DISK));
-
     long expectedActualNonDfsUsage = 400L;
     Mockito.doReturn(diskDfsUsage)
         .when(spyDiskVolume).getDfsUsed();

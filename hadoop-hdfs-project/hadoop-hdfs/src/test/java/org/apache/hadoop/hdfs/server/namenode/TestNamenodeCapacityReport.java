@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.fs.StorageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -185,6 +186,69 @@ public class TestNamenodeCapacityReport {
           (namesystem.getCapacityUsed() + namesystem.getCapacityRemaining()
               + namesystem.getNonDfsUsedSpace() + fileCount * fs
               .getDefaultBlockSize()) - configCapacity < 1 * 1024);
+    }
+    finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+
+  /**
+   * We split the disk to DISK/ARCHIVE volumes and test if NN gets correct stat.
+   */
+  @Test
+  public void testVolumeSizeWithSameDiskTiering() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+
+    // Set aside fifth of the total capacity as reserved
+    long reserved = 10000;
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY, reserved);
+
+    try {
+      double reserveForAchive = 0.3;
+      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+          true);
+      conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+          reserveForAchive);
+      cluster = new MiniDFSCluster.Builder(conf).storageTypes(
+          new StorageType[]{StorageType.DISK, StorageType.ARCHIVE}).build();
+      cluster.waitActive();
+      final FSNamesystem namesystem = cluster.getNamesystem();
+      final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
+      ).getDatanodeManager();
+
+      // Ensure the data reported for each data node is right
+      final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+      final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+      dm.fetchDatanodes(live, dead, false);
+
+      long configCapacity, nonDFSUsed, expectedNonDFSUsed;
+
+      final FsDatasetTestUtils utils = cluster.getFsDatasetTestUtils(0);
+
+      configCapacity = namesystem.getCapacityTotal();
+      nonDFSUsed = namesystem.getNonDfsUsedSpace();
+
+      // Disk capacity should be just the raw capacity
+      // as two volumes shares the capacity.
+      // Tolerate tiny deviation caused by double/long conversion.
+      long rawCapacity = utils.getRawCapacity();
+      long diskCapacity = (long) ((rawCapacity - reserved) * reserveForAchive)
+          + (long) ((rawCapacity - reserved) * (1 - reserveForAchive))
+          + reserved;
+
+      // Reserved should not be double counted as well
+      assertEquals(configCapacity, diskCapacity - reserved);
+
+      // Ensure nonDfsUsed is not double counted.
+      // Same as testVolumeSize above, adding 1MB to avoid error caused by loggings.
+      expectedNonDFSUsed = cluster.getDataNodes().get(0).getFSDataset()
+          .getStorageReports(cluster.getNamesystem().getBlockPoolId())[0]
+          .getNonDfsUsed();
+      assertTrue(expectedNonDFSUsed - nonDFSUsed < 1024);
     }
     finally {
       if (cluster != null) {
@@ -395,4 +459,5 @@ public class TestNamenodeCapacityReport {
     }
     Thread.sleep(100);
   }
+
 }

@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -65,8 +64,7 @@ class FsVolumeList {
   private final BlockScanner blockScanner;
 
   private boolean enableSameDiskTiering;
-  private ConcurrentMap<String, Map<StorageType, FsVolumeImpl>>
-      mountVolumeMapping;
+  private MountVolumeMap mountVolumeMap;
 
   FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
       BlockScanner blockScanner,
@@ -83,9 +81,11 @@ class FsVolumeList {
     enableSameDiskTiering = config.getBoolean(
         DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
         DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
-    if (enableSameDiskTiering) {
-      mountVolumeMapping = new ConcurrentHashMap<>();
-    }
+    mountVolumeMap = new MountVolumeMap(config);
+  }
+
+  MountVolumeMap getMountVolumeMap() {
+    return mountVolumeMap;
   }
 
   /**
@@ -93,29 +93,6 @@ class FsVolumeList {
    */
   List<FsVolumeImpl> getVolumes() {
     return Collections.unmodifiableList(volumes);
-  }
-
-  /**
-   * Get vol by mount and storage type.
-   * This is used when same-disk-tiering is enabled.
-   */
-  FsVolumeReference getVolumeRefByMountAndStorageType(String mount,
-      StorageType storageType) {
-    if (mountVolumeMapping != null
-        && mountVolumeMapping.containsKey(mount)) {
-      try {
-        FsVolumeImpl volume = mountVolumeMapping
-            .get(mount).getOrDefault(storageType, null);
-        if (volume != null) {
-          return volume.obtainReference();
-        }
-      } catch (ClosedChannelException e) {
-        FsDatasetImpl.LOG.warn("Volume closed when getting volume" +
-            " by mount and storage type: "
-            + mount + ", " + storageType);
-      }
-    }
-    return null;
   }
 
   private FsVolumeReference chooseVolume(List<FsVolumeImpl> list,
@@ -330,19 +307,7 @@ class FsVolumeList {
     if (enableSameDiskTiering &&
         (volume.getStorageType() == StorageType.DISK
         || volume.getStorageType() == StorageType.ARCHIVE)) {
-      String mount = volume.getMount();
-      if (!mount.isEmpty()) {
-        Map<StorageType, FsVolumeImpl> storageTypeMap =
-            mountVolumeMapping
-                .getOrDefault(mount, new ConcurrentHashMap<>());
-        if (storageTypeMap.containsKey(volume.getStorageType())) {
-          FsDatasetImpl.LOG.error("Found storage type already exist." +
-              " Skipping for now. Please check disk configuration");
-        } else {
-          storageTypeMap.put(volume.getStorageType(), volume);
-          mountVolumeMapping.put(mount, storageTypeMap);
-        }
-      }
+      mountVolumeMap.addVolume(volume);
     }
     if (blockScanner != null) {
       blockScanner.addVolumeScanner(ref);
@@ -367,14 +332,7 @@ class FsVolumeList {
       if (enableSameDiskTiering &&
           (target.getStorageType() == StorageType.DISK
               || target.getStorageType() == StorageType.ARCHIVE)) {
-        String mount = target.getMount();
-        if (!mount.isEmpty()) {
-          Map storageTypeMap = mountVolumeMapping.get(mount);
-          storageTypeMap.remove(target.getStorageType());
-          if (storageTypeMap.isEmpty()) {
-            mountVolumeMapping.remove(mount);
-          }
-        }
+        mountVolumeMap.removeVolume(target);
       }
       if (blockScanner != null) {
         blockScanner.removeVolumeScanner(target);
