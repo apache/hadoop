@@ -281,7 +281,7 @@ public class TestFileCreation {
           // do nothing;
           return false;
         }
-      }, 1, 100);
+      }, 1, 1000);
 
     } finally {
       cluster.shutdown();
