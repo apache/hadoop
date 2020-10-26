@@ -44,6 +44,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 
+import org.apache.hadoop.yarn.server.MiniYARNCluster;
+
+import static org.junit.Assert.assertTrue;
+
 /**
  * Ensure that we can perform operations against the shaded minicluster
  * given the API and runtime jars by performing some simple smoke tests.
@@ -54,6 +58,7 @@ public class ITUseMiniCluster {
       LoggerFactory.getLogger(ITUseMiniCluster.class);
 
   private MiniDFSCluster cluster;
+  private MiniYARNCluster yarnCluster;
 
   private static final String TEST_PATH = "/foo/bar/cats/dee";
   private static final String FILENAME = "test.file";
@@ -73,12 +78,21 @@ public class ITUseMiniCluster {
         .numDataNodes(3)
         .build();
     cluster.waitActive();
+
+    conf.set("yarn.scheduler.capacity.root.queues", "default");
+    conf.setInt("yarn.scheduler.capacity.root.default.capacity", 100);
+    yarnCluster = new MiniYARNCluster(getClass().getName(), 1, 1, 1, 1);
+    yarnCluster.init(conf);
+    yarnCluster.start();
   }
 
   @After
   public void clusterDown() {
     if (cluster != null) {
       cluster.close();
+    }
+    if (yarnCluster != null) {
+      yarnCluster.stop();
     }
   }
 
