@@ -547,11 +547,11 @@ class BPServiceActor implements Runnable {
     }
     bpThread = new Thread(this);
     bpThread.setDaemon(true); // needed for JUnit testing
-    bpThread.start();
 
     if (lifelineSender != null) {
       lifelineSender.start();
     }
+    bpThread.start();
   }
 
   private String formatThreadName(

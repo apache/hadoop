@@ -204,6 +204,7 @@ class BPOfferService {
     if (id != null) {
       return id;
     }
+    DataNodeFaultInjector.get().delayWhenOfferServiceHoldLock();
     readLock();
     try {
       if (bpNSInfo != null) {
@@ -380,6 +381,7 @@ class BPOfferService {
     }
 
     try {
+      DataNodeFaultInjector.get().delayWhenOfferServiceHoldLock();
       if (setNamespaceInfo(nsInfo) == null) {
         boolean success = false;
 
