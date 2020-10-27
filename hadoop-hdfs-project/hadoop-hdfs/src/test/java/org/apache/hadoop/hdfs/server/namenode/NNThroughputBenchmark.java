@@ -519,7 +519,8 @@ public class NNThroughputBenchmark implements Tool {
     // Operation types
     static final String OP_CREATE_NAME = "create";
     static final String OP_CREATE_USAGE = 
-      "-op create [-threads T] [-files N] [-filesPerDir P] [-close]";
+        "-op create [-threads T] [-files N] [-blockSize S] [-filesPerDir P]"
+        + " [-close]";
 
     protected FileNameGenerator nameGenerator;
     protected String[][] fileNames;
@@ -544,6 +545,9 @@ public class NNThroughputBenchmark implements Tool {
         if(args.get(i).equals("-files")) {
           if(i+1 == args.size())  printUsage();
           numOpsRequired = Integer.parseInt(args.get(++i));
+        } else if (args.get(i).equals("-blockSize")) {
+          if(i+1 == args.size())  printUsage();
+          blockSize = Integer.parseInt(args.get(++i));
         } else if(args.get(i).equals("-threads")) {
           if(i+1 == args.size())  printUsage();
           numThreads = Integer.parseInt(args.get(++i));
@@ -722,7 +726,8 @@ public class NNThroughputBenchmark implements Tool {
     // Operation types
     static final String OP_OPEN_NAME = "open";
     static final String OP_USAGE_ARGS = 
-      " [-threads T] [-files N] [-filesPerDir P] [-useExisting]";
+        " [-threads T] [-files N] [-blockSize S] [-filesPerDir P]"
+        + " [-useExisting]";
     static final String OP_OPEN_USAGE = 
       "-op " + OP_OPEN_NAME + OP_USAGE_ARGS;
 
@@ -754,6 +759,7 @@ public class NNThroughputBenchmark implements Tool {
               "-op", "create", 
               "-threads", String.valueOf(this.numThreads), 
               "-files", String.valueOf(numOpsRequired),
+              "-blockSize", String.valueOf(blockSize),
               "-filesPerDir", 
               String.valueOf(nameGenerator.getFilesPerDirectory()),
               "-close"};
@@ -784,7 +790,8 @@ public class NNThroughputBenchmark implements Tool {
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = Time.now();
-      clientProto.getBlockLocations(fileNames[daemonId][inputIdx], 0L, blockSize);
+      clientProto.getBlockLocations(fileNames[daemonId][inputIdx], 0L,
+          blockSize);
       long end = Time.now();
       return end-start;
     }
@@ -1074,7 +1081,7 @@ public class NNThroughputBenchmark implements Tool {
     static final String OP_BLOCK_REPORT_NAME = "blockReport";
     static final String OP_BLOCK_REPORT_USAGE = 
       "-op blockReport [-datanodes T] [-reports N] " +
-      "[-blocksPerReport B] [-blocksPerFile F]";
+      "[-blocksPerReport B] [-blocksPerFile F] [-blockSize S]";
 
     private int blocksPerReport;
     private int blocksPerFile;
@@ -1121,6 +1128,9 @@ public class NNThroughputBenchmark implements Tool {
         } else if(args.get(i).equals("-blocksPerFile")) {
           if(i+1 == args.size())  printUsage();
           blocksPerFile = Integer.parseInt(args.get(++i));
+        } else if (args.get(i).equals("-blockSize")) {
+          if(i+1 == args.size())  printUsage();
+          blockSize = Integer.parseInt(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
