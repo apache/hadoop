@@ -83,7 +83,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(final URL url,
       final String method, final int httpStatus) {
-    return new AbfsHttpOperation(url, method, httpStatus);
+       return new AbfsHttpOperation(url, method, httpStatus);
   }
 
   private AbfsHttpOperation(final URL url, final String method,
@@ -245,7 +245,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
-//    tracingContext.setClientRequestID();
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
