@@ -34,7 +34,7 @@ public class TestNodeLabelFileReplication {
   @Test
   public void testNodeLabelFileReplication() throws IOException {
     int defaultReplica =
-        YarnConfiguration.DEFAULT_FS_NODE_LABELS_FILES_REPLICATION;
+        YarnConfiguration.DEFAULT_FS_STORE_FILE_REPLICATION;
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     MiniDFSCluster cluster = null;

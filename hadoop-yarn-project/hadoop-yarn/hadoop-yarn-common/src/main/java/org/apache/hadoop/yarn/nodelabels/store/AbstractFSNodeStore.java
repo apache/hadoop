@@ -67,9 +67,8 @@ public abstract class AbstractFSNodeStore<M> {
     initFileSystem(conf);
     // mkdir of root dir path
     fs.mkdirs(fsWorkingPath);
-    this.replication = conf.getInt(
-        YarnConfiguration.FS_NODE_LABELS_FILE_REPLICATION,
-        YarnConfiguration.DEFAULT_FS_NODE_LABELS_FILES_REPLICATION);
+    this.replication = conf.getInt(YarnConfiguration.FS_STORE_FILE_REPLICATION,
+        YarnConfiguration.DEFAULT_FS_STORE_FILE_REPLICATION);
     LOG.info("Created store directory :" + fsWorkingPath);
   }
 
@@ -199,7 +198,7 @@ public abstract class AbstractFSNodeStore<M> {
         fs.setReplication(file, (short) replication);
       }
     } catch (UnsupportedOperationException e) {
-      LOG.error("Failed set replication for a file :" + file);
+      LOG.error("Failed set replication for a file : {}", file);
     }
   }
 
