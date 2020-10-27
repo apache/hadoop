@@ -216,39 +216,29 @@ public class TestNamenodeCapacityReport {
       cluster = new MiniDFSCluster.Builder(conf).storageTypes(
           new StorageType[]{StorageType.DISK, StorageType.ARCHIVE}).build();
       cluster.waitActive();
-      final FSNamesystem namesystem = cluster.getNamesystem();
-      final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
-      ).getDatanodeManager();
-
-      // Ensure the data reported for each data node is right
-      final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-      final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-      dm.fetchDatanodes(live, dead, false);
-
-      long configCapacity, nonDFSUsed, expectedNonDFSUsed;
 
       final FsDatasetTestUtils utils = cluster.getFsDatasetTestUtils(0);
 
-      configCapacity = namesystem.getCapacityTotal();
-      nonDFSUsed = namesystem.getNonDfsUsedSpace();
+      long configCapacity = cluster.getNamesystem().getCapacityTotal();
 
       // Disk capacity should be just the raw capacity
       // as two volumes shares the capacity.
-      // Tolerate tiny deviation caused by double/long conversion.
       long rawCapacity = utils.getRawCapacity();
       long diskCapacity = (long) ((rawCapacity - reserved) * reserveForAchive)
           + (long) ((rawCapacity - reserved) * (1 - reserveForAchive))
           + reserved;
 
-      // Reserved should not be double counted as well
+      // Ensure reserved should not be double counted.
       assertEquals(configCapacity, diskCapacity - reserved);
 
+      DataNode dn = cluster.getDataNodes().get(0);
       // Ensure nonDfsUsed is not double counted.
-      // Same as testVolumeSize above, adding 1MB to avoid error caused by loggings.
-      expectedNonDFSUsed = cluster.getDataNodes().get(0).getFSDataset()
+      long singleVolumeUsed = dn.getFSDataset()
           .getStorageReports(cluster.getNamesystem().getBlockPoolId())[0]
           .getNonDfsUsed();
-      assertTrue(expectedNonDFSUsed - nonDFSUsed < 1024);
+      cluster.triggerHeartbeats();
+      assertTrue(cluster.getNamesystem().getCapacityUsed()
+          < singleVolumeUsed * 2);
     }
     finally {
       if (cluster != null) {
@@ -459,5 +449,4 @@ public class TestNamenodeCapacityReport {
     }
     Thread.sleep(100);
   }
-
 }

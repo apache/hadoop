@@ -474,7 +474,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
       totalBlockPoolUsed += report.getBlockPoolUsed();
       totalDfsUsed += report.getDfsUsed();
       String mount = report.getMount();
-      // For volumes on the same mount, ignore duplicated volumes for nonDfsUsed.
+      // For volumes on the same mount,
+      // ignore duplicated volumes for nonDfsUsed.
       if (mount == null || mount.isEmpty()) {
         totalNonDfsUsed += report.getNonDfsUsed();
       } else {

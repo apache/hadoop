@@ -34,7 +34,8 @@ public class StorageReport {
 
   public StorageReport(DatanodeStorage storage, boolean failed, long capacity,
       long dfsUsed, long remaining, long bpUsed, long nonDfsUsed) {
-    this(storage, failed, capacity, dfsUsed, remaining, bpUsed, nonDfsUsed, "");
+    this(storage, failed, capacity, dfsUsed,
+        remaining, bpUsed, nonDfsUsed, "");
   }
 
   public StorageReport(DatanodeStorage storage, boolean failed, long capacity,
