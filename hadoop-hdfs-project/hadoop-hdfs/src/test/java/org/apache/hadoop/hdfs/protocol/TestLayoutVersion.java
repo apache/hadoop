@@ -115,7 +115,7 @@ public class TestLayoutVersion {
    * features.  TRUNCATE, APPEND_NEW_BLOCK and QUOTA_BY_STORAGE_TYPE are all
    * features that launched in the same release.  TRUNCATE was added first, so
    * we expect all 3 features to have a minimum compatible layout version equal
-   * to TRUNCATE's layout version.  ALL features older than that existed prior
+   * to TRUNCATE's layout version.  All features older than that existed prior
    * to the concept of a minimum compatible layout version, so for each one, the
    * minimum compatible layout version must be equal to itself.
    */
