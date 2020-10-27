@@ -72,6 +72,17 @@ public final class FedBalanceOptions {
           + " when it waits for the distcp job to finish.");
 
   /**
+   * Specify the threshold of diff entries.
+   */
+  final static Option DIFF_THRESHOLD = new Option("diffThreshold", true,
+      "This specifies the threshold of the diff entries that used in"
+          + " incremental copy stage. If the diff entries size is no greater"
+          + " than this threshold and the open files check is satisfied"
+          + "(no open files or force close all open files), the fedBalance will"
+          + " go to the final round of distcp. Default value is 0, that means"
+          + " waiting until there is no diff.");
+
+  /**
    * Move the source path to trash after all the data are sync to target, or
    * delete the source directly, or skip both trash and deletion.
    */
