@@ -218,10 +218,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_USER_AGENT_PREFIX)
   private String userAgentId;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
-      DefaultValue = EMPTY_STRING)
-  private String clientCorrelationID;
-
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_NAME,
       DefaultValue = DEFAULT_VALUE_UNKNOWN)
   private String clusterName;
@@ -229,6 +225,14 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_TYPE,
       DefaultValue = DEFAULT_VALUE_UNKNOWN)
   private String clusterType;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
+          DefaultValue = EMPTY_STRING)
+  private String clientCorrelationID;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CORRELATION_HEADER,
+          DefaultValue = true)
+  private boolean enableCorrelationHeader;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
@@ -298,6 +302,15 @@ public class AbfsConfiguration{
    */
   public String getClientCorrelationID() {
     return clientCorrelationID;
+  }
+
+  /**
+   * Config to allow user to enable list of identifiers for correlation.
+   * Default value is true. Only clientRequestId appears in logs when disabled
+   * @return enableCorrelationHeader config
+   */
+  public boolean isCorrelationHeaderEnabled() {
+    return enableCorrelationHeader;
   }
 
   /**

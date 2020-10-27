@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -55,8 +56,6 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   private static final String TRUE_STR = "true";
   private static final String FALSE_STR = "false";
-  private final String fileSystemID = "test-filesystem-id";
-  private final String clientCorrelationID = "test-corr-id";
 
   private boolean isUsingXNSAccount;
   public ITestGetNameSpaceEnabled() throws Exception {
@@ -85,8 +84,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
         "getIsNamespaceEnabled should return true when the "
             + "config is set as true").isTrue();
-    fs.getAbfsStore().deleteFilesystem(new TracingContext(clientCorrelationID,
-        fileSystemID, "DL"));
+    fs.getAbfsStore().deleteFilesystem(tracingContext);
     unsetAndAssert();
   }
 
@@ -96,7 +94,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
         "getIsNamespaceEnabled should return false when the "
             + "config is set as false").isFalse();
-    fs.getAbfsStore().deleteFilesystem(new TracingContext(clientCorrelationID, fileSystemID, "DL"));
+    fs.getAbfsStore().deleteFilesystem(tracingContext);
     unsetAndAssert();
   }
 
@@ -109,8 +107,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         "getIsNamespaceEnabled should return the value "
             + "configured for fs.azure.test.namespace.enabled")
         .isEqualTo(expectedValue);
-    fs.getAbfsStore().deleteFilesystem(new TracingContext(clientCorrelationID,
-        fileSystemID, "DL"));
+    fs.getAbfsStore().deleteFilesystem(tracingContext);
   }
 
   private AzureBlobFileSystem getNewFSWithHnsConf(
@@ -183,8 +180,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         .setNamespaceEnabled(Trilean.getTrilean(invalidConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
-    verify(mockClient, times(1)).getAclStatus(anyString(),
-        new TracingContext(clientCorrelationID, fileSystemID, "NS"));
+    verify(mockClient, times(1)).getAclStatus(anyString(), any(TracingContext.class));
   }
 
   private void ensureGetAclCallIsNeverMadeForValidConf(String validConf)
@@ -193,16 +189,14 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         .setNamespaceEnabled(Trilean.getTrilean(validConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
-    verify(mockClient, never()).getAclStatus(anyString(),
-        new TracingContext(clientCorrelationID, fileSystemID, "NS"));
+    verify(mockClient, never()).getAclStatus(anyString(), any(TracingContext.class));
   }
 
   private void unsetConfAndEnsureGetAclCallIsMadeOnce() throws IOException {
     this.getFileSystem().getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
-    verify(mockClient, times(1)).getAclStatus(anyString(),
-        new TracingContext(clientCorrelationID, fileSystemID, "NS"));
+    verify(mockClient, times(1)).getAclStatus(anyString(), any(TracingContext.class));
   }
 
   private AbfsClient callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient()
@@ -211,7 +205,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
     final AbfsClient mockClient = mock(AbfsClient.class);
     doReturn(mock(AbfsRestOperation.class)).when(mockClient)
-        .getAclStatus(anyString(), new TracingContext(clientCorrelationID, fileSystemID, "NS"));
+        .getAclStatus(anyString(), any(TracingContext.class));
     abfsStore.setClient(mockClient);
     abfs.getIsNamespaceEnabled();
     return mockClient;

@@ -102,8 +102,6 @@ public class AzureBlobFileSystem extends FileSystem {
   private AbfsDelegationTokenManager delegationTokenManager;
   private AbfsCounters abfsCounters;
   private String clientCorrelationID;
-  public boolean testTracing = false;
-  public List<String> headers;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -190,9 +188,6 @@ public class AzureBlobFileSystem extends FileSystem {
 
     try {
       InputStream inputStream = abfsStore.openFileForRead(qualifiedPath, statistics, tracingContext);
-      if(testTracing) {
-        headers = tracingContext.getRequestHeaders();
-      }
       return new FSDataInputStream(inputStream);
     } catch(AzureBlobFileSystemException ex) {
       checkException(path, ex);

@@ -239,9 +239,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-//  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders) throws IOException {
-//    this(url, method, requestHeaders, new TracingContext("", "OP"));
-//  }
 
   public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
       throws IOException {

@@ -64,7 +64,7 @@ public class ITestAbfsInputStreamStatistics
 
       outputStream = createAbfsOutputStreamWithFlushEnabled(fs, initValuesPath);
       inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics(),
-          new TracingContext("test-corr-id", "test-filesystem-id", "NS"));
+              tracingContext);
 
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) inputStream.getStreamStatistics();
@@ -109,7 +109,7 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.hflush();
       in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics(),
-          new TracingContext("test-corr-id", fs.getFileSystemID(), "IN"));
+          tracingContext);
 
       /*
        * Writing 1MB buffer to the file, this would make the fCursor(Current
@@ -201,7 +201,7 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.hflush();
       in = abfss.openFileForRead(readStatPath, fs.getFsStatistics(),
-          new TracingContext("test-corr-id", "test-filesystem-id", "NS"));
+              tracingContext);
 
       /*
        * Doing file read 10 times.
@@ -271,9 +271,6 @@ public class ITestAbfsInputStreamStatistics
       out.write(oneKbBuff);
       out.hflush();
 
-      TracingContext tracingContext = new TracingContext("testCorrId",
-              fs.getFileSystemID(), "PA");
-
       // AbfsRestOperation Instance required for eTag.
       AbfsRestOperation abfsRestOperation =
           fs.getAbfsClient().getPathStatus(nullStatFilePath.toUri().getPath(), false,
@@ -327,8 +324,7 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.close();
 
-      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics(),
-          new TracingContext("test-corr-id", "test-filesystem-id", "NS"));
+      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics(), tracingContext);
 
       /*
        * Reading 1KB after each i * KB positions. Hence the reads are from 0

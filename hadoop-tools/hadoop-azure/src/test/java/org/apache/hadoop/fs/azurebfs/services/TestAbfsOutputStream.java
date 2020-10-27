@@ -325,7 +325,7 @@ public final class TestAbfsOutputStream {
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
             populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
                     true), new TracingContext(abfsConf.getClientCorrelationID(),
-        "fs-id", "OP"));
+        "test-fs-id", "OP"));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 

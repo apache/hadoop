@@ -26,7 +26,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.Assert;
@@ -238,15 +237,11 @@ public class ITestAzureBlobFileSystemRename extends
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
 
-    TracingContext tracingContext = new TracingContext(fs.getAbfsStore()
-        .getAbfsConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), "RN");
-
     AbfsRestOperation idempotencyRetOp = mock(AbfsRestOperation.class);
     when(idempotencyRetOp.getResult()).thenReturn(idempotencyRetHttpOp);
     doReturn(idempotencyRetOp).when(client).renameIdempotencyCheckOp(any(),
-        any(), any(), tracingContext);
-    when(client.renamePath(any(), any(), any(), tracingContext)).thenCallRealMethod();
+        any(), any(), any());
+    when(client.renamePath(any(), any(), any(), any())).thenCallRealMethod();
 
     // rename on non-existing source file will trigger idempotency check
     if (idempotencyRetHttpOp.getStatusCode() == HTTP_OK) {
@@ -328,8 +323,7 @@ public class ITestAzureBlobFileSystemRename extends
     Assertions.assertThat(testClient.renameIdempotencyCheckOp(
         renameRequestStartTime,
         op,
-        destinationPath.toUri().getPath(),
-        new TracingContext("test-corr-id", "test-fs-id", "RN"))
+        destinationPath.toUri().getPath(), tracingContext)
         .getResult()
         .getStatusCode())
         .describedAs(assertMessage)

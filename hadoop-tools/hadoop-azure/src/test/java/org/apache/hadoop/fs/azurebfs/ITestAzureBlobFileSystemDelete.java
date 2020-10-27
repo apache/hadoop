@@ -213,9 +213,6 @@ public class ITestAzureBlobFileSystemDelete extends
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
 
-    TracingContext tracingContext = new TracingContext(fs.getAbfsStore()
-        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(), "DL");
-
     // Case 1: Not a retried case should throw error back
     intercept(AbfsRestOperationException.class,
         () -> client.deletePath(
@@ -238,7 +235,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     when(mockClient.deletePath("/NonExistingPath", false,
-        null, tracingContext)).thenCallRealMethod();
+        null, any(TracingContext.class))).thenCallRealMethod();
 
     Assertions.assertThat(mockClient.deletePath(
         "/NonExistingPath",

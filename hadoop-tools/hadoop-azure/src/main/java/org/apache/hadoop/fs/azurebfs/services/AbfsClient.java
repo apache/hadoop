@@ -75,6 +75,7 @@ public class AbfsClient implements Closeable {
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
+  private final boolean enableCorrelationHeader;
 
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
@@ -106,6 +107,7 @@ public class AbfsClient implements Closeable {
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
     this.abfsPerfTracker = abfsClientContext.getAbfsPerfTracker();
     this.abfsCounters = abfsClientContext.getAbfsCounters();
+    this.enableCorrelationHeader = abfsConfiguration.isCorrelationHeaderEnabled();
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -133,6 +135,10 @@ public class AbfsClient implements Closeable {
 
   public String getFileSystem() {
     return filesystem;
+  }
+
+  public boolean isCorrelationHeaderEnabled() {
+    return enableCorrelationHeader;
   }
 
   protected AbfsPerfTracker getAbfsPerfTracker() {

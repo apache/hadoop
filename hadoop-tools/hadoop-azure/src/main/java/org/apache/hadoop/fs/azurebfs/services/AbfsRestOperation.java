@@ -23,6 +23,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.UUID;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -70,8 +71,6 @@ public class AbfsRestOperation {
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
-//  public TracingContext tracingContext;
-  public String requestHeader = "";
 
   public AbfsHttpOperation getResult() {
     return result;
@@ -197,8 +196,6 @@ public class AbfsRestOperation {
         Thread.currentThread().interrupt();
       }
     }
-//    this.tracingContext = tracingContext; //if retried, will reflect final header
-     this.requestHeader = tracingContext.toString();
 
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
@@ -218,12 +215,19 @@ public class AbfsRestOperation {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
-      tracingContext.generateClientRequestID();
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      httpOperation.getConnection()
-              .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
-                      tracingContext.toString());
+      if (client.isCorrelationHeaderEnabled()) {
+        tracingContext.generateClientRequestID();
+        httpOperation.getConnection()
+                .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
+                        tracingContext.toString());
+      }
+      else {
+        httpOperation.getConnection()
+                .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
+                        UUID.randomUUID().toString());
+      }
 
       switch(client.getAuthType()) {
         case Custom:

@@ -27,7 +27,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -71,7 +70,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     try {
       AbfsRestOperation op = abfsClient.listPath("/", true, LIST_MAX_RESULTS, "===========",
-              new TracingContext("test-corr-id", fs.getFileSystemID(), "PA"));
+              tracingContext);
       Assert.assertTrue(false);
     } catch (AbfsRestOperationException ex) {
       Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
@@ -146,8 +145,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       throws IOException {
     return getFileSystem().getAbfsClient()
         .listPath(directory, false, getListMaxResults(), null,
-                new TracingContext("test-corr-id", getFileSystem().getFileSystemID(),
-                        "PA")).getResult().getListResultSchema().paths();
+                tracingContext).getResult().getListResultSchema().paths();
   }
 
   private int getListMaxResults() throws IOException {

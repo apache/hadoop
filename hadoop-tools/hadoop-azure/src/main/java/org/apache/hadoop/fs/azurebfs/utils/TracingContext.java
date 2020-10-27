@@ -30,34 +30,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TracingContext {
-  private String clientCorrelationID;
+  private final String clientCorrelationID;
   private final String fileSystemID;
   private String clientRequestID = "";
   private String primaryRequestID;
   private String streamID = "";
   private int retryCount;
   private String hadoopOpName = "";
-  public java.util.ArrayList<String> headers = new java.util.ArrayList<String>();
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
-  // for non-continuation ops (no primary request id necessary)
   public TracingContext(String clientCorrelationID, String fileSystemID, String hadoopOpName) {
     this.fileSystemID = fileSystemID;
     this.hadoopOpName = hadoopOpName;
-    validateClientCorrelationID(clientCorrelationID);
+    this.clientCorrelationID = validateClientCorrelationID(clientCorrelationID);
     streamID = EMPTY_STRING;
     retryCount = 0;
     primaryRequestID = "";
-  }
-
-  // for ops with primary request
-  public TracingContext(String clientCorrelationID, String fileSystemID, String hadoopOpName,
-                         String primaryRequestID) {
-    this(clientCorrelationID, fileSystemID, hadoopOpName);
-    this.primaryRequestID = primaryRequestID;
   }
 
   public TracingContext(TracingContext originalTracingContext) {
@@ -69,17 +60,14 @@ public class TracingContext {
     this.primaryRequestID = originalTracingContext.primaryRequestID;
   }
 
-  public void validateClientCorrelationID(String clientCorrelationID) {
+  public String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
         || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
-      this.clientCorrelationID = EMPTY_STRING;
       LOG.debug(
           "Invalid config provided; correlation id not included in header.");
-    } else if (clientCorrelationID.length() > 0) {
-      this.clientCorrelationID = clientCorrelationID + ":";
-    } else {
-      this.clientCorrelationID = EMPTY_STRING;
+      return EMPTY_STRING;
     }
+    return clientCorrelationID;
   }
 
   public void generateClientRequestID() {
@@ -98,17 +86,8 @@ public class TracingContext {
     retryCount++;
   }
 
-  public void reset() {
-    primaryRequestID = EMPTY_STRING;
-    retryCount = 0;
-  }
-
   public String toString() {
-    return clientCorrelationID + clientRequestID + ":" + fileSystemID + ":" + primaryRequestID
+    return clientCorrelationID + ":" + clientRequestID + ":" + fileSystemID + ":" + primaryRequestID
         + ":" + streamID + ":" + hadoopOpName + ":" + retryCount;
-  }
-
-  public ArrayList<String> getRequestHeaders() {
-    return headers;
   }
 }

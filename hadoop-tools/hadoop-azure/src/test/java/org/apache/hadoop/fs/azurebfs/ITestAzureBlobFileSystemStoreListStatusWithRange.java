@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -109,8 +108,7 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
   public void testListWithRange() throws IOException {
     try {
       FileStatus[] listResult = store.listStatus(new Path(path), startFrom,
-          new TracingContext("test-corr-id",
-                  "test-filesystem-id", "LS"));
+          tracingContext);
       if (!expectedResult) {
         Assert.fail("Excepting failure with IllegalArgumentException");
       }

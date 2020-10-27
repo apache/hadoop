@@ -82,6 +82,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   private AuthType authType;
   private boolean useConfiguredFileSystem = false;
   private boolean usingFilesystemForSASTests = false;
+  public TracingContext tracingContext;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
@@ -145,8 +146,8 @@ public abstract class AbstractAbfsIntegrationTest extends
   public void setup() throws Exception {
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
-    TracingContext tracingContext = new TracingContext(abfsConfig.getClientCorrelationID(),
-            getFileSystem().getFileSystemID(), "TS");
+    tracingContext = new TracingContext(abfsConfig.getClientCorrelationID(),
+            abfs.getFileSystemID(), "TS");
 
     // Only live account without namespace support can run ABFS&WASB compatibility tests
     if (!isIPAddress
@@ -434,9 +435,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     abfss.getAbfsConfiguration().setDisableOutputStreamFlush(false);
 
     return (AbfsOutputStream) abfss.createFile(path, fs.getFsStatistics(),
-        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()),
-        new TracingContext(fs.getAbfsStore().getAbfsConfiguration()
-            .getClientCorrelationID(), fs.getFileSystemID(), "OP"));
+        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()), tracingContext);
   }
 
   /**

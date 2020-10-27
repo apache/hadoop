@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 /**
  * Test FileSystemProperties.
@@ -62,8 +61,6 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   @Test
   public void testBase64FileSystemProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    TracingContext tracingContext = new TracingContext(fs.getAbfsStore().getAbfsConfiguration()
-            .getClientCorrelationID(), fs.getFileSystemID(), "FS");
 
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: value }");
@@ -77,8 +74,6 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   @Test
   public void testBase64PathProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    TracingContext tracingContext = new TracingContext(fs.getAbfsStore().getAbfsConfiguration()
-            .getClientCorrelationID(), fs.getFileSystemID(), "FS");
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: valueTest }");
     touch(TEST_PATH);
@@ -92,8 +87,6 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   @Test (expected = Exception.class)
   public void testBase64InvalidFileSystemProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    TracingContext tracingContext = new TracingContext(fs.getAbfsStore().getAbfsConfiguration()
-            .getClientCorrelationID(), fs.getFileSystemID(), "FS");
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: value歲 }");
     fs.getAbfsStore().setFilesystemProperties(properties, tracingContext);
@@ -106,8 +99,6 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   @Test (expected = Exception.class)
   public void testBase64InvalidPathProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    TracingContext tracingContext = new TracingContext(fs.getAbfsStore().getAbfsConfiguration()
-            .getClientCorrelationID(), fs.getFileSystemID(), "FS");
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: valueTest兩 }");
     touch(TEST_PATH);
@@ -121,8 +112,6 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   @Test
   public void testSetFileSystemProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    TracingContext tracingContext = new TracingContext(fs.getAbfsStore().getAbfsConfiguration()
-            .getClientCorrelationID(), fs.getFileSystemID(), "FS");
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("containerForDevTest", "true");
     fs.getAbfsStore().setFilesystemProperties(properties, tracingContext);
