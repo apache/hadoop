@@ -123,13 +123,12 @@ public class TestLayoutVersion {
   public void testNameNodeFeatureMinimumCompatibleLayoutVersions() {
     int baseLV = NameNodeLayoutVersion.Feature.TRUNCATE.getInfo()
 	.getLayoutVersion();
-    EnumSet<NameNodeLayoutVersion.Feature> compatibleFeatures
-	= EnumSet.of(
-          NameNodeLayoutVersion.Feature.TRUNCATE,
-          NameNodeLayoutVersion.Feature.APPEND_NEW_BLOCK,
-          NameNodeLayoutVersion.Feature.QUOTA_BY_STORAGE_TYPE,
-          NameNodeLayoutVersion.Feature.ERASURE_CODING,
-          NameNodeLayoutVersion.Feature.EXPANDED_STRING_TABLE);
+    EnumSet<NameNodeLayoutVersion.Feature> compatibleFeatures = EnumSet.of(
+        NameNodeLayoutVersion.Feature.TRUNCATE,
+        NameNodeLayoutVersion.Feature.APPEND_NEW_BLOCK,
+        NameNodeLayoutVersion.Feature.QUOTA_BY_STORAGE_TYPE,
+        NameNodeLayoutVersion.Feature.ERASURE_CODING,
+        NameNodeLayoutVersion.Feature.EXPANDED_STRING_TABLE);
     for (LayoutFeature f : compatibleFeatures) {
       assertEquals(String.format("Expected minimum compatible layout version " +
           "%d for feature %s.", baseLV, f), baseLV,
