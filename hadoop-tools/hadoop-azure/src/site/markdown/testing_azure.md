@@ -357,6 +357,34 @@ The Huge File tests validate Azure storages's ability to handle large files —t
 Tests at this scale are slow: they are best executed from hosts running in
 the cloud infrastructure where the storage endpoint is based.
 
+##No test no review: Run different combinations of tests using the runtests.sh script
+
+This is the expected way in which the tests have to be ran before raising a PR.
+The script `runtests.sh` contain template for 3 combinations of tests. Ensure
+the auth configs for all the accounts used for testing are provided in
+azure-auth-keys.xml. In case any new flags or properties are introduced
+with the code change, add the combinations with the possible configurations
+into the `runtests.sh`. The thread count can be specified as the command line
+argument for the script. By default the same will be 8. -n option can be
+specified if build is not required prior to the tests.
+
+Adding a combination of tests involves setting the variable combination (ex: HNS
+-OAuth) and specifying the specific configurations for the particular
+combination with 2 arrays namely properties and values. Specify the property
+names within the array properties and corresponding values in the values
+array. The property and value is determined by the array index. The value for
+the property mentioned at index 1 of array properties should be specified at
+index 1 of the array values. Call the function generateconfigs once the 3
+values mentioned are set. Now the script `runtests.sh` is ready to be ran.
+
+Once the tests are completed, logs will be present in the directory
+dev-support/testrun-scripts/testlogs/$startname, $startname will be the start
+time of the test. A consolidated test results  will be present in the file
+Test-Results.log. Similarly, the full test report can be found in individual
+log files, for each of the combinations with the file name Test-Logs
+-$combination. Please attach the consolidated test results from the file Test
+-Results.log into the respective PRs.
+
 ## Using the emulator
 
 A selection of tests can run against the
