@@ -272,7 +272,7 @@ public class TestFileCreation {
               defaults.getDefaultStoragePolicyId());
       doReturn(newDefaults).when(spyNamesystem).getServerDefaults();
 
-      // Verify that the value is updated correctly
+      // Verify that the value is updated correctly. Wait for 3 seconds.
       GenericTestUtils.waitFor(()->{
         try {
           FsServerDefaults currDef = dfsClient.getServerDefaults();
@@ -281,7 +281,7 @@ public class TestFileCreation {
           // do nothing;
           return false;
         }
-      }, 1, 1000);
+      }, 1, 3000);
 
     } finally {
       cluster.shutdown();
