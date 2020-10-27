@@ -1272,8 +1272,9 @@ public class NNThroughputBenchmark implements Tool {
   class ReplicationStats extends OperationStatsBase {
     static final String OP_REPLICATION_NAME = "replication";
     static final String OP_REPLICATION_USAGE = 
-      "-op replication [-datanodes T] [-nodesToDecommission D] " +
-      "[-nodeReplicationLimit C] [-totalBlocks B] [-replication R]";
+        "-op replication [-datanodes T] [-nodesToDecommission D] " +
+        "[-nodeReplicationLimit C] [-totalBlocks B] [-blockSize S] "
+        + "[-replication R]";
 
     private final BlockReportStats blockReportObject;
     private int numDatanodes;
@@ -1298,10 +1299,11 @@ public class NNThroughputBenchmark implements Tool {
             / (numDatanodes*numDatanodes);
 
       String[] blkReportArgs = {
-        "-op", "blockReport",
-        "-datanodes", String.valueOf(numDatanodes),
-        "-blocksPerReport", String.valueOf(totalBlocks*replication/numDatanodes),
-        "-blocksPerFile", String.valueOf(numDatanodes)};
+          "-op", "blockReport",
+          "-datanodes", String.valueOf(numDatanodes),
+          "-blocksPerReport", String.valueOf(totalBlocks*replication/numDatanodes),
+          "-blocksPerFile", String.valueOf(numDatanodes),
+          "-blockSize", String.valueOf(blockSize)};
       blockReportObject = new BlockReportStats(Arrays.asList(blkReportArgs));
       numDecommissionedBlocks = 0;
       numPendingBlocks = 0;
@@ -1331,6 +1333,9 @@ public class NNThroughputBenchmark implements Tool {
         } else if(args.get(i).equals("-replication")) {
           if(i+1 == args.size())  printUsage();
           replication = Short.parseShort(args.get(++i));
+        } else if (args.get(i).equals("-blockSize")) {
+          if(i+1 == args.size())  printUsage();
+          blockSize = Integer.parseInt(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
