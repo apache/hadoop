@@ -280,11 +280,6 @@ public class AzureBlobFileSystemStore implements Closeable {
     return authorityParts;
   }
 
-  public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
-    return getIsNamespaceEnabled(new TracingContext(abfsConfiguration.getClientCorrelationID(),
-            "test-filesystem-id", "NS"));
-  }
-
     public boolean getIsNamespaceEnabled(TracingContext tracingContext) throws AzureBlobFileSystemException {
     try {
       return this.isNamespaceEnabled.toBoolean();
@@ -488,20 +483,19 @@ public class AzureBlobFileSystemStore implements Closeable {
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
-                statistics,
-                isNamespaceEnabled ? getOctalNotation(permission) : null,
-                isNamespaceEnabled ? getOctalNotation(umask) : null,
-                isAppendBlob, tracingContext
+            statistics,
+            isNamespaceEnabled ? getOctalNotation(permission) : null,
+            isNamespaceEnabled ? getOctalNotation(umask) : null,
+            isAppendBlob, tracingContext
         );
 
       } else {
         op = client.createPath(relativePath, true,
-            overwrite,
-            isNamespaceEnabled ? getOctalNotation(permission) : null,
-            isNamespaceEnabled ? getOctalNotation(umask) : null,
-            isAppendBlob,
-            null, tracingContext);
-//        tracingContext.headers.add(tracingContext.toString());
+          overwrite,
+          isNamespaceEnabled ? getOctalNotation(permission) : null,
+          isNamespaceEnabled ? getOctalNotation(umask) : null,
+          isAppendBlob,
+          null, tracingContext);
 
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -656,7 +650,6 @@ public class AzureBlobFileSystemStore implements Closeable {
               relativePath, contentLength,
               populateAbfsInputStreamContext(),
               eTag, tracingContext);
-//      tracingContext.setStreamID(in.getInputStreamID());
       return in;
     }
   }
@@ -710,7 +703,6 @@ public class AzureBlobFileSystemStore implements Closeable {
               offset,
               populateAbfsOutputStreamContext(isAppendBlob),
               tracingContext);
-//      tracingContext.setStreamID(out.getOutputStreamID());
 
       return out;
     }
@@ -880,7 +872,6 @@ public class AzureBlobFileSystemStore implements Closeable {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue = true;
-//    tracingContext.updateIteration();
 
     LOG.debug("listStatus filesystem: {} path: {}, startFrom: {}",
             client.getFileSystem(),
@@ -906,10 +897,6 @@ public class AzureBlobFileSystemStore implements Closeable {
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
-//        originalTracingContext.updateRequestHeader(op.getResult().getRequestHeader(
-//                HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
-//        originalTracingContext.headers.add(op.tracingContext.toString());
-//        originalTracingContext.headers.add(op.requestHeader);
         if (retrievedSchema == null) {
           throw new AbfsRestOperationException(
                   AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
