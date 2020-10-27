@@ -261,7 +261,6 @@ public class AbfsRestOperation {
         incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
 
-
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.

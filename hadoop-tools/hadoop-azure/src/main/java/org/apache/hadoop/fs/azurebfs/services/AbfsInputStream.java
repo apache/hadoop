@@ -27,13 +27,11 @@ import java.util.UUID;
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 
-//import org.apache.commons.codec.binary.StringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-//import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
@@ -104,6 +102,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setStreamID(inputStreamID);
   }
+
   public String getPath() {
     return path;
   }
