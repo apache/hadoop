@@ -34,6 +34,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,7 +49,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -338,10 +338,10 @@ public class TestBPOfferService {
             (fullBlockReportCount == totalTestBlocks ||
                 incrBlockReportCount == totalTestBlocks), 1000, 15000);
       } catch (Exception e) {
-        LOG.error("Timed out wait for IBR counts FBRCount = {},"
-                + " IBRCount = {}; expected = {}",
-            fullBlockReportCount, incrBlockReportCount, totalTestBlocks);
-        Assert.fail();
+        fail(String.format("Timed out wait for IBR counts FBRCount = %d,"
+                + " IBRCount = %d; expected = %d. Exception: %s",
+            fullBlockReportCount, incrBlockReportCount, totalTestBlocks,
+            e.getMessage()));
       }
 
     } finally {
