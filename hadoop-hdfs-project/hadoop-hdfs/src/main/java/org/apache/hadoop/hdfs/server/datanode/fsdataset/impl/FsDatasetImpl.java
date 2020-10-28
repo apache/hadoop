@@ -1935,29 +1935,33 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       Set<String> missingVolumesReported = new HashSet<>();
       for (ReplicaInfo b : volumeMap.replicas(bpid)) {
         String volStorageID = b.getVolume().getStorageID();
-        if (!builders.containsKey(volStorageID)) {
+        switch(b.getState()) {
+          case FINALIZED:
+          case RBW:
+          case RWR:
+            break;
+          case RUR:
+            // use the original replica.
+            ReplicaUnderRecovery rur = (ReplicaUnderRecovery) b;
+            b = rur.getOriginalReplica();
+            break;
+          case TEMPORARY:
+            continue;
+          default:
+            assert false : "Illegal ReplicaInfo state.";
+            continue;
+        }
+        BlockListAsLongs.Builder storageBuilder = builders.get(volStorageID);
+        // a storage in the process of failing will not be in the volumes list
+        // but will be in the replica map.
+        if (storageBuilder != null) {
+          storageBuilder.add(b);
+        } else {
           if (!missingVolumesReported.contains(volStorageID)) {
             LOG.warn("Storage volume: " + volStorageID + " missing for the"
                 + " replica block: " + b + ". Probably being removed!");
             missingVolumesReported.add(volStorageID);
           }
-          continue;
-        }
-        switch(b.getState()) {
-          case FINALIZED:
-          case RBW:
-          case RWR:
-            builders.get(b.getVolume().getStorageID()).add(b);
-            break;
-          case RUR:
-            ReplicaUnderRecovery rur = (ReplicaUnderRecovery)b;
-            builders.get(rur.getVolume().getStorageID())
-                .add(rur.getOriginalReplica());
-            break;
-          case TEMPORARY:
-            break;
-          default:
-            assert false : "Illegal ReplicaInfo state.";
         }
       }
     }
