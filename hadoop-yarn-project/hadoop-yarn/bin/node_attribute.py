@@ -5,13 +5,14 @@ try:
         nodeInfo = json.load(nodeInfoFile)
 
     attributes = nodeInfo['attributes']
-    yarn = attributes['yarn']
-    yarnInstanceType = ','.join(yarn)
+    yarn = attributes['YARN']
 
     hostGroupName = nodeInfo['hostGroup']
 
     print("NODE_ATTRIBUTE:HostGroup,STRING," + hostGroupName)
-    print("NODE_ATTRIBUTE:NodeInstanceType,STRING," + yarnInstanceType)
+
+    for i in yarn:
+        print("NODE_ATTRIBUTE:" + i + ",STRING," + yarn[i])
 
 except IOError:
     print("nodeinfo.json file does not exist!")
@@ -26,4 +27,4 @@ except TypeError as t:
     if hostGroupName is None:
         print("hostGroup is null!")
     else:
-        print("nodeInstanceType is null!")
+        print("attribute value is null!")
