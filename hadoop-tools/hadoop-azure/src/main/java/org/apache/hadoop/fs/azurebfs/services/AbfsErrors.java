@@ -25,12 +25,12 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class AbfsErrors {
-  public static final String ERR_WRITE_WITHOUT_LEASE = "Attempted to write to file without lease";
-  public static final String ERR_LEASE_EXPIRED = "A lease ID was specified, but the lease for " +
-      "the resource has expired.";
-  public static final String ERR_PARALLEL_ACCESS_DETECTED = "Parallel access to the create path " +
-      "detected. Failing request to honor single writer semantics";
-  public static final String ERR_ACQUIRING_LEASE = "Unable to acquire lease";
-  public static final String ERR_LEASE_PRESENT = "There is already a lease present.";
+public interface AbfsErrors {
+  String ERR_WRITE_WITHOUT_LEASE = "Attempted to write to file without lease";
+  String ERR_LEASE_EXPIRED = "A lease ID was specified, but the lease for the resource has "
+      + "expired.";
+  String ERR_PARALLEL_ACCESS_DETECTED = "Parallel access to the create path detected. Failing "
+      + "request to honor single writer semantics";
+  String ERR_ACQUIRING_LEASE = "Unable to acquire lease";
+  String ERR_LEASE_PRESENT = "There is already a lease present.";
 }

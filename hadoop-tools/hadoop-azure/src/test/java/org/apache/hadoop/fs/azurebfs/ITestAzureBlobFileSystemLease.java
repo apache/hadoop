@@ -33,6 +33,8 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_PARALLEL_ACC
  * Test lease operations.
  */
 public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
+  private static final int TEST_EXECUTION_TIMEOUT = 30 * 1000;
+  private static final int LONG_TEST_EXECUTION_TIMEOUT = 90 * 1000;
   private static final String TEST_FILE = "testfile";
 
   public ITestAzureBlobFileSystemLease() throws Exception {
@@ -46,7 +48,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.mkdirs(testFilePath.getParent());
     try (FSDataOutputStream out = fs.create(testFilePath)) {
       Assert.assertFalse("Output stream should not have lease",
-          ((AbfsOutputStream)out.getWrappedStream()).hasLease());
+          ((AbfsOutputStream) out.getWrappedStream()).hasLease());
     }
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
   }
@@ -62,10 +64,10 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
 
     FSDataOutputStream out = fs.create(testFilePath);
     Assert.assertTrue("Output stream should have lease",
-        ((AbfsOutputStream)out.getWrappedStream()).hasLease());
+        ((AbfsOutputStream) out.getWrappedStream()).hasLease());
     out.close();
     Assert.assertFalse("Output stream should not have lease",
-        ((AbfsOutputStream)out.getWrappedStream()).hasLease());
+        ((AbfsOutputStream) out.getWrappedStream()).hasLease());
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
   }
 
@@ -81,10 +83,10 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
 
     FSDataOutputStream out = fs.create(testFilePath);
     Assert.assertTrue("Output stream should have lease",
-        ((AbfsOutputStream)out.getWrappedStream()).hasLease());
+        ((AbfsOutputStream) out.getWrappedStream()).hasLease());
     out.close();
     Assert.assertFalse("Output stream should not have lease",
-        ((AbfsOutputStream)out.getWrappedStream()).hasLease());
+        ((AbfsOutputStream) out.getWrappedStream()).hasLease());
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
   }
 
@@ -128,7 +130,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
   }
 
-  @Test(timeout = 30 * 1000)
+  @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testTwoWritersCreateAppendNoSingleWriter() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
@@ -137,7 +139,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     twoWriters(fs, testFilePath, false);
   }
 
-  @Test(timeout = 30 * 1000)
+  @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testTwoWritersCreateAppendWithSingleWriterEnabled() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
@@ -149,7 +151,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     twoWriters(fs, testFilePath, true);
   }
 
-  @Test(timeout = 30 * 1000)
+  @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testLeaseFreedOnClose() throws IOException {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
@@ -162,14 +164,14 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     out = fs.create(testFilePath);
     out.write(0);
     Assert.assertTrue("Output stream should have lease",
-        ((AbfsOutputStream)out.getWrappedStream()).hasLease());
+        ((AbfsOutputStream) out.getWrappedStream()).hasLease());
     out.close();
     Assert.assertFalse("Output stream should not have lease after close",
-        ((AbfsOutputStream)out.getWrappedStream()).hasLease());
+        ((AbfsOutputStream) out.getWrappedStream()).hasLease());
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
   }
 
-  @Test(timeout = 30 * 1000)
+  @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testWriteAfterBreakLease() throws IOException {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
@@ -200,7 +202,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
           e.getMessage().contains(ERR_LEASE_EXPIRED));
     }
 
-    Assert.assertTrue(((AbfsOutputStream)out.getWrappedStream()).isLeaseFreed());
+    Assert.assertTrue(((AbfsOutputStream) out.getWrappedStream()).isLeaseFreed());
 
     try (FSDataOutputStream out2 = fs.append(testFilePath)) {
       out2.write(2);
@@ -210,7 +212,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
   }
 
-  @Test(timeout = 90 * 1000)
+  @Test(timeout = LONG_TEST_EXECUTION_TIMEOUT)
   public void testLeaseFreedAfterBreak() throws IOException {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);

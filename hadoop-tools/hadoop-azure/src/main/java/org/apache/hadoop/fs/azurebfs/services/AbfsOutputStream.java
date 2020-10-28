@@ -120,7 +120,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
           final Statistics statistics,
           final String path,
           final long position,
-          final Map<SelfRenewingLease,Object> leaseRefs,
+          final Map<SelfRenewingLease, Object> leaseRefs,
           AbfsOutputStreamContext abfsOutputStreamContext) throws AzureBlobFileSystemException {
     this.client = client;
     this.statistics = statistics;

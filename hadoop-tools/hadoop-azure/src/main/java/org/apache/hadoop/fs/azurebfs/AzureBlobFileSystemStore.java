@@ -148,7 +148,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int GET_SET_AGGREGATE_COUNT = 2;
 
-  private final Map<SelfRenewingLease,Object> leaseRefs;
+  private final Map<SelfRenewingLease, Object> leaseRefs;
 
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
@@ -474,8 +474,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
       boolean enableSingleWriter = isSingleWriterKey(path.toString());
-      LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} " +
-              "isNamespaceEnabled: {} enableSingleWriter: {}",
+      LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} "
+              + "isNamespaceEnabled: {} enableSingleWriter: {}",
               client.getFileSystem(),
               path,
               overwrite,
@@ -754,22 +754,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public void renewLease(final Path path, final String leaseId) throws AzureBlobFileSystemException {
     LOG.debug("lease path: {}, renew lease id: {}", path, leaseId);
 
-    final AbfsRestOperation op =
-        client.renewLease(getRelativePath(path), leaseId);
+    client.renewLease(getRelativePath(path), leaseId);
   }
 
   public void releaseLease(final Path path, final String leaseId) throws AzureBlobFileSystemException {
     LOG.debug("lease path: {}, release lease id: {}", path, leaseId);
 
-    final AbfsRestOperation op =
-        client.releaseLease(getRelativePath(path), leaseId);
+    client.releaseLease(getRelativePath(path), leaseId);
   }
 
   public void breakLease(final Path path) throws AzureBlobFileSystemException {
     LOG.debug("lease path: {}", path);
 
-    final AbfsRestOperation op =
-        client.breakLease(getRelativePath(path));
+    client.breakLease(getRelativePath(path));
   }
 
   public void rename(final Path source, final Path destination) throws
