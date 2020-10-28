@@ -27,7 +27,6 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -56,6 +55,7 @@ public class TestFileChecksum {
       .getLogger(TestFileChecksum.class);
   private final ErasureCodingPolicy ecPolicy =
       StripedFileTestUtil.getDefaultECPolicy();
+  private final static long STALE_INTERVAL = 2000;
   private int dataBlocks = ecPolicy.getNumDataUnits();
   private int parityBlocks = ecPolicy.getNumParityUnits();
 
@@ -89,8 +89,17 @@ public class TestFileChecksum {
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
+        STALE_INTERVAL);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
+        (int) (STALE_INTERVAL / 2));
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+        (int) (STALE_INTERVAL / 4));
+    conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 4);
     customizeConf(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitClusterUp();
@@ -110,6 +119,14 @@ public class TestFileChecksum {
 
   @After
   public void tearDown() {
+    // delete the directory
+    Path ecPath = new Path(ecDir);
+    try {
+      fs.delete(ecPath, true);
+    } catch (Exception ex) {
+      LOG.error("Could not delete ecDir", ex);
+    }
+
     if (client != null) {
       try {
         client.close();
@@ -579,10 +596,8 @@ public class TestFileChecksum {
       dnIdxToDie = getDataNodeToKill(filePath);
       DataNode dnToDie = cluster.getDataNodes().get(dnIdxToDie);
       shutdownDataNode(dnToDie);
-      // wait for reconstruction to happen
-      final FSNamesystem ns = cluster.getNamesystem();
-      GenericTestUtils.waitFor(() -> ns.getPendingReconstructionBlocks() == 0,
-          10, 10000);
+      // wait enough time for the locations to be updated.
+      Thread.sleep(STALE_INTERVAL);
     }
 
     Path testPath = new Path(filePath);
@@ -596,6 +611,7 @@ public class TestFileChecksum {
 
     if (dnIdxToDie != -1) {
       cluster.restartDataNode(dnIdxToDie);
+      cluster.waitActive();
     }
 
     return fc;
