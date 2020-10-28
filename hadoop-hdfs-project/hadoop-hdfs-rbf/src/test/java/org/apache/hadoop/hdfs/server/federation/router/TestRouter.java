@@ -268,7 +268,7 @@ public class TestRouter {
   }
 
   /**
-   * Check the default value of dfs.federation.router.heartbeat.enable
+   * Check the default value of dfs.federation.router.namenode.heartbeat.enable
    * when it isn't explicitly defined.
    * @param enable value for dfs.federation.router.heartbeat.enable.
    */
