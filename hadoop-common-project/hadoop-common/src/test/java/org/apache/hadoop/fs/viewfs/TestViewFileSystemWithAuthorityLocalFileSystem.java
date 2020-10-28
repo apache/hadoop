@@ -52,7 +52,7 @@ public class TestViewFileSystemWithAuthorityLocalFileSystem extends ViewFileSyst
     // Now create a viewfs using a mount table called "default"
     // hence viewfs://default/
     schemeWithAuthority = 
-      new URI(FsConstants.VIEWFS_SCHEME, "default", "/", null, null);
+      new URI(FsConstants.VIEWFS_SCHEME, "default", null, null, null);
     fsView = FileSystem.get(schemeWithAuthority, conf);
   }
 
