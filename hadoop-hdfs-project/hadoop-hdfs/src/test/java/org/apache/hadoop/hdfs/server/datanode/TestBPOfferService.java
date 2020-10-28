@@ -282,7 +282,6 @@ public class TestBPOfferService {
    */
   @Test
   public void testMissBlocksWhenReregister() throws Exception {
-
     BPOfferService bpos = setupBPOSForNNs(mockNN1, mockNN2);
     bpos.start();
     int totalTestBlocks = 4000;
