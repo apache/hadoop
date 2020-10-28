@@ -96,4 +96,6 @@ interface NativeFileSystemStore {
   void dump() throws IOException;
 
   void close();
+
+  boolean isClosed();
 }
