@@ -286,14 +286,11 @@ public class TestRouter {
       config.set(RBFConfigKeys.DFS_ROUTER_HTTPS_ADDRESS_KEY, "127.0.0.1:0");
       config.set(RBFConfigKeys.DFS_ROUTER_HTTP_BIND_HOST_KEY, "0.0.0.0");
 
+      config.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE, enable);
+      router.init(config);
       if (enable) {
-        // We don't explicitly set the parameter to verify
-        // the default behavior. The default value should be true.
-        router.init(config);
         assertNotNull(router.getNamenodeHeartbeatServices());
       } else {
-        config.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE, false);
-        router.init(config);
         assertNull(router.getNamenodeHeartbeatServices());
       }
     }
