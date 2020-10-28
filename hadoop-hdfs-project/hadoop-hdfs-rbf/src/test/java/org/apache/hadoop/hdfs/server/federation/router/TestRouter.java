@@ -274,18 +274,31 @@ public class TestRouter {
    */
   private void checkNamenodeHeartBeatEnableDefault(boolean enable)
       throws IOException {
-    final Router router = new Router();
-    try {
+    try (Router router = new Router()) {
+      // Use default config
       Configuration config = new HdfsConfiguration();
-      config.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE, enable);
+      // bind to any available port
+      config.set(RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY, "0.0.0.0");
+      config.set(RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY, "127.0.0.1:0");
+      config.set(RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY, "127.0.0.1:0");
+      config.set(RBFConfigKeys.DFS_ROUTER_ADMIN_BIND_HOST_KEY, "0.0.0.0");
+      config.set(RBFConfigKeys.DFS_ROUTER_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      config.set(RBFConfigKeys.DFS_ROUTER_HTTPS_ADDRESS_KEY, "127.0.0.1:0");
+      config.set(RBFConfigKeys.DFS_ROUTER_HTTP_BIND_HOST_KEY, "0.0.0.0");
+
+      if (enable) {
+        // We don't set the parameter explicitly to verify
+        // the default behavior. The default value should be true.
+      } else {
+        config.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE, false);
+      }
+
       router.init(config);
       if (enable) {
         assertNotNull(router.getNamenodeHeartbeatServices());
       } else {
         assertNull(router.getNamenodeHeartbeatServices());
       }
-    } finally {
-      router.close();
     }
   }
 }
