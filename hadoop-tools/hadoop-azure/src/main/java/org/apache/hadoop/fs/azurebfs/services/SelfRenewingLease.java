@@ -46,7 +46,7 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LE
  *
  * See also {@link org.apache.hadoop.fs.azure.SelfRenewingLease}.
  */
-final public class SelfRenewingLease {
+public final class SelfRenewingLease {
 
   private final AbfsClient client;
   private final Path path;
