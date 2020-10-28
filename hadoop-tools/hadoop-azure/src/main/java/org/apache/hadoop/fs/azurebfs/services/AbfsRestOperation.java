@@ -256,7 +256,9 @@ public class AbfsRestOperation {
       }
     } catch (IOException ex) {
       if (ex instanceof UnknownHostException) {
-        LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...", httpOperation.getUrl().getHost()));
+        LOG.warn(String.format(
+            "Unknown host name: %s. Retrying to resolve the host name...",
+            httpOperation.getHost()));
       }
 
       if (LOG.isDebugEnabled()) {

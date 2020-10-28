@@ -36,6 +36,7 @@ import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.map.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   private final String method;
   private final URL url;
+  private String maskedUrlStr;
+  private String maskedEncodedUrlStr;
 
   private HttpURLConnection connection;
   private int statusCode;
@@ -103,8 +106,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return method;
   }
 
-  public URL getUrl() {
-    return url;
+  public String getHost() {
+    return url.getHost();
   }
 
   public int getStatusCode() {
@@ -180,19 +183,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(",");
     sb.append(method);
     sb.append(",");
-    sb.append(urlStr);
+    sb.append(getSignatureMaskedUrlStr());
     return sb.toString();
   }
 
   // Returns a trace message for the ABFS API logging service to consume
   public String getLogString() {
-    String urlStr = null;
-
-    try {
-      urlStr = URLEncoder.encode(url.toString(), "UTF-8");
-    } catch(UnsupportedEncodingException e) {
-      urlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
-    }
 
     final StringBuilder sb = new StringBuilder();
     sb.append("s=")
@@ -220,7 +216,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       .append(" m=")
       .append(method)
       .append(" u=")
-      .append(urlStr);
+      .append(getSignatureMaskedEncodedUrlStr());
 
     return sb.toString();
   }
@@ -513,4 +509,45 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private boolean isNullInputStream(InputStream stream) {
     return stream == null ? true : false;
   }
+
+  @VisibleForTesting
+  public String getSignatureMaskedUrlStr() {
+    if (this.maskedUrlStr != null) {
+      return this.maskedUrlStr;
+    }
+    final String urlStr = url.toString();
+    final String qpStr = "sig=";
+    final int qpStrIdx = urlStr.indexOf(qpStr);
+    if (qpStrIdx < 0) {
+      return urlStr;
+    }
+    final StringBuilder sb = new StringBuilder();
+    sb.append(urlStr, 0, qpStrIdx);
+    sb.append(qpStr);
+    sb.append("XXXX");
+    if (qpStrIdx + qpStr.length() < urlStr.length()) {
+      String urlStrSecondPart = urlStr.substring(qpStrIdx + qpStr.length());
+      int idx = urlStrSecondPart.indexOf("&");
+      if (idx > -1) {
+        sb.append(urlStrSecondPart.substring(idx));
+      }
+    }
+    this.maskedUrlStr = sb.toString();
+    return this.maskedUrlStr;
+  }
+
+  @VisibleForTesting
+  public String getSignatureMaskedEncodedUrlStr() {
+    if (this.maskedEncodedUrlStr != null) {
+      return this.maskedEncodedUrlStr;
+    }
+    try {
+      this.maskedEncodedUrlStr = URLEncoder
+          .encode(getSignatureMaskedUrlStr(), "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      this.maskedEncodedUrlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
+    }
+    return this.maskedEncodedUrlStr;
+  }
+
 }
