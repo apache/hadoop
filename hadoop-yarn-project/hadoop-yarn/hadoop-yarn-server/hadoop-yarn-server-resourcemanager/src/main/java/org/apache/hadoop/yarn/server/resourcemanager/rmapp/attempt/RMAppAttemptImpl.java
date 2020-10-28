@@ -170,6 +170,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private long finishTime = 0;
   private long launchAMStartTime = 0;
   private long launchAMEndTime = 0;
+  private boolean nonWorkPreservingAMContainerFinished = false;
 
   // Set to null initially. Will eventually get set
   // if an RMAppAttemptUnregistrationEvent occurs
@@ -844,7 +845,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
       // A new allocate means the AM received the previously sent
       // finishedContainers. We can ack this to NM now
-      sendFinishedContainersToNM();
+      sendFinishedContainersToNM(finishedContainersSentToAM);
 
       // Mark every containerStatus as being sent to AM though we may return
       // only the ones that belong to the current attempt
@@ -1955,13 +1956,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   // Ack NM to remove finished containers from context.
-  private void sendFinishedContainersToNM() {
-    for (NodeId nodeId : finishedContainersSentToAM.keySet()) {
+  private void sendFinishedContainersToNM(
+      Map<NodeId, List<ContainerStatus>> finishedContainers) {
+    for (NodeId nodeId : finishedContainers.keySet()) {
 
       // Clear and get current values
       List<ContainerStatus> currentSentContainers =
-          finishedContainersSentToAM.put(nodeId,
-            new ArrayList<ContainerStatus>());
+          finishedContainers.put(nodeId,
+              new ArrayList<ContainerStatus>());
       List<ContainerId> containerIdList =
           new ArrayList<>(currentSentContainers.size());
       for (ContainerStatus containerStatus : currentSentContainers) {
@@ -1970,7 +1972,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       eventHandler.handle(new RMNodeFinishedContainersPulledByAMEvent(nodeId,
         containerIdList));
     }
-    this.finishedContainersSentToAM.clear();
+    finishedContainers.clear();
   }
 
   // Add am container to the list so that am container instance will be
@@ -1996,7 +1998,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.finishedContainersSentToAM.putIfAbsent(nodeId,
           new ArrayList<ContainerStatus>());
       appAttempt.finishedContainersSentToAM.get(nodeId).add(containerStatus);
-      appAttempt.sendFinishedContainersToNM();
+      appAttempt.sendFinishedContainersToNM(
+          appAttempt.finishedContainersSentToAM);
+      // there might be some completed containers that have not been pulled
+      // by the AM heartbeat, explicitly add them for cleanup.
+      appAttempt.sendFinishedContainersToNM(appAttempt.justFinishedContainers);
+
+      // mark the fact that AM container has finished so that future finished
+      // containers will be cleaned up without the engagement of AM containers
+      // (through heartbeat)
+      appAttempt.nonWorkPreservingAMContainerFinished = true;
     } else {
       appAttempt.sendFinishedAMContainerToNM(nodeId,
           containerStatus.getContainerId());
@@ -2024,6 +2035,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         .getNodeId(), new ArrayList<ContainerStatus>());
     appAttempt.justFinishedContainers.get(containerFinishedEvent
             .getNodeId()).add(containerFinishedEvent.getContainerStatus());
+
+    if (appAttempt.nonWorkPreservingAMContainerFinished) {
+      // AM container has finished, so no more AM heartbeats to do the cleanup.
+      appAttempt.sendFinishedContainersToNM(appAttempt.justFinishedContainers);
+    }
   }
 
   private static final class ContainerFinishedAtFinalStateTransition
