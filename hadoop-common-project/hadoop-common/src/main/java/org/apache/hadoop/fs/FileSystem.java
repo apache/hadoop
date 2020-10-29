@@ -3509,7 +3509,7 @@ public abstract class FileSystem extends Configured
     Cache(final Configuration conf) {
       int permits = conf.getInt(FS_CREATION_PARALLEL_COUNT,
           FS_CREATION_PARALLEL_COUNT_DEFAULT);
-      checkArgument(permits > 0 , "Invalid value of %s: %s",
+      checkArgument(permits > 0, "Invalid value of %s: %s",
           FS_CREATION_PARALLEL_COUNT, permits);
       creatorPermits = new Semaphore(permits);
     }
@@ -3549,9 +3549,8 @@ public abstract class FileSystem extends Configured
       }
       // fs not yet created, acquire lock
       // to construct an instance.
-      try (DurationInfo d =
-              new DurationInfo(LOGGER, false, "Acquiring creator semaphore for %s",
-                  uri)) {
+      try (DurationInfo d = new DurationInfo(LOGGER, false,
+          "Acquiring creator semaphore for %s", uri)) {
         creatorPermits.acquire();
       } catch (InterruptedException e) {
         // acquisition was interrupted; convert to an IOE.
@@ -3625,6 +3624,7 @@ public abstract class FileSystem extends Configured
      * Get the count of discarded instances.
      * @return the new instance.
      */
+    @VisibleForTesting
     long getDiscardedInstances() {
       return discardedInstances.get();
     }

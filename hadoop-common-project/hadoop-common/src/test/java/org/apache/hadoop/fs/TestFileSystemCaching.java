@@ -434,10 +434,9 @@ public class TestFileSystemCaching extends HadoopTestBase {
 
     // acquire the semaphore so blocking all FS instances from
     // being initialized.
-    Semaphore semaphore = BlockingInitializer.sem;
+    Semaphore semaphore = BlockingInitializer.SEM;
     semaphore.acquire();
 
-    // su
     for (int i = 0; i < count; i++) {
       futures.add(pool.submit(
           () -> cache.get(uri, conf)));
@@ -455,20 +454,20 @@ public class TestFileSystemCaching extends HadoopTestBase {
   }
 
   /**
-   * An FS which blocks in initialize() until it can aquire the shared
+   * An FS which blocks in initialize() until it can acquire the shared
    * semaphore (which it then releases).
    */
   private static final class BlockingInitializer extends LocalFileSystem {
 
     private static final String NAME = BlockingInitializer.class.getName();
 
-    private static final Semaphore sem = new Semaphore(1);
+    private static final Semaphore SEM = new Semaphore(1);
 
     @Override
     public void initialize(URI uri, Configuration conf) throws IOException {
       try {
-        sem.acquire();
-        sem.release();
+        SEM.acquire();
+        SEM.release();
       } catch (InterruptedException e) {
         throw new IOException(e.toString(), e);
       }
