@@ -546,27 +546,23 @@ public class TestAbfsInputStream extends
   @Test
   public void testDiffReadRequestSizeAndRAHBlockSize() throws Exception {
     // Set requestRequestSize = 4MB and readAheadBufferSize=8MB
-    ReadBufferManager.getBufferManager()
-        .testResetReadBufferManager(FOUR_MB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
+    resetReadBufferManager(FOUR_MB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
     testReadAheadConfigs(FOUR_MB, TEST_READAHEAD_DEPTH_4, false, EIGHT_MB);
 
     // Test for requestRequestSize =16KB and readAheadBufferSize=16KB
-    ReadBufferManager.getBufferManager()
-        .testResetReadBufferManager(SIXTEEN_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
+    resetReadBufferManager(SIXTEEN_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
     AbfsInputStream inputStream = testReadAheadConfigs(SIXTEEN_KB,
         TEST_READAHEAD_DEPTH_2, true, SIXTEEN_KB);
     testReadAheads(inputStream, SIXTEEN_KB, SIXTEEN_KB);
 
     // Test for requestRequestSize =16KB and readAheadBufferSize=48KB
-    ReadBufferManager.getBufferManager()
-        .testResetReadBufferManager(FORTY_EIGHT_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
+    resetReadBufferManager(FORTY_EIGHT_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
     inputStream = testReadAheadConfigs(SIXTEEN_KB, TEST_READAHEAD_DEPTH_2, true,
         FORTY_EIGHT_KB);
     testReadAheads(inputStream, SIXTEEN_KB, FORTY_EIGHT_KB);
 
     // Test for requestRequestSize =48KB and readAheadBufferSize=16KB
-    ReadBufferManager.getBufferManager()
-        .testResetReadBufferManager(FORTY_EIGHT_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
+    resetReadBufferManager(FORTY_EIGHT_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
     inputStream = testReadAheadConfigs(FORTY_EIGHT_KB, TEST_READAHEAD_DEPTH_2,
         true,
         SIXTEEN_KB);
@@ -712,5 +708,13 @@ public class TestAbfsInputStream extends
         .isEqualTo(testFileSize);
 
     return fs;
+  }
+
+  private void resetReadBufferManager(int bufferSize, int threshold) {
+    ReadBufferManager.getBufferManager()
+        .testResetReadBufferManager(bufferSize, threshold);
+    // Trigger GC as aggressive recreation of ReadBufferManager buffers
+    // by successive tests can lead to OOM based on the dev VM/machine capacity.
+    System.gc();
   }
 }

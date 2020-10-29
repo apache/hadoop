@@ -525,7 +525,6 @@ final class ReadBufferManager {
       inProgressList.clear();
       completedReadList.clear();
       freeList.clear();
-      buffers = new byte[NUM_BUFFERS][];
       for (int i = 0; i < NUM_BUFFERS; i++) {
         buffers[i] = null;
       }
