@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.util.function.Supplier;
+
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
@@ -474,7 +475,69 @@ public class TestStandbyCheckpoints {
     // Assert that former active did not accept the canceled checkpoint file.
     assertEquals(0, nns[0].getFSImage().getMostRecentCheckpointTxId());
   }
-  
+
+  /**
+   * Test check point finishes properly even if one Observer NameNode is
+   * shutdown (image fails to upload to Observer NameNode).
+   */
+  @Test(timeout=60000)
+  public void testCheckpointWithONNDown() throws Exception {
+    // don't compress, we want a big image
+    for (int i = 0; i < NUM_NNS; i++) {
+      cluster.getConfiguration(i).setBoolean(
+              DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, false);
+    }
+
+    for (int i = 1; i < NUM_NNS; i++) {
+      cluster.getConfiguration(i).setLong(
+              DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 0);
+    }
+
+    for (int i = 0; i < NUM_NNS; i++) {
+      cluster.restartNameNode(i);
+    }
+
+    // update references to each of the nns
+    setNNs();
+
+    cluster.transitionToActive(0);
+    cluster.transitionToObserver(2);
+
+    GenericTestUtils.LogCapturer log = GenericTestUtils.LogCapturer.captureLogs(
+            LoggerFactory.getLogger(StandbyCheckpointer.class));
+
+    doEdits(0, 100);
+
+    cluster.shutdownNameNode(2);
+
+    HATestUtil.waitForStandbyToCatchUp(nns[0], nns[1]);
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(104));
+
+    // Wait to make sure background TransferFsImageUpload thread was cancelled.
+    // This needs to be done before the next test in the suite starts, so that a
+    // file descriptor is not held open during the next cluster init.
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+        ThreadInfo[] threads = threadBean.getThreadInfo(
+                threadBean.getAllThreadIds(), 1);
+        for (ThreadInfo thread: threads) {
+          if (thread != null &&
+                  thread.getThreadName().startsWith("TransferFsImageUpload")) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }, 1000, 30000);
+
+    assertTrue(log.getOutput().contains(
+            "Failed to upload image to some NameNodes"));
+    assertTrue(log.getOutput().contains(
+            "Checkpoint finished successfully"));
+  }
+
   /**
    * Make sure that clients will receive StandbyExceptions even when a
    * checkpoint is in progress on the SBN, and therefore the StandbyCheckpointer
