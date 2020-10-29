@@ -20,6 +20,7 @@ package org.apache.hadoop.util.functional;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -40,7 +41,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * {@link #awaitFuture(Future, long, TimeUnit)} calls will
  * extract and rethrow exceptions raised in the future's execution,
  * including extracting the inner IOException of any
- * {@link RuntimeIOException} raised in the future.
+ * {@code UncheckedIOException} raised in the future.
  * This makes it somewhat easier to execute IOException-raising
  * code inside futures.
  */
@@ -142,7 +143,7 @@ public final class FutureIO {
    * to an IOException, raising RuntimeExceptions and Errors immediately.
    * <ol>
    *   <li> If it is an IOE: Return.</li>
-   *   <li> If it is a {@link RuntimeIOException}: return the cause</li>
+   *   <li> If it is a {@link UncheckedIOException}: return the cause</li>
    *   <li> Completion/Execution Exceptions: extract and repeat</li>
    *   <li> If it is an RTE or Error: throw.</li>
    *   <li> Any other type: wrap in an IOE</li>
@@ -160,9 +161,9 @@ public final class FutureIO {
     Throwable cause = e.getCause();
     if (cause instanceof IOException) {
       return (IOException) cause;
-    } else if (cause instanceof RuntimeIOException) {
+    } else if (cause instanceof UncheckedIOException) {
       // this is always an IOException
-      return ((RuntimeIOException) cause).getCause();
+      return ((UncheckedIOException) cause).getCause();
     } else if (cause instanceof CompletionException) {
       return unwrapInnerException(cause);
     } else if (cause instanceof ExecutionException) {
