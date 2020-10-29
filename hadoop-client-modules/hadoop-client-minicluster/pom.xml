@@ -792,12 +792,6 @@
                         <exclude>*/**</exclude>
                       </excludes>
                     </filter>
-                    <filter>
-                      <artifact>org.eclipse.jetty:jetty-http</artifact>
-                      <excludes>
-                        <exclude>*/**</exclude>
-                      </excludes>
-                    </filter>
                   </filters>
 
                   <!-- relocate classes from mssql-jdbc -->
