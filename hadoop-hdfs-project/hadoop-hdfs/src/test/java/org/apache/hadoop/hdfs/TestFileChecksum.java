@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.util.Random;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND;
 
 /**
  * This test serves a prototype to demo the idea proposed so far. It creates two
@@ -70,6 +71,7 @@ public class TestFileChecksum {
   private int stripSize = cellSize * dataBlocks;
   private int blockGroupSize = stripesPerBlock * stripSize;
   private int fileSize = numBlockGroups * blockGroupSize;
+  private int prevFileSize = 0;
   private int bytesPerCRC;
 
   private String ecDir = "/striped";
@@ -83,14 +85,17 @@ public class TestFileChecksum {
   @Before
   public void setup() throws IOException {
     int numDNs = dataBlocks + parityBlocks + 2;
+    prevFileSize = fileSize;
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    conf.setLong(DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND, 0L);
     customizeConf(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
+    cluster.waitActive();
     Path ecPath = new Path(ecDir);
     cluster.getFileSystem().mkdir(ecPath, FsPermission.getDirDefault());
     cluster.getFileSystem().getClient().setErasureCodingPolicy(ecDir,
@@ -107,10 +112,28 @@ public class TestFileChecksum {
 
   @After
   public void tearDown() {
+    // delete the directory
+    fileSize = prevFileSize;
+    Path ecPath = new Path(ecDir);
+    try {
+      fs.delete(ecPath, true);
+    } catch (IOException e) {
+      LOG.error("exception deleting directories", e);
+    }
+    if (client != null) {
+      try {
+        client.close();
+      } catch (IOException e) {
+        LOG.error("exception closing the client", e);
+      }
+      client = null;
+    }
     if (cluster != null) {
       cluster.shutdown();
+      fs = null;
       cluster = null;
     }
+    conf = null;
   }
 
   /**
@@ -473,11 +496,10 @@ public class TestFileChecksum {
   @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocksRangeQuery16()
       throws Exception {
-    int fileLength = 100;
+    fileSize = 100;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
-        fileLength - 1);
+        fileSize - 1);
   }
 
   /**
@@ -487,9 +509,8 @@ public class TestFileChecksum {
   @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocksRangeQuery17()
       throws Exception {
-    int fileLength = 100;
+    fileSize = 100;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3, 1);
   }
 
@@ -500,9 +521,8 @@ public class TestFileChecksum {
   @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocksRangeQuery18()
       throws Exception {
-    int fileLength = 100;
+    fileSize = 100;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3, 10);
   }
 
@@ -513,11 +533,10 @@ public class TestFileChecksum {
   @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocksRangeQuery19()
       throws Exception {
-    int fileLength = 100;
+    fileSize = 100;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
-        fileLength * 2);
+        fileSize * 2);
   }
 
   /**
@@ -527,9 +546,8 @@ public class TestFileChecksum {
   @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocksRangeQuery20()
       throws Exception {
-    int fileLength = bytesPerCRC;
+    fileSize = bytesPerCRC;
     String stripedFile3 = ecDir + "/stripedFileChecksum3";
-    prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
         bytesPerCRC - 1);
   }
@@ -588,6 +606,7 @@ public class TestFileChecksum {
 
     if (dnIdxToDie != -1) {
       cluster.restartDataNode(dnIdxToDie);
+      cluster.waitActive();
     }
 
     return fc;
