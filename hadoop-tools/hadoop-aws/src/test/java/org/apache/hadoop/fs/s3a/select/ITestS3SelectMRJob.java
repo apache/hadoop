@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.s3a.select;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.util.functional.RuntimeIOException;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.junit.Assume;
@@ -209,7 +209,7 @@ public class ITestS3SelectMRJob extends AbstractS3SelectTest {
             IOUtils.readFully(in, buffer, 0, bytesLen);
             return new String(buffer);
           } catch (IOException ex) {
-            throw new RuntimeIOException(ex);
+            throw new UncheckedIOException(ex);
           }
         }));
   }
