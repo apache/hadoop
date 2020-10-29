@@ -52,7 +52,8 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractS3ATestBase.class);
 
-  protected static final IOStatisticsSnapshot FILESYSTEM_IOSTATS = snapshotIOStatistics();
+  protected static final IOStatisticsSnapshot FILESYSTEM_IOSTATS =
+      snapshotIOStatistics();
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {

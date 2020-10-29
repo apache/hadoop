@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
@@ -81,7 +82,6 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.RemoteIterators;
-import org.apache.hadoop.util.functional.RuntimeIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -828,7 +828,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       for (Item item : wrapWithRetries(items)) {
         metas.add(itemToPathMetadata(item, username));
       }
-    } catch (RuntimeIOException e) {
+    } catch (UncheckedIOException e) {
       // failure in the iterators; unwrap.
       throw e.getCause();
     }
