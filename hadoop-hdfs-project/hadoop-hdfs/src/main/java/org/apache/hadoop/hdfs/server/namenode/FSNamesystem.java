@@ -2431,6 +2431,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws  IOException
    */
   void setStoragePolicy(String src, String policyName) throws IOException {
+    if (policyName.equalsIgnoreCase(
+            HdfsConstants.ALLNVDIMM_STORAGE_POLICY_NAME)) {
+      requireEffectiveLayoutVersionForFeature(Feature.NVDIMM_SUPPORT);
+    }
     final String operationName = "setStoragePolicy";
     checkOperation(OperationCategory.WRITE);
     checkStoragePolicyEnabled("set storage policy", true);
