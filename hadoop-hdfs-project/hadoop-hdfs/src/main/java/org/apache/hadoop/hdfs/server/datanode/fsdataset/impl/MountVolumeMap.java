@@ -92,10 +92,6 @@ class MountVolumeMap {
     return 1;
   }
 
-  /**
-   * Add volume <-> mount relationship adding a new volume.
-   * Adding a volume will do locking
-   */
   void addVolume(FsVolumeImpl volume) {
     String mount = volume.getMount();
     if (!mount.isEmpty()) {
