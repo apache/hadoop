@@ -1508,7 +1508,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
    *  The default ratio will be applied if DISK/ARCHIVE are configured
    *  on same disk mount.
    *
-   *  Beware that capacity usage might be >100% if there are already
+   *  Beware that capacity usage might be larger than 100% if there are already
    *  data blocks exist and the configured ratio is small, which will
    *  prevent the volume from taking new blocks until capacity is balanced out.
    */
