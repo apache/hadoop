@@ -927,6 +927,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         return usernameUsedForPlacement;
       }
       String queue = appPlacementContext.getQueue();
+      String parent = appPlacementContext.getParentQueue();
+      if (scheduler instanceof CapacityScheduler && parent != null) {
+        queue = parent + "." + queue;
+      }
       if (callerUGI != null && scheduler
               .checkAccess(callerUGI, QueueACL.SUBMIT_APPLICATIONS, queue)) {
         usernameUsedForPlacement = userNameFromAppTag;
