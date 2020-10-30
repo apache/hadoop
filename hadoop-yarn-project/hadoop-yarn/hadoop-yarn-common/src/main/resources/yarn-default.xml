@@ -3805,6 +3805,14 @@
   </property>
 
   <property>
+    <description>The replication factor for the FS store
+     files. Default value is 0, means it will use file system
+      default replication.</description>
+    <name>yarn.fs-store.file.replication</name>
+    <value>0</value>
+  </property>
+
+  <property>
     <description>
       Enable the CSRF filter for the RM web app
     </description>

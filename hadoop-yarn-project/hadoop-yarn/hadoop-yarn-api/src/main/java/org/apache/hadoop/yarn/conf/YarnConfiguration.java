@@ -4076,6 +4076,11 @@ public class YarnConfiguration extends Configuration {
   public static final String FS_NODE_LABELS_STORE_ROOT_DIR = NODE_LABELS_PREFIX
       + "fs-store.root-dir";
 
+  /** FS store file replication. */
+  public static final String FS_STORE_FILE_REPLICATION = YARN_PREFIX
+      + "fs-store.file.replication";
+  public static final int DEFAULT_FS_STORE_FILE_REPLICATION = 0;
+
   /**
    * Node-attribute configurations.
    */
