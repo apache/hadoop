@@ -853,7 +853,7 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
-  void setReadBufferSize(int bufferSize) {
+  public void setReadBufferSize(int bufferSize) {
     this.readBufferSize = bufferSize;
   }
 

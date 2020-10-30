@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -47,11 +48,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
+  public static final int SLURP_FILE_SIZE = 4 * ONE_MB;
+
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
   private final long contentLength;
-  private final int bufferSize; // default buffer size
+  private int bufferSize; // default buffer size
   private final int readAheadQueueDepth;         // initialized in constructor
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
@@ -169,29 +172,36 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         return -1;
       }
 
-      long bytesRead = 0;
-      //reset buffer to initial state - i.e., throw away existing data
-      bCursor = 0;
-      limit = 0;
-      if (buffer == null) {
-        LOG.debug("created new buffer size {}", bufferSize);
-        buffer = new byte[bufferSize];
-      }
-
-      // Enable readAhead when reading sequentially
-      if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
-        bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
+      if (contentLength <= SLURP_FILE_SIZE) {
+        if (slurpFullFile() < 0) {
+          return -1;
+        }
       } else {
-        bytesRead = readInternal(fCursor, buffer, 0, b.length, true);
-      }
 
-      if (bytesRead == -1) {
-        return -1;
-      }
+        long bytesRead = 0;
+        //reset buffer to initial state - i.e., throw away existing data
+        bCursor = 0;
+        limit = 0;
+        if (buffer == null) {
+          LOG.debug("created new buffer size {}", bufferSize);
+          buffer = new byte[bufferSize];
+        }
 
-      limit += bytesRead;
-      fCursor += bytesRead;
-      fCursorAfterLastRead = fCursor;
+        // Enable readAhead when reading sequentially
+        if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+          bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
+        } else {
+          bytesRead = readInternal(fCursor, buffer, 0, b.length, true);
+        }
+
+        if (bytesRead == -1) {
+          return -1;
+        }
+
+        limit += bytesRead;
+        fCursor += bytesRead;
+        fCursorAfterLastRead = fCursor;
+      }
     }
 
     //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
@@ -211,6 +221,42 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return bytesToRead;
   }
 
+  /**
+   * Reads the whole file into buffer. Useful when reading small files.
+   *
+   * @return number of bytes actually read
+   * @throws IOException throws IOException if there is an error
+   */
+  protected long slurpFullFile() throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("ADLFileInputStream.slurpFullFile() - from path {}. At offset "
+          + "{}", path, getPos());
+    }
+
+    if (buffer == null) {
+      bufferSize = (int) contentLength;
+      buffer = new byte[bufferSize];
+    }
+
+    //reset buffer to initial state - i.e., throw away existing data
+    bCursor = (int) getPos();  // preserve current file offset (may not be 0 if app did a seek before first read)
+    limit = 0;
+    fCursor = 0;  // read from beginning
+    int loopCount = 0;
+
+    // if one OPEN request doesnt get full file, then read again at fCursor
+    while (fCursor < contentLength) {
+      int bytesRead = readInternal(fCursor, buffer, limit, bufferSize - limit, true);
+      limit += bytesRead;
+      fCursor += bytesRead;
+
+      // just to be defensive against infinite loops
+      loopCount++;
+      if (loopCount >= 10) { throw new IOException("Too many attempts in "
+          + "reading whole file " + path); }
+    }
+    return fCursor;
+  }
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
