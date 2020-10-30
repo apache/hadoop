@@ -186,8 +186,7 @@ public class TestNamenodeCapacityReport {
           (namesystem.getCapacityUsed() + namesystem.getCapacityRemaining()
               + namesystem.getNonDfsUsedSpace() + fileCount * fs
               .getDefaultBlockSize()) - configCapacity < 1 * 1024);
-    }
-    finally {
+    } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -211,7 +210,8 @@ public class TestNamenodeCapacityReport {
       double reserveForAchive = 0.3;
       conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
           true);
-      conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+      conf.setDouble(DFSConfigKeys
+              .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
           reserveForAchive);
       cluster = new MiniDFSCluster.Builder(conf).storageTypes(
           new StorageType[]{StorageType.DISK, StorageType.ARCHIVE}).build();

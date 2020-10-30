@@ -5987,11 +5987,13 @@
   </property>
 
   <property>
-    <name>dfs.datanode.reserve-for-archive.percentage</name>
+    <name>dfs.datanode.reserve-for-archive.default.percentage</name>
     <value>0.0</value>
     <description>
-        Disk capacity ratio of ARCHIVE volume,
+        Default disk capacity ratio of ARCHIVE volume,
         expected the value to be between 0 to 1.
+        This will be applied when DISK/ARCHIVE volumes are configured
+        on the same mount, which is detected by datanode.
         Beware that capacity usage might be >100% if there are already
         data blocks exist and the configured ratio is small, which will
         prevent the volume from taking new blocks

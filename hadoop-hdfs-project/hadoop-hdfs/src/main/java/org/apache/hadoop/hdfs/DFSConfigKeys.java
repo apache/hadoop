@@ -1503,19 +1503,25 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT =
       false;
 
+  /**
+   *  HDFS-15548 to allow DISK/ARCHIVE configured on the same disk mount.
+   *  The default ratio will be applied if DISK/ARCHIVE are configured
+   *  on same disk mount.
+   *
+   *  Beware that capacity usage might be >100% if there are already
+   *  data blocks exist and the configured ratio is small, which will
+   *  prevent the volume from taking new blocks until capacity is balanced out.
+   */
   public static final String DFS_DATANODE_ALLOW_SAME_DISK_TIERING =
       "dfs.datanode.same-disk-tiering.enabled";
   public static final boolean DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT =
       false;
 
-  // HDFS-15548 to allow DISK/ARCHIVE configured on the same disk mount.
-  // Beware that capacity usage might be >100% if there are already
-  // data blocks exist and the configured ratio is small, which will
-  // prevent the volume from taking new blocks until capacity is balanced out.
-  public static final String DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE =
-      "dfs.datanode.reserve-for-archive.percentage";
+  public static final String
+      DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE =
+      "dfs.datanode.reserve-for-archive.default.percentage";
   public static final double
-      DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT = 0.0;
+      DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE_DEFAULT = 0.0;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated

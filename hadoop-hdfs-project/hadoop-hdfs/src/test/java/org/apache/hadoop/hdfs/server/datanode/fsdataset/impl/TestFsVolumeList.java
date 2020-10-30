@@ -464,7 +464,8 @@ public class TestFsVolumeList {
     double reservedForArchival = 0.75;
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
         true);
-    conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         reservedForArchival);
     FsVolumeImpl diskVolume = new FsVolumeImplBuilder()
         .setConf(conf)
@@ -501,7 +502,7 @@ public class TestFsVolumeList {
             .getVolumeRefByMountAndStorageType(
             device, StorageType.ARCHIVE).getVolume());
 
-    // 1) removeVolume should work as expected
+    // 2) removeVolume should work as expected
     volumeList.removeVolume(diskVolume.getStorageLocation(), true);
     assertNull(volumeList.getMountVolumeMap()
             .getVolumeRefByMountAndStorageType(
@@ -532,7 +533,8 @@ public class TestFsVolumeList {
     conf.setLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY, duReserved);
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
         true);
-    conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         reservedForArchival);
     FsVolumeImpl diskVolume = new FsVolumeImplBuilder()
         .setConf(conf)
@@ -586,5 +588,10 @@ public class TestFsVolumeList {
         spyDiskVolume.getActualNonDfsUsed());
     assertEquals(expectedActualNonDfsUsage,
         spyArchivalVolume.getActualNonDfsUsed());
+
+    // 3) When there is only one volume on a disk mount,
+    // we allocate the full disk capacity regardless of the default ratio.
+    mountVolumeMap.removeVolume(spyArchivalVolume);
+    assertEquals(dfCapacity - duReserved, spyDiskVolume.getCapacity());
   }
 }

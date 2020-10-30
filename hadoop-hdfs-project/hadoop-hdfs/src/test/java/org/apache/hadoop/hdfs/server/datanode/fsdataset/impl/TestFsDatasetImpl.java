@@ -372,7 +372,8 @@ public class TestFsDatasetImpl {
         replicaCacheRootDir);
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
         true);
-    conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         0.5);
 
     when(datanode.getConf()).thenReturn(conf);

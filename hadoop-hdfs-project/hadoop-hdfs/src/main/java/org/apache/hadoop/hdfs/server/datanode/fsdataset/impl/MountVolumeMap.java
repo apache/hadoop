@@ -45,8 +45,9 @@ class MountVolumeMap {
   MountVolumeMap(Configuration conf) {
     mountVolumeMapping = new ConcurrentHashMap<>();
     reservedForArchive = conf.getDouble(
-        DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
-        DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT);
+        DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
+        DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE_DEFAULT);
     if (reservedForArchive > 1) {
       FsDatasetImpl.LOG.warn("Value of reserve-for-archival is > 100%." +
           " Setting it to 100%.");
@@ -74,18 +75,27 @@ class MountVolumeMap {
   }
 
   /**
-   * Return configured capacity ratio. Otherwise return 1 as default
+   * Return configured capacity ratio.
+   * If the volume is the only one on the mount,
+   * return 1 to avoid unnecessary allocation.
    */
   double getCapacityRatioByMountAndStorageType(String mount,
       StorageType storageType) {
     if (mountVolumeMapping != null
         && mountVolumeMapping.containsKey(mount)) {
-      return mountVolumeMapping
-          .get(mount).getOrDefault(storageType, null).getCapacityRatio();
+      Map<StorageType, VolumeInfo> storageTypeMap = mountVolumeMapping
+          .get(mount);
+      if (storageTypeMap.size() > 1) {
+        return storageTypeMap.get(storageType).getConfiguredCapacityRatio();
+      }
     }
     return 1;
   }
 
+  /**
+   * Add volume <-> mount relationship adding a new volume.
+   * Adding a volume will do locking
+   */
   void addVolume(FsVolumeImpl volume) {
     String mount = volume.getMount();
     if (!mount.isEmpty()) {
@@ -98,9 +108,9 @@ class MountVolumeMap {
       } else {
         VolumeInfo volumeInfo = new VolumeInfo(volume, 1);
         if (volume.getStorageType() == StorageType.ARCHIVE) {
-          volumeInfo.setCapacityRatio(reservedForArchive);
+          volumeInfo.setConfiguredCapacityRatio(reservedForArchive);
         } else if (volume.getStorageType() == StorageType.DISK) {
-          volumeInfo.setCapacityRatio(1 - reservedForArchive);
+          volumeInfo.setConfiguredCapacityRatio(1 - reservedForArchive);
         }
         storageTypeMap.put(volume.getStorageType(), volumeInfo);
         mountVolumeMapping.put(mount, storageTypeMap);
@@ -121,23 +131,23 @@ class MountVolumeMap {
 
   static class VolumeInfo {
     private final FsVolumeImpl fsVolume;
-    private double capacityRatio;
+    private double configuredCapacityRatio;
 
-    VolumeInfo(FsVolumeImpl fsVolume, double capacityRatio) {
+    VolumeInfo(FsVolumeImpl fsVolume, double configuredCapacityRatio) {
       this.fsVolume = fsVolume;
-      this.capacityRatio = capacityRatio;
+      this.configuredCapacityRatio = configuredCapacityRatio;
     }
 
     FsVolumeImpl getFsVolume() {
       return fsVolume;
     }
 
-    double getCapacityRatio() {
-      return capacityRatio;
+    double getConfiguredCapacityRatio() {
+      return configuredCapacityRatio;
     }
 
-    void setCapacityRatio(double capacityRatio) {
-      this.capacityRatio = capacityRatio;
+    void setConfiguredCapacityRatio(double configuredCapacityRatio) {
+      this.configuredCapacityRatio = configuredCapacityRatio;
     }
   }
 }

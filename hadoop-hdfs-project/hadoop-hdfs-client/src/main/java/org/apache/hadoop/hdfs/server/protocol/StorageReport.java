@@ -39,7 +39,8 @@ public class StorageReport {
   }
 
   public StorageReport(DatanodeStorage storage, boolean failed, long capacity,
-      long dfsUsed, long remaining, long bpUsed, long nonDfsUsed, String mount) {
+      long dfsUsed, long remaining, long bpUsed,
+      long nonDfsUsed, String mount) {
     this.storage = storage;
     this.failed = failed;
     this.capacity = capacity;
