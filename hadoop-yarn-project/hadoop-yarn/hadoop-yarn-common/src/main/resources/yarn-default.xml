@@ -3778,9 +3778,10 @@
 
   <property>
     <description>The replication factor for the FS store
-     files (10 by default)</description>
+     files. Default value is 0, means it will use file system
+      default replication.</description>
     <name>yarn.fs-store.file.replication</name>
-    <value>10</value>
+    <value>0</value>
   </property>
 
   <property>

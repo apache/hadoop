@@ -4060,7 +4060,7 @@ public class YarnConfiguration extends Configuration {
   /** FS store file replication. */
   public static final String FS_STORE_FILE_REPLICATION = YARN_PREFIX
       + "fs-store.file.replication";
-  public static final int DEFAULT_FS_STORE_FILE_REPLICATION = 10;
+  public static final int DEFAULT_FS_STORE_FILE_REPLICATION = 0;
 
   /**
    * Node-attribute configurations.

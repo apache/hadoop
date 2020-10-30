@@ -189,12 +189,14 @@ public abstract class AbstractFSNodeStore<M> {
   }
 
   /**
-   * Make sure replica is highly available.
-   * @throws IOException
+   * Make sure replica is highly available. It will avoid setting replication,
+   * if the value configured for
+   * {@link YarnConfiguration#FS_STORE_FILE_REPLICATION} is 0.
    */
   private void checkAvailability(Path file) throws IOException {
     try {
-      if (fs.getFileStatus(file).getReplication() < replication) {
+      if (replication != 0
+          && fs.getFileStatus(file).getReplication() < replication) {
         fs.setReplication(file, (short) replication);
       }
     } catch (UnsupportedOperationException e) {

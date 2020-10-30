@@ -33,10 +33,11 @@ public class TestNodeLabelFileReplication {
 
   @Test
   public void testNodeLabelFileReplication() throws IOException {
-    int defaultReplica =
-        YarnConfiguration.DEFAULT_FS_STORE_FILE_REPLICATION;
+    int expectedReplication = 10;
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    conf.setInt(YarnConfiguration.FS_STORE_FILE_REPLICATION,
+        expectedReplication);
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(new Configuration()).numDataNodes(1)
@@ -51,8 +52,8 @@ public class TestNodeLabelFileReplication {
           .getFileStatus(new Path(nodeLabelDir, "nodelabel.mirror"))
           .getReplication();
       Assert.assertEquals(
-          "Node label file replication should be " + defaultReplica,
-          defaultReplica, fileReplication);
+          "Node label file replication should be " + expectedReplication,
+          expectedReplication, fileReplication);
       manager.close();
     } finally {
       if (cluster != null) {
