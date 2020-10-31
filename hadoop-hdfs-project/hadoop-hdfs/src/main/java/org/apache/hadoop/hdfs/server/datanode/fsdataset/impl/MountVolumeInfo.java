@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * MountVolumeInfo is a wrapper of
- * detailed volume information for MountVolumeMap
+ * detailed volume information for MountVolumeMap.
  */
 @InterfaceAudience.Private
 class MountVolumeInfo {
