@@ -20,11 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 
-import java.nio.channels.ClosedChannelException;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -32,62 +29,38 @@ import java.util.concurrent.ConcurrentMap;
  * MountVolumeMap contains information of the relationship
  * between underlying filesystem mount and datanode volumes.
  *
- * This is useful when configuring block tiering on same disk mount (HDFS-15548)
- * For now,
- * we don't configure multiple volumes with same storage type on a mount.
+ * This is useful when configuring block tiering on same disk mount
+ * (HDFS-15548). For now,
+ * we don't configure multiple volumes with same storage type on one mount.
  */
 @InterfaceAudience.Private
 class MountVolumeMap {
-  private ConcurrentMap<String, Map<StorageType, VolumeInfo>>
+  private ConcurrentMap<String, MountVolumeInfo>
       mountVolumeMapping;
-  private double reservedForArchive;
+  private Configuration conf;
 
   MountVolumeMap(Configuration conf) {
     mountVolumeMapping = new ConcurrentHashMap<>();
-    reservedForArchive = conf.getDouble(
-        DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
-        DFSConfigKeys
-            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE_DEFAULT);
-    if (reservedForArchive > 1) {
-      FsDatasetImpl.LOG.warn("Value of reserve-for-archival is > 100%." +
-          " Setting it to 100%.");
-      reservedForArchive = 1;
-    }
+    this.conf = conf;
   }
 
   FsVolumeReference getVolumeRefByMountAndStorageType(String mount,
       StorageType storageType) {
-    if (mountVolumeMapping != null
-        && mountVolumeMapping.containsKey(mount)) {
-      try {
-        VolumeInfo volumeInfo = mountVolumeMapping
-            .get(mount).getOrDefault(storageType, null);
-        if (volumeInfo != null) {
-          return volumeInfo.getFsVolume().obtainReference();
-        }
-      } catch (ClosedChannelException e) {
-        FsDatasetImpl.LOG.warn("Volume closed when getting volume" +
-            " by mount and storage type: "
-            + mount + ", " + storageType);
-      }
+    if (mountVolumeMapping.containsKey(mount)) {
+      return mountVolumeMapping
+          .get(mount).getVolumeRef(storageType);
     }
     return null;
   }
 
   /**
-   * Return configured capacity ratio.
-   * If the volume is the only one on the mount,
-   * return 1 to avoid unnecessary allocation.
+   * Return capacity ratio.
+   * If not exists, return 1 to use full capacity.
    */
   double getCapacityRatioByMountAndStorageType(String mount,
       StorageType storageType) {
-    if (mountVolumeMapping != null
-        && mountVolumeMapping.containsKey(mount)) {
-      Map<StorageType, VolumeInfo> storageTypeMap = mountVolumeMapping
-          .get(mount);
-      if (storageTypeMap.size() > 1) {
-        return storageTypeMap.get(storageType).getConfiguredCapacityRatio();
-      }
+    if (mountVolumeMapping.containsKey(mount)) {
+      return mountVolumeMapping.get(mount).getCapacityRatio(storageType);
     }
     return 1;
   }
@@ -95,55 +68,25 @@ class MountVolumeMap {
   void addVolume(FsVolumeImpl volume) {
     String mount = volume.getMount();
     if (!mount.isEmpty()) {
-      Map<StorageType, VolumeInfo> storageTypeMap =
-          mountVolumeMapping
-              .getOrDefault(mount, new ConcurrentHashMap<>());
-      if (storageTypeMap.containsKey(volume.getStorageType())) {
-        FsDatasetImpl.LOG.error("Found storage type already exist." +
-            " Skipping for now. Please check disk configuration");
+      MountVolumeInfo info;
+      if (mountVolumeMapping.containsKey(mount)) {
+        info = mountVolumeMapping.get(mount);
       } else {
-        VolumeInfo volumeInfo = new VolumeInfo(volume, 1);
-        if (volume.getStorageType() == StorageType.ARCHIVE) {
-          volumeInfo.setConfiguredCapacityRatio(reservedForArchive);
-        } else if (volume.getStorageType() == StorageType.DISK) {
-          volumeInfo.setConfiguredCapacityRatio(1 - reservedForArchive);
-        }
-        storageTypeMap.put(volume.getStorageType(), volumeInfo);
-        mountVolumeMapping.put(mount, storageTypeMap);
+        info = new MountVolumeInfo(conf);
+        mountVolumeMapping.put(mount, info);
       }
+      info.addVolume(volume);
     }
   }
 
   void removeVolume(FsVolumeImpl target) {
     String mount = target.getMount();
     if (!mount.isEmpty()) {
-      Map storageTypeMap = mountVolumeMapping.get(mount);
-      storageTypeMap.remove(target.getStorageType());
-      if (storageTypeMap.isEmpty()) {
+      MountVolumeInfo info = mountVolumeMapping.get(mount);
+      info.removeVolume(target);
+      if (info.size() == 0) {
         mountVolumeMapping.remove(mount);
       }
-    }
-  }
-
-  static class VolumeInfo {
-    private final FsVolumeImpl fsVolume;
-    private double configuredCapacityRatio;
-
-    VolumeInfo(FsVolumeImpl fsVolume, double configuredCapacityRatio) {
-      this.fsVolume = fsVolume;
-      this.configuredCapacityRatio = configuredCapacityRatio;
-    }
-
-    FsVolumeImpl getFsVolume() {
-      return fsVolume;
-    }
-
-    double getConfiguredCapacityRatio() {
-      return configuredCapacityRatio;
-    }
-
-    void setConfiguredCapacityRatio(double configuredCapacityRatio) {
-      this.configuredCapacityRatio = configuredCapacityRatio;
     }
   }
 }
