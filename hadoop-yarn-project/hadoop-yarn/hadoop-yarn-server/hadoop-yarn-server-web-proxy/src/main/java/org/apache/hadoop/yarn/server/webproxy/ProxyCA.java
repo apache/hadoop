@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.apache.http.conn.util.PublicSuffixMatcherLoader;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -66,6 +67,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Principal;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Security;
@@ -74,11 +76,15 @@ import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Random;
 import java.util.UUID;
+
+import static org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils.getProviderIndex;
+import static org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils.printSecurityProviders;
 
 /**
  * Allows for the generation and acceptance of specialized HTTPS Certificates to
@@ -88,7 +94,15 @@ import java.util.UUID;
 @InterfaceStability.Unstable
 public class ProxyCA {
   private static final Logger LOG = LoggerFactory.getLogger(ProxyCA.class);
+  private static final String RSA_ALGORITHM = "RSA";
+  private static final String SIGNATURE_ALGORITHM_NAME = "SHA512WITHRSA";
+  private static final String CCJ_PROVIDER = "CCJ";
+  private static final String DEFAULT_KEYSTORE_TYPE = "JKS";
+  private static final String KEYSTORE_TYPE_BCFKS = "BCFKS";
+  private static final int KEY_SIZE_BITS = 2048;
 
+  private final String keyStoreType;
+  private final Provider securityProvider;
   private X509Certificate caCert;
   private KeyPair caKeyPair;
   private KeyStore childTrustStore;
@@ -96,16 +110,43 @@ public class ProxyCA {
   private X509TrustManager defaultTrustManager;
   private X509KeyManager x509KeyManager;
   private HostnameVerifier hostnameVerifier;
-  private static final AlgorithmIdentifier SIG_ALG_ID =
-      new DefaultSignatureAlgorithmIdentifierFinder().find("SHA512WITHRSA");
+  private static final AlgorithmIdentifier SIG_ALG_ID = 
+      new DefaultSignatureAlgorithmIdentifierFinder().find(SIGNATURE_ALGORITHM_NAME);
 
   public ProxyCA() {
     srand = new SecureRandom();
 
-    // This only has to be done once
-    Security.addProvider(new BouncyCastleProvider());
-  }
+    final boolean fipsEnabled = YarnServerSecurityUtils.isFipsEnabled();
+    if (fipsEnabled) {
+      LOG.debug("FIPS-mode is enabled");
+      LOG.debug("Found security providers: {}",
+          Arrays.toString(Security.getProviders()));
+      securityProvider = Security.getProvider(CCJ_PROVIDER);
+      keyStoreType = KEYSTORE_TYPE_BCFKS;
 
+      if (LOG.isTraceEnabled()) {
+        printSecurityProviders();
+        LOG.trace("Provider of SecureRandom: {}",
+            ((SecureRandom)srand).getProvider());
+      }
+
+      int fipsIndex = getProviderIndex(CCJ_PROVIDER);
+      if ((fipsIndex != 1)) {
+        throw new YarnRuntimeException(
+            String.format("The provider with name '%s' should be at first " +
+                "index. Actual index is: %d", CCJ_PROVIDER, fipsIndex));
+      }
+    } else {
+      LOG.debug("FIPS-mode is disabled");
+      securityProvider = new BouncyCastleProvider();
+      // This only has to be done once
+      Security.addProvider(securityProvider);
+      keyStoreType = DEFAULT_KEYSTORE_TYPE;
+    }
+    LOG.debug("Active Security Provider is: {}", securityProvider);
+    LOG.debug("Using Keystore type: {}", keyStoreType);
+  }
+  
   public void init() throws GeneralSecurityException, IOException {
     createCACertAndKeyPair();
     initInternal();
@@ -127,8 +168,14 @@ public class ProxyCA {
 
   private void initInternal() throws GeneralSecurityException, IOException {
     defaultTrustManager = null;
+    String defaultAlgorithm = TrustManagerFactory.getDefaultAlgorithm();
+    LOG.debug("Using algorithm for TrustManager: {}", defaultAlgorithm);
     TrustManagerFactory factory = TrustManagerFactory.getInstance(
-        TrustManagerFactory.getDefaultAlgorithm());
+        defaultAlgorithm);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("TrustManagerFactory instance: {}, provider: {}",
+          factory, factory.getProvider());
+    }
     factory.init((KeyStore) null);
     for (TrustManager manager : factory.getTrustManagers()) {
       if (manager instanceof X509TrustManager) {
@@ -141,6 +188,10 @@ public class ProxyCA {
           "Could not find default X509 Trust Manager");
     }
 
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("TrustManager instance: {}",
+          defaultTrustManager.getClass().getCanonicalName());
+    }
     this.x509KeyManager = createKeyManager();
     this.hostnameVerifier = createHostnameVerifier();
     this.childTrustStore = createTrustStore("client", caCert);
@@ -178,7 +229,8 @@ public class ProxyCA {
           new JcaX509ExtensionUtils().createAuthorityKeyIdentifier(caCert));
     }
     X509CertificateHolder certHolder = certBuilder.build(contentSigner);
-    X509Certificate cert = new JcaX509CertificateConverter().setProvider("BC")
+    X509Certificate cert = new JcaX509CertificateConverter()
+        .setProvider(securityProvider)
         .getCertificate(certHolder);
     LOG.info("Created Certificate for {}", subject);
     return cert;
@@ -188,8 +240,12 @@ public class ProxyCA {
       throws GeneralSecurityException, IOException {
     Date from = new Date();
     Date to = new GregorianCalendar(2037, Calendar.DECEMBER, 31).getTime();
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-    keyGen.initialize(2048);
+    KeyPairGenerator keyGen = KeyPairGenerator.getInstance(RSA_ALGORITHM);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("KeyPairGenerator instance: {}, provider: {}",
+          keyGen.getClass().getCanonicalName(), keyGen.getProvider());
+    }
+    keyGen.initialize(KEY_SIZE_BITS);
     caKeyPair = keyGen.genKeyPair();
     String subject = "OU=YARN-" + UUID.randomUUID();
     caCert = createCert(true, subject, subject, from, to,
@@ -203,8 +259,12 @@ public class ProxyCA {
     // for outside users to not accept these certificates
     Date from = new Date();
     Date to = from;
-    KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-    keyGen.initialize(2048);
+    KeyPairGenerator keyGen = KeyPairGenerator.getInstance(RSA_ALGORITHM);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("KeyPairGenerator instance: {}, provider: {}",
+          keyGen.getClass().getCanonicalName(), keyGen.getProvider());
+    }
+    keyGen.initialize(KEY_SIZE_BITS);
     KeyPair keyPair = keyGen.genKeyPair();
     String issuer = caCert.getSubjectX500Principal().getName();
     String subject = "CN=" + appId;
@@ -226,7 +286,11 @@ public class ProxyCA {
 
   private KeyStore createEmptyKeyStore()
       throws GeneralSecurityException, IOException {
-    KeyStore ks = KeyStore.getInstance("JKS");
+    KeyStore ks = KeyStore.getInstance(keyStoreType);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("KeyStore instance: {}, provider: {}",
+          ks.getClass().getCanonicalName(), ks.getProvider());
+    }
     ks.load(null, null); // initialize
     return ks;
   }
@@ -271,7 +335,17 @@ public class ProxyCA {
     KeyManager[] keyManagers = new KeyManager[]{x509KeyManager};
 
     SSLContext sc = SSLContext.getInstance("SSL");
-    sc.init(keyManagers, trustManagers, new SecureRandom());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("SSLContext instance: {}, provider: {}",
+          sc.getClass().getCanonicalName(), sc.getProvider());
+    }
+    SecureRandom secureRandom = new SecureRandom();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Provider of SecureRandom used for SSL Context: {}",
+          secureRandom.getProvider());
+    }
+    
+    sc.init(keyManagers, trustManagers, secureRandom);
     return sc;
   }
 
@@ -427,11 +501,19 @@ public class ProxyCA {
     PublicKey publicKey = cert.getPublicKey();
     byte[] data = new byte[2000];
     srand.nextBytes(data);
-    Signature signer = Signature.getInstance("SHA512withRSA");
+    Signature signer = Signature.getInstance(SIGNATURE_ALGORITHM_NAME);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Signer 1 instance: {}, provider: {}",
+          signer.getClass().getCanonicalName(), signer.getProvider());
+    }
     signer.initSign(privateKey);
     signer.update(data);
     byte[] sig = signer.sign();
-    signer = Signature.getInstance("SHA512withRSA");
+    signer = Signature.getInstance(SIGNATURE_ALGORITHM_NAME);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Signer 2 instance: {}, provider: {}",
+          signer.getClass().getCanonicalName(), signer.getProvider());
+    }
     signer.initVerify(publicKey);
     signer.update(data);
     return signer.verify(sig);

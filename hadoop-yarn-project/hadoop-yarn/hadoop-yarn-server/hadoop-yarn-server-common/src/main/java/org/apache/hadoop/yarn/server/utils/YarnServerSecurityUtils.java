@@ -20,6 +20,11 @@ package org.apache.hadoop.yarn.server.utils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.security.Provider;
+import java.security.Security;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -47,6 +52,9 @@ import org.slf4j.LoggerFactory;
 public final class YarnServerSecurityUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(YarnServerSecurityUtils.class);
+
+  private static final String CCJ_FIPS_APPROVED_ONLY_PROPERTY =
+      "com.safelogic.cryptocomply.fips.approved_only";
 
   private YarnServerSecurityUtils() {
   }
@@ -159,5 +167,65 @@ public final class YarnServerSecurityUtils {
     }
 
     return credentials;
+  }
+  
+  public static boolean isFipsEnabled() {
+    String fipsApprovedModeValue = System.getProperty(
+        CCJ_FIPS_APPROVED_ONLY_PROPERTY);
+    final boolean fipsEnabled = fipsApprovedModeValue != null &&
+        Boolean.valueOf(fipsApprovedModeValue);
+    
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("FIPS mode: {}, value of JVM property '{}' is: {}",
+          fipsEnabled, CCJ_FIPS_APPROVED_ONLY_PROPERTY, fipsApprovedModeValue);
+    }
+    return fipsEnabled;
+  }
+
+  public static void printSecurityProviders() {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Available Security Providers are:");
+    }
+    
+    Provider[] providers = Security.getProviders();
+    for (int i = 0; i < providers.length; i++) {
+      Provider provider = providers[i];
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("[" + (i + 1) + "] - Name: " + provider.getName());
+        LOG.trace("Information:\n" + provider.getInfo());
+        LOG.trace("Listing providers with types of service " +
+            "and algorithm provided:\n");
+      }
+
+      Set<Provider.Service> services = provider.getServices();
+      List<Provider.Service> servicesList = new ArrayList<>(services);
+      servicesList.sort(Comparator.comparing(Provider.Service::getType));
+      for (Provider.Service service : servicesList) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(String.format("- Name: %s, Service Type: %s, Algorithm: %s",
+              provider.getName(), service.getType(), service.getAlgorithm()));
+        }
+      }
+    }
+  }
+
+  /**
+   * Return the index af the given Security Provider.
+   * Note that the index is 1-based.
+   * @param providerName
+   * @return The index, or -1 if the provider is null or was not found.
+   */
+  public static int getProviderIndex(String providerName) {
+    int providerIndex = 1;
+    if (providerName == null) {
+      return -1;
+    }
+    for (Provider provider : Security.getProviders()) {
+      if (providerName.equalsIgnoreCase(provider.getName())) {
+        return providerIndex;
+      }
+      providerIndex++;
+    }
+    return -1;
   }
 }
