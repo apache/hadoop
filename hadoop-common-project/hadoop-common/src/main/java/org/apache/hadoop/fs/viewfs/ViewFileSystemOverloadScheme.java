@@ -173,18 +173,22 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     super.initialize(theUri, conf);
   }
 
-  private MountTableConfigLoader getMountTableConfigLoader(final Configuration conf) {
-    String mountTableConfigLoaderImplConf = conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL,
+  private MountTableConfigLoader getMountTableConfigLoader(
+      final Configuration conf) {
+    String mountTableConfigLoaderImplConf =
+        conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL,
             Constants.CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL_DEFAULT);
 
     Class<?> clazz = conf.getClass(mountTableConfigLoaderImplConf, null);
     if (clazz == null) {
-        throw new RuntimeException(String.format("Errors on getting mount table loader class. The class is %s",
+        throw new RuntimeException(
+            String.format("Errors on getting mount table loader class. The class is %s",
                 mountTableConfigLoaderImplConf));
     }
 
     try {
-      MountTableConfigLoader mountTableConfigLoader = (MountTableConfigLoader) clazz.newInstance();
+      MountTableConfigLoader mountTableConfigLoader =
+          (MountTableConfigLoader) clazz.newInstance();
       return mountTableConfigLoader;
     } catch (Exception e) {
       throw new RuntimeException(e);

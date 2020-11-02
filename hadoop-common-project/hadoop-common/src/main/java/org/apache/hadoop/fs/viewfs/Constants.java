@@ -126,7 +126,9 @@ public interface Constants {
 
   boolean CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT = false;
 
-  String CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL = CONFIG_VIEWFS_PREFIX + ".config.loader.impl";
+  String CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL =
+      CONFIG_VIEWFS_PREFIX + ".config.loader.impl";
 
-  String CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL_DEFAULT = "org.apache.hadoop.fs.viewfs.HCFSMountTableConfigLoader";
+  String CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL_DEFAULT =
+      HCFSMountTableConfigLoader.class.getName();
 }
