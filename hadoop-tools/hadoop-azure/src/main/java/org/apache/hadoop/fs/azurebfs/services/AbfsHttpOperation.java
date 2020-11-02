@@ -36,7 +36,6 @@ import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.map.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,12 +44,15 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Represents an HTTP operation.
  */
 public class AbfsHttpOperation implements AbfsPerfLoggable {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
+
+  public static final String SIGNATURE_QUERY_PARAM_KEY = "sig=";
 
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
@@ -516,23 +518,15 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       return this.maskedUrlStr;
     }
     final String urlStr = url.toString();
-    final String qpStr = "sig=";
-    final int qpStrIdx = urlStr.indexOf(qpStr);
-    if (qpStrIdx < 0) {
+    final int qpStrIdx = urlStr.indexOf(SIGNATURE_QUERY_PARAM_KEY);
+    if (qpStrIdx == -1) {
       return urlStr;
     }
-    final StringBuilder sb = new StringBuilder();
-    sb.append(urlStr, 0, qpStrIdx);
-    sb.append(qpStr);
-    sb.append("XXXX");
-    if (qpStrIdx + qpStr.length() < urlStr.length()) {
-      String urlStrSecondPart = urlStr.substring(qpStrIdx + qpStr.length());
-      int idx = urlStrSecondPart.indexOf("&");
-      if (idx > -1) {
-        sb.append(urlStrSecondPart.substring(idx));
-      }
-    }
-    this.maskedUrlStr = sb.toString();
+    final int sigStartIdx = qpStrIdx + SIGNATURE_QUERY_PARAM_KEY.length();
+    final int ampIdx = urlStr.indexOf("&", sigStartIdx);
+    final int sigEndIndex = (ampIdx != -1) ? ampIdx : urlStr.length();
+    String signature = urlStr.substring(sigStartIdx, sigEndIndex);
+    this.maskedUrlStr = urlStr.replace(signature, "XXXX");
     return this.maskedUrlStr;
   }
 

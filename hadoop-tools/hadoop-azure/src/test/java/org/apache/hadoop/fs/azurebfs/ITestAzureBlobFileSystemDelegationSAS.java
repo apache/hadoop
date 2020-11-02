@@ -55,6 +55,7 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test Perform Authorization Check operation
@@ -403,19 +404,10 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  public void testSignatureMaskOnExceptionMessage() {
-    final AzureBlobFileSystem fs;
-    String msg = null;
-    try {
-      fs = getFileSystem();
-      AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
-          .renamePath("testABC/test.xt", "testABC/abc.txt", null);
-    } catch (IOException e) {
-      msg = e.getMessage();
-    }
-    Assertions.assertThat(msg.substring(msg.indexOf("sig=")))
-        .describedAs("Signature query param should be masked")
-        .startsWith("sig=XXXX");
+  public void testSignatureMaskOnExceptionMessage() throws Exception {
+    intercept(IOException.class, "sig=XXXX",
+        () -> getFileSystem().getAbfsClient()
+            .renamePath("testABC/test.xt", "testABC/abc.txt", null));
   }
 
 }
