@@ -393,8 +393,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null);
     AbfsHttpOperation result = abfsHttpRestOperation.getResult();
-    String url = result.getSignatureMaskedUrlStr();
-    String encodedUrl = result.getSignatureMaskedEncodedUrlStr();
+    String url = result.getSignatureMaskedUrl();
+    String encodedUrl = result.getSignatureMaskedEncodedUrl();
     Assertions.assertThat(url.substring(url.indexOf("sig=")))
         .describedAs("Signature query param should be masked")
         .startsWith("sig=XXXX");

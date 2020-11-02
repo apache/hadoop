@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Represents an HTTP operation.
@@ -64,8 +63,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   private final String method;
   private final URL url;
-  private String maskedUrlStr;
-  private String maskedEncodedUrlStr;
+  private String maskedUrl;
+  private String maskedEncodedUrl;
 
   private HttpURLConnection connection;
   private int statusCode;
@@ -185,7 +184,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(",");
     sb.append(method);
     sb.append(",");
-    sb.append(getSignatureMaskedUrlStr());
+    sb.append(getSignatureMaskedUrl());
     return sb.toString();
   }
 
@@ -218,7 +217,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       .append(" m=")
       .append(method)
       .append(" u=")
-      .append(getSignatureMaskedEncodedUrlStr());
+      .append(getSignatureMaskedEncodedUrl());
 
     return sb.toString();
   }
@@ -512,36 +511,38 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return stream == null ? true : false;
   }
 
-  @VisibleForTesting
-  public String getSignatureMaskedUrlStr() {
-    if (this.maskedUrlStr != null) {
-      return this.maskedUrlStr;
-    }
-    final String urlStr = url.toString();
-    final int qpStrIdx = urlStr.indexOf(SIGNATURE_QUERY_PARAM_KEY);
+  public static String getSignatureMaskedUrl(String url) {
+    final int qpStrIdx = url.indexOf(SIGNATURE_QUERY_PARAM_KEY);
     if (qpStrIdx == -1) {
-      return urlStr;
+      return url;
     }
     final int sigStartIdx = qpStrIdx + SIGNATURE_QUERY_PARAM_KEY.length();
-    final int ampIdx = urlStr.indexOf("&", sigStartIdx);
-    final int sigEndIndex = (ampIdx != -1) ? ampIdx : urlStr.length();
-    String signature = urlStr.substring(sigStartIdx, sigEndIndex);
-    this.maskedUrlStr = urlStr.replace(signature, "XXXX");
-    return this.maskedUrlStr;
+    final int ampIdx = url.indexOf("&", sigStartIdx);
+    final int sigEndIndex = (ampIdx != -1) ? ampIdx : url.length();
+    String signature = url.substring(sigStartIdx, sigEndIndex);
+    return url.replace(signature, "XXXX");
   }
 
-  @VisibleForTesting
-  public String getSignatureMaskedEncodedUrlStr() {
-    if (this.maskedEncodedUrlStr != null) {
-      return this.maskedEncodedUrlStr;
-    }
+  public static String encodedUrlStr(String url) {
     try {
-      this.maskedEncodedUrlStr = URLEncoder
-          .encode(getSignatureMaskedUrlStr(), "UTF-8");
+      return URLEncoder.encode(url, "UTF-8");
     } catch (UnsupportedEncodingException e) {
-      this.maskedEncodedUrlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
+      return "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
     }
-    return this.maskedEncodedUrlStr;
+  }
+
+  public String getSignatureMaskedUrl() {
+    if (this.maskedUrl == null) {
+      this.maskedUrl = getSignatureMaskedUrl(this.url.toString());
+    }
+    return this.maskedUrl;
+  }
+
+  public String getSignatureMaskedEncodedUrl() {
+    if (this.maskedEncodedUrl == null) {
+      this.maskedEncodedUrl = encodedUrlStr(getSignatureMaskedUrl());
+    }
+    return this.maskedEncodedUrl;
   }
 
 }
