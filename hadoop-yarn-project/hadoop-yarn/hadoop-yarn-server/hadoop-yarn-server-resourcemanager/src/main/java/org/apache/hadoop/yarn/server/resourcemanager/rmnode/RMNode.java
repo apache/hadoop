@@ -212,4 +212,8 @@ public interface RMNode {
    * @return all node attributes as a Set.
    */
   Set<NodeAttribute> getAllNodeAttributes();
+
+  long calculateHeartBeatInterval(long defaultInterval,
+      long minInterval, long maxInterval, float speedupFactor,
+      float slowdownFactor);
 }

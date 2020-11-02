@@ -716,6 +716,48 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
+  @Override
+  public long calculateHeartBeatInterval(long defaultInterval, long minInterval,
+      long maxInterval, float speedupFactor, float slowdownFactor) {
+
+    long newInterval = defaultInterval;
+
+    ClusterMetrics metrics = ClusterMetrics.getMetrics();
+    float clusterUtil = metrics.getUtilizedVirtualCores()
+        / Math.max(1.0f, metrics.getCapabilityVirtualCores());
+
+    if (this.nodeUtilization != null && this.getPhysicalResource() != null) {
+      // getCPU() returns utilization normalized to 1 cpu. getVirtualCores() on
+      // a physicalResource returns number of physical cores. So,
+      // nodeUtil will be CPU utilization of entire node.
+      float nodeUtil = this.nodeUtilization.getCPU()
+          / Math.max(1.0f, this.getPhysicalResource().getVirtualCores());
+
+      // sanitize
+      nodeUtil = Math.min(1.0f, Math.max(0.0f, nodeUtil));
+      clusterUtil = Math.min(1.0f, Math.max(0.0f, clusterUtil));
+
+      if (nodeUtil > clusterUtil) {
+        // Slow down - 20% more CPU utilization means slow down by 20% * factor
+        newInterval = (long) (defaultInterval
+            * (1.0f + (nodeUtil - clusterUtil) * slowdownFactor));
+      } else {
+        // Speed up - 20% less CPU utilization means speed up by 20% * factor
+        newInterval = (long) (defaultInterval
+            * (1.0f - (clusterUtil - nodeUtil) * speedupFactor));
+      }
+      newInterval =
+          Math.min(maxInterval, Math.max(minInterval, newInterval));
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Setting heartbeatinterval to: " + newInterval
+            + " node:" + this.nodeId + " nodeUtil: " + nodeUtil
+            + " clusterUtil: " + clusterUtil);
+      }
+    }
+    return newInterval;
+  }
+
   public void handle(RMNodeEvent event) {
     LOG.debug("Processing {} of type {}", event.getNodeId(), event.getType());
     writeLock.lock();
