@@ -667,6 +667,30 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "nodemanagers.heartbeat-interval-ms";
   public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS = 1000;
 
+  /** Enable Heartbeat Interval Scaling based on cpu utilization. */
+  public static final String RM_NM_HEARTBEAT_INTERVAL_SCALING_ENABLE =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-scaling-enable";
+  public static final boolean
+      DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SCALING_ENABLE = false;
+
+  public static final String RM_NM_HEARTBEAT_INTERVAL_MIN_MS =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-min-ms";
+  public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MIN_MS = 1000;
+
+  public static final String RM_NM_HEARTBEAT_INTERVAL_MAX_MS =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-max-ms";
+  public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MAX_MS = 1000;
+
+  public static final String RM_NM_HEARTBEAT_INTERVAL_SPEEDUP_FACTOR =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-speedup-factor";
+  public static final float
+      DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SPEEDUP_FACTOR = 1.0f;
+
+  public static final String RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-slowdown-factor";
+  public static final float
+      DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR = 1.0f;
+
   /** Number of worker threads that write the history data. */
   public static final String RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
       RM_PREFIX + "history-writer.multi-threaded-dispatcher.pool-size";

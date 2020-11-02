@@ -195,4 +195,8 @@ public interface RMNode {
    * @return the RM context associated with this RM node.
    */
   RMContext getRMContext();
+
+  long calculateHeartBeatInterval(long defaultInterval,
+      long minInterval, long maxInterval, float speedupFactor,
+      float slowdownFactor);
 }

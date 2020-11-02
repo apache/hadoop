@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -93,6 +94,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       // Update cluster capacity
       Resources.addTo(clusterCapacity, node.getTotalResource());
       staleClusterCapacity = Resources.clone(clusterCapacity);
+      ClusterMetrics.getMetrics().incrCapability(node.getTotalResource());
 
       // Update maximumAllocation
       updateMaxResources(node, true);
@@ -178,6 +180,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       // Update cluster capacity
       Resources.subtractFrom(clusterCapacity, node.getTotalResource());
       staleClusterCapacity = Resources.clone(clusterCapacity);
+      ClusterMetrics.getMetrics().decrCapability(node.getTotalResource());
 
       // Update maximumAllocation
       updateMaxResources(node, false);
