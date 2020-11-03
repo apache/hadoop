@@ -35,9 +35,9 @@ import java.util.concurrent.ConcurrentMap;
  */
 @InterfaceAudience.Private
 class MountVolumeMap {
-  private ConcurrentMap<String, MountVolumeInfo>
+  private final ConcurrentMap<String, MountVolumeInfo>
       mountVolumeMapping;
-  private Configuration conf;
+  private final Configuration conf;
 
   MountVolumeMap(Configuration conf) {
     mountVolumeMapping = new ConcurrentHashMap<>();

@@ -196,7 +196,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.enableSameDiskTiering =
         conf.getBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
             DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
-    if (enableSameDiskTiering) {
+    if (enableSameDiskTiering && usage != null) {
       this.mount = usage.getMount();
     } else {
       mount = "";

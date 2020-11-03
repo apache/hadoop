@@ -63,8 +63,8 @@ class FsVolumeList {
   private final VolumeChoosingPolicy<FsVolumeImpl> blockChooser;
   private final BlockScanner blockScanner;
 
-  private boolean enableSameDiskTiering;
-  private MountVolumeMap mountVolumeMap;
+  private final boolean enableSameDiskTiering;
+  private final MountVolumeMap mountVolumeMap;
 
   FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
       BlockScanner blockScanner,
@@ -304,9 +304,7 @@ class FsVolumeList {
   void addVolume(FsVolumeReference ref) {
     FsVolumeImpl volume = (FsVolumeImpl) ref.getVolume();
     volumes.add(volume);
-    if (enableSameDiskTiering &&
-        (volume.getStorageType() == StorageType.DISK
-        || volume.getStorageType() == StorageType.ARCHIVE)) {
+    if (isSameDiskTieringApplied(volume)) {
       mountVolumeMap.addVolume(volume);
     }
     if (blockScanner != null) {
@@ -329,9 +327,7 @@ class FsVolumeList {
    */
   private void removeVolume(FsVolumeImpl target) {
     if (volumes.remove(target)) {
-      if (enableSameDiskTiering &&
-          (target.getStorageType() == StorageType.DISK
-              || target.getStorageType() == StorageType.ARCHIVE)) {
+      if (isSameDiskTieringApplied(target)) {
         mountVolumeMap.removeVolume(target);
       }
       if (blockScanner != null) {
@@ -352,6 +348,15 @@ class FsVolumeList {
             " does not exist or is removed by others.");
       }
     }
+  }
+
+  /**
+   * Check if same disk tiering is applied to the volume
+   */
+  private boolean isSameDiskTieringApplied(FsVolumeImpl target) {
+    return enableSameDiskTiering &&
+        (target.getStorageType() == StorageType.DISK
+            || target.getStorageType() == StorageType.ARCHIVE);
   }
 
   /**

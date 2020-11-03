@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 @InterfaceAudience.Private
 class MountVolumeInfo {
-  private ConcurrentMap<StorageType, FsVolumeImpl>
+  private final ConcurrentMap<StorageType, FsVolumeImpl>
       storageTypeVolumeMap;
   private double reservedForArchiveDefault;
 
@@ -68,6 +68,8 @@ class MountVolumeInfo {
    * Return configured capacity ratio.
    * If the volume is the only one on the mount,
    * return 1 to avoid unnecessary allocation.
+   *
+   * TODO: We should support customized capacity ratio for volumes.
    */
   double getCapacityRatio(StorageType storageType) {
     if (storageTypeVolumeMap.containsKey(storageType)
