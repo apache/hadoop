@@ -47,7 +47,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Test when RBW block is removed. Invalidation of the corrupted block happens

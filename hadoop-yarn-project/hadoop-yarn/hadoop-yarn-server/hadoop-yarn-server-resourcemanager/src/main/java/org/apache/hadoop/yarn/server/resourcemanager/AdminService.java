@@ -104,7 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfSchedu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 public class AdminService extends CompositeService implements
@@ -730,6 +730,14 @@ public class AdminService extends CompositeService implements
       // refresh dynamic resource in ResourceTrackerService
       this.rm.getRMContext().getResourceTrackerService().
           updateDynamicResourceConfiguration(newConf);
+
+      // Update our heartbeat configuration as well
+      Configuration ysconf =
+          getConfiguration(new Configuration(false),
+              YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+      this.rm.getRMContext().getResourceTrackerService()
+        .updateHeartBeatConfiguration(ysconf);
+
       RMAuditLogger.logSuccess(user.getShortUserName(), operation,
               "AdminService");
       return response;

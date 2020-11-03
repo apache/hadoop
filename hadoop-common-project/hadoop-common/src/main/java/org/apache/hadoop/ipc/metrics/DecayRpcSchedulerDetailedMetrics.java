@@ -27,7 +27,7 @@ import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class is for maintaining queue (priority) level related

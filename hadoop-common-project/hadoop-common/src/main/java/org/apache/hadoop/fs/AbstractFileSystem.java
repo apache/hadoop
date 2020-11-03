@@ -55,7 +55,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -863,6 +863,20 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   public abstract FileStatus getFileStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
+
+  /**
+   * Synchronize client metadata state.
+   * <p>
+   * In some FileSystem implementations such as HDFS metadata
+   * synchronization is essential to guarantee consistency of read requests
+   * particularly in HA setting.
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  public void msync() throws IOException, UnsupportedOperationException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method msync");
+  }
 
   /**
    * The specification of this method matches that of

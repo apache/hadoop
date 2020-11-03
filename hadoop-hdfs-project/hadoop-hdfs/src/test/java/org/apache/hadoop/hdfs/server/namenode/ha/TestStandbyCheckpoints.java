@@ -18,9 +18,9 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.util.function.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.log4j.spi.LoggingEvent;
 import org.slf4j.Logger;

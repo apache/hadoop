@@ -40,7 +40,6 @@
     <hadoop.component>UNDEF</hadoop.component>
     <snappy.lib></snappy.lib>
     <bundle.snappy>false</bundle.snappy>
-    <bundle.snappy.in.bin>false</bundle.snappy.in.bin>
     <zstd.lib></zstd.lib>
     <bundle.zstd>false</bundle.zstd>
     <bundle.zstd.in.bin>false</bundle.zstd.in.bin>
@@ -341,7 +340,6 @@
                     <argument>--openssllib=${openssl.lib}</argument>
                     <argument>--opensslbinbundle=${bundle.openssl.in.bin}</argument>
                     <argument>--openssllibbundle=${bundle.openssl}</argument>
-                    <argument>--snappybinbundle=${bundle.snappy.in.bin}</argument>
                     <argument>--snappylib=${snappy.lib}</argument>
                     <argument>--snappylibbundle=${bundle.snappy}</argument>
                     <argument>--zstdbinbundle=${bundle.zstd.in.bin}</argument>

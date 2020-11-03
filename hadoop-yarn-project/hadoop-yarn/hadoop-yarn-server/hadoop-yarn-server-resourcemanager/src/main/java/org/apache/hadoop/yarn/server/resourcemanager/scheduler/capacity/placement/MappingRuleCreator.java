@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -44,7 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class MappingRuleCreator {
   private static final String ALL_USER = "*";
@@ -165,6 +165,11 @@ public class MappingRuleCreator {
       action = MappingRuleActions.createPlaceToQueueAction(
           getTargetQueue(rule.getParentQueue(),
               "%user"), create);
+      break;
+    case APPLICATION_NAME:
+      action = MappingRuleActions.createPlaceToQueueAction(
+          getTargetQueue(rule.getParentQueue(),
+              "%application"), create);
       break;
     case SET_DEFAULT_QUEUE:
       String defaultQueue = rule.getValue();

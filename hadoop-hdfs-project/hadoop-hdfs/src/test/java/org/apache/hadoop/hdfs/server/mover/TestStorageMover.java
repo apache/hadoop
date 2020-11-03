@@ -65,8 +65,8 @@ import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Test the data migration tool (for Archival Storage)

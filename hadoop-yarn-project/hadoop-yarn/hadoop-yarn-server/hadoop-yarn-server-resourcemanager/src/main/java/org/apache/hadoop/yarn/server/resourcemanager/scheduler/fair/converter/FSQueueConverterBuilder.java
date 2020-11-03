@@ -27,7 +27,6 @@ public final class FSQueueConverterBuilder {
   Configuration capacitySchedulerConfig;
   boolean preemptionEnabled;
   boolean sizeBasedWeight;
-  boolean autoCreateChildQueues;
   Resource clusterResource;
   float queueMaxAMShareDefault;
   int queueMaxAppsDefault;
@@ -62,12 +61,6 @@ public final class FSQueueConverterBuilder {
   public FSQueueConverterBuilder withSizeBasedWeight(
       boolean sizeBasedWeight) {
     this.sizeBasedWeight = sizeBasedWeight;
-    return this;
-  }
-
-  public FSQueueConverterBuilder withAutoCreateChildQueues(
-      boolean autoCreateChildQueues) {
-    this.autoCreateChildQueues = autoCreateChildQueues;
     return this;
   }
 

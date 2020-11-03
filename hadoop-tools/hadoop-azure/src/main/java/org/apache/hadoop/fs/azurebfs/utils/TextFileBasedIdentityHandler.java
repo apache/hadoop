@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import java.io.File;
 import java.io.IOException;

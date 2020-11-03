@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;

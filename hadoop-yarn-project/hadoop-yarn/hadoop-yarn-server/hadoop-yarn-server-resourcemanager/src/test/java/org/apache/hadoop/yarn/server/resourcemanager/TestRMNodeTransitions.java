@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -1166,5 +1167,113 @@ public class TestRMNodeTransitions {
         getContainerIdList()));
     Assert.assertEquals(1, rmNode.getContainersToBeRemovedFromNM().size());
 
+  }
+
+  private void calcIntervalTest(RMNodeImpl rmNode, ResourceUtilization nodeUtil,
+      long hbDefault, long hbMin, long hbMax, float speedup, float slowdown,
+                                float cpuUtil, long expectedHb) {
+    nodeUtil.setCPU(cpuUtil);
+    rmNode.setNodeUtilization(nodeUtil);
+    long hbInterval = rmNode.calculateHeartBeatInterval(hbDefault, hbMin, hbMax,
+        speedup, slowdown);
+    assertEquals("heartbeat interval incorrect", expectedHb, hbInterval);
+  }
+
+  @Test
+  public void testCalculateHeartBeatInterval() {
+    RMNodeImpl rmNode = getRunningNode();
+    Resource nodeCapability = rmNode.getTotalCapability();
+    ClusterMetrics metrics = ClusterMetrics.getMetrics();
+    // Set cluster capability to 10 * nodeCapability
+    int vcoreUnit = nodeCapability.getVirtualCores();
+    rmNode.setPhysicalResource(nodeCapability);
+    int clusterVcores = vcoreUnit * 10;
+    metrics.incrCapability(
+        Resource.newInstance(10 * nodeCapability.getMemorySize(),
+            clusterVcores));
+
+    long hbDefault = 2000;
+    long hbMin = 1500;
+    long hbMax = 2500;
+    float speedup = 1.0F;
+    float slowdown = 1.0F;
+    metrics.incrUtilizedVirtualCores(vcoreUnit * 5); // 50 % cluster util
+    ResourceUtilization nodeUtil = ResourceUtilization.newInstance(
+        1024, vcoreUnit, 0.0F * vcoreUnit); // 0% rmNode util
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.0F, hbMin); // 0%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.10F, hbMin); // 10%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.20F, hbMin); // 20%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.30F, 1600); // 30%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.40F, 1800); // 40%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.50F, hbDefault); // 50%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.60F, 2200); // 60%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.70F, 2400); // 70%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.80F, hbMax); // 80%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.90F, hbMax); // 90%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 1.0F, hbMax); // 100%
+
+    // Try with 50% speedup/slowdown factors
+    speedup = 0.5F;
+    slowdown = 0.5F;
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.0F, hbMin); // 0%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.10F, 1600); // 10%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.20F, 1700); // 20%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.30F, 1800); // 30%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.40F, 1900); // 40%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.50F, hbDefault); // 50%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.60F, 2100); // 60%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.70F, 2200); // 70%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.80F, 2300); // 80%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.90F, 2400); // 90%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 1.0F, hbMax); // 100%
+
+    // With Physical Resource null, it should always return default
+    rmNode.setPhysicalResource(null);
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.1F, hbDefault); // 10%
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 1.0F, hbDefault); // 100%
   }
 }

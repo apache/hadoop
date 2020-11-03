@@ -92,7 +92,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
         whenRaw(FILE_STATUS_FILE_PROBE
             .plus(LIST_LOCATED_STATUS_LIST_OP)),
         whenAuthoritative(LIST_LOCATED_STATUS_LIST_OP),
-        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP
+            .plus(S3GUARD_NONAUTH_FILE_STATUS_PROBE)));
   }
 
   @Test
@@ -187,7 +188,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
             whenRaw(LIST_STATUS_LIST_OP
                     .plus(GET_FILE_STATUS_ON_FILE)),
             whenAuthoritative(LIST_STATUS_LIST_OP),
-            whenNonauth(LIST_STATUS_LIST_OP));
+            whenNonauth(LIST_STATUS_LIST_OP
+                .plus(S3GUARD_NONAUTH_FILE_STATUS_PROBE)));
   }
 
   @Test

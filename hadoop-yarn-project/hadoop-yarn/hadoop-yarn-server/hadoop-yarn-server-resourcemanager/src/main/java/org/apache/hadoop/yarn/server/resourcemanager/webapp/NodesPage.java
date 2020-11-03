@@ -87,8 +87,10 @@ class NodesPage extends RmView {
             .th(".allocationTags", "Allocation Tags")
             .th(".mem", "Mem Used")
             .th(".mem", "Mem Avail")
+            .th(".mem", "Phys Mem Used %")
             .th(".vcores", "VCores Used")
             .th(".vcores", "VCores Avail")
+            .th(".vcores", "Phys VCores Used %")
             .th(".gpus", "GPUs Used")
             .th(".gpus", "GPUs Avail");
       } else {
@@ -96,8 +98,10 @@ class NodesPage extends RmView {
             .th(".allocationTags", "Allocation Tags")
             .th(".mem", "Mem Used (G)")
             .th(".mem", "Mem Avail (G)")
+            .th(".mem", "Phys Mem Used %")
             .th(".vcores", "VCores Used (G)")
             .th(".vcores", "VCores Avail (G)")
+            .th(".vcores", "Phys VCores Used %")
             .th(".gpus", "GPUs Used (G)")
             .th(".gpus", "GPUs Avail (G)")
             .th(".containers", "Running Containers (O)")
@@ -175,7 +179,8 @@ class NodesPage extends RmView {
             .get(ResourceInformation.GPU_URI);
         long usedGPUs = 0;
         long availableGPUs = 0;
-        if (gpuIndex != null) {
+        if (gpuIndex != null && info.getUsedResource() != null
+            && info.getAvailableResource() != null) {
           usedGPUs = info.getUsedResource().getResource()
               .getResourceValue(ResourceInformation.GPU_URI);
           availableGPUs = info.getAvailableResource().getResource()
@@ -192,9 +197,14 @@ class NodesPage extends RmView {
             .append("\",\"").append("<br title='")
             .append(String.valueOf(availableMemory)).append("'>")
             .append(StringUtils.byteDesc(availableMemory * BYTES_IN_MB))
-            .append("\",\"").append(String.valueOf(info.getUsedVirtualCores()))
+            .append("\",\"")
+            .append(String.valueOf((int) info.getMemUtilization()))
+            .append("\",\"")
+            .append(String.valueOf(info.getUsedVirtualCores()))
             .append("\",\"")
             .append(String.valueOf(info.getAvailableVirtualCores()))
+            .append("\",\"")
+            .append(String.valueOf((int) info.getVcoreUtilization()))
             .append("\",\"")
             .append(String.valueOf(usedGPUs))
             .append("\",\"")

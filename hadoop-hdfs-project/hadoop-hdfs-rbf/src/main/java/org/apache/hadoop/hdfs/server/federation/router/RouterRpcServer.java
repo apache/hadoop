@@ -37,6 +37,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -49,13 +50,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
@@ -171,7 +172,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
@@ -561,8 +562,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    *                          client requests.
    */
   private void checkSafeMode() throws StandbyException {
-    RouterSafemodeService safemodeService = router.getSafemodeService();
-    if (safemodeService != null && safemodeService.isInSafeMode()) {
+    if (isSafeMode()) {
       // Throw standby exception, router is not available
       if (rpcMonitor != null) {
         rpcMonitor.routerFailureSafemode();
@@ -571,6 +571,16 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       throw new StandbyException("Router " + router.getRouterId() +
           " is in safe mode and cannot handle " + op + " requests");
     }
+  }
+
+  /**
+   * Return true if the Router is in safe mode.
+   *
+   * @return true if the Router is in safe mode.
+   */
+  boolean isSafeMode() {
+    RouterSafemodeService safemodeService = router.getSafemodeService();
+    return (safemodeService != null && safemodeService.isInSafeMode());
   }
 
   /**
@@ -587,6 +597,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /**
    * Invokes the method at default namespace, if default namespace is not
    * available then at the first available namespace.
+   * If the namespace is unavailable, retry once with other namespace.
    * @param <T> expected return type.
    * @param method the remote method.
    * @return the response received after invoking method.
@@ -595,16 +606,59 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   <T> T invokeAtAvailableNs(RemoteMethod method, Class<T> clazz)
       throws IOException {
     String nsId = subclusterResolver.getDefaultNamespace();
-    if (!nsId.isEmpty()) {
-      return rpcClient.invokeSingle(nsId, method, clazz);
-    }
     // If default Ns is not present return result from first namespace.
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    if (nss.isEmpty()) {
-      throw new IOException("No namespace available.");
+    try {
+      if (!nsId.isEmpty()) {
+        return rpcClient.invokeSingle(nsId, method, clazz);
+      }
+      // If no namespace is available, throw IOException.
+      IOException io = new IOException("No namespace available.");
+      return invokeOnNs(method, clazz, io, nss);
+    } catch (IOException ioe) {
+      if (!clientProto.isUnavailableSubclusterException(ioe)) {
+        LOG.debug("{} exception cannot be retried",
+            ioe.getClass().getSimpleName());
+        throw ioe;
+      }
+      Set<FederationNamespaceInfo> nssWithoutFailed = getNameSpaceInfo(nsId);
+      return invokeOnNs(method, clazz, ioe, nssWithoutFailed);
     }
-    nsId = nss.iterator().next().getNameserviceId();
+  }
+
+  /**
+   * Invoke the method on first available namespace,
+   * throw no namespace available exception, if no namespaces are available.
+   * @param method the remote method.
+   * @param clazz  Class for the return type.
+   * @param ioe    IOException .
+   * @param nss    List of name spaces in the federation
+   * @return the response received after invoking method.
+   * @throws IOException
+   */
+  <T> T invokeOnNs(RemoteMethod method, Class<T> clazz, IOException ioe,
+      Set<FederationNamespaceInfo> nss) throws IOException {
+    if (nss.isEmpty()) {
+      throw ioe;
+    }
+    String nsId = nss.iterator().next().getNameserviceId();
     return rpcClient.invokeSingle(nsId, method, clazz);
+  }
+
+  /**
+   * Get set of namespace info's removing the already invoked namespaceinfo.
+   * @param nsId already invoked namespace id
+   * @return List of name spaces in the federation on
+   * removing the already invoked namespaceinfo.
+   */
+  private Set<FederationNamespaceInfo> getNameSpaceInfo(String nsId) {
+    Set<FederationNamespaceInfo> namespaceInfos = new HashSet<>();
+    for (FederationNamespaceInfo ns : namespaceInfos) {
+      if (!nsId.equals(ns.getNameserviceId())) {
+        namespaceInfos.add(ns);
+      }
+    }
+    return namespaceInfos;
   }
 
   @Override // ClientProtocol

@@ -376,7 +376,6 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   }
 
   @Override
-  //DFS specific API
   public FSDataOutputStream create(final Path f, final FsPermission permission,
       final EnumSet<CreateFlag> cflags, final int bufferSize,
       final short replication, final long blockSize,
@@ -387,12 +386,8 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
           .create(f, permission, cflags, bufferSize, replication, blockSize,
               progress, checksumOpt);
     }
-    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
-        this.vfs.getMountPathInfo(f, getConf());
-    checkDFS(mountPathInfo.getTargetFs(), "create");
-    return mountPathInfo.getTargetFs()
-        .create(mountPathInfo.getPathOnTarget(), permission, cflags, bufferSize,
-            replication, blockSize, progress, checksumOpt);
+    return vfs.create(f, permission, cflags, bufferSize, replication, blockSize,
+        progress, checksumOpt);
   }
 
   void checkDFS(FileSystem fs, String methodName) {
@@ -1077,16 +1072,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       return super.canonicalizeUri(uri);
     }
 
-    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo = null;
-    try {
-      mountPathInfo = this.vfs.getMountPathInfo(new Path(uri), getConf());
-    } catch (IOException e) {
-      LOGGER.warn("Failed to resolve the uri as mount path", e);
-      return null;
-    }
-    checkDFS(mountPathInfo.getTargetFs(), "canonicalizeUri");
-    return ((DistributedFileSystem) mountPathInfo.getTargetFs())
-        .canonicalizeUri(uri);
+    return vfs.canonicalizeUri(uri);
   }
 
   @Override
@@ -1689,6 +1675,20 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     checkDFS(mountPathInfo.getTargetFs(), "provisionEZTrash");
     ((DistributedFileSystem) mountPathInfo.getTargetFs())
         .provisionEZTrash(mountPathInfo.getPathOnTarget(), trashPermission);
+  }
+
+  @Override
+  public Path provisionSnapshotTrash(final Path path,
+      final FsPermission trashPermission) throws IOException {
+    if (this.vfs == null) {
+      return super.provisionSnapshotTrash(path, trashPermission);
+    }
+    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
+        this.vfs.getMountPathInfo(path, getConf());
+    checkDFS(mountPathInfo.getTargetFs(), "provisionSnapshotTrash");
+    return ((DistributedFileSystem) mountPathInfo.getTargetFs())
+        .provisionSnapshotTrash(mountPathInfo.getPathOnTarget(),
+          trashPermission);
   }
 
   @Override

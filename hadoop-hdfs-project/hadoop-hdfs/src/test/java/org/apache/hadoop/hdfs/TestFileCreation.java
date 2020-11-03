@@ -239,9 +239,8 @@ public class TestFileCreation {
    * Test that server defaults are updated on the client after cache expiration.
    */
   @Test
-  public void testServerDefaultsWithMinimalCaching()
-      throws IOException, InterruptedException {
-    // Create cluster with an explicit block size param
+  public void testServerDefaultsWithMinimalCaching() throws Exception  {
+    // Create cluster with an explicit block size param.
     Configuration clusterConf = new HdfsConfiguration();
     long originalBlockSize = DFS_BLOCK_SIZE_DEFAULT * 2;
     clusterConf.setLong(DFS_BLOCK_SIZE_KEY, originalBlockSize);
@@ -273,10 +272,17 @@ public class TestFileCreation {
               defaults.getDefaultStoragePolicyId());
       doReturn(newDefaults).when(spyNamesystem).getServerDefaults();
 
-      Thread.sleep(1);
-      defaults = dfsClient.getServerDefaults();
-      // Value is updated correctly
-      assertEquals(updatedDefaultBlockSize, defaults.getBlockSize());
+      // Verify that the value is updated correctly. Wait for 3 seconds.
+      GenericTestUtils.waitFor(()->{
+        try {
+          FsServerDefaults currDef = dfsClient.getServerDefaults();
+          return (currDef.getBlockSize() == updatedDefaultBlockSize);
+        } catch (IOException e) {
+          // do nothing;
+          return false;
+        }
+      }, 1, 3000);
+
     } finally {
       cluster.shutdown();
     }

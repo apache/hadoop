@@ -19,9 +19,9 @@
 package org.apache.hadoop.hdfs;
 
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.collections.list.TreeList;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1767,6 +1767,18 @@ public class DistributedFileSystem extends FileSystem
     }.resolve(this, absF);
   }
 
+  /**
+   * Synchronize client metadata state with Active NameNode.
+   * <p>
+   * In HA the client synchronizes its state with the Active NameNode
+   * in order to guarantee subsequent read consistency from Observer Nodes.
+   * @throws IOException
+   */
+  @Override
+  public void msync() throws IOException {
+    dfs.msync();
+  }
+
   @SuppressWarnings("deprecation")
   @Override
   public void createSymlink(final Path target, final Path link,
@@ -2032,6 +2044,19 @@ public class DistributedFileSystem extends FileSystem
     return setSafeMode(SafeModeAction.SAFEMODE_GET, true);
   }
 
+  /**
+   * HDFS only.
+   *
+   * Returns if the NameNode enabled the snapshot trash root configuration
+   * dfs.namenode.snapshot.trashroot.enabled
+   * @return true if NameNode enabled snapshot trash root
+   * @throws IOException
+   *           when there is an issue communicating with the NameNode
+   */
+  public boolean isSnapshotTrashRootEnabled() throws IOException {
+    return dfs.isSnapshotTrashRootEnabled();
+  }
+
   /** @see org.apache.hadoop.hdfs.client.HdfsAdmin#allowSnapshot(Path) */
   public void allowSnapshot(final Path path) throws IOException {
     statistics.incrementWriteOps(1);
@@ -2068,12 +2093,7 @@ public class DistributedFileSystem extends FileSystem
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException {
-        String ssTrashRoot =
-            new Path(p, FileSystem.TRASH_PREFIX).toUri().getPath();
-        if (dfs.exists(ssTrashRoot)) {
-          throw new IOException("Found trash root under path " + p + ". "
-              + "Please remove or move the trash root and then try again.");
-        }
+        checkTrashRootAndRemoveIfEmpty(p);
         dfs.disallowSnapshot(getPathName(p));
         return null;
       }
@@ -2083,6 +2103,7 @@ public class DistributedFileSystem extends FileSystem
           throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          myDfs.checkTrashRootAndRemoveIfEmpty(p);
           myDfs.disallowSnapshot(p);
         } else {
           throw new UnsupportedOperationException("Cannot perform snapshot"
@@ -2092,6 +2113,41 @@ public class DistributedFileSystem extends FileSystem
         return null;
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * Helper function to check if a trash root exists in the given directory,
+   * remove the trash root if it is empty, or throw IOException if not empty
+   * @param p Path to a directory.
+   */
+  private void checkTrashRootAndRemoveIfEmpty(final Path p) throws IOException {
+    Path trashRoot = new Path(p, FileSystem.TRASH_PREFIX);
+    try {
+      // listStatus has 4 possible outcomes here:
+      // 1) throws FileNotFoundException: the trash root doesn't exist.
+      // 2) returns empty array: the trash path is an empty directory.
+      // 3) returns non-empty array, len >= 2: the trash root is not empty.
+      // 4) returns non-empty array, len == 1:
+      //    i) if the element's path is exactly p, the trash path is not a dir.
+      //       e.g. a file named .Trash. Ignore.
+      //   ii) if the element's path isn't p, the trash root is not empty.
+      FileStatus[] fileStatuses = listStatus(trashRoot);
+      if (fileStatuses.length == 0) {
+        DFSClient.LOG.debug("Removing empty trash root {}", trashRoot);
+        delete(trashRoot, false);
+      } else {
+        if (fileStatuses.length == 1
+            && !fileStatuses[0].isDirectory()
+            && !fileStatuses[0].getPath().equals(p)) {
+          // Ignore the trash path because it is not a directory.
+          DFSClient.LOG.warn("{} is not a directory.", trashRoot);
+        } else {
+          throw new IOException("Found non-empty trash root at " +
+              trashRoot + ". Rename or delete it, then try again.");
+        }
+      }
+    } catch (FileNotFoundException ignored) {
+    }
   }
 
   @Override
@@ -2901,6 +2957,80 @@ public class DistributedFileSystem extends FileSystem
     setPermission(trashPath, trashPermission);
   }
 
+  /**
+   * HDFS only.
+   *
+   * Provision snapshottable directory trash.
+   * @param path Path to a snapshottable directory.
+   * @param trashPermission Expected FsPermission of the trash root.
+   * @return Path of the provisioned trash root
+   */
+  public Path provisionSnapshotTrash(final Path path,
+      final FsPermission trashPermission) throws IOException {
+    Path absF = fixRelativePart(path);
+    return new FileSystemLinkResolver<Path>() {
+      @Override
+      public Path doCall(Path p) throws IOException {
+        return provisionSnapshotTrash(getPathName(p), trashPermission);
+      }
+
+      @Override
+      public Path next(FileSystem fs, Path p) throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          return myDfs.provisionSnapshotTrash(p, trashPermission);
+        }
+        throw new UnsupportedOperationException(
+            "Cannot provisionSnapshotTrash through a symlink to" +
+            " a non-DistributedFileSystem: " + fs + " -> " + p);
+      }
+    }.resolve(this, absF);
+  }
+
+  private Path provisionSnapshotTrash(
+      String pathStr, FsPermission trashPermission) throws IOException {
+    Path path = new Path(pathStr);
+    // Given path must be a snapshottable directory
+    FileStatus fileStatus = getFileStatus(path);
+    if (!fileStatus.isSnapshotEnabled()) {
+      throw new IllegalArgumentException(
+          path + " is not a snapshottable directory.");
+    }
+
+    // Check if trash root already exists
+    Path trashPath = new Path(path, FileSystem.TRASH_PREFIX);
+    try {
+      FileStatus trashFileStatus = getFileStatus(trashPath);
+      String errMessage = "Can't provision trash for snapshottable directory " +
+          pathStr + " because trash path " + trashPath.toString() +
+          " already exists.";
+      if (!trashFileStatus.isDirectory()) {
+        errMessage += "\r\n" +
+            "WARNING: " + trashPath.toString() + " is not a directory.";
+      }
+      if (!trashFileStatus.getPermission().equals(trashPermission)) {
+        errMessage += "\r\n" +
+            "WARNING: Permission of " + trashPath.toString() +
+            " differs from provided permission " + trashPermission;
+      }
+      throw new FileAlreadyExistsException(errMessage);
+    } catch (FileNotFoundException ignored) {
+      // Trash path doesn't exist. Continue
+    }
+
+    // Create trash root and set the permission
+    mkdir(trashPath, trashPermission);
+    setPermission(trashPath, trashPermission);
+
+    // Print a warning if snapshot trash root feature is not enabled
+    if (!isSnapshotTrashRootEnabled()) {
+      DFSClient.LOG.warn("New trash is provisioned, but the snapshot trash root"
+          + " feature is disabled. This new trash but won't be automatically"
+          + " utilized unless the feature is enabled on the NameNode.");
+    }
+    return trashPath;
+  }
+
   @Override
   public void setXAttr(Path path, final String name, final byte[] value,
       final EnumSet<XAttrSetFlag> flag) throws IOException {
@@ -3124,7 +3254,7 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * Get erasure coding policy information for the specified path
+   * Get erasure coding policy information for the specified path.
    *
    * @param path The path of the file or directory
    * @return Returns the policy information if file or directory on the path

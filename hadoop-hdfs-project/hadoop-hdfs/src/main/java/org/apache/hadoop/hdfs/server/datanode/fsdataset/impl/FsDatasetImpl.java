@@ -48,7 +48,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -121,9 +121,9 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1957,28 +1957,32 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           continue;
         }
         String volStorageID = b.getVolume().getStorageID();
-        if (!builders.containsKey(volStorageID)) {
+        switch(b.getState()) {
+        case FINALIZED:
+        case RBW:
+        case RWR:
+          break;
+        case RUR:
+          // use the original replica.
+          b = b.getOriginalReplica();
+          break;
+        case TEMPORARY:
+          continue;
+        default:
+          assert false : "Illegal ReplicaInfo state.";
+          continue;
+        }
+        BlockListAsLongs.Builder storageBuilder = builders.get(volStorageID);
+        // a storage in the process of failing will not be in the volumes list
+        // but will be in the replica map.
+        if (storageBuilder != null) {
+          storageBuilder.add(b);
+        } else {
           if (!missingVolumesReported.contains(volStorageID)) {
             LOG.warn("Storage volume: " + volStorageID + " missing for the"
                 + " replica block: " + b + ". Probably being removed!");
             missingVolumesReported.add(volStorageID);
           }
-          continue;
-        }
-        switch(b.getState()) {
-        case FINALIZED:
-        case RBW:
-        case RWR:
-          builders.get(volStorageID).add(b);
-          break;
-        case RUR:
-          ReplicaInfo orig = b.getOriginalReplica();
-          builders.get(volStorageID).add(orig);
-          break;
-        case TEMPORARY:
-          break;
-        default:
-          assert false : "Illegal ReplicaInfo state.";
         }
       }
     }

@@ -153,7 +153,19 @@ public class Hdfs extends AbstractFileSystem {
       throw new FileNotFoundException("File does not exist: " + f.toString());
     }
   }
-  
+
+  /**
+   * Synchronize client metadata state with Active NameNode.
+   * <p>
+   * In HA the client synchronizes its state with the Active NameNode
+   * in order to guarantee subsequent read consistency from Observer Nodes.
+   * @throws IOException
+   */
+  @Override
+  public void msync() throws IOException {
+    dfs.msync();
+  }
+
   @Override
   public FileStatus getFileLinkStatus(Path f) 
       throws IOException, UnresolvedLinkException {

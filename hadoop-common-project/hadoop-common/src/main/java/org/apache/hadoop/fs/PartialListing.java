@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -30,7 +30,7 @@ import java.util.List;
  * A partial listing of the children of a parent directory. Since it is a
  * partial listing, multiple PartialListing may need to be combined to obtain
  * the full listing of a parent directory.
- * <p/>
+ * <p>
  * ListingBatch behaves similar to a Future, in that getting the result via
  * {@link #get()} will throw an Exception if there was a failure.
  */

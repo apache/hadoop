@@ -45,8 +45,6 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -72,13 +70,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.tools.DFSck;
@@ -131,7 +129,6 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
@@ -147,12 +144,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -200,7 +195,7 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
@@ -1951,39 +1946,6 @@ public class DFSTestUtil {
   public static void FsShellRun(String cmd, Configuration conf)
       throws Exception {
     FsShellRun(cmd, 0, null, conf);
-  }
-
-  public static void addDataNodeLayoutVersion(final int lv, final String description)
-      throws NoSuchFieldException, IllegalAccessException {
-    Preconditions.checkState(lv < DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
-
-    // Override {@link DataNodeLayoutVersion#CURRENT_LAYOUT_VERSION} via reflection.
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    Field field = DataNodeLayoutVersion.class.getField("CURRENT_LAYOUT_VERSION");
-    field.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-    field.setInt(null, lv);
-
-    field = HdfsServerConstants.class.getField("DATANODE_LAYOUT_VERSION");
-    field.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-    field.setInt(null, lv);
-
-    // Inject the feature into the FEATURES map.
-    final LayoutVersion.FeatureInfo featureInfo =
-        new LayoutVersion.FeatureInfo(lv, lv + 1, description, false);
-    final LayoutVersion.LayoutFeature feature =
-        new LayoutVersion.LayoutFeature() {
-      @Override
-      public LayoutVersion.FeatureInfo getInfo() {
-        return featureInfo;
-      }
-    };
-
-    // Update the FEATURES map with the new layout version.
-    LayoutVersion.updateMap(DataNodeLayoutVersion.FEATURES,
-                            new LayoutVersion.LayoutFeature[] { feature });
   }
 
   /**

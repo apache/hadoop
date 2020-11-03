@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -500,6 +501,8 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
    * the block count is met or iteration reaches the end of the lowest priority
    * list, in which case bookmarks for each block list are reset to the heads
    * of their respective lists.
+   * If a block is deleted (has invalid bcId), it will be removed from the low
+   * redundancy queues.
    *
    * @param blocksToProcess - number of blocks to fetch from low redundancy
    *          blocks.
@@ -515,21 +518,32 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
 
     int count = 0;
     int priority = 0;
+    HashSet<BlockInfo> toRemove = new HashSet<>();
     for (; count < blocksToProcess && priority < LEVEL; priority++) {
-      if (priority == QUEUE_WITH_CORRUPT_BLOCKS) {
-        // do not choose corrupted blocks.
-        continue;
-      }
-
       // Go through all blocks that need reconstructions with current priority.
       // Set the iterator to the first unprocessed block at this priority level
+      // We do not want to skip QUEUE_WITH_CORRUPT_BLOCKS because we still need
+      // to look for deleted blocks if any.
+      final boolean inCorruptLevel = (QUEUE_WITH_CORRUPT_BLOCKS == priority);
       final Iterator<BlockInfo> i = priorityQueues.get(priority).getBookmark();
       final List<BlockInfo> blocks = new LinkedList<>();
-      blocksToReconstruct.add(blocks);
-      // Loop through all remaining blocks in the list.
-      for(; count < blocksToProcess && i.hasNext(); count++) {
-        blocks.add(i.next());
+      if (!inCorruptLevel) {
+        blocksToReconstruct.add(blocks);
       }
+      for(; count < blocksToProcess && i.hasNext(); count++) {
+        BlockInfo block = i.next();
+        if (block.isDeleted()) {
+          toRemove.add(block);
+          continue;
+        }
+        if (!inCorruptLevel) {
+          blocks.add(block);
+        }
+      }
+      for (BlockInfo bInfo : toRemove) {
+        remove(bInfo, priority);
+      }
+      toRemove.clear();
     }
 
     if (priority == LEVEL || resetIterators) {

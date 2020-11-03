@@ -71,8 +71,8 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 import org.slf4j.Logger;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 /**
  * A thread per active or standby namenode to perform:
@@ -572,11 +572,11 @@ class BPServiceActor implements Runnable {
     }
     bpThread = new Thread(this);
     bpThread.setDaemon(true); // needed for JUnit testing
-    bpThread.start();
 
     if (lifelineSender != null) {
       lifelineSender.start();
     }
+    bpThread.start();
   }
 
   private String formatThreadName(

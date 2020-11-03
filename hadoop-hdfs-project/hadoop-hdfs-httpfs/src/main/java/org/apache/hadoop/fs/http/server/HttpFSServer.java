@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.http.server;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -453,6 +453,14 @@ public class HttpFSServer {
     case GETSNAPSHOTTABLEDIRECTORYLIST: {
       FSOperations.FSGetSnapshottableDirListing command =
           new FSOperations.FSGetSnapshottableDirListing();
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", "/");
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case GETSNAPSHOTLIST: {
+      FSOperations.FSGetSnapshotListing command =
+          new FSOperations.FSGetSnapshotListing(path);
       String js = fsExecute(user, command);
       AUDIT_LOG.info("[{}]", "/");
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();

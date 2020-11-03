@@ -33,7 +33,7 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
 

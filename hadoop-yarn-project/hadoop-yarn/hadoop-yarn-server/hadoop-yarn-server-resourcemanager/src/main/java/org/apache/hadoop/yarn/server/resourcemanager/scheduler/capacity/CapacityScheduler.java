@@ -162,9 +162,9 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QUEUE_MAPPING;
 
@@ -244,6 +244,8 @@ public class CapacityScheduler extends
   private long asyncMaxPendingBacklogs;
 
   private CSMaxRunningAppsEnforcer maxRunningEnforcer;
+
+  private boolean activitiesManagerEnabled = true;
 
   public CapacityScheduler() {
     super(CapacityScheduler.class.getName());
@@ -342,7 +344,9 @@ public class CapacityScheduler extends
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
 
       this.activitiesManager = new ActivitiesManager(rmContext);
-      activitiesManager.init(conf);
+      if (activitiesManagerEnabled) {
+        activitiesManager.init(conf);
+      }
       initializeQueues(this.conf);
       this.isLazyPreemptionEnabled = conf.getLazyPreemptionEnabled();
 
@@ -400,7 +404,9 @@ public class CapacityScheduler extends
   private void startSchedulerThreads() {
     writeLock.lock();
     try {
-      activitiesManager.start();
+      if (activitiesManagerEnabled) {
+        activitiesManager.start();
+      }
       if (scheduleAsynchronously) {
         Preconditions.checkNotNull(asyncSchedulerThreads,
             "asyncSchedulerThreads is null");
@@ -434,7 +440,9 @@ public class CapacityScheduler extends
   public void serviceStop() throws Exception {
     writeLock.lock();
     try {
-      this.activitiesManager.stop();
+      if (activitiesManagerEnabled) {
+        this.activitiesManager.stop();
+      }
       if (scheduleAsynchronously && asyncSchedulerThreads != null) {
         for (Thread t : asyncSchedulerThreads) {
           t.interrupt();
@@ -2282,6 +2290,21 @@ public class CapacityScheduler extends
   public boolean checkAccess(UserGroupInformation callerUGI,
       QueueACL acl, String queueName) {
     CSQueue queue = getQueue(queueName);
+
+    if (queueName.startsWith("root.")) {
+      // can only check proper ACLs if the path is fully qualified
+      while (queue == null) {
+        int sepIndex = queueName.lastIndexOf(".");
+        String parentName = queueName.substring(0, sepIndex);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Queue {} does not exist, checking parent {}",
+              queueName, parentName);
+        }
+        queueName = parentName;
+        queue = queueManager.getQueue(queueName);
+      }
+    }
+
     if (queue == null) {
       LOG.debug("ACL not found for queue access-type {} for queue {}",
           acl, queueName);
@@ -3286,11 +3309,22 @@ public class CapacityScheduler extends
     this.maxRunningEnforcer = enforcer;
   }
 
+
   /**
    * Returning true as capacity scheduler supports placement constraints.
    */
   @Override
   public boolean placementConstraintEnabled() {
     return true;
+  }
+
+  @VisibleForTesting
+  public void setActivitiesManagerEnabled(boolean enabled) {
+    this.activitiesManagerEnabled = enabled;
+  }
+
+  @VisibleForTesting
+  public void setQueueManager(CapacitySchedulerQueueManager qm) {
+    this.queueManager = qm;
   }
 }

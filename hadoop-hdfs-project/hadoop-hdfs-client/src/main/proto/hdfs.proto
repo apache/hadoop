@@ -296,6 +296,7 @@ message DataEncryptionKeyProto {
 enum CipherSuiteProto {
     UNKNOWN = 1;
     AES_CTR_NOPADDING = 2;
+    SM4_CTR_NOPADDING = 3;
 }
 
 /**

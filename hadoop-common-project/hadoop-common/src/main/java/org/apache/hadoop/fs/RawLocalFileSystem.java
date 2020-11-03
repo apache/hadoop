@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.fs;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
@@ -72,7 +72,12 @@ public class RawLocalFileSystem extends FileSystem {
   public static void useStatIfAvailable() {
     useDeprecatedFileStatus = !Stat.isAvailable();
   }
-  
+
+  @VisibleForTesting
+  static void setUseDeprecatedFileStatus(boolean useDeprecatedFileStatus) {
+    RawLocalFileSystem.useDeprecatedFileStatus = useDeprecatedFileStatus;
+  }
+
   public RawLocalFileSystem() {
     workingDir = getInitialWorkingDirectory();
   }
@@ -700,8 +705,8 @@ public class RawLocalFileSystem extends FileSystem {
     DeprecatedRawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs)
       throws IOException {
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
-          f.lastModified(), getLastAccessTime(f),
-          null, null, null,
+          Files.getLastModifiedTime(f.toPath()).toMillis(),
+          getLastAccessTime(f),null, null, null,
           new Path(f.getPath()).makeQualified(fs.getUri(),
             fs.getWorkingDirectory()));
     }

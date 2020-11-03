@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.net;
 
-import com.google.common.net.InetAddresses;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;

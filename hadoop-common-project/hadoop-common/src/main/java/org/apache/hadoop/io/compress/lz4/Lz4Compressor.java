@@ -44,6 +44,7 @@ public class Lz4Compressor implements Compressor {
   private byte[] userBuf = null;
   private int userBufOff = 0, userBufLen = 0;
   private boolean finish, finished;
+  private int dstCapacity;
 
   private long bytesRead = 0L;
   private long bytesWritten = 0L;
@@ -77,8 +78,14 @@ public class Lz4Compressor implements Compressor {
     this.directBufferSize = directBufferSize;
 
     uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
-    compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
-    compressedDirectBuf.position(directBufferSize);
+
+    // Compression is guaranteed to succeed if 'dstCapacity' >=
+    // LZ4_compressBound(srcSize)
+    // whereas LZ4_compressBound(isize) is (isize) + ((isize)/255) + 16)
+    this.dstCapacity = (directBufferSize) + ((directBufferSize) / 255) + 16;
+
+    compressedDirectBuf = ByteBuffer.allocateDirect(this.dstCapacity);
+    compressedDirectBuf.position(this.dstCapacity);
   }
 
   /**
