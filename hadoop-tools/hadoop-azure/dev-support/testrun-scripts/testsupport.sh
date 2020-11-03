@@ -16,7 +16,7 @@
 # limitations under the License.
 
 testresourcesdir=src/test/resources
-combconfsdir=$testresourcesdir/combconfs
+combconfsdir=$testresourcesdir/combinationConfigFiles
 combtestfile=$testresourcesdir/abfs-combination-test-configs.xml
 
 shouldbuild=1
@@ -115,7 +115,7 @@ setactiveconf() {
 </configuration>
 ENDOFFILE
   xmlstarlet ed -P -L -s /configuration -t elem -n include -v "" $combtestfile
-  xmlstarlet ed -P -L -i /configuration/include -t attr -n href -v "combconfs/$combination.xml" $combtestfile
+  xmlstarlet ed -P -L -i /configuration/include -t attr -n href -v "combinationConfigFiles/$combination.xml" $combtestfile
   xmlstarlet ed -P -L -i /configuration/include -t attr -n xmlns -v "http://www.w3.org/2001/XInclude" $combtestfile
   formatxml $combtestfile
 }
