@@ -112,6 +112,7 @@ public class NameNodeConnector implements Closeable {
   private final OutputStream out;
   private final List<Path> targetPaths;
   private final AtomicLong bytesMoved = new AtomicLong();
+  private final AtomicLong blocksMoved = new AtomicLong();
 
   private final int maxNotChangedIterations;
   private int notChangedIterations = 0;
@@ -166,6 +167,19 @@ public class NameNodeConnector implements Closeable {
 
   AtomicLong getBytesMoved() {
     return bytesMoved;
+  }
+
+  AtomicLong getBlocksMoved() {
+    return blocksMoved;
+  }
+
+  public void addBytesMoved(long numBytes) {
+    bytesMoved.addAndGet(numBytes);
+    blocksMoved.incrementAndGet();
+  }
+
+  public URI getNameNodeUri() {
+    return nameNodeUri;
   }
 
   /** @return blocks with locations. */
