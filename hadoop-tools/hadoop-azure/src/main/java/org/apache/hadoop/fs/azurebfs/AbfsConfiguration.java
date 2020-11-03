@@ -306,9 +306,11 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Config to allow user to enable list of identifiers for correlation.
-   * Default value is true. Only clientRequestId appears in logs when disabled
-   * @return enableCorrelationHeader config
+   * Config to allow user to pick format of x-ms-client-request-id header
+   * 0 -> client-req-id
+   * 1 -> all IDs (default)
+   * 2 -> client-corr-id : client-req-id
+   * @return tracingContextFormat config
    */
   public int getTracingContextFormat() {
     return tracingContextFormat;

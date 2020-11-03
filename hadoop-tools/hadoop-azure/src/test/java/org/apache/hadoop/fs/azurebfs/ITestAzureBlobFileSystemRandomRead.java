@@ -98,7 +98,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   public void testRandomRead() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
-            this.getFileSystem().getIsNamespaceEnabled());
+            getIsNamespaceEnabled(getFileSystem()));
     assumeHugeFileExists();
     try (
             FSDataInputStream inputStreamV1
@@ -416,7 +416,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Ignore("HADOOP-16915")
   public void testRandomReadPerformance() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
-            this.getFileSystem().getIsNamespaceEnabled());
+            getIsNamespaceEnabled(getFileSystem()));
     createTestFile();
     assumeHugeFileExists();
 

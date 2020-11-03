@@ -209,55 +209,55 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
 
   @Test
   public void testSetOwnerUnauthorized() throws Exception {
-    Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.SetOwner, true);
   }
 
   @Test
   public void testSetPermissionUnauthorized() throws Exception {
-    Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.SetPermissions, true);
   }
 
   @Test
   public void testModifyAclEntriesUnauthorized() throws Exception {
-    Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.ModifyAclEntries, true);
   }
 
   @Test
   public void testRemoveAclEntriesUnauthorized() throws Exception {
-    Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.RemoveAclEntries, true);
   }
 
   @Test
   public void testRemoveDefaultAclUnauthorized() throws Exception {
-    Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.RemoveDefaultAcl, true);
   }
 
   @Test
   public void testRemoveAclUnauthorized() throws Exception {
-    Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.RemoveAcl, true);
   }
 
   @Test
   public void testSetAclUnauthorized() throws Exception {
-    Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.SetAcl, true);
   }
 
   @Test
   public void testGetAclStatusAuthorized() throws Exception {
-    Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.GetAcl, false);
   }
 
   @Test
   public void testGetAclStatusUnauthorized() throws Exception {
-    Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(getFileSystem()));
     runTest(FileSystemOperations.GetAcl, true);
   }
 

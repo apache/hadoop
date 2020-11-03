@@ -483,32 +483,32 @@ public class AzureBlobFileSystemStore implements Closeable {
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
-            statistics,
-            isNamespaceEnabled ? getOctalNotation(permission) : null,
-            isNamespaceEnabled ? getOctalNotation(umask) : null,
-            isAppendBlob,
-            tracingContext
+              statistics,
+              isNamespaceEnabled ? getOctalNotation(permission) : null,
+              isNamespaceEnabled ? getOctalNotation(umask) : null,
+              isAppendBlob,
+              tracingContext
         );
 
       } else {
         op = client.createPath(relativePath, true,
-          overwrite,
-          isNamespaceEnabled ? getOctalNotation(permission) : null,
-          isNamespaceEnabled ? getOctalNotation(umask) : null,
-          isAppendBlob,
-          null,
-          tracingContext);
+            overwrite,
+            isNamespaceEnabled ? getOctalNotation(permission) : null,
+            isNamespaceEnabled ? getOctalNotation(umask) : null,
+            isAppendBlob,
+            null,
+            tracingContext);
 
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
       return new AbfsOutputStream(
-              client,
-              statistics,
-              relativePath,
-              0,
-              populateAbfsOutputStreamContext(isAppendBlob),
-              tracingContext);
+          client,
+          statistics,
+          relativePath,
+          0,
+          populateAbfsOutputStreamContext(isAppendBlob),
+          tracingContext);
     }
   }
 
@@ -698,12 +698,12 @@ public class AzureBlobFileSystemStore implements Closeable {
         isAppendBlob = true;
       }
       return new AbfsOutputStream(
-              client,
-              statistics,
-              relativePath,
-              offset,
-              populateAbfsOutputStreamContext(isAppendBlob),
-              tracingContext);
+          client,
+          statistics,
+          relativePath,
+          offset,
+          populateAbfsOutputStreamContext(isAppendBlob),
+          tracingContext);
     }
   }
 

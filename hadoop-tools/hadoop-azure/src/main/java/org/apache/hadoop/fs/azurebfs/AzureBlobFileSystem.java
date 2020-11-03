@@ -1301,13 +1301,6 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   @VisibleForTesting
-  boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
-    return abfsStore.getIsNamespaceEnabled(
-            new TracingContext(clientCorrelationID, fileSystemID,
-                AbfsOperations.GET_NAMESPACE, tracingContextFormat));
-  }
-
-  @VisibleForTesting
   Map<String, Long> getInstrumentationMap() {
     return abfsCounters.toMap();
   }

@@ -112,7 +112,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @Override
-
   public int read() throws IOException {
     byte[] b = new byte[1];
     int numberOfBytesRead = read(b, 0, 1);
@@ -296,8 +295,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
-      op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
-              tracingContext);
+      op = client.read(path, position, b, offset, length,
+          tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
+          tracingContext);
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();

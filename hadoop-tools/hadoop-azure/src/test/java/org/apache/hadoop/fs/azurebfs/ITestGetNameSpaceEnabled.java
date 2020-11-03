@@ -67,7 +67,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assume.assumeTrue("Skip this test because the account being used for test is a non XNS account",
             isUsingXNSAccount);
     assertTrue("Expecting getIsNamespaceEnabled() return true",
-            getFileSystem().getIsNamespaceEnabled());
+            getIsNamespaceEnabled(getFileSystem()));
   }
 
   @Test
@@ -75,13 +75,13 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assume.assumeFalse("Skip this test because the account being used for test is a XNS account",
             isUsingXNSAccount);
     assertFalse("Expecting getIsNamespaceEnabled() return false",
-        getFileSystem().getIsNamespaceEnabled());
+        getIsNamespaceEnabled(getFileSystem()));
   }
 
   @Test
   public void testGetIsNamespaceEnabledWhenConfigIsTrue() throws Exception {
     AzureBlobFileSystem fs = getNewFSWithHnsConf(TRUE_STR);
-    Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
+    Assertions.assertThat(getIsNamespaceEnabled(fs)).describedAs(
         "getIsNamespaceEnabled should return true when the "
             + "config is set as true").isTrue();
     fs.getAbfsStore().deleteFilesystem(getTestTracingContext(fs, false));
@@ -91,7 +91,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   @Test
   public void testGetIsNamespaceEnabledWhenConfigIsFalse() throws Exception {
     AzureBlobFileSystem fs = getNewFSWithHnsConf(FALSE_STR);
-    Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
+    Assertions.assertThat(getIsNamespaceEnabled(fs)).describedAs(
         "getIsNamespaceEnabled should return false when the "
             + "config is set as false").isFalse();
     fs.getAbfsStore().deleteFilesystem(getTestTracingContext(fs, false));
@@ -103,7 +103,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
     boolean expectedValue = this.getConfiguration()
         .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
+    Assertions.assertThat(getIsNamespaceEnabled(fs)).describedAs(
         "getIsNamespaceEnabled should return the value "
             + "configured for fs.azure.test.namespace.enabled")
         .isEqualTo(expectedValue);
@@ -207,7 +207,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     doReturn(mock(AbfsRestOperation.class)).when(mockClient)
         .getAclStatus(anyString(), any(TracingContext.class));
     abfsStore.setClient(mockClient);
-    abfs.getIsNamespaceEnabled();
+    getIsNamespaceEnabled(abfs);
     return mockClient;
   }
 

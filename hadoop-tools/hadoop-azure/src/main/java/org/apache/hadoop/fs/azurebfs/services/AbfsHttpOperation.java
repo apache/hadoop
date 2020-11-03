@@ -66,8 +66,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private int statusCode;
   private String statusDescription;
   private String storageErrorCode = "";
-  private String storageErrorMessage  = "";
-  private String requestId  = "";
+  private String storageErrorMessage = "";
+  private String requestId = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
 
@@ -83,7 +83,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(final URL url,
       final String method, final int httpStatus) {
-       return new AbfsHttpOperation(url, method, httpStatus);
+    return new AbfsHttpOperation(url, method, httpStatus);
   }
 
   private AbfsHttpOperation(final URL url, final String method,
@@ -94,7 +94,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.statusCode = httpStatus;
   }
 
-  protected  HttpURLConnection getConnection() {
+  protected HttpURLConnection getConnection() {
     return connection;
   }
 
@@ -195,37 +195,19 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     try {
       urlStr = URLEncoder.encode(url.toString(), "UTF-8");
-    } catch(UnsupportedEncodingException e) {
+    } catch (UnsupportedEncodingException e) {
       urlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
     }
 
     final StringBuilder sb = new StringBuilder();
-    sb.append("s=")
-      .append(statusCode)
-      .append(" e=")
-      .append(storageErrorCode)
-      .append(" ci=")
-      .append(getClientRequestId())
-      .append(" ri=")
-      .append(requestId);
+    sb.append("s=").append(statusCode).append(" e=").append(storageErrorCode).append(" ci=").append(getClientRequestId()).append(" ri=")
+        .append(requestId);
 
     if (isTraceEnabled) {
-      sb.append(" ct=")
-        .append(connectionTimeMs)
-        .append(" st=")
-        .append(sendRequestTimeMs)
-        .append(" rt=")
-        .append(recvResponseTimeMs);
+      sb.append(" ct=").append(connectionTimeMs).append(" st=").append(sendRequestTimeMs).append(" rt=").append(recvResponseTimeMs);
     }
 
-    sb.append(" bs=")
-      .append(bytesSent)
-      .append(" br=")
-      .append(bytesReceived)
-      .append(" m=")
-      .append(method)
-      .append(" u=")
-      .append(urlStr);
+    sb.append(" bs=").append(bytesSent).append(" br=").append(bytesReceived).append(" m=").append(method).append(" u=").append(urlStr);
 
     return sb.toString();
   }
@@ -233,13 +215,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   /**
    * Initializes a new HTTP request and opens the connection.
    *
-   * @param url The full URL including query string parameters.
-   * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
+   * @param url            The full URL including query string parameters.
+   * @param method         The HTTP method (PUT, PATCH, POST, GET, HEAD, or
+   *                       DELETE).
    * @param requestHeaders The HTTP request headers.READ_TIMEOUT
-   *
    * @throws IOException if an error occurs.
    */
-
   public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
       throws IOException {
     this.isTraceEnabled = LOG.isTraceEnabled();
@@ -265,7 +246,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
-   /**
+  /**
    * Sends the HTTP request.  Note that HttpUrlConnection requires that an
    * empty buffer be sent in order to set the "Content-Length: 0" header, which
    * is required by our endpoint.
@@ -273,16 +254,16 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param buffer the request entity body.
    * @param offset an offset into the buffer where the data beings.
    * @param length the length of the data in the buffer.
-   *
    * @throws IOException if an error occurs.
    */
-  public void sendRequest(byte[] buffer, int offset, int length) throws IOException {
+  public void sendRequest(byte[] buffer, int offset, int length)
+      throws IOException {
     this.connection.setDoOutput(true);
     this.connection.setFixedLengthStreamingMode(length);
     if (buffer == null) {
       // An empty buffer is sent to set the "Content-Length: 0" header, which
       // is required by our endpoint.
-      buffer = new byte[]{};
+      buffer = new byte[] {};
       offset = 0;
       length = 0;
     }
@@ -312,7 +293,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param buffer a buffer to hold the response entity body
    * @param offset an offset in the buffer where the data will being.
    * @param length the number of bytes to be written to the buffer.
-   *
    * @throws IOException if an error occurs.
    */
   public void processResponse(final byte[] buffer, final int offset, final int length) throws IOException {
@@ -371,7 +351,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead, length - totalBytesRead);
+              int bytesRead = stream.read(buffer, offset + totalBytesRead,
+                  length - totalBytesRead);
               if (bytesRead == -1) {
                 endOfStream = true;
                 break;
@@ -400,7 +381,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
-
   /**
    * Open the HTTP connection.
    *
@@ -419,21 +399,21 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   /**
-   * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
+   * When the request fails, this function is used to parse the
+   * responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
    * and extract the storageErrorCode and storageErrorMessage.  Any errors
    * encountered while attempting to process the error response are logged,
    * but otherwise ignored.
-   *
+   * <p>
    * For storage errors, the response body *usually* has the following format:
-   *
+   * <p>
    * {
-   *   "error":
-   *   {
-   *     "code": "string",
-   *     "message": "string"
-   *   }
+   * "error":
+   * {
+   * "code": "string",
+   * "message": "string"
    * }
-   *
+   * }
    */
   private void processStorageErrorResponse() {
     try (InputStream stream = connection.getErrorStream()) {
@@ -453,17 +433,17 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
             jp.nextToken();
             fieldValue = jp.getText();
             switch (fieldName) {
-              case "code":
-                storageErrorCode = fieldValue;
-                break;
-              case "message":
-                storageErrorMessage = fieldValue;
-                break;
-              case "ExpectedAppendPos":
-                expectedAppendPos = fieldValue;
-                break;
-              default:
-                break;
+            case "code":
+              storageErrorCode = fieldValue;
+              break;
+            case "message":
+              storageErrorMessage = fieldValue;
+              break;
+            case "ExpectedAppendPos":
+              expectedAppendPos = fieldValue;
+              break;
+            default:
+              break;
             }
           }
           jp.nextToken();
@@ -511,6 +491,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   /**
    * Check null stream, this is to pass findbugs's redundant check for NULL
+   *
    * @param stream InputStream
    */
   private boolean isNullInputStream(InputStream stream) {

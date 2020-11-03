@@ -225,7 +225,6 @@ public class AbfsRestOperation {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-
       updateClientRequestHeader(httpOperation, tracingContext);
 
       switch(client.getAuthType()) {

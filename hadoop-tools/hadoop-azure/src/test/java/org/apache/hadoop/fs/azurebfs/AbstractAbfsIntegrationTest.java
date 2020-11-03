@@ -142,6 +142,14 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
+  protected boolean getIsNamespaceEnabled(AzureBlobFileSystem fs) throws IOException {
+    AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
+    return fs.getAbfsStore().getIsNamespaceEnabled(
+        new TracingContext(abfsConf.getClientCorrelationID(),
+            fs.getFileSystemID(), AbfsOperations.GET_NAMESPACE,
+            abfsConf.getTracingContextFormat()));
+  }
+
   public TracingContext getTestTracingContext(AzureBlobFileSystem fs, boolean isCont) {
     if (fs == null) {
       return new TracingContext("test-corr-id",

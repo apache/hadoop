@@ -95,7 +95,6 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             () -> FileSystem.get(conf.getRawConfiguration()));
   }
 
-
   @Test
   public void testListPathWithValidListMaxResultsValues()
       throws IOException, ExecutionException, InterruptedException {
