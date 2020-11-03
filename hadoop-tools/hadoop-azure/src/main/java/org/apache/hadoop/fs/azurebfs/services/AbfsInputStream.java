@@ -76,6 +76,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
 
+  private final boolean readSmallFilesCompletely;
+
   public AbfsInputStream(
           final AbfsClient client,
           final Statistics statistics,
@@ -95,6 +97,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
+    this.readSmallFilesCompletely = abfsInputStreamContext
+        .readSmallFilesCompletely();
   }
 
   public String getPath() {
@@ -172,7 +176,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         return -1;
       }
 
-      if (contentLength <= SLURP_FILE_SIZE) {
+      if (readSmallFilesCompletely && contentLength <= bufferSize) {
         if (slurpFullFile() < 0) {
           return -1;
         }
@@ -586,5 +590,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       sb.append("}");
     }
     return sb.toString();
+  }
+
+  @VisibleForTesting
+  long getFcursor() {
+    return this.fCursor;
   }
 }

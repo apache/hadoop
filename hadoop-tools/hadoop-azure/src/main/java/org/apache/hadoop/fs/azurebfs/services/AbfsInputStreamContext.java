@@ -31,6 +31,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private AbfsInputStreamStatistics streamStatistics;
 
+  private boolean readSmallFilesCompletely;
+
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -60,6 +62,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withReadSmallFilesCompletely
+      (final boolean readSmallFilesCompletely) {
+    this.readSmallFilesCompletely = readSmallFilesCompletely;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
     // Validation of parameters to be done here.
     return this;
@@ -79,5 +87,9 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
+  }
+
+  public boolean readSmallFilesCompletely() {
+    return this.readSmallFilesCompletely;
   }
 }
