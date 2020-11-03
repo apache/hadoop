@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -175,6 +176,14 @@ public class AzureBlobFileSystemStore {
   * */
   public String getPrimaryGroup() {
     return this.primaryUserGroup;
+  }
+
+  byte[] encodeAttribute(String value) throws UnsupportedEncodingException {
+    return value.getBytes(XMS_PROPERTIES_ENCODING);
+  }
+
+  String decodeAttribute(byte[] value) throws UnsupportedEncodingException {
+    return new String(value, XMS_PROPERTIES_ENCODING);
   }
 
   private String[] authorityParts(URI uri) throws InvalidUriAuthorityException, InvalidUriException {

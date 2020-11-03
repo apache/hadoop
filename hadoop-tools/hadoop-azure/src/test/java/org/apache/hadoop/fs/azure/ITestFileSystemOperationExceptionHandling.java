@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azure;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -27,10 +28,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.FSExceptionMessages.STREAM_IS_CLOSED;
 import static org.apache.hadoop.fs.azure.ExceptionHandlingTestHelper.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Single threaded exception handling.
@@ -263,6 +267,33 @@ public class ITestFileSystemOperationExceptionHandling
         testPath);
     fs.delete(testPath, true);
     inputStream = fs.open(testPath);
+  }
+
+  /**
+   * Attempts to write to the azure stream after it is closed will raise
+   * an IOException.
+   */
+  @Test
+  public void testWriteAfterClose() throws Throwable {
+    final FSDataOutputStream out = fs.create(testPath);
+    out.close();
+    intercept(IOException.class, STREAM_IS_CLOSED,
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            out.write('a');
+          }
+        });
+    intercept(IOException.class, STREAM_IS_CLOSED,
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            out.write(new byte[]{'a'});
+          }
+        });
+    out.hsync();
+    out.flush();
+    out.close();
   }
 
   @After
