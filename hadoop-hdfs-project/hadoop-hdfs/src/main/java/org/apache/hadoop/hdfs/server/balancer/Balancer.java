@@ -36,8 +36,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -66,6 +64,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
@@ -172,7 +172,7 @@ import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 public class Balancer {
-  static final Log LOG = LogFactory.getLog(Balancer.class);
+  static final Logger LOG = LoggerFactory.getLogger(Balancer.class);
 
   static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
 
@@ -264,6 +264,9 @@ public class Balancer {
    */
   Balancer(NameNodeConnector theblockpool, BalancerParameters p,
       Configuration conf) {
+    // NameNode configuration parameters for balancing
+    getInt(conf, DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_DEFAULT);
     final long movedWinWidth = getLong(conf,
         DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY,
         DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_DEFAULT);
@@ -273,10 +276,6 @@ public class Balancer {
     final int dispatcherThreads = getInt(conf,
         DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_KEY,
         DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_DEFAULT);
-    final int maxConcurrentMovesPerNode = getInt(conf,
-        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
-        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
-
     final long getBlocksSize = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_GETBLOCKS_SIZE_KEY,
         DFSConfigKeys.DFS_BALANCER_GETBLOCKS_SIZE_DEFAULT);
@@ -292,6 +291,13 @@ public class Balancer {
     final long maxIterationTime = conf.getLong(
         DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_KEY,
         DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_DEFAULT);
+
+    // DataNode configuration parameters for balancing
+    final int maxConcurrentMovesPerNode = getInt(conf,
+        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
+        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
+    getLongBytes(conf, DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT);
 
     this.nnc = theblockpool;
     this.dispatcher =
@@ -585,12 +591,13 @@ public class Balancer {
       this.bytesAlreadyMoved = bytesAlreadyMoved;
     }
 
-    void print(int iteration, PrintStream out) {
-      out.printf("%-24s %10d  %19s  %18s  %17s%n",
+    void print(int iteration, NameNodeConnector nnc, PrintStream out) {
+      out.printf("%-24s %10d  %19s  %18s  %17s  %s%n",
           DateFormat.getDateTimeInstance().format(new Date()), iteration,
           StringUtils.byteDesc(bytesAlreadyMoved),
           StringUtils.byteDesc(bytesLeftToMove),
-          StringUtils.byteDesc(bytesBeingMoved));
+          StringUtils.byteDesc(bytesBeingMoved),
+          nnc.getNameNodeUri());
     }
   }
 
@@ -636,8 +643,10 @@ public class Balancer {
         System.out.println("No block can be moved. Exiting...");
         return newResult(ExitStatus.NO_MOVE_BLOCK, bytesLeftToMove, bytesBeingMoved);
       } else {
-        LOG.info( "Will move " + StringUtils.byteDesc(bytesBeingMoved) +
-            " in this iteration");
+        LOG.info("Will move {}  in this iteration for {}",
+            StringUtils.byteDesc(bytesBeingMoved), nnc.toString());
+        LOG.info("Total target DataNodes in this iteration: {}",
+            dispatcher.moveTasksTotal());
       }
 
       /* For each pair of <source, target>, start a thread that repeatedly 
@@ -687,7 +696,9 @@ public class Balancer {
     LOG.info("excluded nodes = " + p.getExcludedNodes());
     LOG.info("source nodes = " + p.getSourceNodes());
     checkKeytabAndInit(conf);
-    System.out.println("Time Stamp               Iteration#  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved");
+    System.out.println("Time Stamp               Iteration#"
+        + "  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved"
+        + "  NameNode");
     
     List<NameNodeConnector> connectors = Collections.emptyList();
     try {
@@ -704,7 +715,7 @@ public class Balancer {
               || p.getBlockPools().contains(nnc.getBlockpoolID())) {
             final Balancer b = new Balancer(nnc, p, conf);
             final Result r = b.runOneIteration();
-            r.print(iteration, System.out);
+            r.print(iteration, nnc, System.out);
 
             // clean all lists
             b.resetData(conf);
@@ -724,7 +735,7 @@ public class Balancer {
       }
     } finally {
       for(NameNodeConnector nnc : connectors) {
-        IOUtils.cleanup(LOG, nnc);
+        IOUtils.cleanupWithLogger(LOG, nnc);
       }
     }
     return ExitStatus.SUCCESS.getExitCode();
