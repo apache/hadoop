@@ -83,13 +83,18 @@ class MountVolumeInfo {
     return 1;
   }
 
-  void addVolume(FsVolumeImpl volume) {
+  /**
+   * Add a volume to the mapping.
+   * If there is already storage type exists on same mount, skip this volume.
+   */
+  boolean addVolume(FsVolumeImpl volume) {
     if (storageTypeVolumeMap.containsKey(volume.getStorageType())) {
       FsDatasetImpl.LOG.error("Found storage type already exist." +
           " Skipping for now. Please check disk configuration");
-    } else {
-      storageTypeVolumeMap.put(volume.getStorageType(), volume);
+      return false;
     }
+    storageTypeVolumeMap.put(volume.getStorageType(), volume);
+    return true;
   }
 
 
