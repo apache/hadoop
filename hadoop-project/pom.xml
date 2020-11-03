@@ -106,7 +106,6 @@
 
     <guava.version>27.0-jre</guava.version>
     <guice.version>4.0</guice.version>
-    <joda-time.version>2.9.9</joda-time.version>
 
     <bouncycastle.version>1.60</bouncycastle.version>
 
@@ -1568,12 +1567,6 @@
         <artifactId>bcpkix-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
       </dependency>
-
-     <dependency>
-        <groupId>joda-time</groupId>
-        <artifactId>joda-time</artifactId>
-        <version>${joda-time.version}</version>
-     </dependency>
 
       <dependency>
           <groupId>com.nimbusds</groupId>
