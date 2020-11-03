@@ -531,7 +531,6 @@ public class AzureBlobFileSystemStore implements Closeable {
     AbfsRestOperation op;
 
     tracingContext.setPrimaryRequestID();
-
     try {
       // Trigger a create with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion

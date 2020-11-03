@@ -186,11 +186,11 @@ public class AzureBlobFileSystem extends FileSystem {
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
     statIncrement(CALL_OPEN);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.OPEN, tracingContextFormat);
     Path qualifiedPath = makeQualified(path);
 
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.OPEN, tracingContextFormat);
       InputStream inputStream = abfsStore.openFileForRead(qualifiedPath, statistics, tracingContext);
       return new FSDataInputStream(inputStream);
     } catch(AzureBlobFileSystemException ex) {
@@ -207,8 +207,6 @@ public class AzureBlobFileSystem extends FileSystem {
         permission,
         overwrite,
         blockSize);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.CREATE, tracingContextFormat);
 
     statIncrement(CALL_CREATE);
     trailingPeriodCheck(f);
@@ -216,6 +214,8 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(f);
 
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.CREATE, tracingContextFormat);
       OutputStream outputStream = abfsStore.createFile(qualifiedPath, statistics, overwrite,
           permission == null ? FsPermission.getFileDefault() : permission, FsPermission.getUMask(getConf()),
               tracingContext);
@@ -278,11 +278,11 @@ public class AzureBlobFileSystem extends FileSystem {
         f.toString(),
         bufferSize);
     statIncrement(CALL_APPEND);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.APPEND, tracingContextFormat);
     Path qualifiedPath = makeQualified(f);
 
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.APPEND, tracingContextFormat);
       OutputStream outputStream = abfsStore.openFileForWrite(qualifiedPath, statistics, false,
               tracingContext);
       return new FSDataOutputStream(outputStream, statistics);
@@ -295,8 +295,6 @@ public class AzureBlobFileSystem extends FileSystem {
   public boolean rename(final Path src, final Path dst) throws IOException {
     LOG.debug("AzureBlobFileSystem.rename src: {} dst: {}", src, dst);
     statIncrement(CALL_RENAME);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.RENAME, true, tracingContextFormat);
 
     trailingPeriodCheck(dst);
 
@@ -326,6 +324,8 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     // Non-HNS account need to check dst status on driver side.
+    TracingContext tracingContext = new TracingContext(clientCorrelationID,
+        fileSystemID, AbfsOperations.RENAME, true, tracingContextFormat);
     if (!abfsStore.getIsNamespaceEnabled(tracingContext) && dstFileStatus == null) {
       dstFileStatus = tryGetFileStatus(qualifiedDstPath);
     }
@@ -367,8 +367,6 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.delete path: {} recursive: {}", f.toString(), recursive);
     statIncrement(CALL_DELETE);
     Path qualifiedPath = makeQualified(f);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.DELETE, tracingContextFormat);
 
     if (f.isRoot()) {
       if (!recursive) {
@@ -379,6 +377,8 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.DELETE, tracingContextFormat);
       abfsStore.delete(qualifiedPath, recursive, tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {
@@ -394,10 +394,10 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.listStatus path: {}", f.toString());
     statIncrement(CALL_LIST_STATUS);
     Path qualifiedPath = makeQualified(f);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.LISTSTATUS, true, tracingContextFormat);
 
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.LISTSTATUS, true, tracingContextFormat);
       FileStatus[] result = abfsStore.listStatus(qualifiedPath, tracingContext);
       return result;
     } catch (AzureBlobFileSystemException ex) {
@@ -455,8 +455,6 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.mkdirs path: {} permissions: {}", f, permission);
     statIncrement(CALL_MKDIRS);
     trailingPeriodCheck(f);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.MKDIR, true, tracingContextFormat);
 
     final Path parentFolder = f.getParent();
     if (parentFolder == null) {
@@ -467,6 +465,8 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(f);
 
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.MKDIR, true, tracingContextFormat);
       abfsStore.createDirectory(qualifiedPath, permission == null ? FsPermission.getDirDefault() : permission,
           FsPermission.getUMask(getConf()), tracingContext);
       statIncrement(DIRECTORIES_CREATED);
@@ -495,10 +495,10 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug("AzureBlobFileSystem.getFileStatus path: {}", f);
     statIncrement(CALL_GET_FILE_STATUS);
     Path qualifiedPath = makeQualified(f);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.FILESYSTEM_OPS, tracingContextFormat);
 
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.FILESYSTEM_OPS, tracingContextFormat);
       return abfsStore.getFileStatus(qualifiedPath, tracingContext);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -711,8 +711,6 @@ public class AzureBlobFileSystem extends FileSystem {
   public void setXAttr(final Path path, final String name, final byte[] value, final EnumSet<XAttrSetFlag> flag)
       throws IOException {
     LOG.debug("AzureBlobFileSystem.setXAttr path: {}", path);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.ATTR_OPS, true, tracingContextFormat);
 
     if (name == null || name.isEmpty() || value == null) {
       throw new IllegalArgumentException("A valid name and value must be specified.");
@@ -721,6 +719,8 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(path);
 
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.ATTR_OPS, true, tracingContextFormat);
       Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath, tracingContext);
       String xAttrName = ensureValidAttributeName(name);
       boolean xAttrExists = properties.containsKey(xAttrName);
@@ -752,13 +752,13 @@ public class AzureBlobFileSystem extends FileSystem {
     if (name == null || name.isEmpty()) {
       throw new IllegalArgumentException("A valid name must be specified.");
     }
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.ATTR_OPS, true, tracingContextFormat);
 
     Path qualifiedPath = makeQualified(path);
 
     byte[] value = null;
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.ATTR_OPS, true, tracingContextFormat);
       Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath, tracingContext);
       String xAttrName = ensureValidAttributeName(name);
       if (properties.containsKey(xAttrName)) {
@@ -1015,10 +1015,10 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public void access(final Path path, final FsAction mode) throws IOException {
     LOG.debug("AzureBlobFileSystem.access path : {}, mode : {}", path, mode);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.PATH_OPS, tracingContextFormat);
     Path qualifiedPath = makeQualified(path);
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.PATH_OPS, tracingContextFormat);
       this.abfsStore.access(qualifiedPath, mode, tracingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkCheckAccessException(path, ex);
@@ -1051,9 +1051,9 @@ public class AzureBlobFileSystem extends FileSystem {
   private boolean fileSystemExists() throws IOException {
     LOG.debug(
             "AzureBlobFileSystem.fileSystemExists uri: {}", uri);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.FILESYSTEM_OPS, tracingContextFormat);
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.FILESYSTEM_OPS, tracingContextFormat);
       abfsStore.getFilesystemProperties(tracingContext);
     } catch (AzureBlobFileSystemException ex) {
       try {
@@ -1072,9 +1072,9 @@ public class AzureBlobFileSystem extends FileSystem {
   private void createFileSystem() throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.createFileSystem uri: {}", uri);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.FILESYSTEM_OPS, tracingContextFormat);
     try {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.FILESYSTEM_OPS, tracingContextFormat);
       abfsStore.createFilesystem(tracingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(null, ex);
@@ -1310,13 +1310,13 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     // qualify the path to make sure that it refers to the current FS.
     final Path p = makeQualified(path);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperations.PATH_OPS, tracingContextFormat);
     switch (validatePathCapabilityArgs(p, capability)) {
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_APPEND:
       return true;
     case CommonPathCapabilities.FS_ACLS:
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, AbfsOperations.PATH_OPS, tracingContextFormat);
       return getIsNamespaceEnabled(tracingContext);
     default:
       return super.hasPathCapability(p, capability);
