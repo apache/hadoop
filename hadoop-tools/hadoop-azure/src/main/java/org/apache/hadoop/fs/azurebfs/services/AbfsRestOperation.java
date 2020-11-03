@@ -255,8 +255,12 @@ public class AbfsRestOperation {
             httpOperation.getBytesReceived());
       }
     } catch (UnknownHostException ex) {
+      String hostname = null;
+      if (httpOperation != null) {
+        hostname = httpOperation.getHost();
+      }
       LOG.warn("Unknown host name: %s. Retrying to resolve the host name...",
-          httpOperation.getHost());
+          hostname);
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
         if (httpOperation != null) {

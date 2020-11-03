@@ -158,7 +158,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   // Returns a trace message for the request
   @Override
   public String toString() {
-    final String urlStr = url.toString();
     final StringBuilder sb = new StringBuilder();
     sb.append(statusCode);
     sb.append(",");
@@ -512,11 +511,14 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   public static String getSignatureMaskedUrl(String url) {
-    final int qpStrIdx = url.indexOf(SIGNATURE_QUERY_PARAM_KEY);
+    int qpStrIdx = url.indexOf('?' + SIGNATURE_QUERY_PARAM_KEY);
+    if (qpStrIdx == -1) {
+      qpStrIdx = url.indexOf('&' + SIGNATURE_QUERY_PARAM_KEY);
+    }
     if (qpStrIdx == -1) {
       return url;
     }
-    final int sigStartIdx = qpStrIdx + SIGNATURE_QUERY_PARAM_KEY.length();
+    final int sigStartIdx = qpStrIdx + SIGNATURE_QUERY_PARAM_KEY.length() + 1;
     final int ampIdx = url.indexOf("&", sigStartIdx);
     final int sigEndIndex = (ampIdx != -1) ? ampIdx : url.length();
     String signature = url.substring(sigStartIdx, sigEndIndex);

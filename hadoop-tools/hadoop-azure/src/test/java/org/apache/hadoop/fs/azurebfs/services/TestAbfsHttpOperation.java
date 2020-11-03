@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,64 +30,66 @@ public class TestAbfsHttpOperation {
   @Test
   public void testMaskingAndEncoding()
       throws MalformedURLException, UnsupportedEncodingException {
-    testIfMaskAndEncodeSuccessful("Where sig is the only query param"
-        ,"http://www.testurl.net?sig=abcd"
-        ,"http://www.testurl.net?sig=XXXX");
+    testIfMaskAndEncodeSuccessful("Where sig is the only query param",
+        "http://www.testurl.net?sig=abcd", "http://www.testurl.net?sig=XXXX");
 
-    testIfMaskAndEncodeSuccessful("Where sig is the first query param"
-        ,"http://www.testurl.net?sig=abcd&abc=xyz"
-        ,"http://www.testurl.net?sig=XXXX&abc=xyz");
+    testIfMaskAndEncodeSuccessful("Where sig is the first query param",
+        "http://www.testurl.net?sig=abcd&abc=xyz",
+        "http://www.testurl.net?sig=XXXX&abc=xyz");
 
-    testIfMaskAndEncodeSuccessful("Where sig is neither first nor last query param"
-        ,"http://www.testurl.net?lmn=abc&sig=abcd&abc=xyz"
-        ,"http://www.testurl.net?lmn=abc&sig=XXXX&abc=xyz");
+    testIfMaskAndEncodeSuccessful(
+        "Where sig is neither first nor last query param",
+        "http://www.testurl.net?lmn=abc&sig=abcd&abc=xyz",
+        "http://www.testurl.net?lmn=abc&sig=XXXX&abc=xyz");
 
-    testIfMaskAndEncodeSuccessful("Where sig is the last query param"
-        ,"http://www.testurl.net?abc=xyz&sig=abcd"
-        ,"http://www.testurl.net?abc=xyz&sig=XXXX");
+    testIfMaskAndEncodeSuccessful("Where sig is the last query param",
+        "http://www.testurl.net?abc=xyz&sig=abcd",
+        "http://www.testurl.net?abc=xyz&sig=XXXX");
 
-    testIfMaskAndEncodeSuccessful("Where sig query param is not present"
-        ,"http://www.testurl.net?abc=xyz"
-        ,"http://www.testurl.net?abc=xyz");
+    testIfMaskAndEncodeSuccessful("Where sig query param is not present",
+        "http://www.testurl.net?abc=xyz", "http://www.testurl.net?abc=xyz");
 
-    testIfMaskAndEncodeSuccessful("Where sig query param is not present but mysig"
-        ,"http://www.testurl.net?abc=xyz&mysig=qwerty"
-        ,"http://www.testurl.net?abc=xyz&mysig=qwerty");
+    testIfMaskAndEncodeSuccessful(
+        "Where sig query param is not present but mysig",
+        "http://www.testurl.net?abc=xyz&mysig=qwerty",
+        "http://www.testurl.net?abc=xyz&mysig=qwerty");
 
-    testIfMaskAndEncodeSuccessful("Where sig query param is not present but sigmy"
-        ,"http://www.testurl.net?abc=xyz&sigmy=qwerty"
-        ,"http://www.testurl.net?abc=xyz&sigmy=qwerty");
+    testIfMaskAndEncodeSuccessful(
+        "Where sig query param is not present but sigmy",
+        "http://www.testurl.net?abc=xyz&sigmy=qwerty",
+        "http://www.testurl.net?abc=xyz&sigmy=qwerty");
 
-    testIfMaskAndEncodeSuccessful("Where sig query param is not present but a "
-            + "value sig"
-        ,"http://www.testurl.net?abc=xyz&mnop=sig"
-        ,"http://www.testurl.net?abc=xyz&mnop=sig");
+    testIfMaskAndEncodeSuccessful(
+        "Where sig query param is not present but a " + "value sig",
+        "http://www.testurl.net?abc=xyz&mnop=sig",
+        "http://www.testurl.net?abc=xyz&mnop=sig");
 
-    testIfMaskAndEncodeSuccessful("Where sig query param is not present but a "
-            + "value ends with sig"
-        ,"http://www.testurl.net?abc=xyz&mnop=abcsig"
-        ,"http://www.testurl.net?abc=xyz&mnop=abcsig");
+    testIfMaskAndEncodeSuccessful(
+        "Where sig query param is not present but a " + "value ends with sig",
+        "http://www.testurl.net?abc=xyz&mnop=abcsig",
+        "http://www.testurl.net?abc=xyz&mnop=abcsig");
 
-    testIfMaskAndEncodeSuccessful("Where sig query param is not present but a "
-            + "value starts with sig"
-        ,"http://www.testurl.net?abc=xyz&mnop=sigabc"
-        ,"http://www.testurl.net?abc=xyz&mnop=sigabc");
+    testIfMaskAndEncodeSuccessful(
+        "Where sig query param is not present but a " + "value starts with sig",
+        "http://www.testurl.net?abc=xyz&mnop=sigabc",
+        "http://www.testurl.net?abc=xyz&mnop=sigabc");
   }
 
-  private void testIfMaskAndEncodeSuccessful(String scenario, String url,
-      String expectedMaskedUrl)
+  private void testIfMaskAndEncodeSuccessful(final String scenario,
+      final String url, final String expectedMaskedUrl)
       throws UnsupportedEncodingException {
 
     Assertions.assertThat(AbfsHttpOperation.getSignatureMaskedUrl(url))
-        .describedAs(url+" ("+scenario+") after masking should be: "+expectedMaskedUrl)
-        .isEqualToIgnoringCase(expectedMaskedUrl);
+        .describedAs(url + " (" + scenario + ") after masking should be: "
+            + expectedMaskedUrl).isEqualTo(expectedMaskedUrl);
 
-    final String expectedMaskedEncodedUrl =
-        URLEncoder.encode(expectedMaskedUrl, "UTF-8");
+    final String expectedMaskedEncodedUrl = URLEncoder
+        .encode(expectedMaskedUrl, "UTF-8");
     Assertions.assertThat(AbfsHttpOperation.encodedUrlStr(expectedMaskedUrl))
-        .describedAs(url+" ("+scenario+") after masking and encoding should "
-            + "be: "+expectedMaskedEncodedUrl)
-        .isEqualToIgnoringCase(expectedMaskedEncodedUrl);
+        .describedAs(
+            url + " (" + scenario + ") after masking and encoding should "
+                + "be: " + expectedMaskedEncodedUrl)
+        .isEqualTo(expectedMaskedEncodedUrl);
   }
 
 }
