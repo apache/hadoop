@@ -75,7 +75,6 @@ public class AbfsClient implements Closeable {
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
-  private final boolean enableCorrelationHeader;
 
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
@@ -107,7 +106,6 @@ public class AbfsClient implements Closeable {
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
     this.abfsPerfTracker = abfsClientContext.getAbfsPerfTracker();
     this.abfsCounters = abfsClientContext.getAbfsCounters();
-    this.enableCorrelationHeader = abfsConfiguration.isCorrelationHeaderEnabled();
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -135,10 +133,6 @@ public class AbfsClient implements Closeable {
 
   public String getFileSystem() {
     return filesystem;
-  }
-
-  public boolean isCorrelationHeaderEnabled() {
-    return enableCorrelationHeader;
   }
 
   protected AbfsPerfTracker getAbfsPerfTracker() {
@@ -404,12 +398,6 @@ public class AbfsClient implements Closeable {
     }
 
     return op;
-  }
-
-  public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,
-      final int length, final String cachedSasToken, final boolean isAppendBlob) throws AzureBlobFileSystemException {
-    return append(path, position, buffer, offset, length, cachedSasToken,
-        isAppendBlob, new TracingContext("test-corr-id", "test-filesystem-id", "AP"));
   }
 
   public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,

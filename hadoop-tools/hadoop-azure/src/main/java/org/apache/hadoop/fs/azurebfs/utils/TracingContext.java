@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -34,21 +31,31 @@ public class TracingContext {
   private final String fileSystemID;
   private String clientRequestID = "";
   private String primaryRequestID;
-  private String streamID = "";
+  private String streamID;
   private int retryCount;
-  private String hadoopOpName = "";
+  private String hadoopOpName;
+  private final int format;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
-  public TracingContext(String clientCorrelationID, String fileSystemID, String hadoopOpName) {
+  public TracingContext(String clientCorrelationID, String fileSystemID,
+      String hadoopOpName, int tracingContextFormat) {
     this.fileSystemID = fileSystemID;
     this.hadoopOpName = hadoopOpName;
     this.clientCorrelationID = validateClientCorrelationID(clientCorrelationID);
     streamID = EMPTY_STRING;
     retryCount = 0;
     primaryRequestID = "";
+    format = tracingContextFormat;
+  }
+
+  public TracingContext(String clientCorrelationID, String fileSystemID,
+      String hadoopOpName, boolean needsPrimaryReqId,
+      int tracingContextFormat) {
+    this(clientCorrelationID, fileSystemID, hadoopOpName, tracingContextFormat);
+    primaryRequestID = needsPrimaryReqId? UUID.randomUUID().toString() : "";
   }
 
   public TracingContext(TracingContext originalTracingContext) {
@@ -58,6 +65,7 @@ public class TracingContext {
     this.hadoopOpName = originalTracingContext.hadoopOpName;
     this.retryCount = 0;
     this.primaryRequestID = originalTracingContext.primaryRequestID;
+    this.format = originalTracingContext.format;
   }
 
   public String validateClientCorrelationID(String clientCorrelationID) {
@@ -82,12 +90,17 @@ public class TracingContext {
     streamID = stream;
   }
 
-  public void updateRetryCount() {
-    retryCount++;
+  public void setRetryCount(int retryCount) {
+    this.retryCount = retryCount;
   }
 
   public String toString() {
-    return clientCorrelationID + ":" + clientRequestID + ":" + fileSystemID + ":" + primaryRequestID
-        + ":" + streamID + ":" + hadoopOpName + ":" + retryCount;
+    String header = clientRequestID; //case 0, no IDs for correlation
+    switch (format) {
+      case 1: header = header + ":" + fileSystemID + ":" + primaryRequestID
+          + ":" + streamID + ":" + hadoopOpName + ":" + retryCount; //all IDs
+      case 2: header = clientCorrelationID + ":" + header; // 2-ID format
+    }
+    return header;
   }
 }

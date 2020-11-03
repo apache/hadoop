@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.bouncycastle.jcajce.provider.symmetric.TEA;
 import org.junit.Test;
@@ -84,10 +85,11 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", "WR");
+            "test-fs-id", AbfsOperations.WRITE, abfsConf.getTracingContextFormat());
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
+    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
+        anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
             any(TracingContext.class))).thenReturn(op);
 
@@ -105,6 +107,8 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<TracingContext> acTracingContext =
+        ArgumentCaptor.forClass(TracingContext.class);
 
 
     final byte[] b1 = new byte[2*WRITE_SIZE];
@@ -116,7 +120,8 @@ public final class TestAbfsOutputStream {
     out.hsync();
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
+                                    acSASToken.capture(),
+        acAppendBlobAppend.capture(), acTracingContext.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("Path of the requests").isEqualTo(acString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(WRITE_SIZE))).describedAs("Write Position").isEqualTo(acLong.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
@@ -138,10 +143,11 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", "OP");
+            "test-fs-id", AbfsOperations.WRITE, abfsConf.getTracingContextFormat());
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
+    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
+        anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
             any(TracingContext.class))).thenReturn(op);
 
@@ -163,9 +169,12 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<TracingContext> acTracingContext =
+        ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
+                                    acSASToken.capture(),
+        acAppendBlobAppend.capture(), acTracingContext.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("Path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(new HashSet<Long>(
                acLong.getAllValues()));
@@ -178,7 +187,6 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acFlushRetainUnCommittedData = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<TracingContext> acTracingContext = ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
                                    acFlushSASToken.capture(), acTracingContext.capture());
@@ -203,10 +211,11 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", "OP");
+            "test-fs-id", AbfsOperations.WRITE, abfsConf.getTracingContextFormat());
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
+    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
+        anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
             any(TracingContext.class))).thenReturn(op);
     when(op.getSasToken()).thenReturn("testToken");
@@ -230,9 +239,12 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<TracingContext> acTracingContext =
+        ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
+                                    acSASToken.capture(),
+        acAppendBlobAppend.capture(), acTracingContext.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(new HashSet<Long>(
                acLong.getAllValues()));
@@ -244,7 +256,6 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acFlushRetainUnCommittedData = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<TracingContext> acTracingContext = ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
                                    acFlushSASToken.capture(), acTracingContext.capture());
@@ -271,7 +282,8 @@ public final class TestAbfsOutputStream {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
+    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
+        anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
             any(TracingContext.class))).thenReturn(op);
     when(op.getSasToken()).thenReturn("testToken");
@@ -279,7 +291,9 @@ public final class TestAbfsOutputStream {
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
             populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
-                    false), new TracingContext(abfsConf.getClientCorrelationID(), "fs-id", "WR"));
+                    false),
+        new TracingContext(abfsConf.getClientCorrelationID(), "test-fs-id",
+            AbfsOperations.WRITE, abfsConf.getTracingContextFormat()));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -295,9 +309,12 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<TracingContext> acTracingContext =
+        ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
+                                    acSASToken.capture(),
+        acAppendBlobAppend.capture(), acTracingContext.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position in file").isEqualTo(
                new HashSet<Long>(acLong.getAllValues()));
@@ -321,14 +338,15 @@ public final class TestAbfsOutputStream {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
+    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
+        anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
             any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
             populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
                     true), new TracingContext(abfsConf.getClientCorrelationID(),
-        "test-fs-id", "OP"));
+        "test-fs-id", AbfsOperations.OPEN, abfsConf.getTracingContextFormat()));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -344,9 +362,12 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<TracingContext> acTracingContext =
+        ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
+                                    acSASToken.capture(),
+        acAppendBlobAppend.capture(), acTracingContext.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE))).describedAs("File Position").isEqualTo(acLong.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
@@ -369,10 +390,11 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", "PA");
+            "test-fs-id", AbfsOperations.WRITE, abfsConf.getTracingContextFormat());
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
+    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
+        anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
             any(TracingContext.class))).thenReturn(op);
 
@@ -394,9 +416,12 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<TracingContext> acTracingContext =
+        ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
+                                    acSASToken.capture(),
+        acAppendBlobAppend.capture(), acTracingContext.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("File Position").isEqualTo(
                new HashSet<Long>(acLong.getAllValues()));
@@ -408,7 +433,6 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acFlushRetainUnCommittedData = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<TracingContext> acTracingContext = ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
                                    acFlushSASToken.capture(), acTracingContext.capture());
@@ -432,10 +456,11 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", "WR");
+            "test-fs-id", AbfsOperations.WRITE, abfsConf.getTracingContextFormat());
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
-    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
+    when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
+        anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
             any(TracingContext.class))).thenReturn(op);
 
@@ -459,9 +484,12 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<TracingContext> acTracingContext =
+        ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
-                                    acSASToken.capture(), acAppendBlobAppend.capture());
+                                    acSASToken.capture(),
+        acAppendBlobAppend.capture(), acTracingContext.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(
                new HashSet<Long>(acLong.getAllValues()));

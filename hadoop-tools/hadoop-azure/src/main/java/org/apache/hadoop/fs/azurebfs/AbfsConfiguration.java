@@ -230,9 +230,10 @@ public class AbfsConfiguration{
           DefaultValue = EMPTY_STRING)
   private String clientCorrelationID;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CORRELATION_HEADER,
-          DefaultValue = true)
-  private boolean enableCorrelationHeader;
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_TRACINGCONTEXT_FORMAT,
+          DefaultValue = 1)
+  private int tracingContextFormat;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
@@ -309,8 +310,8 @@ public class AbfsConfiguration{
    * Default value is true. Only clientRequestId appears in logs when disabled
    * @return enableCorrelationHeader config
    */
-  public boolean isCorrelationHeaderEnabled() {
-    return enableCorrelationHeader;
+  public int getTracingContextFormat() {
+    return tracingContextFormat;
   }
 
   /**

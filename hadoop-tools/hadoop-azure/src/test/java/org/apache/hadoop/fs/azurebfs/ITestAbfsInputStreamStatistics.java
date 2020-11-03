@@ -64,7 +64,7 @@ public class ITestAbfsInputStreamStatistics
 
       outputStream = createAbfsOutputStreamWithFlushEnabled(fs, initValuesPath);
       inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics(),
-              tracingContext);
+              getTestTracingContext(fs, false));
 
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) inputStream.getStreamStatistics();
@@ -109,7 +109,7 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.hflush();
       in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics(),
-          tracingContext);
+          getTestTracingContext(fs, false));
 
       /*
        * Writing 1MB buffer to the file, this would make the fCursor(Current
@@ -201,7 +201,7 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.hflush();
       in = abfss.openFileForRead(readStatPath, fs.getFsStatistics(),
-              tracingContext);
+              getTestTracingContext(fs, false));
 
       /*
        * Doing file read 10 times.
@@ -274,14 +274,14 @@ public class ITestAbfsInputStreamStatistics
       // AbfsRestOperation Instance required for eTag.
       AbfsRestOperation abfsRestOperation =
           fs.getAbfsClient().getPathStatus(nullStatFilePath.toUri().getPath(), false,
-                  tracingContext);
+                  getTestTracingContext(fs, false));
 
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,
           nullStatFilePath.toUri().getPath(), ONE_KB,
           abfsInputStreamContext,
           abfsRestOperation.getResult().getResponseHeader("ETag"),
-              tracingContext);
+             getTestTracingContext(fs, false));
 
       // Verifying that AbfsInputStream Operations works with null statistics.
       assertNotEquals("AbfsInputStream read() with null statistics should "
@@ -324,7 +324,8 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.close();
 
-      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics(), tracingContext);
+      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics(),
+          getTestTracingContext(fs, false));
 
       /*
        * Reading 1KB after each i * KB positions. Hence the reads are from 0

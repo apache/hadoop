@@ -188,7 +188,7 @@ public class AbfsRestOperation {
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
-        tracingContext.updateRetryCount();
+        tracingContext.setRetryCount(retryCount);
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
@@ -205,6 +205,14 @@ public class AbfsRestOperation {
     LOG.trace("{} REST operation complete", operationType);
   }
 
+  private void updateClientRequestHeader(AbfsHttpOperation httpOperation,
+      TracingContext tracingContext) {
+    tracingContext.generateClientRequestID();
+    httpOperation.getConnection()
+        .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
+            tracingContext.toString());
+  }
+
   /**
    * Executes a single HTTP operation to complete the REST operation.  If it
    * fails, there may be a retry.  The retryCount is incremented with each
@@ -217,17 +225,8 @@ public class AbfsRestOperation {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      if (client.isCorrelationHeaderEnabled()) {
-        tracingContext.generateClientRequestID();
-        httpOperation.getConnection()
-                .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
-                        tracingContext.toString());
-      }
-      else {
-        httpOperation.getConnection()
-                .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
-                        UUID.randomUUID().toString());
-      }
+
+      updateClientRequestHeader(httpOperation, tracingContext);
 
       switch(client.getAuthType()) {
         case Custom:
@@ -269,7 +268,6 @@ public class AbfsRestOperation {
         incrementCounter(AbfsStatistic.BYTES_RECEIVED,
             httpOperation.getBytesReceived());
       }
-
     } catch (IOException ex) {
       if (ex instanceof UnknownHostException) {
         LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...", httpOperation.getUrl().getHost()));

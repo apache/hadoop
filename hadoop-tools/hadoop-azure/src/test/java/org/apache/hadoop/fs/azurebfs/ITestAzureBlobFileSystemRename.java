@@ -250,7 +250,7 @@ public class ITestAzureBlobFileSystemRename extends
           "/NonExistingsourcepath",
           "/destpath",
           null,
-              tracingContext)
+          getTestTracingContext(fs, true))
           .getResult()
           .getStatusCode())
           .describedAs("Idempotency check reports recent successful "
@@ -263,7 +263,7 @@ public class ITestAzureBlobFileSystemRename extends
               "/NonExistingsourcepath",
               "/destpath",
               "",
-                  tracingContext));
+              getTestTracingContext(fs, true)));
     }
   }
 
@@ -323,7 +323,8 @@ public class ITestAzureBlobFileSystemRename extends
     Assertions.assertThat(testClient.renameIdempotencyCheckOp(
         renameRequestStartTime,
         op,
-        destinationPath.toUri().getPath(), tracingContext)
+        destinationPath.toUri().getPath(),
+        getTestTracingContext(fs, true))
         .getResult()
         .getStatusCode())
         .describedAs(assertMessage)

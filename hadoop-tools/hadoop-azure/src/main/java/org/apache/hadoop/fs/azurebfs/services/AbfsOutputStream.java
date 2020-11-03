@@ -36,7 +36,6 @@ import java.util.UUID;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +43,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -81,7 +81,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
-  private String outputStreamID;
+  private final String outputStreamID;
   private TracingContext tracingContext;
 
   /**
@@ -140,9 +140,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
     this.cachedSasToken = new CachedSASToken(
         abfsOutputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
-    this.outputStreamID = StringUtils.right(UUID.randomUUID().toString(), 12);
+    this.outputStreamID = getOutputStreamID();
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setStreamID(outputStreamID);
+  }
+
+  private String getOutputStreamID() {
+    return StringUtils.right(UUID.randomUUID().toString(), 12);
   }
 
   /**

@@ -98,7 +98,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
-    this.inputStreamID = StringUtils.right(UUID.randomUUID().toString(), 12);
+    this.inputStreamID = getInputStreamID();
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setStreamID(inputStreamID);
   }
@@ -107,7 +107,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return path;
   }
 
+  private String getInputStreamID() {
+    return StringUtils.right(UUID.randomUUID().toString(), 12);
+  }
+
   @Override
+
   public int read() throws IOException {
     byte[] b = new byte[1];
     int numberOfBytesRead = read(b, 0, 1);
@@ -242,7 +247,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         LOG.debug("issuing read ahead requestedOffset = {} requested size {}",
             nextOffset, nextSize);
         ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize,
-                readAheadTracingContext);
+                new TracingContext(readAheadTracingContext));
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
       }

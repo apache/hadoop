@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -129,6 +130,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
 
     // Use abfsStore in this test to verify the  ERROR code in AbfsRestOperationException
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+    TracingContext tracingContext = getTestTracingContext(fs, true);
     // TEST READ FS
     Map<String, String> properties = abfsStore.getFilesystemProperties(tracingContext);
     // TEST READ FOLDER

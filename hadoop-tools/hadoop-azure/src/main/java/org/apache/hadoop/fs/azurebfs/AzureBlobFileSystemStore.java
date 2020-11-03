@@ -280,7 +280,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     return authorityParts;
   }
 
-    public boolean getIsNamespaceEnabled(TracingContext tracingContext) throws AzureBlobFileSystemException {
+  public boolean getIsNamespaceEnabled(TracingContext tracingContext) throws AzureBlobFileSystemException {
     try {
       return this.isNamespaceEnabled.toBoolean();
     } catch (TrileanConversionException e) {
@@ -486,7 +486,8 @@ public class AzureBlobFileSystemStore implements Closeable {
             statistics,
             isNamespaceEnabled ? getOctalNotation(permission) : null,
             isNamespaceEnabled ? getOctalNotation(umask) : null,
-            isAppendBlob, tracingContext
+            isAppendBlob,
+            tracingContext
         );
 
       } else {
@@ -495,7 +496,8 @@ public class AzureBlobFileSystemStore implements Closeable {
           isNamespaceEnabled ? getOctalNotation(permission) : null,
           isNamespaceEnabled ? getOctalNotation(umask) : null,
           isAppendBlob,
-          null, tracingContext);
+          null,
+          tracingContext);
 
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -560,8 +562,8 @@ public class AzureBlobFileSystemStore implements Closeable {
 
         try {
           // overwrite only if eTag matches with the file properties fetched befpre
-          op = client.createPath(relativePath, true,
-                  true, permission, umask, isAppendBlob, eTag, tracingContext);
+          op = client.createPath(relativePath, true, true, permission, umask,
+              isAppendBlob, eTag, tracingContext);
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
@@ -646,11 +648,10 @@ public class AzureBlobFileSystemStore implements Closeable {
       perfInfo.registerSuccess(true);
 
       // Add statistics for InputStream
-      AbfsInputStream in = new AbfsInputStream(client, statistics,
+      return new AbfsInputStream(client, statistics,
               relativePath, contentLength,
               populateAbfsInputStreamContext(),
               eTag, tracingContext);
-      return in;
     }
   }
 
@@ -696,15 +697,13 @@ public class AzureBlobFileSystemStore implements Closeable {
       if (isAppendBlobKey(path.toString())) {
         isAppendBlob = true;
       }
-      AbfsOutputStream out = new AbfsOutputStream(
+      return new AbfsOutputStream(
               client,
               statistics,
               relativePath,
               offset,
               populateAbfsOutputStreamContext(isAppendBlob),
               tracingContext);
-
-      return out;
     }
   }
 
@@ -732,7 +731,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     do {
       try (AbfsPerfInfo perfInfo = startTracking("rename", "renamePath")) {
         AbfsRestOperation op = client.renamePath(sourceRelativePath,
-                destinationRelativePath, continuation, new TracingContext(tracingContext));
+                destinationRelativePath, continuation, tracingContext);
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
@@ -868,7 +867,7 @@ public class AzureBlobFileSystemStore implements Closeable {
    * */
   @InterfaceStability.Unstable
   public FileStatus[] listStatus(final Path path, final String startFrom,
-                                 TracingContext originalTracingContext) throws IOException {
+                                 TracingContext tracingContext) throws IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue = true;
@@ -883,17 +882,16 @@ public class AzureBlobFileSystemStore implements Closeable {
 
     // generate continuation token if a valid startFrom is provided.
     if (startFrom != null && !startFrom.isEmpty()) {
-      continuation = getIsNamespaceEnabled(originalTracingContext)
+      continuation = getIsNamespaceEnabled(tracingContext)
               ? generateContinuationTokenForXns(startFrom)
               : generateContinuationTokenForNonXns(relativePath, startFrom);
     }
-    TracingContext tracingContext = new TracingContext(originalTracingContext);
 
     ArrayList<FileStatus> fileStatuses = new ArrayList<>();
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
         AbfsRestOperation op = client.listPath(relativePath, false,
-            abfsConfiguration.getListMaxResults(), continuation, new TracingContext(tracingContext));
+            abfsConfiguration.getListMaxResults(), continuation, tracingContext);
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         ListResultSchema retrievedSchema = op.getResult().getListResultSchema();

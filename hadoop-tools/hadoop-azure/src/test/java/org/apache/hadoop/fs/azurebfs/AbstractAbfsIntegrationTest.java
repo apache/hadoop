@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperations;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.After;
 import org.junit.Assert;
@@ -82,7 +84,6 @@ public abstract class AbstractAbfsIntegrationTest extends
   private AuthType authType;
   private boolean useConfiguredFileSystem = false;
   private boolean usingFilesystemForSASTests = false;
-  public TracingContext tracingContext;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
@@ -141,18 +142,29 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
+  public TracingContext getTestTracingContext(AzureBlobFileSystem fs, boolean isCont) {
+    if (fs == null) {
+      return new TracingContext("test-corr-id",
+          "test-fs-id", "TS", false, 1);
+    }
+    String fsID = fs.getFileSystemID();
+    AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
+    String corrID = abfsConf == null? "test-corr-id" :
+        abfsConf.getClientCorrelationID();
+    int format = abfsConf == null? 1 : abfsConf.getTracingContextFormat();
+    return new TracingContext(corrID, fsID, "TS", isCont, format);
+  }
+
 
   @Before
   public void setup() throws Exception {
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
-    tracingContext = new TracingContext(abfsConfig.getClientCorrelationID(),
-            abfs.getFileSystemID(), "TS");
 
     // Only live account without namespace support can run ABFS&WASB compatibility tests
     if (!isIPAddress
         && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
-        && !abfs.getIsNamespaceEnabled(tracingContext)) {
+        && !abfs.getIsNamespaceEnabled(getTestTracingContext(getFileSystem(), false))) {
       final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl()));
       final AzureNativeFileSystemStore azureNativeFileSystemStore =
           new AzureNativeFileSystemStore();
@@ -184,8 +196,7 @@ public abstract class AbstractAbfsIntegrationTest extends
       if (abfs == null) {
         return;
       }
-      TracingContext tracingContext = new TracingContext(abfs.getAbfsStore()
-          .getAbfsConfiguration().getClientCorrelationID(), abfs.getFileSystemID(), "DL");
+      TracingContext tracingContext = getTestTracingContext(getFileSystem(), false);
 
       if (usingFilesystemForSASTests) {
         abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey.name());
@@ -435,7 +446,8 @@ public abstract class AbstractAbfsIntegrationTest extends
     abfss.getAbfsConfiguration().setDisableOutputStreamFlush(false);
 
     return (AbfsOutputStream) abfss.createFile(path, fs.getFsStatistics(),
-        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()), tracingContext);
+        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()),
+        getTestTracingContext(fs, false));
   }
 
   /**

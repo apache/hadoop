@@ -84,7 +84,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
         "getIsNamespaceEnabled should return true when the "
             + "config is set as true").isTrue();
-    fs.getAbfsStore().deleteFilesystem(tracingContext);
+    fs.getAbfsStore().deleteFilesystem(getTestTracingContext(fs, false));
     unsetAndAssert();
   }
 
@@ -94,7 +94,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
         "getIsNamespaceEnabled should return false when the "
             + "config is set as false").isFalse();
-    fs.getAbfsStore().deleteFilesystem(tracingContext);
+    fs.getAbfsStore().deleteFilesystem(getTestTracingContext(fs, false));
     unsetAndAssert();
   }
 
@@ -107,7 +107,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         "getIsNamespaceEnabled should return the value "
             + "configured for fs.azure.test.namespace.enabled")
         .isEqualTo(expectedValue);
-    fs.getAbfsStore().deleteFilesystem(tracingContext);
+    fs.getAbfsStore().deleteFilesystem(getTestTracingContext(fs, false));
   }
 
   private AzureBlobFileSystem getNewFSWithHnsConf(
