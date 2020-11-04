@@ -1027,11 +1027,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     properties = null;                            // trigger reload
     finalParameters.clear();                      // clear site-limits
   }
-  
+
   private synchronized void addResourceObject(Resource resource) {
     resources.add(resource);                      // add to resources
     restrictSystemProps |= resource.isParserRestricted();
-    reloadConfiguration();
+    loadProps(properties, resources.size() - 1, false);
   }
 
   private static final int MAX_SUBST = 20;
@@ -2876,12 +2876,28 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
-      Map<String, String[]> backup = updatingResource != null ?
-          new ConcurrentHashMap<String, String[]>(updatingResource) : null;
-      loadResources(properties, resources, quietmode);
+      loadProps(properties, 0, true);
+    }
+    return properties;
+  }
 
+  /**
+   * Loads the resource at a given index into the properties.
+   * @param props the object containing the loaded properties.
+   * @param startIdx the index where the new resource has been added.
+   * @param fullReload flag whether we do complete reload of the conf instead
+   *                   of just loading the new resource.
+   * @return the properties loaded from the resource.
+   */
+  private synchronized Properties loadProps(final Properties props,
+      final int startIdx, final boolean fullReload) {
+    if (props != null) {
+      Map<String, String[]> backup =
+          updatingResource != null
+              ? new ConcurrentHashMap<>(updatingResource) : null;
+      loadResources(props, resources, startIdx, fullReload, quietmode);
       if (overlay != null) {
-        properties.putAll(overlay);
+        props.putAll(overlay);
         if (backup != null) {
           for (Map.Entry<Object, Object> item : overlay.entrySet()) {
             String key = (String) item.getKey();
@@ -2893,7 +2909,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
       }
     }
-    return properties;
+    return props;
   }
 
   /**
@@ -2995,14 +3011,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   private void loadResources(Properties properties,
                              ArrayList<Resource> resources,
+                             int startIdx,
+                             boolean fullReload,
                              boolean quiet) {
-    if(loadDefaults) {
+    if(loadDefaults && fullReload) {
       for (String resource : defaultResources) {
         loadResource(properties, new Resource(resource, false), quiet);
       }
     }
     
-    for (int i = 0; i < resources.size(); i++) {
+    for (int i = startIdx; i < resources.size(); i++) {
       Resource ret = loadResource(properties, resources.get(i), quiet);
       if (ret != null) {
         resources.set(i, ret);
