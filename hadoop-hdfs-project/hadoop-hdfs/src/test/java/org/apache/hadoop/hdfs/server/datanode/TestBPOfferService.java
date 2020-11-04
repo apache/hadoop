@@ -1088,4 +1088,26 @@ public class TestBPOfferService {
       }
     }
   }
+
+  @Test(timeout = 5000)
+  public void testCommandProcessingThreadExit() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(1).build();
+    try {
+      List<DataNode> datanodes = cluster.getDataNodes();
+      DataNode dataNode = datanodes.get(0);
+      List<BPOfferService> allBpOs = dataNode.getAllBpOs();
+      BPOfferService bpos = allBpOs.get(0);
+      waitForInitialization(bpos);
+      BPServiceActor actor = bpos.getBPServiceActors().get(0);
+      // Stop and wait util actor exit.
+      actor.stopCommandProcessingThread();
+      GenericTestUtils.waitFor(() -> !actor.isAlive(), 100, 3000);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

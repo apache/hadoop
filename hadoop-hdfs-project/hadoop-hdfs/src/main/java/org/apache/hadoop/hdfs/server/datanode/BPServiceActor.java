@@ -1271,6 +1271,10 @@ class BPServiceActor implements Runnable {
         processQueue();
       } catch (Throwable t) {
         LOG.error("{} encountered fatal exception and exit.", getName(), t);
+        runningState = RunningState.FAILED;
+      } finally {
+        LOG.warn("Ending command processor service for: " + this);
+        shouldServiceRun = false;
       }
     }
 
@@ -1286,6 +1290,7 @@ class BPServiceActor implements Runnable {
           dn.getMetrics().incrNumProcessedCommands();
         } catch (InterruptedException e) {
           LOG.error("{} encountered interrupt and exit.", getName());
+          Thread.currentThread().interrupt();
           // ignore unless thread was specifically interrupted.
           if (Thread.interrupted()) {
             break;
@@ -1355,6 +1360,13 @@ class BPServiceActor implements Runnable {
     void enqueue(DatanodeCommand[] cmds) throws InterruptedException {
       queue.put(() -> processCommand(cmds));
       dn.getMetrics().incrActorCmdQueueLength(1);
+    }
+  }
+
+  @VisibleForTesting
+  void stopCommandProcessingThread() {
+    if (commandProcessingThread != null) {
+      commandProcessingThread.interrupt();
     }
   }
 }
