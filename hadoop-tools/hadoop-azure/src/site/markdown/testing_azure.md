@@ -592,7 +592,7 @@ with the Hadoop Distributed File System permissions model when hierarchical
 namespace is enabled for the storage account.  Furthermore, the metadata and data
 produced by ADLS Gen 2 REST API can be consumed by Blob REST API, and vice versa.
 
-##Generating test run configurations and test triggers over various config combinations
+## Generating test run configurations and test triggers over various config combinations
 
 To simplify the testing across various authentication and features combinations
 that are mandatory for a PR, script `dev-support/testrun-scripts/runTest.sh`
