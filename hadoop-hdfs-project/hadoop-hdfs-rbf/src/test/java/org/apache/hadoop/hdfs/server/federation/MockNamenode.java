@@ -54,8 +54,8 @@ import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolServi
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -135,7 +135,7 @@ public class MockNamenode {
 
 
   public MockNamenode(final String nsIdentifier) throws IOException {
-    this(nsIdentifier, new HdfsConfiguration());
+    this(nsIdentifier, DFSTestUtil.newHdfsConfiguration());
   }
 
   public MockNamenode(final String nsIdentifier, final Configuration conf)

@@ -102,7 +102,7 @@ public class TestStartup {
   public void setUp() throws Exception {
     ExitUtil.disableSystemExit();
     ExitUtil.resetFirstExitException();
-    config = new HdfsConfiguration();
+    config = DFSTestUtil.newHdfsConfiguration();
     hdfsDir = new File(MiniDFSCluster.getBaseDirectory());
 
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
@@ -673,7 +673,7 @@ public class TestStartup {
 
   @Test(timeout = 120000)
   public void testXattrConfiguration() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     try {

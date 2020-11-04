@@ -52,7 +52,7 @@ public class TestStoragePolicySatisfyAdminCommands {
 
   @Before
   public void clusterSetUp() throws IOException, URISyntaxException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL.toString());
     // Reduced refresh cycle to update latest datanodes.

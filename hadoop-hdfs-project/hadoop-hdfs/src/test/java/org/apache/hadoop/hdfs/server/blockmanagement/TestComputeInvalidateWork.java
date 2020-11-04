@@ -68,7 +68,7 @@ public class TestComputeInvalidateWork {
   public void setup() throws Exception {
     ecPolicy = SystemErasureCodingPolicies.getByID(
         SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_OF_DATANODES)
         .build();
     cluster.waitActive();

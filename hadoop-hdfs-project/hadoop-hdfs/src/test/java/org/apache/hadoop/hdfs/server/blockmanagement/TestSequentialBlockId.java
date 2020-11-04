@@ -58,7 +58,7 @@ public class TestSequentialBlockId {
    */
   @Test
   public void testBlockIdGeneration() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
@@ -94,7 +94,7 @@ public class TestSequentialBlockId {
    */
   @Test
   public void testTriggerBlockIdCollision() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();

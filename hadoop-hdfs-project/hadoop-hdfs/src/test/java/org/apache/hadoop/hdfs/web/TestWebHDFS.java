@@ -1743,7 +1743,7 @@ public class TestWebHDFS {
 
   @Test
   public void testSetStoragePolicyWhenPolicyDisabled() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
         .build();
@@ -1782,7 +1782,7 @@ public class TestWebHDFS {
   // Test For Enable/Disable EC Policy in DFS.
   @Test
   public void testECPolicyCommands() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     cluster.waitActive();
     final DistributedFileSystem dfs = cluster.getFileSystem();
@@ -1817,7 +1817,7 @@ public class TestWebHDFS {
 
   @Test
   public void testWebHdfsSps() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL.toString());
     StoragePolicySatisfier sps = new StoragePolicySatisfier(conf);
@@ -2112,7 +2112,7 @@ public class TestWebHDFS {
 
   @Test
   public void testStatistics() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL.toString());
     StoragePolicySatisfier sps = new StoragePolicySatisfier(conf);

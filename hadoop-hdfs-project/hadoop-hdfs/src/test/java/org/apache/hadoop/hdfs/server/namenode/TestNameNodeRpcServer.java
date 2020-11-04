@@ -29,7 +29,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import org.junit.Test;
@@ -38,7 +38,7 @@ public class TestNameNodeRpcServer {
 
   @Test
   public void testNamenodeRpcBindAny() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // The name node in MiniDFSCluster only binds to 127.0.0.1.
     // We can set the bind address to 0.0.0.0 to make it listen

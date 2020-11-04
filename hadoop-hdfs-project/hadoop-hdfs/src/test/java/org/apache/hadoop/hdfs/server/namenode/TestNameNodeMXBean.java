@@ -738,7 +738,7 @@ public class TestNameNodeMXBean {
     MiniDFSCluster cluster = null;
     DistributedFileSystem fs = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
       ErasureCodingPolicy defaultPolicy =
           StripedFileTestUtil.getDefaultECPolicy();
@@ -778,7 +778,7 @@ public class TestNameNodeMXBean {
     MiniDFSCluster cluster = null;
     DistributedFileSystem fs = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       int dataBlocks = StripedFileTestUtil.getDefaultECPolicy()
           .getNumDataUnits();
       int parityBlocks =
@@ -916,7 +916,7 @@ public class TestNameNodeMXBean {
     FSNamesystem namesystem = null;
     DistributedFileSystem fs = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       int dataBlocks = StripedFileTestUtil.getDefaultECPolicy()
           .getNumDataUnits();
       int parityBlocks =

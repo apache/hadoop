@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
 import org.apache.hadoop.net.NetUtils;
@@ -82,7 +82,7 @@ public class TestStartSecureDataNode {
       assertNotNull("DataNode principal was not specified", dnPrincipal);
       assertNotNull("DataNode keytab was not specified", dnKeyTab);
 
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
       conf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, nnPrincipal);
@@ -127,7 +127,7 @@ public class TestStartSecureDataNode {
       thrown.expect(BindException.class);
       thrown.expectMessage("localhost/127.0.0.1:" + ss.getLocalPort());
 
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
           "localhost:" + ss.getLocalPort());
       SecureDataNodeStarter.getSecureResources(conf);
@@ -151,7 +151,7 @@ public class TestStartSecureDataNode {
       thrown.expect(BindException.class);
       thrown.expectMessage("localhost/127.0.0.1:" + ss.getLocalPort());
 
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
           "localhost:" + NetUtils.getFreeSocketPort());
       conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY,

@@ -59,7 +59,7 @@ public class TestBlockStoragePolicy {
   public static final Configuration conf;
 
   static {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     POLICY_SUITE = BlockStoragePolicySuite.createDefaultSuite();
@@ -90,7 +90,7 @@ public class TestBlockStoragePolicy {
 
   @Test (timeout=300000)
   public void testConfigKeyEnabled() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, true);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1).build();
@@ -110,7 +110,7 @@ public class TestBlockStoragePolicy {
    */
   @Test (timeout=300000, expected=IOException.class)
   public void testConfigKeyDisabled() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1).build();
@@ -1616,7 +1616,7 @@ public class TestBlockStoragePolicy {
   @Test
   public void testCreateFileWithConfiguredDefaultPolicies()
       throws IOException{
-    Configuration newConf = new HdfsConfiguration();
+    Configuration newConf = DFSTestUtil.newHdfsConfiguration();
     newConf.set(DFSConfigKeys.DFS_STORAGE_DEFAULT_POLICY,
         HdfsConstants.StoragePolicy.WARM.name());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(newConf)

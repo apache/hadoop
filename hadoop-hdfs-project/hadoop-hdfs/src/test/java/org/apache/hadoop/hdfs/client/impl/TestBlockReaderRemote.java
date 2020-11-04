@@ -25,8 +25,8 @@ import java.util.Random;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.junit.After;
 import org.junit.Before;
@@ -59,7 +59,7 @@ public class TestBlockReaderRemote {
 
   @Before
   public void setup() throws Exception {
-    util = new BlockReaderTestUtil(1, new HdfsConfiguration());
+    util = new BlockReaderTestUtil(1, DFSTestUtil.newHdfsConfiguration());
     blockData = getBlockData();
     DistributedFileSystem fs = util.getCluster().getFileSystem();
     Path testfile = new Path("/testfile");

@@ -357,7 +357,7 @@ public class TestBalancerWithMultipleNameNodes {
   }
   
   private static Configuration createConf() {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     TestBalancer.initConf(conf);
     return conf;
   }

@@ -122,7 +122,7 @@ public class TestInjectionForSimulatedStorage {
     }
     
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_REPLICATION_KEY, Integer.toString(numDataNodes));
       conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, checksumSize);
       SimulatedFSDataset.setFactory(conf);
@@ -148,7 +148,7 @@ public class TestInjectionForSimulatedStorage {
        */
       
       LOG.info("Restarting minicluster");
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
       SimulatedFSDataset.setFactory(conf);
       conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.0f"); 
       

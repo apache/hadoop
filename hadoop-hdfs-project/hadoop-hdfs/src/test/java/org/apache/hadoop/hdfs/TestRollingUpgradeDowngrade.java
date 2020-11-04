@@ -42,7 +42,7 @@ public class TestRollingUpgradeDowngrade {
    */
   @Test(timeout = 300000, expected = IllegalArgumentException.class)
   public void testDowngrade() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniQJMHACluster cluster = null;
     final Path foo = new Path("/foo");
     final Path bar = new Path("/bar");

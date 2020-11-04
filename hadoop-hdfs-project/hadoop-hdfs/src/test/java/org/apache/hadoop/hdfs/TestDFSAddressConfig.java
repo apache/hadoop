@@ -44,7 +44,7 @@ public class TestDFSAddressConfig {
 
   @Test
   public void testDFSAddressConfig() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     /*-------------------------------------------------------------------------
      * By default, the DataNode socket address should be localhost (127.0.0.1).

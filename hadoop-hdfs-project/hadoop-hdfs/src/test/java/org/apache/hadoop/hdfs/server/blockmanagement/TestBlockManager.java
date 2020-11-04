@@ -156,7 +156,7 @@ public class TestBlockManager {
 
   @Before
   public void setupMockCluster() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
              "need to set a dummy value here so it assumes a multi-rack cluster");
     fsn = Mockito.mock(FSNamesystem.class);
@@ -457,7 +457,7 @@ public class TestBlockManager {
 
   @Test(timeout = 60000)
   public void testNeededReconstructionWhileAppending() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     String src = "/test-file";
     Path file = new Path(src);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -509,7 +509,7 @@ public class TestBlockManager {
 
   @Test(timeout = 60000)
   public void testDeleteCorruptReplicaWithStatleStorages() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
         MIN_REPLICATION, 2);
     Path file = new Path("/test-file");
@@ -1067,7 +1067,7 @@ public class TestBlockManager {
         providedStorageID, DatanodeStorage.State.NORMAL, StorageType.PROVIDED);
 
     // create block manager with provided storage enabled
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED, true);
     conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
         TestProvidedImpl.TestFileRegionBlockAliasMap.class,
@@ -1244,7 +1244,7 @@ public class TestBlockManager {
    */
   @Test
   public void testStorageWithRemainingCapacity() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = FileSystem.get(conf);
     Path file1 = null;
@@ -1304,7 +1304,7 @@ public class TestBlockManager {
 
   @Test
   public void testBlockReportQueueing() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       cluster.waitActive();
@@ -1404,7 +1404,7 @@ public class TestBlockManager {
     final CountDownLatch writeLatch = new CountDownLatch(numWriters);
     final AtomicBoolean failure = new AtomicBoolean();
 
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.getLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, blkSize);
     final MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(8).build();
@@ -1467,7 +1467,7 @@ public class TestBlockManager {
 
   @Test(timeout = 60000)
   public void testBlockManagerMachinesArray() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
     try {

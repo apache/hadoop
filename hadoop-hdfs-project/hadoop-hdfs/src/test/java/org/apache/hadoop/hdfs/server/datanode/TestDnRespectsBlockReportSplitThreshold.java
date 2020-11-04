@@ -64,7 +64,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
   static String bpid;
 
   public void startUpCluster(long splitThreshold) throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY, splitThreshold);
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(REPL_FACTOR)

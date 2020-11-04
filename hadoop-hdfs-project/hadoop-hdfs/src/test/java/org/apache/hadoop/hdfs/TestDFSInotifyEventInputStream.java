@@ -84,7 +84,7 @@ public class TestDFSInotifyEventInputStream {
   @SuppressWarnings("deprecation")
   public void testBasic() throws IOException, URISyntaxException,
       InterruptedException, MissingEventsException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     // so that we can get an atime change
@@ -439,7 +439,7 @@ public class TestDFSInotifyEventInputStream {
     final int dataUnits = ecPolicy.getNumDataUnits();
     final int parityUnits = ecPolicy.getNumParityUnits();
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, ecPolicy.getCellSize());
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     // so that we can get an atime change
@@ -513,7 +513,7 @@ public class TestDFSInotifyEventInputStream {
   @Test(timeout = 120000)
   public void testNNFailover() throws IOException, URISyntaxException,
       MissingEventsException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf).build();
 
     try {
@@ -545,7 +545,7 @@ public class TestDFSInotifyEventInputStream {
 
   @Test(timeout = 120000)
   public void testTwoActiveNNs() throws IOException, MissingEventsException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf).build();
 
     try {
@@ -590,7 +590,7 @@ public class TestDFSInotifyEventInputStream {
   @Test(timeout = 120000)
   public void testReadEventsWithTimeout() throws IOException,
       InterruptedException, MissingEventsException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf).build();
 
     try {

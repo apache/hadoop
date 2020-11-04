@@ -91,7 +91,7 @@ public class TestStripedINodeFile {
 
   @Before
   public void init() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     ErasureCodingPolicyManager.getInstance().init(conf);
   }
 
@@ -387,14 +387,12 @@ public class TestStripedINodeFile {
   @Test(timeout = 60000)
   public void testUnsuitableStoragePoliciesWithECStripedMode()
       throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     int defaultStripedBlockSize = testECPolicy.getCellSize() * 4;
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultStripedBlockSize);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1L);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
 
     // start 10 datanodes
     int numOfDatanodes = 10;

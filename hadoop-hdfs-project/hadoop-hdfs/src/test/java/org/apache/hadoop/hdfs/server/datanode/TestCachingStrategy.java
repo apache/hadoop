@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -216,7 +216,7 @@ public class TestCachingStrategy {
     // start a cluster
     LOG.info("testFadviseAfterWriteThenRead");
     tracker.clear();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     String TEST_PATH = "/test";
     int TEST_PATH_LEN = MAX_TEST_FILE_LEN;
@@ -257,7 +257,7 @@ public class TestCachingStrategy {
     // start a cluster
     LOG.info("testClientDefaults");
     tracker.clear();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_READS_KEY, false);
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_KEY, false);
     conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_CACHE_DROP_BEHIND_READS, true);
@@ -298,7 +298,7 @@ public class TestCachingStrategy {
     // start a cluster
     LOG.info("testFadviseSkippedForSmallReads");
     tracker.clear();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_READS_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_KEY, true);
     MiniDFSCluster cluster = null;
@@ -344,7 +344,7 @@ public class TestCachingStrategy {
     // start a cluster
     LOG.info("testNoFadviseAfterWriteThenRead");
     tracker.clear();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     String TEST_PATH = "/test";
     int TEST_PATH_LEN = MAX_TEST_FILE_LEN;
@@ -376,7 +376,7 @@ public class TestCachingStrategy {
   public void testSeekAfterSetDropBehind() throws Exception {
     // start a cluster
     LOG.info("testSeekAfterSetDropBehind");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     String TEST_PATH = "/test";
     int TEST_PATH_LEN = MAX_TEST_FILE_LEN;

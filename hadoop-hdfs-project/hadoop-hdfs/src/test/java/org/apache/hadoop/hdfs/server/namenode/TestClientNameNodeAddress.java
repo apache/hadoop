@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -46,7 +46,7 @@ public class TestClientNameNodeAddress {
 
   @Test
   public void testSimpleConfig() {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://host1:100");
     assertThat(NameNodeUtils.getClientNamenodeAddress(conf, null),
         is("host1:100"));
@@ -54,27 +54,27 @@ public class TestClientNameNodeAddress {
 
   @Test
   public void testSimpleWithoutPort() {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://host1");
     assertNull(NameNodeUtils.getClientNamenodeAddress(conf, null));
   }
 
   @Test
   public void testWithNoDefaultFs() {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     assertNull(NameNodeUtils.getClientNamenodeAddress(conf, null));
   }
 
   @Test
   public void testWithNoHost() {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs:///");
     assertNull(NameNodeUtils.getClientNamenodeAddress(conf, null));
   }
 
   @Test
   public void testFederationWithHa() {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://ns1");
     conf.set(DFS_NAMESERVICES, "ns1,ns2");
     conf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".ns1", "nn1,nn2");
@@ -91,7 +91,7 @@ public class TestClientNameNodeAddress {
 
   @Test
   public void testFederationWithoutHa() {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://host1:100");
     conf.set(DFS_NAMESERVICES, "ns1,ns2");
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY + ".ns1", "host1:100");

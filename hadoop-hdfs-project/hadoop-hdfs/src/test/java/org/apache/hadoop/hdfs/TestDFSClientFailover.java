@@ -299,7 +299,7 @@ public class TestDFSClientFailover {
   @Test(timeout=60000)
   public void testCreateProxyDoesntDnsResolveLogicalURI() throws IOException {
     final NameService spyNS = spyOnNameService();
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final String service = "nameservice1";
     final String namenode = "namenode113";
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, service);

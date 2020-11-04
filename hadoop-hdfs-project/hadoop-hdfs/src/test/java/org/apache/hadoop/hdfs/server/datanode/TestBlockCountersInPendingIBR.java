@@ -23,6 +23,7 @@ import static org.mockito.Mockito.timeout;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
@@ -46,7 +47,7 @@ public class TestBlockCountersInPendingIBR {
 
   @Test
   public void testBlockCounters() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     /*
      * Set a really long value for dfs.blockreport.intervalMsec and

@@ -436,7 +436,7 @@ public class TestShortCircuitLocalRead {
   @Test(timeout=120000)
   public void testHandleTruncatedBlockFile() throws IOException {
     MiniDFSCluster cluster = null;
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     conf.setBoolean(
         HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY, false);

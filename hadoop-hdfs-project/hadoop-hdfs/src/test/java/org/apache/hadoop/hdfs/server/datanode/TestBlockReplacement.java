@@ -69,7 +69,7 @@ public class TestBlockReplacement {
   MiniDFSCluster cluster;
   @Test
   public void testThrottler() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     long bandwidthPerSec = 1024*1024L;
     final long TOTAL_BYTES =6*bandwidthPerSec; 
@@ -92,7 +92,7 @@ public class TestBlockReplacement {
   
   @Test
   public void testBlockReplacement() throws Exception {
-    final Configuration CONF = new HdfsConfiguration();
+    final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
     final String[] INITIAL_RACKS = {"/RACK0", "/RACK1", "/RACK2"};
     final String[] NEW_RACKS = {"/RACK2"};
 
@@ -210,7 +210,7 @@ public class TestBlockReplacement {
    */
   @Test(timeout = 90000)
   public void testBlockReplacementWithPinnedBlocks() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // create only one datanode in the cluster with DISK and ARCHIVE storage
     // types.
@@ -266,7 +266,7 @@ public class TestBlockReplacement {
 
   @Test
   public void testBlockMoveAcrossStorageInSameNode() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // create only one datanode in the cluster to verify movement within
     // datanode.
     final MiniDFSCluster cluster =
@@ -391,7 +391,7 @@ public class TestBlockReplacement {
    */
   @Test
   public void testDeletedBlockWhenAddBlockIsInEdit() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
        .nnTopology(MiniDFSNNTopology.simpleHATopology())
        .numDataNodes(1).build();

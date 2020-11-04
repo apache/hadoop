@@ -70,7 +70,7 @@ public class TestDelegationToken {
   
   @Before
   public void setUp() throws Exception {
-    config = new HdfsConfiguration();
+    config = DFSTestUtil.newHdfsConfiguration();
     config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
     config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 5000);
     config.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);

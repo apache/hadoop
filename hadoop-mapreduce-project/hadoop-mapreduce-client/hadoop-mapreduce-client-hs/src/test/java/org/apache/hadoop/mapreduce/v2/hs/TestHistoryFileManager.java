@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.util.UUID;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.junit.Assert;
@@ -34,7 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.mapreduce.JobID;
@@ -68,8 +68,8 @@ public class TestHistoryFileManager {
   public static void setUpClass() throws Exception {
     coreSitePath = "." + File.separator + "target" + File.separator +
             "test-classes" + File.separator + "core-site.xml";
-    Configuration conf = new HdfsConfiguration();
-    Configuration conf2 = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
+    Configuration conf2 = DFSTestUtil.newHdfsConfiguration();
     dfsCluster = new MiniDFSCluster.Builder(conf).build();
     conf2.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, conf.get(
         MiniDFSCluster.HDFS_MINIDFS_BASEDIR, MiniDFSCluster.getBaseDirectory())

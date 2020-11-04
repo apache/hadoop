@@ -173,6 +173,7 @@ public class MiniDFSCluster implements AutoCloseable {
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
   public static final String  DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY
       = DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY + ".testing";
+
   /**
    * For the Junit tests, this is the default value of the The amount of time
    * in milliseconds that the BlockScanner times out waiting for the
@@ -509,6 +510,14 @@ public class MiniDFSCluster implements AutoCloseable {
               DEFAULT_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC);
       conf.setLong(DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY,
           defaultScannerVolumeTimeOut);
+      // do not consider load factor when selecting a data node
+      // set the DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD to false if it is not
+      // already set.
+      boolean dfsRedundancyLoad = conf.getBoolean(
+          DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+          DFSTestUtil.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
+      conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+          dfsRedundancyLoad);
       this.storagesPerDatanode =
           FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
     }

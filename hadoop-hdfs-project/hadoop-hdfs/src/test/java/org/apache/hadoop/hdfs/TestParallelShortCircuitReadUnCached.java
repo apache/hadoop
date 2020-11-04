@@ -40,7 +40,7 @@ public class TestParallelShortCircuitReadUnCached extends TestParallelReadUtil {
   static public void setupCluster() throws Exception {
     if (DomainSocket.getLoadingFailureReason() != null) return;
     sockDir = new TemporarySocketDirectory();
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
       new File(sockDir.getDir(), 
         "TestParallelShortCircuitReadUnCached._PORT.sock").getAbsolutePath());

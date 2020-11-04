@@ -35,7 +35,7 @@ public class TestFileLengthOnClusterRestart {
   @Test(timeout = 60000)
   public void testFileLengthWithHSyncAndClusterRestartWithOutDNsRegister()
       throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // create cluster
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
 

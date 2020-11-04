@@ -66,7 +66,7 @@ public class TestStripedFileAppend {
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
   private Path dir = new Path("/TestFileAppendStriped");
-  private HdfsConfiguration conf = new HdfsConfiguration();
+  private HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
 
   @Before
   public void setup() throws IOException {

@@ -92,9 +92,7 @@ public class TestDecommissioningStatus {
   }
 
   protected Configuration setupConfig() throws Exception  {
-    conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
+    conf = DFSTestUtil.newHdfsConfiguration();
 
     // Set up the hosts/exclude files.
     hostsFileWriter = new HostsFileWriter();

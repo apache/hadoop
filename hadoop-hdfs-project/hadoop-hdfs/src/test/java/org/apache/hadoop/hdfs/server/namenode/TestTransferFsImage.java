@@ -36,8 +36,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.http.HttpServer2;
@@ -61,7 +61,7 @@ public class TestTransferFsImage {
    */
   @Test
   public void testClientSideException() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(0).build();
     NNStorage mockStorage = Mockito.mock(NNStorage.class);
@@ -92,7 +92,7 @@ public class TestTransferFsImage {
    */
   @Test
   public void testClientSideExceptionOnJustOneDir() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(0).build();
     NNStorage mockStorage = Mockito.mock(NNStorage.class);
@@ -148,7 +148,7 @@ public class TestTransferFsImage {
    */
   @Test(timeout = 10000)
   public void testImageUploadTimeout() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     NNStorage mockStorage = Mockito.mock(NNStorage.class);
     HttpServer2 testServer = HttpServerFunctionalTest.createServer("hdfs");
     try {

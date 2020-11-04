@@ -40,7 +40,7 @@ public class TestUpdatePipelineWithSnapshots {
   // Regression test for HDFS-6647.
   @Test
   public void testUpdatePipelineAfterDelete() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Path file = new Path("/test-file");    
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     

@@ -38,7 +38,7 @@ public class TestErasureCodingAddConfig {
 
   @Test
   public void testECAddPolicyConfigDisable() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_USERPOLICIES_ALLOWED_KEY,
         false);
@@ -62,7 +62,7 @@ public class TestErasureCodingAddConfig {
 
   @Test
   public void testECAddPolicyConfigEnable() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_EC_POLICIES_USERPOLICIES_ALLOWED_KEY, true);
     try (MiniDFSCluster cluster =

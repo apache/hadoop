@@ -162,7 +162,7 @@ public class TestDFSClientRetries {
   
   @Before
   public void setupConf(){
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
   }
   
   /**
@@ -778,7 +778,7 @@ public class TestDFSClientRetries {
       this.cluster = cluster;
       counter = cnt;
       len = fileLen;
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
       expected_sha = hash_sha;
       try {
         cluster.waitActive();
@@ -913,7 +913,7 @@ public class TestDFSClientRetries {
    */
   @Test
   public void testRetryOnChecksumFailure() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster =
       new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
 

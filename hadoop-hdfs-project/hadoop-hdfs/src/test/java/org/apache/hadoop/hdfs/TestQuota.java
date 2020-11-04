@@ -92,7 +92,7 @@ public class TestQuota {
 
   @BeforeClass
   public static void setUpClass() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(
         MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
         GenericTestUtils.getTestDir("my-test-quota").getAbsolutePath());
@@ -1086,7 +1086,7 @@ public class TestQuota {
         GenericTestUtils.getMethodName());
     assertTrue(dfs.mkdirs(parent));
 
-    Configuration dfsConf = new HdfsConfiguration();
+    Configuration dfsConf = DFSTestUtil.newHdfsConfiguration();
     final int BLOCK_SIZE = 6 * 1024;
     dfsConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     // Make it relinquish locks. When run serially, the result should
@@ -1167,7 +1167,7 @@ public class TestQuota {
 
   @Test
   public void testSetSpaceQuotaWhenStorageTypeIsWrong() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:8020");
     DFSAdmin admin = new DFSAdmin(conf);
     ByteArrayOutputStream err = new ByteArrayOutputStream();

@@ -58,7 +58,7 @@ public class TestMissingBlocksAlert {
     MiniDFSCluster cluster = null;
     
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       //minimize test delay
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
           0);

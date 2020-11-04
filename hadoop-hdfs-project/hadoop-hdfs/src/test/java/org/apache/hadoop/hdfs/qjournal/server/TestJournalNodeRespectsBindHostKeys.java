@@ -28,6 +28,7 @@ import static org.junit.Assert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.junit.After;
 import org.junit.Before;
@@ -69,7 +70,7 @@ public class TestJournalNodeRespectsBindHostKeys {
 
   @Before
   public void setUp() {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
   }
 
   @After

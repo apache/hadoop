@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -54,7 +54,7 @@ public class TestDefaultBlockPlacementPolicy {
   @Before
   public void setup() throws IOException {
     StaticMapping.resetMap();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final String[] racks = { "/RACK0", "/RACK0", "/RACK2", "/RACK3", "/RACK2" };
     final String[] hosts = { "/host0", "/host1", "/host2", "/host3", "/host4" };
 
@@ -124,7 +124,7 @@ public class TestDefaultBlockPlacementPolicy {
    */
   @Test
   public void testPlacementWithDFSNetworkTopology() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final String[] racks = {"/RACK0", "/RACK0", "/RACK2", "/RACK3", "/RACK2"};
     final String[] hosts = {"/host0", "/host1", "/host2", "/host3", "/host4"};
 

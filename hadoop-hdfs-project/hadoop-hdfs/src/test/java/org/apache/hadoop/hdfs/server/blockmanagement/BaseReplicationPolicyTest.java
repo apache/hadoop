@@ -70,7 +70,7 @@ abstract public class BaseReplicationPolicyTest {
 
   @Before
   public void setupCluster() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     dataNodes = getDatanodeDescriptors(conf);
 
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");

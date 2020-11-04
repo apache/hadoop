@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.diskbalancer;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
@@ -41,7 +41,7 @@ public class TestConnectors {
 
   @Before
   public void setup() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numDatanodes).build();
   }

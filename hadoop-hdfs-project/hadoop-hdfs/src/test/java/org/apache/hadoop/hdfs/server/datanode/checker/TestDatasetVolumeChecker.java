@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 
@@ -105,7 +106,8 @@ public class TestDatasetVolumeChecker {
     LOG.info("Executing {}", testName.getMethodName());
     final FsVolumeSpi volume = makeVolumes(1, expectedVolumeHealth).get(0);
     final DatasetVolumeChecker checker =
-        new DatasetVolumeChecker(new HdfsConfiguration(), new FakeTimer());
+        new DatasetVolumeChecker(DFSTestUtil.newHdfsConfiguration(),
+            new FakeTimer());
     checker.setDelegateChecker(new DummyChecker());
     final AtomicLong numCallbackInvocations = new AtomicLong(0);
 
@@ -152,7 +154,7 @@ public class TestDatasetVolumeChecker {
         NUM_VOLUMES, expectedVolumeHealth);
     final FsDatasetSpi<FsVolumeSpi> dataset = makeDataset(volumes);
     final DatasetVolumeChecker checker =
-        new DatasetVolumeChecker(new HdfsConfiguration(), new FakeTimer());
+        new DatasetVolumeChecker(DFSTestUtil.newHdfsConfiguration(), new FakeTimer());
     checker.setDelegateChecker(new DummyChecker());
 
     Set<FsVolumeSpi> failedVolumes = checker.checkAllVolumes(dataset);
@@ -235,7 +237,7 @@ public class TestDatasetVolumeChecker {
 
   @Test
   public void testInvalidConfigurationValues() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY, 0);
     intercept(HadoopIllegalArgumentException.class,
         "Invalid value configured for dfs.datanode.disk.check.timeout"

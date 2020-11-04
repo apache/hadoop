@@ -85,7 +85,7 @@ public class TestDeadDatanode {
    */
   @Test
   public void testDeadDatanode() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     cluster = new MiniDFSCluster.Builder(conf).build();
@@ -149,7 +149,7 @@ public class TestDeadDatanode {
 
   @Test
   public void testDeadNodeAsBlockTarget() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
@@ -186,7 +186,7 @@ public class TestDeadDatanode {
 
   @Test
   public void testNonDFSUsedONDeadNodeReReg() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
         3000);

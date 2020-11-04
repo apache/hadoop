@@ -136,7 +136,7 @@ public class TestMover {
 
   @Test
   public void testScheduleSameBlock() throws IOException {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -271,7 +271,7 @@ public class TestMover {
   @Test(timeout = 300000)
   public void testWithFederateClusterWithinSameNode() throws
       Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
 
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -321,7 +321,7 @@ public class TestMover {
   @Test(timeout = 300000)
   public void testWithFederatedCluster() throws Exception{
 
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(conf)
@@ -365,7 +365,7 @@ public class TestMover {
   @Test(timeout = 300000)
   public void testWithFederatedHACluster() throws Exception{
 
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(conf)
@@ -443,7 +443,7 @@ public class TestMover {
 
   @Test
   public void testScheduleBlockWithinSameNode() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     testWithinSameNode(conf);
   }
@@ -461,7 +461,7 @@ public class TestMover {
    */
   @Test
   public void testMoverCli() throws Exception {
-    final Configuration clusterConf = new HdfsConfiguration();
+    final Configuration clusterConf = DFSTestUtil.newHdfsConfiguration();
     clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
@@ -496,7 +496,7 @@ public class TestMover {
 
   @Test
   public void testMoverCliWithHAConf() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
@@ -521,14 +521,14 @@ public class TestMover {
 
   @Test
   public void testMoverCliWithFederation() throws Exception {
-    final Configuration clusterConf = new HdfsConfiguration();
+    final Configuration clusterConf = DFSTestUtil.newHdfsConfiguration();
     clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(3))
         .numDataNodes(0).build();
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
     DFSTestUtil.setFederatedConfiguration(cluster, conf);
@@ -574,14 +574,14 @@ public class TestMover {
 
   @Test
   public void testMoverCliWithFederationHA() throws Exception {
-    final Configuration clusterConf = new HdfsConfiguration();
+    final Configuration clusterConf = DFSTestUtil.newHdfsConfiguration();
     clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(3))
         .numDataNodes(0).build();
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
     DFSTestUtil.setFederatedHAConfiguration(cluster, conf);
@@ -607,7 +607,7 @@ public class TestMover {
   @Test(timeout = 300000)
   public void testTwoReplicaSameStorageTypeShouldNotSelect() throws Exception {
     // HDFS-8147
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3)
@@ -646,7 +646,7 @@ public class TestMover {
   @Test(timeout = 300000)
   public void testMoveWhenStoragePolicyNotSatisfying() throws Exception {
     // HDFS-8147
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -676,7 +676,7 @@ public class TestMover {
 
   @Test(timeout = 300000)
   public void testMoveWhenStoragePolicySatisfierIsRunning() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -710,7 +710,7 @@ public class TestMover {
   @Test
   public void testMoverFailedRetry() throws Exception {
     // HDFS-8147
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     conf.set(DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY, "2");
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -745,7 +745,7 @@ public class TestMover {
   @Test(timeout=100000)
   public void testBalancerMaxIterationTimeNotAffectMover() throws Exception {
     long blockSize = 10*1024*1024;
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     conf.setInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY, 1);
     conf.setInt(
@@ -801,15 +801,13 @@ public class TestMover {
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1L);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.NONE.toString());
   }
 
   @Test(timeout = 300000)
   public void testMoverWithStripedFile() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConfWithStripe(conf);
 
     // start 10 datanodes
@@ -1004,7 +1002,7 @@ public class TestMover {
    */
   @Test(timeout = 300000)
   public void testMoverWithKeytabs() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     try {
       initSecureConf(conf);
       final UserGroupInformation ugi = UserGroupInformation
@@ -1032,7 +1030,7 @@ public class TestMover {
    */
   @Test(timeout = 90000)
   public void testMoverWithPinnedBlocks() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
 
     // Sets bigger retry max attempts value so that test case will timed out if
@@ -1094,7 +1092,7 @@ public class TestMover {
    */
   @Test(timeout = 90000)
   public void testMoverFailedRetryWithPinnedBlocks() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     conf.set(DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY, "2");
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -1138,7 +1136,7 @@ public class TestMover {
 
   @Test(timeout = 300000)
   public void testMoverWhenStoragePolicyUnset() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1)

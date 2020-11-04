@@ -26,7 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.junit.After;
@@ -62,7 +62,7 @@ public class TestStartupOptionUpgrade {
   
   @Before
   public void setUp() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     startOpt.setClusterId(null);
     storage = new NNStorage(conf,
       Collections.<URI>emptyList(),

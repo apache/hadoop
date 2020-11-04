@@ -49,7 +49,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -82,7 +82,7 @@ public class TestDiskBalancerCommand {
   public ExpectedException thrown = ExpectedException.none();
   private MiniDFSCluster cluster;
   private URI clusterJson;
-  private Configuration conf = new HdfsConfiguration();
+  private Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   private final static int DEFAULT_BLOCK_SIZE = 1024;
   private final static int FILE_LEN = 200 * 1024;
@@ -119,7 +119,7 @@ public class TestDiskBalancerCommand {
   public void testSubmitPlanInNonRegularStatus() throws Exception {
     final int numDatanodes = 1;
     MiniDFSCluster miniCluster = null;
-    final Configuration hdfsConf = new HdfsConfiguration();
+    final Configuration hdfsConf = DFSTestUtil.newHdfsConfiguration();
 
     try {
       /* new cluster with imbalanced capacity */
@@ -164,7 +164,7 @@ public class TestDiskBalancerCommand {
 
     final int numDatanodes = 1;
     MiniDFSCluster miniCluster = null;
-    final Configuration hdfsConf = new HdfsConfiguration();
+    final Configuration hdfsConf = DFSTestUtil.newHdfsConfiguration();
 
     try {
       /* new cluster with imbalanced capacity */
@@ -198,7 +198,7 @@ public class TestDiskBalancerCommand {
       Exception {
     final int numDatanodes = 1;
 
-    final Configuration hdfsConf = new HdfsConfiguration();
+    final Configuration hdfsConf = DFSTestUtil.newHdfsConfiguration();
     hdfsConf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     hdfsConf.set(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "0d");
 
@@ -241,7 +241,7 @@ public class TestDiskBalancerCommand {
       Exception {
     final int numDatanodes = 1;
 
-    final Configuration hdfsConf = new HdfsConfiguration();
+    final Configuration hdfsConf = DFSTestUtil.newHdfsConfiguration();
     hdfsConf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     hdfsConf.set(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "0");
 
@@ -283,7 +283,7 @@ public class TestDiskBalancerCommand {
       Exception {
     final int numDatanodes = 1;
 
-    final Configuration hdfsConf = new HdfsConfiguration();
+    final Configuration hdfsConf = DFSTestUtil.newHdfsConfiguration();
     hdfsConf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     hdfsConf.set(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "0d");
 
@@ -322,7 +322,7 @@ public class TestDiskBalancerCommand {
   public void testDiskBalancerExecuteOptionPlanValidity() throws Exception {
     final int numDatanodes = 1;
 
-    final Configuration hdfsConf = new HdfsConfiguration();
+    final Configuration hdfsConf = DFSTestUtil.newHdfsConfiguration();
     hdfsConf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     hdfsConf.set(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "600s");
 
@@ -734,7 +734,7 @@ public class TestDiskBalancerCommand {
 
     MiniDFSCluster miniCluster = null;
     try {
-      Configuration hdfsConf = new HdfsConfiguration();
+      Configuration hdfsConf = DFSTestUtil.newHdfsConfiguration();
       List<String> outputs = null;
 
       /* new cluster with imbalanced capacity */
@@ -821,7 +821,7 @@ public class TestDiskBalancerCommand {
    */
   @Test
   public void testDiskBalancerQueryWithoutSubmit() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int numDatanodes = 2;
     File basedir = new File(GenericTestUtils.getRandomizedTempPath());

@@ -121,7 +121,7 @@ public class TestBatchedListDirectories {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 7);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_BATCHED_LISTING_LIMIT,
         FIRST_LEVEL_DIRS * SECOND_LEVEL_DIRS * FILES_PER_DIR);

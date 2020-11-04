@@ -73,7 +73,7 @@ public class TestDataNodeRollingUpgrade {
   String blockPoolId = null;
 
   private void startCluster() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt("dfs.blocksize", 1024*1024);
     cluster = new Builder(conf).numDataNodes(REPL_FACTOR).build();
     cluster.waitActive();

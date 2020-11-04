@@ -142,7 +142,7 @@ public class TestSecureEncryptionZoneWithKMS {
     kdc = new MiniKdc(kdcConf, baseDir);
     kdc.start();
 
-    baseConf = new HdfsConfiguration();
+    baseConf = DFSTestUtil.newHdfsConfiguration();
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS,
         baseConf);
     UserGroupInformation.setConfiguration(baseConf);

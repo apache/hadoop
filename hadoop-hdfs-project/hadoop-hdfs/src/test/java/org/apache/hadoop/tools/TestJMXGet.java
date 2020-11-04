@@ -67,7 +67,7 @@ public class TestJMXGet {
 
   @Before
   public void setUp() throws Exception {
-    config = new HdfsConfiguration();
+    config = DFSTestUtil.newHdfsConfiguration();
   }
 
   /**

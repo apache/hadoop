@@ -120,7 +120,7 @@ public class TestDataNodeVolumeMetrics {
   }
 
   private MiniDFSCluster setupClusterForVolumeMetrics() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys
         .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY, 100);
     SimulatedFSDataset.setFactory(conf);
@@ -182,7 +182,7 @@ public class TestDataNodeVolumeMetrics {
 
   @Test
   public void testWriteIoVolumeMetrics() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(
         DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
         100);

@@ -151,7 +151,7 @@ public class TestReplaceDatanodeFailureReplication {
   }
 
   private MiniDFSCluster setupCluster(int failRF) throws IOException {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
         MIN_REPLICATION, failRF);
     // always replace a datanode

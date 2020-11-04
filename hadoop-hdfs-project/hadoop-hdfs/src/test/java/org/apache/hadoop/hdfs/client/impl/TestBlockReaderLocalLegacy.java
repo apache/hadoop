@@ -63,7 +63,7 @@ public class TestBlockReaderLocalLegacy {
 
   private static HdfsConfiguration getConfiguration(
       TemporarySocketDirectory socketDir) throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     if (socketDir == null) {
       conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY, "");
     } else {

@@ -63,7 +63,7 @@ public class TestClientReportBadBlock {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
   private static final int numDataNodes = 3;
-  private static final Configuration conf = new HdfsConfiguration();
+  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   Random rand = new Random();
 

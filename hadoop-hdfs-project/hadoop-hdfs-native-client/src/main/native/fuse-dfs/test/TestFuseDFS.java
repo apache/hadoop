@@ -234,7 +234,7 @@ public class TestFuseDFS {
 
   @BeforeClass
   public static void startUp() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     r = Runtime.getRuntime();
     mountPoint = System.getProperty("build.test") + "/mnt";
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);

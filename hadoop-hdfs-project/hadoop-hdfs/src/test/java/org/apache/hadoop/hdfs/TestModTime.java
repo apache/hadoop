@@ -70,7 +70,7 @@ public class TestModTime {
    */
   @Test
   public void testModTime() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
                                                .numDataNodes(numDatanodes).build();
@@ -188,7 +188,7 @@ public class TestModTime {
     final long sleepTime = 10; // 10 milliseconds
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       fs = cluster.getFileSystem();

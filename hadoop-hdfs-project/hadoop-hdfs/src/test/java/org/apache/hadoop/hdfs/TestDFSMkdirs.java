@@ -37,7 +37,7 @@ import org.junit.Test;
  * directories, and generally behaves as expected.
  */
 public class TestDFSMkdirs {
-  private final Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   private static final String[] NON_CANONICAL_PATHS = new String[] {
       "//test1",
@@ -90,7 +90,7 @@ public class TestDFSMkdirs {
    */
   @Test
   public void testMkdir() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     DistributedFileSystem dfs = cluster.getFileSystem();
     try {

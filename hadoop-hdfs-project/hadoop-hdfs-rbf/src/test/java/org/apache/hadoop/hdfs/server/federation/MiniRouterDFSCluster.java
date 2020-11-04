@@ -71,6 +71,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -472,7 +473,7 @@ public class MiniRouterDFSCluster {
    * @return New namenode configuration.
    */
   public Configuration generateNamenodeConfiguration(String nsId) {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     conf.set(DFS_NAMESERVICES, getNameservicesKey());
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://" + nsId);

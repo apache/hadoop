@@ -561,12 +561,12 @@ public class TestHAStateTransitions {
    */
   @Test(timeout = 300000)
   public void testIsAtLeastOneActive() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration())
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(0)
         .build();
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       HATestUtil.setFailoverConfigurations(cluster, conf);
       
       List<ClientProtocol> namenodes =

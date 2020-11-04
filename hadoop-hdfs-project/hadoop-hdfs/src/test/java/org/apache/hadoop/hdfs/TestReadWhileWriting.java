@@ -54,7 +54,7 @@ public class TestReadWhileWriting {
   /** Test reading while writing. */
   @Test
   public void pipeline_02_03() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
     // create cluster

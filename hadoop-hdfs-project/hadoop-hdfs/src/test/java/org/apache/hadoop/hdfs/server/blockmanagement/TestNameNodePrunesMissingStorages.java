@@ -77,7 +77,7 @@ public class TestNameNodePrunesMissingStorages {
                               final boolean createFiles,
                               final int numInitialStorages,
                               final int expectedStoragesAfterTest) throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     try {
@@ -159,7 +159,7 @@ public class TestNameNodePrunesMissingStorages {
    */
   @Test(timeout=300000)
   public void testRemovingStorageDoesNotProduceZombies() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
         1000);
@@ -313,7 +313,7 @@ public class TestNameNodePrunesMissingStorages {
 
   @Test(timeout=300000)
   public void testRenamingStorageIds() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 0);
     final MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(conf).numDataNodes(1)
@@ -379,7 +379,7 @@ public class TestNameNodePrunesMissingStorages {
 
   @Test(timeout=300000)
   public void testNameNodePrunesUnreportedStorages() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Create a cluster with one datanode with two storages
     MiniDFSCluster cluster = new MiniDFSCluster
         .Builder(conf).numDataNodes(1)

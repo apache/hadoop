@@ -39,7 +39,7 @@ import org.junit.Test;
  * Test case for FilesInGetListingOps metric in Namenode
  */
 public class TestNNMetricFilesInGetListingOps {
-  private static final Configuration CONF = new HdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   private static final String NN_METRICS = "NameNodeActivity";
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);

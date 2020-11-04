@@ -42,7 +42,7 @@ public class TestViewFSStoragePolicyCommands extends TestStoragePolicyCommands {
 
   @Before
   public void clusterSetUp() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     String clusterName = "cluster";
     cluster =
         new MiniDFSCluster.Builder(conf).nnTopology(

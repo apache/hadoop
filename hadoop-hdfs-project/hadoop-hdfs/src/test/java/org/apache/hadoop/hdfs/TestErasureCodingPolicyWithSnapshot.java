@@ -58,7 +58,7 @@ public class TestErasureCodingPolicyWithSnapshot {
     ecPolicy = getEcPolicy();
     groupSize = (short) (ecPolicy.getNumDataUnits()
         + ecPolicy.getNumParityUnits());
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();

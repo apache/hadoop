@@ -37,7 +37,7 @@ public class TestParallelShortCircuitRead extends TestParallelReadUtil {
     if (DomainSocket.getLoadingFailureReason() != null) return;
     DFSInputStream.tcpReadsDisabledForTesting = true;
     sockDir = new TemporarySocketDirectory();
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
       new File(sockDir.getDir(), "TestParallelLocalRead.%d.sock").getAbsolutePath());
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);

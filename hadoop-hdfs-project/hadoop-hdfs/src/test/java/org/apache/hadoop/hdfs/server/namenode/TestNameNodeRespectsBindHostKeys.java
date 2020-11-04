@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -39,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
@@ -77,7 +77,7 @@ public class TestNameNodeRespectsBindHostKeys {
 
   @Test (timeout=300000)
   public void testRpcBindHostKey() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     
     LOG.info("Testing without " + DFS_NAMENODE_RPC_BIND_HOST_KEY);
@@ -117,7 +117,7 @@ public class TestNameNodeRespectsBindHostKeys {
 
   @Test (timeout=300000)
   public void testServiceRpcBindHostKey() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     LOG.info("Testing without " + DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
@@ -159,7 +159,7 @@ public class TestNameNodeRespectsBindHostKeys {
 
   @Test (timeout=300000)
   public void testLifelineRpcBindHostKey() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     LOG.info("Testing without " + DFS_NAMENODE_LIFELINE_RPC_BIND_HOST_KEY);
@@ -201,7 +201,7 @@ public class TestNameNodeRespectsBindHostKeys {
 
   @Test(timeout=300000)
   public void testHttpBindHostKey() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     LOG.info("Testing without " + DFS_NAMENODE_HTTP_BIND_HOST_KEY);
@@ -267,7 +267,7 @@ public class TestNameNodeRespectsBindHostKeys {
    */
   @Test (timeout=300000)
   public void testHttpsBindHostKey() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     LOG.info("Testing behavior without " + DFS_NAMENODE_HTTPS_BIND_HOST_KEY);

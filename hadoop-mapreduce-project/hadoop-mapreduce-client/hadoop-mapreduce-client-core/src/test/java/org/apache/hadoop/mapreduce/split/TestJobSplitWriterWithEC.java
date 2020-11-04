@@ -62,7 +62,7 @@ public class TestJobSplitWriterWithEC {
 
   @Before
   public void setup() throws Exception {
-    Configuration hdfsConf = new HdfsConfiguration();
+    Configuration hdfsConf = DFSTestUtil.newHdfsConfiguration();
     hdfsConf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);
     String namenodeDir = new File(MiniDFSCluster.getBaseDirectory(), "name").
         getAbsolutePath();

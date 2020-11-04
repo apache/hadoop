@@ -303,7 +303,7 @@ public class TestFSImage {
   public void testRemovalStaleFsimageCkpt() throws IOException {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     try {
       cluster = new MiniDFSCluster.Builder(conf).
           numDataNodes(1).format(true).build();
@@ -442,7 +442,7 @@ public class TestFSImage {
    */
   @Test
   public void testZeroBlockSize() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     String tarFile = System.getProperty("test.cache.data", "build/test/cache")
       + "/" + HADOOP_2_7_ZER0_BLOCK_SIZE_TGZ;
     String testDir = PathUtils.getTestDirName(getClass());
@@ -481,7 +481,7 @@ public class TestFSImage {
     final short GROUP_SIZE = (short) (testECPolicy.getNumDataUnits() +
         testECPolicy.getNumParityUnits());
     final int BLOCK_SIZE = 8 * 1024 * 1024;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     MiniDFSCluster cluster = null;
     try {
@@ -580,7 +580,7 @@ public class TestFSImage {
   @Test
   public void testHasNonEcBlockUsingStripedIDForLoadFile() throws IOException{
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -639,7 +639,7 @@ public class TestFSImage {
   public void testHasNonEcBlockUsingStripedIDForLoadUCFile()
       throws IOException{
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -686,7 +686,7 @@ public class TestFSImage {
   public void testHasNonEcBlockUsingStripedIDForLoadSnapshot()
       throws IOException{
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)

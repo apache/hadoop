@@ -55,7 +55,7 @@ public class TestValidateConfigurationSettings {
 
     NameNode nameNode = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
           nameDir.getAbsolutePath());
@@ -83,7 +83,7 @@ public class TestValidateConfigurationSettings {
   public void testThatDifferentRPCandHttpPortsAreOK() 
       throws IOException {
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         nameDir.getAbsolutePath());
@@ -120,7 +120,7 @@ public class TestValidateConfigurationSettings {
   @Test(timeout = 300000)
   public void testGenericKeysForNameNodeFormat()
       throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // Set ephemeral ports 
     conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY,

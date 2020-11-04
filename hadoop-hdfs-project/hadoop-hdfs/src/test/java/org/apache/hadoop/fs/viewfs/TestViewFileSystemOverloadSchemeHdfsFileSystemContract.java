@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.AppendTestUtil;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -53,7 +54,7 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
 
   private static MiniDFSCluster cluster;
   private static String defaultWorkingDirectory;
-  private static Configuration conf = new HdfsConfiguration();
+  private static Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   @BeforeClass
   public static void init() throws IOException {

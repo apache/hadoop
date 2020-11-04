@@ -72,7 +72,7 @@ public class TestListOpenFiles {
 
   @Before
   public void setUp() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(
         DFSConfigKeys.DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES, BATCH_SIZE);
@@ -193,7 +193,7 @@ public class TestListOpenFiles {
   public void testListOpenFilesInHA() throws Exception {
     fs.close();
     cluster.shutdown();
-    HdfsConfiguration haConf = new HdfsConfiguration();
+    HdfsConfiguration haConf = DFSTestUtil.newHdfsConfiguration();
     haConf.setLong(
         DFSConfigKeys.DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES, BATCH_SIZE);
     MiniDFSCluster haCluster =

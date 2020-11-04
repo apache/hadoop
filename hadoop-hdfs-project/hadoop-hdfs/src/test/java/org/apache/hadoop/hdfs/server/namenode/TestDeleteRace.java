@@ -81,7 +81,7 @@ import static org.junit.Assert.assertNotEquals;
 public class TestDeleteRace {
   private static final int BLOCK_SIZE = 4096;
   private static final Logger LOG = LoggerFactory.getLogger(TestDeleteRace.class);
-  private static final Configuration conf = new HdfsConfiguration();
+  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   private MiniDFSCluster cluster;
 
   @Rule

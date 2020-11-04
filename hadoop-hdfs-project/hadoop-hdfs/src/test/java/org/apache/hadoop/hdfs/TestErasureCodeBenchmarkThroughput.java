@@ -45,7 +45,7 @@ public class TestErasureCodeBenchmarkThroughput {
 
   @BeforeClass
   public static void setup() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     int numDN = ErasureCodeBenchmarkThroughput.getEcPolicy().getNumDataUnits() +
         ErasureCodeBenchmarkThroughput.getEcPolicy().getNumParityUnits();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDN).build();

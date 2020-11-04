@@ -73,7 +73,7 @@ public class TestMiniDFSCluster {
   public void testClusterWithoutSystemProperties() throws Throwable {
     String oldPrp = System.getProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA);
     System.clearProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA);
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     File testDataCluster1 = new File(testDataPath, CLUSTER_1);
     String c1Path = testDataCluster1.getAbsolutePath();
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c1Path);
@@ -93,7 +93,7 @@ public class TestMiniDFSCluster {
   @Test(timeout=100000)
   public void testClusterSetStorageCapacity() throws Throwable {
 
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final int numDatanodes = 1;
     final int defaultBlockSize = 1024;
     final int blocks = 100;
@@ -205,7 +205,7 @@ public class TestMiniDFSCluster {
 
   @Test(timeout=100000)
   public void testIsClusterUpAfterShutdown() throws Throwable {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     File testDataCluster4 = new File(testDataPath, CLUSTER_4);
     MiniDFSCluster cluster4 =
         new MiniDFSCluster.Builder(conf, testDataCluster4).build();
@@ -224,7 +224,7 @@ public class TestMiniDFSCluster {
   @Test(timeout=100000)
   public void testClusterSetDatanodeHostname() throws Throwable {
     assumeTrue(System.getProperty("os.name").startsWith("Linux"));
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "MYHOST");
     File testDataCluster5 = new File(testDataPath, CLUSTER_5);
     try (MiniDFSCluster cluster5 =
@@ -239,7 +239,7 @@ public class TestMiniDFSCluster {
 
   @Test
   public void testClusterSetDatanodeDifferentStorageType() throws IOException {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     StorageType[][] storageType = new StorageType[][] {
         {StorageType.DISK, StorageType.ARCHIVE}, {StorageType.DISK},
         {StorageType.ARCHIVE}};
@@ -257,7 +257,7 @@ public class TestMiniDFSCluster {
 
   @Test
   public void testClusterNoStorageTypeSetForDatanodes() throws IOException {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3).build()) {
       cluster.waitActive();

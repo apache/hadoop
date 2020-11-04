@@ -31,7 +31,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -65,7 +65,7 @@ public class TestWriteToReplica {
   // test close
   @Test
   public void testClose() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration(),
         new File(GenericTestUtils.getRandomizedTempPath())).build();
     
     try {
@@ -88,7 +88,7 @@ public class TestWriteToReplica {
   // test append
   @Test
   public void testAppend() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration(),
         new File(GenericTestUtils.getRandomizedTempPath())).build();
     try {
       cluster.waitActive();
@@ -109,7 +109,7 @@ public class TestWriteToReplica {
   // test writeToRbw
   @Test
   public void testWriteToRbw() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration(),
         new File(GenericTestUtils.getRandomizedTempPath())).build();
     try {
       cluster.waitActive();
@@ -130,7 +130,7 @@ public class TestWriteToReplica {
   // test writeToTemporary
   @Test
   public void testWriteToTemporary() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration(),
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration(),
         new File(GenericTestUtils.getRandomizedTempPath())).build();
     try {
       cluster.waitActive();
@@ -516,7 +516,7 @@ public class TestWriteToReplica {
    */
   @Test
   public  void testReplicaMapAfterDatanodeRestart() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf,
         new File(GenericTestUtils.getRandomizedTempPath()))
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
@@ -571,7 +571,7 @@ public class TestWriteToReplica {
    */
   @Test
   public void testRecoverInconsistentRbw() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf,
         new File(GenericTestUtils.getRandomizedTempPath())).build();
     cluster.waitActive();

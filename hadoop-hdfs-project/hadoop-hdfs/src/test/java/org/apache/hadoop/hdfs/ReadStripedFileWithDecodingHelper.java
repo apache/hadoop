@@ -71,13 +71,11 @@ abstract public class ReadStripedFileWithDecodingHelper {
       {BLOCK_GROUP_SIZE - 123, BLOCK_GROUP_SIZE + 123};
 
   public static MiniDFSCluster initializeCluster() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY,
         0);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     MiniDFSCluster myCluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(NUM_DATANODES)
         .build();

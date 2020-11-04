@@ -65,7 +65,7 @@ public class TestDataNodeVolumeFailureToleration {
 
   @Before
   public void setUp() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512L);
     /*
      * Lower the DN heartbeat, DF rate, and recheck interval to one second

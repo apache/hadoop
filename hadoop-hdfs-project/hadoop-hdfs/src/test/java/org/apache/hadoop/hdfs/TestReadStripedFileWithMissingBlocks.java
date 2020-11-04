@@ -43,7 +43,7 @@ public class TestReadStripedFileWithMissingBlocks {
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   private DFSClient dfsClient;
-  private Configuration conf = new HdfsConfiguration();
+  private Configuration conf = DFSTestUtil.newHdfsConfiguration();
   private final ErasureCodingPolicy ecPolicy =
       StripedFileTestUtil.getDefaultECPolicy();
   private final short dataBlocks = (short) ecPolicy.getNumDataUnits();

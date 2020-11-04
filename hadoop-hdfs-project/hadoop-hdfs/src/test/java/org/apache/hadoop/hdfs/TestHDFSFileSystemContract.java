@@ -38,7 +38,7 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,
         FileSystemContractBaseTest.TEST_UMASK);
     File basedir = GenericTestUtils.getRandomizedTestDir();

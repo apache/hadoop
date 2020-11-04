@@ -54,7 +54,7 @@ public class TestNameNodeMetadataConsistency {
 
   @Before
   public void InitTest() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
         SCAN_INTERVAL);
     cluster = new MiniDFSCluster.Builder(conf)

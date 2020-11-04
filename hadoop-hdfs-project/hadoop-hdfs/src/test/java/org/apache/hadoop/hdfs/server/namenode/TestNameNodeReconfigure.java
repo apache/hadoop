@@ -31,11 +31,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.ipc.RemoteException;
@@ -62,7 +62,7 @@ public class TestNameNodeReconfigure {
 
   @Before
   public void setUp() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFS_BLOCK_INVALIDATE_LIMIT_KEY,
         customizedBlockInvalidateLimit);
     cluster = new MiniDFSCluster.Builder(conf).build();
@@ -237,7 +237,7 @@ public class TestNameNodeReconfigure {
       throws ReconfigurationException, IOException {
     // shutdown cluster
     cluster.shutdown();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();

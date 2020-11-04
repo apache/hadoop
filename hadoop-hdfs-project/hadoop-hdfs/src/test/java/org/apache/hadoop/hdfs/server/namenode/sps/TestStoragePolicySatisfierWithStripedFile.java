@@ -90,7 +90,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
     parityBlocks = ecPolicy.getNumParityUnits();
     cellSize = ecPolicy.getCellSize();
     defaultStripeBlockSize = cellSize * stripesPerBlock;
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL.toString());
     // Reduced refresh cycle to update latest datanodes.
@@ -519,8 +519,6 @@ public class TestStoragePolicySatisfierWithStripedFile {
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1L);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
   }
 
   // Check whether the Block movement has been successfully completed to satisfy

@@ -38,7 +38,7 @@ public class TestWriteStripedFileWithFailure {
       .getLogger(TestWriteStripedFileWithFailure.class);
   private MiniDFSCluster cluster;
   private FileSystem fs;
-  private Configuration conf = new HdfsConfiguration();
+  private Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   static {
     GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.ALL);

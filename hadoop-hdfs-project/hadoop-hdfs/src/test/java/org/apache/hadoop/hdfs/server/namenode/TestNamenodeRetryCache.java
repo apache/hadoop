@@ -96,7 +96,7 @@ public class TestNamenodeRetryCache {
   /** Start a cluster */
   @Before
   public void setup() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BlockSize);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
@@ -425,7 +425,7 @@ public class TestNamenodeRetryCache {
   @Test
   public void testRetryCacheConfig() {
     // By default retry configuration should be enabled
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Assert.assertNotNull(FSNamesystem.initRetryCache(conf));
     
     // If retry cache is disabled, it should not be created

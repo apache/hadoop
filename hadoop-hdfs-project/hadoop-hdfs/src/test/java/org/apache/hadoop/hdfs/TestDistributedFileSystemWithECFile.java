@@ -60,7 +60,7 @@ public class TestDistributedFileSystemWithECFile {
   private MiniDFSCluster cluster;
   private FileContext fileContext;
   private DistributedFileSystem fs;
-  private Configuration conf = new HdfsConfiguration();
+  private Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   public ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
@@ -81,8 +81,6 @@ public class TestDistributedFileSystemWithECFile {
     blockGroupSize = blockSize * dataBlocks;
 
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     fileContext = FileContext.getFileContext(cluster.getURI(0), conf);
     fs = cluster.getFileSystem();

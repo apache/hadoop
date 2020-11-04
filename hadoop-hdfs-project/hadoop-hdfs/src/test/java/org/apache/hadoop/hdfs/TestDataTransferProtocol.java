@@ -204,7 +204,7 @@ public class TestDataTransferProtocol {
   public void testOpWrite() throws IOException {
     int numDataNodes = 1;
     final long BLOCK_ID_FUDGE = 128;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {
       cluster.waitActive();
@@ -338,7 +338,7 @@ public class TestDataTransferProtocol {
     Path file = new Path("dataprotocol.dat");
     int numDataNodes = 1;
     
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes); 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {

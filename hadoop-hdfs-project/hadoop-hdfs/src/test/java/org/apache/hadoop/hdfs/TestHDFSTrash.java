@@ -50,7 +50,7 @@ public class TestHDFSTrash {
 
   private static MiniDFSCluster cluster = null;
   private static FileSystem fs;
-  private static Configuration conf = new HdfsConfiguration();
+  private static Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   private final static Path TEST_ROOT = new Path("/TestHDFSTrash-ROOT");
   private final static Path TRASH_ROOT = new Path("/TestHDFSTrash-TRASH");

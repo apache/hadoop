@@ -81,7 +81,7 @@ public class TestLeaseRecovery2 {
 
   static private MiniDFSCluster cluster;
   static private DistributedFileSystem dfs;
-  final static private Configuration conf = new HdfsConfiguration();
+  final static private Configuration conf = DFSTestUtil.newHdfsConfiguration();
   final static private int BUF_SIZE = conf.getInt(
       CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
   

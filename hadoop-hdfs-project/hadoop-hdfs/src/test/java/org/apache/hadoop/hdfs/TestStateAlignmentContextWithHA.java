@@ -64,7 +64,7 @@ public class TestStateAlignmentContextWithHA {
   private static final int NUMDATANODES = 1;
   private static final int NUMCLIENTS = 10;
   private static final int NUMFILES = 120;
-  private static final Configuration CONF = new HdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   private static final List<ClientGSIContext> AC_LIST = new ArrayList<>();
 
   private static MiniQJMHACluster qjmhaCluster;

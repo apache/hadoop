@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -28,10 +29,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -218,7 +217,7 @@ public class TestProtectedDirectories {
 
   @Test
   public void testReconfigureProtectedPaths() throws Throwable {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Collection<Path> protectedPaths = Arrays.asList(new Path("/a"), new Path(
         "/b"), new Path("/c"));
     Collection<Path> unprotectedPaths = Arrays.asList();
@@ -259,7 +258,7 @@ public class TestProtectedDirectories {
   @Test
   public void testDelete() throws Throwable {
     for (TestMatrixEntry testMatrixEntry : createTestMatrix()) {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       MiniDFSCluster cluster = setupTestCase(
           conf, testMatrixEntry.getProtectedPaths(),
           testMatrixEntry.getUnprotectedPaths());
@@ -290,7 +289,7 @@ public class TestProtectedDirectories {
   @Test
   public void testMoveToTrash() throws Throwable {
     for (TestMatrixEntry testMatrixEntry : createTestMatrix()) {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.setInt(DFSConfigKeys.FS_TRASH_INTERVAL_KEY, 3600);
       MiniDFSCluster cluster = setupTestCase(
           conf, testMatrixEntry.getProtectedPaths(),
@@ -318,7 +317,7 @@ public class TestProtectedDirectories {
   @Test
   public void testRename() throws Throwable {
     for (TestMatrixEntry testMatrixEntry : createTestMatrix()) {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       MiniDFSCluster cluster = setupTestCase(
           conf, testMatrixEntry.getProtectedPaths(),
           testMatrixEntry.getUnprotectedPaths());
@@ -344,7 +343,7 @@ public class TestProtectedDirectories {
   public void testRenameProtectSubDirs() throws Throwable {
     for (TestMatrixEntry testMatrixEntry :
             createTestMatrixForProtectSubDirs()) {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.setBoolean(DFS_PROTECTED_SUBDIRECTORIES_ENABLE, true);
       MiniDFSCluster cluster = setupTestCase(
               conf, testMatrixEntry.getProtectedPaths(),
@@ -371,7 +370,7 @@ public class TestProtectedDirectories {
   public void testMoveProtectedSubDirsToTrash() throws Throwable {
     for (TestMatrixEntry testMatrixEntry :
         createTestMatrixForProtectSubDirs()) {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.setBoolean(DFS_PROTECTED_SUBDIRECTORIES_ENABLE, true);
       conf.setInt(DFSConfigKeys.FS_TRASH_INTERVAL_KEY, 3600);
       MiniDFSCluster cluster = setupTestCase(
@@ -398,7 +397,7 @@ public class TestProtectedDirectories {
   public void testDeleteProtectSubDirs() throws Throwable {
     for (TestMatrixEntry testMatrixEntry :
             createTestMatrixForProtectSubDirs()) {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.setBoolean(DFS_PROTECTED_SUBDIRECTORIES_ENABLE, true);
       MiniDFSCluster cluster = setupTestCase(
               conf, testMatrixEntry.getProtectedPaths(),
@@ -434,7 +433,7 @@ public class TestProtectedDirectories {
    */
   @Test
   public void testProtectedDirNormalization1() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(
         CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES,
         "/foo//bar");
@@ -449,7 +448,7 @@ public class TestProtectedDirectories {
    */
   @Test
   public void testProtectedDirNormalization2() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(
         CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES,
         "/a/b/,/c,/d/e/f/");
@@ -465,7 +464,7 @@ public class TestProtectedDirectories {
    */
   @Test
   public void testProtectedDirIsCanonicalized() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(
         CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES,
         "/foo/../bar/");
@@ -479,7 +478,7 @@ public class TestProtectedDirectories {
    */
   @Test
   public void testProtectedRootDirectory() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(
         CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES, "/");
     Collection<String> paths = FSDirectory.parseProtectedDirectories(conf);
@@ -493,7 +492,7 @@ public class TestProtectedDirectories {
    */
   @Test
   public void testBadPathsInConfig() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(
         CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES,
         "hdfs://foo/,/.reserved/foo");

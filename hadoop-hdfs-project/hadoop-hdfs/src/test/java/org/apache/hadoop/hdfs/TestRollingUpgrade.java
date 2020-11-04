@@ -85,7 +85,7 @@ public class TestRollingUpgrade {
   @Test
   public void testDFSAdminRollingUpgradeCommands() throws Exception {
     // start a cluster
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
@@ -171,7 +171,7 @@ public class TestRollingUpgrade {
     LOG.info("nn1Dir=" + nn1Dir);
     LOG.info("nn2Dir=" + nn2Dir);
 
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final MiniJournalCluster mjc = new MiniJournalCluster.Builder(conf).build();
     mjc.waitActive();
     setConf(conf, nn1Dir, mjc);
@@ -308,7 +308,7 @@ public class TestRollingUpgrade {
   @Test
   public void testRollback() throws Exception {
     // start a cluster
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
@@ -394,7 +394,7 @@ public class TestRollingUpgrade {
   @Test
   public void testDFSAdminDatanodeUpgradeControlCommands() throws Exception {
     // start a cluster
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
@@ -449,7 +449,7 @@ public class TestRollingUpgrade {
 
   private void testFinalize(int nnCount, boolean skipImageDeltaCheck)
       throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniQJMHACluster cluster = null;
     final Path foo = new Path("/foo");
     final Path bar = new Path("/bar");
@@ -719,7 +719,7 @@ public class TestRollingUpgrade {
     SecondaryNameNode snn = null;
 
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 

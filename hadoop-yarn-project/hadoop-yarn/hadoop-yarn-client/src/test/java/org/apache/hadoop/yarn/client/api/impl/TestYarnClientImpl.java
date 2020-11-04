@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -173,7 +174,7 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
     MiniDFSCluster hdfsCluster = null;
     try {
       // Step 1: Start a MiniDFSCluster for Log Aggregation Path
-      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      HdfsConfiguration hdfsConfig = DFSTestUtil.newHdfsConfiguration();
       hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
           .numDataNodes(1).build();
 

@@ -49,7 +49,7 @@ public class TestNodeCount {
 
   @Test(timeout = 60000)
   public void testNodeCount() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // avoid invalidation by startup delay in order to make test non-transient
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY,

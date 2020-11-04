@@ -91,14 +91,12 @@ public class TestReconstructStripedBlocksWithRackAwareness {
   }
 
   private MiniDFSCluster cluster;
-  private static final HdfsConfiguration conf = new HdfsConfiguration();
+  private static final HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
   private DistributedFileSystem fs;
 
   @BeforeClass
   public static void setup() throws Exception {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 1);
   }
 

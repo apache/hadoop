@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.federation.MockNamenode;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -72,7 +72,7 @@ public class TestRouterMissingFolderMulti {
   @Before
   public void setup() throws Exception {
     LOG.info("Start the Namenodes");
-    Configuration nnConf = new HdfsConfiguration();
+    Configuration nnConf = DFSTestUtil.newHdfsConfiguration();
     nnConf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 10);
     for (final String nsId : asList("ns0", "ns1")) {
       MockNamenode nn = new MockNamenode(nsId, nnConf);

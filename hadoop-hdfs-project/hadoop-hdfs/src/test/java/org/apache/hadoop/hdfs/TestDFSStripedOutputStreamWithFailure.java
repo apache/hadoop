@@ -89,7 +89,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
   @Test(timeout = 90000)
   public void testAddBlockWhenNoSufficientDataBlockNumOfNodes()
       throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     try {
       setup(conf);
@@ -159,7 +159,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
   // HDFS-12612
   @Test
   public void testIdempotentCloseWithFailedStreams() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     try {
       setup(conf);
@@ -182,7 +182,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
 
   @Test
   public void testCloseAfterAbort() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     try {
       setup(conf);
@@ -203,7 +203,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
   @Test(timeout = 90000)
   public void testAddBlockWhenNoSufficientParityNumOfNodes()
       throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     try {
       setup(conf);

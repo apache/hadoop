@@ -171,7 +171,7 @@ public class TestDataXceiverLazyPersistHint {
 
   private static DataNode getMockDn(NonLocalLazyPersist nonLocalLazyPersist)
       throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(
         DFS_DATANODE_NON_LOCAL_LAZY_PERSIST,
         nonLocalLazyPersist == NonLocalLazyPersist.ALLOWED);

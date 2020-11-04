@@ -55,7 +55,7 @@ public class TestDeadNodeDetection {
   @Before
   public void setUp() {
     cluster = null;
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
     conf.setLong(
         DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_KEY,

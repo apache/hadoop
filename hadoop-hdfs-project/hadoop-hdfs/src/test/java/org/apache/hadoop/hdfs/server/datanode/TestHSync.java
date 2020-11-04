@@ -31,8 +31,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AppendTestUtil;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.RandomDatum;
 import org.apache.hadoop.io.SequenceFile;
@@ -62,7 +62,7 @@ public class TestHSync {
   }
 
   private void testHSyncOperation(boolean testWithAppend) throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     final DistributedFileSystem fs = cluster.getFileSystem();
 
@@ -119,7 +119,7 @@ public class TestHSync {
   /** Test hsync on an exact block boundary */
   @Test
   public void testHSyncBlockBoundary() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     final FileSystem fs = cluster.getFileSystem();
     
@@ -149,7 +149,7 @@ public class TestHSync {
   /** Test hsync via SequenceFiles */
   @Test
   public void testSequenceFileSync() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
     final FileSystem fs = cluster.getFileSystem();
@@ -183,7 +183,7 @@ public class TestHSync {
   /** Test that syncBlock is correctly performed at replicas */
   @Test
   public void testHSyncWithReplication() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     final FileSystem fs = cluster.getFileSystem();
 

@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
@@ -40,7 +40,7 @@ import org.junit.Test;
 
 
 public class TestNNWithQJM {
-  final Configuration conf = new HdfsConfiguration();
+  final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   private MiniJournalCluster mjc = null;
   private final Path TEST_PATH = new Path("/test-dir");
   private final Path TEST_PATH_2 = new Path("/test-dir-2");

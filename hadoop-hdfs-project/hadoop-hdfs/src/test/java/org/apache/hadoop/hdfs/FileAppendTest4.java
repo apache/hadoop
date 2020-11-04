@@ -61,7 +61,7 @@ public class FileAppendTest4 {
   
   @BeforeClass
   public static void startUp () throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     init(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     fs = cluster.getFileSystem();

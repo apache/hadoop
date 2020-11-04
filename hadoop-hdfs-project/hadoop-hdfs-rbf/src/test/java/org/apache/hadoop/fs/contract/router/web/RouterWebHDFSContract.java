@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract.router.web;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.contract.hdfs.HDFSContract;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
@@ -55,7 +56,7 @@ public class RouterWebHDFSContract extends HDFSContract {
   }
 
   public static void createCluster() throws IOException {
-    createCluster(new HdfsConfiguration());
+    createCluster(DFSTestUtil.newHdfsConfiguration());
   }
 
   public static void createCluster(Configuration conf) throws IOException {
@@ -118,7 +119,7 @@ public class RouterWebHDFSContract extends HDFSContract {
       String uriStr =
           WebHdfsConstants.WEBHDFS_SCHEME + "://" + router.getHttpAddress();
       URI uri = new URI(uriStr);
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       return FileSystem.get(uri, conf);
     } catch (URISyntaxException e) {
       LOG.error("Cannot create URI for the WebHDFS filesystem", e);

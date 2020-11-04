@@ -45,7 +45,7 @@ public class TestWriteBlockGetsBlockLengthHint {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     final Path path = new Path("/" + METHOD_NAME + ".dat");
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FsDatasetChecker.setFactory(conf);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_LENGTH);
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);

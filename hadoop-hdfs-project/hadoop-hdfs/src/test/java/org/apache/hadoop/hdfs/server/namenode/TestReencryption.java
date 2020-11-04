@@ -110,7 +110,7 @@ public class TestReencryption {
 
   @Before
   public void setup() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     fsHelper = new FileSystemTestHelper();
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();

@@ -40,7 +40,7 @@ public class TestQuotaAllowOwner {
 
   @BeforeClass
   public static void setUpClass() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_KEY,
         true);

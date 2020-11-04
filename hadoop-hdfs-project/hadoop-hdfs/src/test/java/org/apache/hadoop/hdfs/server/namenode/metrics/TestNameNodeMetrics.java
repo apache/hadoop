@@ -98,7 +98,7 @@ import org.junit.Test;
  * Test for metrics published by the Namenode
  */
 public class TestNameNodeMetrics {
-  private static final Configuration CONF = new HdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   private static final int DFS_REDUNDANCY_INTERVAL = 1;
   private static final Path TEST_ROOT_DIR_PATH = 
     new Path("/testNameNodeMetrics");
@@ -809,7 +809,7 @@ public class TestNameNodeMetrics {
             .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(basePort))
             .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(basePort + 1)));
 
-        HdfsConfiguration conf2 = new HdfsConfiguration();
+        HdfsConfiguration conf2 = DFSTestUtil.newHdfsConfiguration();
         // Lower the checkpoint condition for purpose of testing.
         conf2.setInt(
             DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
@@ -1007,7 +1007,7 @@ public class TestNameNodeMetrics {
   public void testGenerateEDEKTime() throws IOException,
       NoSuchAlgorithmException {
     //Create new MiniDFSCluster with EncryptionZone configurations
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FileSystemTestHelper fsHelper = new FileSystemTestHelper();
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();
@@ -1057,7 +1057,7 @@ public class TestNameNodeMetrics {
 
   @Test
   public void testResourceCheck() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     File basedir = new File(MiniDFSCluster.getBaseDirectory(),
         GenericTestUtils.getMethodName());
     MiniDFSCluster tmpCluster = new MiniDFSCluster.Builder(conf, basedir)
@@ -1071,7 +1071,7 @@ public class TestNameNodeMetrics {
           .setNNResourceChecker(mockResourceChecker);
       NNHAServiceTarget haTarget = new NNHAServiceTarget(conf,
           DFSUtil.getNamenodeNameServiceId(
-              new HdfsConfiguration()), "nn1");
+              DFSTestUtil.newHdfsConfiguration()), "nn1");
       HAServiceProtocol rpc = haTarget.getHealthMonitorProxy(conf, conf.getInt(
           HA_HM_RPC_TIMEOUT_KEY, HA_HM_RPC_TIMEOUT_DEFAULT));
 
@@ -1089,7 +1089,7 @@ public class TestNameNodeMetrics {
 
   @Test
   public void testEditLogTailing() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, 60);
     MiniDFSCluster dfsCluster = null;

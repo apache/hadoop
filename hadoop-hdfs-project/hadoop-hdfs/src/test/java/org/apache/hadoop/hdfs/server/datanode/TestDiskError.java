@@ -69,7 +69,7 @@ public class TestDiskError {
 
   @Before
   public void setUp() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512L);
     conf.setTimeDuration(
         DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,

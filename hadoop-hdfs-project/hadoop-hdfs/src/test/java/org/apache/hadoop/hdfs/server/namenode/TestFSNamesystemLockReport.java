@@ -62,7 +62,7 @@ public class TestFSNamesystemLockReport {
 
   @Before
   public void setUp() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFS_PERMISSIONS_SUPERUSERGROUP_KEY, "hadoop");
 
     // Make the lock report always shown

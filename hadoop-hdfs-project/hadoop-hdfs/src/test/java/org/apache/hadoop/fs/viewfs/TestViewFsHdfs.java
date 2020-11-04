@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -37,7 +38,8 @@ import org.junit.BeforeClass;
 public class TestViewFsHdfs extends ViewFsBaseTest {
 
   private static MiniDFSCluster cluster;
-  private static final HdfsConfiguration CONF = new HdfsConfiguration();
+  private static final HdfsConfiguration CONF =
+      DFSTestUtil.newHdfsConfiguration();
   private static FileContext fc;
   
   @Override

@@ -184,7 +184,7 @@ public class TestAclsEndToEnd {
     miniKMS = miniKMSBuilder.setKmsConfDir(kmsDir).build();
     miniKMS.start();
 
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
 
     // Set up java key store
     conf.set(ProxyUsers.CONF_HADOOP_PROXYUSER + "." + realUser + ".users",

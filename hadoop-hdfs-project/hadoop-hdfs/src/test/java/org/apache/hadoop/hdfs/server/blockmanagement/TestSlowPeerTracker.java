@@ -22,7 +22,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.SlowPeerTracker
     .ReportForJson;
 import org.apache.hadoop.util.FakeTimer;
@@ -63,7 +63,7 @@ public class TestSlowPeerTracker {
 
   @Before
   public void setup() {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     timer = new FakeTimer();
     tracker = new SlowPeerTracker(conf, timer);
     reportValidityMs = tracker.getReportValidityMs();

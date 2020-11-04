@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -57,7 +57,7 @@ public class TestDataStorage {
 
   @Before
   public void setUp() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     storage = new DataStorage();
     nsInfo = new NamespaceInfo(0, CLUSTER_ID, DEFAULT_BPID, CTIME,
         BUILD_VERSION, SOFTWARE_VERSION);
@@ -182,7 +182,7 @@ public class TestDataStorage {
     // from the value before the restart.
     storage.unlockAll();
     DataNode newMockDN = Mockito.mock(DataNode.class);
-    Mockito.when(newMockDN.getConf()).thenReturn(new HdfsConfiguration());
+    Mockito.when(newMockDN.getConf()).thenReturn(DFSTestUtil.newHdfsConfiguration());
     DataStorage newStorage = new DataStorage();
     NamespaceInfo newNamespaceInfo = new NamespaceInfo(0, CLUSTER_ID2,
         DEFAULT_BPID, CTIME, BUILD_VERSION, SOFTWARE_VERSION);

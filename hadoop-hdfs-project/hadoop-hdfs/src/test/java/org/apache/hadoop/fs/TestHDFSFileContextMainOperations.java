@@ -29,6 +29,7 @@ import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.AppendTestUtil;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -47,7 +48,8 @@ public class TestHDFSFileContextMainOperations extends
     FileContextMainOperationsBaseTest {
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
-  private static final HdfsConfiguration CONF = new HdfsConfiguration();
+  private static final HdfsConfiguration CONF =
+      DFSTestUtil.newHdfsConfiguration();
   
   @Override
   protected FileContextTestHelper createFileContextHelper() {

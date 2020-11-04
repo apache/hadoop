@@ -19,13 +19,13 @@ package org.apache.hadoop.hdfs.server.balancer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestBalancerWithEncryptedTransfer {
   
-  private final Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   
   @Before
   public void setUpConf() {

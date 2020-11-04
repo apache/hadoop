@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -55,7 +56,8 @@ public class TestWebHdfsFileContextMainOperations
 
   protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
-  protected static final HdfsConfiguration CONF = new HdfsConfiguration();
+  protected static final HdfsConfiguration CONF =
+      DFSTestUtil.newHdfsConfiguration();
 
   @Override
   public Path getDefaultWorkingDirectory() {

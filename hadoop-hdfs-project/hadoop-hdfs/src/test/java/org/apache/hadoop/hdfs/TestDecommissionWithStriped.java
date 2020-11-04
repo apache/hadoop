@@ -110,7 +110,7 @@ public class TestDecommissionWithStriped {
   private DFSClient client;
 
   protected Configuration createConfiguration() {
-    return new HdfsConfiguration();
+    return DFSTestUtil.newHdfsConfiguration();
   }
 
   @Before
@@ -127,8 +127,6 @@ public class TestDecommissionWithStriped {
     writeConfigFile(excludeFile, null);
 
     // Setup conf
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
@@ -146,8 +144,6 @@ public class TestDecommissionWithStriped {
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
         cellSize - 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
 
     numDNs = dataBlocks + parityBlocks + 5;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();

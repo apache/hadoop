@@ -29,7 +29,7 @@ public class TestDeprecatedKeys {
   //Tests a deprecated key
   @Test
   public void testDeprecatedKeys() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set("topology.script.file.name", "xyz");
     String scriptFile = conf.get(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY);
     assertTrue(scriptFile.equals("xyz")) ;

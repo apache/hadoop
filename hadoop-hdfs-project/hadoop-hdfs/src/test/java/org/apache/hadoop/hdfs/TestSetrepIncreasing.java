@@ -36,7 +36,7 @@ import org.junit.Test;
 
 public class TestSetrepIncreasing {
   static void setrep(int fromREP, int toREP, boolean simulatedStorage) throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
     }
@@ -89,7 +89,7 @@ public class TestSetrepIncreasing {
 
   @Test
   public void testSetRepWithStoragePolicyOnEmptyFile() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     DistributedFileSystem dfs = cluster.getFileSystem();
@@ -109,7 +109,7 @@ public class TestSetrepIncreasing {
   @Test
   public void testSetRepOnECFile() throws Exception {
     ClientProtocol client;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
         .build();
     cluster.waitActive();

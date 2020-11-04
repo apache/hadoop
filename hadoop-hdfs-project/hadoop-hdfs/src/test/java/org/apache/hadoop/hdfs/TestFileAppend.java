@@ -120,7 +120,7 @@ public class TestFileAppend{
 
   @Test
   public void testBreakHardlinksIfNeeded() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .build();
@@ -187,7 +187,7 @@ public class TestFileAppend{
    */
   @Test
   public void testSimpleFlush() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
@@ -242,7 +242,7 @@ public class TestFileAppend{
    */
   @Test
   public void testComplexFlush() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
@@ -292,7 +292,7 @@ public class TestFileAppend{
    */
   @Test(expected = FileNotFoundException.class)
   public void testFileNotFound() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .build();
@@ -309,7 +309,7 @@ public class TestFileAppend{
   /** Test two consecutive appends on a file with a full block. */
   @Test
   public void testAppendTwice() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .build();
@@ -350,7 +350,7 @@ public class TestFileAppend{
   /** Test two consecutive appends on a file with a full block. */
   @Test
   public void testAppend2Twice() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .build();
@@ -392,7 +392,7 @@ public class TestFileAppend{
   @Test
   public void testMultipleAppends() throws Exception {
     final long startTime = Time.monotonicNow();
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(
         DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY, 1);
     conf.setBoolean(
@@ -446,7 +446,7 @@ public class TestFileAppend{
   @Test
   public void testAppendAfterSoftLimit() 
       throws IOException, InterruptedException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
     //Set small soft-limit for lease
     final long softLimit = 1L;
@@ -487,7 +487,7 @@ public class TestFileAppend{
   /** Tests appending after soft-limit expires. */
   @Test
   public void testAppend2AfterSoftLimit() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
     //Set small soft-limit for lease
     final long softLimit = 1L;
@@ -538,7 +538,7 @@ public class TestFileAppend{
    */
   @Test
   public void testFailedAppendBlockRejection() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set("dfs.client.block.write.replace-datanode-on-failure.enable",
         "false");
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
@@ -592,7 +592,7 @@ public class TestFileAppend{
    */
   @Test
   public void testMultiAppend2() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set("dfs.client.block.write.replace-datanode-on-failure.enable",
         "false");
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
@@ -664,7 +664,7 @@ public class TestFileAppend{
   
   @Test(timeout = 10000)
   public void testAppendCorruptedBlock() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
@@ -689,7 +689,7 @@ public class TestFileAppend{
       throws IOException, TimeoutException, InterruptedException {
     // Create a finalized replica and append to it
     // Read block data and checksum. Verify checksum.
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
 

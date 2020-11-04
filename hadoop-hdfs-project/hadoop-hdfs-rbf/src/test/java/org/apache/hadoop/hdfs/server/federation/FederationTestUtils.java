@@ -56,8 +56,8 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
@@ -448,7 +448,7 @@ public final class FederationTestUtils {
    * @throws IOException If it cannot create the file system.
    */
   public static FileSystem getFileSystem(int rpcPort) throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     URI uri = URI.create("hdfs://localhost:" + rpcPort);
     return DistributedFileSystem.get(uri, conf);
   }
@@ -474,7 +474,7 @@ public final class FederationTestUtils {
    */
   public static RouterClient getAdminClient(
       final Router router) throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     InetSocketAddress routerSocket = router.getAdminServerAddress();
     return new RouterClient(routerSocket, conf);
   }

@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +109,7 @@ public class MiniKerberizedHadoopCluster extends CompositeService {
   public MiniKerberizedHadoopCluster() {
     super("MiniKerberizedHadoopCluster");
     // load all the configs to force in the -default.xml files
-    new HdfsConfiguration();
+    DFSTestUtil.newHdfsConfiguration();
     new YarnConfiguration();
     new JobConf();
     if (LOG.isDebugEnabled()) {

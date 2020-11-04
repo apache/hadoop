@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -79,7 +80,7 @@ public class TestLogInfo {
   @Before
   public void setup() throws Exception {
     config.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, TEST_ROOT_DIR.toString());
-    HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+    HdfsConfiguration hdfsConfig = DFSTestUtil.newHdfsConfiguration();
     hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig).numDataNodes(1).build();
     fs = hdfsCluster.getFileSystem();
     fc = FileContext.getFileContext(hdfsCluster.getURI(0), config);

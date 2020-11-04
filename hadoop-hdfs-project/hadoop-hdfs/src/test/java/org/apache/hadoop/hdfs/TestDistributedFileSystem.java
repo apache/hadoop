@@ -155,7 +155,7 @@ public class TestDistributedFileSystem {
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeDir);
       conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, namenodeDir);
     } else {
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
     }
     if (dualPortTesting) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,

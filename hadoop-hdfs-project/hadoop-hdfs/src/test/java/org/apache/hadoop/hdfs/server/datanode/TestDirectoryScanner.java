@@ -91,7 +91,7 @@ import org.slf4j.LoggerFactory;
 public class TestDirectoryScanner {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDirectoryScanner.class);
-  private static final Configuration CONF = new HdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   private static final int DEFAULT_GEN_STAMP = 9999;
 
   private MiniDFSCluster cluster;

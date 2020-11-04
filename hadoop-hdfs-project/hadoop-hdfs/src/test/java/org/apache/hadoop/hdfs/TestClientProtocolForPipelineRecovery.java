@@ -65,7 +65,7 @@ public class TestClientProtocolForPipelineRecovery {
       LoggerFactory.getLogger(TestClientProtocolForPipelineRecovery.class);
   @Test public void testGetNewStamp() throws IOException {
     int numDataNodes = 1;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {
       cluster.waitActive();
@@ -151,7 +151,7 @@ public class TestClientProtocolForPipelineRecovery {
         = Mockito.mock(DFSClientFaultInjector.class);
     DFSClientFaultInjector oldInjector = DFSClientFaultInjector.get();
     DFSClientFaultInjector.set(faultInjector);
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     conf.setInt(HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 3);
     MiniDFSCluster cluster = null;
@@ -199,7 +199,7 @@ public class TestClientProtocolForPipelineRecovery {
 
     // Setting the timeout to be 3 seconds. Normally heartbeat packet
     // would be sent every 1.5 seconds if there is no data traffic.
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, "3000");
     MiniDFSCluster cluster = null;
 
@@ -253,7 +253,7 @@ public class TestClientProtocolForPipelineRecovery {
    */
   @Test
   public void testPipelineRecoveryOnOOB() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(HdfsClientConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY, "15");
     MiniDFSCluster cluster = null;
     try {
@@ -294,7 +294,7 @@ public class TestClientProtocolForPipelineRecovery {
    */
   @Test
   public void testEvictWriter() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
@@ -341,7 +341,7 @@ public class TestClientProtocolForPipelineRecovery {
   /** Test restart timeout */
   @Test
   public void testPipelineRecoveryOnRestartFailure() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(HdfsClientConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY, "5");
     MiniDFSCluster cluster = null;
     try {
@@ -403,7 +403,7 @@ public class TestClientProtocolForPipelineRecovery {
    */
   @Test(timeout = 60000)
   public void testPipelineRecoveryOnDatanodeUpgrade() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -447,7 +447,7 @@ public class TestClientProtocolForPipelineRecovery {
 
   @Test
   public void testPipelineRecoveryOnRemoteDatanodeUpgrade() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(BlockWrite.ReplaceDatanodeOnFailure.BEST_EFFORT_KEY, true);
     MiniDFSCluster cluster = null;
     DFSClientFaultInjector old = DFSClientFaultInjector.get();
@@ -565,7 +565,7 @@ public class TestClientProtocolForPipelineRecovery {
     DataNodeFaultInjector oldDnInjector = DataNodeFaultInjector.get();
     DataNodeFaultInjector.set(dnFaultInjector);
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, "1000");
     conf.set(HdfsClientConfigKeys.
         BlockWrite.ReplaceDatanodeOnFailure.POLICY_KEY, "ALWAYS");
@@ -607,7 +607,7 @@ public class TestClientProtocolForPipelineRecovery {
     final int oneWriteSize = 5000;
     final int totalSize = 1024 * 1024;
     final int errorInjectionPos = 512;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Need 4 datanodes to verify the replaceDatanode during pipeline recovery
     final MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
@@ -714,7 +714,7 @@ public class TestClientProtocolForPipelineRecovery {
 
   @Test
   public void testUpdatePipeLineAfterDNReg()throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();

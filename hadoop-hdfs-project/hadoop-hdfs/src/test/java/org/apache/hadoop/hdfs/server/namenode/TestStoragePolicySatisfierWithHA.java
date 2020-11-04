@@ -23,8 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
@@ -38,7 +38,7 @@ import org.junit.Test;
 public class TestStoragePolicySatisfierWithHA {
   private MiniDFSCluster cluster = null;
 
-  private final Configuration config = new HdfsConfiguration();
+  private final Configuration config = DFSTestUtil.newHdfsConfiguration();
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private DistributedFileSystem dfs = null;
 

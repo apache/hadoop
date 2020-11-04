@@ -66,7 +66,7 @@ public class TestFileLimit {
    */
   @Test
   public void testFileLimit() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     int maxObjects = 5;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY, maxObjects);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
@@ -165,7 +165,7 @@ public class TestFileLimit {
 
   @Test(timeout=60000)
   public void testMaxBlocksPerFileLimit() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Make a small block size and a low limit
     final long blockSize = 4096;
     final long numBlocks = 2;
@@ -196,7 +196,7 @@ public class TestFileLimit {
   @Test(timeout=60000)
   public void testMinBlockSizeLimit() throws Exception {
     final long blockSize = 4096;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, blockSize);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();

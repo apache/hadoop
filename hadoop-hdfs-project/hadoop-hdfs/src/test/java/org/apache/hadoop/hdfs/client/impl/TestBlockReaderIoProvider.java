@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.metrics.BlockReaderIoProvider;
@@ -47,7 +48,7 @@ public class TestBlockReaderIoProvider {
 
   @Test(timeout = 300_000)
   public void testSlowShortCircuitReadsIsRecorded() throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(HdfsClientConfigKeys.Read.ShortCircuit
         .METRICS_SAMPLING_PERCENTAGE_KEY, 100);
     DfsClientConf clientConf = new DfsClientConf(conf);

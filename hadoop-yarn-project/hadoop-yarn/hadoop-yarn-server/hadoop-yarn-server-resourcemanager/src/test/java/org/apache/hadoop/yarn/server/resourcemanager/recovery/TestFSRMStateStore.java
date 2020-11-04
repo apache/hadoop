@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -49,7 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Applicatio
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -174,7 +174,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
 
   @Test(timeout = 60000)
   public void testFSRMStateStore() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster =
             new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
@@ -215,7 +215,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
 
   @Test(timeout = 60000)
   public void testHDFSRMStateStore() throws Exception {
-    final HdfsConfiguration conf = new HdfsConfiguration();
+    final HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     UserGroupInformation yarnAdmin =
             UserGroupInformation.createUserForTesting("yarn",
                     new String[]{"admin"});
@@ -312,7 +312,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
 
   @Test(timeout = 60000)
   public void testCheckMajorVersionChange() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
@@ -393,7 +393,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
 
   @Test (timeout = 30000)
   public void testFSRMStateStoreClientRetry() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitActive();

@@ -53,7 +53,7 @@ import org.junit.Test;
 public class TestDFSPermission {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDFSPermission.class);
-  final private static Configuration conf = new HdfsConfiguration();
+  final private static Configuration conf = DFSTestUtil.newHdfsConfiguration();
   
   final private static String GROUP1_NAME = "group1";
   final private static String GROUP2_NAME = "group2";

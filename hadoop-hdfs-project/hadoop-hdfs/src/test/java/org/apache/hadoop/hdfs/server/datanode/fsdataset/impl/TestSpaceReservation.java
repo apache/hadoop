@@ -88,7 +88,7 @@ public class TestSpaceReservation {
 
   @Before
   public void before() {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
   }
 
   private void initConfig(int blockSize) {

@@ -53,7 +53,7 @@ public class TestWriteRead {
   int loopOption = 10;
 
   private MiniDFSCluster cluster;
-  private Configuration conf; // = new HdfsConfiguration();
+  private Configuration conf; // = DFSTestUtil.newHdfsConfiguration();
   private FileSystem mfs; // = cluster.getFileSystem();
   private FileContext mfc; // = FileContext.getFileContext();
 
@@ -71,7 +71,7 @@ public class TestWriteRead {
   public void initJunitModeTest() throws Exception {
     LOG.info("initJunitModeTest");
 
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize); // 100K
                                                               // blocksize
 

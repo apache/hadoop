@@ -84,7 +84,7 @@ public class TestStorageMover {
   private static final int BLOCK_SIZE = 1024;
   private static final short REPL = 3;
   private static final int NUM_DATANODES = 6;
-  private static final Configuration DEFAULT_CONF = new HdfsConfiguration();
+  private static final Configuration DEFAULT_CONF = DFSTestUtil.newHdfsConfiguration();
   private static final BlockStoragePolicySuite DEFAULT_POLICIES;
   private static final BlockStoragePolicy HOT;
   private static final BlockStoragePolicy WARM;

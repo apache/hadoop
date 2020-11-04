@@ -67,7 +67,7 @@ public class TestHeartbeatHandling {
    */
   @Test
   public void testHeartbeat() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       cluster.waitActive();
@@ -150,7 +150,7 @@ public class TestHeartbeatHandling {
    */
   @Test
   public void testHeartbeatBlockRecovery() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {

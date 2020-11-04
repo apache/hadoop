@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.metrics;
 
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.metrics2.lib.MetricsTestHelper;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -69,7 +69,7 @@ public class TestDataNodeOutlierDetectionViaMetrics {
   public void setup() {
     GenericTestUtils.setLogLevel(DataNodePeerMetrics.LOG, Level.ALL);
     GenericTestUtils.setLogLevel(OutlierDetector.LOG, Level.ALL);
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
   }
 
   /**

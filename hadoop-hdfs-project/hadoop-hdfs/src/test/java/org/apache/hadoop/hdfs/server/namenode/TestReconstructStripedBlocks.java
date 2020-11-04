@@ -108,7 +108,7 @@ public class TestReconstructStripedBlocks {
    */
   private void doTestMissingStripedBlock(int numOfMissed, int numOfBusy)
       throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 1)
         .build();
@@ -197,7 +197,7 @@ public class TestReconstructStripedBlocks {
 
   @Test
   public void test2RecoveryTasksForSameBlockGroup() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1000);
@@ -275,10 +275,8 @@ public class TestReconstructStripedBlocks {
    */
   @Test
   public void testCountLiveReplicas() throws Exception {
-    final HdfsConfiguration conf = new HdfsConfiguration();
+    final HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
     cluster.waitActive();
@@ -368,7 +366,7 @@ public class TestReconstructStripedBlocks {
 
   @Test(timeout=120000) // 1 min timeout
   public void testReconstructionWork() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);

@@ -90,7 +90,7 @@ public class TestGetBlocks {
    */
   @Test
   public void testReadSelectNonStaleDatanode() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
     long staleInterval = 30 * 1000 * 60;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
@@ -178,7 +178,7 @@ public class TestGetBlocks {
   /** test getBlocks */
   @Test
   public void testGetBlocks() throws Exception {
-    final Configuration CONF = new HdfsConfiguration();
+    final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
 
     final short REPLICATION_FACTOR = (short) 2;
     final int DEFAULT_BLOCK_SIZE = 1024;

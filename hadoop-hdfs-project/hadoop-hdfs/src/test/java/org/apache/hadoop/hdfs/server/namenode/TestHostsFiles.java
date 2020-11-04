@@ -69,7 +69,7 @@ public class TestHostsFiles {
    * a topology script set (which enables rack awareness).  
    */
   private Configuration getConf() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // Lower the heart beat interval so the NN quickly learns of dead
     // or decommissioned DNs and the NN issues replication and invalidation

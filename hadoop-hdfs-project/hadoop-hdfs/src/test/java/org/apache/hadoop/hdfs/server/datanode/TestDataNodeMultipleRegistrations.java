@@ -55,7 +55,7 @@ public class TestDataNodeMultipleRegistrations {
 
   @Before
   public void setUp() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
   }
 
   /**
@@ -319,7 +319,7 @@ public class TestDataNodeMultipleRegistrations {
   
   @Test
   public void testMiniDFSClusterWithMultipleNN() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // start Federated cluster and add a node.
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
@@ -339,7 +339,7 @@ public class TestDataNodeMultipleRegistrations {
     }
         
     // 2. start with Federation flag set
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(1))
       .build();
@@ -359,7 +359,7 @@ public class TestDataNodeMultipleRegistrations {
     }
 
     // 3. start non-federated
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).build();
     
     // add a node

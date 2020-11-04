@@ -140,7 +140,7 @@ public class TestBlockReaderLocal {
           throws IOException {
     Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
     MiniDFSCluster cluster = null;
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
         !checksum);
     conf.setLong(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
@@ -744,7 +744,7 @@ public class TestBlockReaderLocal {
 
   private void testStatistics(boolean isShortCircuit) throws Exception {
     Assume.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     TemporarySocketDirectory sockDir = null;
     if (isShortCircuit) {
       DFSInputStream.tcpReadsDisabledForTesting = true;
@@ -807,7 +807,7 @@ public class TestBlockReaderLocal {
 
   @Test(timeout = 60000)
   public void testStatisticsForErasureCodingRead() throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
 
     final ErasureCodingPolicy ecPolicy =
         StripedFileTestUtil.getDefaultECPolicy();

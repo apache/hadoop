@@ -27,6 +27,7 @@ import java.io.FileWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.PathUtils;
@@ -38,7 +39,7 @@ import org.junit.Test;
  * This class tests if a balancer schedules tasks correctly.
  */
 public class TestLoadGenerator extends Configured implements Tool {
-  private static final Configuration CONF = new HdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   private static final int DEFAULT_BLOCK_SIZE = 10;
   private static final File OUT_DIR = PathUtils.getTestDir(TestLoadGenerator.class);
   private static final File DIR_STRUCTURE_FILE = 

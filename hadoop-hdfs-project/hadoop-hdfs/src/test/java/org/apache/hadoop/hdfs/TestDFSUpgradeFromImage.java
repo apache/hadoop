@@ -85,7 +85,7 @@ public class TestDFSUpgradeFromImage {
   static final Configuration upgradeConf;
   
   static {
-    upgradeConf = new HdfsConfiguration();
+    upgradeConf = DFSTestUtil.newHdfsConfiguration();
     upgradeConf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // block scanning off
     if (System.getProperty(GenericTestUtils.SYSPROP_TEST_DATA_DIR) == null) {
       // to allow test to be run outside of Maven
@@ -244,7 +244,7 @@ public class TestDFSUpgradeFromImage {
    */
   @Test
   public void testFailOnPreUpgradeImage() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     File namenodeStorage = new File(TEST_ROOT_DIR, "nnimage-0.3.0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeStorage.toString());
@@ -651,7 +651,7 @@ public class TestDFSUpgradeFromImage {
      * mv /input/dir1/randome_file_1 /input/dir3/randome_file_3
      * rmdir /input/dir1
      */
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf = UpgradeUtilities.initializeStorageStateConf(1, conf);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
         .format(false)

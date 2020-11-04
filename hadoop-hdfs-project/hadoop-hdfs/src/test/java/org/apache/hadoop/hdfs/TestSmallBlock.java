@@ -84,7 +84,7 @@ public class TestSmallBlock {
    */
   @Test
   public void testSmallBlock() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
     }

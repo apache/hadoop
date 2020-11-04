@@ -236,8 +236,6 @@ public class TestBalancer {
 
   void initConfWithStripe(Configuration conf) {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultBlockSize);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     SimulatedFSDataset.setFactory(conf);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
@@ -498,7 +496,7 @@ public class TestBalancer {
     // provide a different mechanism for Windows.
     assumeNotWindows();
 
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     conf.setBoolean(DFS_DATANODE_BLOCK_PINNING_ENABLED, true);
 
@@ -550,7 +548,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testRackPolicyAfterBalance() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     long[] capacities =  new long[] { CAPACITY, CAPACITY };
     String[] hosts = {"host0", "host1"};
@@ -565,7 +563,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testUpgradeDomainPolicyAfterBalance() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
         BlockPlacementPolicyWithUpgradeDomain.class,
@@ -1126,7 +1124,7 @@ public class TestBalancer {
 
   @Test(timeout = 100000)
   public void testUnknownDatanodeSimple() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     testUnknownDatanode(conf);
   }
@@ -1218,7 +1216,7 @@ public class TestBalancer {
    * then a new empty node is added to the cluster*/
   @Test(timeout=100000)
   public void testBalancer0() throws Exception {
-    testBalancer0Internal(new HdfsConfiguration());
+    testBalancer0Internal(DFSTestUtil.newHdfsConfiguration());
   }
 
   void testBalancer0Internal(Configuration conf) throws Exception {
@@ -1230,7 +1228,7 @@ public class TestBalancer {
   /** Test unevenly distributed cluster */
   @Test(timeout=100000)
   public void testBalancer1() throws Exception {
-    testBalancer1Internal(new HdfsConfiguration());
+    testBalancer1Internal(DFSTestUtil.newHdfsConfiguration());
   }
 
   void testBalancer1Internal(Configuration conf) throws Exception {
@@ -1243,21 +1241,21 @@ public class TestBalancer {
 
   @Test(expected=HadoopIllegalArgumentException.class)
   public void testBalancerWithZeroThreadsForMove() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 0);
     testBalancer1Internal (conf);
   }
 
   @Test(timeout=100000)
   public void testBalancerWithNonZeroThreadsForMove() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 8);
     testBalancer1Internal(conf);
   }
 
   @Test(timeout=100000)
   public void testBalancer2() throws Exception {
-    testBalancer2Internal(new HdfsConfiguration());
+    testBalancer2Internal(DFSTestUtil.newHdfsConfiguration());
   }
 
   void testBalancer2Internal(Configuration conf) throws Exception {
@@ -1407,7 +1405,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testExitZeroOnSuccess() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     initConf(conf);
 
@@ -1421,7 +1419,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerWithExcludeList() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     Set<String> excludeHosts = new HashSet<String>();
     excludeHosts.add( "datanodeY");
@@ -1439,7 +1437,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerWithExcludeListWithPorts() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
         CAPACITY, RACK2, new PortNumberBasedNodes(3, 2, 0), false, false);
@@ -1452,7 +1450,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerCliWithExcludeList() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     Set<String> excludeHosts = new HashSet<String>();
     excludeHosts.add( "datanodeY");
@@ -1471,7 +1469,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerCliWithExcludeListWithPorts() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
         CAPACITY, RACK2, new PortNumberBasedNodes(3, 2, 0), true, false);
@@ -1484,7 +1482,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerCliWithExcludeListInAFile() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     Set<String> excludeHosts = new HashSet<String>();
     excludeHosts.add( "datanodeY");
@@ -1502,7 +1500,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerCliWithExcludeListWithPortsInAFile() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
         CAPACITY, RACK2, new PortNumberBasedNodes(3, 2, 0), true, true);
@@ -1515,7 +1513,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerWithIncludeList() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     Set<String> includeHosts = new HashSet<String>();
     includeHosts.add( "datanodeY");
@@ -1532,7 +1530,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerWithIncludeListWithPorts() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
         CAPACITY, RACK2, new PortNumberBasedNodes(3, 0, 1), false, false);
@@ -1545,7 +1543,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerCliWithIncludeList() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     Set<String> includeHosts = new HashSet<String>();
     includeHosts.add( "datanodeY");
@@ -1562,7 +1560,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerCliWithIncludeListWithPorts() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
         CAPACITY, RACK2, new PortNumberBasedNodes(3, 0, 1), true, false);
@@ -1575,7 +1573,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerCliWithIncludeListInAFile() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     Set<String> includeHosts = new HashSet<String>();
     includeHosts.add( "datanodeY");
@@ -1592,7 +1590,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testBalancerCliWithIncludeListWithPortsInAFile() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
         CAPACITY, RACK2, new PortNumberBasedNodes(3, 0, 1), true, true);
@@ -1601,7 +1599,7 @@ public class TestBalancer {
 
   @Test(timeout = 100000)
   public void testMaxIterationTime() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     int blockSize = 10*1024*1024; // 10MB block size
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
@@ -1751,7 +1749,7 @@ public class TestBalancer {
   @Test(timeout=300000)
   public void testBalancerDuringUpgrade() throws Exception {
     final int SEED = 0xFADED;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
@@ -1816,7 +1814,7 @@ public class TestBalancer {
    */
   @Test(timeout=100000)
   public void testTwoReplicaShouldNotInSameDN() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     int blockSize = 5 * 1024 * 1024 ;
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
@@ -1878,7 +1876,7 @@ public class TestBalancer {
    */
   @Test(timeout = 100000)
   public void testManyBalancerSimultaneously() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     // add an empty node with half of the capacities(4 * CAPACITY) & the same
     // rack
@@ -1941,7 +1939,7 @@ public class TestBalancer {
   /** Balancer should not move blocks with size < minBlockSize. */
   @Test(timeout=60000)
   public void testMinBlockSizeAndSourceNodes() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
 
     final short replication = 3;
@@ -2132,7 +2130,7 @@ public class TestBalancer {
    */
   @Test(timeout = 300000)
   public void testBalancerWithKeytabs() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     try {
       initSecureConf(conf);
       final UserGroupInformation ugi = UserGroupInformation.loginUserFromKeytabAndReturnUGI(
@@ -2177,7 +2175,7 @@ public class TestBalancer {
    * because it is run from {@link TestBalancerRPCDelay}.
    */
   void testBalancerRPCDelay(int getBlocksMaxQps) throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     initConf(conf);
     conf.setInt(DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_KEY, 30);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY,

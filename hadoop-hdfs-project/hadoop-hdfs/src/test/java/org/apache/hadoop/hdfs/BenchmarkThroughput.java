@@ -230,7 +230,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
    * @param args arguments
    */
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new HdfsConfiguration(),
+    int res = ToolRunner.run(DFSTestUtil.newHdfsConfiguration(),
         new BenchmarkThroughput(), args);
     System.exit(res);
   }

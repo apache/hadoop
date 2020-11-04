@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -38,7 +38,7 @@ import org.junit.Test;
 public class TestCheckpointsWithSnapshots {
   
   private static final Path TEST_PATH = new Path("/foo");
-  private static final Configuration conf = new HdfsConfiguration();
+  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   static {
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
   }

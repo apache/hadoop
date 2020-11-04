@@ -46,7 +46,7 @@ public class TestAppendDifferentChecksum {
 
   @BeforeClass
   public static void setupCluster() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
     conf.set("fs.hdfs.impl.disable.cache", "true");
     cluster = new MiniDFSCluster.Builder(conf)

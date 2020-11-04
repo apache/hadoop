@@ -61,7 +61,7 @@ public class TestDataNodeTcpNoDelay {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    baseConf = new HdfsConfiguration();
+    baseConf = DFSTestUtil.newHdfsConfiguration();
   }
 
   @AfterClass

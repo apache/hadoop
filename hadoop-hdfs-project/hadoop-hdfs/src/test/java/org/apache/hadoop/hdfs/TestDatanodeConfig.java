@@ -50,7 +50,7 @@ public class TestDatanodeConfig {
   @BeforeClass
   public static void setUp() throws Exception {
     clearBaseDir();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY, 0);
     conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "localhost:0");
     conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "localhost:0");

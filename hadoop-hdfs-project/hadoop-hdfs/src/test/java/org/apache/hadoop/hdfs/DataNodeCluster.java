@@ -103,7 +103,7 @@ public class DataNodeCluster {
     long simulatedCapacityPerDn = SimulatedFSDataset.DEFAULT_CAPACITY;
     String bpid = null;
     
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     for (int i = 0; i < args.length; i++) { // parse command line
       if (args[i].equals("-n")) {

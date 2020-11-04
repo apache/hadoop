@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred.uploader;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -31,7 +32,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -491,7 +491,7 @@ public class TestFrameworkUploader {
 
     try {
       Assert.assertTrue("Directory creation failed", parent.mkdirs());
-      Configuration hdfsConf = new HdfsConfiguration();
+      Configuration hdfsConf = DFSTestUtil.newHdfsConfiguration();
       String namenodeDir = new File(MiniDFSCluster.getBaseDirectory(),
           "name").getAbsolutePath();
       hdfsConf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeDir);

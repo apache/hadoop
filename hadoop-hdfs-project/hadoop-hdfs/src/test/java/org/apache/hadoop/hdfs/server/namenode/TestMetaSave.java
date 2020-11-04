@@ -62,7 +62,7 @@ public class TestMetaSave {
   @Before
   public void setUp() throws IOException {
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // High value of replication interval
     // so that blocks remain less redundant

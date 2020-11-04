@@ -55,7 +55,7 @@ public class TestResolveHdfsSymlink {
 
   @BeforeClass
   public static void setUp() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     cluster = new MiniDFSCluster.Builder(conf).build();

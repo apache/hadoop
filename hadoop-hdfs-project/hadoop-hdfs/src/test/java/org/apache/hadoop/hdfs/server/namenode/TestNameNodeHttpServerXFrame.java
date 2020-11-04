@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
@@ -78,7 +78,7 @@ public class TestNameNodeHttpServerXFrame {
 
   private HttpURLConnection createServerwithXFrame(boolean enabled, String
       value) throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
     conf.setBoolean(DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED, enabled);
     if (value != null) {
@@ -99,7 +99,7 @@ public class TestNameNodeHttpServerXFrame {
 
   @Test
   public void testSecondaryNameNodeXFrame() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
 
     SecondaryNameNode sn = new SecondaryNameNode(conf);

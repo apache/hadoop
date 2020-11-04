@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -175,7 +176,7 @@ public class TestFSSchedulerConfigurationStore extends
     FileSystem fs;
     Path path = new Path("/tmp/confstore");
     try {
-      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      HdfsConfiguration hdfsConfig = DFSTestUtil.newHdfsConfiguration();
       hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
           .numDataNodes(1).build();
 

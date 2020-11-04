@@ -62,7 +62,7 @@ public class TestNamenodeCapacityReport {
    */
   @Test
   public void testVolumeSize() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
 
     // Set aside fifth of the total capacity as reserved
@@ -201,7 +201,7 @@ public class TestNamenodeCapacityReport {
   }
 
   public void testXceiverCountInternal(int minMaintenanceR) throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // retry one time, if close fails
     conf.setInt(
         HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 1);

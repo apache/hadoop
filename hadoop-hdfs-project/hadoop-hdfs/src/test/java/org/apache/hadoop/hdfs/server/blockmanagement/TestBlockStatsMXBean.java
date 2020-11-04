@@ -64,7 +64,7 @@ public class TestBlockStatsMXBean {
 
   @Before
   public void setup() throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setTimeDuration(DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY,
         0, TimeUnit.MILLISECONDS);
     cluster = null;

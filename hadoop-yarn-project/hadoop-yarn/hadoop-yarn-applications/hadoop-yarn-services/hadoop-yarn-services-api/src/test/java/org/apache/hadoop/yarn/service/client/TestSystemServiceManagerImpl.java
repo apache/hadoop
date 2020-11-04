@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.service.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -219,7 +220,7 @@ public class TestSystemServiceManagerImpl {
     FileSystem fs = null;
     Path path = new Path("/tmp/servicedir");
 
-    HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+    HdfsConfiguration hdfsConfig = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
         .numDataNodes(1).build();
 

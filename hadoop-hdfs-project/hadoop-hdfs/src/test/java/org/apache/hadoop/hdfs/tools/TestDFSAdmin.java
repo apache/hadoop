@@ -462,7 +462,7 @@ public class TestDFSAdmin {
     redirectStream();
 
     /* init conf */
-    final Configuration dfsConf = new HdfsConfiguration();
+    final Configuration dfsConf = DFSTestUtil.newHdfsConfiguration();
     final File baseDir = new File(
         PathUtils.getTestDir(getClass()),
         GenericTestUtils.getMethodName());
@@ -589,7 +589,7 @@ public class TestDFSAdmin {
     redirectStream();
 
     // init conf
-    final Configuration dfsConf = new HdfsConfiguration();
+    final Configuration dfsConf = DFSTestUtil.newHdfsConfiguration();
     ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByID(
         SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
     dfsConf.setInt(
@@ -733,7 +733,7 @@ public class TestDFSAdmin {
   public void testListOpenFiles() throws Exception {
     redirectStream();
 
-    final Configuration dfsConf = new HdfsConfiguration();
+    final Configuration dfsConf = DFSTestUtil.newHdfsConfiguration();
     dfsConf.setInt(
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     dfsConf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);

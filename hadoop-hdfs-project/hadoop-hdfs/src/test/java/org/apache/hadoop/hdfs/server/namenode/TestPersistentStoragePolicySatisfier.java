@@ -85,7 +85,7 @@ public class TestPersistentStoragePolicySatisfier {
    * @throws IOException
    */
   public void clusterSetUp() throws Exception {
-    clusterSetUp(false, new HdfsConfiguration());
+    clusterSetUp(false, DFSTestUtil.newHdfsConfiguration());
   }
 
   /**
@@ -275,7 +275,7 @@ public class TestPersistentStoragePolicySatisfier {
   public void testMultipleSatisfyStoragePolicy() throws Exception {
     try {
       // Lower block movement check for testing.
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
       final long minCheckTimeout = 500; // minimum value
       conf.setLong(
           DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_RECHECK_TIMEOUT_MILLIS_KEY,

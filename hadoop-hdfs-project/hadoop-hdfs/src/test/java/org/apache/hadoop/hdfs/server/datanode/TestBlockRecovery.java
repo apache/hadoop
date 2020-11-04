@@ -187,7 +187,7 @@ public class TestBlockRecovery {
   @Before
   public void startUp() throws IOException, URISyntaxException {
     tearDownDone = false;
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, DATA_DIR);
     conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
@@ -777,7 +777,7 @@ public class TestBlockRecovery {
   public void testRaceBetweenReplicaRecoveryAndFinalizeBlock() throws Exception {
     tearDown();// Stop the Mocked DN started in startup()
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY, "1000");
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1).build();
@@ -1159,7 +1159,7 @@ public class TestBlockRecovery {
 
   private void testRecoveryWithDatanodeDelayed(
       GenericTestUtils.SleepAnswer recoveryDelayer) throws Exception {
-    Configuration configuration = new HdfsConfiguration();
+    Configuration configuration = DFSTestUtil.newHdfsConfiguration();
     configuration.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     MiniDFSCluster cluster = null;
 
@@ -1223,7 +1223,7 @@ public class TestBlockRecovery {
     final int numReplicas = 3;
     final String filename = "/testIgnoreMinReplication";
     final Path filePath = new Path(filename);
-    Configuration configuration = new HdfsConfiguration();
+    Configuration configuration = DFSTestUtil.newHdfsConfiguration();
     configuration.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
     configuration.setInt(DFS_NAMENODE_REPLICATION_MIN_KEY, 2);
     configuration.setLong(DFS_BLOCK_SIZE_KEY, blockSize);

@@ -115,7 +115,7 @@ public class TestAuditLogs {
     // must configure prior to instantiating the namesystem because it
     // will reconfigure the logger if async is enabled
     configureAuditLogs();
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     final long precision = 1L;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);

@@ -46,6 +46,7 @@ import java.util.Properties;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.http.HttpConfig;
@@ -97,7 +98,7 @@ public class TestSecureNNWithQJM {
     kdc = new MiniKdc(kdcConf, baseDir);
     kdc.start();
 
-    baseConf = new HdfsConfiguration();
+    baseConf = DFSTestUtil.newHdfsConfiguration();
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS,
       baseConf);
     UserGroupInformation.setConfiguration(baseConf);

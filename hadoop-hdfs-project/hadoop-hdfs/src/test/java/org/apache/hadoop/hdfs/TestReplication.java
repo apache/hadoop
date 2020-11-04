@@ -220,7 +220,7 @@ public class TestReplication {
 
   private void testBadBlockReportOnTransfer(
       boolean corruptBlockByDeletingBlockFile) throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FileSystem fs = null;
     DFSClient dfsClient = null;
     LocatedBlocks blocks = null;
@@ -271,7 +271,7 @@ public class TestReplication {
 
   @Test(timeout = 30000)
   public void testBadBlockReportOnTransferCorruptFile() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
         CorruptFileSimulatedFSDataset.Factory.class.getName());
     // Disable BlockScanner to trigger reportBadBlocks
@@ -337,9 +337,7 @@ public class TestReplication {
    * Tests replication in DFS.
    */
   public void runReplication(boolean simulated) throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     if (simulated) {
       SimulatedFSDataset.setFactory(conf);
     }
@@ -473,7 +471,7 @@ public class TestReplication {
     }
 
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_REPLICATION_KEY, Integer.toString(numDataNodes));
       //first time format
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
@@ -520,7 +518,7 @@ public class TestReplication {
        */
       
       LOG.info("Restarting minicluster after deleting a replica and corrupting 2 crcs");
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_REPLICATION_KEY, Integer.toString(numDataNodes));
       conf.set(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
       conf.set("dfs.datanode.block.write.timeout.sec", Integer.toString(5));
@@ -551,7 +549,7 @@ public class TestReplication {
    */
   @Test
   public void testReplicateLenMismatchedBlock() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).numDataNodes(2).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration()).numDataNodes(2).build();
     try {
       cluster.waitActive();
       // test truncated block
@@ -617,7 +615,7 @@ public class TestReplication {
   public void testReplicationWhenBlockCorruption() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.setLong(
           DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 1);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)

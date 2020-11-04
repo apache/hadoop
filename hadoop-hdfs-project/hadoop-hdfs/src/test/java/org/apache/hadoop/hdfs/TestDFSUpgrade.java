@@ -226,7 +226,7 @@ public class TestDFSUpgrade {
     File[] baseDirs;
     StorageInfo storageInfo = null;
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
       String[] dataNodeDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
@@ -371,7 +371,7 @@ public class TestDFSUpgrade {
     // One more check: normal NN upgrade with 4 directories, concurrent write
     int numDirs = 4;
     {
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
       conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
       conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION, false);
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
@@ -407,7 +407,7 @@ public class TestDFSUpgrade {
   @Ignore
   public void testUpgrade4() throws Exception {
     int numDirs = 4;
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION, false);
     conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);

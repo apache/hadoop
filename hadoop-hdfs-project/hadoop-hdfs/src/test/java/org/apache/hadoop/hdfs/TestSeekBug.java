@@ -118,7 +118,7 @@ public class TestSeekBug {
    */
   @Test
   public void testSeekBugDFS() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fileSys = cluster.getFileSystem();
     try {
@@ -141,7 +141,7 @@ public class TestSeekBug {
   */
   @Test (expected=IOException.class)
   public void testNegativeSeek() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     try {
@@ -172,7 +172,7 @@ public class TestSeekBug {
   */
   @Test (expected=IOException.class)
   public void testSeekPastFileSize() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     try {
@@ -202,7 +202,7 @@ public class TestSeekBug {
    */
   @Test
   public void testSeekBugLocalFS() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FileSystem fileSys = FileSystem.getLocal(conf);
     try {
       Path file1 = new Path(GenericTestUtils.getTempPath("seektest.dat"));

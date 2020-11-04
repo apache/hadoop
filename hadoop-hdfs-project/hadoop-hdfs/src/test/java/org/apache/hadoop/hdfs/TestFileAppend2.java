@@ -78,7 +78,7 @@ public class TestFileAppend2 {
    */ 
   @Test
   public void testSimpleAppend() throws IOException {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 50);
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -227,7 +227,7 @@ public class TestFileAppend2 {
    */
   @Test
   public void testSimpleAppend2() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 50);
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -478,7 +478,7 @@ public class TestFileAppend2 {
    */
   private void testComplexAppend(boolean appendToNewBlock) throws IOException {
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 2);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 2);
@@ -551,7 +551,7 @@ public class TestFileAppend2 {
   public void testAppendLessThanChecksumChunk() throws Exception {
     final byte[] buf = new byte[1024];
     final MiniDFSCluster cluster = new MiniDFSCluster
-        .Builder(new HdfsConfiguration()).numDataNodes(1).build();
+        .Builder(DFSTestUtil.newHdfsConfiguration()).numDataNodes(1).build();
     cluster.waitActive();
 
     try (DistributedFileSystem fs = cluster.getFileSystem()) {

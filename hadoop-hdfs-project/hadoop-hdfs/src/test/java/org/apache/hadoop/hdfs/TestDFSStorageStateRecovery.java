@@ -325,7 +325,7 @@ public class TestDFSStorageStateRecovery {
     String[] baseDirs;
 
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
       conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < NUM_NN_TEST_CASES; i++) {
@@ -370,7 +370,7 @@ public class TestDFSStorageStateRecovery {
 
     // First setup the datanode storage directory
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
       conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);      
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < NUM_DN_TEST_CASES; i++) {
@@ -412,7 +412,7 @@ public class TestDFSStorageStateRecovery {
     // First setup the datanode storage directory
     String bpid = UpgradeUtilities.getCurrentBlockPoolID(null);
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
-      conf = new HdfsConfiguration();
+      conf = DFSTestUtil.newHdfsConfiguration();
       conf.setInt("dfs.datanode.scan.period.hours", -1);      
       conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < NUM_DN_TEST_CASES; i++) {

@@ -30,6 +30,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.PathUtils;
@@ -69,7 +70,7 @@ public class TestUrlStreamHandler {
   @Test
   public void testDfsUrls() throws IOException {
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     FileSystem fs = cluster.getFileSystem();
     Path filePath = new Path("/thefile");
@@ -119,7 +120,7 @@ public class TestUrlStreamHandler {
   @Test
   public void testFileUrls() throws IOException, URISyntaxException {
     // URLStreamHandler is already set in JVM by testDfsUrls() 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // Locate the test temporary directory.
     if (!TEST_ROOT_DIR.exists()) {

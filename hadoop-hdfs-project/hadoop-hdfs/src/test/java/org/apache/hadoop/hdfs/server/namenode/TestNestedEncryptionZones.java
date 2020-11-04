@@ -89,7 +89,7 @@ public class TestNestedEncryptionZones {
 
   @Before
   public void setup() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FileSystemTestHelper fsHelper = new FileSystemTestHelper();
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();

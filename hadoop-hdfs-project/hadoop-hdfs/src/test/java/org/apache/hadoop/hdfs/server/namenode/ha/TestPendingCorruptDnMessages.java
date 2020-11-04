@@ -52,7 +52,7 @@ public class TestPendingCorruptDnMessages {
   @Test (timeout = 60000)
   public void testChangedStorageId() throws IOException, URISyntaxException,
       InterruptedException, TimeoutException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1)

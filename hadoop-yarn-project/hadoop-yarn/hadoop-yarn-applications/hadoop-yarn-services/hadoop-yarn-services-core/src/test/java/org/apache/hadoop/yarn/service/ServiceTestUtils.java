@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.service;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
@@ -299,7 +301,7 @@ public class ServiceTestUtils {
       LOG.info("Write yarn-site.xml configs to: " + url);
     }
     if (hdfsCluster == null) {
-      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      HdfsConfiguration hdfsConfig = DFSTestUtil.newHdfsConfiguration();
       hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
           .numDataNodes(1).build();
     }

@@ -50,7 +50,7 @@ import java.net.InetSocketAddress;
  */
 public final class TestTriggerBlockReport {
   private void testTriggerBlockReport(boolean incremental, boolean withSpecificNN) throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // Set a really long value for dfs.blockreport.intervalMsec and
     // dfs.heartbeat.interval, so that incremental block reports and heartbeats

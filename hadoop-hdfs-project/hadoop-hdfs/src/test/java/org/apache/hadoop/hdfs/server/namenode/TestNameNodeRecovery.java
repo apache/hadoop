@@ -79,7 +79,7 @@ public class TestNameNodeRecovery {
   }
 
   private static Configuration getConf() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
         useAsyncEditLog);
     return conf;

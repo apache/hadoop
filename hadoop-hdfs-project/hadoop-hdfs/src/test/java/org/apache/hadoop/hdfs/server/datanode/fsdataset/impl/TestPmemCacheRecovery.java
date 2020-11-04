@@ -124,7 +124,7 @@ public class TestPmemCacheRecovery {
 
   @Before
   public void setUp() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY, true);
     conf.setLong(DFSConfigKeys.
         DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 100);
@@ -166,7 +166,7 @@ public class TestPmemCacheRecovery {
   }
 
   protected static void restartCluster() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY, true);
     conf.setLong(DFSConfigKeys.
         DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 100);

@@ -47,7 +47,7 @@ public class TestFileStatusWithDefaultECPolicy {
 
   @Before
   public void before() throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();

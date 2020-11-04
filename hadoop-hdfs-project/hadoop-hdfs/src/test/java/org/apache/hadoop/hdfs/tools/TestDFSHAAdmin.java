@@ -39,6 +39,7 @@ import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ZKFCProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.test.MockitoUtil;
@@ -87,7 +88,7 @@ public class TestDFSHAAdmin {
   private static final String FENCER_FALSE_COMMAND_WINDOWS = "shell(help.exe /? >NUL)";
 
   private HdfsConfiguration getHAConf() {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, NSID);
     conf.set(DFSConfigKeys.DFS_NAMESERVICE_ID, NSID);
     conf.set(DFSUtil.addKeySuffixes(

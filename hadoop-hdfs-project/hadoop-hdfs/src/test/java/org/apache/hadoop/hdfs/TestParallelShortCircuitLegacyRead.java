@@ -27,7 +27,7 @@ public class TestParallelShortCircuitLegacyRead extends TestParallelReadUtil {
   @BeforeClass
   static public void setupCluster() throws Exception {
     DFSInputStream.tcpReadsDisabledForTesting = true;
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY, "");
     conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL, true);
     conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC, false);

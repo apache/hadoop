@@ -415,7 +415,7 @@ public class ErasureCodeBenchmarkThroughput
   }
 
   public static void main(String[] args) throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FileSystem fs = FileSystem.get(conf);
     int res = ToolRunner.run(conf,
         new ErasureCodeBenchmarkThroughput(fs), args);

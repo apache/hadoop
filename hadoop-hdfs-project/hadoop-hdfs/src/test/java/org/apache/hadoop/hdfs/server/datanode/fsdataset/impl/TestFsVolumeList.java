@@ -414,7 +414,7 @@ public class TestFsVolumeList {
   public void testInstanceOfAddReplicaThreadPool() throws Exception {
     // Start cluster with multiple namespace
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(
-        new HdfsConfiguration())
+        DFSTestUtil.newHdfsConfiguration())
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
         .numDataNodes(1).build()) {
       cluster.waitActive();

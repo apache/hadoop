@@ -39,7 +39,6 @@ import org.slf4j.event.Level;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -73,9 +72,7 @@ public class TestErasureCodingMultipleRacks {
   @Before
   public void setup() {
     ecPolicy = getPolicy();
-    conf = new HdfsConfiguration();
-    // disable load consideration to test placement only.
-    conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY, false);
+    conf = DFSTestUtil.newHdfsConfiguration();
   }
 
   /**

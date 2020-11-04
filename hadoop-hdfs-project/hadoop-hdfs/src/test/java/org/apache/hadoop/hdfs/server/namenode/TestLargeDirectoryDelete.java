@@ -41,7 +41,7 @@ import org.junit.Test;
 public class TestLargeDirectoryDelete {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestLargeDirectoryDelete.class);
-  private static final Configuration CONF = new HdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   private static final int TOTAL_BLOCKS = 10000;
   private MiniDFSCluster mc = null;
   private int createOps = 0;

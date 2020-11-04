@@ -157,7 +157,7 @@ public class TestFileCreation {
    */
   @Test
   public void testServerDefaults() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT);
     conf.setInt(DFS_BYTES_PER_CHECKSUM_KEY, DFS_BYTES_PER_CHECKSUM_DEFAULT);
     conf.setInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY, DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
@@ -190,7 +190,7 @@ public class TestFileCreation {
   public void testServerDefaultsWithCaching()
       throws IOException, InterruptedException {
     // Create cluster with an explicit block size param
-    Configuration clusterConf = new HdfsConfiguration();
+    Configuration clusterConf = DFSTestUtil.newHdfsConfiguration();
     long originalBlockSize = DFS_BLOCK_SIZE_DEFAULT * 2;
     clusterConf.setLong(DFS_BLOCK_SIZE_KEY, originalBlockSize);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(clusterConf)
@@ -203,7 +203,7 @@ public class TestFileCreation {
     InetSocketAddress nameNodeAddr = cluster.getNameNode().getNameNodeAddress();
     try {
       // Create a dfs client and set a long enough validity interval
-      Configuration clientConf = new HdfsConfiguration();
+      Configuration clientConf = DFSTestUtil.newHdfsConfiguration();
       clientConf.setLong(DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY,
           TimeUnit.MINUTES.toMillis(1));
       DFSClient dfsClient = new DFSClient(nameNodeAddr, clientConf);
@@ -241,7 +241,7 @@ public class TestFileCreation {
   @Test
   public void testServerDefaultsWithMinimalCaching() throws Exception  {
     // Create cluster with an explicit block size param.
-    Configuration clusterConf = new HdfsConfiguration();
+    Configuration clusterConf = DFSTestUtil.newHdfsConfiguration();
     long originalBlockSize = DFS_BLOCK_SIZE_DEFAULT * 2;
     clusterConf.setLong(DFS_BLOCK_SIZE_KEY, originalBlockSize);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(clusterConf)
@@ -254,7 +254,7 @@ public class TestFileCreation {
     InetSocketAddress nameNodeAddr = cluster.getNameNode().getNameNodeAddress();
     try {
       // Create a dfs client and set a minimal validity interval
-      Configuration clientConf = new HdfsConfiguration();
+      Configuration clientConf = DFSTestUtil.newHdfsConfiguration();
       // Invalidate cache in at most 1 ms, see DfsClient#getServerDefaults
       clientConf.setLong(DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY, 0L);
       DFSClient dfsClient = new DFSClient(nameNodeAddr, clientConf);
@@ -323,7 +323,7 @@ public class TestFileCreation {
    */
   public void checkFileCreation(String netIf, boolean useDnHostname)
       throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     if (netIf != null) {
       conf.set(HdfsClientConfigKeys.DFS_CLIENT_LOCAL_INTERFACES, netIf);
     }
@@ -418,7 +418,7 @@ public class TestFileCreation {
    */
   @Test
   public void testDeleteOnExit() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
     }
@@ -482,7 +482,7 @@ public class TestFileCreation {
    */
   @Test
   public void testOverwriteOpenForWrite() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     SimulatedFSDataset.setFactory(conf);
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
 
@@ -539,7 +539,7 @@ public class TestFileCreation {
    */
   @Test
   public void testFileCreationError1() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     if (simulatedStorage) {
@@ -614,7 +614,7 @@ public class TestFileCreation {
   public void testFileCreationError2() throws IOException {
     long leasePeriod = 1000;
     System.out.println("testFileCreationError2 start");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     if (simulatedStorage) {
@@ -679,7 +679,7 @@ public class TestFileCreation {
   @Test
   public void testFileCreationError3() throws IOException {
     System.out.println("testFileCreationError3 start");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // create cluster
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     DistributedFileSystem dfs = null;
@@ -712,7 +712,7 @@ public class TestFileCreation {
   @Test
   public void testFileCreationNamenodeRestart()
       throws IOException, NoSuchFieldException, IllegalAccessException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
@@ -858,7 +858,7 @@ public class TestFileCreation {
    */
   @Test
   public void testDFSClientDeath() throws IOException, InterruptedException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     System.out.println("Testing adbornal client death.");
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
@@ -895,7 +895,7 @@ public class TestFileCreation {
    */
   @Test
   public void testFileCreationNonRecursive() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
     }
@@ -999,7 +999,7 @@ public class TestFileCreation {
    */
   @Test
   public void testConcurrentFileCreation() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
     try {
@@ -1032,7 +1032,7 @@ public class TestFileCreation {
    */
   @Test
   public void testFileCreationSyncOnClose() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFS_DATANODE_SYNCONCLOSE_KEY, true);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
@@ -1072,7 +1072,7 @@ public class TestFileCreation {
     final long leasePeriod = 1000;
     final int DATANODE_NUM = 3;
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
@@ -1129,7 +1129,7 @@ public class TestFileCreation {
     System.out.println("test file system close start");
     final int DATANODE_NUM = 3;
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // create cluster
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
@@ -1158,7 +1158,7 @@ public class TestFileCreation {
     System.out.println("test testFsCloseAfterClusterShutdown start");
     final int DATANODE_NUM = 3;
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFS_NAMENODE_REPLICATION_MIN_KEY, 3);
     conf.setBoolean("ipc.client.ping", false); // hdfs timeout is default 60 seconds
     conf.setInt("ipc.ping.interval", 10000); // hdfs timeout is now 10 second
@@ -1238,7 +1238,7 @@ public class TestFileCreation {
     PATH_FROM_STRING
   };
   private void doCreateTest(CreationMethod method) throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1).build();
     try {
@@ -1295,7 +1295,7 @@ public class TestFileCreation {
    */
   @Test
   public void testFileIdMismatch() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     DistributedFileSystem dfs = null;

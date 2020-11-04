@@ -86,7 +86,7 @@ public class TestDFSInputStreamBlockLocations {
 
   @Before
   public void setup() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
     // set the heartbeat intervals and stale considerations

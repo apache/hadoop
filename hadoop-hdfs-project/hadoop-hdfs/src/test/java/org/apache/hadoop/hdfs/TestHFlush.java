@@ -55,7 +55,7 @@ public class TestHFlush {
    */
   @Test
   public void hFlush_01() throws IOException {
-    doTheJob(new HdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
+    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
         (short) 2, false, EnumSet.noneOf(SyncFlag.class));
   }
 
@@ -67,7 +67,7 @@ public class TestHFlush {
    */
   @Test
   public void hFlush_02() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     int customPerChecksumSize = 512;
     int customBlockSize = customPerChecksumSize * 3;
     // Modify defaul filesystem settings
@@ -86,7 +86,7 @@ public class TestHFlush {
    */
   @Test
   public void hFlush_03() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     int customPerChecksumSize = 400;
     int customBlockSize = customPerChecksumSize * 3;
     // Modify defaul filesystem settings
@@ -103,7 +103,7 @@ public class TestHFlush {
    */
   @Test
   public void hSyncUpdateLength_00() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         2).build();
     DistributedFileSystem fileSystem =
@@ -131,7 +131,7 @@ public class TestHFlush {
   @Test
   public void hSyncEndBlock_00() throws IOException {
     final int preferredBlockSize = 1024;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, preferredBlockSize);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
         .build();
@@ -191,7 +191,7 @@ public class TestHFlush {
    */
   @Test
   public void hSyncUpdateLength_01() throws IOException {
-    doTheJob(new HdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
+    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
         (short) 2, true, EnumSet.of(SyncFlag.UPDATE_LENGTH));
   }
 
@@ -202,7 +202,7 @@ public class TestHFlush {
    */
   @Test
   public void hSyncEndBlock_01() throws IOException {
-    doTheJob(new HdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
+    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
         (short) 2, true, EnumSet.of(SyncFlag.END_BLOCK));
   }
 
@@ -214,7 +214,7 @@ public class TestHFlush {
    */
   @Test
   public void hSyncEndBlockAndUpdateLength() throws IOException {
-    doTheJob(new HdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
+    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
         (short) 2, true, EnumSet.of(SyncFlag.END_BLOCK, SyncFlag.UPDATE_LENGTH));
   }
 
@@ -227,7 +227,7 @@ public class TestHFlush {
    */
   @Test
   public void hSyncUpdateLength_02() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     int customPerChecksumSize = 512;
     int customBlockSize = customPerChecksumSize * 3;
     // Modify defaul filesystem settings
@@ -240,7 +240,7 @@ public class TestHFlush {
 
   @Test
   public void hSyncEndBlock_02() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     int customPerChecksumSize = 512;
     int customBlockSize = customPerChecksumSize * 3;
     // Modify defaul filesystem settings
@@ -261,7 +261,7 @@ public class TestHFlush {
    */
   @Test
   public void hSyncUpdateLength_03() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     int customPerChecksumSize = 400;
     int customBlockSize = customPerChecksumSize * 3;
     // Modify defaul filesystem settings
@@ -274,7 +274,7 @@ public class TestHFlush {
 
   @Test
   public void hSyncEndBlock_03() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     int customPerChecksumSize = 400;
     int customBlockSize = customPerChecksumSize * 3;
     // Modify defaul filesystem settings
@@ -385,7 +385,7 @@ public class TestHFlush {
   public void testPipelineHeartbeat() throws Exception {
     final int DATANODE_NUM = 2;
     final int fileLen = 6;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final int timeout = 2000;
     conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
         timeout);
@@ -438,7 +438,7 @@ public class TestHFlush {
     final int DATANODE_NUM = 2;
     final int fileLen = 6;
     byte[] fileContents = AppendTestUtil.initBuffer(fileLen);
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final Path p = new Path("/hflush-interrupted");
 
     System.out.println("p=" + p);

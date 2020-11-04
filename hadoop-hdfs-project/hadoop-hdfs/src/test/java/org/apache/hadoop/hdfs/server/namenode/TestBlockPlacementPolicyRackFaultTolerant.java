@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -52,7 +52,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
   @Before
   public void setup() throws IOException {
     StaticMapping.resetMap();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final ArrayList<String> rackList = new ArrayList<String>();
     final ArrayList<String> hostList = new ArrayList<String>();
     for (int i = 0; i < 10; i++) {

@@ -66,7 +66,7 @@ public class TestListCorruptFileBlocks {
     MiniDFSCluster cluster = null;
 
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
       // datanode scans directories
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
@@ -146,7 +146,7 @@ public class TestListCorruptFileBlocks {
     MiniDFSCluster cluster = null;
 
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       // datanode scans directories
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
       // datanode sends block reports
@@ -465,7 +465,7 @@ public class TestListCorruptFileBlocks {
   public void testMaxCorruptFiles() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();

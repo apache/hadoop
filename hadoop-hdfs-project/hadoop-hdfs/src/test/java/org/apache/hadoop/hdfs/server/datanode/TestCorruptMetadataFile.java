@@ -49,7 +49,7 @@ public class TestCorruptMetadataFile {
 
   @Before
   public void setUp() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     // Reduce block acquire retries as we only have 1 DN and it allows the
     // test to run faster
     conf.setInt(

@@ -157,7 +157,7 @@ public class TestNameEditsConfigs {
     
     
     // Start namenode with same dfs.namenode.name.dir and dfs.namenode.edits.dir
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEdits.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, checkpointNameAndEdits.getPath());
@@ -185,7 +185,7 @@ public class TestNameEditsConfigs {
     }
 
     // Start namenode with additional dfs.namenode.name.dir and dfs.namenode.edits.dir
-    conf =  new HdfsConfiguration();
+    conf =  DFSTestUtil.newHdfsConfiguration();
     assertTrue(newNameDir.mkdir());
     assertTrue(newEditsDir.mkdir());
 
@@ -228,7 +228,7 @@ public class TestNameEditsConfigs {
     
     // Now remove common directory both have and start namenode with 
     // separate name and edits dirs
-    conf =  new HdfsConfiguration();
+    conf =  DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, newNameDir.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, newEditsDir.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, checkpointNameDir.getPath());
@@ -269,7 +269,7 @@ public class TestNameEditsConfigs {
     // from old dir
     assertTrue(FileUtil.fullyDelete(new File(nameAndEdits, "current")));
     assertTrue(FileUtil.fullyDelete(new File(checkpointNameAndEdits, "current")));
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEdits.getPath() +
               "," + newNameDir.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits +
@@ -329,7 +329,7 @@ public class TestNameEditsConfigs {
     // Bad configuration. Add a directory to dfs.namenode.edits.dir.required
     // without adding it to dfs.namenode.edits.dir.
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
           nameDir.getAbsolutePath());
       conf.set(
@@ -356,7 +356,7 @@ public class TestNameEditsConfigs {
     // Good configuration. Add a directory to both dfs.namenode.edits.dir.required
     // and dfs.namenode.edits.dir.
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
           nameDir.getAbsolutePath());
       conf.setStrings(
@@ -380,7 +380,7 @@ public class TestNameEditsConfigs {
     // Good configuration. Adds a directory to dfs.namenode.edits.dir but not to
     // dfs.namenode.edits.dir.required.
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
           nameDir.getAbsolutePath());
       conf.setStrings(
@@ -424,7 +424,7 @@ public class TestNameEditsConfigs {
     
     // 1
     // Start namenode with same dfs.namenode.name.dir and dfs.namenode.edits.dir
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEditsDir.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEditsDir.getPath());
     replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
@@ -453,7 +453,7 @@ public class TestNameEditsConfigs {
 
     // 2
     // Start namenode with additional dfs.namenode.name.dir and dfs.namenode.edits.dir
-    conf =  new HdfsConfiguration();
+    conf =  DFSTestUtil.newHdfsConfiguration();
     assertTrue(nameOnlyDir.mkdir());
     assertTrue(editsOnlyDir.mkdir());
 
@@ -494,7 +494,7 @@ public class TestNameEditsConfigs {
     // Now remove common directory both have and start namenode with 
     // separate name and edits dirs
     try {
-      conf =  new HdfsConfiguration();
+      conf =  DFSTestUtil.newHdfsConfiguration();
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameOnlyDir.getPath());
       conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, editsOnlyDir.getPath());
       replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
@@ -520,7 +520,7 @@ public class TestNameEditsConfigs {
     
     // 4
     // Add old shared directory for name and edits along with latest name
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameOnlyDir.getPath() + "," + 
              nameAndEditsDir.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEditsDir.getPath());
@@ -546,7 +546,7 @@ public class TestNameEditsConfigs {
     // Add old shared directory for name and edits along with latest edits. 
     // This is OK, since the latest edits will have segments leading all
     // the way from the image in name_and_edits.
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameAndEditsDir.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, editsOnlyDir.getPath() +
              "," + nameAndEditsDir.getPath());
@@ -588,7 +588,7 @@ public class TestNameEditsConfigs {
     File checkpointEditsDir2 = new File(base_dir, "chkptEdits2");
     File nameDir = new File(base_dir, "name1");
     String whiteSpace = "  \n   \n  ";
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameDir.getPath());
     conf.setStrings(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, whiteSpace
         + checkpointNameDir1.getPath() + whiteSpace, whiteSpace

@@ -496,7 +496,7 @@ public class TestPread {
    */
   @Test
   public void testPreadLocalFS() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FileSystem fileSys = FileSystem.getLocal(conf);
     try {
       Path file1 = new Path(GenericTestUtils.getTempPath("preadtest.dat"));
@@ -662,7 +662,7 @@ public class TestPread {
   private void doPreadTestWithChangedLocations(int maxFailures)
       throws IOException, TimeoutException, InterruptedException {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.DEBUG);
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 2);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     if (isHedgedRead) {

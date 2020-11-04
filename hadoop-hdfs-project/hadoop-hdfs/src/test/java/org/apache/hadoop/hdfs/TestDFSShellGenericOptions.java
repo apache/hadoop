@@ -38,7 +38,7 @@ public class TestDFSShellGenericOptions {
     String namenode = null;
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).build();
       namenode = FileSystem.getDefaultUri(conf).toString();
       String [] args = new String[4];

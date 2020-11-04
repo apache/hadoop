@@ -50,7 +50,7 @@ public class TestOverReplicatedBlocks {
    */
   @Test
   public void testProcesOverReplicateBlock() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 100L);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     conf.set(
@@ -147,7 +147,7 @@ public class TestOverReplicatedBlocks {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, SMALL_BLOCK_SIZE);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       fs = cluster.getFileSystem();
@@ -201,7 +201,7 @@ public class TestOverReplicatedBlocks {
    */
   @Test
   public void testInvalidateOverReplicatedBlock() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
         .build();
     try {

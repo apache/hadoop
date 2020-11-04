@@ -84,7 +84,7 @@ public class TestConnCache {
    */
   @Test
   public void testReadFromOneDN() throws Exception {
-    HdfsConfiguration configuration = new HdfsConfiguration();
+    HdfsConfiguration configuration = DFSTestUtil.newHdfsConfiguration();
     // One of the goals of this test is to verify that we don't open more
     // than one socket.  So use a different client context, so that we
     // get our own socket cache, rather than sharing with the other test 

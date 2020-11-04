@@ -83,7 +83,7 @@ public class TestDiskBalancer {
 
   @Test
   public void testDiskBalancerNameNodeConnectivity() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int numDatanodes = 2;
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -134,7 +134,7 @@ public class TestDiskBalancer {
   @Test
   public void testDiskBalancerEndToEnd() throws Exception {
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int blockCount = 100;
     final int blockSize = 1024;
@@ -169,7 +169,7 @@ public class TestDiskBalancer {
   @Test
   public void testDiskBalancerWithFederatedCluster() throws Exception {
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int blockCount = 100;
     final int blockSize = 1024;
@@ -224,7 +224,7 @@ public class TestDiskBalancer {
   @Test
   public void testDiskBalancerComputeDelay() throws Exception {
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
 
     final int blockCount = 100;
@@ -288,7 +288,7 @@ public class TestDiskBalancer {
   @Test
   public void testDiskBalancerWithFedClusterWithOneNameServiceEmpty() throws
       Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int blockCount = 100;
     final int blockSize = 1024;
@@ -345,7 +345,7 @@ public class TestDiskBalancer {
   public void testBalanceDataBetweenMultiplePairsOfVolumes()
       throws Exception {
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int blockCount = 1000;
     final int blockSize = 1024;
@@ -394,7 +394,7 @@ public class TestDiskBalancer {
   @Test
   public void testDiskBalancerWhenRemovingVolumes() throws Exception {
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
 
     final int blockCount = 100;

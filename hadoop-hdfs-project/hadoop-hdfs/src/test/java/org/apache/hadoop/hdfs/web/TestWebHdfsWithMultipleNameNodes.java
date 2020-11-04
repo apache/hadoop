@@ -51,7 +51,7 @@ public class TestWebHdfsWithMultipleNameNodes {
     DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
   }
 
-  private static final Configuration conf = new HdfsConfiguration();
+  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   private static MiniDFSCluster cluster;
   private static WebHdfsFileSystem[] webhdfs;
 

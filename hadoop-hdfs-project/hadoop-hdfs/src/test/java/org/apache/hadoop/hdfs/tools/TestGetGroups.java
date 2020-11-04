@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.tools;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.tools.GetGroupsTestBase;
 import org.apache.hadoop.util.Tool;
@@ -36,7 +36,7 @@ public class TestGetGroups extends GetGroupsTestBase {
 
   @Before
   public void setUpNameNode() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
   }
   

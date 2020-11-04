@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -55,7 +55,7 @@ public class TestDatasetVolumeCheckerTimeout {
   static ReentrantLock lock = new ReentrantLock();
 
   static {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setTimeDuration(
         DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY,
         DISK_CHECK_TIMEOUT, TimeUnit.MILLISECONDS);

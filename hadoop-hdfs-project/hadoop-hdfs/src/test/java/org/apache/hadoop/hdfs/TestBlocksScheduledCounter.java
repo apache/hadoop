@@ -61,7 +61,8 @@ public class TestBlocksScheduledCounter {
 
   @Test
   public void testBlocksScheduledCounter() throws IOException {
-    cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    cluster =
+        new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration()).build();
 
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -93,8 +94,8 @@ public class TestBlocksScheduledCounter {
   @Test
   public void testScheduledBlocksCounterShouldDecrementOnAbandonBlock()
       throws Exception {
-    cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).numDataNodes(
-        2).build();
+    cluster = new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration())
+        .numDataNodes(2).build();
 
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -146,7 +147,7 @@ public class TestBlocksScheduledCounter {
   @Test
   public void testScheduledBlocksCounterDecrementOnDeletedBlock()
       throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
@@ -208,7 +209,7 @@ public class TestBlocksScheduledCounter {
    */
   @Test
   public void testBlocksScheduledCounterOnTruncate() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();

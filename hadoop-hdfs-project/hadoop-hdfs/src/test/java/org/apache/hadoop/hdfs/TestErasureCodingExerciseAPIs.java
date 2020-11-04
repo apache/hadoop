@@ -85,7 +85,7 @@ public class TestErasureCodingExerciseAPIs {
   @Before
   public void setupCluster() throws IOException {
     ecPolicy = getEcPolicy();
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
 

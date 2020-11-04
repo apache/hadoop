@@ -78,7 +78,7 @@ public class TestErasureCodingPolicies {
   @Before
   public void setupCluster() throws IOException {
     ecPolicy = getEcPolicy();
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     cluster = new MiniDFSCluster.Builder(conf).
         numDataNodes(ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits()).

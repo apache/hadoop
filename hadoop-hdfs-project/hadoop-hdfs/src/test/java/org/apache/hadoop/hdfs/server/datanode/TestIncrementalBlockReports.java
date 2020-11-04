@@ -66,7 +66,7 @@ public class TestIncrementalBlockReports {
 
   @Before
   public void startCluster() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DN_COUNT).build();
     singletonNn = cluster.getNameNode();
     singletonDn = cluster.getDataNodes().get(0);

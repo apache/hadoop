@@ -47,7 +47,7 @@ public class TestDFSClientExcludedNodes {
   @Before
   public void setUp() {
     cluster = null;
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
   }
 
   @After

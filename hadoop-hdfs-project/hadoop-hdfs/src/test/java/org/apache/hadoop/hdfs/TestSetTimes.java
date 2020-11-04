@@ -91,7 +91,7 @@ public class TestSetTimes {
    */
   @Test
   public void testTimes() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
@@ -230,7 +230,7 @@ public class TestSetTimes {
    */
   @Test
   public void testTimesAtClose() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     int replicas = 1;
 
@@ -293,7 +293,7 @@ public class TestSetTimes {
    */
   @Test(timeout=60000)
   public void testGetBlockLocationsOnlyUsesReadLock() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 100*1000);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(0)
@@ -323,7 +323,7 @@ public class TestSetTimes {
    */
   @Test
   public void testAtimeUpdate() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 0);
     MiniDFSCluster cluster = null;
     FileSystem fs = null;

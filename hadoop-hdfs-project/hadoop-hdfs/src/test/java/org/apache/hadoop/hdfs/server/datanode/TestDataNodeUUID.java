@@ -23,6 +23,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -47,7 +48,7 @@ public class TestDataNodeUUID {
 
     final InetSocketAddress NN_ADDR = new InetSocketAddress(
       "localhost", 5020);
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
@@ -79,7 +80,7 @@ public class TestDataNodeUUID {
     FileUtils.deleteDirectory(disk2);
 
     MiniDFSCluster cluster = null;
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
             disk1.toURI().toString(),
             disk2.toURI().toString());

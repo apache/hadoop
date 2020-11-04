@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
 import java.io.File;
@@ -32,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import org.junit.Assert;
@@ -60,7 +60,7 @@ public class TestSecondaryNameNodeUpgrade {
     SecondaryNameNode snn = null;
 
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();

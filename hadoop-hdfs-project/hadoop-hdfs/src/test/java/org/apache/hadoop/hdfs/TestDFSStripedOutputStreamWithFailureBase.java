@@ -225,10 +225,8 @@ public class TestDFSStripedOutputStreamWithFailureBase {
   }
 
   HdfsConfiguration newHdfsConfiguration() {
-    final HdfsConfiguration conf = new HdfsConfiguration();
+    final HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     return conf;

@@ -44,7 +44,7 @@ public class TestDisableConnCache {
    */
   @Test
   public void testDisableCache() throws Exception {
-    HdfsConfiguration confWithoutCache = new HdfsConfiguration();
+    HdfsConfiguration confWithoutCache = DFSTestUtil.newHdfsConfiguration();
     // Configure a new instance with no peer caching, ensure that it doesn't
     // cache anything
     confWithoutCache.setInt(

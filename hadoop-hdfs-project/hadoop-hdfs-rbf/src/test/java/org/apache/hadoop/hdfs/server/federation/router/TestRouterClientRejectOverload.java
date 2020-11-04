@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -180,7 +180,7 @@ public class TestRouterClientRejectOverload {
       throws Exception {
     RouterContext routerContext = cluster.getRandomRouter();
     URI address = routerContext.getFileSystemURI();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     testOverloaded(expOverloadMin, expOverloadMax, address, conf, 10);
   }
 

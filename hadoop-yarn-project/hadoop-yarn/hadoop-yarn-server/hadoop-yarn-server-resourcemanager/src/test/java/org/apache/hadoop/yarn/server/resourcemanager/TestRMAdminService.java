@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -182,7 +183,7 @@ public class TestRMAdminService {
       throws Exception {
     MiniDFSCluster hdfsCluster = null;
     try {
-      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      HdfsConfiguration hdfsConfig = DFSTestUtil.newHdfsConfiguration();
       hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
           .numDataNodes(1).build();
       FileSystem fs1 = hdfsCluster.getFileSystem();

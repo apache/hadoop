@@ -42,7 +42,7 @@ public class TestAbandonBlock {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestAbandonBlock.class);
   
-  private static final Configuration CONF = new HdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   static final String FILE_NAME_PREFIX
       = "/" + TestAbandonBlock.class.getSimpleName() + "_"; 
   private MiniDFSCluster cluster;

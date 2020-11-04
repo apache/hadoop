@@ -31,7 +31,7 @@ public class TestDFSStripedOutputStreamUpdatePipeline {
   @Test
   public void testDFSStripedOutputStreamUpdatePipeline() throws Exception {
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFS_BLOCK_SIZE_KEY, 1 * 1024 * 1024);
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(5).build()) {
@@ -68,7 +68,7 @@ public class TestDFSStripedOutputStreamUpdatePipeline {
    */
   @Test(timeout = 90000)
   public void testECWriteHangWhenAddBlockWithException() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1 * 1024 * 1024);
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3).build()) {

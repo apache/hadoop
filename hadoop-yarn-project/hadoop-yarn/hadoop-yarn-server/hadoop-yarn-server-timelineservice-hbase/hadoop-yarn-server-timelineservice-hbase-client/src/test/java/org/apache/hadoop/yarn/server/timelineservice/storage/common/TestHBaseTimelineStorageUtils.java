@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -81,7 +82,7 @@ public class TestHBaseTimelineStorageUtils {
   public void testWithHbaseConfAtHdfsFileSystem() throws IOException {
     MiniDFSCluster hdfsCluster = null;
     try {
-      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      HdfsConfiguration hdfsConfig = DFSTestUtil.newHdfsConfiguration();
       hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
           .numDataNodes(1).build();
 

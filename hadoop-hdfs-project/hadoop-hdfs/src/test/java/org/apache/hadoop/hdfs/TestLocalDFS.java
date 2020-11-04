@@ -68,7 +68,7 @@ public class TestLocalDFS {
    */
   @Test(timeout=20000)
   public void testWorkingDirectory() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fileSys = cluster.getFileSystem();
     try {
@@ -109,7 +109,7 @@ public class TestLocalDFS {
   @Test(timeout=30000)
   public void testHomeDirectory() throws IOException {
     final String[] homeBases = new String[] {"/home", "/home/user"};
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     for (final String homeBase : homeBases) {
       conf.set(HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY, homeBase);
       MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();

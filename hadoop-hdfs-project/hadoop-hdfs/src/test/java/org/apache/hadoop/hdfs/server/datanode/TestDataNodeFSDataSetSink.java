@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
@@ -111,7 +111,7 @@ public class TestDataNodeFSDataSetSink {
    * have registered. That is calls into FSDataSetSinkTest
    */
   public void testFSDataSetMetrics() throws InterruptedException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     String bpid = "FSDatSetSink-Test";
     SimulatedFSDataset fsdataset = new SimulatedFSDataset(null, conf);
     fsdataset.addBlockPool(bpid, conf);

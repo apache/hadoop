@@ -130,7 +130,7 @@ public class TestExternalStoragePolicySatisfier {
 
   @Before
   public void setUp() {
-    config = new HdfsConfiguration();
+    config = DFSTestUtil.newHdfsConfiguration();
     config.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL.toString());
     // Most of the tests are restarting DNs and NN. So, reduced refresh cycle to
@@ -1046,8 +1046,6 @@ public class TestExternalStoragePolicySatisfier {
             {StorageType.DISK, StorageType.SSD},
             {StorageType.DISK, StorageType.DISK}};
     config.setLong("dfs.block.size", 2 * DEFAULT_BLOCK_SIZE);
-    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     long dnCapacity = 1024 * DEFAULT_BLOCK_SIZE + (2 * DEFAULT_BLOCK_SIZE - 1);
     try {
       hdfsCluster = startCluster(config, diskTypes, NUM_OF_DATANODES,
@@ -1125,8 +1123,6 @@ public class TestExternalStoragePolicySatisfier {
     config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     config.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1L);
-    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     try {
       hdfsCluster = startCluster(config, diskTypes, diskTypes.length,
           STORAGES_PER_DATANODE, CAPACITY);

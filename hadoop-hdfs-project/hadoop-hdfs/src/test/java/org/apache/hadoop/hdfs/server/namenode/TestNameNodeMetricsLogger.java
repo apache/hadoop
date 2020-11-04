@@ -24,7 +24,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Appender;
@@ -110,7 +110,7 @@ public class TestNameNodeMetricsLogger {
    */
   private NameNode makeNameNode(boolean enableMetricsLogging)
       throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(FS_DEFAULT_NAME_KEY, "hdfs://localhost:0");
     conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     conf.setInt(DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY,

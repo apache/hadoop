@@ -206,7 +206,8 @@ public class DFSTestUtil {
   private static final String[] dirNames = {
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
   };
-  
+  public static final boolean DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD = false;
+
   private final int maxLevels;
   private final int maxSize;
   private final int minSize;
@@ -262,6 +263,17 @@ public class DFSTestUtil {
   public static Configuration newHAConfiguration(final String logicalName) {
     Configuration conf = new Configuration();
     addHAConfiguration(conf, logicalName);
+    return conf;
+  }
+
+  /**
+   * Create a new HA-enabled configuration.
+   */
+  public static HdfsConfiguration newHdfsConfiguration() {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    // set default values
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+        DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
     return conf;
   }
 

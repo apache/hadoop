@@ -26,7 +26,7 @@ public class TestParallelRead extends TestParallelReadUtil {
   static public void setupCluster() throws Exception {
     // This is a test of the normal (TCP) read path.  For this reason, we turn
     // off both short-circuit local reads and UNIX domain socket data traffic.
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, false);
     conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
                     false);

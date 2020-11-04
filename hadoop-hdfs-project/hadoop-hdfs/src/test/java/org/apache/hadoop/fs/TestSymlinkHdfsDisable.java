@@ -33,7 +33,7 @@ public class TestSymlinkHdfsDisable {
 
   @Test(timeout=60000)
   public void testSymlinkHdfsDisable() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // disable symlink resolution
     conf.setBoolean(
         CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY, false);

@@ -130,7 +130,7 @@ public class TestEditLog {
   }
 
   public static Configuration getConf() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
         useAsyncEditLog);
     return conf;
@@ -1663,7 +1663,7 @@ public class TestEditLog {
    */
   @Test
   public void testResetThreadLocalCachedOps() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     // Set single handler thread, so all transactions hit same thread-local ops.
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 1);
@@ -1744,7 +1744,7 @@ public class TestEditLog {
   public void testReadActivelyUpdatedLog() throws Exception {
     final TestAppender appender = new TestAppender();
     LogManager.getRootLogger().addAppender(appender);
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     // Set single handler thread, so all transactions hit same thread-local ops.
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 1);

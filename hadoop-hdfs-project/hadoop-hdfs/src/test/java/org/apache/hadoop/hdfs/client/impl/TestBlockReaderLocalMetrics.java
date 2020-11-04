@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.client.impl;
 
 import java.util.function.Supplier;
+
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.metrics.BlockReaderIoProvider;
@@ -57,11 +59,11 @@ public class TestBlockReaderLocalMetrics {
 
   private static final FakeTimer TIMER = new FakeTimer();
 
-  private static HdfsConfiguration conf = new HdfsConfiguration();
+  private static HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
   private static DfsClientConf clientConf;
 
   static {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(HdfsClientConfigKeys.Read.ShortCircuit
         .METRICS_SAMPLING_PERCENTAGE_KEY, 100);
     clientConf = new DfsClientConf(conf);

@@ -114,7 +114,7 @@ public class TestRestartDFS {
   /** check if DFS remains in proper condition after a restart */
   @Test
   public void testRestartDFS() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     runTests(conf, false);
   }
   
@@ -123,7 +123,7 @@ public class TestRestartDFS {
    */
   @Test
    public void testRestartDualPortDFS() throws Exception {
-     final Configuration conf = new HdfsConfiguration();
+     final Configuration conf = DFSTestUtil.newHdfsConfiguration();
      runTests(conf, true);
    }
 }

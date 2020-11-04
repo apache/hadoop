@@ -80,7 +80,7 @@ public class TestFSNamesystem {
    */
   @Test
   public void testFSNamespaceClearLeases() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
     conf.set(DFS_NAMENODE_NAME_DIR_KEY, nameDir.getAbsolutePath());
 

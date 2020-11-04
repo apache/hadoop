@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -52,7 +53,7 @@ public class TestEnabledECPolicies {
   public Timeout testTimeout = new Timeout(60000);
 
   private void expectInvalidPolicy(String value) throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
         value);
     try {
@@ -65,7 +66,7 @@ public class TestEnabledECPolicies {
 
   private void expectValidPolicy(String value, final int numEnabled) throws
       Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     ErasureCodingPolicyManager manager =
         ErasureCodingPolicyManager.getInstance();
     manager.init(conf);
@@ -76,7 +77,7 @@ public class TestEnabledECPolicies {
 
   @Test
   public void testDefaultPolicy() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     String defaultECPolicies = conf.get(
         DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
         DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT);
@@ -127,7 +128,7 @@ public class TestEnabledECPolicies {
 
   @Test
   public void testChangeDefaultPolicy() throws Exception {
-    final HdfsConfiguration conf = new HdfsConfiguration();
+    final HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     final String testPolicy = "RS-3-2-1024k";
     final String defaultPolicy = conf.getTrimmed(
         DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
@@ -191,7 +192,7 @@ public class TestEnabledECPolicies {
 
   private void testGetPolicies(ErasureCodingPolicy[] enabledPolicies)
       throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     ErasureCodingPolicyManager manager =
         ErasureCodingPolicyManager.getInstance();
     manager.init(conf);

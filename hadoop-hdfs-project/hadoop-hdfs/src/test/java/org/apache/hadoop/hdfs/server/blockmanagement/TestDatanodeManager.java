@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -1021,14 +1022,14 @@ public class TestDatanodeManager {
   public void testNetworkTopologyInstantiation() throws Exception {
     // case 1, dfs.use.dfs.network.topology=true, use the default
     // DFSNetworkTopology impl.
-    Configuration conf1 = new HdfsConfiguration();
+    Configuration conf1 = DFSTestUtil.newHdfsConfiguration();
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     DatanodeManager dm1 = mockDatanodeManager(fsn, conf1);
     assertEquals(DFSNetworkTopology.class, dm1.getNetworkTopology().getClass());
 
     // case 2, dfs.use.dfs.network.topology=false, use the default
     // NetworkTopology impl.
-    Configuration conf2 = new HdfsConfiguration();
+    Configuration conf2 = DFSTestUtil.newHdfsConfiguration();
     conf2.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, false);
     DatanodeManager dm2 = mockDatanodeManager(fsn, conf2);
     assertEquals(NetworkTopology.class, dm2.getNetworkTopology()
@@ -1036,7 +1037,7 @@ public class TestDatanodeManager {
 
     // case 3, dfs.use.dfs.network.topology=false, and specify the
     // net.topology.impl property.
-    Configuration conf3 = new HdfsConfiguration();
+    Configuration conf3 = DFSTestUtil.newHdfsConfiguration();
     conf3.setClass(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY,
         MockDfsNetworkTopology.class, NetworkTopology.class);
     conf3.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, false);
@@ -1046,7 +1047,7 @@ public class TestDatanodeManager {
 
     // case 4, dfs.use.dfs.network.topology=true, and specify the
     // dfs.net.topology.impl property.
-    Configuration conf4 = new HdfsConfiguration();
+    Configuration conf4 = DFSTestUtil.newHdfsConfiguration();
     conf4.setClass(DFSConfigKeys.DFS_NET_TOPOLOGY_IMPL_KEY,
             MockDfsNetworkTopology.class, NetworkTopology.class);
     conf4.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, true);

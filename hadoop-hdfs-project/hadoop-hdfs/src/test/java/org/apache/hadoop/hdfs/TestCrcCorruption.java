@@ -88,7 +88,7 @@ public class TestCrcCorruption {
    */
   @Test(timeout=50000)
   public void testCorruptionDuringWrt() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Set short retry timeouts so this test runs faster
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     MiniDFSCluster cluster = null;
@@ -226,7 +226,7 @@ public class TestCrcCorruption {
     // default parameters
     //
     System.out.println("TestCrcCorruption with default parameters");
-    Configuration conf1 = new HdfsConfiguration();
+    Configuration conf1 = DFSTestUtil.newHdfsConfiguration();
     conf1.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000);
     DFSTestUtil util1 = new DFSTestUtil.Builder().setName("TestCrcCorruption").
         setNumFiles(40).build();
@@ -236,7 +236,7 @@ public class TestCrcCorruption {
     // specific parameters
     //
     System.out.println("TestCrcCorruption with specific parameters");
-    Configuration conf2 = new HdfsConfiguration();
+    Configuration conf2 = DFSTestUtil.newHdfsConfiguration();
     conf2.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 17);
     conf2.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 34);
     DFSTestUtil util2 = new DFSTestUtil.Builder().setName("TestCrcCorruption").

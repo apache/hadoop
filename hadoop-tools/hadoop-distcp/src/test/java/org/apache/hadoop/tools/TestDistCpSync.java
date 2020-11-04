@@ -52,7 +52,7 @@ import java.util.Map;
 
 public class TestDistCpSync {
   private MiniDFSCluster cluster;
-  private final Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   private DistributedFileSystem dfs;
   private DistCpContext context;
   private final Path source = new Path("/source");

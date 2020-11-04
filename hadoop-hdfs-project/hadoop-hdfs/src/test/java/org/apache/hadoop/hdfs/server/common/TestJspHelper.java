@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.common;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
@@ -56,7 +56,7 @@ import static org.mockito.Mockito.when;
 
 public class TestJspHelper {
 
-  private final Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   // allow user with TGT to run tests
   @BeforeClass

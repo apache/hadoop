@@ -251,7 +251,7 @@ public class TestFsDatasetImpl {
   @Test(timeout=10000)
   public void testReadLockCanBeDisabledByConfig()
       throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(
         DFSConfigKeys.DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY, false);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -360,7 +360,7 @@ public class TestFsDatasetImpl {
 
   @Test
   public void testAddVolumeWithSameStorageUuid() throws IOException {
-    HdfsConfiguration config = new HdfsConfiguration();
+    HdfsConfiguration config = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
         .numDataNodes(1).build();
     try {
@@ -596,7 +596,7 @@ public class TestFsDatasetImpl {
    * reading the blocks from it directly would not be sorted.
    */
   public void testSortedFinalizedBlocksAreSorted() throws IOException {
-    this.conf = new HdfsConfiguration();
+    this.conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       cluster.waitActive();
@@ -626,7 +626,7 @@ public class TestFsDatasetImpl {
   
   @Test
   public void testDeletingBlocks() throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       cluster.waitActive();
@@ -899,7 +899,7 @@ public class TestFsDatasetImpl {
   public void testCleanShutdownOfVolume() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration config = new HdfsConfiguration();
+      Configuration config = DFSTestUtil.newHdfsConfiguration();
       config.setLong(
           DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY, 1000);
       config.setTimeDuration(
@@ -963,7 +963,7 @@ public class TestFsDatasetImpl {
     boolean threwException = false;
     MiniDFSCluster cluster = null;
     try {
-      Configuration config = new HdfsConfiguration();
+      Configuration config = DFSTestUtil.newHdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
       cluster.waitActive();
 
@@ -1197,7 +1197,7 @@ public class TestFsDatasetImpl {
     File dataDir = new File(baseDir, "invalidFormatString-%z");
     dataDir.mkdirs();
     FsVolumeImpl volumeFixed = new FsVolumeImplBuilder()
-        .setConf(new HdfsConfiguration())
+        .setConf(DFSTestUtil.newHdfsConfiguration())
         .setDataset(dataset)
         .setStorageID("storage-id")
         .setStorageDirectory(

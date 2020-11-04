@@ -37,6 +37,7 @@ import java.util.Properties;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -118,7 +119,7 @@ public abstract class SaslDataTransferTestCase {
    */
   protected HdfsConfiguration createSecureConfig(
       String dataTransferProtection) throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
     conf.set(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
     conf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, hdfsKeytab);

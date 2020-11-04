@@ -53,7 +53,7 @@ public class TestStoragePolicyPermissionSettings {
 
   @BeforeClass
   public static void clusterSetUp() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();

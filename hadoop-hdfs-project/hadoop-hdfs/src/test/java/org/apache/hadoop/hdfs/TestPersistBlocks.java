@@ -92,7 +92,7 @@ public class TestPersistBlocks {
    * @param useFlush - if true then flush is used instead of sync (ie hflush)
    */
   void testRestartDfs(boolean useFlush) throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Turn off persistent IPC, so that the DFSClient can survive NN restart
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
@@ -151,7 +151,7 @@ public class TestPersistBlocks {
   
   @Test
   public void testRestartDfsWithAbandonedBlock() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Turn off persistent IPC, so that the DFSClient can survive NN restart
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
@@ -213,7 +213,7 @@ public class TestPersistBlocks {
   
   @Test
   public void testRestartWithPartialBlockHflushed() throws IOException {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Turn off persistent IPC, so that the DFSClient can survive NN restart
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
@@ -262,7 +262,7 @@ public class TestPersistBlocks {
   
   @Test
   public void testRestartWithAppend() throws IOException {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Turn off persistent IPC, so that the DFSClient can survive NN restart
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
@@ -316,7 +316,7 @@ public class TestPersistBlocks {
    */
   @Test
   public void testEarlierVersionEditLog() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
         
     String tarFile = System.getProperty("test.cache.data", "build/test/cache")
       + "/" + HADOOP_1_0_MULTIBLOCK_TGZ;

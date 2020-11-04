@@ -698,7 +698,7 @@ public class TestSaveNamespace {
 
   @Test
   public void testSaveNamespaceBeforeShutdown() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(0).build();
     cluster.waitActive();
@@ -751,7 +751,7 @@ public class TestSaveNamespace {
     nameDirs.add(fileAsURI(new File(baseDir, "name1")).toString());
     nameDirs.add(fileAsURI(new File(baseDir, "name2")).toString());
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     String nameDirsStr = StringUtils.join(",", nameDirs);
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameDirsStr);
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameDirsStr);
@@ -809,7 +809,7 @@ public class TestSaveNamespace {
     String nameDirs = fileAsURI(new File(baseDir, "name1")) + "," + 
                       fileAsURI(new File(baseDir, "name2"));
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameDirs);

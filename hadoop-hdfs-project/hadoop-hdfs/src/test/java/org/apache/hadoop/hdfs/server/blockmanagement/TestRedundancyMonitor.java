@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
@@ -52,7 +53,7 @@ public class TestRedundancyMonitor {
   @Test
   public void testChooseTargetWhenAllDataNodesStop() throws Throwable {
 
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     String[] hosts = new String[]{"host1", "host2"};
     String[] racks = new String[]{"/d1/r1", "/d1/r1"};
     try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(conf)

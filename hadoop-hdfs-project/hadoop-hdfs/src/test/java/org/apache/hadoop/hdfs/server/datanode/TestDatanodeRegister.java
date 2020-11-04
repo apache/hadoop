@@ -33,6 +33,7 @@ import java.util.Collections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import org.junit.Assert;
@@ -136,7 +137,7 @@ public class TestDatanodeRegister {
   public void testDNShutdwonBeforeRegister() throws Exception {
     final InetSocketAddress nnADDR = new InetSocketAddress(
         "localhost", 5020);
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
@@ -167,7 +168,7 @@ public class TestDatanodeRegister {
 
   @Test
   public void testInvalidConfigurationValue() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, -2);
     intercept(HadoopIllegalArgumentException.class,
         "Invalid value configured for dfs.datanode.failed.volumes.tolerated"

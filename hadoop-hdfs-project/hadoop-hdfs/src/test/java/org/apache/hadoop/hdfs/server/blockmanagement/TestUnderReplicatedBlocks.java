@@ -39,7 +39,7 @@ import java.util.Iterator;
 public class TestUnderReplicatedBlocks {
   @Test(timeout=120000) // 1 min timeout
   public void testSetRepIncWithUnderReplicatedBlocks() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final short REPLICATION_FACTOR = 2;
     final String FILE_NAME = "/testFile";
     final Path FILE_PATH = new Path(FILE_NAME);
@@ -107,7 +107,7 @@ public class TestUnderReplicatedBlocks {
    */
   @Test(timeout=60000) // 1 min timeout
   public void testNumberOfBlocksToBeReplicated() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1);

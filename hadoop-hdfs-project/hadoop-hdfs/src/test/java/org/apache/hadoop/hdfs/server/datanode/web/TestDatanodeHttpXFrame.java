@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.web;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.http.HttpServer2;
@@ -80,7 +80,7 @@ public class TestDatanodeHttpXFrame {
 
   private static MiniDFSCluster createCluster(boolean enabled, String
       value) throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED, enabled);
     if (value != null) {
       conf.set(DFSConfigKeys.DFS_XFRAME_OPTION_VALUE, value);

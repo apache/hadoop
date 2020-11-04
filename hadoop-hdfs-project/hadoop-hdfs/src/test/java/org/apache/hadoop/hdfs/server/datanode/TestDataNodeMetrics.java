@@ -75,7 +75,7 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testDataNodeMetrics() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     SimulatedFSDataset.setFactory(conf);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
@@ -97,7 +97,7 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testSendDataPacketMetrics() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final int interval = 1;
     conf.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, "" + interval);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -129,7 +129,7 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testReceivePacketMetrics() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final int interval = 1;
     conf.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, "" + interval);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -167,7 +167,7 @@ public class TestDataNodeMetrics {
    */
   @Test
   public void testFsDatasetMetrics() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       cluster.waitActive();
@@ -213,7 +213,7 @@ public class TestDataNodeMetrics {
   public void testRoundTripAckMetric() throws Exception {
     final int datanodeCount = 2;
     final int interval = 1;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, "" + interval);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
         datanodeCount).build();
@@ -265,7 +265,7 @@ public class TestDataNodeMetrics {
 
   @Test(timeout=60000)
   public void testTimeoutMetric() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final Path path = new Path("/test");
 
     final MiniDFSCluster cluster =
@@ -318,7 +318,7 @@ public class TestDataNodeMetrics {
    */
   @Test(timeout=120000)
   public void testDataNodeTimeSpend() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       final FileSystem fs = cluster.getFileSystem();
@@ -362,7 +362,7 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testDatanodeBlocksReplicatedMetric() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       FileSystem fs = cluster.getFileSystem();
@@ -392,7 +392,7 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testDatanodeActiveXceiversCount() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       FileSystem fs = cluster.getFileSystem();
@@ -474,7 +474,7 @@ public class TestDataNodeMetrics {
   @Test
   public void testDNShouldNotDeleteBlockONTooManyOpenFiles()
       throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 1);
     DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
@@ -531,7 +531,7 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testNNRpcMetricsWithNonHA() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // setting heartbeat interval to 1 hour to prevent bpServiceActor sends
     // heartbeat periodically to NN during running test case, and bpServiceActor
     // only sends heartbeat once after startup
@@ -545,7 +545,7 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testNNRpcMetricsWithHA() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // setting heartbeat interval to 1 hour to prevent bpServiceActor sends
     // heartbeat periodically to NN during running test case, and bpServiceActor
     // only sends heartbeat once after startup
@@ -563,7 +563,7 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testNNRpcMetricsWithFederation() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // setting heartbeat interval to 1 hour to prevent bpServiceActor sends
     // heartbeat periodically to NN during running test case, and bpServiceActor
     // only sends heartbeat once after startup
@@ -580,7 +580,7 @@ public class TestDataNodeMetrics {
 
   @Test
   public void testNNRpcMetricsWithFederationAndHA() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // setting heartbeat interval to 1 hour to prevent bpServiceActor sends
     // heartbeat periodically to NN during running test case, and bpServiceActor
     // only sends heartbeat once after startup

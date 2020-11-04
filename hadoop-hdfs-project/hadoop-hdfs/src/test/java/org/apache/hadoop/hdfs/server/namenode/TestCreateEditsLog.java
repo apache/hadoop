@@ -71,7 +71,7 @@ public class TestCreateEditsLog {
   @Test(timeout=60000)
   public void testCanLoadCreatedEditsLog() throws Exception {
     // Format namenode.
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     File nameDir = new File(HDFS_DIR, "name");
     conf.set(DFS_NAMENODE_NAME_DIR_KEY, Util.fileAsURI(nameDir).toString());
     DFSTestUtil.formatNameNode(conf);

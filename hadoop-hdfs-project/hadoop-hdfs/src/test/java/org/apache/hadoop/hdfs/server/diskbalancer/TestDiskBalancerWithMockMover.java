@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import java.util.function.Supplier;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -26,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancer;
@@ -83,7 +83,7 @@ public class TestDiskBalancerWithMockMover {
    */
   @Test
   public void testDiskBalancerDisabled() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, false);
     restartDataNode();
 
@@ -108,7 +108,7 @@ public class TestDiskBalancerWithMockMover {
    */
   @Test
   public void testDiskBalancerEnabled() throws DiskBalancerException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
 
     TestMover blockMover = new TestMover(cluster.getDataNodes()
@@ -320,7 +320,7 @@ public class TestDiskBalancerWithMockMover {
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final int numStoragesPerDn = 2;
     cluster = new MiniDFSCluster
         .Builder(conf).numDataNodes(3)
@@ -486,7 +486,7 @@ public class TestDiskBalancerWithMockMover {
     }
 
     public MockMoverHelper invoke() throws Exception {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
       restartDataNode();
 

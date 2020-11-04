@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
@@ -116,7 +117,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
         YarnConfiguration.TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_APP_CACHE_SIZE,
         CACHE_TEST_CACHE_SIZE);
     config.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, TEST_ROOT_DIR.toString());
-    HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+    HdfsConfiguration hdfsConfig = DFSTestUtil.newHdfsConfiguration();
     hdfsCluster
         = new MiniDFSCluster.Builder(hdfsConfig).numDataNodes(1).build();
     fs = hdfsCluster.getFileSystem();

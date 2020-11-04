@@ -26,8 +26,8 @@ import javax.servlet.ServletContext;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosName;
@@ -39,7 +39,7 @@ public class TestGetImageServlet {
   
   @Test
   public void testIsValidRequestor() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     KerberosName.setRules("RULE:[1:$1]\nRULE:[2:$1]");
     
     // Set up generic HA configs.

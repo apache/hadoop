@@ -161,7 +161,7 @@ public class TestCheckpoint {
   @Test
   public void testNameDirError() throws IOException {
     LOG.info("Starting testNameDirError");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
         .build();
     
@@ -205,7 +205,7 @@ public class TestCheckpoint {
                filePath.exists() || filePath.mkdirs());
     fsImageDirs.add(filePath.toURI());
     editsDirs.add(filePath.toURI());
-    NNStorage nnStorage = new NNStorage(new HdfsConfiguration(),
+    NNStorage nnStorage = new NNStorage(DFSTestUtil.newHdfsConfiguration(),
       fsImageDirs, editsDirs);
     try {
       assertTrue("List of storage directories didn't have storageDirToCheck.",
@@ -232,7 +232,7 @@ public class TestCheckpoint {
    */
   @Test(timeout=30000)
   public void testReloadOnEditReplayFailure () throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FSDataOutputStream fos = null;
     SecondaryNameNode secondary = null;
     MiniDFSCluster cluster = null;
@@ -286,7 +286,7 @@ public class TestCheckpoint {
    */
   @Test(timeout=30000)
   public void testTooManyEditReplayFailures() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
 
@@ -335,7 +335,7 @@ public class TestCheckpoint {
   public void testSecondaryNamenodeError1()
     throws IOException {
     LOG.info("Starting testSecondaryNamenodeError1");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Path file1 = new Path("checkpointxx.dat");
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
@@ -407,7 +407,7 @@ public class TestCheckpoint {
   @Test
   public void testSecondaryNamenodeError2() throws IOException {
     LOG.info("Starting testSecondaryNamenodeError2");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Path file1 = new Path("checkpointyy.dat");
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
@@ -479,7 +479,7 @@ public class TestCheckpoint {
   @Test
   public void testSecondaryNamenodeError3() throws IOException {
     LOG.info("Starting testSecondaryNamenodeError3");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Path file1 = new Path("checkpointzz.dat");
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
@@ -570,7 +570,7 @@ public class TestCheckpoint {
 
   private void doSecondaryFailsToReturnImage() throws IOException {
     LOG.info("Starting testSecondaryFailsToReturnImage");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Path file1 = new Path("checkpointRI.dat");
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
@@ -677,7 +677,7 @@ public class TestCheckpoint {
    */
   private void doSendFailTest(String exceptionSubstring)
       throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Path file1 = new Path("checkpoint-doSendFailTest-doSendFailTest.dat");
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
@@ -735,7 +735,7 @@ public class TestCheckpoint {
    **/
   @Test
   public void testNameDirLocking() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     
     // Start a NN, and verify that lock() fails in all of the configured
@@ -765,7 +765,7 @@ public class TestCheckpoint {
    **/
   @Test
   public void testSeparateEditsDirLocking() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
     File editsDir = new File(MiniDFSCluster.getBaseDirectory(),
         "testSeparateEditsDirLocking");
@@ -805,7 +805,7 @@ public class TestCheckpoint {
   @Test
   public void testSecondaryNameNodeLocking() throws Exception {
     // Start a primary NN so that the secondary will start successfully
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
     try {
@@ -852,7 +852,7 @@ public class TestCheckpoint {
    */
   @Test
   public void testStorageAlreadyLockedErrorMessage() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     StorageDirectory savedSd = null;
     try {
@@ -933,7 +933,7 @@ public class TestCheckpoint {
    */
   @Test
   public void testImportCheckpoint() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Path testPath = new Path("/testfile");
     SecondaryNameNode snn = null;
     MiniDFSCluster cluster = null;
@@ -1025,7 +1025,7 @@ public class TestCheckpoint {
     Path tmpDir = new Path("/tmp_tmp");
     Path file1 = new Path("checkpoint.dat");
     Path file2 = new Path("checkpoint2.dat");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
     
@@ -1145,7 +1145,7 @@ public class TestCheckpoint {
     DistributedFileSystem fs = null;
     FileContext fc;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).format(true).build();
       cluster.waitActive();
       fs = (cluster.getFileSystem());
@@ -1246,7 +1246,7 @@ public class TestCheckpoint {
   public void testCheckpointSignature() throws IOException {
 
     MiniDFSCluster cluster = null;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     SecondaryNameNode secondary = null;
     try {
@@ -1287,7 +1287,7 @@ public class TestCheckpoint {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
     
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
@@ -1339,7 +1339,7 @@ public class TestCheckpoint {
    */
   @Test
   public void testMultipleSecondaryNamenodes() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     String nameserviceId1 = "ns1";
     String nameserviceId2 = "ns2";
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, nameserviceId1
@@ -1405,7 +1405,7 @@ public class TestCheckpoint {
   @Test
   public void testSecondaryImageDownload() throws IOException {
     LOG.info("Starting testSecondaryImageDownload");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     Path dir = new Path("/checkpoint");
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -1480,7 +1480,7 @@ public class TestCheckpoint {
    */
   @Test(timeout=30000)
   public void testFailureBeforeRename () throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     FSDataOutputStream fos = null;
     SecondaryNameNode secondary = null;
     MiniDFSCluster cluster = null;
@@ -1529,7 +1529,7 @@ public class TestCheckpoint {
    */
   @Test(timeout = 30000)
   public void testEditFailureBeforeRename() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     SecondaryNameNode secondary = null;
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
@@ -1588,7 +1588,7 @@ public class TestCheckpoint {
    */
   @Test(timeout = 30000)
   public void testEditFailureOnFirstCheckpoint() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     SecondaryNameNode secondary = null;
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
@@ -1642,7 +1642,7 @@ public class TestCheckpoint {
    */
   @Test(timeout = 60000)
   public void testDeleteTemporaryEditsOnStartup() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     SecondaryNameNode secondary = null;
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
@@ -1721,7 +1721,7 @@ public class TestCheckpoint {
    */
   @Test
   public void testMultipleSecondaryNNsAgainstSameNN() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary1 = null, secondary2 = null;
     try {
@@ -1809,7 +1809,7 @@ public class TestCheckpoint {
    */
   @Test
   public void testMultipleSecondaryNNsAgainstSameNN2() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary1 = null, secondary2 = null;
     try {
@@ -1906,7 +1906,7 @@ public class TestCheckpoint {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
     
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
         1);
 
@@ -1966,7 +1966,7 @@ public class TestCheckpoint {
   public void testNamespaceVerifiedOnFileTransfer() throws IOException {
     MiniDFSCluster cluster = null;
     
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
           .format(true).build();
@@ -2036,7 +2036,7 @@ public class TestCheckpoint {
     SecondaryNameNode secondary = null;
     File currentDir = null;
     
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
@@ -2098,7 +2098,7 @@ public class TestCheckpoint {
     SecondaryNameNode secondary = null;
     File currentDir = null;
     
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     File base_dir = new File(MiniDFSCluster.getBaseDirectory());
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_KEY, true);
@@ -2165,7 +2165,7 @@ public class TestCheckpoint {
   public void testCheckpointTriggerOnTxnCount() throws Exception {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 10);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
@@ -2219,7 +2219,7 @@ public class TestCheckpoint {
   public void testSecondaryHasVeryOutOfDateImage() throws IOException {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
@@ -2257,7 +2257,7 @@ public class TestCheckpoint {
   public void testSecondaryPurgesEditLogs() throws IOException {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(true)
@@ -2301,7 +2301,7 @@ public class TestCheckpoint {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
     
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     try {
@@ -2341,7 +2341,7 @@ public class TestCheckpoint {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
     FSDataOutputStream fos = null;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
           .format(true).build();
@@ -2428,7 +2428,7 @@ public class TestCheckpoint {
     SecondaryNameNode secondary = null;
     File tmpDir = GenericTestUtils.getTestDir("testLegacyOivImage");
     tmpDir.mkdirs();
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY,
         tmpDir.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY,
@@ -2466,7 +2466,7 @@ public class TestCheckpoint {
   @Test(timeout = 300000)
   public void testActiveRejectSmallerTxidDeltaImage() throws Exception {
     MiniDFSCluster cluster = null;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Set the delta txid threshold to 10
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 10);
     // Set the delta time threshold to some arbitrarily large value, so
@@ -2525,7 +2525,7 @@ public class TestCheckpoint {
    */
   @Test
   public void testActiveImageWithTimeDeltaRelaxation() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Set the delta txid threshold to some arbitrarily large value, so
     // it does not trigger a checkpoint during this test.
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1000000);

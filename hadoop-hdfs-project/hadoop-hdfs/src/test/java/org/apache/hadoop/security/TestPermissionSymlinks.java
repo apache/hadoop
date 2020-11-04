@@ -56,7 +56,7 @@ public class TestPermissionSymlinks {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestPermissionSymlinks.class);
-  private static final Configuration conf = new HdfsConfiguration();
+  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   // Non-super user to run commands with
   private static final UserGroupInformation user = UserGroupInformation
       .createRemoteUser("myuser");

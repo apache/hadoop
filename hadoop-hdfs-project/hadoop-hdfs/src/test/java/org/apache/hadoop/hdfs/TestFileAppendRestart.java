@@ -76,7 +76,7 @@ public class TestFileAppendRestart {
    */
   @Test
   public void testAppendRestart() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Turn off persistent IPC, so that the DFSClient can survive NN restart
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
@@ -145,7 +145,7 @@ public class TestFileAppendRestart {
    */
   @Test
   public void testLoadLogsFromBuggyEarlierVersions() throws IOException {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     String tarFile = System.getProperty("test.cache.data", "build/test/cache")
       + "/" + HADOOP_23_BROKEN_APPEND_TGZ;

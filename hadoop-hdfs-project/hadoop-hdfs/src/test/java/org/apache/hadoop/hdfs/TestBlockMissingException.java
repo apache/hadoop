@@ -50,7 +50,7 @@ public class TestBlockMissingException {
     LOG.info("Test testBlockMissingException started.");
     long blockSize = 1024L;
     int numBlocks = 4;
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     // Set short retry timeouts so this test runs faster
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     try {

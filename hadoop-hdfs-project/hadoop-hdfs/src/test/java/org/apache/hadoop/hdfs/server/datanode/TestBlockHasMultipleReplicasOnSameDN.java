@@ -72,7 +72,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
 
   @Before
   public void startUpCluster() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(NUM_DATANODES)
         .build();

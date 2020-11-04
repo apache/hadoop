@@ -68,7 +68,7 @@ public class TestSafeModeWithStripedFile {
     cellSize = ecPolicy.getCellSize();
     blockSize = cellSize * 2;
 
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 100);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();

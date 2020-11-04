@@ -48,6 +48,7 @@ import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -274,7 +275,7 @@ public class TestGetConf {
    */
   @Test(timeout=10000)
   public void testInvalidArgument() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     String[] args = {"-invalidArgument"};
     String ret = runTool(conf, args, false);
     assertTrue(ret.contains(GetConf.USAGE));
@@ -302,14 +303,14 @@ public class TestGetConf {
     verifyAddresses(conf, TestType.SECONDARY, false, "localhost:1002");
   
     // Returned namenode address should match service RPC address
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "localhost:1000");
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "localhost:1001");
     verifyAddresses(conf, TestType.NAMENODE, false, "localhost:1000");
     verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "localhost:1000");
   
     // Returned address should match RPC address
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "localhost:1001");
     verifyAddresses(conf, TestType.NAMENODE, false, "localhost:1001");
     verifyAddresses(conf, TestType.NNRPCADDRESSES, true, "localhost:1001");
@@ -514,7 +515,7 @@ public class TestGetConf {
 
   @Test(timeout=10000)
   public void testGetSpecificKey() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set("mykey", " myval ");
     String[] args = {"-confKey", "mykey"};
     String toolResult = runTool(conf, args, true);
@@ -523,7 +524,7 @@ public class TestGetConf {
   
   @Test(timeout=10000)
   public void testExtraArgsThrowsError() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set("mykey", "myval");
     String[] args = {"-namenodes", "unexpected-arg"};
     assertTrue(runTool(conf, args, false).contains(
@@ -549,7 +550,7 @@ public class TestGetConf {
   }
   @Test
   public void TestGetConfExcludeCommand() throws Exception{
-  	HdfsConfiguration conf = new HdfsConfiguration();
+  	HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     // Set up the hosts/exclude files.
     HostsFileWriter hostsFileWriter = new HostsFileWriter();
     hostsFileWriter.initialize(conf, "GetConf");
@@ -563,7 +564,7 @@ public class TestGetConf {
   
   @Test
   public void TestGetConfIncludeCommand() throws Exception{
-  	HdfsConfiguration conf = new HdfsConfiguration();
+  	HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     // Set up the hosts/exclude files.
     HostsFileWriter hostsFileWriter = new HostsFileWriter();
     hostsFileWriter.initialize(conf, "GetConf");
@@ -580,7 +581,7 @@ public class TestGetConf {
   public void testIncludeInternalNameServices() throws Exception {
     final int nsCount = 10;
     final int remoteNsCount = 4;
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     setupNameServices(conf, nsCount);
     setupAddress(conf, DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nsCount, 1000);
     setupAddress(conf, DFS_NAMENODE_RPC_ADDRESS_KEY, nsCount, 1500);

@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.net.ServerSocketUtil;
@@ -194,7 +195,7 @@ public class TestDistributedShell {
           CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT);
     } else if (timelineVersion == 1.5f) {
       if (hdfsCluster == null) {
-        HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+        HdfsConfiguration hdfsConfig = DFSTestUtil.newHdfsConfiguration();
         hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
             .numDataNodes(1).build();
       }

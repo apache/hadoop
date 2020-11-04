@@ -44,7 +44,7 @@ public class TestSnapshotCommands {
   
   @BeforeClass
   public static void clusterSetUp() throws IOException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT, 3);
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
@@ -195,7 +195,7 @@ public class TestSnapshotCommands {
 
   @Test (timeout=60000)
   public void testSnapshotCommandsWithURI()throws Exception {
-    Configuration config = new HdfsConfiguration();
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
     //fs.defaultFS should not be used, when path is fully qualified.
     config.set("fs.defaultFS", "hdfs://127.0.0.1:1024");
     String path = fs.getUri() + "/Fully/QPath";
@@ -226,7 +226,7 @@ public class TestSnapshotCommands {
 
   @Test (timeout=60000)
   public void testSnapshotDiff()throws Exception {
-    Configuration config = new HdfsConfiguration();
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
     Path snapDirPath = new Path(fs.getUri().toString() + "/snap_dir");
     String snapDir = snapDirPath.toString();
     fs.mkdirs(snapDirPath);

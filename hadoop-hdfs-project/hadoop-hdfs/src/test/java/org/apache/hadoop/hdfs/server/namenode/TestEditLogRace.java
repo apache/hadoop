@@ -369,7 +369,7 @@ public class TestEditLogRace {
   }
  
   private Configuration getConf() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
         useAsyncEditLog);
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");

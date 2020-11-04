@@ -146,7 +146,7 @@ public class TestBackupNode {
    *  */
   @Test
     public void startBackupNodeWithIncorrectAuthentication() throws IOException {
-    Configuration c = new HdfsConfiguration();
+    Configuration c = DFSTestUtil.newHdfsConfiguration();
     StartupOption startupOpt = StartupOption.CHECKPOINT;
     String dirs = getBackupNodeDir(startupOpt, 1);
     c.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY,
@@ -214,7 +214,7 @@ public class TestBackupNode {
    */
   @Test
   public void testBackupNodeTailsEdits() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     HAUtil.setAllowStandbyReads(conf, true);
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
@@ -353,7 +353,7 @@ public class TestBackupNode {
     Path file2 = new Path("/checkpoint2.dat");
     Path file3 = new Path("/backup.dat");
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     HAUtil.setAllowStandbyReads(conf, true);
     short replication = (short)conf.getInt("dfs.replication", 3);
     int numDatanodes = Math.max(3, replication);
@@ -511,7 +511,7 @@ public class TestBackupNode {
   @Test
   public void testCanReadData() throws IOException {
     Path file1 = new Path("/fileToRead.dat");
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     BackupNode backup = null;

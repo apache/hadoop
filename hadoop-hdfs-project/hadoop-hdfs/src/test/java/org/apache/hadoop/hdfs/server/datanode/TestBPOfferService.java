@@ -1186,7 +1186,7 @@ public class TestBPOfferService {
 
   @Test(timeout = 15000)
   public void testCommandProcessingThread() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       List<DataNode> datanodes = cluster.getDataNodes();
@@ -1214,7 +1214,7 @@ public class TestBPOfferService {
 
   @Test(timeout = 5000)
   public void testCommandProcessingThreadExit() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
         numDataNodes(1).build();
     try {

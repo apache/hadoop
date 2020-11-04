@@ -494,7 +494,7 @@ public class TestNetworkTopology {
   @Test(timeout=180000)
   public void testInvalidNetworkTopologiesNotCachedInHdfs() throws Exception {
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       // bad rack topology

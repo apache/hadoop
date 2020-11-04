@@ -128,7 +128,7 @@ public class TestTrashWithSecureEncryptionZones {
     kdc = new MiniKdc(kdcConf, baseDir);
     kdc.start();
 
-    baseConf = new HdfsConfiguration();
+    baseConf = DFSTestUtil.newHdfsConfiguration();
     SecurityUtil.setAuthenticationMethod(UserGroupInformation
         .AuthenticationMethod.KERBEROS, baseConf);
     UserGroupInformation.setConfiguration(baseConf);

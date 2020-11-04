@@ -92,7 +92,7 @@ public class TestFSEditLogLoader {
   }
 
   private static Configuration getConf() {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGGING,
         useAsyncEditLog);
     return conf;
@@ -466,7 +466,7 @@ public class TestFSEditLogLoader {
   @Test
   public void testAddNewStripedBlock() throws IOException{
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -540,7 +540,7 @@ public class TestFSEditLogLoader {
   @Test
   public void testUpdateStripedBlocks() throws IOException{
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -622,7 +622,7 @@ public class TestFSEditLogLoader {
   @Test
   public void testHasNonEcBlockUsingStripedIDForAddBlock() throws IOException{
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -671,7 +671,7 @@ public class TestFSEditLogLoader {
   public void testHasNonEcBlockUsingStripedIDForUpdateBlocks()
       throws IOException{
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
@@ -725,7 +725,7 @@ public class TestFSEditLogLoader {
   @Test
   public void testErasureCodingPolicyOperations() throws IOException {
     // start a cluster
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final int blockSize = 16 * 1024;
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     MiniDFSCluster cluster = null;

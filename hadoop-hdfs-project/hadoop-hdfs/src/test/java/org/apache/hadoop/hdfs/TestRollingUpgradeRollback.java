@@ -89,7 +89,7 @@ public class TestRollingUpgradeRollback {
 
   @Test
   public void testRollbackCommand() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     final Path foo = new Path("/foo");
     final Path bar = new Path("/bar");
@@ -144,7 +144,7 @@ public class TestRollingUpgradeRollback {
 
   @Test
   public void testRollbackWithQJM() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniJournalCluster mjc = null;
     MiniDFSCluster cluster = null;
     final Path foo = new Path("/foo");
@@ -202,7 +202,7 @@ public class TestRollingUpgradeRollback {
    */
   @Test
   public void testRollbackWithHAQJM() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniQJMHACluster cluster = null;
     final Path foo = new Path("/foo");
     final Path bar = new Path("/bar");

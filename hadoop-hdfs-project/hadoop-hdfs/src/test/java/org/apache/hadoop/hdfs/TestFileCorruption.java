@@ -77,7 +77,7 @@ public class TestFileCorruption {
     DFSTestUtil util = new DFSTestUtil.Builder().setName("TestFileCorruption").
         setNumFiles(20).build();
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
@@ -105,7 +105,7 @@ public class TestFileCorruption {
   /** check if local FS can handle corrupted blocks properly */
   @Test
   public void testLocalFileCorruption() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     Path file = new Path(PathUtils.getTestDirName(getClass()), "corruptFile");
     FileSystem fs = FileSystem.getLocal(conf);
     DataOutputStream dos = fs.create(file);
@@ -134,7 +134,7 @@ public class TestFileCorruption {
   public void testArrayOutOfBoundsException() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       cluster.waitActive();
       
@@ -184,7 +184,7 @@ public class TestFileCorruption {
   public void testCorruptionWithDiskFailure() throws Exception {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = DFSTestUtil.newHdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
       BlockManager bm = cluster.getNamesystem().getBlockManager();
@@ -235,7 +235,7 @@ public class TestFileCorruption {
 
   @Test
   public void testSetReplicationWhenBatchIBR() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 100);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INCREMENTAL_INTERVAL_MSEC_KEY,
         30000);

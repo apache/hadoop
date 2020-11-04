@@ -25,7 +25,7 @@ import java.io.IOException;
 public class ListingBenchmark {
 
   public static void main(String[] args) throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(0)
         .format(true)

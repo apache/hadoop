@@ -57,7 +57,7 @@ public class TestDFSRename {
   
   @Test
   public void testRename() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     try {
       FileSystem fs = cluster.getFileSystem();
@@ -181,7 +181,7 @@ public class TestDFSRename {
   @Test
   public void testRename2Options() throws Exception {
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(
-        new HdfsConfiguration()).build()) {
+        DFSTestUtil.newHdfsConfiguration()).build()) {
       cluster.waitActive();
       final DistributedFileSystem dfs = cluster.getFileSystem();
       Path path = new Path("/test");

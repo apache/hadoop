@@ -759,7 +759,7 @@ public class TestDataNodeVolumeFailureReporting {
    */
   private void initCluster(int numDataNodes, int storagesPerDatanode,
       int failedVolumesTolerated) throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512L);
     /*
      * Lower the DN heartbeat, DF rate, and recheck interval to one second

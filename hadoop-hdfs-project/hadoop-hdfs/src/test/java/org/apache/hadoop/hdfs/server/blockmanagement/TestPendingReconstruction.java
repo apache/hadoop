@@ -192,7 +192,7 @@ public class TestPendingReconstruction {
  */
   @Test
   public void testProcessPendingReconstructions() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(
         DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, TIMEOUT);
     MiniDFSCluster cluster = null;
@@ -330,7 +330,7 @@ public class TestPendingReconstruction {
    */
   @Test
   public void testBlockReceived() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     MiniDFSCluster cluster = null;
     try {
@@ -431,7 +431,7 @@ public class TestPendingReconstruction {
    */
   @Test
   public void testPendingAndInvalidate() throws Exception {
-    final Configuration CONF = new HdfsConfiguration();
+    final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
         DFS_REPLICATION_INTERVAL);
@@ -500,7 +500,7 @@ public class TestPendingReconstruction {
   @Test (timeout = 300000)
   public void testReplicationCounter() throws IOException,
       InterruptedException, TimeoutException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     conf.setInt(DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 1);
     MiniDFSCluster tmpCluster = new MiniDFSCluster.Builder(conf).numDataNodes(
@@ -569,7 +569,7 @@ public class TestPendingReconstruction {
 
   @Test
   public void testPendingReConstructionBlocksForSameDN() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();

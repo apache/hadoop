@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -66,7 +67,7 @@ public class TestBlockReportLease {
    */
   @Test
   public void testCheckBlockReportLease() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     Random rand = new Random();
 
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)

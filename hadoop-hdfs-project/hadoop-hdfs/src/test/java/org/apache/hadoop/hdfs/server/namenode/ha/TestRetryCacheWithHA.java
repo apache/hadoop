@@ -109,7 +109,7 @@ public class TestRetryCacheWithHA {
   
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
-  private final Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   
   /** 
    * A dummy invocation handler extending RetryInvocationHandler. We can use

@@ -54,7 +54,7 @@ import java.util.StringTokenizer;
  */
 public abstract class TestDistCpSyncReverseBase {
   private MiniDFSCluster cluster;
-  private final Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   private DistributedFileSystem dfs;
   private DistCpOptions.Builder optionsBuilder;
   private DistCpContext distCpContext;

@@ -94,7 +94,7 @@ public class TestReadOnlySharedStorage {
    */
   @Before
   public void setup() throws IOException, InterruptedException {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     SimulatedFSDataset.setFactory(conf);
     
     Configuration[] overlays = new Configuration[NUM_DATANODES];

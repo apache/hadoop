@@ -83,7 +83,7 @@ public class TestDatanodeRegistration {
     
     MiniDFSCluster cluster = null;
     try {
-      HdfsConfiguration conf = new HdfsConfiguration();
+      HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(8).build();
       cluster.waitActive();
       
@@ -124,7 +124,7 @@ public class TestDatanodeRegistration {
    */
   @Test
   public void testChangeIpcPort() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
@@ -171,7 +171,7 @@ public class TestDatanodeRegistration {
     final int DN_INFO_PORT = 12346;
     final int DN_INFO_SECURE_PORT = 12347;
     final int DN_IPC_PORT = 12348;
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
@@ -220,7 +220,7 @@ public class TestDatanodeRegistration {
 
   @Test
   public void testRegistrationWithDifferentSoftwareVersions() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_MIN_SUPPORTED_NAMENODE_VERSION_KEY, "3.0.0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_KEY, "3.0.0");
     MiniDFSCluster cluster = null;
@@ -271,7 +271,7 @@ public class TestDatanodeRegistration {
   @Test
   public void testRegistrationWithDifferentSoftwareVersionsDuringUpgrade()
       throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_MIN_SUPPORTED_NAMENODE_VERSION_KEY, "1.0.0");
     MiniDFSCluster cluster = null;
     try {
@@ -329,7 +329,7 @@ public class TestDatanodeRegistration {
   // a forced re-registration on the next heartbeat.
   @Test
   public void testForcedRegistration() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 4);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, Integer.MAX_VALUE);
 

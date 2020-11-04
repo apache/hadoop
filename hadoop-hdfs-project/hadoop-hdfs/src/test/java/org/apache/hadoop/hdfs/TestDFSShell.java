@@ -780,7 +780,7 @@ public class TestDFSShell {
 
   @Test
   public void testMoveWithTargetPortEmpty() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
@@ -812,8 +812,8 @@ public class TestDFSShell {
 
   @Test (timeout = 30000)
   public void testURIPaths() throws Exception {
-    Configuration srcConf = new HdfsConfiguration();
-    Configuration dstConf = new HdfsConfiguration();
+    Configuration srcConf = DFSTestUtil.newHdfsConfiguration();
+    Configuration dstConf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster srcCluster =  null;
     MiniDFSCluster dstCluster = null;
     File bak = new File(PathUtils.getTestDir(getClass()), "testURIPaths");
@@ -1411,7 +1411,7 @@ public class TestDFSShell {
 
   @Test (timeout = 30000)
   public void testFilePermissions() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     //test chmod on local fs
     FileSystem fs = FileSystem.getLocal(conf);
@@ -1967,7 +1967,7 @@ public class TestDFSShell {
     final String fname = "testGet.txt";
     Path root = new Path("/test/get");
     final Path remotef = new Path(root, fname);
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     // Set short retry timeouts so this test runs faster
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     TestGetRunner runner = new TestGetRunner() {
@@ -2919,7 +2919,7 @@ public class TestDFSShell {
   private void deleteFileUsingTrash(
       boolean serverTrash, boolean clientTrash) throws Exception {
     // Run a miniCluster, optionally with trash enabled on the server
-    Configuration serverConf = new HdfsConfiguration();
+    Configuration serverConf = DFSTestUtil.newHdfsConfiguration();
     if (serverTrash) {
       serverConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
     }
@@ -2987,7 +2987,7 @@ public class TestDFSShell {
     createLocalFileWithRandomData(inputFileLength, file1);
     createLocalFileWithRandomData(inputFileLength, file2);
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
 
@@ -3486,7 +3486,7 @@ public class TestDFSShell {
 
   @Test (timeout = 30000)
   public void testListReserved() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     FileSystem fs = cluster.getFileSystem();

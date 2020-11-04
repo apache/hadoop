@@ -96,7 +96,7 @@ public class TestAuditLogger {
     DummyAuditLogger.logCount = 0;
     DummyAuditLogger.remoteAddr = null;
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);    
   }
 
@@ -105,7 +105,7 @@ public class TestAuditLogger {
    */
   @Test
   public void testAuditLogger() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
         DummyAuditLogger.class.getName());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -129,7 +129,7 @@ public class TestAuditLogger {
    */
   @Test
   public void testDisableTopAuditLogger() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(NNTOP_ENABLED_KEY, false);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
@@ -149,7 +149,7 @@ public class TestAuditLogger {
 
   @Test
   public void testWebHdfsAuditLogger() throws IOException, URISyntaxException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
         DummyAuditLogger.class.getName());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -209,7 +209,7 @@ public class TestAuditLogger {
    */
   @Test
   public void testAuditLoggerWithSetPermission() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
         DummyAuditLogger.class.getName());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -236,7 +236,7 @@ public class TestAuditLogger {
    */
   @Test
   public void testAuditLoggerWithCallContext() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     conf.setInt(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, 128);
     conf.setInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, 40);
@@ -405,7 +405,7 @@ public class TestAuditLogger {
 
   @Test
   public void testAuditLogWithAclFailure() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
         DummyAuditLogger.class.getName());
@@ -462,7 +462,7 @@ public class TestAuditLogger {
    */
   @Test (timeout = 60000)
   public void testAuditLogForAcls() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
         DummyAuditLogger.class.getName());
@@ -525,7 +525,7 @@ public class TestAuditLogger {
    */
   @Test
   public void testBrokenLogger() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
         BrokenAuditLogger.class.getName());
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();

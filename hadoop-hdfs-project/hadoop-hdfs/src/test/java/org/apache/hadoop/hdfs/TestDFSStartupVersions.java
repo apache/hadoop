@@ -242,7 +242,7 @@ public class TestDFSStartupVersions {
   public void testVersions() throws Exception {
     UpgradeUtilities.initialize();
     Configuration conf = UpgradeUtilities.initializeStorageStateConf(1, 
-                                                      new HdfsConfiguration());
+                                                      DFSTestUtil.newHdfsConfiguration());
     StorageData[] versions = initializeVersions();
     UpgradeUtilities.createNameNodeStorageDirs(
         conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY), "current");

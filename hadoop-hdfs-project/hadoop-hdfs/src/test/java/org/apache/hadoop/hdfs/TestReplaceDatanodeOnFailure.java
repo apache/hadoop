@@ -60,7 +60,7 @@ public class TestReplaceDatanodeOnFailure {
   /** Test DEFAULT ReplaceDatanodeOnFailure policy. */
   @Test
   public void testDefaultPolicy() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final ReplaceDatanodeOnFailure p = ReplaceDatanodeOnFailure.get(conf);
 
     final DatanodeInfo[] infos = new DatanodeInfo[5];
@@ -117,10 +117,7 @@ public class TestReplaceDatanodeOnFailure {
   /** Test replace datanode on failure. */
   @Test
   public void testReplaceDatanodeOnFailure() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
-    // do not consider load factor when selecting a data node
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     //always replace a datanode
     ReplaceDatanodeOnFailure.write(Policy.ALWAYS, true, conf);
 
@@ -276,7 +273,7 @@ public class TestReplaceDatanodeOnFailure {
 
   @Test
   public void testAppend() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     final short REPLICATION = (short)3;
     
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf
@@ -326,7 +323,7 @@ public class TestReplaceDatanodeOnFailure {
 
   @Test
   public void testBestEffort() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     
     //always replace a datanode but do not throw exception
     ReplaceDatanodeOnFailure.write(Policy.ALWAYS, true, conf);

@@ -39,7 +39,7 @@ public class TestViewDistributedFileSystemContract
     extends TestHDFSFileSystemContract {
   private static MiniDFSCluster cluster;
   private static String defaultWorkingDirectory;
-  private static Configuration conf = new HdfsConfiguration();
+  private static Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   @BeforeClass
   public static void init() throws IOException {

@@ -50,7 +50,7 @@ import org.junit.Test;
  */
 public class TestDatanodeReport {
   static final Logger LOG = LoggerFactory.getLogger(TestDatanodeReport.class);
-  final static private Configuration conf = new HdfsConfiguration();
+  final static private Configuration conf = DFSTestUtil.newHdfsConfiguration();
   final static private int NUM_OF_DATANODES = 4;
 
   /**

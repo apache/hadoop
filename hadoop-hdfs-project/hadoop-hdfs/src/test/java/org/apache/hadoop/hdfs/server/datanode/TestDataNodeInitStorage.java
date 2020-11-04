@@ -24,13 +24,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.junit.Test;
-
-import static org.hamcrest.core.IsNot.not;
-import static org.junit.Assert.*;
 
 
 /**
@@ -75,7 +72,7 @@ public class TestDataNodeInitStorage {
   @Test (timeout = 60000)
   public void testDataNodeInitStorage() throws Throwable {
     // Create configuration to use SimulatedFsDatasetVerifier#Factory.
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     SimulatedFsDatasetVerifier.setFactory(conf);
 
     // Start a cluster so that SimulatedFsDatasetVerifier constructor is

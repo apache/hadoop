@@ -76,7 +76,7 @@ public class TestRBWBlockInvalidation {
     // reject the attempt to delete the block file from the RBW folder.
     assumeNotWindows();
 
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 2);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 300);
     conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
@@ -148,7 +148,7 @@ public class TestRBWBlockInvalidation {
    */
   @Test(timeout=120000)
   public void testRWRInvalidation() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
     // Set the deletion policy to be randomized rather than the default.
     // The default is based on disk space, which isn't controllable
@@ -249,7 +249,7 @@ public class TestRBWBlockInvalidation {
 
   @Test
   public void testRWRShouldNotAddedOnDNRestart() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set("dfs.client.block.write.replace-datanode-on-failure.enable",
         "false");
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)

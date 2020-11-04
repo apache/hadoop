@@ -65,7 +65,7 @@ public class TestFileStatus {
   
   @BeforeClass
   public static void testSetUp() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 2);
     cluster = new MiniDFSCluster.Builder(conf).build();
     fs = cluster.getFileSystem();

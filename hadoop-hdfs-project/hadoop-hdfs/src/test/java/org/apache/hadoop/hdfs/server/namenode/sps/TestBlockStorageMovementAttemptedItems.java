@@ -52,7 +52,7 @@ public class TestBlockStorageMovementAttemptedItems {
 
   @Before
   public void setup() throws Exception {
-    Configuration config = new HdfsConfiguration();
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
     Context ctxt = Mockito.mock(ExternalSPSContext.class);
     SPSService sps = new StoragePolicySatisfier(config);
     Mockito.when(ctxt.isRunning()).thenReturn(true);

@@ -116,7 +116,7 @@ public class TestRead {
 
   @Test(timeout=60000)
   public void testInterruptReader() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
         DelayedSimulatedFSDataset.Factory.class.getName());
 

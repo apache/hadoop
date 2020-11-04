@@ -48,7 +48,7 @@ import org.junit.Test;
  */
 public class TestLargeBlockReport {
 
-  private final HdfsConfiguration conf = new HdfsConfiguration();
+  private final HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
   private MiniDFSCluster cluster;
   private DataNode dn;
   private BPOfferService bpos;

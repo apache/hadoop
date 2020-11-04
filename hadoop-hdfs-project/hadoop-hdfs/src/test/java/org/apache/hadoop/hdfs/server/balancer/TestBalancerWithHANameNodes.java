@@ -34,10 +34,10 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
@@ -79,7 +79,7 @@ public class TestBalancerWithHANameNodes {
    */
   @Test(timeout = 60000)
   public void testBalancerWithHANameNodes() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     TestBalancer.initConf(conf);
     assertEquals(TEST_CAPACITIES.length, TEST_RACKS.length);
     NNConf nn1Conf = new MiniDFSNNTopology.NNConf("nn1");
@@ -142,7 +142,7 @@ public class TestBalancerWithHANameNodes {
    */
   @Test(timeout = 60000)
   public void testBalancerRequestSBNWithHA() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.setBoolean(DFS_HA_ALLOW_STALE_READ_KEY, true);
     conf.setLong(DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     //conf.setBoolean(DFS_HA_BALANCER_REQUEST_STANDBY_KEY, true);
@@ -194,7 +194,7 @@ public class TestBalancerWithHANameNodes {
 
   private void testBalancerWithObserver(boolean withObserverFailure)
       throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
     TestBalancer.initConf(conf);
     // Avoid the same FS being reused between tests
     conf.setBoolean("fs.hdfs.impl.disable.cache", true);

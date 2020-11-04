@@ -21,7 +21,7 @@ package org.apache.hadoop.hdfs.server.federation.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.router.RouterHDFSContract;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
@@ -83,7 +83,7 @@ public class TestRouterSecurityManager {
 
   @Test
   public void testCreateSecretManagerUsingReflection() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(
         DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS,
         MockDelegationTokenSecretManager.class.getName());

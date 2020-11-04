@@ -57,7 +57,7 @@ public class TestAvailableSpaceBlockPlacementPolicy {
 
   @BeforeClass
   public static void setupCluster() throws Exception {
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.setFloat(
       DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
       0.6f);

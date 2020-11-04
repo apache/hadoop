@@ -142,7 +142,7 @@ public class ITestProvidedImplementation {
     long seed = r.nextLong();
     r.setSeed(seed);
     System.out.println(name.getMethodName() + " seed: " + seed);
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
     conf.set(SingleUGIResolver.USER, singleUser);
     conf.set(SingleUGIResolver.GROUP, singleGroup);
 

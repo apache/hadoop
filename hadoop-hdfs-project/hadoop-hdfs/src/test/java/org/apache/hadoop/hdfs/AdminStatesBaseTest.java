@@ -85,7 +85,7 @@ public class AdminStatesBaseTest {
   public void setup() throws IOException {
     // Set up the hosts/exclude files.
     hostsFileWriter = new HostsFileWriter();
-    conf = new HdfsConfiguration();
+    conf = DFSTestUtil.newHdfsConfiguration();
 
     if (useCombinedHostFileManager) {
       conf.setClass(DFSConfigKeys.DFS_NAMENODE_HOSTS_PROVIDER_CLASSNAME_KEY,
@@ -93,8 +93,6 @@ public class AdminStatesBaseTest {
     }
 
     // Setup conf
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
         200);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, HEARTBEAT_INTERVAL);
