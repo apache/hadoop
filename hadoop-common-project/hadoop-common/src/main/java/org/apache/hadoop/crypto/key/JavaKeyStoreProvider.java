@@ -23,7 +23,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -104,7 +103,6 @@ public class JavaKeyStoreProvider extends KeyProvider {
   private final Path path;
   private final FileSystem fs;
   private FsPermission permissions;
-  private FileContext context;
   private KeyStore keyStore;
   private char[] password;
   private boolean changed = false;
@@ -132,7 +130,6 @@ public class JavaKeyStoreProvider extends KeyProvider {
     this.uri = uri;
     path = ProviderUtils.unnestUri(uri);
     fs = path.getFileSystem(conf);
-    context = FileContext.getFileContext(conf);
     locateKeystore();
     ReadWriteLock lock = new ReentrantReadWriteLock(true);
     readLock = lock.readLock();
@@ -641,7 +638,10 @@ public class JavaKeyStoreProvider extends KeyProvider {
 
   private void renameOrFail(Path src, Path dest)
       throws IOException {
-    context.rename(src, dest, org.apache.hadoop.fs.Options.Rename.NONE);
+    if (!fs.rename(src, dest)) {
+      throw new IOException("Rename unsuccessful : "
+          + String.format("'%s' to '%s'", src, dest));
+    }
   }
 
   @Override
