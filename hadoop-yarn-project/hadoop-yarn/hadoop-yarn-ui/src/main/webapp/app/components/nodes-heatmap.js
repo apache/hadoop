@@ -58,6 +58,9 @@ export default BaseChartComponent.extend({
         }
 
     },
+    getContainerCountByRack: function (rack) {
+        return this.containerCounts.has(rack) ? this.containerCounts.get(rack) : 0;
+    },
 
   bindTP: function(element, cell) {
     var currentToolTip = this.tooltip;
@@ -204,7 +207,7 @@ export default BaseChartComponent.extend({
       for (var j = 0; j < data.length; j++) {
         var rack = data[j].get("rack");
 
-        if (rack === racksArray[i]) {
+        if (rack === this.racks[i]) {
           this.addNode(g, xOffset, yOffset, colorFunc, data[j]);
           xOffset += this.CELL_MARGIN + this.CELL_WIDTH;
           if (xOffset + this.CELL_MARGIN + this.CELL_WIDTH >= layout.x2 -
@@ -338,7 +341,7 @@ export default BaseChartComponent.extend({
     }
     else if (selectedOption === this.containersLabel) {
         return "<p>Containers: " + Math.round(data.get("numContainers")) + " Containers</p>" +
-          "<p>Total Containers: " + this.getContainerCountByRack(data.get("rack") + " Containers</p>";
+          "<p>Total Containers: " + this.getContainerCountByRack(data.get("rack")) + " Containers</p>";
     }
   }
 });
