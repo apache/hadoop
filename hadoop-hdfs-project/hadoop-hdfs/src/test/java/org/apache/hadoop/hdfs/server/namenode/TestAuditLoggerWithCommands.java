@@ -1205,6 +1205,18 @@ public class TestAuditLoggerWithCommands {
     }
   }
 
+  @Test
+  public void testDeleteRoot() throws Exception {
+    Path srcDir = new Path("/");
+    fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
+    boolean result = fileSys.delete(srcDir, true);
+    fileSys.close();
+    assertTrue(result == false);
+    String aceDeletePattern =
+        ".*allowed=false.*ugi=theDoctor.*cmd=delete.*";
+    verifyAuditLogs(aceDeletePattern);
+  }  
+
   private void verifyAuditRestoreFailedStorageACE(
       FSNamesystem fsNamesystem, String arg) throws IOException {
     String operationName = fsNamesystem.getFailedStorageCommand(arg);
