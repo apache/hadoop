@@ -19,8 +19,6 @@ testresourcesdir=src/test/resources
 combconfsdir=$testresourcesdir/combinationConfigFiles
 combtestfile=$testresourcesdir/abfs-combination-test-configs.xml
 
-shouldbuild=1
-
 logdir=dev-support/testlogs
 testresultsregex="Results:(\n|.)*?Tests run:"
 testresultsfilename=
@@ -151,13 +149,11 @@ summary() {
 
 init() {
   checkdependencies
-  if [[ "$shouldbuild" -eq "1" ]]; then
-    if ! mvn clean install -DskipTests
-    then
-      echo ""
-      echo "Exiting. Build failed."
-      exit -1
-    fi
+  if ! mvn clean install -DskipTests
+  then
+    echo ""
+    echo "Exiting. Build failed."
+    exit -1
   fi
   starttime=$(date +"%Y-%m-%d_%H-%M-%S")
   mkdir -p "$logdir"
@@ -192,19 +188,22 @@ begin() {
 }
 
 parseoptions() {
-  while getopts ":c:a:n?t:" option; do
+runactivate=0
+runtests=0
+  while getopts ":c:a:t:" option; do
     case "${option}" in
       a)
+        if [[ "$runactivate" -eq "1" ]]; then
+          echo "-a Option is not multivalued"
+          exit 1
+        fi
+        runactivate=1
         combination=$(basename "$OPTARG" .xml)
-        setactiveconf
-        exit 0
         ;;
       c)
+        runtests=1
         combination=$(basename "$OPTARG" .xml)
         combinations+=("$combination")
-        ;;
-      n)
-        shouldbuild=0
         ;;
       t)
         threadcount=$OPTARG
@@ -215,10 +214,17 @@ parseoptions() {
         echo "Where:"
         echo "  -a COMBINATION_NAME   Specify the combination name which needs to be activated."
         echo "  -c COMBINATION_NAME   Specify the combination name for test runs"
-        echo "  -n Specify this option if there is no need to build before running the tests"
         echo "  -t THREAD_COUNT       Specify the thread count"
         exit 1
         ;;
     esac
   done
+  if [[ "$runactivate" -eq "1" && "$runtests" -eq "1" ]]; then
+    echo "Both activate (-a option) and test run combinations (-c option) cannot be specified together"
+    exit 1
+  fi
+  if [[ "$runactivate" -eq "1" ]]; then
+        setactiveconf
+        exit 0
+  fi
 }
