@@ -134,19 +134,15 @@ export default BaseChartComponent.extend({
     model.forEach(function (o) {
       data.push(o);
     });
-    
-    this.initRacks(data);
-    
+    this.initRacks(data);   
     if (selectedOption === this.containersLabel) {
             this.initContainerCounts(data);
     }
-
     this.chart.g.remove();
     this.chart.g = this.chart.svg.append("g");
     var g = this.chart.g;
     var layout = this.getLayout();
     layout.margin = 50;
-    
     var xOffset = layout.margin;
     var yOffset = layout.margin * 3;
 
@@ -190,7 +186,6 @@ export default BaseChartComponent.extend({
     }
 
     var chartXOffset = -1;
-    
     for (var i = 0; i < this.racks.length; i++) {
       text = g.append("text")
         .text(this.racks[i])
