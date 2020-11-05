@@ -313,7 +313,7 @@ public class TestStripedINodeFile {
       final Path ecFile = new Path(ecDir, "ecFile");
       final Path contiguousFile = new Path(parentDir, "someFile");
       final DistributedFileSystem dfs;
-      final Configuration conf = new Configuration();
+      final Configuration conf = DFSTestUtil.newConfiguration();
       final short GROUP_SIZE = (short) (testECPolicy.getNumDataUnits() +
           testECPolicy.getNumParityUnits());
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY, 2);

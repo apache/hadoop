@@ -75,7 +75,7 @@ public class TestQuotaWithStripedBlocks {
     ecDir = new Path("/ec");
     diskQuota = blockSize * (groupSize + 1);
 
-    final Configuration conf = new Configuration();
+    final Configuration conf = DFSTestUtil.newConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
     cluster.waitActive();

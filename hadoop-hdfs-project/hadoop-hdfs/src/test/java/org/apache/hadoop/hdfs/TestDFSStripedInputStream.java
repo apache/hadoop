@@ -69,7 +69,7 @@ public class TestDFSStripedInputStream {
       LoggerFactory.getLogger(TestDFSStripedInputStream.class);
 
   private MiniDFSCluster cluster;
-  private Configuration conf = new Configuration();
+  private Configuration conf = DFSTestUtil.newConfiguration();
   private DistributedFileSystem fs;
   private final Path dirPath = new Path("/striped");
   private Path filePath = new Path(dirPath, "file");

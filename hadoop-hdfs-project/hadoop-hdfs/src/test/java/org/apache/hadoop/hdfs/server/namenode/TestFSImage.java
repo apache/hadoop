@@ -96,13 +96,13 @@ public class TestFSImage {
 
   @Test
   public void testPersist() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     testPersistHelper(conf);
   }
 
   @Test
   public void testCompression() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
     setCompressCodec(conf, "org.apache.hadoop.io.compress.DefaultCodec");
     setCompressCodec(conf, "org.apache.hadoop.io.compress.GzipCodec");
@@ -112,7 +112,7 @@ public class TestFSImage {
   @Test
   public void testNativeCompression() throws IOException {
     Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
     setCompressCodec(conf, "org.apache.hadoop.io.compress.Lz4Codec");
   }
@@ -260,7 +260,7 @@ public class TestFSImage {
    */
   @Test
   public void testSaveAndLoadStripedINodeFile() throws IOException{
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
@@ -281,7 +281,7 @@ public class TestFSImage {
   @Test
   public void testSaveAndLoadStripedINodeFileUC() throws IOException {
     // construct a INode with StripedBlock for saving and loading
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
@@ -340,7 +340,7 @@ public class TestFSImage {
    */
   @Test
   public void testDigest() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
@@ -366,7 +366,7 @@ public class TestFSImage {
    */
   @Test(timeout=60000)
   public void testLoadMtimeAtime() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
@@ -413,7 +413,7 @@ public class TestFSImage {
    */
   @Test(timeout=60000)
   public void testCtime() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     MiniDFSCluster cluster = null;
     try {
       final long pre = Time.now();
@@ -751,7 +751,7 @@ public class TestFSImage {
   @Test
   public void testSaveAndLoadFileUnderReplicationPolicyDir()
       throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
@@ -836,7 +836,7 @@ public class TestFSImage {
    */
   @Test
   public void testSaveAndLoadErasureCodingPolicies() throws IOException{
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     final int blockSize = 16 * 1024 * 1024;
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     try (MiniDFSCluster cluster =
@@ -1064,7 +1064,7 @@ public class TestFSImage {
 
   @Test
   public void testParallelSaveAndLoad() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
 
     MiniDFSCluster cluster = null;
     try {
@@ -1105,7 +1105,7 @@ public class TestFSImage {
   @Test
   public void testNoParallelSectionsWithCompressionEnabled()
       throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
     conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
         "org.apache.hadoop.io.compress.GzipCodec");
@@ -1156,7 +1156,7 @@ public class TestFSImage {
 
   @Test
   public void testUpdateBlocksMapAndNameCacheAsync() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();

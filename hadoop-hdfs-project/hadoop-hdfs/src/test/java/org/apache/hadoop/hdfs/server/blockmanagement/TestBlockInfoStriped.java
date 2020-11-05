@@ -229,7 +229,7 @@ public class TestBlockInfoStriped {
     int parityBlocks = testECPolicy.getNumParityUnits();
     int totalSize = dataBlocks + parityBlocks;
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     try (MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf, builderBaseDir).numDataNodes(totalSize)
             .build()) {

@@ -40,7 +40,7 @@ public class TestGetFileChecksum {
 
   @Before
   public void setUp() throws Exception {
-    conf = new Configuration();
+    conf = DFSTestUtil.newConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .build();

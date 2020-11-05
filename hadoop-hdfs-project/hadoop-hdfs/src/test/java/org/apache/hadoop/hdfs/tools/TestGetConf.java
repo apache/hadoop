@@ -548,9 +548,10 @@ public class TestGetConf {
       }
     }
   }
+
   @Test
-  public void TestGetConfExcludeCommand() throws Exception{
-  	HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
+  public void testGetConfExcludeCommand() throws Exception {
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     // Set up the hosts/exclude files.
     HostsFileWriter hostsFileWriter = new HostsFileWriter();
     hostsFileWriter.initialize(conf, "GetConf");
@@ -558,13 +559,13 @@ public class TestGetConf {
 
     String[] args = {"-excludeFile"};
     String ret = runTool(conf, args, true);
-    assertEquals(excludeFile.toUri().getPath(),ret.trim());
+    assertEquals(excludeFile.toUri().getPath(), ret.trim());
     hostsFileWriter.cleanup();
   }
-  
+
   @Test
-  public void TestGetConfIncludeCommand() throws Exception{
-  	HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
+  public void testGetConfIncludeCommand() throws Exception {
+    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
     // Set up the hosts/exclude files.
     HostsFileWriter hostsFileWriter = new HostsFileWriter();
     hostsFileWriter.initialize(conf, "GetConf");
@@ -573,7 +574,7 @@ public class TestGetConf {
     // Setup conf
     String[] args = {"-includeFile"};
     String ret = runTool(conf, args, true);
-    assertEquals(hostsFile.toUri().getPath(),ret.trim());
+    assertEquals(hostsFile.toUri().getPath(), ret.trim());
     hostsFileWriter.cleanup();
   }
 

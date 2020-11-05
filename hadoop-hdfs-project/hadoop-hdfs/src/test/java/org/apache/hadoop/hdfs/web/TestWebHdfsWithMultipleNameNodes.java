@@ -50,7 +50,7 @@ public class TestWebHdfsWithMultipleNameNodes {
     DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
   }
 
-  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   private static MiniDFSCluster cluster;
   private static WebHdfsFileSystem[] webhdfs;
 
@@ -68,7 +68,7 @@ public class TestWebHdfsWithMultipleNameNodes {
       throws Exception {
     LOG.info("nNameNodes=" + nNameNodes + ", nDataNodes=" + nDataNodes);
 
-    cluster = new MiniDFSCluster.Builder(conf)
+    cluster = new MiniDFSCluster.Builder(CONF)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(nNameNodes))
         .numDataNodes(nDataNodes)
         .build();
@@ -79,7 +79,7 @@ public class TestWebHdfsWithMultipleNameNodes {
       final InetSocketAddress addr = cluster.getNameNode(i).getHttpAddress();
       final String uri = WebHdfsConstants.WEBHDFS_SCHEME + "://"
           + addr.getHostName() + ":" + addr.getPort() + "/";
-      webhdfs[i] = (WebHdfsFileSystem)FileSystem.get(new URI(uri), conf);
+      webhdfs[i] = (WebHdfsFileSystem)FileSystem.get(new URI(uri), CONF);
     }
   }
 

@@ -70,7 +70,7 @@ public class TestAddOverReplicatedStripedBlocks {
 
   @Before
   public void setup() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     // disable block recovery
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);

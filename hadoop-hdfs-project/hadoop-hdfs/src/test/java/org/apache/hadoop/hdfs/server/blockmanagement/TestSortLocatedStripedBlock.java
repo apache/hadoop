@@ -504,7 +504,7 @@ public class TestSortLocatedStripedBlock {
   }
 
   private static DatanodeManager mockDatanodeManager() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,

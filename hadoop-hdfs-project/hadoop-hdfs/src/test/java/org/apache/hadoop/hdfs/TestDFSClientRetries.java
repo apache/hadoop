@@ -915,7 +915,7 @@ public class TestDFSClientRetries {
   public void testRetryOnChecksumFailure() throws Exception {
     HdfsConfiguration config = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster =
-      new MiniDFSCluster.Builder(config).numDataNodes(1).build();
+        new MiniDFSCluster.Builder(config).numDataNodes(1).build();
 
     try {
       final short REPL_FACTOR = 1;

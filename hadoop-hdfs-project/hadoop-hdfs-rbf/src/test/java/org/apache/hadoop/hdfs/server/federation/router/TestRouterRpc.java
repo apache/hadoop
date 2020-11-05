@@ -198,7 +198,7 @@ public class TestRouterRpc {
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
-    Configuration namenodeConf = new Configuration();
+    Configuration namenodeConf = DFSTestUtil.newConfiguration();
     namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
         true);
     // It's very easy to become overloaded for some specific dn in this small
@@ -210,7 +210,7 @@ public class TestRouterRpc {
     cluster.addNamenodeOverrides(namenodeConf);
     cluster.setIndependentDNs();
 
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 5);
     cluster.addNamenodeOverrides(conf);
     // Start NNs and DNs and wait until ready

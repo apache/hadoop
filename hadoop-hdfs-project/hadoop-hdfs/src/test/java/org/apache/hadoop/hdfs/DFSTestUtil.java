@@ -267,11 +267,23 @@ public class DFSTestUtil {
   }
 
   /**
-   * Create a new HA-enabled configuration.
+   * Create a new Hdfs configuration.
    */
   public static HdfsConfiguration newHdfsConfiguration() {
     HdfsConfiguration conf = new HdfsConfiguration();
     // set default values
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+        DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
+    return conf;
+  }
+
+  /**
+   * Create a new Configuration.
+   * @return return Configuration with DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD
+   *         disabled.
+   */
+  public static Configuration newConfiguration() {
+    Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
     return conf;

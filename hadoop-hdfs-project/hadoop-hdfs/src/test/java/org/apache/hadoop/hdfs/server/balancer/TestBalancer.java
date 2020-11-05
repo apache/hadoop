@@ -92,7 +92,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
@@ -1684,7 +1683,7 @@ public class TestBalancer {
   public void testBalancerWithRamDisk() throws Exception {
     final int SEED = 0xFADED;
     final short REPL_FACT = 1;
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
 
     final int defaultRamDiskCapacity = 10;
     final long ramDiskStorageLimit =
@@ -2058,7 +2057,7 @@ public class TestBalancer {
 
   @Test(timeout = 200000)
   public void testBalancerWithStripedFile() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     initConfWithStripe(conf);
     NameNodeConnector.setWrite2IdFile(true);
     doTestBalancerWithStripedFile(conf);
@@ -2148,7 +2147,7 @@ public class TestBalancer {
     } finally {
       // Reset UGI so that other tests are not affected.
       UserGroupInformation.reset();
-      UserGroupInformation.setConfiguration(new Configuration());
+      UserGroupInformation.setConfiguration(DFSTestUtil.newConfiguration());
     }
   }
 

@@ -211,7 +211,7 @@ public class TestBlockTokenWithDFS {
 
   // get a conf for testing
   protected Configuration getConf(int numDataNodes) {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", BLOCK_SIZE);

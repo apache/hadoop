@@ -32,7 +32,7 @@ public class TestDecommissionWithStripedBackoffMonitor
 
   @Override
   protected Configuration createConfiguration() {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     conf.setClass(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MONITOR_CLASS,
         DatanodeAdminBackoffMonitor.class, DatanodeAdminMonitorInterface.class);
     return conf;

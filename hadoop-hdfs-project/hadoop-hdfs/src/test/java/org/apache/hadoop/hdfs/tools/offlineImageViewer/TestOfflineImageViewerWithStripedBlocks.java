@@ -59,7 +59,7 @@ public class TestOfflineImageViewerWithStripedBlocks {
   @Before
   public void setup() throws IOException {
     int numDNs = dataBlocks + parityBlocks + 2;
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();

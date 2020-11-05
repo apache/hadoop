@@ -83,7 +83,7 @@ public class TestFileChecksum {
   @Before
   public void setup() throws IOException {
     int numDNs = dataBlocks + parityBlocks + 2;
-    conf = new Configuration();
+    conf = DFSTestUtil.newConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);

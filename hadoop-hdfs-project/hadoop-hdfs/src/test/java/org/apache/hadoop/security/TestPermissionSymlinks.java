@@ -55,7 +55,7 @@ public class TestPermissionSymlinks {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestPermissionSymlinks.class);
-  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   // Non-super user to run commands with
   private static final UserGroupInformation user = UserGroupInformation
       .createRemoteUser("myuser");
@@ -71,10 +71,10 @@ public class TestPermissionSymlinks {
   
   @BeforeClass
   public static void beforeClassSetUp() throws Exception {
-    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
-    conf.set(FsPermission.UMASK_LABEL, "000");
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    CONF.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
+    CONF.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    CONF.set(FsPermission.UMASK_LABEL, "000");
+    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(3).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     wrapper = new FileSystemTestWrapper(fs);
@@ -149,7 +149,7 @@ public class TestPermissionSymlinks {
       user.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws IOException {
-          FileContext myfc = FileContext.getFileContext(conf);
+          FileContext myfc = FileContext.getFileContext(CONF);
           myfc.delete(link, false);
           return null;
         }
@@ -166,7 +166,7 @@ public class TestPermissionSymlinks {
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
-        FileContext myfc = FileContext.getFileContext(conf);
+        FileContext myfc = FileContext.getFileContext(CONF);
         myfc.delete(link, false);
         return null;
       }
@@ -199,7 +199,7 @@ public class TestPermissionSymlinks {
       user.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws IOException {
-          FileContext myfc = FileContext.getFileContext(conf);
+          FileContext myfc = FileContext.getFileContext(CONF);
           myfc.open(link).read();
           return null;
         }
@@ -232,7 +232,7 @@ public class TestPermissionSymlinks {
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
-        FileContext myfc = FileContext.getFileContext(conf);
+        FileContext myfc = FileContext.getFileContext(CONF);
         FileStatus stat = myfc.getFileLinkStatus(link);
         assertEquals("Expected link's FileStatus path to match link!",
             link.makeQualified(fs.getUri(), fs.getWorkingDirectory()), stat.getPath());
@@ -272,7 +272,7 @@ public class TestPermissionSymlinks {
       @Override
       public Object run() throws IOException {
         // First FileContext
-        FileContext myfc = FileContext.getFileContext(conf);
+        FileContext myfc = FileContext.getFileContext(CONF);
         Path newlink = new Path(linkParent, "newlink");
         myfc.rename(link, newlink, Rename.NONE);
         Path linkTarget = myfc.getLinkTarget(newlink);
@@ -306,7 +306,7 @@ public class TestPermissionSymlinks {
       user.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws IOException {
-          FileContext myfc = FileContext.getFileContext(conf);
+          FileContext myfc = FileContext.getFileContext(CONF);
           Path newlink = new Path(targetParent, "newlink");
           myfc.rename(link, newlink, Rename.NONE);
           return null;
@@ -349,7 +349,7 @@ public class TestPermissionSymlinks {
       @Override
       public Object run() throws IOException {
         // First FileContext
-        FileSystem myfs = FileSystem.get(conf);
+        FileSystem myfs = FileSystem.get(CONF);
         Path newlink = new Path(linkParent, "newlink");
         myfs.rename(link, newlink);
         Path linkTarget = myfs.getLinkTarget(newlink);
@@ -383,7 +383,7 @@ public class TestPermissionSymlinks {
       user.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws IOException {
-          FileSystem myfs = FileSystem.get(conf);
+          FileSystem myfs = FileSystem.get(CONF);
           Path newlink = new Path(targetParent, "newlink");
           myfs.rename(link, newlink);
           return null;
@@ -406,7 +406,7 @@ public class TestPermissionSymlinks {
     FileContext myfc = user.doAs(new PrivilegedExceptionAction<FileContext>() {
       @Override
       public FileContext run() throws IOException {
-        return FileContext.getFileContext(conf);
+        return FileContext.getFileContext(CONF);
       }
     });
 

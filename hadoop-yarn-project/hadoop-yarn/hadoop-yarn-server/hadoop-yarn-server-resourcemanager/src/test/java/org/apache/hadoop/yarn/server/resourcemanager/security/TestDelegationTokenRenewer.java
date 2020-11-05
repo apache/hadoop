@@ -56,6 +56,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -199,7 +200,7 @@ public class TestDelegationTokenRenewer {
  
   @BeforeClass
   public static void setUpClass() throws Exception {
-    conf = new Configuration();
+    conf = DFSTestUtil.newConfiguration();
     
     // create a fake FileSystem (MyFS) and assosiate it
     // with "hdfs" schema.

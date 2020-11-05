@@ -665,7 +665,7 @@ public class TestReplication {
     LOG.info("Test block replication when blockReceived is late" );
     final short numDataNodes = 3;
     final short replication = 3;
-    final Configuration conf = new Configuration();
+    final Configuration conf = DFSTestUtil.newConfiguration();
         conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numDataNodes).build();

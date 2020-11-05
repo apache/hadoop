@@ -53,7 +53,8 @@ import org.junit.Test;
 public class TestDFSPermission {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDFSPermission.class);
-  final private static Configuration CONFIG = DFSTestUtil.newHdfsConfiguration();
+  final private static Configuration CONFIG =
+      DFSTestUtil.newHdfsConfiguration();
   
   final private static String GROUP1_NAME = "group1";
   final private static String GROUP2_NAME = "group2";
@@ -72,8 +73,9 @@ public class TestDFSPermission {
   final private static short DEFAULT_UMASK = 022;
   final private static FsPermission DEFAULT_PERMISSION = 
     FsPermission.createImmutable((short) 0777);
-  final static private int NUM_TEST_PERMISSIONS = 
-    CONFIG.getInt("test.dfs.permission.num", 10) * (MAX_PERMISSION + 1) / 100;
+  final static private int NUM_TEST_PERMISSIONS =
+      CONFIG.getInt("test.dfs.permission.num",
+          10) * (MAX_PERMISSION + 1) / 100;
 
   final private static String PATH_NAME = "xx";
   final private static Path FILE_DIR_PATH = new Path("/", PATH_NAME);

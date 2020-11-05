@@ -55,7 +55,7 @@ import org.junit.Test;
  */
 public class TestIsMethodSupported {
   private static MiniDFSCluster cluster = null;
-  private static final HdfsConfiguration CONF =TestLease
+  private static final HdfsConfiguration CONF =
       DFSTestUtil.newHdfsConfiguration();
   private static InetSocketAddress nnAddress = null;
   private static InetSocketAddress dnAddress = null;
@@ -164,11 +164,11 @@ public class TestIsMethodSupported {
   
   @Test
   public void testRefreshAuthorizationPolicyProtocol() throws IOException {
-    RefreshAuthorizationPolicyProtocolClientSideTranslatorPB translator = 
-      (RefreshAuthorizationPolicyProtocolClientSideTranslatorPB)
-      NameNodeProxies.createNonHAProxy(CONF, nnAddress,
-          RefreshAuthorizationPolicyProtocol.class,
-          UserGroupInformation.getCurrentUser(), true).getProxy();
+    RefreshAuthorizationPolicyProtocolClientSideTranslatorPB translator =
+        (RefreshAuthorizationPolicyProtocolClientSideTranslatorPB)
+            NameNodeProxies.createNonHAProxy(CONF, nnAddress,
+                RefreshAuthorizationPolicyProtocol.class,
+                UserGroupInformation.getCurrentUser(), true).getProxy();
     assertTrue(translator.isMethodSupported("refreshServiceAcl"));
   }
   

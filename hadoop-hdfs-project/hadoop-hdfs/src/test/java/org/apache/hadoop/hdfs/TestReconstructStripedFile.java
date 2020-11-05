@@ -110,7 +110,7 @@ public class TestReconstructStripedFile {
     groupSize = dataBlkNum + parityBlkNum;
     dnNum = groupSize + parityBlkNum;
 
-    conf = new Configuration();
+    conf = DFSTestUtil.newConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,

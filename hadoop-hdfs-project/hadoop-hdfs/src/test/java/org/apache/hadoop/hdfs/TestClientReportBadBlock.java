@@ -77,7 +77,8 @@ public class TestClientReportBadBlock {
         .build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
-    buffersize = CONF.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
+    buffersize = CONF.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY,
+        4096);
   }
 
   @After
@@ -313,7 +314,9 @@ public class TestClientReportBadBlock {
   }
   
   private static void testFsckListCorruptFilesBlocks(Path filePath, int errorCode) throws Exception{
-    String outStr = runFsck(CONF, errorCode, true, filePath.toString(), "-list-corruptfileblocks");
+    String outStr =
+        runFsck(CONF, errorCode, true, filePath.toString(),
+            "-list-corruptfileblocks");
     LOG.info("fsck -list-corruptfileblocks out: " + outStr);
     if (errorCode != 0) {
       Assert.assertTrue(outStr.contains("CORRUPT files"));

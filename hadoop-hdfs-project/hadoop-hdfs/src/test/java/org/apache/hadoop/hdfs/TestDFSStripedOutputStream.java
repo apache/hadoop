@@ -88,7 +88,7 @@ public class TestDFSStripedOutputStream {
     System.out.println("EC policy = " + ecPolicy);
 
     int numDNs = dataBlocks + parityBlocks + 2;
-    conf = new Configuration();
+    conf = DFSTestUtil.newConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     if (ErasureCodeNative.isNativeCodeLoaded()) {

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -70,7 +71,7 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
     Configuration[] overlays = new Configuration[numDNs];
     for (int i = 0; i < overlays.length; i++) {
       int offset = i * 10;
-      Configuration c = new Configuration();
+      Configuration c = DFSTestUtil.newConfiguration();
       c.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:"
           + ServerSocketUtil.getPort(19866 + offset, 100));
       c.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:"
