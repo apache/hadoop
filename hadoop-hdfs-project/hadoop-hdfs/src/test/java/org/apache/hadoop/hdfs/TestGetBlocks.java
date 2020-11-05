@@ -178,16 +178,16 @@ public class TestGetBlocks {
   /** test getBlocks */
   @Test
   public void testGetBlocks() throws Exception {
-    final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
+    final Configuration config = DFSTestUtil.newHdfsConfiguration();
 
     final short REPLICATION_FACTOR = (short) 2;
     final int DEFAULT_BLOCK_SIZE = 1024;
 
-    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
-    CONF.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY,
-      DEFAULT_BLOCK_SIZE);
+    config.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    config.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY,
+        DEFAULT_BLOCK_SIZE);
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF)
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
               .numDataNodes(REPLICATION_FACTOR)
               .storagesPerDatanode(4)
               .build();
@@ -203,7 +203,7 @@ public class TestGetBlocks {
       DatanodeInfo[] dataNodes = null;
       boolean notWritten;
       final DFSClient dfsclient = new DFSClient(
-          DFSUtilClient.getNNAddress(CONF), CONF);
+          DFSUtilClient.getNNAddress(config), config);
       do {
         locatedBlocks = dfsclient.getNamenode()
             .getBlockLocations("/tmp.txt", 0, fileLen).getLocatedBlocks();
@@ -226,7 +226,7 @@ public class TestGetBlocks {
       // get RPC client to namenode
       InetSocketAddress addr = new InetSocketAddress("localhost",
           cluster.getNameNodePort());
-      NamenodeProtocol namenode = NameNodeProxies.createProxy(CONF,
+      NamenodeProtocol namenode = NameNodeProxies.createProxy(config,
           DFSUtilClient.getNNUri(addr), NamenodeProtocol.class).getProxy();
 
       // get blocks of size fileLen from dataNodes[0], with minBlockSize as

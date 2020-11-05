@@ -251,10 +251,10 @@ public class TestFsDatasetImpl {
   @Test(timeout=10000)
   public void testReadLockCanBeDisabledByConfig()
       throws Exception {
-    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
-    conf.setBoolean(
+    HdfsConfiguration config = DFSTestUtil.newHdfsConfiguration();
+    config.setBoolean(
         DFSConfigKeys.DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY, false);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
         .numDataNodes(1).build();
     try {
       cluster.waitActive();
@@ -626,16 +626,17 @@ public class TestFsDatasetImpl {
   
   @Test
   public void testDeletingBlocks() throws IOException {
-    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    HdfsConfiguration config = DFSTestUtil.newHdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config).build();
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
       
       FsDatasetSpi<?> ds = DataNodeTestUtils.getFSDataset(dn);
-      ds.addBlockPool(BLOCKPOOL, conf);
+      ds.addBlockPool(BLOCKPOOL, config);
       FsVolumeImpl vol;
-      try (FsDatasetSpi.FsVolumeReferences volumes = ds.getFsVolumeReferences()) {
+      try (FsDatasetSpi.FsVolumeReferences volumes =
+               ds.getFsVolumeReferences()) {
         vol = (FsVolumeImpl)volumes.get(0);
       }
 

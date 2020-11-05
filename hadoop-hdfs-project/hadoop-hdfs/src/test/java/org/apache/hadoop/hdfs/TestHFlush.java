@@ -55,8 +55,9 @@ public class TestHFlush {
    */
   @Test
   public void hFlush_01() throws IOException {
-    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
-        (short) 2, false, EnumSet.noneOf(SyncFlag.class));
+    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName,
+        AppendTestUtil.BLOCK_SIZE, (short) 2, false,
+        EnumSet.noneOf(SyncFlag.class));
   }
 
   /**
@@ -191,7 +192,8 @@ public class TestHFlush {
    */
   @Test
   public void hSyncUpdateLength_01() throws IOException {
-    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
+    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName,
+        AppendTestUtil.BLOCK_SIZE,
         (short) 2, true, EnumSet.of(SyncFlag.UPDATE_LENGTH));
   }
 
@@ -202,7 +204,8 @@ public class TestHFlush {
    */
   @Test
   public void hSyncEndBlock_01() throws IOException {
-    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
+    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName,
+        AppendTestUtil.BLOCK_SIZE,
         (short) 2, true, EnumSet.of(SyncFlag.END_BLOCK));
   }
 
@@ -214,7 +217,8 @@ public class TestHFlush {
    */
   @Test
   public void hSyncEndBlockAndUpdateLength() throws IOException {
-    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
+    doTheJob(DFSTestUtil.newHdfsConfiguration(), fName,
+        AppendTestUtil.BLOCK_SIZE,
         (short) 2, true, EnumSet.of(SyncFlag.END_BLOCK, SyncFlag.UPDATE_LENGTH));
   }
 

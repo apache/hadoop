@@ -69,8 +69,8 @@ public class TestHAStateTransitions {
   private static final String TEST_FILE_STR = TEST_FILE_PATH.toUri().getPath();
   private static final String TEST_FILE_DATA =
     "Hello state transitioning world";
-  private static final StateChangeRequestInfo REQ_INFO = new StateChangeRequestInfo(
-      RequestSource.REQUEST_BY_USER_FORCED);
+  private static final StateChangeRequestInfo REQ_INFO =
+      new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER_FORCED);
   
   static {
     GenericTestUtils.setLogLevel(EditLogTailer.LOG, Level.TRACE);
@@ -561,10 +561,11 @@ public class TestHAStateTransitions {
    */
   @Test(timeout = 300000)
   public void testIsAtLeastOneActive() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration())
-        .nnTopology(MiniDFSNNTopology.simpleHATopology())
-        .numDataNodes(0)
-        .build();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration())
+            .nnTopology(MiniDFSNNTopology.simpleHATopology())
+            .numDataNodes(0)
+            .build();
     try {
       Configuration conf = DFSTestUtil.newHdfsConfiguration();
       HATestUtil.setFailoverConfigurations(cluster, conf);

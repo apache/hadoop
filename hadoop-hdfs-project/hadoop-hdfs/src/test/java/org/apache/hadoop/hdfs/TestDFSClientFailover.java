@@ -299,26 +299,26 @@ public class TestDFSClientFailover {
   @Test(timeout=60000)
   public void testCreateProxyDoesntDnsResolveLogicalURI() throws IOException {
     final NameService spyNS = spyOnNameService();
-    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+    final Configuration config = DFSTestUtil.newHdfsConfiguration();
     final String service = "nameservice1";
     final String namenode = "namenode113";
-    conf.set(DFSConfigKeys.DFS_NAMESERVICES, service);
-    conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://" + service);
-    conf.set(
+    config.set(DFSConfigKeys.DFS_NAMESERVICES, service);
+    config.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://" + service);
+    config.set(
         HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + service,
         "org.apache.hadoop.hdfs.server.namenode.ha."
         + "ConfiguredFailoverProxyProvider");
-    conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + service,
+    config.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + service,
         namenode);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + service + "."
+    config.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + service + "."
         + namenode, "localhost:8020");
 
     // call createProxy implicitly and explicitly
     Path p = new Path("/");
-    p.getFileSystem(conf);
-    NameNodeProxiesClient.createProxyWithClientProtocol(conf,
-        FileSystem.getDefaultUri(conf), null);
-    NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
+    p.getFileSystem(config);
+    NameNodeProxiesClient.createProxyWithClientProtocol(config,
+        FileSystem.getDefaultUri(config), null);
+    NameNodeProxies.createProxy(config, FileSystem.getDefaultUri(config),
         NamenodeProtocol.class, null);
 
     // Ensure that the logical hostname was never resolved.

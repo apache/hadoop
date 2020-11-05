@@ -40,7 +40,7 @@ import org.junit.Test;
 
 
 public class TestNNWithQJM {
-  final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  private final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   private MiniJournalCluster mjc = null;
   private final Path TEST_PATH = new Path("/test-dir");
   private final Path TEST_PATH_2 = new Path("/test-dir-2");

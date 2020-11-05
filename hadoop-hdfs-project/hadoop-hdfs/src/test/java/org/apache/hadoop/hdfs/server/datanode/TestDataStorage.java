@@ -182,7 +182,8 @@ public class TestDataStorage {
     // from the value before the restart.
     storage.unlockAll();
     DataNode newMockDN = Mockito.mock(DataNode.class);
-    Mockito.when(newMockDN.getConf()).thenReturn(DFSTestUtil.newHdfsConfiguration());
+    Mockito.when(newMockDN.getConf())
+        .thenReturn(DFSTestUtil.newHdfsConfiguration());
     DataStorage newStorage = new DataStorage();
     NamespaceInfo newNamespaceInfo = new NamespaceInfo(0, CLUSTER_ID2,
         DEFAULT_BPID, CTIME, BUILD_VERSION, SOFTWARE_VERSION);

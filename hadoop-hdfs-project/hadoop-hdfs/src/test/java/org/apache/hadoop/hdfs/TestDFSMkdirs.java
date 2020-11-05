@@ -90,8 +90,9 @@ public class TestDFSMkdirs {
    */
   @Test
   public void testMkdir() throws IOException {
-    Configuration conf = DFSTestUtil.newHdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(config).numDataNodes(2).build();
     DistributedFileSystem dfs = cluster.getFileSystem();
     try {
       // Create a dir in root dir, should succeed

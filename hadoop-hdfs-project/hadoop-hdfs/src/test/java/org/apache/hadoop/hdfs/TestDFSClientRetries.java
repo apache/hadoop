@@ -913,9 +913,9 @@ public class TestDFSClientRetries {
    */
   @Test
   public void testRetryOnChecksumFailure() throws Exception {
-    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
+    HdfsConfiguration config = DFSTestUtil.newHdfsConfiguration();
     MiniDFSCluster cluster =
-      new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      new MiniDFSCluster.Builder(config).numDataNodes(1).build();
 
     try {
       final short REPL_FACTOR = 1;
@@ -935,7 +935,7 @@ public class TestDFSClientRetries {
 
       InetSocketAddress nnAddr =
         new InetSocketAddress("localhost", cluster.getNameNodePort());
-      DFSClient client = new DFSClient(nnAddr, conf);
+      DFSClient client = new DFSClient(nnAddr, config);
       DFSInputStream dis = client.open(path.toString());
       byte[] arr = new byte[(int)FILE_LENGTH];
       for (int i = 0; i < 2; ++i) {

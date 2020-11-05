@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
@@ -238,16 +237,16 @@ public class TestDiskBalancerRPC {
 
   @Test
   public void testMoveBlockAcrossVolume() throws Exception {
-    Configuration conf = DFSTestUtil.newHdfsConfiguration();
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
     final int defaultBlockSize = 100;
-    conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultBlockSize);
-    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, defaultBlockSize);
+    config.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+    config.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultBlockSize);
+    config.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, defaultBlockSize);
     String fileName = "/tmp.txt";
     Path filePath = new Path(fileName);
     final int numDatanodes = 1;
     final int dnIndex = 0;
-    cluster = new MiniDFSCluster.Builder(conf)
+    cluster = new MiniDFSCluster.Builder(config)
         .numDataNodes(numDatanodes).build();
     FsVolumeImpl source = null;
     FsVolumeImpl dest = null;

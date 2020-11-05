@@ -90,9 +90,9 @@ public class TestBlockStoragePolicy {
 
   @Test (timeout=300000)
   public void testConfigKeyEnabled() throws IOException {
-    Configuration conf = DFSTestUtil.newHdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, true);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
+    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, true);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
         .numDataNodes(1).build();
     try {
       cluster.waitActive();
@@ -110,9 +110,9 @@ public class TestBlockStoragePolicy {
    */
   @Test (timeout=300000, expected=IOException.class)
   public void testConfigKeyDisabled() throws IOException {
-    Configuration conf = DFSTestUtil.newHdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
+    config.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
         .numDataNodes(1).build();
     try {
       cluster.waitActive();

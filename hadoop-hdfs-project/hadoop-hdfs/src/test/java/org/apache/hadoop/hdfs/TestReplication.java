@@ -549,7 +549,9 @@ public class TestReplication {
    */
   @Test
   public void testReplicateLenMismatchedBlock() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration()).numDataNodes(2).build();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(DFSTestUtil.newHdfsConfiguration())
+            .numDataNodes(2).build();
     try {
       cluster.waitActive();
       // test truncated block

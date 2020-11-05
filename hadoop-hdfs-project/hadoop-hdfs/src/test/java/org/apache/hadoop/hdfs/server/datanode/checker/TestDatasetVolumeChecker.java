@@ -154,7 +154,8 @@ public class TestDatasetVolumeChecker {
         NUM_VOLUMES, expectedVolumeHealth);
     final FsDatasetSpi<FsVolumeSpi> dataset = makeDataset(volumes);
     final DatasetVolumeChecker checker =
-        new DatasetVolumeChecker(DFSTestUtil.newHdfsConfiguration(), new FakeTimer());
+        new DatasetVolumeChecker(DFSTestUtil.newHdfsConfiguration(),
+            new FakeTimer());
     checker.setDelegateChecker(new DummyChecker());
 
     Set<FsVolumeSpi> failedVolumes = checker.checkAllVolumes(dataset);

@@ -122,17 +122,17 @@ public class TestCacheDirectives {
   private static final long CACHE_CAPACITY = 64 * 1024 / NUM_DATANODES;
 
   private static HdfsConfiguration createCachingConf() {
-    HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
-    conf.setLong(DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    conf.setLong(DFS_DATANODE_MAX_LOCKED_MEMORY_KEY, CACHE_CAPACITY);
-    conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
-    conf.setLong(DFS_CACHEREPORT_INTERVAL_MSEC_KEY, 1000);
-    conf.setLong(DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 1000);
+    HdfsConfiguration config = DFSTestUtil.newHdfsConfiguration();
+    config.setLong(DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    config.setLong(DFS_DATANODE_MAX_LOCKED_MEMORY_KEY, CACHE_CAPACITY);
+    config.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    config.setLong(DFS_CACHEREPORT_INTERVAL_MSEC_KEY, 1000);
+    config.setLong(DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 1000);
     // set low limits here for testing purposes
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES, 2);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES,
-        2);
-    return conf;
+    config.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES, 2);
+    config.setInt(
+        DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES, 2);
+    return config;
   }
 
   /**

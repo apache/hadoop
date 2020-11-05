@@ -431,13 +431,13 @@ public class TestPendingReconstruction {
    */
   @Test
   public void testPendingAndInvalidate() throws Exception {
-    final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
-    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
-    CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+    final Configuration config = DFSTestUtil.newHdfsConfiguration();
+    config.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
+    config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
         DFS_REPLICATION_INTERVAL);
-    CONF.setInt(DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
+    config.setInt(DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         DFS_REPLICATION_INTERVAL);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config).numDataNodes(
         DATANODE_COUNT).build();
     cluster.waitActive();
 

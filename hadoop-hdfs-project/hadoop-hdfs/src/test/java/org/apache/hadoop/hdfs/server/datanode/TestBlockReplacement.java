@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
@@ -92,7 +91,7 @@ public class TestBlockReplacement {
   
   @Test
   public void testBlockReplacement() throws Exception {
-    final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
+    final Configuration config = DFSTestUtil.newHdfsConfiguration();
     final String[] INITIAL_RACKS = {"/RACK0", "/RACK1", "/RACK2"};
     final String[] NEW_RACKS = {"/RACK2"};
 
@@ -100,10 +99,12 @@ public class TestBlockReplacement {
     final int DEFAULT_BLOCK_SIZE = 1024;
     final Random r = new Random();
     
-    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
-    CONF.setInt(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE/2);
-    CONF.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,500);
-    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(REPLICATION_FACTOR)
+    config.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    config.setInt(HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
+        DEFAULT_BLOCK_SIZE / 2);
+    config.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,500);
+    cluster =
+        new MiniDFSCluster.Builder(config).numDataNodes(REPLICATION_FACTOR)
                                               .racks(INITIAL_RACKS).build();
 
     try {
@@ -120,7 +121,7 @@ public class TestBlockReplacement {
       // get all datanodes
       InetSocketAddress addr = new InetSocketAddress("localhost",
           cluster.getNameNodePort());
-      DFSClient client = new DFSClient(addr, CONF);
+      DFSClient client = new DFSClient(addr, config);
       List<LocatedBlock> locatedBlocks = client.getNamenode().
         getBlockLocations("/tmp.txt", 0, DEFAULT_BLOCK_SIZE).getLocatedBlocks();
       assertEquals(1, locatedBlocks.size());
@@ -130,7 +131,7 @@ public class TestBlockReplacement {
       ExtendedBlock b = block.getBlock();
       
       // add a fourth datanode to the cluster
-      cluster.startDataNodes(CONF, 1, true, null, NEW_RACKS);
+      cluster.startDataNodes(config, 1, true, null, NEW_RACKS);
       cluster.waitActive();
       
       DatanodeInfo[] datanodes = client.datanodeReport(DatanodeReportType.ALL);

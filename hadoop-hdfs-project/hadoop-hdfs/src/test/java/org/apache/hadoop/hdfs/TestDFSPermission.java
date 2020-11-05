@@ -53,7 +53,7 @@ import org.junit.Test;
 public class TestDFSPermission {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDFSPermission.class);
-  final private static Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  final private static Configuration CONFIG = DFSTestUtil.newHdfsConfiguration();
   
   final private static String GROUP1_NAME = "group1";
   final private static String GROUP2_NAME = "group2";
@@ -73,7 +73,7 @@ public class TestDFSPermission {
   final private static FsPermission DEFAULT_PERMISSION = 
     FsPermission.createImmutable((short) 0777);
   final static private int NUM_TEST_PERMISSIONS = 
-    conf.getInt("test.dfs.permission.num", 10) * (MAX_PERMISSION + 1) / 100;
+    CONFIG.getInt("test.dfs.permission.num", 10) * (MAX_PERMISSION + 1) / 100;
 
   final private static String PATH_NAME = "xx";
   final private static Path FILE_DIR_PATH = new Path("/", PATH_NAME);
@@ -93,14 +93,14 @@ public class TestDFSPermission {
       LOG.info("NUM_TEST_PERMISSIONS=" + NUM_TEST_PERMISSIONS);
       
       // explicitly turn on permission checking
-      conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
+      CONFIG.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
       
       // create fake mapping for the groups
       Map<String, String[]> u2g_map = new HashMap<String, String[]> (3);
       u2g_map.put(USER1_NAME, new String[] {GROUP1_NAME, GROUP2_NAME });
       u2g_map.put(USER2_NAME, new String[] {GROUP2_NAME, GROUP3_NAME });
       u2g_map.put(USER3_NAME, new String[] {GROUP3_NAME, GROUP4_NAME });
-      DFSTestUtil.updateConfWithFakeGroupMapping(conf, u2g_map);
+      DFSTestUtil.updateConfWithFakeGroupMapping(CONFIG, u2g_map);
       
       // Initiate all four users
       SUPERUSER = UserGroupInformation.getCurrentUser();
@@ -117,7 +117,7 @@ public class TestDFSPermission {
 
   @Before
   public void setUp() throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster = new MiniDFSCluster.Builder(CONFIG).numDataNodes(3).build();
     cluster.waitActive();
   }
   
@@ -140,8 +140,8 @@ public class TestDFSPermission {
 
   private void initFileSystem(short umask) throws Exception {
     // set umask in configuration, converting to padded octal
-    conf.set(FsPermission.UMASK_LABEL, String.format("%1$03o", umask));
-    fs = FileSystem.get(conf);
+    CONFIG.set(FsPermission.UMASK_LABEL, String.format("%1$03o", umask));
+    fs = FileSystem.get(CONFIG);
   }
 
   private void closeFileSystem() throws Exception {
@@ -199,7 +199,7 @@ public class TestDFSPermission {
   }
 
   private void create(OpType op, Path name) throws IOException {
-    create(fs, conf, op, name);
+    create(fs, CONFIG, op, name);
   }
 
   /* create a file/directory with the default umask and permission */
@@ -212,7 +212,7 @@ public class TestDFSPermission {
   private void create(OpType op, Path name, short umask,
       FsPermission permission)
       throws IOException {
-    create(fs, conf, op, name, umask, permission);
+    create(fs, CONFIG, op, name, umask, permission);
   }
 
   /* create a file/directory with the given umask and permission */
@@ -283,7 +283,7 @@ public class TestDFSPermission {
    */
   @Test
   public void testImmutableFsPermission() throws IOException {
-    fs = FileSystem.get(conf);
+    fs = FileSystem.get(CONFIG);
 
     // set the permission of the root to be world-wide rwx
     fs.setPermission(new Path("/"),
@@ -300,13 +300,13 @@ public class TestDFSPermission {
     Path user1File = new Path("/BSS/user1/test");
 
     try {
-      conf.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "10");
-      fs = FileSystem.get(conf);
+      CONFIG.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "10");
+      fs = FileSystem.get(CONFIG);
 
       fs.mkdirs(rootDir);
       fs.setPermission(rootDir, new FsPermission((short) 0777));
 
-      fs = DFSTestUtil.login(fs, conf, USER1);
+      fs = DFSTestUtil.login(fs, CONFIG, USER1);
       fs.mkdirs(user1Dir);
       fs.setPermission(user1Dir, new FsPermission((short) 0755));
       fs.setOwner(user1Dir, USER1.getShortUserName(), GROUP2_NAME);
@@ -319,7 +319,7 @@ public class TestDFSPermission {
         // login as user2, attempt to delete /BSS/user1
         // this should fail because user2 has no permission to
         // its sub directory.
-        fs = DFSTestUtil.login(fs, conf, USER2);
+        fs = DFSTestUtil.login(fs, CONFIG, USER2);
         fs.delete(user1Dir, true);
         fail("User2 should not be allowed to delete user1's dir.");
       } catch (AccessControlException e) {
@@ -332,8 +332,8 @@ public class TestDFSPermission {
       assertTrue(fs.exists(user1Dir));
 
       try {
-        fs = DFSTestUtil.login(fs, conf, SUPERUSER);
-        Trash trash = new Trash(fs, conf);
+        fs = DFSTestUtil.login(fs, CONFIG, SUPERUSER);
+        Trash trash = new Trash(fs, CONFIG);
         Path trashRoot = trash.getCurrentTrashDir(user1Dir);
         while(true) {
           trashRoot = trashRoot.getParent();
@@ -347,8 +347,8 @@ public class TestDFSPermission {
         // login as user2, attempt to move /BSS/user1 to trash
         // this should also fail otherwise the directory will be
         // removed by trash emptier (emptier is running by superuser)
-        fs = DFSTestUtil.login(fs, conf, USER2);
-        Trash userTrash = new Trash(fs, conf);
+        fs = DFSTestUtil.login(fs, CONFIG, USER2);
+        Trash userTrash = new Trash(fs, CONFIG);
         assertTrue(userTrash.isEnabled());
         userTrash.moveToTrash(user1Dir);
         fail("User2 should not be allowed to move"
@@ -364,9 +364,9 @@ public class TestDFSPermission {
       // ensure /BSS/user1 still exists
       assertEquals(fs.exists(user1Dir), true);
     } finally {
-      fs = DFSTestUtil.login(fs, conf, SUPERUSER);
+      fs = DFSTestUtil.login(fs, CONFIG, SUPERUSER);
       fs.delete(rootDir, true);
-      conf.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "0");
+      CONFIG.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "0");
     }
   }
 
@@ -396,7 +396,7 @@ public class TestDFSPermission {
   /* check ownership is set correctly for a file or directory */
   private void testOwnership(OpType op) throws Exception {
     // case 1: superuser create a file/directory
-    fs = FileSystem.get(conf);
+    fs = FileSystem.get(CONFIG);
     create(op, FILE_DIR_PATH, DEFAULT_UMASK,
         new FsPermission(DEFAULT_PERMISSION));
     checkOwnership(FILE_DIR_PATH, SUPERUSER.getShortUserName(),
@@ -406,7 +406,7 @@ public class TestDFSPermission {
     setOwner(FILE_DIR_PATH, USER1.getShortUserName(), GROUP3_NAME, false);
 
     // case 3: user1 changes FILE_DIR_PATH's owner to be user2
-    fs = DFSTestUtil.login(fs, conf, USER1);
+    fs = DFSTestUtil.login(fs, CONFIG, USER1);
     setOwner(FILE_DIR_PATH, USER2.getShortUserName(), null, true);
 
     // case 4: user1 changes FILE_DIR_PATH's group to be group1 which it belongs
@@ -418,14 +418,14 @@ public class TestDFSPermission {
     setOwner(FILE_DIR_PATH, null, GROUP3_NAME, true);
 
     // case 6: user2 (non-owner) changes FILE_DIR_PATH's group to be group3
-    fs = DFSTestUtil.login(fs, conf, USER2);
+    fs = DFSTestUtil.login(fs, CONFIG, USER2);
     setOwner(FILE_DIR_PATH, null, GROUP3_NAME, true);
 
     // case 7: user2 (non-owner) changes FILE_DIR_PATH's user to be user2
     setOwner(FILE_DIR_PATH, USER2.getShortUserName(), null, true);
 
     // delete the file/directory
-    fs = DFSTestUtil.login(fs, conf, SUPERUSER);
+    fs = DFSTestUtil.login(fs, CONFIG, SUPERUSER);
     fs.delete(FILE_DIR_PATH, true);
   }
 
@@ -463,7 +463,7 @@ public class TestDFSPermission {
   @Test
   public void testPermissionChecking() throws Exception {
     try {
-      fs = FileSystem.get(conf);
+      fs = FileSystem.get(CONFIG);
 
       // set the permission of the root to be world-wide rwx
       fs.setPermission(new Path("/"), new FsPermission((short)0777));
@@ -524,14 +524,14 @@ public class TestDFSPermission {
 
   @Test
   public void testAccessOwner() throws IOException, InterruptedException {
-    FileSystem rootFs = FileSystem.get(conf);
+    FileSystem rootFs = FileSystem.get(CONFIG);
     Path p1 = new Path("/p1");
     rootFs.mkdirs(p1);
     rootFs.setOwner(p1, USER1_NAME, GROUP1_NAME);
     fs = USER1.doAs(new PrivilegedExceptionAction<FileSystem>() {
       @Override
       public FileSystem run() throws Exception {
-        return FileSystem.get(conf);
+        return FileSystem.get(CONFIG);
       }
     });
     fs.setPermission(p1, new FsPermission((short) 0444));
@@ -558,7 +558,7 @@ public class TestDFSPermission {
 
   @Test
   public void testAccessGroupMember() throws IOException, InterruptedException {
-    FileSystem rootFs = FileSystem.get(conf);
+    FileSystem rootFs = FileSystem.get(CONFIG);
     Path p2 = new Path("/p2");
     rootFs.mkdirs(p2);
     rootFs.setOwner(p2, UserGroupInformation.getCurrentUser().getShortUserName(), GROUP1_NAME);
@@ -566,7 +566,7 @@ public class TestDFSPermission {
     fs = USER1.doAs(new PrivilegedExceptionAction<FileSystem>() {
       @Override
       public FileSystem run() throws Exception {
-        return FileSystem.get(conf);
+        return FileSystem.get(CONFIG);
       }
     });
     fs.access(p2, FsAction.READ);
@@ -584,14 +584,14 @@ public class TestDFSPermission {
 
   @Test
   public void testAccessOthers() throws IOException, InterruptedException {
-    FileSystem rootFs = FileSystem.get(conf);
+    FileSystem rootFs = FileSystem.get(CONFIG);
     Path p3 = new Path("/p3");
     rootFs.mkdirs(p3);
     rootFs.setPermission(p3, new FsPermission((short) 0774));
     fs = USER1.doAs(new PrivilegedExceptionAction<FileSystem>() {
       @Override
       public FileSystem run() throws Exception {
-        return FileSystem.get(conf);
+        return FileSystem.get(CONFIG);
       }
     });
     fs.access(p3, FsAction.READ);
@@ -610,7 +610,7 @@ public class TestDFSPermission {
   @Test
   public void testPermissionMessageOnNonDirAncestor()
       throws IOException, InterruptedException {
-    FileSystem rootFs = FileSystem.get(conf);
+    FileSystem rootFs = FileSystem.get(CONFIG);
     Path p4 = new Path("/p4");
     rootFs.mkdirs(p4);
     rootFs.setOwner(p4, USER1_NAME, GROUP1_NAME);
@@ -625,7 +625,7 @@ public class TestDFSPermission {
     fs = USER1.doAs(new PrivilegedExceptionAction<FileSystem>() {
       @Override
       public FileSystem run() throws Exception {
-        return FileSystem.get(conf);
+        return FileSystem.get(CONFIG);
       }
     });
 
@@ -667,7 +667,7 @@ public class TestDFSPermission {
       short[] filePermission, Path[] parentDirs, Path[] files, Path[] dirs)
       throws Exception {
     boolean[] isDirEmpty = new boolean[NUM_TEST_PERMISSIONS];
-    fs = DFSTestUtil.login(fs, conf, SUPERUSER);
+    fs = DFSTestUtil.login(fs, CONFIG, SUPERUSER);
     for (int i = 0; i < NUM_TEST_PERMISSIONS; i++) {
       create(OpType.CREATE, files[i]);
       create(OpType.MKDIRS, dirs[i]);
@@ -683,7 +683,7 @@ public class TestDFSPermission {
       isDirEmpty[i] = (fs.listStatus(dirs[i]).length == 0);
     }
 
-    fs = DFSTestUtil.login(fs, conf, ugi);
+    fs = DFSTestUtil.login(fs, CONFIG, ugi);
     for (int i = 0; i < NUM_TEST_PERMISSIONS; i++) {
       testCreateMkdirs(ugi, new Path(parentDirs[i], FILE_DIR_NAME),
           ancestorPermission[i], parentPermission[i]);

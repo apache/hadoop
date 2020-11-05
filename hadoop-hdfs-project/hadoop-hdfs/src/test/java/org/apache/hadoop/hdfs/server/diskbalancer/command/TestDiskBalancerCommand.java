@@ -821,11 +821,11 @@ public class TestDiskBalancerCommand {
    */
   @Test
   public void testDiskBalancerQueryWithoutSubmit() throws Exception {
-    Configuration conf = DFSTestUtil.newHdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
+    config.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int numDatanodes = 2;
     File basedir = new File(GenericTestUtils.getRandomizedTempPath());
-    MiniDFSCluster miniDFSCluster = new MiniDFSCluster.Builder(conf, basedir)
+    MiniDFSCluster miniDFSCluster = new MiniDFSCluster.Builder(config, basedir)
         .numDataNodes(numDatanodes).build();
     try {
       miniDFSCluster.waitActive();

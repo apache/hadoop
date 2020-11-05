@@ -122,8 +122,8 @@ public class TestRestartDFS {
    * this rerun is with 2 ports enabled for RPC in the namenode
    */
   @Test
-   public void testRestartDualPortDFS() throws Exception {
-     final Configuration conf = DFSTestUtil.newHdfsConfiguration();
-     runTests(conf, true);
-   }
+  public void testRestartDualPortDFS() throws Exception {
+    final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+    runTests(conf, true);
+  }
 }

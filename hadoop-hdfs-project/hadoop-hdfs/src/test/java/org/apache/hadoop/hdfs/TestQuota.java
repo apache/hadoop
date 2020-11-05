@@ -1167,9 +1167,9 @@ public class TestQuota {
 
   @Test
   public void testSetSpaceQuotaWhenStorageTypeIsWrong() throws Exception {
-    Configuration conf = DFSTestUtil.newHdfsConfiguration();
-    conf.set(FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:8020");
-    DFSAdmin admin = new DFSAdmin(conf);
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
+    config.set(FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:8020");
+    DFSAdmin admin = new DFSAdmin(config);
     ByteArrayOutputStream err = new ByteArrayOutputStream();
     PrintStream oldErr = System.err;
     try {

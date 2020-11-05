@@ -63,21 +63,21 @@ public class TestClientReportBadBlock {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
   private static final int numDataNodes = 3;
-  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
 
   Random rand = new Random();
 
   @Before
   public void startUpCluster() throws IOException {
     // disable block scanner
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); 
+    CONF.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
     // Set short retry timeouts so this test runs faster
-    conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes)
+    CONF.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
+    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(numDataNodes)
         .build();
     cluster.waitActive();
     dfs = cluster.getFileSystem();
-    buffersize = conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
+    buffersize = CONF.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
   }
 
   @After
@@ -298,7 +298,7 @@ public class TestClientReportBadBlock {
   private static void verifyFsckHealth(String expected) throws Exception {
     // Fsck health has error code 0.
     // Make sure filesystem is in healthy state
-    String outStr = runFsck(conf, 0, true, "/");
+    String outStr = runFsck(CONF, 0, true, "/");
     LOG.info(outStr);
     Assert.assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     if (!expected.equals("")) {
@@ -307,13 +307,13 @@ public class TestClientReportBadBlock {
   }
 
   private static void verifyFsckBlockCorrupted() throws Exception {
-    String outStr = runFsck(conf, 1, true, "/");
+    String outStr = runFsck(CONF, 1, true, "/");
     LOG.info(outStr);
     Assert.assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
   }
   
   private static void testFsckListCorruptFilesBlocks(Path filePath, int errorCode) throws Exception{
-    String outStr = runFsck(conf, errorCode, true, filePath.toString(), "-list-corruptfileblocks");
+    String outStr = runFsck(CONF, errorCode, true, filePath.toString(), "-list-corruptfileblocks");
     LOG.info("fsck -list-corruptfileblocks out: " + outStr);
     if (errorCode != 0) {
       Assert.assertTrue(outStr.contains("CORRUPT files"));

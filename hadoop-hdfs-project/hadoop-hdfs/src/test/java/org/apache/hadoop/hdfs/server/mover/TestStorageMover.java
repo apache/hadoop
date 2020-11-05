@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -84,7 +83,8 @@ public class TestStorageMover {
   private static final int BLOCK_SIZE = 1024;
   private static final short REPL = 3;
   private static final int NUM_DATANODES = 6;
-  private static final Configuration DEFAULT_CONF = DFSTestUtil.newHdfsConfiguration();
+  private static final Configuration DEFAULT_CONF =
+      DFSTestUtil.newHdfsConfiguration();
   private static final BlockStoragePolicySuite DEFAULT_POLICIES;
   private static final BlockStoragePolicy HOT;
   private static final BlockStoragePolicy WARM;

@@ -67,7 +67,7 @@ public class TestLease {
   static final String dirString = "/test/lease";
   final Path dir = new Path(dirString);
   static final Logger LOG = LoggerFactory.getLogger(TestLease.class);
-  final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  private final Configuration conf = DFSTestUtil.newHdfsConfiguration();
 
   @Test
   public void testLeaseAbort() throws Exception {

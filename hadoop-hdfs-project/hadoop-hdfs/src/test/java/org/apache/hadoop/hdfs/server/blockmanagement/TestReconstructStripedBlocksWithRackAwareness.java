@@ -91,13 +91,14 @@ public class TestReconstructStripedBlocksWithRackAwareness {
   }
 
   private MiniDFSCluster cluster;
-  private static final HdfsConfiguration conf = DFSTestUtil.newHdfsConfiguration();
+  private static final HdfsConfiguration CONF =
+      DFSTestUtil.newHdfsConfiguration();
   private DistributedFileSystem fs;
 
   @BeforeClass
   public static void setup() throws Exception {
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 1);
+    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 1);
   }
 
   @After
@@ -143,7 +144,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
   public void testReconstructForNotEnoughRacks() throws Exception {
     LOG.info("cluster hosts: {}, racks: {}", Arrays.asList(hosts),
         Arrays.asList(racks));
-    cluster = new MiniDFSCluster.Builder(conf).racks(racks).hosts(hosts)
+    cluster = new MiniDFSCluster.Builder(CONF).racks(racks).hosts(hosts)
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -221,7 +222,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
   @Test
   public void testChooseExcessReplicasToDelete() throws Exception {
-    cluster = new MiniDFSCluster.Builder(conf).racks(racks).hosts(hosts)
+    cluster = new MiniDFSCluster.Builder(CONF).racks(racks).hosts(hosts)
         .numDataNodes(hosts.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -277,7 +278,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
         dataBlocks);
     final String[] hostNames = getHosts(dataBlocks + parityBlocks + 2);
     // we now have 11 hosts on 6 racks with distribution: 2-2-2-2-2-1
-    cluster = new MiniDFSCluster.Builder(conf).racks(rackNames).hosts(hostNames)
+    cluster = new MiniDFSCluster.Builder(CONF).racks(rackNames).hosts(hostNames)
         .numDataNodes(hostNames.length).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();

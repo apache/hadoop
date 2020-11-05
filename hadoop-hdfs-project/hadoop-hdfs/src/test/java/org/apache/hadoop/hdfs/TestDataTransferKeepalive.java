@@ -47,7 +47,7 @@ import org.junit.Test;
 import java.util.function.Supplier;
 
 public class TestDataTransferKeepalive {
-  final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  private final Configuration conf = DFSTestUtil.newHdfsConfiguration();
   private MiniDFSCluster cluster;
   private DataNode dn;
   private static final Path TEST_FILE = new Path("/test");

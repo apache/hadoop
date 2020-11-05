@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
@@ -319,9 +318,9 @@ public class TestDataNodeMultipleRegistrations {
   
   @Test
   public void testMiniDFSClusterWithMultipleNN() throws IOException {
-    Configuration conf = DFSTestUtil.newHdfsConfiguration();
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
     // start Federated cluster and add a node.
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
       .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
       .build();
     
@@ -330,7 +329,7 @@ public class TestDataNodeMultipleRegistrations {
       cluster.waitActive();
       Assert.assertEquals("(1)Should be 2 namenodes", 2, cluster.getNumNameNodes());
 
-      cluster.addNameNode(conf, 0);
+      cluster.addNameNode(config, 0);
       Assert.assertEquals("(1)Should be 3 namenodes", 3, cluster.getNumNameNodes());
     } catch (IOException ioe) {
       Assert.fail("Failed to add NN to cluster:" + StringUtils.stringifyException(ioe));
@@ -339,8 +338,8 @@ public class TestDataNodeMultipleRegistrations {
     }
         
     // 2. start with Federation flag set
-    conf = DFSTestUtil.newHdfsConfiguration();
-    cluster = new MiniDFSCluster.Builder(conf)
+    config = DFSTestUtil.newHdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(config)
       .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(1))
       .build();
     
@@ -350,7 +349,7 @@ public class TestDataNodeMultipleRegistrations {
       Assert.assertEquals("(2)Should be 1 namenodes", 1, cluster.getNumNameNodes());
     
       // add a node
-      cluster.addNameNode(conf, 0);
+      cluster.addNameNode(config, 0);
       Assert.assertEquals("(2)Should be 2 namenodes", 2, cluster.getNumNameNodes());
     } catch (IOException ioe) {
       Assert.fail("Failed to add NN to cluster:" + StringUtils.stringifyException(ioe));
@@ -359,8 +358,8 @@ public class TestDataNodeMultipleRegistrations {
     }
 
     // 3. start non-federated
-    conf = DFSTestUtil.newHdfsConfiguration();
-    cluster = new MiniDFSCluster.Builder(conf).build();
+    config = DFSTestUtil.newHdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(config).build();
     
     // add a node
     try {
@@ -368,7 +367,7 @@ public class TestDataNodeMultipleRegistrations {
       Assert.assertNotNull(cluster);
       Assert.assertEquals("(2)Should be 1 namenodes", 1, cluster.getNumNameNodes());
 
-      cluster.addNameNode(conf, 9929);
+      cluster.addNameNode(config, 9929);
       Assert.fail("shouldn't be able to add another NN to non federated cluster");
     } catch (IOException e) {
       // correct 

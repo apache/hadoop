@@ -81,8 +81,8 @@ public class TestLeaseRecovery2 {
 
   static private MiniDFSCluster cluster;
   static private DistributedFileSystem dfs;
-  final static private Configuration conf = DFSTestUtil.newHdfsConfiguration();
-  final static private int BUF_SIZE = conf.getInt(
+  final static private Configuration CONF = DFSTestUtil.newHdfsConfiguration();
+  final static private int BUF_SIZE = CONF.getInt(
       CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
   
   final static private long SHORT_LEASE_PERIOD = 1000L;
@@ -94,10 +94,10 @@ public class TestLeaseRecovery2 {
    */
   @Before
   public void startUp() throws IOException {
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    CONF.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
-    cluster = new MiniDFSCluster.Builder(conf)
+    cluster = new MiniDFSCluster.Builder(CONF)
         .numDataNodes(5)
         .checkExitOnShutdown(false)
         .build();
@@ -264,7 +264,7 @@ public class TestLeaseRecovery2 {
   private void recoverLease(Path filepath, DistributedFileSystem dfs)
   throws Exception {
     if (dfs == null) {
-      dfs = (DistributedFileSystem)getFSAsAnotherUser(conf);
+      dfs = (DistributedFileSystem)getFSAsAnotherUser(CONF);
     }
 
     while (!dfs.recoverLease(filepath)) {
@@ -282,7 +282,7 @@ public class TestLeaseRecovery2 {
 
   private void recoverLeaseUsingCreate(Path filepath)
       throws IOException, InterruptedException {
-    FileSystem dfs2 = getFSAsAnotherUser(conf);
+    FileSystem dfs2 = getFSAsAnotherUser(CONF);
     for(int i = 0; i < 10; i++) {
       AppendTestUtil.LOG.info("i=" + i);
       try {
@@ -303,7 +303,7 @@ public class TestLeaseRecovery2 {
 
   private void recoverLeaseUsingCreate2(Path filepath)
           throws Exception {
-    FileSystem dfs2 = getFSAsAnotherUser(conf);
+    FileSystem dfs2 = getFSAsAnotherUser(CONF);
     int size = AppendTestUtil.nextInt(FILE_SIZE);
     DistributedFileSystem dfsx = (DistributedFileSystem) dfs2;
     //create file using dfsx
@@ -406,8 +406,8 @@ public class TestLeaseRecovery2 {
   public void testSoftLeaseRecovery() throws Exception {
     Map<String, String []> u2g_map = new HashMap<String, String []>(1);
     u2g_map.put(fakeUsername, new String[] {fakeGroup});
-    DFSTestUtil.updateConfWithFakeGroupMapping(conf, u2g_map);
-    long hardlimit = conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+    DFSTestUtil.updateConfWithFakeGroupMapping(CONF, u2g_map);
+    long hardlimit = CONF.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
         DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000;
     // Reset default lease periods
     cluster.setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD, hardlimit);
@@ -442,7 +442,7 @@ public class TestLeaseRecovery2 {
         UserGroupInformation.createUserForTesting(fakeUsername, 
             new String [] { fakeGroup});
 
-      FileSystem dfs2 = DFSTestUtil.getFileSystemAs(ugi, conf);
+      FileSystem dfs2 = DFSTestUtil.getFileSystemAs(ugi, CONF);
 
       boolean done = false;
       for(int i = 0; i < 10 && !done; i++) {

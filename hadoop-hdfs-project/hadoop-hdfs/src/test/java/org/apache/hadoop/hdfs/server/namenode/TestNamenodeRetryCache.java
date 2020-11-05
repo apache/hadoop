@@ -39,7 +39,6 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -425,12 +424,12 @@ public class TestNamenodeRetryCache {
   @Test
   public void testRetryCacheConfig() {
     // By default retry configuration should be enabled
-    Configuration conf = DFSTestUtil.newHdfsConfiguration();
-    Assert.assertNotNull(FSNamesystem.initRetryCache(conf));
+    Configuration config = DFSTestUtil.newHdfsConfiguration();
+    Assert.assertNotNull(FSNamesystem.initRetryCache(config));
     
     // If retry cache is disabled, it should not be created
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY, false);
-    Assert.assertNull(FSNamesystem.initRetryCache(conf));
+    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY, false);
+    Assert.assertNull(FSNamesystem.initRetryCache(config));
   }
   
   /**

@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
@@ -81,7 +80,7 @@ import static org.junit.Assert.assertNotEquals;
 public class TestDeleteRace {
   private static final int BLOCK_SIZE = 4096;
   private static final Logger LOG = LoggerFactory.getLogger(TestDeleteRace.class);
-  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   private MiniDFSCluster cluster;
 
   @Rule
@@ -99,9 +98,9 @@ public class TestDeleteRace {
 
   private void testDeleteAddBlockRace(boolean hasSnapshot) throws Exception {
     try {
-      conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+      CONF.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
           SlowBlockPlacementPolicy.class, BlockPlacementPolicy.class);
-      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster = new MiniDFSCluster.Builder(CONF).build();
       FileSystem fs = cluster.getFileSystem();
       final String fileName = "/testDeleteAddBlockRace";
       Path filePath = new Path(fileName);
@@ -210,9 +209,9 @@ public class TestDeleteRace {
   @Test
   public void testRenameRace() throws Exception {
     try {
-      conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+      CONF.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
           SlowBlockPlacementPolicy.class, BlockPlacementPolicy.class);
-      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster = new MiniDFSCluster.Builder(CONF).build();
       FileSystem fs = cluster.getFileSystem();
       Path dirPath1 = new Path("/testRenameRace1");
       Path dirPath2 = new Path("/testRenameRace2");
@@ -433,7 +432,7 @@ public class TestDeleteRace {
       Whitebox.setInternalState(lm, "sortedLeases", spyLeases);
 
       // wait for lease manager's background 'Monitor' class to check leases.
-      Thread.sleep(2 * conf.getLong(DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
+      Thread.sleep(2 * CONF.getLong(DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT));
 
       LOG.info("Now check we can restart");
@@ -521,11 +520,11 @@ public class TestDeleteRace {
    */
   @Test
   public void testDeleteOnSnapshottableDir() throws Exception {
-    conf.setBoolean(
+    CONF.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
         true);
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(1).build();
       cluster.waitActive();
       DistributedFileSystem hdfs = cluster.getFileSystem();
       FSNamesystem fsn = cluster.getNamesystem();

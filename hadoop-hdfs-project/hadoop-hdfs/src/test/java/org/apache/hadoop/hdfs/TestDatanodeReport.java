@@ -50,7 +50,7 @@ import org.junit.Test;
  */
 public class TestDatanodeReport {
   static final Logger LOG = LoggerFactory.getLogger(TestDatanodeReport.class);
-  final static private Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  final static private Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   final static private int NUM_OF_DATANODES = 4;
 
   /**
@@ -58,16 +58,17 @@ public class TestDatanodeReport {
    */
   @Test
   public void testDatanodeReportWithUpgradeDomain() throws Exception {
-    conf.setInt(
-        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500); // 0.5s
-    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
-    conf.setClass(DFSConfigKeys.DFS_NAMENODE_HOSTS_PROVIDER_CLASSNAME_KEY,
+    // 0.5s
+    CONF.setInt(
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
+    CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    CONF.setClass(DFSConfigKeys.DFS_NAMENODE_HOSTS_PROVIDER_CLASSNAME_KEY,
         CombinedHostFileManager.class, HostConfigManager.class);
     HostsFileWriter hostsFileWriter = new HostsFileWriter();
-    hostsFileWriter.initialize(conf, "temp/datanodeReport");
+    hostsFileWriter.initialize(CONF, "temp/datanodeReport");
 
     MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+        new MiniDFSCluster.Builder(CONF).numDataNodes(1).build();
     final DFSClient client = cluster.getFileSystem().dfs;
     final String ud1 = "ud1";
     final String ud2 = "ud2";
@@ -108,11 +109,11 @@ public class TestDatanodeReport {
    */
   @Test
   public void testDatanodeReport() throws Exception {
-    conf.setInt(
+    CONF.setInt(
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500); // 0.5s
-    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     MiniDFSCluster cluster = 
-      new MiniDFSCluster.Builder(conf).numDataNodes(NUM_OF_DATANODES).build();
+      new MiniDFSCluster.Builder(CONF).numDataNodes(NUM_OF_DATANODES).build();
     try {
       //wait until the cluster is up
       cluster.waitActive();
@@ -151,9 +152,9 @@ public class TestDatanodeReport {
 
   @Test
   public void testDatanodeReportMissingBlock() throws Exception {
-    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
-    conf.setLong(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 1);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    CONF.setLong(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 1);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF)
         .numDataNodes(NUM_OF_DATANODES).build();
     try {
       // wait until the cluster is up

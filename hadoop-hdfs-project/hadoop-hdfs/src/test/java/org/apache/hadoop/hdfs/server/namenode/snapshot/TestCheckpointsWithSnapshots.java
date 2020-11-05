@@ -38,9 +38,10 @@ import org.junit.Test;
 public class TestCheckpointsWithSnapshots {
   
   private static final Path TEST_PATH = new Path("/foo");
-  private static final Configuration conf = DFSTestUtil.newHdfsConfiguration();
+  private static final Configuration CONF = DFSTestUtil.newHdfsConfiguration();
   static {
-    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    CONF.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+        "0.0.0.0:0");
   }
   
   @Before
@@ -57,14 +58,14 @@ public class TestCheckpointsWithSnapshots {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster = new MiniDFSCluster.Builder(CONF).build();
       cluster.waitActive();
-      secondary = new SecondaryNameNode(conf);
+      secondary = new SecondaryNameNode(CONF);
       SnapshotManager nnSnapshotManager = cluster.getNamesystem().getSnapshotManager();
       SnapshotManager secondarySnapshotManager = secondary.getFSNamesystem().getSnapshotManager();
       
       FileSystem fs = cluster.getFileSystem();
-      HdfsAdmin admin =  new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+      HdfsAdmin admin =  new HdfsAdmin(FileSystem.getDefaultUri(CONF), CONF);
       
       assertEquals(0, nnSnapshotManager.getNumSnapshots());
       assertEquals(0, nnSnapshotManager.getNumSnapshottableDirs());

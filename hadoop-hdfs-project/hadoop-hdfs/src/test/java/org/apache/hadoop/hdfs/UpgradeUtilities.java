@@ -347,7 +347,8 @@ public class UpgradeUtilities {
     for (int i = 0; i < parents.length; i++) {
       File newDir = new File(parents[i], dirName);
       createEmptyDirs(new String[] {newDir.toString()});
-      LocalFileSystem localFS = FileSystem.getLocal(DFSTestUtil.newHdfsConfiguration());
+      LocalFileSystem localFS =
+          FileSystem.getLocal(DFSTestUtil.newHdfsConfiguration());
       localFS.copyToLocalFile(new Path(namenodeStorage.toString(), "current"),
                               new Path(newDir.toString()),
                               false);
@@ -375,7 +376,8 @@ public class UpgradeUtilities {
     for (int i = 0; i < parents.length; i++) {
       File newDir = new File(parents[i], dirName);
       createEmptyDirs(new String[] {newDir.toString()});
-      LocalFileSystem localFS = FileSystem.getLocal(DFSTestUtil.newHdfsConfiguration());
+      LocalFileSystem localFS =
+          FileSystem.getLocal(DFSTestUtil.newHdfsConfiguration());
       localFS.copyToLocalFile(new Path(datanodeStorage.toString(), "current"),
                               new Path(newDir.toString()),
                               false);
@@ -416,7 +418,8 @@ public class UpgradeUtilities {
     for (int i = 0; i < parents.length; i++) {
       File newDir = new File(parents[i] + "/current/" + bpid, dirName);
       createEmptyDirs(new String[] {newDir.toString()});
-      LocalFileSystem localFS = FileSystem.getLocal(DFSTestUtil.newHdfsConfiguration());
+      LocalFileSystem localFS =
+          FileSystem.getLocal(DFSTestUtil.newHdfsConfiguration());
       localFS.copyToLocalFile(bpCurDir,
                               new Path(newDir.toString()),
                               false);
