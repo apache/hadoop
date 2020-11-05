@@ -18,7 +18,6 @@
 package org.apache.hadoop.fs;
 
 import java.io.File;
-import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -168,28 +167,4 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
     }
   }
 
-  @Test
-  public void testMTimeAtime() throws IOException {
-    RawLocalFileSystem.setUseDeprecatedFileStatus(true);
-    try {
-      Path testDir = getTestBaseDir();
-      String testFilename = "testmtime";
-      Path path = new Path(testDir, testFilename);
-      Path file = new Path(path, "file");
-      fs.create(file);
-      long now = System.currentTimeMillis();
-      long mtime = (now % 1000 == 0) ? now + 1 : now;
-      long atime = (now % 1000 == 0) ? now + 2 : now;
-      fs.setTimes(file, mtime, atime);
-      FileStatus fileStatus = fs.getFileStatus(file);
-      if (!Shell.MAC) {
-        // HADOOP-17306 ; Skip MacOS because HFS+ does not support
-        // milliseconds for mtime.
-        assertEquals(mtime, fileStatus.getModificationTime());
-      }
-      assertEquals(atime, fileStatus.getAccessTime());
-    } finally {
-      RawLocalFileSystem.useStatIfAvailable();
-    }
-  }
 }
