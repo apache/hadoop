@@ -1215,7 +1215,7 @@ public class TestAuditLoggerWithCommands {
     String aceDeletePattern =
         ".*allowed=false.*ugi=theDoctor.*cmd=delete.*";
     verifyAuditLogs(aceDeletePattern);
-  }  
+  }
 
   private void verifyAuditRestoreFailedStorageACE(
       FSNamesystem fsNamesystem, String arg) throws IOException {
