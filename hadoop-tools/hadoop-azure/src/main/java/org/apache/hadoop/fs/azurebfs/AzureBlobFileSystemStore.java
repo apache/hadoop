@@ -483,11 +483,11 @@ public class AzureBlobFileSystemStore implements Closeable {
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
-              statistics,
-              isNamespaceEnabled ? getOctalNotation(permission) : null,
-              isNamespaceEnabled ? getOctalNotation(umask) : null,
-              isAppendBlob,
-              tracingContext
+            statistics,
+            isNamespaceEnabled ? getOctalNotation(permission) : null,
+            isNamespaceEnabled ? getOctalNotation(umask) : null,
+            isAppendBlob,
+            tracingContext
         );
 
       } else {
@@ -530,7 +530,6 @@ public class AzureBlobFileSystemStore implements Closeable {
       final boolean isAppendBlob, TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op;
 
-    tracingContext.setPrimaryRequestID();
     try {
       // Trigger a create with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion
@@ -696,6 +695,7 @@ public class AzureBlobFileSystemStore implements Closeable {
       if (isAppendBlobKey(path.toString())) {
         isAppendBlob = true;
       }
+
       return new AbfsOutputStream(
           client,
           statistics,

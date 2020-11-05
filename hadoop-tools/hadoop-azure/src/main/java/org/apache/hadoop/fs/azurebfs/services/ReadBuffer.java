@@ -56,7 +56,7 @@ class ReadBuffer {
   }
 
   public void setTracingContext(TracingContext tracingContext) {
-    this.tracingContext = new TracingContext(tracingContext);
+    this.tracingContext = tracingContext;
   }
 
   public TracingContext getTracingContext() {

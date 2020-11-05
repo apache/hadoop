@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperations;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.After;
 import org.junit.Assert;

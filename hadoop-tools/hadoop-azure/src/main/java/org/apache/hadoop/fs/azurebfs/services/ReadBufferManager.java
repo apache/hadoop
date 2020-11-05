@@ -268,6 +268,7 @@ final class ReadBufferManager {
     }
 
     completedReadList.remove(buf);
+    buf.setTracingContext(null);
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Evicting buffer idx {}; was used for file {} offset {} length {}",
           buf.getBufferindex(), buf.getStream().getPath(), buf.getOffset(), buf.getLength());
