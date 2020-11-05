@@ -371,12 +371,15 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     private final long rmStartIntervalMS;
     private final boolean rmNeverStart;
     public ResourceTracker resourceTracker;
+    private final boolean useSocketTimeoutEx;
     public MyNodeStatusUpdater4(Context context, Dispatcher dispatcher,
         NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
-        long rmStartIntervalMS, boolean rmNeverStart) {
+        long rmStartIntervalMS, boolean rmNeverStart,
+        boolean useSocketTimeoutEx) {
       super(context, dispatcher, healthChecker, metrics);
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
+      this.useSocketTimeoutEx = useSocketTimeoutEx;
     }
 
     @Override
@@ -391,7 +394,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           HAUtil.isHAEnabled(conf));
       resourceTracker =
           (ResourceTracker) RetryProxy.create(ResourceTracker.class,
-            new MyResourceTracker6(rmStartIntervalMS, rmNeverStart),
+            new MyResourceTracker6(rmStartIntervalMS, rmNeverStart,
+                useSocketTimeoutEx),
             retryPolicy);
       return resourceTracker;
     }
@@ -824,11 +828,14 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     private long rmStartIntervalMS;
     private boolean rmNeverStart;
     private final long waitStartTime;
+    private final boolean useSocketTimeoutEx;
 
-    public MyResourceTracker6(long rmStartIntervalMS, boolean rmNeverStart) {
+    MyResourceTracker6(long rmStartIntervalMS, boolean rmNeverStart,
+                       boolean useSocketTimeoutEx) {
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
       this.waitStartTime = System.currentTimeMillis();
+      this.useSocketTimeoutEx = useSocketTimeoutEx;
     }
 
     @Override
@@ -837,8 +844,13 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
         IOException {
       if (System.currentTimeMillis() - waitStartTime <= rmStartIntervalMS
           || rmNeverStart) {
-        throw new java.net.ConnectException("Faking RM start failure as start "
-            + "delay timer has not expired.");
+        if (useSocketTimeoutEx) {
+          throw new java.net.SocketTimeoutException(
+              "Faking RM start failure as start delay timer has not expired.");
+        } else {
+          throw new java.net.ConnectException(
+              "Faking RM start failure as start delay timer has not expired.");
+        }
       } else {
         NodeId nodeId = request.getNodeId();
         Resource resource = request.getResource();
@@ -1340,8 +1352,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     }
   }
 
-  @Test (timeout = 150000)
-  public void testNMConnectionToRM() throws Exception {
+  private void testNMConnectionToRMInternal(boolean useSocketTimeoutEx)
+      throws Exception {
     final long delta = 50000;
     final long connectionWaitMs = 5000;
     final long connectionRetryIntervalMs = 1000;
@@ -1360,7 +1372,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
         NodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater4(
             context, dispatcher, healthChecker, metrics,
-            rmStartIntervalMS, true);
+            rmStartIntervalMS, true, useSocketTimeoutEx);
         return nodeStatusUpdater;
       }
     };
@@ -1392,7 +1404,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
         NodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater4(
             context, dispatcher, healthChecker, metrics, rmStartIntervalMS,
-            false);
+            false, useSocketTimeoutEx);
         return nodeStatusUpdater;
       }
     };
@@ -1421,6 +1433,16 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
         +" milliseconds of RM starting up: actual " + duration
         + " " + myUpdater,
         (duration < (rmStartIntervalMS + delta)));
+  }
+
+  @Test (timeout = 150000)
+  public void testNMConnectionToRM() throws Exception {
+    testNMConnectionToRMInternal(false);
+  }
+
+  @Test (timeout = 150000)
+  public void testNMConnectionToRMwithSocketTimeout() throws Exception {
+    testNMConnectionToRMInternal(true);
   }
 
   /**
