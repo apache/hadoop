@@ -25,7 +25,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext.TracingContextFormat;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -147,15 +149,17 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public TracingContext getTestTracingContext(AzureBlobFileSystem fs, boolean isCont) {
     if (fs == null) {
-      return new TracingContext("test-corr-id",
-          "test-fs-id", "TS", false, 1);
+      return new TracingContext("test-corr-id", "test-fs-id", "TS", false,
+          TracingContextFormat.ALL_ID_FORMAT);
     }
     String fsID = fs.getFileSystemID();
     AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
     String corrID = abfsConf == null? "test-corr-id" :
         abfsConf.getClientCorrelationID();
-    int format = abfsConf == null? 1 : abfsConf.getTracingContextFormat();
-    return new TracingContext(corrID, fsID, "TS", isCont, format);
+    TracingContextFormat format = abfsConf == null? TracingContextFormat.ALL_ID_FORMAT :
+        abfsConf.getTracingContextFormat();
+    return new TracingContext(corrID, fsID, AbfsOperationConstants.TESTOP, isCont,
+        format);
   }
 
 

@@ -40,6 +40,7 @@ import java.util.concurrent.Future;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext.TracingContextFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,7 +104,7 @@ public class AzureBlobFileSystem extends FileSystem {
   private AbfsDelegationTokenManager delegationTokenManager;
   private AbfsCounters abfsCounters;
   private String clientCorrelationID;
-  private int tracingContextFormat;
+  private TracingContextFormat tracingContextFormat;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -676,7 +677,7 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug(
         "AzureBlobFileSystem.setOwner path: {}", path);
     TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperationConstants.SET_OWNER, true, tracingContextFormat);
+        fileSystemID, AbfsOperationConstants.SETOWNER, true, tracingContextFormat);
 
     if (!getIsNamespaceEnabled(tracingContext)) {
       super.setOwner(path, owner, group);
@@ -722,7 +723,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationID,
-          fileSystemID, AbfsOperationConstants.ATTR_OPS, true, tracingContextFormat);
+          fileSystemID, AbfsOperationConstants.SETATTR, true,
+          tracingContextFormat);
       Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath, tracingContext);
       String xAttrName = ensureValidAttributeName(name);
       boolean xAttrExists = properties.containsKey(xAttrName);
@@ -760,7 +762,8 @@ public class AzureBlobFileSystem extends FileSystem {
     byte[] value = null;
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationID,
-          fileSystemID, AbfsOperationConstants.ATTR_OPS, true, tracingContextFormat);
+          fileSystemID, AbfsOperationConstants.GETATTR, true,
+          tracingContextFormat);
       Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath, tracingContext);
       String xAttrName = ensureValidAttributeName(name);
       if (properties.containsKey(xAttrName)) {
@@ -825,7 +828,7 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.modifyAclEntries path: {}", path);
     TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperationConstants.ACL_OPS,true, tracingContextFormat);
+        fileSystemID, AbfsOperationConstants.MODIFYACL,true, tracingContextFormat);
 
     if (!getIsNamespaceEnabled(tracingContext)) {
       throw new UnsupportedOperationException(
@@ -860,7 +863,8 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.removeAclEntries path: {}", path);
     TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperationConstants.ACL_OPS, true, tracingContextFormat);
+        fileSystemID, AbfsOperationConstants.REMOVEACLENTRIES, true,
+        tracingContextFormat);
 
     if (!getIsNamespaceEnabled(tracingContext)) {
       throw new UnsupportedOperationException(
@@ -891,7 +895,8 @@ public class AzureBlobFileSystem extends FileSystem {
   public void removeDefaultAcl(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.removeDefaultAcl path: {}", path);
     TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperationConstants.ACL_OPS, true, tracingContextFormat);
+        fileSystemID, AbfsOperationConstants.REMOVEDEFAULTACL, true,
+        tracingContextFormat);
 
     if (!getIsNamespaceEnabled(tracingContext)) {
       throw new UnsupportedOperationException(
@@ -920,7 +925,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public void removeAcl(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.removeAcl path: {}", path);
     TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperationConstants.ACL_OPS, true, tracingContextFormat);
+        fileSystemID, AbfsOperationConstants.REMOVEACL, true, tracingContextFormat);
 
     if (!getIsNamespaceEnabled(tracingContext)) {
       throw new UnsupportedOperationException(
@@ -952,7 +957,7 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.setAcl path: {}", path);
     TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperationConstants.ACL_OPS, true, tracingContextFormat);
+        fileSystemID, AbfsOperationConstants.SETACL, true, tracingContextFormat);
 
     if (!getIsNamespaceEnabled(tracingContext)) {
       throw new UnsupportedOperationException(
@@ -984,7 +989,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public AclStatus getAclStatus(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.getAclStatus path: {}", path);
     TracingContext tracingContext = new TracingContext(clientCorrelationID,
-        fileSystemID, AbfsOperationConstants.ACL_OPS, true, tracingContextFormat);
+        fileSystemID, AbfsOperationConstants.GETACLSTATUS, true, tracingContextFormat);
 
     if (!getIsNamespaceEnabled(tracingContext)) {
       throw new UnsupportedOperationException(
@@ -1020,7 +1025,7 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(path);
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationID,
-          fileSystemID, AbfsOperationConstants.PATH_OPS, tracingContextFormat);
+          fileSystemID, AbfsOperationConstants.ACCESS, tracingContextFormat);
       this.abfsStore.access(qualifiedPath, mode, tracingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkCheckAccessException(path, ex);
@@ -1319,7 +1324,7 @@ public class AzureBlobFileSystem extends FileSystem {
       return true;
     case CommonPathCapabilities.FS_ACLS:
       TracingContext tracingContext = new TracingContext(clientCorrelationID,
-          fileSystemID, AbfsOperationConstants.PATH_OPS, tracingContextFormat);
+          fileSystemID, AbfsOperationConstants.PATH, tracingContextFormat);
       return getIsNamespaceEnabled(tracingContext);
     default:
       return super.hasPathCapability(p, capability);

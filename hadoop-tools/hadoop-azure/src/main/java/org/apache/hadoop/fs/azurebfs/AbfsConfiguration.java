@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext.TracingContextFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -312,9 +313,12 @@ public class AbfsConfiguration{
    * 2 -> client-corr-id : client-req-id
    * @return tracingContextFormat config
    */
-  public int getTracingContextFormat() {
-    return tracingContextFormat;
+  public TracingContextFormat getTracingContextFormat() {
+    return getEnum(FS_AZURE_TRACINGCONTEXT_FORMAT, DEFAULT_TRACINGCONTEXT_FORMAT);
   }
+//  public int getTracingContextFormat() {
+//    return tracingContextFormat;
+//  }
 
   /**
    * Appends an account name to a configuration key yielding the

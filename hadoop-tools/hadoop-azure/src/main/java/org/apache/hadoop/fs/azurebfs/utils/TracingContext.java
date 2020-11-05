@@ -33,24 +33,21 @@ public class TracingContext {
   private String primaryRequestID;
   private String streamID;
   private int retryCount;
-  private String hadoopOpName;
-  private final int format;
+  private final String hadoopOpName;
+  private final TracingContextFormat format;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
-//  public static enum TracingContextFormat {
-//    SINGLE_ID_FORMAT,
-//    ALL_IDS,
-//    TWO_ID_FORMAT;
-//
-//    private TracingContextFormat() {
-//    }
-//  }
+  public static enum TracingContextFormat {
+    SINGLE_ID_FORMAT,
+    ALL_ID_FORMAT,
+    TWO_ID_FORMAT;
+  }
 
   public TracingContext(String clientCorrelationID, String fileSystemID,
-      String hadoopOpName, int tracingContextFormat) {
+      String hadoopOpName, TracingContextFormat tracingContextFormat) {
     this.fileSystemID = fileSystemID;
     this.hadoopOpName = hadoopOpName;
     this.clientCorrelationID = validateClientCorrelationID(clientCorrelationID);
@@ -62,7 +59,7 @@ public class TracingContext {
 
   public TracingContext(String clientCorrelationID, String fileSystemID,
       String hadoopOpName, boolean needsPrimaryReqId,
-      int tracingContextFormat) {
+      TracingContextFormat tracingContextFormat) {
     this(clientCorrelationID, fileSystemID, hadoopOpName, tracingContextFormat);
     primaryRequestID = needsPrimaryReqId? UUID.randomUUID().toString() : "";
   }
@@ -106,9 +103,11 @@ public class TracingContext {
   public String toString() {
     String header = clientRequestID; //case 0, no IDs for correlation
     switch (format) {
-      case 1: header = header + ":" + fileSystemID + ":" + primaryRequestID
-          + ":" + streamID + ":" + hadoopOpName + ":" + retryCount; //all IDs
-      case 2: header = clientCorrelationID + ":" + header; // 2-ID format
+    case ALL_ID_FORMAT: header =
+        clientCorrelationID + ":" + header + ":" + fileSystemID + ":" + primaryRequestID
+          + ":" + streamID + ":" + hadoopOpName + ":" + retryCount;
+        break;
+    case TWO_ID_FORMAT: header = clientCorrelationID + ":" + header;
     }
     return header;
   }
