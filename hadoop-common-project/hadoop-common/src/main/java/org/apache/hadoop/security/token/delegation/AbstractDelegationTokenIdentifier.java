@@ -49,7 +49,7 @@ extends TokenIdentifier {
   private int masterKeyId = 0;
   
   public AbstractDelegationTokenIdentifier() {
-    this(new Text(), new Text(), new Text());
+    this(null, null, null);
   }
   
   public AbstractDelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
