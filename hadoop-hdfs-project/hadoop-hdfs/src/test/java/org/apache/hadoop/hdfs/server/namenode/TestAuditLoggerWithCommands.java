@@ -51,6 +51,7 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import org.mockito.Mockito;
 
@@ -1211,7 +1212,7 @@ public class TestAuditLoggerWithCommands {
     fileSys = DFSTestUtil.getFileSystemAs(user1, conf);
     boolean result = fileSys.delete(srcDir, true);
     fileSys.close();
-    assertTrue(result == false);
+    assertFalse(result);
     String aceDeletePattern =
         ".*allowed=false.*ugi=theDoctor.*cmd=delete.*";
     verifyAuditLogs(aceDeletePattern);
