@@ -152,9 +152,6 @@ pipeline {
                         # help keep the ASF boxes clean
                         YETUS_ARGS+=("--sentinel")
 
-                        # use emoji vote so it is easier to find the broken line
-                        YETUS_ARGS+=("--github-use-emoji-vote")
-
                         # test with Java 8 and 11
                         YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
                         YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
