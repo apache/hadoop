@@ -75,7 +75,6 @@ import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -87,6 +86,7 @@ import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -232,13 +232,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       } catch (SocketException e) {
       }
       ResolverConfig.refresh();
-      ExtendedResolver resolver;
-      try {
-        resolver = new ExtendedResolver();
-      } catch (UnknownHostException e) {
-        LOG.error("Can not resolve DNS servers: ", e);
-        return;
-      }
+      ExtendedResolver resolver = new ExtendedResolver();
       for (Resolver check : resolver.getResolvers()) {
         if (check instanceof SimpleResolver) {
           InetAddress address = ((SimpleResolver) check).getAddress()
@@ -247,7 +241,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
             resolver.deleteResolver(check);
             continue;
           } else {
-            check.setTimeout(30);
+            check.setTimeout(Duration.ofSeconds(30));
           }
         } else {
           LOG.error("Not simple resolver!!!?" + check);
@@ -260,12 +254,10 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       }
       StringBuilder message = new StringBuilder();
       message.append("DNS servers: ");
-      if (ResolverConfig.getCurrentConfig().servers() != null) {
-        for (String server : ResolverConfig.getCurrentConfig()
-            .servers()) {
-          message.append(server);
-          message.append(" ");
-        }
+      for(InetSocketAddress address :
+          ResolverConfig.getCurrentConfig().servers()) {
+        message.append(address);
+        message.append(" ");
       }
       LOG.info(message.toString());
     }
@@ -331,11 +323,10 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     if (isDNSSECEnabled()) {
       Collection<Zone> zoneCollection = zones.values();
       for (Zone zone : zoneCollection) {
-        Iterator itor = zone.iterator();
+        Iterator<RRset> itor = zone.iterator();
         while (itor.hasNext()) {
-          RRset rRset = (RRset) itor.next();
-          Iterator sigs = rRset.sigs();
-          if (!sigs.hasNext()) {
+          RRset rRset = itor.next();
+          if (!rRset.sigs().isEmpty()) {
             try {
               signSiteRecord(zone, rRset.first());
             } catch (DNSSEC.DNSSECException e) {
@@ -1403,11 +1394,10 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
           response.getHeader().setFlag(Flags.AA);
         }
       } else if (sr.isSuccessful()) {
-        RRset[] rrsets = sr.answers();
+        List<RRset> rrsets = sr.answers();
         LOG.info("found answers {}", rrsets);
-        for (int i = 0; i < rrsets.length; i++) {
-          addRRset(name, response, rrsets[i],
-              Section.ANSWER, flags);
+        for(RRset rrset : rrsets) {
+          addRRset(name, response, rrset, Section.ANSWER, flags);
         }
         addNS(response, zone, flags);
         if (iterations == 0) {
@@ -1515,9 +1505,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       }
     }
     if ((flags & FLAG_SIGONLY) == 0) {
-      Iterator it = rrset.rrs();
-      while (it.hasNext()) {
-        Record r = (Record) it.next();
+      for (Record r : rrset.rrs()) {
         if (r.getName().isWild() && !name.isWild()) {
           r = r.withName(name);
         }
@@ -1525,9 +1513,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       }
     }
     if ((flags & (FLAG_SIGONLY | FLAG_DNSSECOK)) != 0) {
-      Iterator it = rrset.sigs();
-      while (it.hasNext()) {
-        Record r = (Record) it.next();
+      for (Record r : rrset.sigs()) {
         if (r.getName().isWild() && !name.isWild()) {
           r = r.withName(name);
         }
