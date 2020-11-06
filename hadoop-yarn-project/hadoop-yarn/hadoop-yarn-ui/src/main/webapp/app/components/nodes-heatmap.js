@@ -134,7 +134,7 @@ export default BaseChartComponent.extend({
     model.forEach(function (o) {
       data.push(o);
     });
-    this.initRacks(data);   
+    this.initRacks(data);
     if (selectedOption === this.containersLabel) {
             this.initContainerCounts(data);
     }
