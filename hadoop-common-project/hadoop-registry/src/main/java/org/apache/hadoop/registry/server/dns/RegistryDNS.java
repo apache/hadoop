@@ -254,7 +254,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       }
       StringBuilder message = new StringBuilder();
       message.append("DNS servers: ");
-      for(InetSocketAddress address :
+      for (InetSocketAddress address :
           ResolverConfig.getCurrentConfig().servers()) {
         message.append(address);
         message.append(" ");
@@ -1396,7 +1396,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       } else if (sr.isSuccessful()) {
         List<RRset> rrsets = sr.answers();
         LOG.info("found answers {}", rrsets);
-        for(RRset rrset : rrsets) {
+        for (RRset rrset : rrsets) {
           addRRset(name, response, rrset, Section.ANSWER, flags);
         }
         addNS(response, zone, flags);
