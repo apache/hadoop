@@ -41,7 +41,6 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.apache.hadoop.fs.Options.ChecksumOpt;
