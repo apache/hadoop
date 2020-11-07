@@ -154,6 +154,53 @@ public final class AzureADAuthenticator {
     return getTokenCall(authEndpoint, qp.serialize(), headers, "GET", true);
   }
 
+
+  /**
+   * gets Azure Active Directory token using the user's username and password. This only
+   * works if the identity can be authenticated directly by microsoftonline.com. It will likely
+   * not work if the domain is federated and/or multi-factor authentication or other form of
+   * strong authentication is configured for the user.
+   *
+   * @param authEndpoint the OAuth 2.0 token endpoint associated
+   *                     with the user's directory (obtain from
+   *                     Active Directory configuration)
+   * @param username     the user name of the user
+   * @param password     the password of the user
+   * @param clientId     the client ID (GUID) of the client web app
+   *                     obtained from Azure Active Directory configuration
+   * @param clientSecret (optional) the secret key of the client web app
+   *                     If the app is a confidential client, then it must be included
+   * @return {@link AzureADToken} obtained using the creds
+   * @throws IOException throws IOException if there is a failure in connecting to Azure AD
+   */
+  public static AzureADToken getTokenUsingUserCreds(String authEndpoint,
+      String username, String password, String clientId,
+      String clientSecret) throws IOException {
+    Preconditions.checkNotNull(authEndpoint, "authEndpoint");
+    Preconditions.checkNotNull(username, "username");
+    Preconditions.checkNotNull(password, "password");
+    Preconditions.checkNotNull(clientId, "clientId");
+    boolean isVersion2AuthenticationEndpoint = authEndpoint.contains("/oauth2/v2.0/");
+
+    QueryParams qp = new QueryParams();
+    if (isVersion2AuthenticationEndpoint) {
+      qp.add("scope", SCOPE);
+    } else {
+      qp.add("resource", RESOURCE_NAME);
+    }
+    qp.add("grant_type", "password");
+    qp.add("client_id", clientId);
+    qp.add("username",username);
+    qp.add("password",password);
+
+    if (clientSecret != null && clientSecret.length() > 0) {
+      qp.add("client_secret", clientSecret);
+    }
+
+    LOG.debug("AADToken: starting to fetch token using username and password");
+    return getTokenCall(authEndpoint, qp.serialize(), null, null);
+  }
+
   /**
    * Gets Azure Active Directory token using refresh token.
    *

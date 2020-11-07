@@ -35,22 +35,30 @@ public class UserPasswordTokenProvider extends AccessTokenProvider {
 
   private final String password;
 
+  private final String clientId;
+
+  private final String clientSecret;
+
   private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
 
   public UserPasswordTokenProvider(final String authEndpoint,
-                                   final String username, final String password) {
+                                   final String username, final String password,
+                                   final String clientId, final String clientSecret) {
     Preconditions.checkNotNull(authEndpoint, "authEndpoint");
     Preconditions.checkNotNull(username, "username");
     Preconditions.checkNotNull(password, "password");
+    Preconditions.checkNotNull(clientId, "clientId");
 
     this.authEndpoint = authEndpoint;
     this.username = username;
     this.password = password;
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
   }
 
   @Override
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing user-password based token");
-    return AzureADAuthenticator.getTokenUsingClientCreds(authEndpoint, username, password);
+    return AzureADAuthenticator.getTokenUsingUserCreds(authEndpoint, username, password, clientId, clientSecret);
   }
 }
