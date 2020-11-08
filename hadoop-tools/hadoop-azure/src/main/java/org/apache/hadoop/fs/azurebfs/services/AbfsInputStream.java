@@ -47,6 +47,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
+  private boolean isFirstRead = true;
+
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
@@ -73,6 +75,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
 
+  private final boolean readSmallFilesCompletely;
+
   public AbfsInputStream(
           final AbfsClient client,
           final Statistics statistics,
@@ -92,6 +96,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
+    this.readSmallFilesCompletely = abfsInputStreamContext
+        .readSmallFilesCompletely();
   }
 
   public String getPath() {
@@ -162,14 +168,28 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IndexOutOfBoundsException();
     }
 
-    //If buffer is empty, then fill the buffer.
-    if (bCursor == limit) {
+    long bytesRead = 0;
+
+    if (isFirstRead && this.readSmallFilesCompletely && contentLength <= bufferSize) {
+      bCursor = (int) getPos();
+      //  Read full file in case the file size <= buffer size
+      buffer = new byte[bufferSize];
+      bytesRead = readInternal(0, buffer, 0, (int) contentLength, true);
+      isFirstRead = false;
+
+      if (bytesRead == -1) {
+        return -1;
+      }
+
+      limit = (int) bytesRead;
+      fCursor = bytesRead;
+    } else if (bCursor == limit) { //If buffer is empty, then fill the buffer.
+
       //If EOF, then return -1
       if (fCursor >= contentLength) {
         return -1;
       }
 
-      long bytesRead = 0;
       //reset buffer to initial state - i.e., throw away existing data
       bCursor = 0;
       limit = 0;
@@ -178,7 +198,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         buffer = new byte[bufferSize];
       }
 
-      // Enable readAhead when reading sequentially
+      // Enable  readAhead when reading sequentially
       if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {
@@ -191,8 +211,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       limit += bytesRead;
       fCursor += bytesRead;
-      fCursorAfterLastRead = fCursor;
     }
+    fCursorAfterLastRead = fCursor;
 
     //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
     //(bytes returned may be less than requested)
@@ -540,5 +560,20 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       sb.append("}");
     }
     return sb.toString();
+  }
+
+  @VisibleForTesting
+  int getBCursor() {
+    return this.bCursor;
+  }
+
+  @VisibleForTesting
+  long getFCursor() {
+    return this.fCursor;
+  }
+
+  @VisibleForTesting
+  long getLimit() {
+    return this.limit;
   }
 }
