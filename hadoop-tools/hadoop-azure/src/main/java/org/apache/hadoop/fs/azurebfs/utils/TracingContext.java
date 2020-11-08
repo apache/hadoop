@@ -40,12 +40,6 @@ public class TracingContext {
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
-  public static enum TracingContextFormat {
-    SINGLE_ID_FORMAT,
-    ALL_ID_FORMAT,
-    TWO_ID_FORMAT;
-  }
-
   public TracingContext(String clientCorrelationID, String fileSystemID,
       String hadoopOpName, TracingContextFormat tracingContextFormat) {
     this.fileSystemID = fileSystemID;

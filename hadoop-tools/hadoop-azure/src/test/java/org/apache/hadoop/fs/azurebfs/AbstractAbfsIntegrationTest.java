@@ -27,7 +27,7 @@ import java.util.concurrent.Callable;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext.TracingContextFormat;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContextFormat;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

@@ -60,7 +60,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext.TracingContextFormat;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContextFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -231,15 +231,15 @@ public class AbfsConfiguration{
           DefaultValue = EMPTY_STRING)
   private String clientCorrelationID;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_TRACINGCONTEXT_FORMAT,
-          DefaultValue = 1)
-  private int tracingContextFormat;
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TRACINGCONTEXT_FORMAT,
+          DefaultValue = 1)// DEFAULT_TRACINGCONTEXT_FORMATSIZE)
+  private int inputTracingContextFormat;
+
+  private final TracingContextFormat tracingContextFormat;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
   private boolean enableDelegationToken;
-
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ALWAYS_USE_HTTPS,
           DefaultValue = DEFAULT_ENABLE_HTTPS)
@@ -284,6 +284,9 @@ public class AbfsConfiguration{
         field.set(this, validateBoolean(field));
       }
     }
+    System.out.println(inputTracingContextFormat + "abfsconf");
+    tracingContextFormat =
+        TracingContextFormat.valueOf(inputTracingContextFormat);
   }
 
   public Trilean getIsNamespaceEnabledAccount() {
@@ -314,11 +317,8 @@ public class AbfsConfiguration{
    * @return tracingContextFormat config
    */
   public TracingContextFormat getTracingContextFormat() {
-    return getEnum(FS_AZURE_TRACINGCONTEXT_FORMAT, DEFAULT_TRACINGCONTEXT_FORMAT);
+    return tracingContextFormat;
   }
-//  public int getTracingContextFormat() {
-//    return tracingContextFormat;
-//  }
 
   /**
    * Appends an account name to a configuration key yielding the
