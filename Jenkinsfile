@@ -171,6 +171,18 @@ pipeline {
     post {
         always {
           script {
+            // Publish status if it was missed (YETUS-1059)
+            withCredentials(
+                [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
+                                  passwordVariable: 'GITHUB_TOKEN',
+                                  usernameVariable: 'GITHUB_USER')]) {
+                sh '''#!/usr/bin/env bash
+                    YETUS_ARGS+=("--github-token=${GITHUB_TOKEN}")
+                    YETUS_ARGS+=("--patch-dir=${WORKSPACE}/${PATCHDIR}")
+                    TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/github-status-recovery.sh"
+                    /usr/bin/env bash "${TESTPATCHBIN}" "${YETUS_ARGS[@]}" ${EXTRA_ARGS} || true
+                    '''
+            }
             // Yetus output
             archiveArtifacts "${env.PATCHDIR}/**"
             // Publish the HTML report so that it can be looked at
