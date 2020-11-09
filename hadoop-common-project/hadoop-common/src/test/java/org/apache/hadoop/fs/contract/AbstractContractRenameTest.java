@@ -104,29 +104,43 @@ public abstract class AbstractContractRenameTest extends
     assertIsFile(destFile);
     boolean renameOverwritesDest = isSupported(RENAME_OVERWRITES_DEST);
     boolean renameReturnsFalseOnRenameDestExists =
-        !isSupported(RENAME_RETURNS_FALSE_IF_DEST_EXISTS);
+        isSupported(RENAME_RETURNS_FALSE_IF_DEST_EXISTS);
+    assertFalse(RENAME_OVERWRITES_DEST + " and " +
+        RENAME_RETURNS_FALSE_IF_DEST_EXISTS + " cannot be both supported",
+        renameOverwritesDest && renameReturnsFalseOnRenameDestExists);
+    String expectedTo = "expected rename(" + srcFile + ", " + destFile + ") to ";
+
     boolean destUnchanged = true;
     try {
+      // rename is rejected by returning 'false' or throwing an exception
       boolean renamed = rename(srcFile, destFile);
+      destUnchanged = !renamed;
 
       if (renameOverwritesDest) {
-      // the filesystem supports rename(file, file2) by overwriting file2
+        assertTrue(expectedTo + "overwrite destination, but got false",
+            renamed);
+      } else if (renameReturnsFalseOnRenameDestExists) {
+        assertFalse(expectedTo + "be rejected with false, but destination " +
+            "was overwritten", renamed);
+      } else if (renamed) {
+        String destDirLS = generateAndLogErrorListing(srcFile, destFile);
+        getLogger().error("dest dir {}", destDirLS);
 
-      assertTrue("Rename returned false", renamed);
-      destUnchanged = false;
+        fail(expectedTo + "be rejected with exception, but got overwritten");
       } else {
-        // rename is rejected by returning 'false' or throwing an exception
-        if (renamed && !renameReturnsFalseOnRenameDestExists) {
-          //expected an exception
-          String destDirLS = generateAndLogErrorListing(srcFile, destFile);
-          getLogger().error("dest dir {}", destDirLS);
-          fail("expected rename(" + srcFile + ", " + destFile + " ) to fail," +
-               " but got success and destination of " + destDirLS);
-        }
+        fail(expectedTo + "be rejected with exception, but got false");
       }
     } catch (FileAlreadyExistsException e) {
+      // rename(file, file2) should throw exception iff
+      // it neither overwrites nor returns false
+      assertFalse(expectedTo + "overwrite destination, but got exception",
+          renameOverwritesDest);
+      assertFalse(expectedTo + "be rejected with false, but got exception",
+          renameReturnsFalseOnRenameDestExists);
+
       handleExpectedException(e);
     }
+
     // verify that the destination file is as expected based on the expected
     // outcome
     verifyFileContents(getFileSystem(), destFile,
