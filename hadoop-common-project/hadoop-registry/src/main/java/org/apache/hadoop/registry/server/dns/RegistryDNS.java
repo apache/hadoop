@@ -87,8 +87,9 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
@@ -683,10 +684,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       throws DNSSEC.DNSSECException {
     RRset rrset = zone.findExactMatch(record.getName(),
         record.getType());
-    Calendar cal = Calendar.getInstance();
-    Date inception = cal.getTime();
-    cal.add(Calendar.YEAR, 1);
-    Date expiration = cal.getTime();
+    Instant inception = Instant.now();
+    Instant expiration = inception.plus(365, ChronoUnit.DAYS);
     RRSIGRecord rrsigRecord =
         DNSSEC.sign(rrset, dnsKeyRecs.get(zone.getOrigin()),
             privateKey, inception, expiration);
@@ -1150,7 +1149,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
           }
         }
         if (r.getType() == Type.CNAME) {
-          Name cname = ((CNAMERecord) r).getAlias();
+          Name cname = r.getName();
           if (iterations < 6) {
             remoteLookup(response, cname, type, iterations + 1);
           }
@@ -1246,9 +1245,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    * @param flags the flags.
    */
   private void addAdditional2(Message response, int section, int flags) {
-    Record[] records = response.getSectionArray(section);
-    for (int i = 0; i < records.length; i++) {
-      Record r = records[i];
+    for (Record r : response.getSection(section)) {
       Name glueName = r.getAdditionalName();
       if (glueName != null) {
         addGlue(response, glueName, flags);
@@ -1446,7 +1443,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   private void addNXT(Message response, int flags)
       throws DNSSEC.DNSSECException, IOException {
     Record nxtRecord = getNXTRecord(
-        response.getSectionArray(Section.QUESTION)[0]);
+        response.getSection(Section.QUESTION).get(0));
     Zone zone = findBestZone(nxtRecord.getName());
     addRecordCommand.exec(zone, nxtRecord);
     RRset nxtRR = zone.findExactMatch(nxtRecord.getName(), Type.NXT);
@@ -1540,13 +1537,13 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     if (zone == null) {
       return errorMessage(query, Rcode.REFUSED);
     }
-    Iterator it = zone.AXFR();
+    Iterator<RRset> it = zone.AXFR();
     try {
       DataOutputStream dataOut;
       dataOut = new DataOutputStream(s.getOutputStream());
       int id = query.getHeader().getID();
       while (it.hasNext()) {
-        RRset rrset = (RRset) it.next();
+        RRset rrset = it.next();
         Message response = new Message(id);
         Header header = response.getHeader();
         header.setFlag(Flags.QR);
@@ -1554,7 +1551,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
         addRRset(rrset.getName(), response, rrset,
             Section.ANSWER, FLAG_DNSSECOK);
         if (tsig != null) {
-          tsig.applyStream(response, qtsig, first);
+          tsig.apply(response, qtsig, first);
           qtsig = response.getTSIG();
         }
         first = false;
@@ -1674,10 +1671,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
           zone.addRecord(record);
           LOG.info("Registered {}", record);
           if (isDNSSECEnabled()) {
-            Calendar cal = Calendar.getInstance();
-            Date inception = cal.getTime();
-            cal.add(Calendar.YEAR, 1);
-            Date expiration = cal.getTime();
+            Instant inception = Instant.now();
+            Instant expiration = inception.plus(365, ChronoUnit.DAYS);
             RRset rRset =
                 zone.findExactMatch(record.getName(), record.getType());
             try {
@@ -1713,8 +1708,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
      */
     private void addDSRecord(Zone zone,
         Name name, int dClass, long dsTtl,
-        Date inception,
-        Date expiration) throws DNSSEC.DNSSECException {
+        Instant inception,
+        Instant expiration) throws DNSSEC.DNSSECException {
       RRset rRset;
       RRSIGRecord rrsigRecord;
 
