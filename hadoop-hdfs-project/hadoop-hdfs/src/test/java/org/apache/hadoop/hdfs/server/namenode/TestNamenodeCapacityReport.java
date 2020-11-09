@@ -193,7 +193,6 @@ public class TestNamenodeCapacityReport {
     }
   }
 
-
   /**
    * We split the disk to DISK/ARCHIVE volumes and test if NN gets correct stat.
    */

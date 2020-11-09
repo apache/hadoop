@@ -48,6 +48,11 @@ class MountVolumeInfo {
           " Setting it to 100%.");
       reservedForArchiveDefault = 1;
     }
+    if (reservedForArchiveDefault < 0) {
+      FsDatasetImpl.LOG.warn("Value of reserve-for-archival is < 0." +
+          " Setting it to 0.0");
+      reservedForArchiveDefault = 0;
+    }
   }
 
   FsVolumeReference getVolumeRef(StorageType storageType) {
