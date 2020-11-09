@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -43,10 +44,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
-
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * Ensure that we can perform operations against the shaded minicluster
@@ -91,9 +89,7 @@ public class ITUseMiniCluster {
     if (cluster != null) {
       cluster.close();
     }
-    if (yarnCluster != null) {
-      yarnCluster.stop();
-    }
+    IOUtils.cleanupWithLogger(LOG, yarnCluster);
   }
 
   @Test
