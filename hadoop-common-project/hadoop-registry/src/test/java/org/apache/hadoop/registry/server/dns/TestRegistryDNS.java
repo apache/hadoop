@@ -202,7 +202,8 @@ public class TestRegistryDNS extends Assert {
     recs = assertDNSQuery("management-api.test1.root.dev.test.", 2);
     assertEquals("wrong target name", "test1.root.dev.test.",
         ((CNAMERecord) recs.get(0)).getTarget().toString());
-    assertTrue("not an ARecord", recs.get(isSecure() ? 2 : 1) instanceof ARecord);
+    assertTrue("not an ARecord",
+        recs.get(isSecure() ? 2 : 1) instanceof ARecord);
 
     recs = assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.",
         Type.SRV, 1);
@@ -212,12 +213,14 @@ public class TestRegistryDNS extends Assert {
     recs = assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.", 2);
     assertEquals("wrong target name", "test1.root.dev.test.",
         ((CNAMERecord) recs.get(0)).getTarget().toString());
-    assertTrue("not an ARecord", recs.get(isSecure() ? 2 : 1) instanceof ARecord);
+    assertTrue("not an ARecord",
+        recs.get(isSecure() ? 2 : 1) instanceof ARecord);
 
     recs = assertDNSQuery("http-api.test1.root.dev.test.", 2);
     assertEquals("wrong target name", "test1.root.dev.test.",
         ((CNAMERecord) recs.get(0)).getTarget().toString());
-    assertTrue("not an ARecord", recs.get(isSecure() ? 2 : 1) instanceof ARecord);
+    assertTrue("not an ARecord",
+        recs.get(isSecure() ? 2 : 1) instanceof ARecord);
 
     recs = assertDNSQuery("http-api.test1.root.dev.test.", Type.SRV,
         1);
@@ -413,8 +416,8 @@ public class TestRegistryDNS extends Assert {
     return recs;
   }
 
-  private List<Record> assertDNSQueryNotNull(String lookup, int type, int answerCount)
-      throws IOException {
+  private List<Record> assertDNSQueryNotNull(
+      String lookup, int type, int answerCount) throws IOException {
     Name name = Name.fromString(lookup);
     Record question = Record.newRecord(name, type, DClass.IN);
     Message query = Message.newQuery(question);
