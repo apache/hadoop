@@ -159,7 +159,7 @@ public class ZStandardCompressor implements Compressor {
     }
 
     // have we consumed all input
-    if (keepUncompressedBuf && uncompressedDirectBufLen > 0) {
+    if (keepUncompressedBuf && uncompressedDirectBufLen - uncompressedDirectBufOff > 0) {
       return false;
     }
 
@@ -223,7 +223,7 @@ public class ZStandardCompressor implements Compressor {
     compressedDirectBuf.limit(n);
 
     // Check if we have consumed all input buffer
-    if (uncompressedDirectBufLen <= 0) {
+    if (uncompressedDirectBufLen - uncompressedDirectBufOff <= 0) {
       // consumed all input buffer
       keepUncompressedBuf = false;
       uncompressedDirectBuf.clear();

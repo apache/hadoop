@@ -219,13 +219,13 @@ JNIEXPORT jint Java_org_apache_hadoop_io_compress_zstd_ZStandardCompressor_defla
         return (jint) 0;
     }
 
-    bytes_read += input.pos;
+    bytes_read += input.pos - uncompressed_direct_buf_off;
     bytes_written += output.pos;
     (*env)->SetLongField(env, this, ZStandardCompressor_bytesRead, bytes_read);
     (*env)->SetLongField(env, this, ZStandardCompressor_bytesWritten, bytes_written);
 
     (*env)->SetIntField(env, this, ZStandardCompressor_uncompressedDirectBufOff, input.pos);
-    (*env)->SetIntField(env, this, ZStandardCompressor_uncompressedDirectBufLen, input.size - input.pos);
+    (*env)->SetIntField(env, this, ZStandardCompressor_uncompressedDirectBufLen, input.size);
     return (jint) output.pos;
 }
 
