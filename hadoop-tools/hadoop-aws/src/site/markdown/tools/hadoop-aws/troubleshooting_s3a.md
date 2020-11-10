@@ -104,7 +104,6 @@ Fixes:
 revert to the JVM SSL implementation when the wildfly
 or native openssl libraries cannot be loaded.
 
-
 ## <a name="authentication"></a> Authentication Failure
 
 If Hadoop cannot authenticate with the S3 service endpoint,
@@ -247,6 +246,47 @@ As an example, the endpoint for S3 Frankfurt is `s3.eu-central-1.amazonaws.com`:
   <value>s3.eu-central-1.amazonaws.com</value>
 </property>
 ```
+
+### `Class does not implement AWSCredentialsProvider`
+
+A credential provider listed in `fs.s3a.aws.credentials.provider` does not implement
+the interface `com.amazonaws.auth.AWSCredentialsProvider`.
+
+```
+  Cause: java.lang.RuntimeException: java.io.IOException: Class class com.amazonaws.auth.EnvironmentVariableCredentialsProvider does not implement AWSCredentialsProvider
+  at org.apache.hadoop.hive.ql.session.SessionState.start(SessionState.java:686)
+  at org.apache.hadoop.hive.ql.session.SessionState.start(SessionState.java:621)
+  at org.apache.spark.sql.hive.client.HiveClientImpl.newState(HiveClientImpl.scala:219)
+  at org.apache.spark.sql.hive.client.HiveClientImpl.<init>(HiveClientImpl.scala:126)
+  at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+  at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+  at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+  at java.lang.reflect.Constructor.newInstance(Constructor.java:423)
+  at org.apache.spark.sql.hive.client.IsolatedClientLoader.createClient(IsolatedClientLoader.scala:306)
+  at org.apache.spark.sql.hive.HiveUtils$.newClientForMetadata(HiveUtils.scala:433)
+  ...
+  Cause: java.io.IOException: Class class com.amazonaws.auth.EnvironmentVariableCredentialsProvider does not implement AWSCredentialsProvider
+  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProvider(S3AUtils.java:722)
+  at org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList(S3AUtils.java:687)
+  at org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet(S3AUtils.java:620)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.bindAWSClient(S3AFileSystem.java:673)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:414)
+  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3462)
+  at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:171)
+  at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3522)
+  at org.apache.hadoop.fs.FileSystem$Cache.getUnique(FileSystem.java:3496)
+  at org.apache.hadoop.fs.FileSystem.newInstance(FileSystem.java:591)
+```
+
+There's two main causes
+
+1. A class listed there is not an implementation of the interface.
+   Fix: review the settings and correct as appropriate.
+1. A class listed there does implement the interface, but it has been loaded in a different
+   classloader, so the JVM does not consider it to be an implementation.
+   Fix: learn the entire JVM classloader model and see if you can then debug it.
+   Tip: having both the AWS Shaded SDK and individual AWS SDK modules on your classpath
+   may be a cause of this
 
 ## <a name="access_denied"></a> "The security token included in the request is invalid"
 
@@ -1262,11 +1302,11 @@ Number of parts in multipart upload exceeded
 ```
 org.apache.hadoop.fs.PathIOException: `test/testMultiPartUploadFailure': Number of parts in multipart upload exceeded. Current part count = X, Part count limit = Y
 
-	at org.apache.hadoop.fs.s3a.WriteOperationHelper.newUploadPartRequest(WriteOperationHelper.java:432)
-	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.uploadBlockAsync(S3ABlockOutputStream.java:627)
-	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.access$000(S3ABlockOutputStream.java:532)
-	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.uploadCurrentBlock(S3ABlockOutputStream.java:316)
-	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.write(S3ABlockOutputStream.java:301)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.newUploadPartRequest(WriteOperationHelper.java:432)
+    at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.uploadBlockAsync(S3ABlockOutputStream.java:627)
+    at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.access$000(S3ABlockOutputStream.java:532)
+    at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.uploadCurrentBlock(S3ABlockOutputStream.java:316)
+    at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.write(S3ABlockOutputStream.java:301)
 ```
 
 This is a known issue where upload fails if number of parts

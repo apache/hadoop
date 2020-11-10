@@ -46,8 +46,8 @@ public final class InternalCommitterConstants {
   /**
    * A unique identifier to use for this work: {@value}.
    */
-  public static final String FS_S3A_COMMITTER_STAGING_UUID =
-      "fs.s3a.committer.staging.uuid";
+  public static final String FS_S3A_COMMITTER_UUID =
+      "fs.s3a.committer.uuid";
 
   /**
    * Directory committer factory: {@value}.
@@ -97,4 +97,30 @@ public final class InternalCommitterConstants {
   /** Error message for a path without a magic element in the list: {@value}. */
   public static final String E_NO_MAGIC_PATH_ELEMENT
       = "No " + MAGIC + " element in path";
+
+  /**
+   * The UUID for jobs: {@value}.
+   * This was historically created in Spark 1.x's SQL queries, but "went away".
+   */
+  public static final String SPARK_WRITE_UUID =
+      "spark.sql.sources.writeJobUUID";
+
+  /**
+   * The App ID for jobs: {@value}.
+   */
+  public static final String SPARK_APP_ID = "spark.app.id";
+
+  /**
+   * Java temp dir: {@value}.
+   */
+  public static final String JAVA_IO_TMPDIR = "java.io.tmpdir";
+
+  /**
+   * Incoming Job/task configuration didn't contain any option
+   * {@link #SPARK_WRITE_UUID}.
+   */
+  public static final String E_NO_SPARK_UUID =
+      "Job/task context does not contain a unique ID in "
+          + SPARK_WRITE_UUID;
+
 }
