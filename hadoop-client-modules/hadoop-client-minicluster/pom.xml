@@ -840,6 +840,12 @@
                         <exclude>*/**</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty:jetty-server</artifact>
+                      <excludes>
+                        <exclude>jetty-dir.css</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
 
                   <!-- relocate classes from mssql-jdbc -->
