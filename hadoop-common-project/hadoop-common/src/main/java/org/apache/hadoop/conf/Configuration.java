@@ -2889,7 +2889,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *                   of just loading the new resource.
    * @return the properties loaded from the resource.
    */
-  private synchronized Properties loadProps(final Properties props,
+  private synchronized void loadProps(final Properties props,
       final int startIdx, final boolean fullReload) {
     if (props != null) {
       Map<String, String[]> backup =
@@ -2909,7 +2909,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
       }
     }
-    return props;
   }
 
   /**
