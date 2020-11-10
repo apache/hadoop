@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.htrace.core.SpanId;
@@ -90,6 +92,7 @@ public class TestDFSOutputStream {
   public static void setup() throws IOException {
     Configuration conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster.waitActive();
   }
 
   /**
@@ -97,31 +100,44 @@ public class TestDFSOutputStream {
    * twice. See HDFS-5335 for details.
    */
   @Test
-  public void testCloseTwice() throws IOException {
-    DistributedFileSystem fs = cluster.getFileSystem();
+  public void testCloseTwice() throws Exception {
+    // we create a new dfsCluster to avoid shutting down the local cluster used
+    // by other tests.
+    MiniDFSCluster dfsCluster =
+        new MiniDFSCluster.Builder(new Configuration()).numDataNodes(3).build();
+    dfsCluster.waitActive();
+    DistributedFileSystem fs = dfsCluster.getFileSystem();
     FSDataOutputStream os = fs.create(new Path("/test"));
-    DFSOutputStream dos = (DFSOutputStream) Whitebox.getInternalState(os,
-        "wrappedStream");
-    DataStreamer streamer = (DataStreamer) Whitebox
-        .getInternalState(dos, "streamer");
+    DFSOutputStream dos = (DFSOutputStream) os.getWrappedStream();
+    DataStreamer streamer = dos.getStreamer();
+
     @SuppressWarnings("unchecked")
-    LastExceptionInStreamer ex = (LastExceptionInStreamer) Whitebox
-        .getInternalState(streamer, "lastException");
-    Throwable thrown = (Throwable) Whitebox.getInternalState(ex, "thrown");
+    LastExceptionInStreamer ex = streamer.getLastException();
+    Throwable thrown = ex.get();
     Assert.assertNull(thrown);
+    // force stream to break. output stream needs to encounter a real
+    // error to properly mark it closed with an exception.
+    dfsCluster.shutdown(true, false);
 
-    dos.close();
-
-    IOException dummy = new IOException("dummy");
-    ex.set(dummy);
+    LambdaTestUtils.intercept(EOFException.class,
+        () -> dos.close());
+    thrown = ex.get();
+    Assert.assertNull(thrown);
+    // no exception should be thrown.
     try {
       dos.close();
-    } catch (IOException e) {
-      assertEquals(e, dummy);
+    } catch (Exception e) {
+      fail("DFSOutputStream should never throw the same exception twice");
     }
-    thrown = (Throwable) Whitebox.getInternalState(ex, "thrown");
-    Assert.assertNull(thrown);
-    dos.close();
+    // even if the exception is set again, close should not throw it twice.
+    ex.set(new IOException("dummy"));
+    thrown = ex.get();
+    Assert.assertNotNull(thrown);
+    try {
+      dos.close();
+    } catch (Exception e) {
+      fail("DFSOutputStream should never throw the same exception twice");
+    }
   }
 
   /**

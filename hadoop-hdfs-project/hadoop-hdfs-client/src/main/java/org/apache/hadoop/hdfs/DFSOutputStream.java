@@ -130,6 +130,17 @@ public class DFSOutputStream extends FSOutputSummer
   private int writePacketSize;
   private boolean leaseRecovered = false;
 
+  // a flag to avoid race between threads calling close()
+  private boolean clientCloseAttempt = false;
+
+  protected boolean getClientCloseAttempt() {
+    return clientCloseAttempt;
+  }
+
+  protected void setClientCloseAttempt() {
+    clientCloseAttempt = true;
+  }
+
   /** Use {@link ByteArrayManager} to create buffer for non-heartbeat packets.*/
   protected DFSPacket createPacket(int packetSize, int chunksPerPkt,
       long offsetInBlock, long seqno, boolean lastPacketInBlock)
@@ -850,11 +861,18 @@ public class DFSOutputStream extends FSOutputSummer
   public void close() throws IOException {
     final MultipleIOException.Builder b = new MultipleIOException.Builder();
     synchronized (this) {
+      if (getClientCloseAttempt()) {
+        return;
+      }
       try (TraceScope ignored = dfsClient.newPathTraceScope(
           "DFSOutputStream#close", src)) {
         closeImpl();
       } catch (IOException e) {
         b.add(e);
+      } finally {
+        // If current thread throws exception before closing;
+        // then calls should not throw the same exception again.
+        setClientCloseAttempt();
       }
     }
     final IOException ioe = b.build();
