@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.yarn.server.MiniYARNCluster;
 
 /**
  * Ensure that we can perform operations against the shaded minicluster
@@ -54,6 +56,7 @@ public class ITUseMiniCluster {
       LoggerFactory.getLogger(ITUseMiniCluster.class);
 
   private MiniDFSCluster cluster;
+  private MiniYARNCluster yarnCluster;
 
   private static final String TEST_PATH = "/foo/bar/cats/dee";
   private static final String FILENAME = "test.file";
@@ -73,6 +76,12 @@ public class ITUseMiniCluster {
         .numDataNodes(3)
         .build();
     cluster.waitActive();
+
+    conf.set("yarn.scheduler.capacity.root.queues", "default");
+    conf.setInt("yarn.scheduler.capacity.root.default.capacity", 100);
+    yarnCluster = new MiniYARNCluster(getClass().getName(), 1, 1, 1, 1);
+    yarnCluster.init(conf);
+    yarnCluster.start();
   }
 
   @After
@@ -80,6 +89,7 @@ public class ITUseMiniCluster {
     if (cluster != null) {
       cluster.close();
     }
+    IOUtils.cleanupWithLogger(LOG, yarnCluster);
   }
 
   @Test
