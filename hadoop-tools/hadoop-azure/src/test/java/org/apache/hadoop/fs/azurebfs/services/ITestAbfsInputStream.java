@@ -40,69 +40,87 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testSeekToBeginingAndReadWithConfTrue() throws Exception {
-    testSeekToBeginingAndReadWithConf(true);
-  }
-
-  @Test
-  public void testSeekToBeginingAndReadWithConfFalse() throws Exception {
-    testSeekToBeginingAndReadWithConf(false);
-  }
-
-  private void testSeekToBeginingAndReadWithConf(
-      boolean readSmallFilesCompletely) throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem(readSmallFilesCompletely);
-    for (int i = 1; i <= 4; i++) {
-      String fileName = methodName.getMethodName() + i;
-      int fileSize = i * ONE_MB;
-      byte[] fileContent = getRandomBytesArray(fileSize);
-      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      seekReadAndTest(fs, testFilePath, 0, ONE_KB, fileContent);
-    }
-  }
-
-  @Test
-  public void testSeekToEndAndReadWithConfTrue() throws Exception {
-    testSeekToEndAndReadWithConf(true);
-  }
-
-  @Test
-  public void testSeekToEndAndReadWithConfFalse() throws Exception {
-    testSeekToEndAndReadWithConf(false);
-  }
-
-  private void testSeekToEndAndReadWithConf(boolean readSmallFilesCompletely)
+  public void testSeekToBeginingAndReadSmallFileWithConfTrue()
       throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem(readSmallFilesCompletely);
-    for (int i = 1; i <= 4; i++) {
-      String fileName = methodName.getMethodName() + i;
-      int fileSize = i * ONE_MB;
-      byte[] fileContent = getRandomBytesArray(fileSize);
-      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      seekReadAndTest(fs, testFilePath, fileSize - ONE_KB, ONE_KB, fileContent);
-    }
+    testSeekAndReadWithConf(SeekTo.BEGIN, 1, 4, true);
   }
 
   @Test
-  public void testSeekToMiddleAndReadWithConfTrue() throws Exception {
-    testSeekToMiddleAndReadWithConf(true);
-  }
-
-  @Test
-  public void testSeekToMiddleAndReadWithConfFalse() throws Exception {
-    testSeekToMiddleAndReadWithConf(false);
-  }
-
-  private void testSeekToMiddleAndReadWithConf(boolean readSmallFilesCompletely)
+  public void testSeekToBeginingAndReadSmallFileWithConfFalse()
       throws Exception {
+    testSeekAndReadWithConf(SeekTo.BEGIN, 1, 4, false);
+  }
+
+  @Test
+  public void testSeekToBeginingAndReadBigFileWithConfTrue() throws Exception {
+    testSeekAndReadWithConf(SeekTo.BEGIN, 5, 8, true);
+  }
+
+  @Test
+  public void testSeekToBeginingAndReadBigFileWithConfFalse() throws Exception {
+    testSeekAndReadWithConf(SeekTo.BEGIN, 5, 8, false);
+  }
+
+  @Test
+  public void testSeekToEndAndReadSmallFileWithConfTrue() throws Exception {
+    testSeekAndReadWithConf(SeekTo.END, 1, 4, true);
+  }
+
+  @Test
+  public void testSeekToEndAndReadSmallFileWithConfFalse() throws Exception {
+    testSeekAndReadWithConf(SeekTo.END, 1, 4, false);
+  }
+
+  @Test
+  public void testSeekToEndAndReadBigFileWithConfTrue() throws Exception {
+    testSeekAndReadWithConf(SeekTo.END, 5, 8, true);
+  }
+
+  @Test
+  public void testSeekToEndAndReaBigFiledWithConfFalse() throws Exception {
+    testSeekAndReadWithConf(SeekTo.END, 5, 8, false);
+  }
+
+  @Test
+  public void testSeekToMiddleAndReadSmallFileWithConfTrue() throws Exception {
+    testSeekAndReadWithConf(SeekTo.MIDDLE, 1, 4, true);
+  }
+
+  @Test
+  public void testSeekToMiddleAndReadSmallFileWithConfFalse() throws Exception {
+    testSeekAndReadWithConf(SeekTo.MIDDLE, 1, 4, false);
+  }
+
+  @Test
+  public void testSeekToMiddleAndReaBigFileWithConfTrue() throws Exception {
+    testSeekAndReadWithConf(SeekTo.MIDDLE, 5, 8, true);
+  }
+
+  @Test
+  public void testSeekToMiddleAndReadBigFileWithConfFalse() throws Exception {
+    testSeekAndReadWithConf(SeekTo.MIDDLE, 5, 8, false);
+  }
+
+  private void testSeekAndReadWithConf(SeekTo seekTo, int startFileSizeInMB,
+      int endFileSizeInMB, boolean readSmallFilesCompletely) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem(readSmallFilesCompletely);
-    for (int i = 1; i <= 4; i++) {
+    for (int i = startFileSizeInMB; i <= endFileSizeInMB; i++) {
       String fileName = methodName.getMethodName() + i;
       int fileSize = i * ONE_MB;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      seekReadAndTest(fs, testFilePath, fileSize / 2, ONE_KB, fileContent);
+      int length = ONE_KB;
+      int seekPos = seekPos(seekTo, fileSize, length);
+      seekReadAndTest(fs, testFilePath, seekPos, length, fileContent);
     }
+  }
+
+  private int seekPos(SeekTo seekTo, int fileSize, int length) {
+    if (seekTo == SeekTo.BEGIN)
+      return 0;
+    if (seekTo == SeekTo.END)
+      return fileSize - length;
+    return fileSize / 2;
   }
 
   private AzureBlobFileSystem getFileSystem(boolean readSmallFilesCompletely)
@@ -135,24 +153,37 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
       AzureBlobFileSystem abfs = (AzureBlobFileSystem) fs;
       AbfsConfiguration conf = abfs.getAbfsStore().getAbfsConfiguration();
-
-      int expectedFCursor = fileContent.length;
-      int expectedLimit, expectedBCursor;
-      if (conf.readSmallFilesCompletely()) {
-        assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer());
+      final int readBufferSize = conf.getReadBufferSize();
+      final int fileContentLength = fileContent.length;
+      final boolean smallFile = fileContentLength <= readBufferSize;
+      int expectedLimit, expectedFCursor;
+      int expectedBCursor;
+      //  All he tests are called after the first read.
+      //  The feature will work only on the first read.
+      //  The comments and assertions are also for the first read.
+      if (conf.readSmallFilesCompletely() && smallFile) {
+        //  The files will be exact same when the ile size is < readbuffer
+        //  size
+        assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf);
+        expectedFCursor = fileContentLength;
+        expectedLimit = fileContentLength;
         expectedBCursor = seekPos + length;
-        expectedLimit = fileContent.length;
       } else {
-        expectedBCursor = length;
         if ((seekPos == 0)) {
-          assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer());
-          expectedLimit = fileContent.length;
-          // Buffer containf bytes from 0 to EOF
+          //  Irrespective of the requested length the first n bytes are read
+          //  if it is first read and read is from the begining
+          assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf);
         } else {
-          assertBuffersAreNotEqual(fileContent, abfsInputStream.getBuffer());
-          expectedLimit = fileContent.length - seekPos;
-          // Buffer containf bytes from seekPos to EOF
+          assertBuffersAreNotEqual(fileContent, abfsInputStream.getBuffer(),
+              conf);
         }
+        expectedBCursor = length;
+        expectedFCursor = (fileContentLength < (seekPos + readBufferSize)) ?
+            fileContentLength :
+            (seekPos + readBufferSize);
+        expectedLimit = (fileContentLength < (seekPos + readBufferSize)) ?
+            (fileContentLength - seekPos) :
+            readBufferSize;
       }
       assertEquals(expectedFCursor, abfsInputStream.getFCursor());
       assertEquals(expectedBCursor, abfsInputStream.getBCursor());
@@ -168,24 +199,31 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
   }
 
   private void assertBuffersAreNotEqual(byte[] actualContent,
-      byte[] contentRead) {
-    int matches = 0;
-    for (int i = 0; i < actualContent.length; i++) {
-      if (actualContent[i] == contentRead[i]) {
-        matches++;
-      }
-    }
-    assertNotEquals(actualContent.length, matches);
+      byte[] contentRead, AbfsConfiguration conf) {
+    assertBufferEquality(actualContent, contentRead, conf, false);
   }
 
-  private void assertBuffersAreEqual(byte[] actualContent, byte[] contentRead) {
+  private void assertBuffersAreEqual(byte[] actualContent, byte[] contentRead,
+      AbfsConfiguration conf) {
+    assertBufferEquality(actualContent, contentRead, conf, true);
+  }
+
+  private void assertBufferEquality(byte[] actualContent, byte[] contentRead,
+      AbfsConfiguration conf, boolean assertEqual) {
+    int bufferSize = conf.getReadBufferSize();
+    int actualContentSize = actualContent.length;
+    int n = (actualContentSize < bufferSize) ? actualContentSize : bufferSize;
     int matches = 0;
-    for (int i = 0; i < actualContent.length; i++) {
+    for (int i = 0; i < n; i++) {
       if (actualContent[i] == contentRead[i]) {
         matches++;
       }
     }
-    assertEquals(actualContent.length, matches);
+    if (assertEqual) {
+      assertEquals(n, matches);
+    } else {
+      assertNotEquals(n, matches);
+    }
   }
 
   private byte[] getRandomBytesArray(int length) {
@@ -193,4 +231,6 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     new Random().nextBytes(b);
     return b;
   }
+
+  private enum SeekTo {BEGIN, MIDDLE, END}
 }

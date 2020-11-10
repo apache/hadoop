@@ -47,7 +47,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
-  private boolean isFirstRead = true;
+  private boolean firstRead = true;
 
   private final AbfsClient client;
   private final Statistics statistics;
@@ -76,6 +76,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private long bytesFromRemoteRead; // bytes read remotely; for testing
 
   private final boolean readSmallFilesCompletely;
+  private final boolean optimizeFooterRead;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -98,6 +99,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
     this.readSmallFilesCompletely = abfsInputStreamContext
         .readSmallFilesCompletely();
+    this.optimizeFooterRead = true;
   }
 
   public String getPath() {
@@ -134,7 +136,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
     incrementReadOps();
     do {
-      lastReadBytes = readOneBlock(b, currentOff, currentLen);
+      lastReadBytes = readToUserBuffer(b, currentOff, currentLen);
       if (lastReadBytes > 0) {
         currentOff += lastReadBytes;
         currentLen -= lastReadBytes;
@@ -147,7 +149,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
   }
 
-  private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
+  private int readToUserBuffer(final byte[] b, final int off, final int len) throws IOException {
     if (closed) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
@@ -170,12 +172,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
     long bytesRead = 0;
 
-    if (isFirstRead && this.readSmallFilesCompletely && contentLength <= bufferSize) {
+    if (firstRead && this.readSmallFilesCompletely
+        && contentLength <= bufferSize) { //  Read small files completely
       bCursor = (int) getPos();
       //  Read full file in case the file size <= buffer size
       buffer = new byte[bufferSize];
       bytesRead = readInternal(0, buffer, 0, (int) contentLength, true);
-      isFirstRead = false;
+      firstRead = false;
 
       if (bytesRead == -1) {
         return -1;
@@ -183,6 +186,24 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       limit = (int) bytesRead;
       fCursor = bytesRead;
+    } else if (firstRead && this.optimizeFooterRead
+        && fCursor == contentLength - 9) {  //  Read the last one block if te
+                                            // read is for the footer
+      bCursor = (int) (
+          ((contentLength < bufferSize) ? contentLength : bufferSize) - 9);
+      buffer = new byte[bufferSize];
+      long startPos = (contentLength < bufferSize) ?
+          0 :
+          contentLength - bufferSize;
+      bytesRead = readInternal(startPos, buffer, 0, bufferSize, true);
+      firstRead = false;
+
+      if (bytesRead == -1) {
+        return -1;
+      }
+
+      limit += (int) bytesRead;
+      fCursor = contentLength;
     } else if (bCursor == limit) { //If buffer is empty, then fill the buffer.
 
       //If EOF, then return -1
@@ -230,7 +251,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
     return bytesToRead;
   }
-
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
