@@ -2887,7 +2887,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param startIdx the index where the new resource has been added.
    * @param fullReload flag whether we do complete reload of the conf instead
    *                   of just loading the new resource.
-   * @return the properties loaded from the resource.
    */
   private synchronized void loadProps(final Properties props,
       final int startIdx, final boolean fullReload) {
