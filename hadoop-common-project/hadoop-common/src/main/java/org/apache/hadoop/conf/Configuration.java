@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.conf;
 
+
 import com.ctc.wstx.api.ReaderConfig;
 import com.ctc.wstx.io.StreamBootstrapper;
 import com.ctc.wstx.io.SystemId;
