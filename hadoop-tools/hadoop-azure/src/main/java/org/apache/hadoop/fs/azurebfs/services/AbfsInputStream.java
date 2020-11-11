@@ -174,37 +174,74 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
     if (firstRead && this.readSmallFilesCompletely
         && contentLength <= bufferSize) { //  Read small files completely
-      bCursor = (int) getPos();
-      //  Read full file in case the file size <= buffer size
-      buffer = new byte[bufferSize];
-      bytesRead = readInternal(0, buffer, 0, (int) contentLength, true);
-      firstRead = false;
-
-      if (bytesRead == -1) {
+      if (readFileCompletely() == -1)
         return -1;
-      }
-
-      limit = (int) bytesRead;
-      fCursor = bytesRead;
     } else if (firstRead && this.optimizeFooterRead
         && fCursor == contentLength - 9) {  //  Read the last one block if te
-                                            // read is for the footer
-      bCursor = (int) (
-          ((contentLength < bufferSize) ? contentLength : bufferSize) - 9);
-      buffer = new byte[bufferSize];
-      long startPos = (contentLength < bufferSize) ?
-          0 :
-          contentLength - bufferSize;
-      bytesRead = readInternal(startPos, buffer, 0, bufferSize, true);
-      firstRead = false;
-
-      if (bytesRead == -1) {
+      // read is for the footer
+      if (readLastBlock() == -1)
         return -1;
-      }
+    } else {
+      if (readOneBlock(b) == -1)
+        return -1;
+    }
+    fCursorAfterLastRead = fCursor;
 
-      limit += (int) bytesRead;
-      fCursor = contentLength;
-    } else if (bCursor == limit) { //If buffer is empty, then fill the buffer.
+    //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
+    //(bytes returned may be less than requested)
+    int bytesRemaining = limit - bCursor;
+    int bytesToRead = Math.min(len, bytesRemaining);
+    System.arraycopy(buffer, bCursor, b, off, bytesToRead);
+    bCursor += bytesToRead;
+    if (statistics != null) {
+      statistics.incrementBytesRead(bytesToRead);
+    }
+    if (streamStatistics != null) {
+      // Bytes read from the local buffer.
+      streamStatistics.bytesReadFromBuffer(bytesToRead);
+      streamStatistics.bytesRead(bytesToRead);
+    }
+    return bytesToRead;
+  }
+
+  private long readFileCompletely() throws IOException {
+    bCursor = (int) getPos();
+    //  Read full file in case the file size <= buffer size
+    buffer = new byte[bufferSize];
+    long bytesRead = readInternal(0, buffer, 0, (int) contentLength, true);
+    firstRead = false;
+
+    if (bytesRead == -1) {
+      return -1;
+    }
+
+    limit = (int) bytesRead;
+    fCursor = bytesRead;
+    return bytesRead;
+  }
+
+  private long readLastBlock() throws IOException {
+    bCursor = (int) (
+        ((contentLength < bufferSize) ? contentLength : bufferSize) - 9);
+    buffer = new byte[bufferSize];
+    long startPos = (contentLength < bufferSize) ?
+        0 :
+        contentLength - bufferSize;
+    long bytesRead = readInternal(startPos, buffer, 0, bufferSize, true);
+    firstRead = false;
+
+    if (bytesRead == -1) {
+      return -1;
+    }
+
+    limit += (int) bytesRead;
+    fCursor = contentLength;
+    return bytesRead;
+  }
+
+  private long readOneBlock(final byte[] b) throws IOException {
+    long bytesRead = 0;
+    if (bCursor == limit) { //If buffer is empty, then fill the buffer.
 
       //If EOF, then return -1
       if (fCursor >= contentLength) {
@@ -233,23 +270,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       limit += bytesRead;
       fCursor += bytesRead;
     }
-    fCursorAfterLastRead = fCursor;
-
-    //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
-    //(bytes returned may be less than requested)
-    int bytesRemaining = limit - bCursor;
-    int bytesToRead = Math.min(len, bytesRemaining);
-    System.arraycopy(buffer, bCursor, b, off, bytesToRead);
-    bCursor += bytesToRead;
-    if (statistics != null) {
-      statistics.incrementBytesRead(bytesToRead);
-    }
-    if (streamStatistics != null) {
-      // Bytes read from the local buffer.
-      streamStatistics.bytesReadFromBuffer(bytesToRead);
-      streamStatistics.bytesRead(bytesToRead);
-    }
-    return bytesToRead;
+    return bytesRead;
   }
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
