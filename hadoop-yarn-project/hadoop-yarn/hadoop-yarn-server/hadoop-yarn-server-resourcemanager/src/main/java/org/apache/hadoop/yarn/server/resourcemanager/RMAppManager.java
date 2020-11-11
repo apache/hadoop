@@ -864,9 +864,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     if (placementManager != null) {
       try {
         String usernameUsedForPlacement =
-                getUserNameForPlacement(user, context, placementManager);
+            getUserNameForPlacement(user, context, placementManager);
         placementContext = placementManager
-                .placeApplication(context, usernameUsedForPlacement);
+            .placeApplication(context, usernameUsedForPlacement, isRecovery);
       } catch (YarnException e) {
         // Placement could also fail if the user doesn't exist in system
         // skip if the user is not found during recovery.

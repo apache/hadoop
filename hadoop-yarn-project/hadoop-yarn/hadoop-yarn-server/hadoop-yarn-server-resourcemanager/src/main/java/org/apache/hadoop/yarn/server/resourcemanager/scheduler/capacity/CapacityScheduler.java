@@ -35,6 +35,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -71,11 +75,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.AppNameMappingPlacementRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 
@@ -679,24 +678,14 @@ public class CapacityScheduler extends
     }
   }
 
-  @VisibleForTesting
-  public PlacementRule getUserGroupMappingPlacementRule() throws IOException {
-    readLock.lock();
-    try {
-      UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule();
-      ugRule.initialize(this);
-      return ugRule;
-    } finally {
-      readLock.unlock();
-    }
-  }
 
-  public PlacementRule getAppNameMappingPlacementRule() throws IOException {
+  @VisibleForTesting
+  public PlacementRule getCSMappingPlacementRule() throws IOException {
     readLock.lock();
     try {
-      AppNameMappingPlacementRule anRule = new AppNameMappingPlacementRule();
-      anRule.initialize(this);
-      return anRule;
+      CSMappingPlacementRule mappingRule = new CSMappingPlacementRule();
+      mappingRule.initialize(this);
+      return mappingRule;
     } finally {
       readLock.unlock();
     }
@@ -718,19 +707,18 @@ public class CapacityScheduler extends
     }
 
     placementRuleStrs = new ArrayList<>(distinguishRuleSet);
+    boolean csMappingAdded = false;
 
     for (String placementRuleStr : placementRuleStrs) {
       switch (placementRuleStr) {
       case YarnConfiguration.USER_GROUP_PLACEMENT_RULE:
-        PlacementRule ugRule = getUserGroupMappingPlacementRule();
-        if (null != ugRule) {
-          placementRules.add(ugRule);
-        }
-        break;
       case YarnConfiguration.APP_NAME_PLACEMENT_RULE:
-        PlacementRule anRule = getAppNameMappingPlacementRule();
-        if (null != anRule) {
-          placementRules.add(anRule);
+        if (!csMappingAdded) {
+          PlacementRule csMappingRule = getCSMappingPlacementRule();
+          if (null != csMappingRule) {
+            placementRules.add(csMappingRule);
+            csMappingAdded = true;
+          }
         }
         break;
       default:

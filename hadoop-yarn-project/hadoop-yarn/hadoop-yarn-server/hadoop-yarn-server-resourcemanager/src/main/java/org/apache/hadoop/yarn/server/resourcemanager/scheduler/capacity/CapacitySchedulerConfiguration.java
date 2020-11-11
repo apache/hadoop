@@ -1229,6 +1229,24 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setStrings(QUEUE_MAPPING, StringUtils.join(",", queueMappingStrs));
   }
 
+
+  @Private
+  @VisibleForTesting
+  public void setAppNameMappings(List<QueueMapping> queueMappings) {
+    if (queueMappings == null) {
+      return;
+    }
+
+    List<String> queueMappingStrs = new ArrayList<>();
+    for (QueueMapping mapping : queueMappings) {
+      String rule = mapping.toString();
+      String[] parts = rule.split(":");
+      queueMappingStrs.add(parts[1] + ":" + parts[2]);
+    }
+
+    setStrings(QUEUE_MAPPING_NAME, StringUtils.join(",", queueMappingStrs));
+  }
+
   @Private
   @VisibleForTesting
   void setWorkflowPriorityMappings(
