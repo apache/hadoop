@@ -51,7 +51,7 @@ pipeline {
                     checkout([
                         $class: 'GitSCM',
                         branches: [[name: "${env.YETUS_VERSION}"]],
-                        userRemoteConfigs: [[ url: 'https://github.com/effectivemachines/yetus.git']]]
+                        userRemoteConfigs: [[ url: 'https://github.com/effectivemachines/buretoolbox.git']]]
                     )
                 }
             }
