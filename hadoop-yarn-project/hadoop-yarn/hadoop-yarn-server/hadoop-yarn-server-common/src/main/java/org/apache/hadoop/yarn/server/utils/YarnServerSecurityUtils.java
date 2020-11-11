@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.Text;
@@ -53,8 +54,11 @@ public final class YarnServerSecurityUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(YarnServerSecurityUtils.class);
 
-  private static final String CCJ_FIPS_APPROVED_ONLY_PROPERTY =
+  @VisibleForTesting
+  public static final String CCJ_FIPS_APPROVED_ONLY_PROPERTY =
       "com.safelogic.cryptocomply.fips.approved_only";
+  public static final String DEFAULT_KEYSTORE_TYPE = "JKS";
+  public static final String KEYSTORE_TYPE_BCFKS = "BCFKS";
 
   private YarnServerSecurityUtils() {
   }

@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils.CCJ_FIPS_APPROVED_ONLY_PROPERTY;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -121,6 +124,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerIn
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
@@ -2452,15 +2456,26 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
   @Test(timeout = 20000)
   public void testFilesAndEnvWithoutHTTPS() throws Exception {
-    testFilesAndEnv(false);
+    testFilesAndEnv(false, YarnServerSecurityUtils.DEFAULT_KEYSTORE_TYPE);
   }
 
   @Test(timeout = 20000)
   public void testFilesAndEnvWithHTTPS() throws Exception {
-    testFilesAndEnv(true);
+    testFilesAndEnv(true, YarnServerSecurityUtils.DEFAULT_KEYSTORE_TYPE);
   }
 
-  private void testFilesAndEnv(boolean https) throws Exception {
+  @Test(timeout = 20000)
+  public void testFilesAndEnvWithHTTPSFipsModeEnabled() throws Exception {
+    try {
+      System.setProperty(CCJ_FIPS_APPROVED_ONLY_PROPERTY, Boolean.TRUE.toString());
+      testFilesAndEnv(true, YarnServerSecurityUtils.KEYSTORE_TYPE_BCFKS);
+    } finally {
+      System.clearProperty(CCJ_FIPS_APPROVED_ONLY_PROPERTY);
+    }
+  }
+
+  private void testFilesAndEnv(boolean https, String expectedKeyStoreType)
+      throws Exception {
     // setup mocks
     Dispatcher dispatcher = mock(Dispatcher.class);
     EventHandler handler = mock(EventHandler.class);

@@ -21,8 +21,13 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.TOKEN_FILE_NAME_FMT;
+import static org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils.DEFAULT_KEYSTORE_TYPE;
+import static org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils.KEYSTORE_TYPE_BCFKS;
 
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
+import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -318,6 +323,11 @@ public class ContainerLaunch implements Callable<Integer> {
         appDirs.add(new Path(appsdir, appIdStr));
       }
 
+      String keyStoreType = DEFAULT_KEYSTORE_TYPE;
+      if (YarnServerSecurityUtils.isFipsEnabled()) {
+        keyStoreType = KEYSTORE_TYPE_BCFKS;
+      }
+      
       byte[] keystore = container.getCredentials().getSecretKey(
           AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE);
       if (keystore != null) {
@@ -325,6 +335,14 @@ public class ContainerLaunch implements Callable<Integer> {
                  lfs.create(nmPrivateKeystorePath,
                      EnumSet.of(CREATE, OVERWRITE))) {
           keystoreOutStream.write(keystore);
+          environment.put(ApplicationConstants.KEYSTORE_FILE_LOCATION_ENV_NAME,
+              new Path(containerWorkDir,
+                  ContainerLaunch.KEYSTORE_FILE).toUri().getPath());
+          environment.put(ApplicationConstants.KEYSTORE_PASSWORD_ENV_NAME,
+              new String(container.getCredentials().getSecretKey(
+                  AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD),
+                  StandardCharsets.UTF_8));
+          environment.put(ApplicationConstants.KEYSTORE_TYPE_ENV_NAME, keyStoreType);
         }
       } else {
         nmPrivateKeystorePath = null;
@@ -336,6 +354,16 @@ public class ContainerLaunch implements Callable<Integer> {
                  lfs.create(nmPrivateTruststorePath,
                      EnumSet.of(CREATE, OVERWRITE))) {
           truststoreOutStream.write(truststore);
+          environment.put(
+              ApplicationConstants.TRUSTSTORE_FILE_LOCATION_ENV_NAME,
+              new Path(containerWorkDir,
+                  ContainerLaunch.TRUSTSTORE_FILE).toUri().getPath());
+          environment.put(ApplicationConstants.TRUSTSTORE_PASSWORD_ENV_NAME,
+              new String(container.getCredentials().getSecretKey(
+                  AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD),
+                  StandardCharsets.UTF_8));
+
+          environment.put(ApplicationConstants.TRUSTSTORE_TYPE_ENV_NAME, keyStoreType);
         }
       } else {
         nmPrivateTruststorePath = null;

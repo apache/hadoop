@@ -59,6 +59,11 @@ public interface ApplicationConstants {
   String KEYSTORE_PASSWORD_ENV_NAME = "KEYSTORE_PASSWORD";
 
   /**
+   * The type of the AM's keystore.
+   */
+  String KEYSTORE_TYPE_ENV_NAME = "KEYSTORE_TYPE";
+
+  /**
    * The file into which the truststore containing the AM's certificate is
    * written.
    */
@@ -69,6 +74,11 @@ public interface ApplicationConstants {
    */
   String TRUSTSTORE_PASSWORD_ENV_NAME = "TRUSTSTORE_PASSWORD";
 
+  /**
+   * The type of the AM's truststore.
+   */
+  String TRUSTSTORE_TYPE_ENV_NAME = "TRUSTSTORE_TYPE";
+  
   /**
    * The environmental variable for APPLICATION_WEB_PROXY_BASE. Set in
    * ApplicationMaster's environment only. This states that for all non-relative

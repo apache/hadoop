@@ -360,12 +360,25 @@ public class WebApps {
               .setSecurityEnabled(UserGroupInformation.isSecurityEnabled());
         }
 
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("HTTP policy: {}, " +
+              "HTTP scheme: {}, " +
+              "needsClientAuth: {}", 
+              this.httpPolicy, httpScheme, needsClientAuth);
+        }
         if (httpScheme.equals(WebAppUtils.HTTPS_PREFIX)) {
           String amKeystoreLoc = System.getenv("KEYSTORE_FILE_LOCATION");
           if (amKeystoreLoc != null) {
             LOG.info("Setting keystore location to " + amKeystoreLoc);
             String password = System.getenv("KEYSTORE_PASSWORD");
-            builder.keyStore(amKeystoreLoc, password, "jks");
+
+            String keyStoreType = "jks";
+            String keyStoreTypeFromEnv = System.getenv("KEYSTORE_TYPE");
+            if (keyStoreTypeFromEnv != null) {
+              keyStoreType = keyStoreTypeFromEnv;
+            }
+            LOG.info("Setting keystore type to " + keyStoreType);
+            builder.keyStore(amKeystoreLoc, password, keyStoreType);
           } else {
             LOG.info("Loading standard ssl config");
             WebAppUtils.loadSslConfiguration(builder, conf);
@@ -376,7 +389,14 @@ public class WebApps {
             if (amTruststoreLoc != null) {
               LOG.info("Setting truststore location to " + amTruststoreLoc);
               String password = System.getenv("TRUSTSTORE_PASSWORD");
-              builder.trustStore(amTruststoreLoc, password, "jks");
+
+              String trustStoreType = "jks";
+              String trustStoreTypeFromEnv = System.getenv("TRUSTSTORE_TYPE");
+              if (trustStoreTypeFromEnv != null) {
+                trustStoreType = trustStoreTypeFromEnv;
+              }
+              LOG.info("Setting trustStore type to " + trustStoreType);
+              builder.trustStore(amTruststoreLoc, password, trustStoreType);
             }
           }
         }

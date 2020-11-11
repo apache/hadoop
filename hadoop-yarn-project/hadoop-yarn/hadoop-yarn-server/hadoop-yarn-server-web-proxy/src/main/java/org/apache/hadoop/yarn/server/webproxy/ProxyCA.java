@@ -83,6 +83,8 @@ import java.util.GregorianCalendar;
 import java.util.Random;
 import java.util.UUID;
 
+import static org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils.DEFAULT_KEYSTORE_TYPE;
+import static org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils.KEYSTORE_TYPE_BCFKS;
 import static org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils.getProviderIndex;
 import static org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils.printSecurityProviders;
 
@@ -97,8 +99,6 @@ public class ProxyCA {
   private static final String RSA_ALGORITHM = "RSA";
   private static final String SIGNATURE_ALGORITHM_NAME = "SHA512WITHRSA";
   private static final String CCJ_PROVIDER = "CCJ";
-  private static final String DEFAULT_KEYSTORE_TYPE = "JKS";
-  private static final String KEYSTORE_TYPE_BCFKS = "BCFKS";
   private static final int KEY_SIZE_BITS = 2048;
 
   private final String keyStoreType;
