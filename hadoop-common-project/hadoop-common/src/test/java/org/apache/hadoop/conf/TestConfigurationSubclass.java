@@ -49,8 +49,9 @@ public class TestConfigurationSubclass extends TestCase {
     SubConf conf = new SubConf(true);
     conf.setQuietMode(false);
     assertFalse(conf.isReloaded());
+    // adding a resource does not force a reload.
     conf.addResource("not-a-valid-resource");
-    assertTrue(conf.isReloaded());
+    assertFalse(conf.isReloaded());
     try {
       Properties properties = conf.getProperties();
       fail("Should not have got here");
