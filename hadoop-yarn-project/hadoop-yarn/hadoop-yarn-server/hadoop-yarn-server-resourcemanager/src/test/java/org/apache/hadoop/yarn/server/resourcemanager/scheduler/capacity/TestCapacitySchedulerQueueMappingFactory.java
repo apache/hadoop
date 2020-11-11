@@ -25,11 +25,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
@@ -46,8 +46,10 @@ import static org.junit.Assert.*;
 public class TestCapacitySchedulerQueueMappingFactory {
 
   private static final String QUEUE_MAPPING_NAME = "app-name";
-  private static final String QUEUE_MAPPING_RULE =
-      CSMappingPlacementRule.class.getCanonicalName();
+  private static final String QUEUE_MAPPING_RULE_APP_NAME =
+      "org.apache.hadoop.yarn.server.resourcemanager.placement.AppNameMappingPlacementRule";
+  private static final String QUEUE_MAPPING_RULE_USER_GROUP =
+      "org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule";
   public static final String USER = "user_";
   public static final String PARENT_QUEUE = "c";
 
@@ -57,7 +59,8 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
     List<String> queuePlacementRules = new ArrayList<>();
 
-    queuePlacementRules.add(QUEUE_MAPPING_RULE);
+    queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
+    queuePlacementRules.add(QUEUE_MAPPING_RULE_APP_NAME);
 
     conf.setQueuePlacementRules(queuePlacementRules);
 
@@ -131,7 +134,8 @@ public class TestCapacitySchedulerQueueMappingFactory {
       }
 
       // verify both placement rules were added successfully
-      assertThat(placementRuleNames, hasItems(QUEUE_MAPPING_RULE));
+      assertThat(placementRuleNames, hasItems(QUEUE_MAPPING_RULE_USER_GROUP));
+      assertThat(placementRuleNames, hasItems(QUEUE_MAPPING_RULE_APP_NAME));
     } finally {
       if(mockRM != null) {
         mockRM.close();
@@ -150,7 +154,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
 
     List<String> queuePlacementRules = new ArrayList<>();
-    queuePlacementRules.add(QUEUE_MAPPING_RULE);
+    queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
     conf.setQueuePlacementRules(queuePlacementRules);
 
     List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
@@ -196,8 +200,8 @@ public class TestCapacitySchedulerQueueMappingFactory {
       List<PlacementRule> rules =
           cs.getRMContext().getQueuePlacementManager().getPlacementRules();
 
-      CSMappingPlacementRule r =
-          (CSMappingPlacementRule) rules.get(0);
+      UserGroupMappingPlacementRule r =
+          (UserGroupMappingPlacementRule) rules.get(0);
 
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
       assertEquals("Queue", "b1", ctx.getQueue());
@@ -323,7 +327,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
 
     List<String> queuePlacementRules = new ArrayList<>();
-    queuePlacementRules.add(QUEUE_MAPPING_RULE);
+    queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
     conf.setQueuePlacementRules(queuePlacementRules);
 
     List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
@@ -349,8 +353,8 @@ public class TestCapacitySchedulerQueueMappingFactory {
       List<PlacementRule> rules =
           cs.getRMContext().getQueuePlacementManager().getPlacementRules();
 
-      CSMappingPlacementRule r =
-          (CSMappingPlacementRule) rules.get(0);
+      UserGroupMappingPlacementRule r =
+          (UserGroupMappingPlacementRule) rules.get(0);
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, user);
       assertEquals("Queue", user, ctx.getQueue());
 
@@ -378,7 +382,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
 
     List<String> queuePlacementRules = new ArrayList<>();
-    queuePlacementRules.add(QUEUE_MAPPING_RULE);
+    queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
     conf.setQueuePlacementRules(queuePlacementRules);
 
     List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
@@ -422,8 +426,8 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
       List<PlacementRule> rules =
           cs.getRMContext().getQueuePlacementManager().getPlacementRules();
-      CSMappingPlacementRule r =
-          (CSMappingPlacementRule) rules.get(0);
+      UserGroupMappingPlacementRule r =
+          (UserGroupMappingPlacementRule) rules.get(0);
 
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
       assertEquals("Queue", "b1", ctx.getQueue());
@@ -447,7 +451,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
 
     List<String> queuePlacementRules = new ArrayList<>();
-    queuePlacementRules.add(QUEUE_MAPPING_RULE);
+    queuePlacementRules.add(QUEUE_MAPPING_RULE_USER_GROUP);
     conf.setQueuePlacementRules(queuePlacementRules);
 
     List<QueueMapping> existingMappingsForUG = conf.getQueueMappings();
@@ -469,11 +473,11 @@ public class TestCapacitySchedulerQueueMappingFactory {
                                           .queue("%primary_group")
                                           .build();
 
-    // u:b4:c.%secondary_group
+    // u:b4:%secondary_group
     QueueMapping userQueueMapping3 = QueueMappingBuilder.create()
                                           .type(QueueMapping.MappingType.USER)
                                           .source("e")
-                                          .queue("c.%secondary_group")
+                                          .queue("%secondary_group")
                                           .build();
 
     queueMappingsForUG.add(userQueueMapping1);
@@ -499,8 +503,8 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
       List<PlacementRule> rules =
           cs.getRMContext().getQueuePlacementManager().getPlacementRules();
-      CSMappingPlacementRule r =
-          (CSMappingPlacementRule) rules.get(0);
+      UserGroupMappingPlacementRule r =
+          (UserGroupMappingPlacementRule) rules.get(0);
 
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
       assertEquals("Queue", "b1", ctx.getQueue());
@@ -510,7 +514,6 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
       ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "e");
       assertEquals("Queue", "esubgroup1", ctx2.getQueue());
-      assertEquals("Queue", "root.c", ctx2.getParentQueue());
     } finally {
       if (mockRM != null) {
         mockRM.close();

@@ -86,6 +86,7 @@ import java.util.Set;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
+import static org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.CURRENT_USER_MAPPING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
 import static org.junit.Assert.assertEquals;
@@ -104,8 +105,6 @@ public class TestCapacitySchedulerAutoQueueCreation
 
   private static final Logger LOG = LoggerFactory.getLogger(
       TestCapacitySchedulerAutoQueueCreation.class);
-
-  private static final String CURRENT_USER_MAPPING = "%user";
 
   private static final Resource TEMPLATE_MAX_RES = Resource.newInstance(16 *
           GB,
@@ -425,16 +424,16 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       //dynamic queue mapping
       try {
-        setupQueueMapping(newCS, CURRENT_USER_MAPPING, "a1",
+        setupQueueMapping(newCS, CURRENT_USER_MAPPING, "a",
             CURRENT_USER_MAPPING);
         newCS.updatePlacementRules();
         fail("Expected invalid parent queue mapping failure");
 
       } catch (IOException e) {
         //expected exception
-
         assertTrue(e.getMessage().contains(
-            "Target queue path 'a1.%user' has a non-managed parent queue"));
+            "invalid parent queue which does not have auto creation of leaf "
+                + "queues enabled [" + "a" + "]"));
       }
 
       //"a" is not auto create enabled and app_user does not exist as a leaf
@@ -447,8 +446,8 @@ public class TestCapacitySchedulerAutoQueueCreation
         fail("Expected invalid parent queue mapping failure");
       } catch (IOException e) {
         //expected exception
-        assertTrue(e.getMessage().contains(
-            "contains an invalid parent queue 'INVALID_PARENT_QUEUE'"));
+        assertTrue(e.getMessage()
+            .contains("invalid parent queue [" + "INVALID_PARENT_QUEUE" + "]"));
       }
     } finally {
       if (newMockRM != null) {
@@ -478,7 +477,7 @@ public class TestCapacitySchedulerAutoQueueCreation
         fail("Expected invalid parent queue mapping failure");
       } catch (IOException e) {
         //expected exception
-        assertTrue(e.getMessage().contains("invalid parent queue"));
+        assertTrue(e.getMessage().contains("invalid parent queue []"));
       }
     } finally {
       if (newMockRM != null) {

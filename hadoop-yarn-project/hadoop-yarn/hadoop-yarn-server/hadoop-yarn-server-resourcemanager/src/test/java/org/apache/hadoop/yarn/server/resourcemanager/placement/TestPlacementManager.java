@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -34,6 +33,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
@@ -83,12 +83,9 @@ public class TestPlacementManager {
                                                   USER1))
                                           .build();
 
-    cs.getConfiguration().setQueueMappings(
-        Lists.newArrayList(userQueueMapping));
-    CSMappingPlacementRule ugRule = new CSMappingPlacementRule();
-    ugRule.initialize(cs);
+    UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule(
+        false, Arrays.asList(userQueueMapping), null);
     queuePlacementRules.add(ugRule);
-
     pm.updateRules(queuePlacementRules);
 
     ApplicationSubmissionContext asc = Records.newRecord(
@@ -105,14 +102,17 @@ public class TestPlacementManager {
       .parentQueue(PARENT_QUEUE)
       .build();
 
-    cs.getConfiguration().setAppNameMappings(
-        Lists.newArrayList(queueMappingEntity));
-    CSMappingPlacementRule anRule = new CSMappingPlacementRule();
-    anRule.initialize(cs);
+    AppNameMappingPlacementRule anRule = new AppNameMappingPlacementRule(false,
+        Arrays.asList(queueMappingEntity));
     queuePlacementRules.add(anRule);
     pm.updateRules(queuePlacementRules);
-    ApplicationPlacementContext pc = pm.placeApplication(asc, USER2);
-    Assert.assertNotNull(pc);
+    try {
+      ApplicationPlacementContext pc = pm.placeApplication(asc, USER2);
+      Assert.assertNotNull(pc);
+    } catch (Exception e) {
+      e.printStackTrace();
+      Assert.fail("Exception not expected");
+    }
   }
 
   @Test
@@ -121,9 +121,10 @@ public class TestPlacementManager {
     QueueMapping userQueueMapping = QueueMappingBuilder.create()
         .type(MappingType.USER).source(USER1)
         .queue(getQueueMapping(PARENT_QUEUE, USER1)).build();
+    UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule(
+        false, Arrays.asList(userQueueMapping), null);
 
-    CSMappingPlacementRule ugRule = new CSMappingPlacementRule();
-
+    // Configure placement rule
     conf.set(YarnConfiguration.QUEUE_PLACEMENT_RULES, ugRule.getName());
     queueMappings.add(userQueueMapping);
     conf.setQueueMappings(queueMappings);
@@ -134,7 +135,7 @@ public class TestPlacementManager {
     PlacementManager pm = cs.getRMContext().getQueuePlacementManager();
 
     // As we are setting placement rule, It shouldn't update default
-    // placement rule ie user-group. Number of placement rules should be 1.
+    // placement rule ie user-group. Number of placemnt rules should be 1.
     Assert.assertEquals(1, pm.getPlacementRules().size());
     // Verifying if placement rule set is same as the one we configured
     Assert.assertEquals(ugRule.getName(),

@@ -125,11 +125,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
 
     if (groups == null) {
-      //We cannot use Groups#getUserToGroupsMappingService here, because when
-      //tests change the HADOOP_SECURITY_GROUP_MAPPING, Groups won't refresh its
-      //cached instance of groups, so we might get a Group instance which
-      //ignores the HADOOP_SECURITY_GROUP_MAPPING settings.
-      groups = new Groups(conf);
+      groups = Groups.getUserToGroupsMappingService(conf);
     }
 
     MappingRuleValidationContext validationContext = buildValidationContext();
@@ -149,8 +145,8 @@ public class CSMappingPlacementRule extends PlacementRule {
     }
 
     LOG.info("Initialized queue mappings, can override user specified " +
-        "queues: {}  number of rules: {} mapping rules: {}",
-        overrideWithQueueMappings, mappingRules.size(), mappingRules);
+        "queues: {}  number of rules: {}", overrideWithQueueMappings,
+        mappingRules.size());
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Initialized with the following mapping rules:");
@@ -174,12 +170,6 @@ public class CSMappingPlacementRule extends PlacementRule {
    */
   private void setupGroupsForVariableContext(VariableContext vctx, String user)
       throws IOException {
-    if (groups == null) {
-      LOG.warn(
-          "Group provider hasn't been set, cannot query groups for user {}",
-          user);
-      return;
-    }
     Set<String> groupsSet = groups.getGroupsSet(user);
     String secondaryGroup = null;
     Iterator<String> it = groupsSet.iterator();
@@ -203,18 +193,14 @@ public class CSMappingPlacementRule extends PlacementRule {
   }
 
   private VariableContext createVariableContext(
-      ApplicationSubmissionContext asc, String user) {
+      ApplicationSubmissionContext asc, String user) throws IOException {
     VariableContext vctx = new VariableContext();
 
     vctx.put("%user", user);
     vctx.put("%specified", asc.getQueue());
     vctx.put("%application", asc.getApplicationName());
     vctx.put("%default", "root.default");
-    try {
-      setupGroupsForVariableContext(vctx, user);
-    } catch (IOException e) {
-      LOG.warn("Unable to setup groups: {}", e.getMessage());
-    }
+    setupGroupsForVariableContext(vctx, user);
 
     vctx.setImmutables(immutableVariables);
     return vctx;
@@ -352,43 +338,34 @@ public class CSMappingPlacementRule extends PlacementRule {
   @Override
   public ApplicationPlacementContext getPlacementForApp(
       ApplicationSubmissionContext asc, String user) throws YarnException {
-    return getPlacementForApp(asc, user, false);
-  }
-
-  @Override
-  public ApplicationPlacementContext getPlacementForApp(
-      ApplicationSubmissionContext asc, String user, boolean recovery)
-        throws YarnException {
     //We only use the mapping rules if overrideWithQueueMappings enabled
     //or the application is submitted to the default queue, which effectively
     //means the application doesn't have any specific queue.
     String appQueue = asc.getQueue();
-    LOG.debug("Looking placement for app '{}' originally submitted to queue " +
-        "'{}', with override enabled '{}'",
-        asc.getApplicationName(), appQueue, overrideWithQueueMappings);
     if (appQueue != null &&
         !appQueue.equals(YarnConfiguration.DEFAULT_QUEUE_NAME) &&
         !appQueue.equals(YarnConfiguration.DEFAULT_QUEUE_FULL_NAME) &&
-        !overrideWithQueueMappings &&
-        !recovery) {
+        !overrideWithQueueMappings) {
       LOG.info("Have no jurisdiction over application submission '{}', " +
           "moving to next PlacementRule engine", asc.getApplicationName());
       return null;
     }
 
     VariableContext variables;
-    variables = createVariableContext(asc, user);
+    try {
+      variables = createVariableContext(asc, user);
+    } catch (IOException e) {
+      LOG.error("Unable to setup variable context", e);
+      throw new YarnException(e);
+    }
 
-    ApplicationPlacementContext ret = null;
     for (MappingRule rule : mappingRules) {
       MappingRuleResult result = evaluateRule(rule, variables);
       switch (result.getResult()) {
       case PLACE_TO_DEFAULT:
-        ret = placeToDefault(asc, variables, rule);
-        break;
+        return placeToDefault(asc, variables, rule);
       case PLACE:
-        ret = placeToQueue(asc, rule, result);
-        break;
+        return placeToQueue(asc, rule, result);
       case REJECT:
         LOG.info("Rejecting application '{}', reason: Mapping rule '{}' " +
             " fallback action is set to REJECT.",
@@ -400,42 +377,17 @@ public class CSMappingPlacementRule extends PlacementRule {
       case SKIP:
       //SKIP means skip to the next rule, which is the default behaviour of
       //the for loop, so we don't need to take any extra actions
-        break;
+      break;
       default:
         LOG.error("Invalid result '{}'", result);
       }
-
-      //If we already have a return value, we can return it!
-      if (ret != null) {
-        break;
-      }
     }
 
-    if (ret == null) {
-      //If no rule was applied we return null, to let the engine move onto the
-      //next placementRule class
-      LOG.info("No matching rule found for application '{}', moving to next " +
-          "PlacementRule engine", asc.getApplicationName());
-    }
-
-    if (recovery) {
-      //we need this part for backwards compatibility with recovery
-      //the legacy code checked if the placement matches the queue of the
-      //application to be recovered, and if it did, it created an
-      //ApplicationPlacementContext.
-      //However at a later point this is going to be changed, there are two
-      //major issues with this approach:
-      //  1) The recovery only uses LEAF queue names, which must be updated
-      //  2) The ORIGINAL queue which the application was submitted is NOT
-      //     stored this might result in different placement evaluation since
-      //     now we can have rules which give different result based on what
-      //     the user submitted.
-      if (ret == null || !ret.getQueue().equals(asc.getQueue())) {
-        return null;
-      }
-    }
-
-    return ret;
+    //If no rule was applied we return null, to let the engine move onto the
+    //next placementRule class
+    LOG.info("No matching rule found for application '{}', moving to next " +
+        "PlacementRule engine", asc.getApplicationName());
+    return null;
   }
 
   private ApplicationPlacementContext placeToQueue(
@@ -458,13 +410,13 @@ public class CSMappingPlacementRule extends PlacementRule {
       String queueName = validateAndNormalizeQueue(
           variables.replacePathVariables("%default"), false);
       LOG.debug("Application '{}' have been placed to queue '{}' by " +
-          "the fallback option of rule {}",
+              "the fallback option of rule {}",
           asc.getApplicationName(), queueName, rule);
       return createPlacementContext(queueName);
     } catch (YarnException e) {
       LOG.error("Rejecting application due to a failed fallback" +
           " action '{}'" + ", reason: {}", asc.getApplicationName(),
-          e);
+          e.getMessage());
       //We intentionally omit the details, we don't want any server side
       //config information to leak to the client side
       throw new YarnException("Application submission have been rejected by a" +

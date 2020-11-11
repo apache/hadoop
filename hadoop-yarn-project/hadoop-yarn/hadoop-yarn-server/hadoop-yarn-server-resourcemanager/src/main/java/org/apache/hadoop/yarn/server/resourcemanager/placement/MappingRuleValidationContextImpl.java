@@ -154,22 +154,20 @@ public class MappingRuleValidationContextImpl
     }
 
     if (!(parentQueue instanceof ManagedParentQueue)) {
-      if (parentQueue.getChildQueues() != null) {
-        for (CSQueue queue : parentQueue.getChildQueues()) {
-          if (queue instanceof LeafQueue) {
-            //if a non managed parent queue has at least one leaf queue, this
-            //mapping can be valid, we cannot do any more checks
-            return true;
-          }
+      for (CSQueue queue : parentQueue.getChildQueues()) {
+        if (queue instanceof LeafQueue) {
+          //if a non managed parent queue has at least one leaf queue, this
+          //mapping can be valid, we cannot do any more checks
+          return true;
         }
       }
 
       //There is no way we can place anything into the queue referenced by the
       // rule, because we cannot auto create, and we don't have any leaf queues
-      //Actually this branch is not accessible with the current queue hierarchy,
+      //Actually this branch is not accessibe with the current queue hierarchy,
       //there should be no parents without any leaf queues. This condition says
       //for sanity checks
-      throw new YarnException("Target queue path '" + path + "' has " +
+      throw new YarnException("Target queue path '" + path + "' has" +
           "a non-managed parent queue which has no LeafQueues either.");
     }
 
