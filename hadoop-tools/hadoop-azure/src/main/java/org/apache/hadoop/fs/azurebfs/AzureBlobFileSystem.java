@@ -178,11 +178,6 @@ public class AzureBlobFileSystem extends FileSystem {
     return this.uri;
   }
 
-  @VisibleForTesting
-  String getFileSystemID() {
-    return fileSystemID;
-  }
-
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
@@ -1311,6 +1306,11 @@ public class AzureBlobFileSystem extends FileSystem {
   @VisibleForTesting
   Map<String, Long> getInstrumentationMap() {
     return abfsCounters.toMap();
+  }
+
+  @VisibleForTesting
+  String getFileSystemID() {
+    return fileSystemID;
   }
 
   @Override

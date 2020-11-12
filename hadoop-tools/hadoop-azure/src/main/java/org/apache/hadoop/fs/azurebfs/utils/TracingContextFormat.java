@@ -5,16 +5,13 @@ public enum TracingContextFormat {
   ALL_ID_FORMAT,
   TWO_ID_FORMAT;
 
+  //save list as calling values() is expensive
   private static final TracingContextFormat[] formatValues =
       TracingContextFormat.values();
   private static final int FORMAT_COUNT = formatValues.length;
 
-//  public static int getFormatCount() {
-//    return FORMAT_COUNT;
-//  }
   public static TracingContextFormat valueOf(int number) {
     return number < FORMAT_COUNT? formatValues[number] :
-        TracingContextFormat.ALL_ID_FORMAT; //because values()
-    // is expensive
+        TracingContextFormat.ALL_ID_FORMAT;
   }
 }

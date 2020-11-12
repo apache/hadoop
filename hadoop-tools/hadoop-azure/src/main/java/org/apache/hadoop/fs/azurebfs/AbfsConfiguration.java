@@ -284,7 +284,6 @@ public class AbfsConfiguration{
         field.set(this, validateBoolean(field));
       }
     }
-    System.out.println(inputTracingContextFormat + "abfsconf");
     tracingContextFormat =
         TracingContextFormat.valueOf(inputTracingContextFormat);
   }

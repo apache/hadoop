@@ -20,8 +20,8 @@ public final class AbfsOperationConstants {
     public static final String REMOVEACLENTRIES = "RE";
     public static final String REMOVEDEFAULTACL = "DA";
     public static final String RENAME = "RN";
-    public static final String SETOWNER = "SO";
     public static final String SETATTR = "ST";
+    public static final String SETOWNER = "SO";
     public static final String SETACL = "SA";
     public static final String TESTOP = "TS";
     public static final String WRITE = "WR";
