@@ -110,6 +110,23 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     testClasses.put(new ITestAzureBlobFileSystemCreate(),
         ITestAzureBlobFileSystemCreate.class.getMethod(
             "testDefaultCreateOverwriteFileTest"));
+    testClasses.put(new ITestAbfsNetworkStatistics(),
+        ITestAbfsNetworkStatistics.class.getMethod(
+            "testAbfsHttpResponseStatistics")); //fs.open
+    testClasses.put(new ITestAbfsStatistics(),
+        ITestAbfsStatistics.class.getMethod("testOpenAppendRenameExists"));
+    //setacl, setpermission, rename, getaclstatus
+    testClasses.put(new ITestAzureBlobFilesystemAcl(),
+        ITestAzureBlobFilesystemAcl.class.getMethod(
+            "testDefaultAclRenamedFile"));
+    testClasses.put(new ITestAzureBlobFileSystemDelete(),
+        ITestAzureBlobFileSystemDelete.class.getMethod(
+            "testDeleteFirstLevelDirectory")); //delete
+    testClasses.put(new ITestAzureBlobFileSystemCreate(),
+        ITestAzureBlobFileSystemCreate.class.getMethod(
+            "testCreateNonRecursive")); //mkdir
+
+
     //add other ops' testClasses and testMethods that have listener registered
 
     for (AbstractAbfsIntegrationTest testClass : testClasses.keySet()) {

@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
@@ -176,12 +178,17 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
         + "exists methods on Abfs");
 
     AzureBlobFileSystem fs = getFileSystem();
+    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     Path createFilePath = path(getMethodName());
     Path destCreateFilePath = path(getMethodName() + "New");
 
     fs.create(createFilePath);
     fs.open(createFilePath);
+    fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
+        fs.getFileSystemID(), AbfsOperationConstants.APPEND,
+        false, 0));
     fs.append(createFilePath);
+    fs.registerListener(null);
     assertTrue(fs.rename(createFilePath, destCreateFilePath));
 
     Map<String, Long> metricMap = fs.getInstrumentationMap();

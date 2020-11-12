@@ -92,13 +92,19 @@ public class ITestAzureBlobFileSystemCreate extends
   @SuppressWarnings("deprecation")
   public void testCreateNonRecursive() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
+    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     Path testFile = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
     try {
       fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null);
       fail("Should've thrown");
     } catch (FileNotFoundException expected) {
     }
+    fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
+        fs.getFileSystemID(), AbfsOperationConstants.MKDIR,
+        false, 0));
     fs.mkdirs(TEST_FOLDER_PATH);
+    fs.registerListener(null);
+
     fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null)
         .close();
     assertIsFile(fs, testFile);

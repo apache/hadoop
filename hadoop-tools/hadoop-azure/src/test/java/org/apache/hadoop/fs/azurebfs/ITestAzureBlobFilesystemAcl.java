@@ -24,6 +24,8 @@ import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -1205,20 +1207,38 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   @Test
   public void testDefaultAclRenamedFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
+    TracingHeaderValidator tracingHeaderValidator =
+        new TracingHeaderValidator(conf.getClientCorrelationID(),
+            fs.getFileSystemID(), AbfsOperationConstants.TESTOP,
+            true, 0);
     assumeTrue(getIsNamespaceEnabled(fs));
     path = new Path(testRoot, UUID.randomUUID().toString());
     Path dirPath = new Path(path, "dir");
     FileSystem.mkdirs(fs, dirPath, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(DEFAULT, USER, FOO, ALL));
+    fs.registerListener(tracingHeaderValidator.getClone(AbfsOperationConstants.SETACL));
     fs.setAcl(dirPath, aclSpec);
     Path filePath = new Path(path, "file1");
+    fs.registerListener(null);
     fs.create(filePath).close();
+
+    fs.registerListener(tracingHeaderValidator
+        .getClone(AbfsOperationConstants.PERMISSION));
     fs.setPermission(filePath, FsPermission.createImmutable((short) RW_R));
     Path renamedFilePath = new Path(dirPath, "file1");
+
+    fs.registerListener(tracingHeaderValidator
+        .getClone(AbfsOperationConstants.RENAME));
     fs.rename(filePath, renamedFilePath);
     AclEntry[] expected = new AclEntry[] { };
+
+    fs.registerListener(tracingHeaderValidator
+        .getClone(AbfsOperationConstants.GETACLSTATUS));
     AclStatus s = fs.getAclStatus(renamedFilePath);
+    fs.registerListener(null);
+
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
     assertPermission(fs, renamedFilePath, (short) RW_R);
@@ -1273,14 +1293,21 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   @Test
   public void testSetOwnerForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     Assume.assumeTrue(!getIsNamespaceEnabled(fs));
     final Path filePath = new Path(methodName.getMethodName());
     fs.create(filePath);
 
     assertTrue(fs.exists(filePath));
 
+    TracingHeaderValidator tracingHeaderValidator = new TracingHeaderValidator(
+        conf.getClientCorrelationID(), fs.getFileSystemID(),
+        AbfsOperationConstants.GETFILESTATUS, false, 1);
+    fs.registerListener(tracingHeaderValidator);
     FileStatus oldFileStatus = fs.getFileStatus(filePath);
+    tracingHeaderValidator.setOperation(AbfsOperationConstants.SETOWNER);
     fs.setOwner(filePath, TEST_OWNER, TEST_GROUP);
+    fs.registerListener(null);
     FileStatus newFileStatus = fs.getFileStatus(filePath);
 
     assertEquals(oldFileStatus.getOwner(), newFileStatus.getOwner());

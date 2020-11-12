@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.junit.Test;
@@ -198,7 +200,12 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        * (Writing data in Data store).
        *
        */
+      AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
+      fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
+          fs.getFileSystemID(), AbfsOperationConstants.CREATE,
+          true, 0));
       out = fs.create(getResponsePath);
+      fs.registerListener(null);
       out.write(testResponseString.getBytes());
       out.hflush();
 

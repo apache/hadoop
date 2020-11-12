@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import java.io.IOException;
 import java.util.UUID;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;

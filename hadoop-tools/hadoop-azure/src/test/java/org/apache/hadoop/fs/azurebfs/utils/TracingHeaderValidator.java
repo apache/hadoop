@@ -1,5 +1,6 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.assertj.core.api.Assertions;
 
 public class TracingHeaderValidator implements Listener {
@@ -33,6 +34,12 @@ public class TracingHeaderValidator implements Listener {
     return tracingHeaderValidator;
   }
 
+  public TracingHeaderValidator getClone(String operation) {
+    TracingHeaderValidator tracingHeaderValidator = getClone();
+    tracingHeaderValidator.operation = operation;
+    return tracingHeaderValidator;
+  }
+
   public TracingHeaderValidator(String clientCorrelationID,
       String fileSystemID, String operation,
       boolean needsPrimaryRequestID, int retryNum) {
@@ -61,16 +68,24 @@ public class TracingHeaderValidator implements Listener {
       Assertions.assertThat(id_list[2]).describedAs(
           "FilesystemID should be same for requests with same filesystem")
           .isEqualTo(fileSystemID);
+      System.out.println("primaryreq " + primaryRequestID);
     }
       if (!streamID.isEmpty()) {
         System.out.println("check stream" + streamID);
         Assertions.assertThat(id_list[4])
             .describedAs("Stream id should be common for these requests")
             .isEqualTo(streamID);
+        System.out.println("streamid " + streamID);
       }
   }
 
+  @VisibleForTesting
+  public void setOperation(String operation) {
+    this.operation = operation;
+  }
+
   private void validateBasicFormat(String[] id_list) {
+    System.out.println("basic test");
     Assertions.assertThat(id_list)
         .describedAs("header should have 7 elements").hasSize(7);
 
