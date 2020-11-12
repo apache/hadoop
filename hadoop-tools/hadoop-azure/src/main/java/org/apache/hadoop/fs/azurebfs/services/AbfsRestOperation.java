@@ -122,7 +122,8 @@ public class AbfsRestOperation {
    * @param requestHeaders The HTTP request headers.
    * @param sasToken A sasToken for optional re-use by AbfsInputStream/AbfsOutputStream.
    */
-  AbfsRestOperation(final AbfsRestOperationType operationType,
+  @VisibleForTesting
+  protected AbfsRestOperation(final AbfsRestOperationType operationType,
                     final AbfsClient client,
                     final String method,
                     final URL url,
@@ -205,7 +206,7 @@ public class AbfsRestOperation {
     LOG.trace("{} REST operation complete", operationType);
   }
 
-  private void updateClientRequestHeader(AbfsHttpOperation httpOperation,
+  protected void updateClientRequestHeader(AbfsHttpOperation httpOperation,
       TracingContext tracingContext) {
     tracingContext.generateClientRequestID();
     httpOperation.getConnection()
@@ -218,8 +219,8 @@ public class AbfsRestOperation {
    * fails, there may be a retry.  The retryCount is incremented with each
    * attempt.
    */
-  private boolean executeHttpOperation(final int retryCount, TracingContext tracingContext)
-          throws AzureBlobFileSystemException {
+  protected boolean executeHttpOperation(final int retryCount,
+    TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection

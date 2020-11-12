@@ -36,6 +36,7 @@ import java.util.UUID;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +83,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
   private final String outputStreamID;
-  private TracingContext tracingContext;
+  private final TracingContext tracingContext;
+  private Listener listener;
 
   /**
    * Queue storing buffers with the size of the Azure block ready for
@@ -280,6 +282,15 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       flushInternal(false);
     }
   }
+  
+  public String getStreamID() {
+    return outputStreamID;
+  }
+
+  public void registerListener(Listener listener1) {
+    listener = listener1;
+    tracingContext.setListener(listener);
+  }
 
   /**
    * Force all data in the output stream to be written to Azure storage.
@@ -464,6 +475,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
+
       AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose, cachedSasToken.get(),
           new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());

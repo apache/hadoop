@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Random;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Test;
 
@@ -84,7 +85,8 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", AbfsOperationConstants.WRITE, abfsConf.getTracingContextFormat());
+            "test-fs-id", AbfsOperationConstants.WRITE,
+                abfsConf.getTracingContextFormat(), null);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
@@ -142,7 +144,8 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", AbfsOperationConstants.WRITE, abfsConf.getTracingContextFormat());
+            "test-fs-id", AbfsOperationConstants.WRITE,
+                abfsConf.getTracingContextFormat(), null);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
@@ -210,7 +213,8 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", AbfsOperationConstants.WRITE, abfsConf.getTracingContextFormat());
+            "test-fs-id", AbfsOperationConstants.WRITE,
+                abfsConf.getTracingContextFormat(), null);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
@@ -292,7 +296,9 @@ public final class TestAbfsOutputStream {
             populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
                     false),
         new TracingContext(abfsConf.getClientCorrelationID(), "test-fs-id",
-            AbfsOperationConstants.WRITE, abfsConf.getTracingContextFormat()));
+            AbfsOperationConstants.WRITE, abfsConf.getTracingContextFormat(),
+            null));
+
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -345,7 +351,8 @@ public final class TestAbfsOutputStream {
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
             populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
                     true), new TracingContext(abfsConf.getClientCorrelationID(),
-        "test-fs-id", AbfsOperationConstants.OPEN, abfsConf.getTracingContextFormat()));
+        "test-fs-id", AbfsOperationConstants.OPEN,
+            abfsConf.getTracingContextFormat(), null));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -389,7 +396,8 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", AbfsOperationConstants.WRITE, abfsConf.getTracingContextFormat());
+            "test-fs-id", AbfsOperationConstants.WRITE,
+                abfsConf.getTracingContextFormat(), null);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
@@ -455,7 +463,8 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", AbfsOperationConstants.WRITE, abfsConf.getTracingContextFormat());
+            "test-fs-id", AbfsOperationConstants.WRITE,
+                abfsConf.getTracingContextFormat(), null);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),

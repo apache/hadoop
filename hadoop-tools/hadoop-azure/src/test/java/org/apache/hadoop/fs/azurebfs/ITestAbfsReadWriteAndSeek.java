@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -98,6 +101,11 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result;
     try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+      ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(new
+          TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
+          fs.getFileSystemID(), AbfsOperationConstants.READ, true,
+          0,
+          ((AbfsInputStream) inputStream.getWrappedStream()).getStreamID()));
       inputStream.seek(bufferSize);
       result = inputStream.read(readBuffer, bufferSize, bufferSize);
       assertNotEquals(-1, result);

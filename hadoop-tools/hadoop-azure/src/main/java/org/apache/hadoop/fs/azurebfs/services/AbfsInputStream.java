@@ -28,6 +28,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +79,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final AbfsInputStreamStatistics streamStatistics;
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
+  private Listener listener;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -100,6 +103,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
     this.inputStreamID = getInputStreamID();
     this.tracingContext = new TracingContext(tracingContext);
+    this.tracingContext.setOperation(AbfsOperationConstants.READ);
     this.tracingContext.setStreamID(inputStreamID);
   }
 
@@ -109,6 +113,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private String getInputStreamID() {
     return StringUtils.right(UUID.randomUUID().toString(), 12);
+  }
+
+  public void registerListener(Listener listener1) {
+    listener = listener1;
+    tracingContext.setListener(listener);
+  }
+
+  public String getStreamID() {
+    return inputStreamID;
   }
 
   @Override

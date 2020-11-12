@@ -27,6 +27,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -35,6 +39,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
@@ -77,7 +82,16 @@ public class ITestAzureBlobFileSystemListStatus extends
     }
 
     es.shutdownNow();
-    FileStatus[] files = fs.listStatus(new Path("/"));
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set(FS_AZURE_CLIENT_CORRELATIONID, "validconfig");
+    AzureBlobFileSystem fs1 =
+        (AzureBlobFileSystem) FileSystem.newInstance(config);
+    AbfsConfiguration conf = fs1.getAbfsStore().getAbfsConfiguration();
+    fs1.registerListener(new TracingHeaderValidator(
+        conf.getClientCorrelationID(),
+        fs1.getFileSystemID(), AbfsOperationConstants.LISTSTATUS, true,
+        0));
+    FileStatus[] files = fs1.listStatus(new Path("/"));
     assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
   }
 
