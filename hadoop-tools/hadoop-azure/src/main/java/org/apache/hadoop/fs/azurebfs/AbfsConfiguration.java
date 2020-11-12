@@ -102,8 +102,13 @@ public class AbfsConfiguration{
 
   @BooleanConfigurationValidatorAnnotation(
       ConfigurationKey = AZURE_READ_SMALL_FILES_COMPLETELY,
-      DefaultValue = DEFAULT_AZURE_READ_SMALL_FILES_COMPLETELY)
+      DefaultValue = DEFAULT_READ_SMALL_FILES_COMPLETELY)
   private boolean readSmallFilesCompletely;
+
+  @BooleanConfigurationValidatorAnnotation(
+      ConfigurationKey = AZURE_READ_OPTIMIZE_FOOTER_READ,
+      DefaultValue = DEFAULT_OPTIMIZE_FOOTER_READ)
+  private boolean optimizeFooterRead;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_READ_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
@@ -526,6 +531,10 @@ public class AbfsConfiguration{
     return this.readSmallFilesCompletely;
   }
 
+  public boolean optimizeFooterRead() {
+    return this.optimizeFooterRead;
+  }
+
   public int getReadBufferSize() {
     return this.readBufferSize;
   }
@@ -919,6 +928,11 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setReadSmallFilesCompletely(boolean readSmallFilesCompletely) {
     this.readSmallFilesCompletely = readSmallFilesCompletely;
+  }
+
+  @VisibleForTesting
+  public void setOptimizeFooterRead(boolean optimizeFooterRead) {
+    this.optimizeFooterRead = optimizeFooterRead;
   }
 
 }

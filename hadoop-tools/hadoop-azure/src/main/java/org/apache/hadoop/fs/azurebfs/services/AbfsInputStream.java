@@ -47,6 +47,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
+  public static final int FOOTER_DELTA = 8;
+
   private boolean firstRead = true;
 
   private final AbfsClient client;
@@ -99,7 +101,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
     this.readSmallFilesCompletely = abfsInputStreamContext
         .readSmallFilesCompletely();
-    this.optimizeFooterRead = true;
+    this.optimizeFooterRead = abfsInputStreamContext.optimizeFooterRead();
   }
 
   public String getPath() {
@@ -170,15 +172,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IndexOutOfBoundsException();
     }
 
-    long bytesRead = 0;
-
     if (firstRead && this.readSmallFilesCompletely
         && contentLength <= bufferSize) { //  Read small files completely
       if (readFileCompletely() == -1)
         return -1;
     } else if (firstRead && this.optimizeFooterRead
-        && fCursor == contentLength - 9) {  //  Read the last one block if te
-      // read is for the footer
+        && fCursor == contentLength - FOOTER_DELTA) {  //  Read the last one block if the
+                                            // read is for the footer
       if (readLastBlock() == -1)
         return -1;
     } else {
@@ -222,7 +222,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private long readLastBlock() throws IOException {
     bCursor = (int) (
-        ((contentLength < bufferSize) ? contentLength : bufferSize) - 9);
+        ((contentLength < bufferSize) ? contentLength : bufferSize)
+            - FOOTER_DELTA);
     buffer = new byte[bufferSize];
     long startPos = (contentLength < bufferSize) ?
         0 :

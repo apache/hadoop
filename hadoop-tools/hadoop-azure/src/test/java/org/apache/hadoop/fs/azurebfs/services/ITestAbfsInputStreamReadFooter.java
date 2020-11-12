@@ -39,15 +39,35 @@ public class ITestAbfsInputStreamReadFooter
   }
 
   @Test
-  public void testSeekToEndAndReadWithConf() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
+  public void testSeekToEndAndReadWithConfTrue() throws Exception {
+    testSeekToEndAndReadWithConf(true);
+  }
+
+  @Test
+  public void testSeekToEndAndReadWithConfFalse() throws Exception {
+    testSeekToEndAndReadWithConf(false);
+  }
+
+  private void testSeekToEndAndReadWithConf(boolean optimizeFooterRead) throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem(optimizeFooterRead);
     for (int i = 1; i <= 10; i++) {
       String fileName = methodName.getMethodName() + i;
       int fileSize = i * ONE_MB;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      seekReadAndTest(fs, testFilePath, fileSize - 9, 8, fileContent);
+      seekReadAndTest(fs, testFilePath, fileSize - AbfsInputStream.FOOTER_DELTA, 8,
+          fileContent);
     }
+  }
+
+  private AzureBlobFileSystem getFileSystem(boolean optimizeFooterRead)
+      throws IOException {
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.getAbfsStore().getAbfsConfiguration()
+        .setOptimizeFooterRead(optimizeFooterRead);
+    fs.getAbfsStore().getAbfsConfiguration()
+        .setReadSmallFilesCompletely(false);
+    return fs;
   }
 
   private Path createFileWithContent(FileSystem fs, String fileName,
@@ -60,8 +80,8 @@ public class ITestAbfsInputStreamReadFooter
     return testFilePath;
   }
 
-  private void seekReadAndTest(FileSystem fs, Path testFilePath, int seekPos,
-      int length, byte[] fileContent) throws IOException {
+  private void seekReadAndTest(final FileSystem fs, final Path testFilePath,
+      final int seekPos, final int length, final byte[] fileContent) throws IOException {
     try (FSDataInputStream iStream = fs.open(testFilePath)) {
       iStream.seek(seekPos);
       byte[] buffer = new byte[length];
@@ -74,15 +94,21 @@ public class ITestAbfsInputStreamReadFooter
       AbfsConfiguration conf = abfs.getAbfsStore().getAbfsConfiguration();
 
       int expectedFCursor = fileContent.length;
-      int expectedLimit = (conf.getReadBufferSize() < fileContent.length) ?
-          conf.getReadBufferSize() :
-          fileContent.length;
-      int expectedBCursor = ((conf.getReadBufferSize() < fileContent.length) ?
-          conf.getReadBufferSize() :
-          fileContent.length) - 1;
-
+      int expectedLimit;
+      int expectedBCursor;
+      if(conf.optimizeFooterRead()){
+        expectedBCursor = ((conf.getReadBufferSize() < fileContent.length) ?
+            conf.getReadBufferSize() :
+            fileContent.length);
+        expectedLimit = (conf.getReadBufferSize() < fileContent.length) ?
+            conf.getReadBufferSize() :
+            fileContent.length;
+      }else{
+        expectedBCursor = length;
+        expectedLimit = length;
+      }
       assertSuccessfulRead(fileContent, abfsInputStream.getBuffer(),
-          conf);
+          conf, length);
       assertEquals(expectedFCursor, abfsInputStream.getFCursor());
       assertEquals(expectedBCursor, abfsInputStream.getBCursor());
       assertEquals(expectedLimit, abfsInputStream.getLimit());
@@ -90,10 +116,14 @@ public class ITestAbfsInputStreamReadFooter
   }
 
   private void assertSuccessfulRead(byte[] actualFileContent,
-      byte[] contentRead, AbfsConfiguration conf) {
+      byte[] contentRead, AbfsConfiguration conf, int len) {
     int buffersize = conf.getReadBufferSize();
     int actualContentSize = actualFileContent.length;
-    int len = (actualContentSize < buffersize) ? actualContentSize : buffersize;
+    if(conf.optimizeFooterRead()){
+    len = (actualContentSize < buffersize) ?
+          actualContentSize :
+          buffersize;
+    }
     assertSuccessfulRead(actualFileContent, actualContentSize - len, len,
         contentRead);
   }
