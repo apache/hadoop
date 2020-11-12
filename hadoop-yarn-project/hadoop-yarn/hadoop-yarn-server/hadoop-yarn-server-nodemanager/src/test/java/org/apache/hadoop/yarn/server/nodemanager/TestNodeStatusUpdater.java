@@ -131,8 +131,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
   /** Bytes in a GigaByte. */
   private static final long GB = 1024L * 1024L * 1024L;
 
-  AtomicInteger heartBeatID = new AtomicInteger(0);
-  volatile Throwable nmStartError = null;
+  private volatile Throwable nmStartError = null;
+  private AtomicInteger heartBeatID = new AtomicInteger(0);
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
   private boolean triggered = false;
   private NodeManager nm;
@@ -716,14 +716,14 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           for (ContainerStatus status : statuses) {
             if (status.getContainerId().equals(
               containerStatus2.getContainerId())) {
-              Assert.assertTrue(status.getState().equals(
-                containerStatus2.getState()));
+              Assert.assertEquals(containerStatus2.getState(),
+                  status.getState());
               container2Exist = true;
             }
             if (status.getContainerId().equals(
               containerStatus3.getContainerId())) {
-              Assert.assertTrue(status.getState().equals(
-                containerStatus3.getState()));
+              Assert.assertEquals(containerStatus3.getState(),
+                  status.getState());
               container3Exist = true;
             }
           }
@@ -748,26 +748,26 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           for (ContainerStatus status : statuses) {
             if (status.getContainerId().equals(
               containerStatus2.getContainerId())) {
-              Assert.assertTrue(status.getState().equals(
-                containerStatus2.getState()));
+              Assert.assertEquals(containerStatus2.getState(),
+                  status.getState());
               container2Exist = true;
             }
             if (status.getContainerId().equals(
               containerStatus3.getContainerId())) {
-              Assert.assertTrue(status.getState().equals(
-                containerStatus3.getState()));
+              Assert.assertEquals(containerStatus3.getState(),
+                  status.getState());
               container3Exist = true;
             }
             if (status.getContainerId().equals(
               containerStatus4.getContainerId())) {
-              Assert.assertTrue(status.getState().equals(
-                containerStatus4.getState()));
+              Assert.assertEquals(containerStatus4.getState(),
+                  status.getState());
               container4Exist = true;
             }
             if (status.getContainerId().equals(
               containerStatus5.getContainerId())) {
-              Assert.assertTrue(status.getState().equals(
-                containerStatus5.getState()));
+              Assert.assertEquals(containerStatus5.getState(),
+                  status.getState());
               container5Exist = true;
             }
           }
@@ -1144,7 +1144,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
   }
 
   @Test
-  public void testNMRegistration() throws InterruptedException, IOException {
+  public void testNMRegistration() throws Exception {
     nm = new NodeManager() {
       @Override
       protected NodeStatusUpdater createNodeStatusUpdater(Context context,
@@ -1183,13 +1183,11 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
       Assert.fail(nmStartError.getCause().getMessage());
     }
 
-    int waitCount = 0;
-    while (nm.getServiceState() == STATE.STARTED
-        && heartBeatID.get() <= 3 && waitCount++ < 4000) {
-      Thread.sleep(50);
-    }
+    GenericTestUtils.waitFor(
+        () -> nm.getServiceState() != STATE.STARTED || heartBeatID.get() > 3,
+        50, 20000);
 
-    Assert.assertFalse(heartBeatID.get() <= 3);
+    Assert.assertTrue(heartBeatID.get() > 3);
     Assert.assertEquals("Number of registered NMs is wrong!!",
         1, this.registeredNodes.size());
   }
@@ -1232,12 +1230,10 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     nm.start();
     GenericTestUtils.waitFor(() -> nm.getServiceState() == STATE.STARTED,
         20, 10000);
-    int waitCount = 0;
-    while (nm.getServiceState() == STATE.STARTED
-        && heartBeatID.get() < 1 && waitCount++ < 20000) {
-      Thread.sleep(50);
-    }
-    Assert.assertFalse(heartBeatID.get() < 1);
+    GenericTestUtils.waitFor(
+        () -> nm.getServiceState() != STATE.STARTED || heartBeatID.get() >= 1,
+        50, 20000);
+    Assert.assertTrue(heartBeatID.get() >= 1);
 
     // Meanwhile call stop directly as the shutdown hook would
     nm.stop();
@@ -1261,13 +1257,15 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     nm.start();
     GenericTestUtils.waitFor(() -> nm.getServiceState() == STATE.STARTED,
         20, 10000);
-    int waitCount = 0;
-    while (nm.getServiceState() == STATE.STARTED && waitCount++ < 200000) {
-      if (heartBeatID.get() >= 1 && nm.getNMContext().getDecommissioned()) {
-        break;
-      }
-      Thread.sleep(50);
-    }
+    GenericTestUtils.waitFor(
+        () -> {
+          if (nm.getServiceState() == STATE.STARTED) {
+            return (heartBeatID.get() >= 1
+                && nm.getNMContext().getDecommissioned());
+          }
+          return true;
+        },
+        50, 200000);
     Assert.assertTrue(heartBeatID.get() >= 1);
     Assert.assertTrue(nm.getNMContext().getDecommissioned());
 
@@ -1517,13 +1515,13 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
       nm.init(conf);
       nm.start();
       // HB 2 -> app cancelled by RM.
-      GenericTestUtils.waitFor(() -> nm.getServiceState() == STATE.STARTED,
-          20, 10000);
-      int waitCount = 0;
-      while (nm.getServiceState() == STATE.STARTED && heartBeatID.get() < 12
-          && waitCount++ < 60000000) {
-        Thread.sleep(100L);
-      }
+      GenericTestUtils.waitFor(() -> nm.getServiceState() == STATE.STARTED, 20,
+          10000);
+      GenericTestUtils.waitFor(
+          () -> nm.getServiceState() != STATE.STARTED
+              || heartBeatID.get() >= 12,
+          100L, 60000000);
+
       Assert.assertTrue(heartBeatID.get() >= 12);
       MyResourceTracker3 rt =
           (MyResourceTracker3) nm.getNodeStatusUpdater().getRMClient();
@@ -1532,17 +1530,18 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
       int numKeepAliveRequests = rt.keepAliveRequests.get(rt.appId).size();
       LOG.info("Number of Keep Alive Requests: [" + numKeepAliveRequests + "]");
       Assert.assertTrue(numKeepAliveRequests == 2 || numKeepAliveRequests == 3);
-      waitCount = 0;
-      while (nm.getServiceState() == STATE.STARTED && heartBeatID.get() < 20
-          && waitCount++ < 60000000) {
-        Thread.sleep(100L);
-      }
+      GenericTestUtils.waitFor(
+          () -> nm.getServiceState() != STATE.STARTED
+              || heartBeatID.get() >= 20,
+          100L, 60000000);
       Assert.assertTrue(heartBeatID.get() >= 20);
       int numKeepAliveRequests2 = rt.keepAliveRequests.get(rt.appId).size();
       Assert.assertEquals(numKeepAliveRequests, numKeepAliveRequests2);
     } finally {
-      if (nm.getServiceState() == STATE.STARTED)
+      if (nm != null) {
         nm.stop();
+        nm.waitForServiceToStop(10000);
+      }
     }
   }
 
@@ -1580,13 +1579,12 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     GenericTestUtils.waitFor(() -> nm.getServiceState() == STATE.STARTED,
         20, 10000);
 
-    int waitCount = 0;
-    while (nm.getServiceState() == STATE.STARTED
-        && heartBeatID.get() <= 4 && waitCount++ < 20000) {
-      Thread.sleep(50);
-    }
-    Assert.assertFalse("Failed to get all heartbeats in time, " +
-          "heartbeatID:" + heartBeatID.get(), heartBeatID.get() <= 4);
+    GenericTestUtils.waitFor(
+        () -> nm.getServiceState() != STATE.STARTED || heartBeatID.get() > 4,
+        50, 20000);
+    int hbID = heartBeatID.get();
+    Assert.assertFalse("Failed to get all heartbeats in time, "
+        + "heartbeatID:" + hbID, hbID <= 4);
     Assert.assertFalse("ContainerStatus Backup failed",
         assertionFailedInThread.get());
     Assert.assertNotNull(nm.getNMContext().getSystemCredentialsForApps()
@@ -1627,8 +1625,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     Assert.assertFalse("Containers not cleaned up when NM stopped",
       assertionFailedInThread.get());
     Assert.assertTrue(((MyNodeManager2) nm).isStopped);
-    Assert.assertTrue("calculate heartBeatCount based on" +
-        " connectionWaitSecs and RetryIntervalSecs", heartBeatID.get() == 2);
+    Assert.assertEquals("calculate heartBeatCount based on" +
+        " connectionWaitSecs and RetryIntervalSecs", 2, heartBeatID.get());
   }
 
   @Test
@@ -1672,8 +1670,6 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     // NM takes a while to reach the STARTED state.
     GenericTestUtils.waitFor(() -> nm.getServiceState() == STATE.STARTED,
         20, 200000);
-
-    Assert.assertTrue(nm.getServiceState() == STATE.STARTED);
   }
 
 
@@ -1706,13 +1702,11 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     GenericTestUtils.waitFor(() -> nm.getServiceState() == STATE.STARTED,
         20, 20000);
 
-    int waitCount = 0;
-
-    while (nm.getServiceState() == STATE.STARTED
-        && heartBeatID.get() <= 3 && waitCount++ < 20000) {
-      Thread.sleep(50);
-    }
-    Assert.assertFalse(heartBeatID.get() <= 3);
+    GenericTestUtils.waitFor(
+        () -> nm.getServiceState() != STATE.STARTED
+            || heartBeatID.get() > 3,
+        50, 20000);
+    Assert.assertTrue(heartBeatID.get() > 3);
     Assert.assertEquals("Number of registered NMs is wrong!!", 1,
         this.registeredNodes.size());
 
