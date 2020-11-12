@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.assertj.core.api.Assertions;
@@ -57,6 +58,10 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.getStatusWithEmptyDirFlag;
  */
 public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
 
+  /**
+   * Rename an empty directory, verify that the empty dir
+   * marker moves in both S3Guard and in the S3A FS.
+   */
   @Test
   public void testRenameEmptyDir() throws Throwable {
     S3AFileSystem fs = getFileSystem();
@@ -67,7 +72,7 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
     String destDirMarker = fs.pathToKey(destDir) + "/";
     // set things up.
     mkdirs(sourceDir);
-    // there'a source directory marker
+    // there's source directory marker
     fs.getObjectMetadata(sourceDirMarker);
     S3AFileStatus srcStatus = getEmptyDirStatus(sourceDir);
     assertEquals("Must be an empty dir: " + srcStatus, Tristate.TRUE,
@@ -82,8 +87,12 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
         () -> getEmptyDirStatus(sourceDir));
     // and verify that there's no dir marker hidden under a tombstone
     intercept(FileNotFoundException.class,
-        () -> Invoker.once("HEAD", sourceDirMarker,
-            () -> fs.getObjectMetadata(sourceDirMarker)));
+        () -> Invoker.once("HEAD", sourceDirMarker, () -> {
+          ObjectMetadata md = fs.getObjectMetadata(sourceDirMarker);
+          return String.format("Object %s of length %d",
+              sourceDirMarker, md.getInstanceLength());
+        }));
+
     // the parent dir mustn't be confused
     S3AFileStatus baseStatus = getEmptyDirStatus(basePath);
     assertEquals("Must not be an empty dir: " + baseStatus, Tristate.FALSE,

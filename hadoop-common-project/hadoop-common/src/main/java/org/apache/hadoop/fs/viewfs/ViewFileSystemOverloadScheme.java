@@ -33,77 +33,90 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
 
-/******************************************************************************
- * This class is extended from the ViewFileSystem for the overloaded scheme
- * file system. Mount link configurations and in-memory mount table
- * building behaviors are inherited from ViewFileSystem. Unlike ViewFileSystem
- * scheme (viewfs://), the users would be able to use any scheme.
+/**
+ * <p> This class is extended from the ViewFileSystem for the overloaded
+ * scheme file system. Mount link configurations and in-memory mount table
+ * building behaviors are inherited from ViewFileSystem. Unlike
+ * ViewFileSystem scheme (viewfs://), the users would be able to use
+ * any scheme. </p>
  *
- * To use this class, the following configurations need to be added in
- * core-site.xml file.
- * 1) fs.<scheme>.impl
- *    = org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme
- * 2) fs.viewfs.overload.scheme.target.<scheme>.impl
- *    = <hadoop compatible file system implementation class name for the
- *    <scheme>"
+ * <p> To use this class, the following configurations need to be added in
+ * core-site.xml file. <br>
+ * 1) fs.{@literal <scheme>}.impl
+ *    = org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme <br>
+ * 2) fs.viewfs.overload.scheme.target.{@literal <scheme>}.impl
+ *    = {@literal <hadoop compatible file system implementation class name
+ *    for the <scheme>>} </p>
  *
- * Here <scheme> can be any scheme, but with that scheme there should be a
- * hadoop compatible file system available. Second configuration value should
- * be the respective scheme's file system implementation class.
+ * <p> Here {@literal <scheme>} can be any scheme, but with that scheme there
+ * should be a hadoop compatible file system available. Second configuration
+ * value should be the respective scheme's file system implementation class.
  * Example: if scheme is configured with "hdfs", then the 2nd configuration
  * class name will be org.apache.hadoop.hdfs.DistributedFileSystem.
  * if scheme is configured with "s3a", then the 2nd configuration class name
- * will be org.apache.hadoop.fs.s3a.S3AFileSystem.
+ * will be org.apache.hadoop.fs.s3a.S3AFileSystem. </p>
  *
- * Use Case 1:
- * ===========
+ * <p> Use Case 1: <br>
+ * =========== <br>
  * If users want some of their existing cluster (hdfs://Cluster)
  * data to mount with other hdfs and object store clusters(hdfs://NN1,
- * o3fs://bucket1.volume1/, s3a://bucket1/)
+ * o3fs://bucket1.volume1/, s3a://bucket1/) </p>
  *
- * fs.viewfs.mounttable.Cluster.link./user = hdfs://NN1/user
- * fs.viewfs.mounttable.Cluster.link./data = o3fs://bucket1.volume1/data
+ * <p>
+ * fs.viewfs.mounttable.Cluster.link./user = hdfs://NN1/user <br>
+ * fs.viewfs.mounttable.Cluster.link./data = o3fs://bucket1.volume1/data <br>
  * fs.viewfs.mounttable.Cluster.link./backup = s3a://bucket1/backup/
+ * </p>
  *
+ * <p>
  * Op1: Create file hdfs://Cluster/user/fileA will go to hdfs://NN1/user/fileA
+ * <br>
  * Op2: Create file hdfs://Cluster/data/datafile will go to
- *      o3fs://bucket1.volume1/data/datafile
+ *      o3fs://bucket1.volume1/data/datafile<br>
  * Op3: Create file hdfs://Cluster/backup/data.zip will go to
  *      s3a://bucket1/backup/data.zip
+ * </p>
  *
- * Use Case 2:
- * ===========
+ * <p> Use Case 2:<br>
+ * ===========<br>
  * If users want some of their existing cluster (s3a://bucketA/)
  * data to mount with other hdfs and object store clusters
- * (hdfs://NN1, o3fs://bucket1.volume1/)
+ * (hdfs://NN1, o3fs://bucket1.volume1/) </p>
  *
- * fs.viewfs.mounttable.bucketA.link./user = hdfs://NN1/user
- * fs.viewfs.mounttable.bucketA.link./data = o3fs://bucket1.volume1/data
+ * <p>
+ * fs.viewfs.mounttable.bucketA.link./user = hdfs://NN1/user<br>
+ * fs.viewfs.mounttable.bucketA.link./data = o3fs://bucket1.volume1/data<br>
  * fs.viewfs.mounttable.bucketA.link./salesDB = s3a://bucketA/salesDB/
+ * </p>
  *
+ * <p>
  * Op1: Create file s3a://bucketA/user/fileA will go to hdfs://NN1/user/fileA
+ * <br>
  * Op2: Create file s3a://bucketA/data/datafile will go to
- *      o3fs://bucket1.volume1/data/datafile
+ *      o3fs://bucket1.volume1/data/datafile<br>
  * Op3: Create file s3a://bucketA/salesDB/dbfile will go to
  *      s3a://bucketA/salesDB/dbfile
+ * </p>
  *
- * Note:
+ * <p> Note:<br>
  * (1) In ViewFileSystemOverloadScheme, by default the mount links will be
  * represented as non-symlinks. If you want to change this behavior, please see
- * {@link ViewFileSystem#listStatus(Path)}
+ * {@link ViewFileSystem#listStatus(Path)}<br>
  * (2) In ViewFileSystemOverloadScheme, only the initialized uri's hostname will
  * be considered as the mount table name. When the passed uri has hostname:port,
  * it will simply ignore the port number and only hostname will be considered as
- * the mount table name.
+ * the mount table name.<br>
  * (3) If there are no mount links configured with the initializing uri's
  * hostname as the mount table name, then it will automatically consider the
- * current uri as fallback( ex: fs.viewfs.mounttable.<mycluster>.linkFallBack)
- * target fs uri.
- *****************************************************************************/
+ * current uri as fallback( ex:
+ * {@literal fs.viewfs.mounttable.<mycluster>.linkFallback}) target fs uri.
+ * </p>
+ */
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
 @InterfaceStability.Evolving
 public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   private URI myUri;
+  private boolean supportAutoAddingFallbackOnNoMounts = true;
   public ViewFileSystemOverloadScheme() throws IOException {
     super();
   }
@@ -114,11 +127,19 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   }
 
   /**
-   * Returns the ViewFileSystem type.
-   * @return <code>viewfs</code>
+   * By default returns false as ViewFileSystemOverloadScheme supports auto
+   * adding fallback on no mounts.
    */
-  String getType() {
-    return FsConstants.VIEWFSOS_TYPE;
+  public boolean supportAutoAddingFallbackOnNoMounts() {
+    return this.supportAutoAddingFallbackOnNoMounts;
+  }
+
+  /**
+   * Sets whether to add fallback automatically when no mount points found.
+   */
+  public void setSupportAutoAddingFallbackOnNoMounts(
+      boolean addAutoFallbackOnNoMounts) {
+    this.supportAutoAddingFallbackOnNoMounts = addAutoFallbackOnNoMounts;
   }
 
   @Override
@@ -155,12 +176,13 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   /**
    * This method is overridden because in ViewFileSystemOverloadScheme if
    * overloaded scheme matches with mounted target fs scheme, file system
-   * should be created without going into fs.<scheme>.impl based resolution.
-   * Otherwise it will end up in an infinite loop as the target will be
-   * resolved again to ViewFileSystemOverloadScheme as fs.<scheme>.impl points
-   * to ViewFileSystemOverloadScheme. So, below method will initialize the
-   * fs.viewfs.overload.scheme.target.<scheme>.impl. Other schemes can
-   * follow fs.newInstance
+   * should be created without going into {@literal fs.<scheme>.impl} based
+   * resolution. Otherwise it will end up in an infinite loop as the target
+   * will be resolved again to ViewFileSystemOverloadScheme as
+   * {@literal fs.<scheme>.impl} points to ViewFileSystemOverloadScheme.
+   * So, below method will initialize the
+   * {@literal fs.viewfs.overload.scheme.target.<scheme>.impl}.
+   * Other schemes can follow fs.newInstance
    */
   @Override
   protected FsGetter fsGetter() {
@@ -170,7 +192,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   /**
    * This class checks whether the rooScheme is same as URI scheme. If both are
    * same, then it will initialize file systems by using the configured
-   * fs.viewfs.overload.scheme.target.<scheme>.impl class.
+   * {@literal fs.viewfs.overload.scheme.target.<scheme>.impl} class.
    */
   static class ChildFsGetter extends FsGetter {
 
@@ -287,4 +309,67 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     }
   }
 
+  /**
+   * Gets the mount path info, which contains the target file system and
+   * remaining path to pass to the target file system.
+   */
+  public MountPathInfo<FileSystem> getMountPathInfo(Path path,
+      Configuration conf) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(path), true);
+      FileSystem fs = res.isInternalDir() ?
+          (fsState.getRootFallbackLink() != null ?
+              ((ChRootedFileSystem) fsState
+                  .getRootFallbackLink().targetFileSystem).getMyFs() :
+              fsGetter().get(path.toUri(), conf)) :
+          ((ChRootedFileSystem) res.targetFileSystem).getMyFs();
+      return new MountPathInfo<FileSystem>(res.remainingPath, res.resolvedPath,
+          fs);
+    } catch (FileNotFoundException e) {
+      // No link configured with passed path.
+      throw new NotInMountpointException(path,
+          "No link found for the given path.");
+    }
+  }
+
+  /**
+   * A class to maintain the target file system and a path to pass to the target
+   * file system.
+   */
+  public static class MountPathInfo<T> {
+    private Path pathOnTarget;
+    private T targetFs;
+
+    public MountPathInfo(Path pathOnTarget, String resolvedPath, T targetFs) {
+      this.pathOnTarget = pathOnTarget;
+      this.targetFs = targetFs;
+    }
+
+    public Path getPathOnTarget() {
+      return this.pathOnTarget;
+    }
+
+    public T getTargetFs() {
+      return this.targetFs;
+    }
+  }
+
+  /**
+   * @return Gets the fallback file system configured. Usually, this will be the
+   * default cluster.
+   */
+  public FileSystem getFallbackFileSystem() {
+    if (fsState.getRootFallbackLink() == null) {
+      return null;
+    }
+    return ((ChRootedFileSystem) fsState.getRootFallbackLink().targetFileSystem)
+        .getMyFs();
+  }
+
+  @Override
+  @InterfaceAudience.LimitedPrivate("HDFS")
+  public URI canonicalizeUri(URI uri) {
+    return super.canonicalizeUri(uri);
+  }
 }

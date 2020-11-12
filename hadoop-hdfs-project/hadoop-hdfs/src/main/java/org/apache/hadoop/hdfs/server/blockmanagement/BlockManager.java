@@ -126,8 +126,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2531,7 +2531,7 @@ public class BlockManager implements BlockStatsMXBean {
            * with the most up-to-date block information (e.g. genstamp).
            */
           BlockInfo bi = blocksMap.getStoredBlock(timedOutItems[i]);
-          if (bi == null) {
+          if (bi == null || bi.isDeleted()) {
             continue;
           }
           NumberReplicas num = countNodes(timedOutItems[i]);

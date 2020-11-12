@@ -124,15 +124,35 @@ public class ReflectionUtils {
    */
   @SuppressWarnings("unchecked")
   public static <T> T newInstance(Class<T> theClass, Configuration conf) {
+    return newInstance(theClass, conf, EMPTY_ARRAY);
+  }
+
+  /** Create an object for the given class and initialize it from conf
+   *
+   * @param theClass class of which an object is created
+   * @param conf Configuration
+   * @param argTypes the types of the arguments
+   * @param values the values of the arguments
+   * @return a new object
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> T newInstance(Class<T> theClass, Configuration conf,
+      Class<?>[] argTypes, Object ... values) {
     T result;
+    if (argTypes.length != values.length) {
+      throw new IllegalArgumentException(argTypes.length
+          + " parameters are required but "
+          + values.length
+          + " arguments are provided");
+    }
     try {
       Constructor<T> meth = (Constructor<T>) CONSTRUCTOR_CACHE.get(theClass);
       if (meth == null) {
-        meth = theClass.getDeclaredConstructor(EMPTY_ARRAY);
+        meth = theClass.getDeclaredConstructor(argTypes);
         meth.setAccessible(true);
         CONSTRUCTOR_CACHE.put(theClass, meth);
       }
-      result = meth.newInstance();
+      result = meth.newInstance(values);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

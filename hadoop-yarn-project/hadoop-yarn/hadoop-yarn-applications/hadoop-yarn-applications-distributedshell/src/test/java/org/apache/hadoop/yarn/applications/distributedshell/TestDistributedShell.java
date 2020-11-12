@@ -141,18 +141,21 @@ public class TestDistributedShell {
 
   @Before
   public void setup() throws Exception {
-    setupInternal(NUM_NMS, timelineVersionWatcher.getTimelineVersion());
+    setupInternal(NUM_NMS, timelineVersionWatcher.getTimelineVersion(),
+        new YarnConfiguration());
   }
 
-  protected void setupInternal(int numNodeManager) throws Exception {
-    setupInternal(numNodeManager, DEFAULT_TIMELINE_VERSION);
+  protected void setupInternal(int numNodeManager,
+      YarnConfiguration yarnConfig) throws Exception {
+    setupInternal(numNodeManager, DEFAULT_TIMELINE_VERSION, yarnConfig);
   }
 
-  private void setupInternal(int numNodeManager, float timelineVersion)
+  private void setupInternal(int numNodeManager, float timelineVersion,
+      YarnConfiguration yarnConfig)
       throws Exception {
     LOG.info("Starting up YARN cluster");
 
-    conf = new YarnConfiguration();
+    this.conf = yarnConfig;
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
         MIN_ALLOCATION_MB);
     // reduce the teardown waiting time

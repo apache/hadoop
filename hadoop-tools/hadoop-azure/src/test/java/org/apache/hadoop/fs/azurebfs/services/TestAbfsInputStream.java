@@ -23,9 +23,12 @@ import java.io.IOException;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.assertj.core.api.Assertions;
+
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TimeoutException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -49,6 +52,8 @@ public class TestAbfsInputStream extends
   private static final int TWO_KB = 2 * 1024;
   private static final int THREE_KB = 3 * 1024;
   private static final int REDUCED_READ_BUFFER_AGE_THRESHOLD = 3000; // 3 sec
+  private static final int INCREASED_READ_BUFFER_AGE_THRESHOLD =
+      REDUCED_READ_BUFFER_AGE_THRESHOLD * 10; // 30 sec
 
   private AbfsRestOperation getMockRestOp() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -182,7 +187,38 @@ public class TestAbfsInputStream extends
     checkEvictedStatus(inputStream, 0, false);
   }
 
+  @Test
+  public void testFailedReadAheadEviction() throws Exception {
+    AbfsClient client = getMockAbfsClient();
+    AbfsRestOperation successOp = getMockRestOp();
+    ReadBufferManager.setThresholdAgeMilliseconds(INCREASED_READ_BUFFER_AGE_THRESHOLD);
+    // Stub :
+    // Read request leads to 3 readahead calls: Fail all 3 readahead-client.read()
+    // Actual read request fails with the failure in readahead thread
+    doThrow(new TimeoutException("Internal Server error"))
+        .when(client)
+        .read(any(String.class), any(Long.class), any(byte[].class),
+            any(Integer.class), any(Integer.class), any(String.class),
+            any(String.class));
+
+    AbfsInputStream inputStream = getAbfsInputStream(client, "testFailedReadAheadEviction.txt");
+
+    // Add a failed buffer to completed queue and set to no free buffers to read ahead.
+    ReadBuffer buff = new ReadBuffer();
+    buff.setStatus(ReadBufferStatus.READ_FAILED);
+    ReadBufferManager.getBufferManager().testMimicFullUseAndAddFailedBuffer(buff);
+
+    // if read failed buffer eviction is tagged as a valid eviction, it will lead to
+    // wrong assumption of queue logic that a buffer is freed up and can lead to :
+    // java.util.EmptyStackException
+    // at java.util.Stack.peek(Stack.java:102)
+    // at java.util.Stack.pop(Stack.java:84)
+    // at org.apache.hadoop.fs.azurebfs.services.ReadBufferManager.queueReadAhead
+    ReadBufferManager.getBufferManager().queueReadAhead(inputStream, 0, ONE_KB);
+  }
+
   /**
+   *
    * The test expects AbfsInputStream to initiate a remote read request for
    * the request offset and length when previous read ahead on the offset had failed.
    * Also checks that the ReadBuffers are evicted as per the ReadBufferManager
@@ -264,12 +300,25 @@ public class TestAbfsInputStream extends
             any(String.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
+    int beforeReadCompletedListSize = ReadBufferManager.getBufferManager().getCompletedReadListSize();
 
     // First read request that triggers readAheads.
     inputStream.read(new byte[ONE_KB]);
 
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
+    int newAdditionsToCompletedRead =
+        ReadBufferManager.getBufferManager().getCompletedReadListSize()
+            - beforeReadCompletedListSize;
+    // read buffer might be dumped if the ReadBufferManager getblock preceded
+    // the action of buffer being picked for reading from readaheadqueue, so that
+    // inputstream can proceed with read and not be blocked on readahead thread
+    // availability. So the count of buffers in completedReadQueue for the stream
+    // can be same or lesser than the requests triggered to queue readahead.
+    Assertions.assertThat(newAdditionsToCompletedRead)
+        .describedAs(
+            "New additions to completed reads should be same or less than as number of readaheads")
+        .isLessThanOrEqualTo(3);
 
     // Another read request whose requested data is already read ahead.
     inputStream.read(ONE_KB, new byte[ONE_KB], 0, ONE_KB);

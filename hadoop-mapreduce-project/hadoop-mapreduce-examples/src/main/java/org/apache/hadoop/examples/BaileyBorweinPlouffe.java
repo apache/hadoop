@@ -53,7 +53,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * A map/reduce program that uses Bailey-Borwein-Plouffe to compute exact 

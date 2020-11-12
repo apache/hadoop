@@ -43,14 +43,15 @@ public class TestDataDirs {
 
     File dir5 = new File("/dir5");
     File dir6 = new File("/dir6");
+    File dir7 = new File("/dir7");
     // Verify that a valid string is correctly parsed, and that storage
     // type is not case-sensitive and we are able to handle white-space between
     // storage type and URI.
     String locations1 = "[disk]/dir0,[DISK]/dir1,[sSd]/dir2,[disK]/dir3," +
-            "[ram_disk]/dir4,[disk]/dir5, [disk] /dir6, [disk] ";
+            "[ram_disk]/dir4,[disk]/dir5, [disk] /dir6, [disk] , [nvdimm]/dir7";
     conf.set(DFS_DATANODE_DATA_DIR_KEY, locations1);
     locations = DataNode.getStorageLocations(conf);
-    assertThat(locations.size(), is(8));
+    assertThat(locations.size(), is(9));
     assertThat(locations.get(0).getStorageType(), is(StorageType.DISK));
     assertThat(locations.get(0).getUri(), is(dir0.toURI()));
     assertThat(locations.get(1).getStorageType(), is(StorageType.DISK));
@@ -69,6 +70,9 @@ public class TestDataDirs {
     // not asserting the 8th URI since it is incomplete and it in the
     // test set to make sure that we don't fail if we get URIs like that.
     assertThat(locations.get(7).getStorageType(), is(StorageType.DISK));
+
+    assertThat(locations.get(8).getStorageType(), is(StorageType.NVDIMM));
+    assertThat(locations.get(8).getUri(), is(dir7.toURI()));
 
     // Verify that an unrecognized storage type result in an exception.
     String locations2 = "[BadMediaType]/dir0,[ssd]/dir1,[disk]/dir2";

@@ -31,8 +31,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.RateLimiter;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -63,7 +63,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The class provides utilities for accessing a NameNode.
@@ -162,6 +162,7 @@ public class NameNodeConnector implements Closeable {
   private OutputStream out;
   private final List<Path> targetPaths;
   private final AtomicLong bytesMoved = new AtomicLong();
+  private final AtomicLong blocksMoved = new AtomicLong();
 
   private final int maxNotChangedIterations;
   private int notChangedIterations = 0;
@@ -231,6 +232,19 @@ public class NameNodeConnector implements Closeable {
 
   AtomicLong getBytesMoved() {
     return bytesMoved;
+  }
+
+  AtomicLong getBlocksMoved() {
+    return blocksMoved;
+  }
+
+  public void addBytesMoved(long numBytes) {
+    bytesMoved.addAndGet(numBytes);
+    blocksMoved.incrementAndGet();
+  }
+
+  public URI getNameNodeUri() {
+    return nameNodeUri;
   }
 
   /** @return blocks with locations. */

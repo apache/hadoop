@@ -62,7 +62,7 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class is responsible for posting application, appattempt &amp; Container
@@ -127,7 +127,7 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         ApplicationMetricsConstants.APP_NODE_LABEL_EXPRESSION,
         app.getAppNodeLabelExpression());
     if (app.getCallerContext() != null) {
-      if (app.getCallerContext().getContext() != null) {
+      if (app.getCallerContext().isContextValid()) {
         entityInfo.put(ApplicationMetricsConstants.YARN_APP_CALLER_CONTEXT,
             app.getCallerContext().getContext());
       }

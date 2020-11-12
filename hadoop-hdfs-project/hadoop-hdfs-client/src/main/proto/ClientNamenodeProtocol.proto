@@ -303,6 +303,14 @@ message GetSnapshottableDirListingResponseProto {
   optional SnapshottableDirectoryListingProto snapshottableDirList = 1;
 }
 
+message GetSnapshotListingRequestProto {
+  required string snapshotRoot = 1;
+}
+
+message GetSnapshotListingResponseProto {
+  optional SnapshotListingProto snapshotList = 1;
+}
+
 message GetSnapshotDiffReportRequestProto {
   required string snapshotRoot = 1;
   required string fromSnapshot = 2;
@@ -986,6 +994,8 @@ service ClientNamenodeProtocol {
       returns(DisallowSnapshotResponseProto);   
   rpc getSnapshottableDirListing(GetSnapshottableDirListingRequestProto)
       returns(GetSnapshottableDirListingResponseProto);
+  rpc getSnapshotListing(GetSnapshotListingRequestProto)
+      returns(GetSnapshotListingResponseProto);
   rpc deleteSnapshot(DeleteSnapshotRequestProto)
       returns(DeleteSnapshotResponseProto);
   rpc getSnapshotDiffReport(GetSnapshotDiffReportRequestProto)

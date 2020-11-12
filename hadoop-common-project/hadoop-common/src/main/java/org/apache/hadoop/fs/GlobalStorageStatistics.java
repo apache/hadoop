@@ -23,7 +23,7 @@ import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**

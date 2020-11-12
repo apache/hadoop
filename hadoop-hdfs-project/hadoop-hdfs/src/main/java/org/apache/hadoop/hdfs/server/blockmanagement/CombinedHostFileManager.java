@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.UnmodifiableIterator;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.UnmodifiableIterator;
 
 import java.util.stream.Collectors;
 import org.slf4j.Logger;

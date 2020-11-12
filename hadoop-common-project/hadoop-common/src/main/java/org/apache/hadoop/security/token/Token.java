@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.security.token;
 
-import com.google.common.collect.Maps;
-import com.google.common.primitives.Bytes;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.HadoopIllegalArgumentException;

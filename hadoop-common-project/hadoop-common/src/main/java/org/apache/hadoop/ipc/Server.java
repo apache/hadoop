@@ -123,7 +123,7 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
@@ -2043,7 +2043,7 @@ public abstract class Server {
             LOG.debug("SASL server successfully authenticated client: " + user);
           }
           rpcMetrics.incrAuthenticationSuccesses();
-          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
+          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user + " from " + toString());
           saslContextEstablished = true;
         }
       } catch (RpcServerException rse) { // don't re-wrap
@@ -3714,7 +3714,7 @@ public abstract class Server {
         if (count == null) {
           count = 1;
         } else {
-          count++;
+          count = count + 1;
         }
         userToConnectionsMap.put(user, count);
       }
@@ -3726,7 +3726,7 @@ public abstract class Server {
         if (count == null) {
           return;
         } else {
-          count--;
+          count = count - 1;
         }
         if (count == 0) {
           userToConnectionsMap.remove(user);

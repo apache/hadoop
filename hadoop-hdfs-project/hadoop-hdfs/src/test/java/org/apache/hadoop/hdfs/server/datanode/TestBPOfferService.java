@@ -34,6 +34,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,6 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -90,8 +92,8 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 public class TestBPOfferService {
 
@@ -285,21 +287,18 @@ public class TestBPOfferService {
     int totalTestBlocks = 4000;
     Thread addNewBlockThread = null;
     final AtomicInteger count = new AtomicInteger(0);
-
+    DataNodeFaultInjector prevDNFaultInjector = null;
     try {
       waitForBothActors(bpos);
       waitForInitialization(bpos);
+      prevDNFaultInjector = DataNodeFaultInjector.get();
       DataNodeFaultInjector.set(new DataNodeFaultInjector() {
         public void blockUtilSendFullBlockReport() {
           try {
-            GenericTestUtils.waitFor(() -> {
-              if(count.get() > 2000) {
-                return true;
-              }
-              return false;
-            }, 100, 1000);
+            GenericTestUtils.waitFor(() -> count.get() > 2000,
+                100, 1000);
           } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("error DataNodeFaultInjector", e);
           }
         }
       });
@@ -318,45 +317,41 @@ public class TestBPOfferService {
             count.addAndGet(1);
             Thread.sleep(1);
           } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("error addNewBlockThread", e);
           }
         }
       });
       addNewBlockThread.start();
 
       // Make sure that generate blocks for DataNode and IBR not empty now.
-      GenericTestUtils.waitFor(() -> {
-        if(count.get() > 0) {
-          return true;
-        }
-        return false;
-      }, 100, 1000);
+      GenericTestUtils.waitFor(() -> count.get() > 0, 100, 1000);
 
       // Trigger re-register using DataNode Command.
       datanodeCommands[0] = new DatanodeCommand[]{RegisterCommand.REGISTER};
+
       bpos.triggerHeartbeatForTests();
-
-      try {
-        GenericTestUtils.waitFor(() -> {
-          if(fullBlockReportCount == totalTestBlocks ||
-              incrBlockReportCount == totalTestBlocks) {
-            return true;
-          }
-          return false;
-        }, 1000, 15000);
-      } catch (Exception e) {}
-
-      // Verify FBR/IBR count is equal to generate number.
-      assertTrue(fullBlockReportCount == totalTestBlocks ||
-          incrBlockReportCount == totalTestBlocks);
-    } finally {
       addNewBlockThread.join();
+      addNewBlockThread = null;
+      // Verify FBR/IBR count is equal to generate number.
+      try {
+        GenericTestUtils.waitFor(() ->
+            (fullBlockReportCount == totalTestBlocks ||
+                incrBlockReportCount == totalTestBlocks), 1000, 15000);
+      } catch (Exception e) {
+        fail(String.format("Timed out wait for IBR counts FBRCount = %d,"
+                + " IBRCount = %d; expected = %d. Exception: %s",
+            fullBlockReportCount, incrBlockReportCount, totalTestBlocks,
+            e.getMessage()));
+      }
+
+    } finally {
+      if (addNewBlockThread != null) {
+        addNewBlockThread.interrupt();
+      }
       bpos.stop();
       bpos.join();
 
-      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
-        public void blockUtilSendFullBlockReport() {}
-      });
+      DataNodeFaultInjector.set(prevDNFaultInjector);
     }
   }
 
@@ -1210,6 +1205,28 @@ public class TestBPOfferService {
       // Check new metric result about processedCommandsOp.
       // One command send back to DataNode here is #FinalizeCommand.
       assertCounter("ProcessedCommandsOpNumOps", 1L, mrb);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 5000)
+  public void testCommandProcessingThreadExit() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(1).build();
+    try {
+      List<DataNode> datanodes = cluster.getDataNodes();
+      DataNode dataNode = datanodes.get(0);
+      List<BPOfferService> allBpOs = dataNode.getAllBpOs();
+      BPOfferService bpos = allBpOs.get(0);
+      waitForInitialization(bpos);
+      BPServiceActor actor = bpos.getBPServiceActors().get(0);
+      // Stop and wait util actor exit.
+      actor.stopCommandProcessingThread();
+      GenericTestUtils.waitFor(() -> !actor.isAlive(), 100, 3000);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

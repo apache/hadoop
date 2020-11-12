@@ -33,6 +33,8 @@ public class AbfsInputStreamStatisticsImpl
   private long readOperations;
   private long bytesReadFromBuffer;
   private long remoteReadOperations;
+  private long readAheadBytesRead;
+  private long remoteBytesRead;
 
   /**
    * Seek backwards, incrementing the seek and backward seek counters.
@@ -129,6 +131,30 @@ public class AbfsInputStreamStatisticsImpl
   }
 
   /**
+   * Total bytes read from readAhead buffer during a read operation.
+   *
+   * @param bytes the bytes to be incremented.
+   */
+  @Override
+  public void readAheadBytesRead(long bytes) {
+    if (bytes > 0) {
+      readAheadBytesRead += bytes;
+    }
+  }
+
+  /**
+   * Total bytes read remotely after nothing was read from readAhead buffer.
+   *
+   * @param bytes the bytes to be incremented.
+   */
+  @Override
+  public void remoteBytesRead(long bytes) {
+    if (bytes > 0) {
+      remoteBytesRead += bytes;
+    }
+  }
+
+  /**
    * {@inheritDoc}
    *
    * Increment the counter when a remote read operation occurs.
@@ -178,6 +204,14 @@ public class AbfsInputStreamStatisticsImpl
     return remoteReadOperations;
   }
 
+  public long getReadAheadBytesRead() {
+    return readAheadBytesRead;
+  }
+
+  public long getRemoteBytesRead() {
+    return remoteBytesRead;
+  }
+
   /**
    * String operator describes all the current statistics.
    * <b>Important: there are no guarantees as to the stability
@@ -199,6 +233,8 @@ public class AbfsInputStreamStatisticsImpl
     sb.append(", ReadOperations=").append(readOperations);
     sb.append(", bytesReadFromBuffer=").append(bytesReadFromBuffer);
     sb.append(", remoteReadOperations=").append(remoteReadOperations);
+    sb.append(", readAheadBytesRead=").append(readAheadBytesRead);
+    sb.append(", remoteBytesRead=").append(remoteBytesRead);
     sb.append('}');
     return sb.toString();
   }

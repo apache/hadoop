@@ -167,6 +167,28 @@ public class ConfigUtil {
   }
 
   /**
+   * Add a LinkRegex to the config for the specified mount table.
+   * @param conf - get mountable config from this conf
+   * @param mountTableName - the mountable name of the regex config item
+   * @param srcRegex - the src path regex expression that applies to this config
+   * @param targetStr - the string of target path
+   * @param interceptorSettings - the serialized interceptor string to be
+   *                            applied while resolving the mapping
+   */
+  public static void addLinkRegex(
+      Configuration conf, final String mountTableName, final String srcRegex,
+      final String targetStr, final String interceptorSettings) {
+    String prefix = getConfigViewFsPrefix(mountTableName) + "."
+        + Constants.CONFIG_VIEWFS_LINK_REGEX + ".";
+    if ((interceptorSettings != null) && (!interceptorSettings.isEmpty())) {
+      prefix = prefix + interceptorSettings
+          + RegexMountPoint.SETTING_SRCREGEX_SEP;
+    }
+    String key = prefix + srcRegex;
+    conf.set(key, targetStr);
+  }
+
+  /**
    * Add config variable for homedir for default mount table
    * @param conf - add to this conf
    * @param homedir - the home dir path starting with slash

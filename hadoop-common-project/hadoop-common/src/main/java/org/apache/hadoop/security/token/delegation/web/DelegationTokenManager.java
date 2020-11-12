@@ -33,7 +33,7 @@ import org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManage
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Delegation Token Manager used by the

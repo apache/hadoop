@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
 import java.util.function.Function;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 

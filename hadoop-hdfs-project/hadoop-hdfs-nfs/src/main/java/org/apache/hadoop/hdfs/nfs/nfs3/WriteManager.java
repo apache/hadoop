@@ -45,7 +45,7 @@ import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.security.IdMappingServiceProvider;
 import org.jboss.netty.channel.Channel;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Manage the writes and responds asynchronously.

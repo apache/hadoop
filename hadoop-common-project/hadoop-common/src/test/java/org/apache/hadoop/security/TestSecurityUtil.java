@@ -46,7 +46,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 public class TestSecurityUtil {
 
@@ -368,6 +368,16 @@ public class TestSecurityUtil {
     String staticHost = "host3";
     NetUtils.addStaticResolution(staticHost, "255.255.255.255");
     verifyServiceAddr(staticHost, "255.255.255.255");
+  }
+
+  @Test
+  public void testSocketAddrWithChangeIP() {
+    String staticHost = "host4";
+    NetUtils.addStaticResolution(staticHost, "255.255.255.255");
+    verifyServiceAddr(staticHost, "255.255.255.255");
+
+    NetUtils.addStaticResolution(staticHost, "255.255.255.254");
+    verifyServiceAddr(staticHost, "255.255.255.254");
   }
 
   // this is a bizarre case, but it's if a test tries to remap an ip address

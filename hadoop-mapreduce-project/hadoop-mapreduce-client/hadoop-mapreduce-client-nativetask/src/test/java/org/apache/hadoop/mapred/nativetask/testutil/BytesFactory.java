@@ -19,9 +19,9 @@ package org.apache.hadoop.mapred.nativetask.testutil;
 
 import java.util.Random;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Longs;
 
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.ByteWritable;

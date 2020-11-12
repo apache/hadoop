@@ -330,6 +330,22 @@ All secrets can be stored in JCEKS files. These are encrypted and password
 protected —use them or a compatible Hadoop Key Management Store wherever
 possible
 
+### <a name="aad-token-fetch-retry-logic"></a> AAD Token fetch retries
+
+The exponential retry policy used for the AAD token fetch retries can be tuned
+with the following configurations.
+* `fs.azure.oauth.token.fetch.retry.max.retries`: Sets the maximum number of
+ retries. Default value is 5.
+* `fs.azure.oauth.token.fetch.retry.min.backoff.interval`: Minimum back-off
+  interval. Added to the retry interval computed from delta backoff. By
+   default this si set as 0. Set the interval in milli seconds.
+* `fs.azure.oauth.token.fetch.retry.max.backoff.interval`: Maximum back-off
+interval. Default value is 60000 (sixty seconds). Set the interval in milli
+seconds.
+* `fs.azure.oauth.token.fetch.retry.delta.backoff`: Back-off interval between
+retries. Multiples of this timespan are used for subsequent retry attempts
+ . The default value is 2.
+
 ### <a name="shared-key-auth"></a> Default: Shared Key
 
 This is the simplest authentication mechanism of account + password.
@@ -776,7 +792,22 @@ bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to
 `fs.azure.readaheadqueue.depth`: Sets the readahead queue depth in
 AbfsInputStream. In case the set value is negative the read ahead queue depth
 will be set as Runtime.getRuntime().availableProcessors(). By default the value
-will be -1.
+will be -1. To disable readaheads, set this value to 0. If your workload is
+ doing only random reads (non-sequential) or you are seeing throttling, you
+  may try setting this value to 0.
+
+To run under limited memory situations configure the following. Especially
+when there are too many writes from the same process. 
+
+`fs.azure.write.max.concurrent.requests`: To set the maximum concurrent
+ write requests from an AbfsOutputStream instance  to server at any point of
+ time. Effectively this will be the threadpool size within the
+ AbfsOutputStream instance. Set the value in between 1 to 8 both inclusive.
+
+`fs.azure.write.max.requests.to.queue`: To set the maximum write requests
+ that can be queued. Memory consumption of AbfsOutputStream instance can be
+ tuned with this config considering each queued request holds a buffer. Set
+ the value 3 or 4 times the value set for s.azure.write.max.concurrent.requests.
 
 ### <a name="securityconfigoptions"></a> Security Options
 `fs.azure.always.use.https`: Enforces to use HTTPS instead of HTTP when the flag

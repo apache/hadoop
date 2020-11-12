@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.server.namenode.FsImageValidation.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,18 +46,20 @@ public class INodeReferenceValidation {
 
   public static void start() {
     INSTANCE.compareAndSet(null, new INodeReferenceValidation());
-    println("Validation started");
+    println("%s started", INodeReferenceValidation.class.getSimpleName());
   }
 
-  public static int end() {
+  public static void end(AtomicInteger errorCount) {
     final INodeReferenceValidation instance = INSTANCE.getAndSet(null);
     if (instance == null) {
-      return 0;
+      return;
     }
 
-    final int errorCount = instance.assertReferences();
-    println("Validation ended successfully: %d error(s) found.", errorCount);
-    return errorCount;
+    final int initCount = errorCount.get();
+    instance.assertReferences(errorCount);
+    println("%s ended successfully: %d error(s) found.",
+        INodeReferenceValidation.class.getSimpleName(),
+        errorCount.get() - initCount);
   }
 
   static <REF extends INodeReference> void add(REF ref, Class<REF> clazz) {
@@ -153,7 +155,7 @@ public class INodeReferenceValidation {
     throw new IllegalArgumentException("References not found for " + clazz);
   }
 
-  private int assertReferences() {
+  private void assertReferences(AtomicInteger errorCount) {
     final int p = Runtime.getRuntime().availableProcessors();
     LOG.info("Available Processors: {}", p);
     final ExecutorService service = Executors.newFixedThreadPool(p);
@@ -168,7 +170,6 @@ public class INodeReferenceValidation {
     final Timer t = new Timer();
     t.scheduleAtFixedRate(checkProgress, 0, 1_000);
 
-    final AtomicInteger errorCount = new AtomicInteger();
     try {
       dstReferences.submit(errorCount, service);
       withCounts.submit(errorCount, service);
@@ -183,7 +184,6 @@ public class INodeReferenceValidation {
       service.shutdown();
       t.cancel();
     }
-    return errorCount.get();
   }
 
   static <REF extends INodeReference> List<Task<REF>> createTasks(
@@ -215,7 +215,7 @@ public class INodeReferenceValidation {
         try {
           ref.assertReferences();
         } catch (Throwable t) {
-          println("%d: %s", errorCount.incrementAndGet(), t);
+          printError(errorCount, "%s", t);
         }
       }
       return references.size();

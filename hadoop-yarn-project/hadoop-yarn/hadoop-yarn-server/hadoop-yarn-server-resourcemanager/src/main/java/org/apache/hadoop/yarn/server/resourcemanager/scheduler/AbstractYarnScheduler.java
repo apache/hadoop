@@ -108,8 +108,8 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 
 @SuppressWarnings("unchecked")
@@ -884,6 +884,15 @@ public abstract class AbstractYarnScheduler
         + " does not support reservations");
   }
 
+  /**
+   * By default placement constraint is disabled. Schedulers which support
+   * placement constraint can override this value.
+   * @return enabled or not
+   */
+  public boolean placementConstraintEnabled() {
+    return false;
+  }
+
   protected void refreshMaximumAllocation(Resource newMaxAlloc) {
     nodeTracker.setConfiguredMaxAllocation(newMaxAlloc);
   }
@@ -1188,7 +1197,9 @@ public abstract class AbstractYarnScheduler
     // If the node is decommissioning, send an update to have the total
     // resource equal to the used resource, so no available resource to
     // schedule.
-    if (nm.getState() == NodeState.DECOMMISSIONING && schedulerNode != null) {
+    if (nm.getState() == NodeState.DECOMMISSIONING && schedulerNode != null
+        && schedulerNode.getTotalResource().compareTo(
+            schedulerNode.getAllocatedResource()) != 0) {
       this.rmContext
           .getDispatcher()
           .getEventHandler()

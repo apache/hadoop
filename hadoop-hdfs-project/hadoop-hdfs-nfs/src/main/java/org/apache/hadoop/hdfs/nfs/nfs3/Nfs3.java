@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.nfs.mount.Mountd;
 import org.apache.hadoop.nfs.nfs3.Nfs3Base;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Nfs server. Supports NFS v3 using {@link RpcProgramNfs3}.

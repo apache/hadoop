@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
 
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import net.jcip.annotations.NotThreadSafe;
 import org.apache.hadoop.fs.StorageType;

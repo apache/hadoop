@@ -71,8 +71,8 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 import org.slf4j.Logger;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 /**
  * A thread per active or standby namenode to perform:
@@ -572,11 +572,11 @@ class BPServiceActor implements Runnable {
     }
     bpThread = new Thread(this);
     bpThread.setDaemon(true); // needed for JUnit testing
-    bpThread.start();
 
     if (lifelineSender != null) {
       lifelineSender.start();
     }
+    bpThread.start();
   }
 
   private String formatThreadName(
@@ -1312,6 +1312,10 @@ class BPServiceActor implements Runnable {
         processQueue();
       } catch (Throwable t) {
         LOG.error("{} encountered fatal exception and exit.", getName(), t);
+        runningState = RunningState.FAILED;
+      } finally {
+        LOG.warn("Ending command processor service for: " + this);
+        shouldServiceRun = false;
       }
     }
 
@@ -1327,6 +1331,7 @@ class BPServiceActor implements Runnable {
           dn.getMetrics().incrNumProcessedCommands();
         } catch (InterruptedException e) {
           LOG.error("{} encountered interrupt and exit.", getName());
+          Thread.currentThread().interrupt();
           // ignore unless thread was specifically interrupted.
           if (Thread.interrupted()) {
             break;
@@ -1396,6 +1401,13 @@ class BPServiceActor implements Runnable {
     void enqueue(DatanodeCommand[] cmds) throws InterruptedException {
       queue.put(() -> processCommand(cmds));
       dn.getMetrics().incrActorCmdQueueLength(1);
+    }
+  }
+
+  @VisibleForTesting
+  void stopCommandProcessingThread() {
+    if (commandProcessingThread != null) {
+      commandProcessingThread.interrupt();
     }
   }
 }

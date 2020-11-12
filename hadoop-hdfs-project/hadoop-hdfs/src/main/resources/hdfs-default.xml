@@ -314,6 +314,17 @@
 </property>
 
   <property>
+    <name>dfs.namenode.redundancy.considerLoadByStorageType</name>
+    <value>false</value>
+    <description>
+      Decide if chooseTarget considers the target's load with respect to the
+      storage type. Typically to be used when datanodes contain homogenous
+      storage types. Irrelevent if dfs.namenode.redundancy.considerLoad is
+      false.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.redundancy.considerLoad.factor</name>
     <value>2.0</value>
     <description>The factor by which a node's load can exceed the average
@@ -377,7 +388,7 @@
   <value>0</value>
   <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
       Specific storage type based reservation is also supported. The property can be followed with
-      corresponding storage types ([ssd]/[disk]/[archive]/[ram_disk]) for cluster with heterogeneous storage.
+      corresponding storage types ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
       For example, reserved space for RAM_DISK storage can be configured using property
       'dfs.datanode.du.reserved.ram_disk'. If specific storage type reservation is not configured
       then dfs.datanode.du.reserved will be used. Support multiple size unit suffix(case insensitive),
@@ -395,7 +406,7 @@
     when this takes effect. The actual number of bytes reserved will be calculated by using the
     total capacity of the data directory in question. Specific storage type based reservation
     is also supported. The property can be followed with corresponding storage types
-    ([ssd]/[disk]/[archive]/[ram_disk]) for cluster with heterogeneous storage.
+    ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
     For example, reserved percentage space for RAM_DISK storage can be configured using property
     'dfs.datanode.du.reserved.pct.ram_disk'. If specific storage type reservation is not configured
     then dfs.datanode.du.reserved.pct will be used.
@@ -604,7 +615,7 @@
   should store its blocks.  If this is a comma-delimited
   list of directories, then data will be stored in all named
   directories, typically on different devices. The directories should be tagged
-  with corresponding storage types ([SSD]/[DISK]/[ARCHIVE]/[RAM_DISK]) for HDFS
+  with corresponding storage types ([SSD]/[DISK]/[ARCHIVE]/[RAM_DISK]/[NVDIMM]) for HDFS
   storage policies. The default storage type will be DISK if the directory does
   not have a storage type tagged explicitly. Directories that do not exist will
   be created if local filesystem permission allows.
@@ -1236,6 +1247,14 @@
   restarts. Defaults to 10 minutes.</description>
 </property>
 
+  <property>
+    <name>dfs.client.write.recover.lease.on.close.exception</name>
+    <value>false</value>
+    <description>
+      Set to true to call recoverLease operation automatically when DFSOutputSteam closing encounters exception.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.checkpoint.dir</name>
   <value>file://${hadoop.tmp.dir}/dfs/namesecondary</value>
@@ -1428,13 +1447,13 @@
 
 <property>
   <name>dfs.image.transfer.bandwidthPerSec</name>
-  <value>0</value>
+  <value>52428800</value>
   <description>
         Maximum bandwidth used for regular image transfers (instead of
         bootstrapping the standby namenode), in bytes per second.
         This can help keep normal namenode operations responsive during
         checkpointing.
-        A default value of 0 indicates that throttling is disabled.
+        A default value is 50mb per second.
         The maximum bandwidth used for bootstrapping standby namenode is
         configured with dfs.image.transfer-bootstrap-standby.bandwidthPerSec.
         Support multiple size unit suffix(case insensitive), as described
@@ -1593,6 +1612,15 @@
     If this is true, scanner will check the access time of block file to avoid
     scanning blocks accessed during recent scan peroid, reducing disk IO.
     This feature will not work if the DataNode volume has noatime mount option.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.scanner.volume.join.timeout.ms</name>
+  <value>5000</value>
+  <description>
+    The amount of time in milliseconds that the BlockScanner times out waiting
+    for the VolumeScanner thread to join during a shutdown call.
   </description>
 </property>
 
@@ -3288,7 +3316,7 @@
 
 <property>
   <name>dfs.datanode.block.id.layout.upgrade.threads</name>
-  <value>12</value>
+  <value>6</value>
   <description>The number of threads to use when creating hard links from
     current to previous blocks during upgrade of a DataNode to block ID-based
     block layout (see HDFS-6482 for details on the layout).</description>
@@ -4186,6 +4214,15 @@
 </property>
 
 <property>
+  <name>dfs.client.read.uri.cache.enabled</name>
+  <value>false</value>
+  <description>
+    If true, dfs client will use cache when creating URI based on host:port
+    to reduce the frequency of URI object creation.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.read.short.circuit.replica.stale.threshold.ms</name>
   <value>1800000</value>
   <description>
@@ -4418,6 +4455,14 @@
   <value>true</value>
   <description>
     If true, set TCP_NODELAY to sockets for transferring data between Datanodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.data.transfer.max.packet.size</name>
+  <value>16777216</value>
+  <description>
+    The max size of any single packet.
   </description>
 </property>
 
@@ -5098,6 +5143,15 @@
   <description>
     Limits the maximum number of snapshots allowed per snapshottable
     directory.If the configuration is not set, the default limit
+    for maximum no of snapshots allowed is 65536.
+  </description>
+</property>
+<property>
+  <name>dfs.namenode.snapshot.filesystem.limit</name>
+  <value>65536</value>
+  <description>
+    Limits the maximum number of snapshots allowed on the entire filesystem.
+    If the configuration is not set, the default limit
     for maximum no of snapshots allowed is 65536.
   </description>
 </property>
@@ -5966,4 +6020,29 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.datanode.same-disk-tiering.enabled</name>
+    <value>false</value>
+    <description>
+        HDFS-15548 to allow DISK/ARCHIVE to be
+        configured on the same disk mount to manage disk IO.
+        When this is enabled, datanode will control the capacity
+        of DISK/ARCHIVE based on reserve-for-archive.percentage.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.reserve-for-archive.default.percentage</name>
+    <value>0.0</value>
+    <description>
+        Default disk capacity ratio of ARCHIVE volume,
+        expected the value to be between 0 to 1.
+        This will be applied when DISK/ARCHIVE volumes are configured
+        on the same mount, which is detected by datanode.
+        Beware that capacity usage might be >100% if there are already
+        data blocks exist and the configured ratio is small, which will
+        prevent the volume from taking new blocks
+        until capacity is balanced out.
+    </description>
+  </property>
 </configuration>

@@ -24,7 +24,7 @@ import java.net.URI;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -208,6 +208,10 @@ public class StoreContext {
 
   public boolean isUseListV1() {
     return useListV1;
+  }
+
+  public ContextAccessors getContextAccessors() {
+    return contextAccessors;
   }
 
   /**

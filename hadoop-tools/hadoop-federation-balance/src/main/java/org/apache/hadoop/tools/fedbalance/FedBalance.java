@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.fedbalance;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -51,6 +51,7 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.BANDWIDTH;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.TRASH;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DELAY_DURATION;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.CLI_OPTIONS;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DIFF_THRESHOLD;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TrashOption;
 
 /**
@@ -91,6 +92,8 @@ public class FedBalance extends Configured implements Tool {
     private TrashOption trashOpt = TrashOption.TRASH;
     /* Specify the duration(millie seconds) when the procedure needs retry. */
     private long delayDuration = TimeUnit.SECONDS.toMillis(1);
+    /* Specify the threshold of diff entries. */
+    private int diffThreshold = 0;
     /* The source input. This specifies the source path. */
     private final String inputSrc;
     /* The dst input. This specifies the dst path. */
@@ -156,6 +159,15 @@ public class FedBalance extends Configured implements Tool {
     }
 
     /**
+     * Specify the threshold of diff entries.
+     * @param value the threshold of a fast distcp.
+     */
+    public Builder setDiffThreshold(int value) {
+      this.diffThreshold = value;
+      return this;
+    }
+
+    /**
      * Build the balance job.
      */
     public BalanceJob build() throws IOException {
@@ -172,7 +184,8 @@ public class FedBalance extends Configured implements Tool {
             .setForceCloseOpenFiles(forceCloseOpen)
             .setUseMountReadOnly(routerCluster).setMapNum(map)
             .setBandwidthLimit(bandwidth).setTrash(trashOpt)
-            .setDelayDuration(delayDuration).build();
+            .setDelayDuration(delayDuration)
+            .setDiffThreshold(diffThreshold).build();
       } else { // normal federation cluster.
         Path src = new Path(inputSrc);
         if (src.toUri().getAuthority() == null) {
@@ -181,7 +194,8 @@ public class FedBalance extends Configured implements Tool {
         context = new FedBalanceContext.Builder(src, dst, NO_MOUNT, getConf())
             .setForceCloseOpenFiles(forceCloseOpen)
             .setUseMountReadOnly(routerCluster).setMapNum(map)
-            .setBandwidthLimit(bandwidth).setTrash(trashOpt).build();
+            .setBandwidthLimit(bandwidth).setTrash(trashOpt)
+            .setDiffThreshold(diffThreshold).build();
       }
 
       LOG.info(context.toString());
@@ -289,6 +303,10 @@ public class FedBalance extends Configured implements Tool {
     if (command.hasOption(DELAY_DURATION.getOpt())) {
       builder.setDelayDuration(
           Long.parseLong(command.getOptionValue(DELAY_DURATION.getOpt())));
+    }
+    if (command.hasOption(DIFF_THRESHOLD.getOpt())) {
+      builder.setDiffThreshold(Integer.parseInt(
+          command.getOptionValue(DIFF_THRESHOLD.getOpt())));
     }
     if (command.hasOption(TRASH.getOpt())) {
       String val = command.getOptionValue(TRASH.getOpt());

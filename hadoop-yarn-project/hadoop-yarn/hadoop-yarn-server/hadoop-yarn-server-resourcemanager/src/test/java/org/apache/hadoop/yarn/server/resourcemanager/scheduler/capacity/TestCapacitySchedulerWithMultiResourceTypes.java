@@ -60,7 +60,7 @@ import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

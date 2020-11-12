@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueuePlacementRuleUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -278,6 +279,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   public static final String QUEUE_MAPPING = PREFIX + "queue-mappings";
+
+  @Private
+  public static final String QUEUE_MAPPING_NAME =
+      YarnConfiguration.QUEUE_PLACEMENT_RULES + ".app-name";
 
   @Private
   public static final String ENABLE_QUEUE_MAPPING_OVERRIDE = QUEUE_MAPPING + "-override.enable";
@@ -1159,6 +1164,46 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return mappings;
   }
 
+  public List<MappingRule> getMappingRules() {
+    List<MappingRule> mappings = new ArrayList<MappingRule>();
+    Collection<String> mappingsString =
+        getTrimmedStringCollection(QUEUE_MAPPING);
+
+    for (String mappingValue : mappingsString) {
+      String[] mapping =
+          StringUtils.getTrimmedStringCollection(mappingValue, ":")
+              .toArray(new String[] {});
+      if (mapping.length != 3 || mapping[1].length() == 0
+          || mapping[2].length() == 0) {
+        throw new IllegalArgumentException(
+            "Illegal queue mapping " + mappingValue);
+      }
+
+      if (mapping[0].equals("u") || mapping[0].equals("g")) {
+        mappings.add(MappingRule.createLegacyRule(
+            mapping[0], mapping[1], mapping[2]));
+      } else {
+        throw new IllegalArgumentException(
+            "unknown mapping prefix " + mapping[0]);
+      }
+    }
+
+    mappingsString = getTrimmedStringCollection(QUEUE_MAPPING_NAME);
+    for (String mappingValue : mappingsString) {
+      String[] mapping =
+          StringUtils.getTrimmedStringCollection(mappingValue, ":")
+              .toArray(new String[] {});
+      if (mapping.length != 2 || mapping[1].length() == 0) {
+        throw new IllegalArgumentException(
+            "Illegal queue mapping " + mappingValue);
+      }
+
+      mappings.add(MappingRule.createLegacyRule(mapping[0], mapping[1]));
+    }
+
+    return mappings;
+  }
+
   @Private
   @VisibleForTesting
   public void setQueuePlacementRules(Collection<String> queuePlacementRules) {
@@ -1182,6 +1227,24 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     setStrings(QUEUE_MAPPING, StringUtils.join(",", queueMappingStrs));
+  }
+
+
+  @Private
+  @VisibleForTesting
+  public void setAppNameMappings(List<QueueMapping> queueMappings) {
+    if (queueMappings == null) {
+      return;
+    }
+
+    List<String> queueMappingStrs = new ArrayList<>();
+    for (QueueMapping mapping : queueMappings) {
+      String rule = mapping.toString();
+      String[] parts = rule.split(":");
+      queueMappingStrs.add(parts[1] + ":" + parts[2]);
+    }
+
+    setStrings(QUEUE_MAPPING_NAME, StringUtils.join(",", queueMappingStrs));
   }
 
   @Private
@@ -2164,6 +2227,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           + DOT + type;
     }
     set(prefix, resourceString.toString());
+  }
+
+  public boolean checkConfigTypeIsAbsoluteResource(String label, String queue,
+      Set<String> resourceTypes) {
+    String propertyName = getNodeLabelPrefix(queue, label) + CAPACITY;
+    String resourceString = get(propertyName);
+    if (resourceString == null || resourceString.isEmpty()) {
+      return false;
+    }
+
+    Matcher matcher = RESOURCE_PATTERN.matcher(resourceString);
+    if (matcher.find()) {
+      return true;
+    }
+    return false;
   }
 
   private Resource internalGetLabeledResourceRequirementForQueue(String queue,

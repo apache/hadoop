@@ -83,12 +83,12 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.Tracer;
 import org.apache.htrace.core.TraceScope;
 
-import com.google.common.base.Preconditions;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
@@ -621,6 +621,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException a problem arose closing one or more filesystem.
    */
   public static void closeAll() throws IOException {
+    debugLogFileSystemClose("closeAll", "");
     CACHE.closeAll();
   }
 
@@ -631,8 +632,22 @@ public abstract class FileSystem extends Configured
    * @throws IOException a problem arose closing one or more filesystem.
    */
   public static void closeAllForUGI(UserGroupInformation ugi)
-  throws IOException {
+      throws IOException {
+    debugLogFileSystemClose("closeAllForUGI", "UGI: " + ugi);
     CACHE.closeAll(ugi);
+  }
+
+  private static void debugLogFileSystemClose(String methodName,
+      String additionalInfo) {
+    if (LOGGER.isDebugEnabled()) {
+      Throwable throwable = new Throwable().fillInStackTrace();
+      LOGGER.debug("FileSystem.{}() by method: {}); {}", methodName,
+          throwable.getStackTrace()[2], additionalInfo);
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("FileSystem.{}() full stack trace:", methodName,
+            throwable);
+      }
+    }
   }
 
   /**
@@ -2214,7 +2229,9 @@ public abstract class FileSystem extends Configured
     @Override
     @SuppressWarnings("unchecked")
     public T next() throws IOException {
-      Preconditions.checkState(hasNext(), "No more items in iterator");
+      if (!hasNext()) {
+        throw new NoSuchElementException("No more items in iterator");
+      }
       if (i == entries.getEntries().length) {
         fetchMore();
       }
@@ -2570,6 +2587,9 @@ public abstract class FileSystem extends Configured
    */
   @Override
   public void close() throws IOException {
+    debugLogFileSystemClose("close", "Key: " + key + "; URI: " + getUri()
+        + "; Object Identity Hash: "
+        + Integer.toHexString(System.identityHashCode(this)));
     // delete all files that were marked as delete-on-exit.
     processDeleteOnExit();
     CACHE.remove(this.key, this);
@@ -2654,6 +2674,20 @@ public abstract class FileSystem extends Configured
    * @throws IOException see specific implementation
    */
   public abstract FileStatus getFileStatus(Path f) throws IOException;
+
+  /**
+   * Synchronize client metadata state.
+   * <p>
+   * In some FileSystem implementations such as HDFS metadata
+   * synchronization is essential to guarantee consistency of read requests
+   * particularly in HA setting.
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  public void msync() throws IOException, UnsupportedOperationException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method msync");
+  }
 
   /**
    * Checks if the user can access a path.  The mode specifies which access

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidPathException;
@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Time;
@@ -193,7 +194,7 @@ class FSDirRenameOp {
     }
 
     validateNestSnapshot(fsd, src, dstParent.asDirectory(), snapshottableDirs);
-
+    checkUnderSameSnapshottableRoot(fsd, srcIIP, dstIIP);
     fsd.ezManager.checkMoveValidity(srcIIP, dstIIP);
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
@@ -262,6 +263,11 @@ class FSDirRenameOp {
           throws IOException {
     final INodesInPath srcIIP = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
     final INodesInPath dstIIP = fsd.resolvePath(pc, dst, DirOp.CREATE_LINK);
+
+    if(fsd.isNonEmptyDirectory(srcIIP)) {
+      DFSUtil.checkProtectedDescendants(fsd, srcIIP);
+    }
+
     if (fsd.isPermissionEnabled()) {
       boolean renameToTrash = false;
       if (null != options &&
@@ -407,6 +413,7 @@ class FSDirRenameOp {
 
     validateNestSnapshot(fsd, src,
             dstParent.asDirectory(), srcSnapshottableDirs);
+    checkUnderSameSnapshottableRoot(fsd, srcIIP, dstIIP);
 
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
@@ -650,7 +657,12 @@ class FSDirRenameOp {
       // snapshot is taken on the dst tree, changes will be recorded in the
       // latest snapshot of the src tree.
       if (isSrcInSnapshot) {
-        srcChild.recordModification(srcLatestSnapshotId);
+        if (srcChild.isFile()) {
+          INodeFile file = srcChild.asFile();
+          file.recordModification(srcLatestSnapshotId, true);
+        } else {
+          srcChild.recordModification(srcLatestSnapshotId);
+        }
       }
 
       // check srcChild for reference
@@ -812,6 +824,29 @@ class FSDirRenameOp {
         QuotaCounts newSrcCounts = srcChild.computeQuotaUsage(bsps, false);
         newSrcCounts.subtract(oldSrcCounts);
         srcParent.addSpaceConsumed(newSrcCounts);
+      }
+    }
+  }
+
+  private static void checkUnderSameSnapshottableRoot(
+      FSDirectory fsd, INodesInPath srcIIP, INodesInPath dstIIP)
+      throws IOException {
+    // Ensure rename out of a snapshottable root is not permitted if ordered
+    // snapshot deletion feature is enabled
+    SnapshotManager snapshotManager = fsd.getFSNamesystem().
+        getSnapshotManager();
+    if (snapshotManager.isSnapshotDeletionOrdered() && fsd.getFSNamesystem()
+        .isSnapshotTrashRootEnabled()) {
+      INodeDirectory srcRoot = snapshotManager.
+          getSnapshottableAncestorDir(srcIIP);
+      INodeDirectory dstRoot = snapshotManager.
+          getSnapshottableAncestorDir(dstIIP);
+      // Ensure snapshoottable root for both src and dest are same.
+      if (srcRoot != dstRoot) {
+        String errMsg = "Source " + srcIIP.getPath() +
+            " and dest " + dstIIP.getPath() + " are not under " +
+            "the same snapshot root.";
+        throw new SnapshotException(errMsg);
       }
     }
   }

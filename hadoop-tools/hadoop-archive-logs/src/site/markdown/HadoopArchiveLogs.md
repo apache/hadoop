@@ -59,7 +59,7 @@ How to Archive Logs
     -verbose                       Print more details.
 
 The tool only supports running one instance on a cluster at a time in order
-to prevent conflicts. It does this by checking for the existance of a
+to prevent conflicts. It does this by checking for the existence of a
 directory named ``archive-logs-work`` under
 ``yarn.nodemanager.remote-app-log-dir`` in HDFS
 (default: ``/tmp/logs/archive-logs-work``). If for some reason that

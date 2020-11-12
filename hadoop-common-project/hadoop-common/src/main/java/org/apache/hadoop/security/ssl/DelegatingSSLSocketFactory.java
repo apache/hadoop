@@ -30,7 +30,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,18 +43,19 @@ import org.slf4j.LoggerFactory;
  *
  * <p>
  *   The factory has several different modes of operation:
- *   <ul>
- *     <li>OpenSSL: Uses the wildly-openssl library to delegate to the
- *     system installed OpenSSL. If the wildfly-openssl integration is not
- *     properly setup, an exception is thrown.</li>
- *     <li>Default: Attempts to use the OpenSSL mode, if it cannot load the
- *     necessary libraries, it falls back to the Default_JSEE mode.</li>
- *     <li>Default_JSSE: Delegates to the JSSE implementation of SSL, but
- *     it disables the GCM cipher when running on Java 8.</li>
- *     <li>Default_JSSE_with_GCM: Delegates to the JSSE implementation of
- *     SSL with no modification to the list of enabled ciphers.</li>
- *   </ul>
  * </p>
+ *
+ * <ul>
+ *   <li>OpenSSL: Uses the wildly-openssl library to delegate to the
+ *   system installed OpenSSL. If the wildfly-openssl integration is not
+ *   properly setup, an exception is thrown.</li>
+ *   <li>Default: Attempts to use the OpenSSL mode, if it cannot load the
+ *   necessary libraries, it falls back to the Default_JSEE mode.</li>
+ *   <li>Default_JSSE: Delegates to the JSSE implementation of SSL, but
+ *   it disables the GCM cipher when running on Java 8.</li>
+ *   <li>Default_JSSE_with_GCM: Delegates to the JSSE implementation of
+ *   SSL with no modification to the list of enabled ciphers.</li>
+ * </ul>
  *
  * In order to load OpenSSL, applications must ensure the wildfly-openssl
  * artifact is on the classpath. Currently, only ABFS declares

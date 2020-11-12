@@ -56,7 +56,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubA
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 class SubApplicationEntityReader extends GenericEntityReader {
   private static final SubApplicationTableRW SUB_APPLICATION_TABLE =

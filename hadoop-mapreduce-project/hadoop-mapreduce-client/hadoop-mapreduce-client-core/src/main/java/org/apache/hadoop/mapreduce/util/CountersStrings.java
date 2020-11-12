@@ -21,7 +21,7 @@ package org.apache.hadoop.mapreduce.util;
 import java.text.ParseException;
 import java.util.List;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.IntWritable;

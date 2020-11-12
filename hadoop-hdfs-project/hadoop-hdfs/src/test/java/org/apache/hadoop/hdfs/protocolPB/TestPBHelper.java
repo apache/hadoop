@@ -35,7 +35,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -115,9 +115,9 @@ import org.apache.hadoop.util.DataChecksum;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
@@ -529,14 +529,18 @@ public class TestPBHelper {
             AdminStates.NORMAL),
         DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h4",
             AdminStates.NORMAL),
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h5",
+            AdminStates.NORMAL),
     };
-    String[] storageIDs = {"s1", "s2", "s3", "s4"};
+    String[] storageIDs = {"s1", "s2", "s3", "s4", "s5"};
     StorageType[] media = {
         StorageType.DISK,
         StorageType.SSD,
         StorageType.DISK,
-        StorageType.RAM_DISK
+        StorageType.RAM_DISK,
+        StorageType.NVDIMM,
     };
+
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53),
         dnInfos, storageIDs, media, 5, false, new DatanodeInfo[]{});

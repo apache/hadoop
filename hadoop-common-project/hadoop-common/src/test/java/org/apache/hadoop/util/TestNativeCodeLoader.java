@@ -22,7 +22,6 @@ import static org.junit.Assert.*;
 
 import org.apache.hadoop.crypto.OpensslCipher;
 import org.apache.hadoop.io.compress.Lz4Codec;
-import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.slf4j.Logger;
@@ -52,9 +51,6 @@ public class TestNativeCodeLoader {
     // library names are depended on platform and build envs
     // so just check names are available
     assertFalse(ZlibFactory.getLibraryName().isEmpty());
-    if (NativeCodeLoader.buildSupportsSnappy()) {
-      assertFalse(SnappyCodec.getLibraryName().isEmpty());
-    }
     if (NativeCodeLoader.buildSupportsOpenssl()) {
       assertFalse(OpensslCipher.getLibraryName().isEmpty());
     }

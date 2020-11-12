@@ -33,8 +33,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.ExitUtil;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 class FSEditLogAsync extends FSEditLog implements Runnable {
   static final Logger LOG = LoggerFactory.getLogger(FSEditLog.class);

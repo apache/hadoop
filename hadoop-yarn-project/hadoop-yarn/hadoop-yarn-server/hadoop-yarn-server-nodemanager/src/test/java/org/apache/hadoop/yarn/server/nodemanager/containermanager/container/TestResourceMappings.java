@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.junit.Assert;

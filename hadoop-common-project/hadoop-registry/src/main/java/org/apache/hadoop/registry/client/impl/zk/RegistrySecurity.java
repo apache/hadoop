@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.registry.client.impl.zk;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.hadoop.classification.InterfaceAudience;

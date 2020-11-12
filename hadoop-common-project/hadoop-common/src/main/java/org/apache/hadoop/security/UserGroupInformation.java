@@ -28,7 +28,7 @@ import static org.apache.hadoop.security.UGIExceptionMessages.*;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.File;
 import java.io.IOException;
@@ -527,6 +527,14 @@ public class UserGroupInformation {
 
   private void setLogin(LoginContext login) {
     user.setLogin(login);
+  }
+
+  /**
+   * Set the last login time for logged in user
+   * @param loginTime the number of milliseconds since the beginning of time
+   */
+  private void setLastLogin(long loginTime) {
+    user.setLastLogin(loginTime);
   }
 
   /**
@@ -1224,7 +1232,29 @@ public class UserGroupInformation {
     reloginFromKeytab(false);
   }
 
+  /**
+   * Force re-Login a user in from a keytab file irrespective of the last login
+   * time. Loads a user identity from a keytab file and logs them in. They
+   * become the currently logged-in user. This method assumes that
+   * {@link #loginUserFromKeytab(String, String)} had happened already. The
+   * Subject field of this UserGroupInformation object is updated to have the
+   * new credentials.
+   *
+   * @throws IOException
+   * @throws KerberosAuthException on a failure
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public void forceReloginFromKeytab() throws IOException {
+    reloginFromKeytab(false, true);
+  }
+
   private void reloginFromKeytab(boolean checkTGT) throws IOException {
+    reloginFromKeytab(checkTGT, false);
+  }
+
+  private void reloginFromKeytab(boolean checkTGT, boolean ignoreLastLoginTime)
+      throws IOException {
     if (!shouldRelogin() || !isFromKeytab()) {
       return;
     }
@@ -1239,7 +1269,7 @@ public class UserGroupInformation {
         return;
       }
     }
-    relogin(login);
+    relogin(login, ignoreLastLoginTime);
   }
 
   /**
@@ -1260,25 +1290,27 @@ public class UserGroupInformation {
     if (login == null) {
       throw new KerberosAuthException(MUST_FIRST_LOGIN);
     }
-    relogin(login);
+    relogin(login, false);
   }
 
-  private void relogin(HadoopLoginContext login) throws IOException {
+  private void relogin(HadoopLoginContext login, boolean ignoreLastLoginTime)
+      throws IOException {
     // ensure the relogin is atomic to avoid leaving credentials in an
     // inconsistent state.  prevents other ugi instances, SASL, and SPNEGO
     // from accessing or altering credentials during the relogin.
     synchronized(login.getSubjectLock()) {
       // another racing thread may have beat us to the relogin.
       if (login == getLogin()) {
-        unprotectedRelogin(login);
+        unprotectedRelogin(login, ignoreLastLoginTime);
       }
     }
   }
 
-  private void unprotectedRelogin(HadoopLoginContext login) throws IOException {
+  private void unprotectedRelogin(HadoopLoginContext login,
+      boolean ignoreLastLoginTime) throws IOException {
     assert Thread.holdsLock(login.getSubjectLock());
     long now = Time.now();
-    if (!hasSufficientTimeElapsed(now)) {
+    if (!hasSufficientTimeElapsed(now) && !ignoreLastLoginTime) {
       return;
     }
     // register most recent relogin attempt
@@ -1968,6 +2000,7 @@ public class UserGroupInformation {
       if (subject == null) {
         params.put(LoginParam.PRINCIPAL, ugi.getUserName());
         ugi.setLogin(login);
+        ugi.setLastLogin(Time.now());
       }
       return ugi;
     } catch (LoginException le) {

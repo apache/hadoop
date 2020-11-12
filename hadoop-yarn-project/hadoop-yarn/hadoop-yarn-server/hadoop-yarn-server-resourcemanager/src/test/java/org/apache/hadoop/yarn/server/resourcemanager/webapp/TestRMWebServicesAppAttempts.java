@@ -381,7 +381,8 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
               WebServicesTestUtils.getXmlString(element, "nodeHttpAddress"),
               WebServicesTestUtils.getXmlString(element, "nodeId"),
               WebServicesTestUtils.getXmlString(element, "logsLink"), user,
-              WebServicesTestUtils.getXmlString(element, "exportPorts"));
+              WebServicesTestUtils.getXmlString(element, "exportPorts"),
+              WebServicesTestUtils.getXmlString(element, "appAttemptState"));
     }
   }
 
@@ -389,17 +390,19 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
           String user)
           throws Exception {
 
-    assertEquals("incorrect number of elements", 11, info.length());
+    assertEquals("incorrect number of elements", 12, info.length());
 
     verifyAppAttemptInfoGeneric(appAttempt, info.getInt("id"),
             info.getLong("startTime"), info.getString("containerId"),
             info.getString("nodeHttpAddress"), info.getString("nodeId"),
-            info.getString("logsLink"), user, info.getString("exportPorts"));
+            info.getString("logsLink"), user, info.getString("exportPorts"),
+            info.getString("appAttemptState"));
   }
 
   private void verifyAppAttemptInfoGeneric(RMAppAttempt appAttempt, int id,
           long startTime, String containerId, String nodeHttpAddress, String
-          nodeId, String logsLink, String user, String exportPorts) {
+          nodeId, String logsLink, String user, String exportPorts,
+          String appAttemptState) {
 
     assertEquals("id doesn't match", appAttempt.getAppAttemptId()
             .getAttemptId(), id);
@@ -415,5 +418,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     assertTrue(
             "logsLink doesn't contain user info", logsLink.endsWith("/"
                     + user));
+    assertEquals("appAttemptState doesn't match", appAttemptState, appAttempt
+            .getAppAttemptState().toString());
   }
 }

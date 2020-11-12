@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.webapp.hamlet2;
 
-import com.google.common.base.Joiner;
-import static com.google.common.base.Preconditions.*;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
 import java.io.PrintWriter;
 import java.util.EnumSet;

@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class PlacementManager {  
   private static final Logger LOG =
@@ -54,7 +54,8 @@ public class PlacementManager {
   }
 
   public ApplicationPlacementContext placeApplication(
-      ApplicationSubmissionContext asc, String user) throws YarnException {
+      ApplicationSubmissionContext asc, String user, boolean recovery)
+      throws YarnException {
     readLock.lock();
     try {
       if (null == rules || rules.isEmpty()) {
@@ -63,7 +64,7 @@ public class PlacementManager {
 
       ApplicationPlacementContext placement = null;
       for (PlacementRule rule : rules) {
-        placement = rule.getPlacementForApp(asc, user);
+        placement = rule.getPlacementForApp(asc, user, recovery);
         if (placement != null) {
           break;
         }
@@ -73,6 +74,11 @@ public class PlacementManager {
     } finally {
       readLock.unlock();
     }
+  }
+
+  public ApplicationPlacementContext placeApplication(
+      ApplicationSubmissionContext asc, String user) throws YarnException {
+    return placeApplication(asc, user, false);
   }
   
   @VisibleForTesting

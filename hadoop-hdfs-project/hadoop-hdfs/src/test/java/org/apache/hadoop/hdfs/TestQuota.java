@@ -64,8 +64,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;

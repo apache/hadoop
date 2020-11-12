@@ -30,7 +30,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespaceVisitor;
 import org.apache.hadoop.security.AccessControlException;
 
 /**
@@ -368,7 +369,12 @@ public abstract class INodeReference extends INode {
     b.append("->");
     getReferredINode().dumpTreeRecursively(out, b, snapshot);
   }
-  
+
+  @Override
+  public void accept(NamespaceVisitor visitor, int snapshot) {
+    visitor.visitReferenceRecursively(this, snapshot);
+  }
+
   public int getDstSnapshotId() {
     return Snapshot.CURRENT_STATE_ID;
   }
@@ -399,7 +405,7 @@ public abstract class INodeReference extends INode {
       INodeReferenceValidation.add(this, WithCount.class);
     }
 
-    private String getCountDetails() {
+    public String getCountDetails() {
       final StringBuilder b = new StringBuilder("[");
       if (!withNameList.isEmpty()) {
         final Iterator<WithName> i = withNameList.iterator();

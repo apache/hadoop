@@ -30,6 +30,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.Assert;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -42,6 +43,8 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.util.UUID.randomUUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +53,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test rename operation.
@@ -75,6 +80,16 @@ public class ITestAzureBlobFileSystemRename extends
 
     assertIsFile(fs, dest);
     assertPathDoesNotExist(fs, "expected renamed", src);
+  }
+
+  @Test
+  public void testRenameWithPreExistingDestination() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path src = path("renameSrc");
+    touch(src);
+    Path dest = path("renameDest");
+    touch(dest);
+    assertRenameOutcome(fs, src, dest, false);
   }
 
   @Test
@@ -195,6 +210,59 @@ public class ITestAzureBlobFileSystemRename extends
         "Rename should return original rename failure response "
             + "because the destination path LMT is older than "
             + "TimespanForIdentifyingRecentOperationThroughLMT.");
+  }
+
+  @Test
+  public void testRenameIdempotencyTriggerHttpNotFound() throws Exception {
+    AbfsHttpOperation http404Op = mock(AbfsHttpOperation.class);
+    when(http404Op.getStatusCode()).thenReturn(HTTP_NOT_FOUND);
+
+    AbfsHttpOperation http200Op = mock(AbfsHttpOperation.class);
+    when(http200Op.getStatusCode()).thenReturn(HTTP_OK);
+
+    // Check 1 where idempotency check fails to find dest path
+    // Rename should throw exception
+    testRenameIdempotencyTriggerChecks(http404Op);
+
+    // Check 2 where idempotency check finds the dest path
+    // Renam will be successful
+    testRenameIdempotencyTriggerChecks(http200Op);
+  }
+
+  private void testRenameIdempotencyTriggerChecks(
+      AbfsHttpOperation idempotencyRetHttpOp) throws Exception {
+
+    final AzureBlobFileSystem fs = getFileSystem();
+    AbfsClient client = TestAbfsClient.getMockAbfsClient(
+        fs.getAbfsStore().getClient(),
+        this.getConfiguration());
+
+    AbfsRestOperation idempotencyRetOp = mock(AbfsRestOperation.class);
+    when(idempotencyRetOp.getResult()).thenReturn(idempotencyRetHttpOp);
+    doReturn(idempotencyRetOp).when(client).renameIdempotencyCheckOp(any(),
+        any(), any());
+    when(client.renamePath(any(), any(), any())).thenCallRealMethod();
+
+    // rename on non-existing source file will trigger idempotency check
+    if (idempotencyRetHttpOp.getStatusCode() == HTTP_OK) {
+      // idempotency check found that destination exists and is recently created
+      Assertions.assertThat(client.renamePath(
+          "/NonExistingsourcepath",
+          "/destpath",
+          null)
+          .getResult()
+          .getStatusCode())
+          .describedAs("Idempotency check reports recent successful "
+              + "rename. 200OK should be returned")
+          .isEqualTo(idempotencyRetOp.getResult().getStatusCode());
+    } else {
+      // rename dest not found. Original exception should be returned.
+      intercept(AbfsRestOperationException.class,
+          () -> client.renamePath(
+              "/NonExistingsourcepath",
+              "/destpath",
+              ""));
+    }
   }
 
   private void testRenameTimeout(

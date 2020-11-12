@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -38,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.AddBlockFlag;
@@ -82,7 +84,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   // The interval for marking a datanode as stale,
   private static final long staleInterval =
       DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT;
-
+  private static AtomicLong mockINodeId = new AtomicLong(0);
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
@@ -825,7 +827,15 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   }
 
   private BlockInfo genBlockInfo(long id) {
-    return new BlockInfoContiguous(new Block(id), (short) 3);
+    return genBlockInfo(id, false);
+  }
+
+  private BlockInfo genBlockInfo(long id, boolean isBlockCorrupted) {
+    BlockInfo bInfo = new BlockInfoContiguous(new Block(id), (short) 3);
+    if (!isBlockCorrupted) {
+      bInfo.setBlockCollectionId(mockINodeId.incrementAndGet());
+    }
+    return bInfo;
   }
 
   /**
@@ -848,7 +858,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
         // Adding the blocks directly to normal priority
 
         neededReconstruction.add(genBlockInfo(ThreadLocalRandom.current().
-            nextLong()), 2, 0, 0, 3);
+            nextLong(), true), 2, 0, 0, 3);
       }
       // Lets wait for the replication interval, to start process normal
       // priority blocks
@@ -856,7 +866,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       
       // Adding the block directly to high priority list
       neededReconstruction.add(genBlockInfo(ThreadLocalRandom.current().
-          nextLong()), 1, 0, 0, 3);
+          nextLong(), true), 1, 0, 0, 3);
 
       // Lets wait for the replication interval
       Thread.sleep(DFS_NAMENODE_REPLICATION_INTERVAL);
@@ -1609,5 +1619,33 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     when(node.getXceiverCount()).thenReturn(10);
     assertTrue(bppd.excludeNodeByLoad(node));
 
+    // Enable load check per storage type.
+    conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY,
+        true);
+    bppd.initialize(conf, statistics, null, null);
+    Map<StorageType, StorageTypeStats> storageStats = new HashMap<>();
+    StorageTypeStats diskStorageTypeStats =
+        new StorageTypeStats(StorageType.DISK);
+
+    // Set xceiver count as 500 for DISK.
+    diskStorageTypeStats.setDataNodesInServiceXceiverCount(50, 10);
+    storageStats.put(StorageType.DISK, diskStorageTypeStats);
+
+    //Set xceiver count as 900 for ARCHIVE
+    StorageTypeStats archiveStorageTypeStats =
+        new StorageTypeStats(StorageType.ARCHIVE);
+    archiveStorageTypeStats.setDataNodesInServiceXceiverCount(10, 90);
+    storageStats.put(StorageType.ARCHIVE, diskStorageTypeStats);
+
+    when(statistics.getStorageTypeStats()).thenReturn(storageStats);
+    when(node.getXceiverCount()).thenReturn(29);
+    when(node.getStorageTypes()).thenReturn(EnumSet.of(StorageType.DISK));
+    when(statistics.getInServiceXceiverAverage()).thenReturn(0.0);
+    //Added for sanity, the number of datanodes are 100, the average xceiver
+    // shall be (50*100+90*100)/100 = 14
+    when(statistics.getInServiceXceiverAverage()).thenReturn(14.0);
+    when(node.getXceiverCount()).thenReturn(100);
+
+    assertFalse(bppd.excludeNodeByLoad(node));
   }
 }

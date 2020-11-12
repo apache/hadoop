@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -155,6 +155,14 @@ public abstract class LogAggregationFileController {
    */
   public String getRemoteRootLogDirSuffix() {
     return this.remoteRootLogDirSuffix;
+  }
+
+  /**
+   * Get the name of the file controller.
+   * @return name of the file controller.
+   */
+  public String getFileControllerName() {
+    return this.fileControllerName;
   }
 
   /**

@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.A
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.QueueProperties;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   private static final AccessControlList EVERYBODY_ACL = new AccessControlList("*");

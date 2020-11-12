@@ -24,6 +24,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -1314,6 +1316,13 @@ public class TestFifoScheduler {
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
     assertThat(availableResource.getMemorySize()).isEqualTo(0);
     assertThat(availableResource.getVirtualCores()).isEqualTo(0);
+    // Kick off another heartbeat where the RMNodeResourceUpdateEvent would
+    // be skipped for DECOMMISSIONING state since the total resource is
+    // already equal to used resource from the previous heartbeat.
+    when(spyNode.getState()).thenReturn(NodeState.DECOMMISSIONING);
+    resourceManager.getResourceScheduler().handle(
+        new NodeUpdateSchedulerEvent(spyNode));
+    verify(mockDispatcher, times(4)).getEventHandler();
   }
 
   private void checkApplicationResourceUsage(int expected, 

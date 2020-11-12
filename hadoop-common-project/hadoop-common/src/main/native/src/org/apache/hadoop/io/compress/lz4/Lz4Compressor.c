@@ -30,7 +30,7 @@
 static jfieldID Lz4Compressor_uncompressedDirectBuf;
 static jfieldID Lz4Compressor_uncompressedDirectBufLen;
 static jfieldID Lz4Compressor_compressedDirectBuf;
-static jfieldID Lz4Compressor_directBufferSize;
+static jfieldID Lz4Compressor_dstCapacity;
 
 
 JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_initIDs
@@ -44,8 +44,8 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_init
   Lz4Compressor_compressedDirectBuf = (*env)->GetFieldID(env, clazz,
                                                          "compressedDirectBuf",
                                                          "Ljava/nio/Buffer;");
-  Lz4Compressor_directBufferSize = (*env)->GetFieldID(env, clazz,
-                                                       "directBufferSize", "I");
+  Lz4Compressor_dstCapacity = (*env)->GetFieldID(env, clazz,
+                                                       "dstCapacity", "I");
 }
 
 JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_compressBytesDirect
@@ -57,7 +57,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
   jobject uncompressed_direct_buf = (*env)->GetObjectField(env, thisj, Lz4Compressor_uncompressedDirectBuf);
   jint uncompressed_direct_buf_len = (*env)->GetIntField(env, thisj, Lz4Compressor_uncompressedDirectBufLen);
   jobject compressed_direct_buf = (*env)->GetObjectField(env, thisj, Lz4Compressor_compressedDirectBuf);
-  jint compressed_direct_buf_len = (*env)->GetIntField(env, thisj, Lz4Compressor_directBufferSize);
+  jint compressed_direct_buf_len = (*env)->GetIntField(env, thisj, Lz4Compressor_dstCapacity);
 
   // Get the input direct buffer
   uncompressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
@@ -73,7 +73,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
     return (jint)0;
   }
 
-  compressed_direct_buf_len = LZ4_compress(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len);
+  compressed_direct_buf_len = LZ4_compress_default(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len, compressed_direct_buf_len);
   if (compressed_direct_buf_len < 0){
     THROW(env, "java/lang/InternalError", "LZ4_compress failed");
   }
@@ -101,7 +101,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
   jobject uncompressed_direct_buf = (*env)->GetObjectField(env, thisj, Lz4Compressor_uncompressedDirectBuf);
   jint uncompressed_direct_buf_len = (*env)->GetIntField(env, thisj, Lz4Compressor_uncompressedDirectBufLen);
   jobject compressed_direct_buf = (*env)->GetObjectField(env, thisj, Lz4Compressor_compressedDirectBuf);
-  jint compressed_direct_buf_len = (*env)->GetIntField(env, thisj, Lz4Compressor_directBufferSize);
+  jint compressed_direct_buf_len = (*env)->GetIntField(env, thisj, Lz4Compressor_dstCapacity);
 
   // Get the input direct buffer
   uncompressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
@@ -117,7 +117,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
     return (jint)0;
   }
 
-  compressed_direct_buf_len = LZ4_compressHC(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len);
+  compressed_direct_buf_len = LZ4_compress_HC(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len, compressed_direct_buf_len, 0);
   if (compressed_direct_buf_len < 0){
     THROW(env, "java/lang/InternalError", "LZ4_compressHC failed");
   }

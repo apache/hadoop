@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespaceVisitor;
 import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -76,7 +77,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /** Get the {@link PermissionStatus} */
-  abstract PermissionStatus getPermissionStatus(int snapshotId);
+  public abstract PermissionStatus getPermissionStatus(int snapshotId);
 
   /** The same as getPermissionStatus(null). */
   final PermissionStatus getPermissionStatus() {
@@ -1121,6 +1122,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     public void clear() {
       toDeleteList.clear();
     }
+  }
+
+  /** Accept a visitor to visit this {@link INode}. */
+  public void accept(NamespaceVisitor visitor, int snapshot) {
+    final Class<?> clazz = visitor != null? visitor.getClass()
+        : NamespaceVisitor.class;
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " does not support " + clazz.getSimpleName());
   }
 
   /** 

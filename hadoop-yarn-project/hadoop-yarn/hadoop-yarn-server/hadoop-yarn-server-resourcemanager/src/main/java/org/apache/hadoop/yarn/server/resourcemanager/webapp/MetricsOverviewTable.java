@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
@@ -26,6 +27,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
 
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -60,7 +62,37 @@ public class MetricsOverviewTable extends HtmlBlock {
     ClusterMetricsInfo clusterMetrics = new ClusterMetricsInfo(this.rm);
     
     DIV<Hamlet> div = html.div().$class("metrics");
-    
+
+    Resource usedResources;
+    Resource totalResources;
+    Resource reservedResources;
+    int allocatedContainers;
+    if (clusterMetrics.getCrossPartitionMetricsAvailable()) {
+      allocatedContainers =
+          clusterMetrics.getTotalAllocatedContainersAcrossPartition();
+      usedResources =
+          clusterMetrics.getTotalUsedResourcesAcrossPartition().getResource();
+      totalResources =
+          clusterMetrics.getTotalClusterResourcesAcrossPartition()
+          .getResource();
+      reservedResources =
+          clusterMetrics.getTotalReservedResourcesAcrossPartition()
+          .getResource();
+      // getTotalUsedResourcesAcrossPartition includes reserved resources.
+      Resources.subtractFrom(usedResources, reservedResources);
+    } else {
+      allocatedContainers = clusterMetrics.getContainersAllocated();
+      usedResources = Resource.newInstance(
+          clusterMetrics.getAllocatedMB() * BYTES_IN_MB,
+          (int) clusterMetrics.getAllocatedVirtualCores());
+      totalResources = Resource.newInstance(
+          clusterMetrics.getTotalMB() * BYTES_IN_MB,
+          (int) clusterMetrics.getTotalVirtualCores());
+      reservedResources = Resource.newInstance(
+          clusterMetrics.getReservedMB() * BYTES_IN_MB,
+          (int) clusterMetrics.getReservedVirtualCores());
+    }
+
     div.h3("Cluster Metrics").
     table("#metricsoverview").
     thead().$class("ui-widget-header").
@@ -70,12 +102,11 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default").__("Apps Running").__().
         th().$class("ui-state-default").__("Apps Completed").__().
         th().$class("ui-state-default").__("Containers Running").__().
-        th().$class("ui-state-default").__("Memory Used").__().
-        th().$class("ui-state-default").__("Memory Total").__().
-        th().$class("ui-state-default").__("Memory Reserved").__().
-        th().$class("ui-state-default").__("VCores Used").__().
-        th().$class("ui-state-default").__("VCores Total").__().
-        th().$class("ui-state-default").__("VCores Reserved").__().
+        th().$class("ui-state-default").__("Used Resources").__().
+        th().$class("ui-state-default").__("Total Resources").__().
+        th().$class("ui-state-default").__("Reserved Resources").__().
+        th().$class("ui-state-default").__("Physical Mem Used %").__().
+        th().$class("ui-state-default").__("Physical VCores Used %").__().
         __().
         __().
     tbody().$class("ui-widget-content").
@@ -89,13 +120,12 @@ public class MetricsOverviewTable extends HtmlBlock {
                 clusterMetrics.getAppsFailed() + clusterMetrics.getAppsKilled()
                 )
             ).
-        td(String.valueOf(clusterMetrics.getContainersAllocated())).
-        td(StringUtils.byteDesc(clusterMetrics.getAllocatedMB() * BYTES_IN_MB)).
-        td(StringUtils.byteDesc(clusterMetrics.getTotalMB() * BYTES_IN_MB)).
-        td(StringUtils.byteDesc(clusterMetrics.getReservedMB() * BYTES_IN_MB)).
-        td(String.valueOf(clusterMetrics.getAllocatedVirtualCores())).
-        td(String.valueOf(clusterMetrics.getTotalVirtualCores())).
-        td(String.valueOf(clusterMetrics.getReservedVirtualCores())).
+        td(String.valueOf(allocatedContainers)).
+        td(usedResources.toString()).
+        td(totalResources.toString()).
+        td(reservedResources.toString()).
+        td(String.valueOf(clusterMetrics.getUtilizedMBPercent())).
+        td(String.valueOf(clusterMetrics.getUtilizedVirtualCoresPercent())).
         __().
         __().__();
 

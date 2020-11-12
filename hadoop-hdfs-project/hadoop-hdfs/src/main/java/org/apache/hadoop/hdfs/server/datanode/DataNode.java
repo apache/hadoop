@@ -222,13 +222,13 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.htrace.core.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 import org.slf4j.Logger;
@@ -1579,7 +1579,7 @@ public class DataNode extends ReconfigurableBase
     if (storageInfo == null) {
       // it's null in the case of SimulatedDataSet
       storageInfo = new StorageInfo(
-          DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION,
+          DataNodeLayoutVersion.getCurrentLayoutVersion(),
           nsInfo.getNamespaceID(), nsInfo.clusterID, nsInfo.getCTime(),
           NodeType.DATA_NODE);
     }
@@ -1660,7 +1660,9 @@ public class DataNode extends ReconfigurableBase
       // a block pool id
       String bpId = bpos.getBlockPoolId();
 
-      blockScanner.disableBlockPoolId(bpId);
+      if (blockScanner.hasAnyRegisteredScanner()) {
+        blockScanner.disableBlockPoolId(bpId);
+      }
 
       if (data != null) {
         data.shutdownBlockPool(bpId);
@@ -2710,7 +2712,11 @@ public class DataNode extends ReconfigurableBase
    *  If this thread is specifically interrupted, it will stop waiting.
    */
   public void runDatanodeDaemon() throws IOException {
-    blockPoolManager.startAll();
+
+    // Verify that blockPoolManager has been started.
+    if (!isDatanodeUp()) {
+      throw new IOException("Failed to instantiate DataNode.");
+    }
 
     // start dataXceiveServer
     dataXceiverServer.start();

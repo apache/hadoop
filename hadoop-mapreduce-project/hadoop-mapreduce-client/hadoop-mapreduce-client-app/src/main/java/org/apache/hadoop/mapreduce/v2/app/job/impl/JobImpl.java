@@ -130,8 +130,8 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1425,7 +1425,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
    * be set up to false. In that way, the NMs that host the task containers
    * won't try to upload the resources to shared cache.
    */
-  private static void cleanupSharedCacheUploadPolicies(Configuration conf) {
+  @VisibleForTesting
+  static void cleanupSharedCacheUploadPolicies(Configuration conf) {
     Job.setArchiveSharedCacheUploadPolicies(conf, Collections.emptyMap());
     Job.setFileSharedCacheUploadPolicies(conf, Collections.emptyMap());
   }

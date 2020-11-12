@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -84,6 +85,14 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
   private String isNamespaceEnabledAccount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_MAX_CONCURRENT_REQUESTS,
+      DefaultValue = -1)
+  private int writeMaxConcurrentRequestCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_MAX_REQUESTS_TO_QUEUE,
+      DefaultValue = -1)
+  private int maxWriteRequestsToQueue;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
@@ -119,6 +128,26 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
   private int customTokenFetchRetryCount;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS)
+  private int oauthTokenFetchRetryCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL)
+  private int oauthTokenFetchRetryMinBackoff;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF_INTERVAL)
+  private int oauthTokenFetchRetryMaxBackoff;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF)
+  private int oauthTokenFetchRetryDeltaBackoff;
+
   @LongConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BLOCK_SIZE_PROPERTY_NAME,
       MinValue = 0,
       MaxValue = MAX_AZURE_BLOCK_SIZE,
@@ -151,6 +180,10 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ATOMIC_RENAME_KEY,
       DefaultValue = DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES)
   private String azureAtomicDirs;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE)
+  private boolean enableConditionalCreateOverwrite;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,
       DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
@@ -544,6 +577,10 @@ public class AbfsConfiguration{
     return this.azureAtomicDirs;
   }
 
+  public boolean isConditionalCreateOverwriteEnabled() {
+    return this.enableConditionalCreateOverwrite;
+  }
+
   public String getAppendBlobDirs() {
     return this.azureAppendBlobDirs;
   }
@@ -793,6 +830,26 @@ public class AbfsConfiguration{
         validator.ConfigurationKey(),
         validator.DefaultValue(),
         validator.ThrowIfInvalid()).validate(value);
+  }
+
+  public ExponentialRetryPolicy getOauthTokenFetchRetryPolicy() {
+    return new ExponentialRetryPolicy(oauthTokenFetchRetryCount,
+        oauthTokenFetchRetryMinBackoff, oauthTokenFetchRetryMaxBackoff,
+        oauthTokenFetchRetryDeltaBackoff);
+  }
+
+  public int getWriteMaxConcurrentRequestCount() {
+    if (this.writeMaxConcurrentRequestCount < 1) {
+      return 4 * Runtime.getRuntime().availableProcessors();
+    }
+    return this.writeMaxConcurrentRequestCount;
+  }
+
+  public int getMaxWriteRequestsToQueue() {
+    if (this.maxWriteRequestsToQueue < 1) {
+      return 2 * getWriteMaxConcurrentRequestCount();
+    }
+    return this.maxWriteRequestsToQueue;
   }
 
   @VisibleForTesting

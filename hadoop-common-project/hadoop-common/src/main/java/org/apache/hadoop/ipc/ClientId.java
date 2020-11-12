@@ -22,7 +22,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A class defining a set of static helper methods to provide conversion between

@@ -36,18 +36,18 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ticker;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Ticker;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -201,10 +201,10 @@ public class Groups {
   /**
    * Get the group memberships of a given user.
    * If the user's group is not cached, this method may block.
-   * Note this method can be expensive as it involves Set->List conversion.
-   * For user with large group membership (i.e., > 1000 groups), we recommend
-   * using getGroupSet to avoid the conversion and fast membership look up via
-   * contains().
+   * Note this method can be expensive as it involves Set {@literal ->} List
+   * conversion. For user with large group membership
+   * (i.e., {@literal >} 1000 groups), we recommend using getGroupSet
+   * to avoid the conversion and fast membership look up via contains().
    * @param user User's name
    * @return the group memberships of the user as list
    * @throws IOException if user does not exist
@@ -220,7 +220,9 @@ public class Groups {
    * Get the group memberships of a given user.
    * If the user's group is not cached, this method may block.
    * This provide better performance when user has large group membership via
-   * 1) avoid set->list->set conversion for the caller UGI/PermissionCheck
+   * <br>
+   * 1) avoid {@literal set->list->set} conversion for the caller
+   * UGI/PermissionCheck <br>
    * 2) fast lookup using contains() via Set instead of List
    * @param user User's name
    * @return the group memberships of the user as set

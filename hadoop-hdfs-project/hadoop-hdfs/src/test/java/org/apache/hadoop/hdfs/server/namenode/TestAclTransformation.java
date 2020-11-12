@@ -26,8 +26,8 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.permission.AclEntry;

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.util.concurrent;
 
-import com.google.common.util.concurrent.AbstractFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.AbstractFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

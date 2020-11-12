@@ -26,7 +26,7 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public class TestDirectBufferPool {
   final org.apache.hadoop.util.DirectBufferPool pool = new org.apache.hadoop.util.DirectBufferPool();

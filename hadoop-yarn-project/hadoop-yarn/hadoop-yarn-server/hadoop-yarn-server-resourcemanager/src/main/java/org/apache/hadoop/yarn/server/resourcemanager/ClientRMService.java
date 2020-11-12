@@ -198,7 +198,7 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
@@ -509,6 +509,9 @@ public class ClientRMService extends AbstractService implements
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
     ContainerId containerId = request.getContainerId();
+    if (containerId == null) {
+      throw new ContainerNotFoundException("Invalid container id: null");
+    }
     ApplicationAttemptId appAttemptId = containerId.getApplicationAttemptId();
     ApplicationId appId = appAttemptId.getApplicationId();
     UserGroupInformation callerUGI = getCallerUgi(appId,
