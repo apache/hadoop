@@ -4493,7 +4493,7 @@
   <name>dfs.namenode.replication.max-streams</name>
   <value>2</value>
   <description>
-    Hard limit for the number of highest-priority replication streams.
+    Hard limit for the number of replication streams other than those with highest-priority.
   </description>
 </property>
 
