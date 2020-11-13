@@ -64,14 +64,14 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsInputStreamContext withReadSmallFilesCompletely
-      (final boolean readSmallFilesCompletely) {
+  public AbfsInputStreamContext withReadSmallFilesCompletely(
+      final boolean readSmallFilesCompletely) {
     this.readSmallFilesCompletely = readSmallFilesCompletely;
     return this;
   }
 
-  public AbfsInputStreamContext withOptimizeFooterRead
-      (final boolean optimizeFooterRead) {
+  public AbfsInputStreamContext withOptimizeFooterRead(
+      final boolean optimizeFooterRead) {
     this.optimizeFooterRead = optimizeFooterRead;
     return this;
   }

@@ -1242,7 +1242,7 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   @VisibleForTesting
-  Map<String, Long> getInstrumentationMap() {
+  public Map<String, Long> getInstrumentationMap() {
     return abfsCounters.toMap();
   }
 

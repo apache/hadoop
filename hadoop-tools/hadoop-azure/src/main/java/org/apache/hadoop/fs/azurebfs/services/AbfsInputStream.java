@@ -174,16 +174,19 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
     if (firstRead && this.readSmallFilesCompletely
         && contentLength <= bufferSize) { //  Read small files completely
-      if (readFileCompletely() == -1)
+      if (readFileCompletely() == -1) {
         return -1;
-    } else if (firstRead && this.optimizeFooterRead
-        && fCursor == contentLength - FOOTER_DELTA) {  //  Read the last one block if the
-                                            // read is for the footer
-      if (readLastBlock() == -1)
+      }
+    } else if (firstRead && this.optimizeFooterRead && fCursor
+        == contentLength - FOOTER_DELTA) {  //  Read the last one block if the
+      // read is for the footer
+      if (readLastBlock() == -1) {
         return -1;
+      }
     } else {
-      if (readOneBlock(b) == -1)
+      if (readOneBlock(b) == -1) {
         return -1;
+      }
     }
     fCursorAfterLastRead = fCursor;
 
@@ -225,9 +228,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         ((contentLength < bufferSize) ? contentLength : bufferSize)
             - FOOTER_DELTA);
     buffer = new byte[bufferSize];
-    long startPos = (contentLength < bufferSize) ?
-        0 :
-        contentLength - bufferSize;
+    long startPos = (contentLength < bufferSize)
+        ? 0
+        : contentLength - bufferSize;
     long bytesRead = readInternal(startPos, buffer, 0, bufferSize, true);
     firstRead = false;
 
@@ -257,7 +260,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         buffer = new byte[bufferSize];
       }
 
-      // Enable  readAhead when reading sequentially
+      // Enable readAhead when reading sequentially
       if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {

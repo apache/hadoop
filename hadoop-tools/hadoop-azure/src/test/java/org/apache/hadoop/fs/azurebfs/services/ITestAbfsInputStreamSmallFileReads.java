@@ -19,11 +19,12 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Random;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -31,12 +32,62 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
-public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
+public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationTest {
 
-  public ITestAbfsInputStream() throws Exception {
+  public ITestAbfsInputStreamSmallFileReads() throws Exception {
+  }
+
+  @Test
+  public void testOnlyOneServerCallIsMadeWhenTheCOnfIsTrue() throws Exception {
+    testNumBackendCalls(true);
+  }
+
+  @Test
+  public void testMultipleServerCallsAreMadeWhenTheCOnfIsFalse()
+      throws Exception {
+    testNumBackendCalls(false);
+  }
+
+  private void testNumBackendCalls(boolean readSmallFilesCompletely)
+      throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem(readSmallFilesCompletely);
+    for (int i = 1; i <= 4; i++) {
+      String fileName = methodName.getMethodName() + i;
+      int fileSize = i * ONE_MB;
+      byte[] fileContent = getRandomBytesArray(fileSize);
+      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+      int length = ONE_KB;
+      try (FSDataInputStream iStream = fs.open(testFilePath)) {
+        byte[] buffer = new byte[length];
+
+        Map<String, Long> metricMap = fs.getInstrumentationMap();
+        long requestsMadeBeforeTest = metricMap
+            .get(CONNECTIONS_MADE.getStatName());
+
+        iStream.seek(seekPos(SeekTo.END, fileSize, length));
+        iStream.read(buffer, 0, length);
+
+        iStream.seek(seekPos(SeekTo.MIDDLE, fileSize, length));
+        iStream.read(buffer, 0, length);
+
+        iStream.seek(seekPos(SeekTo.BEGIN, fileSize, length));
+        iStream.read(buffer, 0, length);
+
+        metricMap = fs.getInstrumentationMap();
+        long requestsMadeAfterTest = metricMap
+            .get(CONNECTIONS_MADE.getStatName());
+
+        if (readSmallFilesCompletely) {
+          assertEquals(1, requestsMadeAfterTest - requestsMadeBeforeTest);
+        } else {
+          assertEquals(3, requestsMadeAfterTest - requestsMadeBeforeTest);
+        }
+      }
+    }
   }
 
   @Test
@@ -116,10 +167,12 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
   }
 
   private int seekPos(SeekTo seekTo, int fileSize, int length) {
-    if (seekTo == SeekTo.BEGIN)
+    if (seekTo == SeekTo.BEGIN) {
       return 0;
-    if (seekTo == SeekTo.END)
+    }
+    if (seekTo == SeekTo.END) {
       return fileSize - length;
+    }
     return fileSize / 2;
   }
 
@@ -158,32 +211,25 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       final boolean smallFile = fileContentLength <= readBufferSize;
       int expectedLimit, expectedFCursor;
       int expectedBCursor;
-      //  All he tests are called after the first read.
-      //  The feature will work only on the first read.
-      //  The comments and assertions are also for the first read.
       if (conf.readSmallFilesCompletely() && smallFile) {
-        //  The files will be exact same when the ile size is < readbuffer
-        //  size
         assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf);
         expectedFCursor = fileContentLength;
         expectedLimit = fileContentLength;
         expectedBCursor = seekPos + length;
       } else {
         if ((seekPos == 0)) {
-          //  Irrespective of the requested length the first n bytes are read
-          //  if it is first read and read is from the begining
           assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf);
         } else {
           assertBuffersAreNotEqual(fileContent, abfsInputStream.getBuffer(),
               conf);
         }
         expectedBCursor = length;
-        expectedFCursor = (fileContentLength < (seekPos + readBufferSize)) ?
-            fileContentLength :
-            (seekPos + readBufferSize);
-        expectedLimit = (fileContentLength < (seekPos + readBufferSize)) ?
-            (fileContentLength - seekPos) :
-            readBufferSize;
+        expectedFCursor = (fileContentLength < (seekPos + readBufferSize))
+            ? fileContentLength
+            : (seekPos + readBufferSize);
+        expectedLimit = (fileContentLength < (seekPos + readBufferSize))
+            ? (fileContentLength - seekPos)
+            : readBufferSize;
       }
       assertEquals(expectedFCursor, abfsInputStream.getFCursor());
       assertEquals(expectedBCursor, abfsInputStream.getBCursor());
