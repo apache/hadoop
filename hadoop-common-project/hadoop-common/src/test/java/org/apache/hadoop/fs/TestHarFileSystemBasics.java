@@ -33,7 +33,10 @@ import java.net.URI;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 
 /**
  * This test class checks basic operations with {@link HarFileSystem} including
