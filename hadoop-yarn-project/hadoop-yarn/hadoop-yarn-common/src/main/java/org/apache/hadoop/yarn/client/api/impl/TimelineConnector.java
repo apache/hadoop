@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
@@ -352,7 +353,8 @@ public class TimelineConnector extends AbstractService {
           // sleep for the given time interval
           Thread.sleep(retryInterval);
         } catch (InterruptedException ie) {
-          LOG.warn("Client retry sleep interrupted! ");
+          Thread.currentThread().interrupt();
+          throw new InterruptedIOException("Client retry sleep interrupted!");
         }
       }
       throw new RuntimeException("Failed to connect to timeline server. "
