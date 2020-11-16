@@ -98,12 +98,13 @@ ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-arm64
 ENV FINDBUGS_HOME /usr
 
 #######
-# Install SpotBugs 4.1.3
+# Install SpotBugs 4.0.6
 #######
 RUN mkdir -p /opt/spotbugs \
-    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.1.3/spotbugs-4.1.3.tgz \
+    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.0.6/spotbugs-4.0.6.tgz \
       -o /opt/spotbugs.tgz \
-    && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs
+    && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
+    && chmod +x /opt/spotbugs/*
 ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
