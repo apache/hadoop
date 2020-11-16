@@ -45,7 +45,6 @@
       <artifactId>hadoop-hdfs-client</artifactId>
     </dependency>
 
-
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
