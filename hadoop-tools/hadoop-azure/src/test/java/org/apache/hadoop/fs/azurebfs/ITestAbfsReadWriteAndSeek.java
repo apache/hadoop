@@ -23,6 +23,7 @@ import java.util.Random;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -75,14 +76,27 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] b = new byte[bufferSize * 10];
     new Random().nextBytes(b);
     try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+      ((AbfsOutputStream)stream.getWrappedStream()).registerListener(new
+          TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
+          fs.getFileSystemID(), AbfsOperationConstants.CREATE,
+          false, 0));
       stream.write(b);
     }
 
     final byte[] readBuffer = new byte[4 * bufferSize];
     int result;
+    TracingHeaderValidator tracingHeaderValidator = new TracingHeaderValidator(
+        abfsConfiguration.getClientCorrelationID(), fs.getFileSystemID(),
+        AbfsOperationConstants.OPEN, false, 0);
+    fs.registerListener(tracingHeaderValidator);
     try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+      ((AbfsInputStream)inputStream.getWrappedStream()).registerListener(new
+              TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
+          fs.getFileSystemID(), AbfsOperationConstants.READ,
+          false, 0));
       result = inputStream.read(readBuffer, 0, bufferSize*4);
     }
+    fs.registerListener(null);
   }
 
   private void testReadWriteAndSeek(int bufferSize) throws Exception {
@@ -109,8 +123,17 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
       inputStream.seek(bufferSize);
       result = inputStream.read(readBuffer, bufferSize, bufferSize);
       assertNotEquals(-1, result);
+
+      //to test tracingHeader for case with bypassReadAhead == true
+      inputStream.seek(0);
+      byte[] temp = new byte[5];
+      int t = inputStream.read(temp, 0, 1);
+
       inputStream.seek(0);
       result = inputStream.read(readBuffer, 0, bufferSize);
+//      inputStream.seek(bufferSize - 1);
+//      result += inputStream.read(readBuffer, bufferSize-1, 1);
+
     }
     assertNotEquals("data read in final read()", -1, result);
     assertArrayEquals(readBuffer, b);

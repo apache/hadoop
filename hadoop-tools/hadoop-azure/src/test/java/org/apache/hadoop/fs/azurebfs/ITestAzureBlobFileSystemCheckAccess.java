@@ -23,6 +23,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -179,7 +181,12 @@ public class ITestAzureBlobFileSystemCheckAccess
     setTestUserFs();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test3.txt",
         FsAction.EXECUTE);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem)testUserFs;
+    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
+        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
+        AbfsOperationConstants.ACCESS, false, 0));
     assertAccessible(testFilePath, FsAction.EXECUTE);
+    fs.registerListener(null);
 
     assertInaccessible(testFilePath, FsAction.READ);
     assertInaccessible(testFilePath, FsAction.WRITE);

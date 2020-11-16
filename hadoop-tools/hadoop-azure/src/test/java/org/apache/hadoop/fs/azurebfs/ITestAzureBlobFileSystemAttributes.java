@@ -23,6 +23,8 @@ import java.util.EnumSet;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -42,6 +44,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   @Test
   public void testSetGetXAttr() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
+    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     Assume.assumeTrue(getIsNamespaceEnabled(fs));
 
     byte[] attributeValue1 = fs.getAbfsStore().encodeAttribute("hi");
@@ -55,8 +58,13 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     assertNull(fs.getXAttr(testFile, attributeName1));
 
     // after setting the xAttr on the file, the value should be retrievable
+    fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
+        fs.getFileSystemID(), AbfsOperationConstants.SETATTR,
+        true, 0));
     fs.setXAttr(testFile, attributeName1, attributeValue1);
+    fs.setListenerOperation(AbfsOperationConstants.GETATTR);
     assertArrayEquals(attributeValue1, fs.getXAttr(testFile, attributeName1));
+    fs.registerListener(null);
 
     // after setting a second xAttr on the file, the first xAttr values should not be overwritten
     fs.setXAttr(testFile, attributeName2, attributeValue2);

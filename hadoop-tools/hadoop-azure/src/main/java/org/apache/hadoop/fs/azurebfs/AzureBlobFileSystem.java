@@ -1271,6 +1271,10 @@ public class AzureBlobFileSystem extends FileSystem {
     return this.statistics;
   }
 
+  public void setListenerOperation(String operation) {
+    listener.setOperation(operation);
+  }
+
   @VisibleForTesting
   static class FileSystemOperation<T> {
     private final T result;

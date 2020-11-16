@@ -2,7 +2,10 @@ package org.apache.hadoop.fs.azurebfs;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -10,6 +13,8 @@ import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContextFormat;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
@@ -28,7 +33,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   String GUID_PATTERN = "[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}";
   String prevClientRequestID = "";
 
-  protected TestTracingContext() throws Exception {
+  public TestTracingContext() throws Exception {
     super();
   }
 
@@ -105,34 +110,62 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     //map to avoid creating new instance and calling setup() for each test
     Map<AbstractAbfsIntegrationTest, Method> testClasses = new HashMap<>();
 
-    testClasses.put(new ITestAzureBlobFileSystemListStatus(),
-        ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
+//    testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
+//        ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
+    testClasses.put(new ITestAbfsReadWriteAndSeek(32), //open, read, write
+    ITestAbfsReadWriteAndSeek.class.getMethod("testReadAheadRequestID"));
+    testClasses.put(new ITestAbfsReadWriteAndSeek(32), //read
+        ITestAbfsReadWriteAndSeek.class.getMethod("testReadAndWriteWithDifferentBufferSizesAndSeek"));
+    testClasses.put(new ITestAzureBlobFileSystemAppend(), //append
+        ITestAzureBlobFileSystemAppend.class.getMethod("testTracingForAppend"));
     testClasses.put(new ITestAzureBlobFileSystemCreate(),
         ITestAzureBlobFileSystemCreate.class.getMethod(
-            "testDefaultCreateOverwriteFileTest"));
-    testClasses.put(new ITestAbfsNetworkStatistics(),
-        ITestAbfsNetworkStatistics.class.getMethod(
-            "testAbfsHttpResponseStatistics")); //fs.open
-    testClasses.put(new ITestAbfsStatistics(),
-        ITestAbfsStatistics.class.getMethod("testOpenAppendRenameExists"));
-    //setacl, setpermission, rename, getaclstatus
+            "testDefaultCreateOverwriteFileTest")); //create
     testClasses.put(new ITestAzureBlobFilesystemAcl(),
         ITestAzureBlobFilesystemAcl.class.getMethod(
-            "testDefaultAclRenamedFile"));
+            "testDefaultAclRenamedFile")); //rename
     testClasses.put(new ITestAzureBlobFileSystemDelete(),
         ITestAzureBlobFileSystemDelete.class.getMethod(
             "testDeleteFirstLevelDirectory")); //delete
     testClasses.put(new ITestAzureBlobFileSystemCreate(),
         ITestAzureBlobFileSystemCreate.class.getMethod(
-            "testCreateNonRecursive")); //mkdir
-
-
-    //add other ops' testClasses and testMethods that have listener registered
+            "testCreateNonRecursive")); //mkdirs
+    testClasses.put(new ITestAzureBlobFileSystemAttributes(),
+        ITestAzureBlobFileSystemAttributes.class.getMethod(
+            "testSetGetXAttr")); //setxattr, getxattr
+    testClasses.put(new ITestAzureBlobFilesystemAcl(),
+        ITestAzureBlobFilesystemAcl.class.getMethod(
+            "testEnsureAclOperationWorksForRoot")); // setacl, getaclstatus,
+    // setowner, setpermission, modifyaclentries,
+    // removeaclentries, removedefaultacl, removeacl
 
     for (AbstractAbfsIntegrationTest testClass : testClasses.keySet()) {
+      System.out.println(testClass.methodName.getMethodName());
       testClass.setup();
       testClasses.get(testClass).invoke(testClass);
       testClass.teardown();
     }
+    testExternalOps();
+  }
+
+  @Test
+  //rename this test
+  public void testExternalOps() throws Exception {
+    //validate tracing header for access, hasPathCapability,
+    // getIsNamespaceEnabled
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
+        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
+        AbfsOperationConstants.ACCESS, false, 0));
+    fs.access(new Path("/"), FsAction.READ);
+
+    fs.setListenerOperation(AbfsOperationConstants.PATH);
+    //unset namespaceEnabled config to call getAcl -> test tracing header
+    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
+    fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
+
+    ITestAzureBlobFileSystemAppend test2 = new ITestAzureBlobFileSystemAppend();
+    test2.setup();
+    test2.testTracingForAppend();
   }
 }

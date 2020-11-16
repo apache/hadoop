@@ -19,8 +19,13 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -53,7 +58,9 @@ public class ITestAzureBlobFileSystemAppend extends
     try(FSDataOutputStream stream = fs.create(TEST_FILE_PATH)) {
       final byte[] b = new byte[1024];
       new Random().nextBytes(b);
+      System.out.println("going to write");
       stream.write(b, 1000, 0);
+      System.out.println("done write");
       assertEquals(0, stream.getPos());
     }
   }
@@ -66,6 +73,9 @@ public class ITestAzureBlobFileSystemAppend extends
     ContractTestUtils.touch(fs, filePath);
     fs.delete(filePath, false);
 
+    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
+        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
+        AbfsOperationConstants.APPEND, false, 0));
     fs.append(filePath);
   }
 
@@ -75,5 +85,18 @@ public class ITestAzureBlobFileSystemAppend extends
     final Path folderPath = TEST_FOLDER_PATH;
     fs.mkdirs(folderPath);
     fs.append(folderPath);
+  }
+
+  @Test
+  public void testTracingForAppend() throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.create(TEST_FILE_PATH);
+    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
+        .getAbfsConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), AbfsOperationConstants.APPEND,
+        false, 0));
+    FSDataOutputStream in = fs.append(TEST_FILE_PATH, 10);
+    byte[] buf = new byte[100];
+    in.write(buf, 0, 5);
   }
 }

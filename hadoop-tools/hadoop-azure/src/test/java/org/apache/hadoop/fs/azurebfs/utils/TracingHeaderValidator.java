@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
 import org.assertj.core.api.Assertions;
 
 public class TracingHeaderValidator implements Listener {
@@ -24,6 +25,7 @@ public class TracingHeaderValidator implements Listener {
   public void updatePrimaryRequestID(String primaryRequestID) {
     this.primaryRequestID = primaryRequestID;
   }
+
 
   @Override
   public TracingHeaderValidator getClone() {
@@ -62,9 +64,14 @@ public class TracingHeaderValidator implements Listener {
     String[] id_list = tracingContextHeader.split(":");
     validateBasicFormat(id_list);
     if (needsPrimaryRequestID) {
-      Assertions.assertThat(id_list[3])
-          .describedAs("PrimaryReqID should be common for these requests")
-          .isEqualTo(primaryRequestID);
+      if (!operation.equals(AbfsOperationConstants.READ)) {
+        Assertions.assertThat(primaryRequestID)
+            .describedAs("Should have primaryReqId").isNotEmpty();
+      } else {
+        Assertions.assertThat(id_list[3])
+            .describedAs("PrimaryReqID should be common for these requests")
+            .isEqualTo(primaryRequestID);
+      }
       Assertions.assertThat(id_list[2]).describedAs(
           "FilesystemID should be same for requests with same filesystem")
           .isEqualTo(fileSystemID);
@@ -85,7 +92,7 @@ public class TracingHeaderValidator implements Listener {
   }
 
   private void validateBasicFormat(String[] id_list) {
-    System.out.println("basic test");
+    System.out.println("basic test " + operation);
     Assertions.assertThat(id_list)
         .describedAs("header should have 7 elements").hasSize(7);
 
@@ -102,6 +109,10 @@ public class TracingHeaderValidator implements Listener {
         .matches(GUID_PATTERN);
     Assertions.assertThat(id_list[2]).describedAs("Filesystem ID incorrect")
         .isEqualTo(fileSystemID);
+    if (needsPrimaryRequestID && !operation.equals(AbfsOperationConstants.READ)) {
+      Assertions.assertThat(id_list[3]).describedAs("should have primaryReqId")
+          .isNotEmpty();
+    }
     Assertions.assertThat(id_list[5]).describedAs("Operation name incorrect")
         .isEqualTo(operation);
     int retryCount = Integer.parseInt(id_list[6]);

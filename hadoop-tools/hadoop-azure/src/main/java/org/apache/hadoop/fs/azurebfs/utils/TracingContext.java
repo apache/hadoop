@@ -76,6 +76,11 @@ public class TracingContext {
     }
   }
 
+  public void printTC() {
+    System.out.println(clientCorrelationID + ":" + clientRequestID +
+        ":" + primaryRequestID);
+  }
+
   public String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
         || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {

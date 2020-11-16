@@ -206,6 +206,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       // Enable readAhead when reading sequentially
       if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+        System.out.println(fCursorAfterLastRead + " " + fCursor + " b.l " + b.length +
+                " " + bufferSize);
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {
         bytesRead = readInternal(fCursor, buffer, 0, b.length, true);
@@ -260,6 +262,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
             nextOffset, nextSize);
         ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize,
                 new TracingContext(readAheadTracingContext));
+        System.out.println("----------------1-------------------");
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
       }
@@ -269,6 +272,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       bytesFromReadAhead += receivedBytes;
       if (receivedBytes > 0) {
         incrementReadOps();
+        System.out.println("Received data from read ahead");
         LOG.debug("Received data from read ahead, not doing remote read");
         if (streamStatistics != null) {
           streamStatistics.readAheadBytesRead(receivedBytes);
@@ -278,9 +282,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       // got nothing from read-ahead, do our own read now
       receivedBytes = readRemote(position, b, offset, length, new TracingContext(tracingContext));
+      System.out.println("----------------2-----------------");
       return receivedBytes;
     } else {
       LOG.debug("read ahead disabled, reading remote");
+      System.out.println("----------------3-----------------");
+      tracingContext.printTC();
       return readRemote(position, b, offset, length, new TracingContext(tracingContext));
     }
   }
@@ -311,6 +318,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       op = client.read(path, position, b, offset, length,
           tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
           tracingContext);
+      System.out.println("----------------4-----------------");
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();

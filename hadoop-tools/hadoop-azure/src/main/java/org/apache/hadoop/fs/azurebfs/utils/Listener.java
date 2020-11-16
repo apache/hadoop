@@ -4,4 +4,5 @@ public interface Listener {
   void afterOp(String header);
   void updatePrimaryRequestID(String primaryRequestID);
   Listener getClone();
+  void setOperation(String operation);
 }

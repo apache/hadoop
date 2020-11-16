@@ -145,6 +145,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.outputStreamID = getOutputStreamID();
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setStreamID(outputStreamID);
+    System.out.println("----------------5----------------");
   }
 
   private String getOutputStreamID() {
@@ -344,8 +345,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private void writeAppendBlobCurrentBufferToService() throws IOException {
     if (bufferIndex == 0) {
+      System.out.println("bufferIndex is 0");
       return;
     }
+    System.out.println("bufferIndex not 0");
     outputStreamStatistics.writeCurrentBuffer();
 
     final byte[] bytes = buffer;
@@ -358,6 +361,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "writeCurrentBufferToService", "append")) {
+      System.out.println("----------------6----------------");
       AbfsRestOperation op = client.append(path, offset, bytes, 0,
           bytesLength, cachedSasToken.get(), this.isAppendBlob,
           new TracingContext(tracingContext));
@@ -383,6 +387,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private synchronized void writeCurrentBufferToService() throws IOException {
     if (this.isAppendBlob) {
+      System.out.println("append blob true");
       writeAppendBlobCurrentBufferToService();
       return;
     }
@@ -412,6 +417,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         AbfsPerfTracker tracker = client.getAbfsPerfTracker();
         try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
                 "writeCurrentBufferToService", "append")) {
+          System.out.println("----------------7----------------");
           AbfsRestOperation op = client.append(path, offset, bytes, 0,
                   bytesLength, cachedSasToken.get(), false,
               new TracingContext(tracingContext));
@@ -476,6 +482,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
 
+      System.out.println("----------------8----------------");
       AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose, cachedSasToken.get(),
           new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());

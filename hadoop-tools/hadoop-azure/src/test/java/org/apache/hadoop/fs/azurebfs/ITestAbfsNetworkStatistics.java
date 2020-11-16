@@ -200,12 +200,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        * (Writing data in Data store).
        *
        */
-      AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
-      fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
-          fs.getFileSystemID(), AbfsOperationConstants.CREATE,
-          true, 0));
       out = fs.create(getResponsePath);
-      fs.registerListener(null);
       out.write(testResponseString.getBytes());
       out.hflush();
 

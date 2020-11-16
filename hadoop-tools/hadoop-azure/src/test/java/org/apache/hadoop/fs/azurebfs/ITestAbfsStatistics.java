@@ -184,11 +184,7 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
 
     fs.create(createFilePath);
     fs.open(createFilePath);
-    fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
-        fs.getFileSystemID(), AbfsOperationConstants.APPEND,
-        false, 0));
     fs.append(createFilePath);
-    fs.registerListener(null);
     assertTrue(fs.rename(createFilePath, destCreateFilePath));
 
     Map<String, Long> metricMap = fs.getInstrumentationMap();

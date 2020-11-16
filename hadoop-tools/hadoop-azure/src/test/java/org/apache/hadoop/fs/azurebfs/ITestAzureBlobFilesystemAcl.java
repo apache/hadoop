@@ -1207,37 +1207,25 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   @Test
   public void testDefaultAclRenamedFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
-    TracingHeaderValidator tracingHeaderValidator =
-        new TracingHeaderValidator(conf.getClientCorrelationID(),
-            fs.getFileSystemID(), AbfsOperationConstants.TESTOP,
-            true, 0);
     assumeTrue(getIsNamespaceEnabled(fs));
     path = new Path(testRoot, UUID.randomUUID().toString());
     Path dirPath = new Path(path, "dir");
     FileSystem.mkdirs(fs, dirPath, FsPermission.createImmutable((short) RWX_RX));
     List<AclEntry> aclSpec = Lists.newArrayList(
         aclEntry(DEFAULT, USER, FOO, ALL));
-    fs.registerListener(tracingHeaderValidator.getClone(AbfsOperationConstants.SETACL));
     fs.setAcl(dirPath, aclSpec);
     Path filePath = new Path(path, "file1");
-    fs.registerListener(null);
     fs.create(filePath).close();
-
-    fs.registerListener(tracingHeaderValidator
-        .getClone(AbfsOperationConstants.PERMISSION));
     fs.setPermission(filePath, FsPermission.createImmutable((short) RW_R));
     Path renamedFilePath = new Path(dirPath, "file1");
 
-    fs.registerListener(tracingHeaderValidator
-        .getClone(AbfsOperationConstants.RENAME));
+    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
+        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
+        AbfsOperationConstants.RENAME, true, 0));
     fs.rename(filePath, renamedFilePath);
-    AclEntry[] expected = new AclEntry[] { };
-
-    fs.registerListener(tracingHeaderValidator
-        .getClone(AbfsOperationConstants.GETACLSTATUS));
-    AclStatus s = fs.getAclStatus(renamedFilePath);
     fs.registerListener(null);
+    AclEntry[] expected = new AclEntry[] { };
+    AclStatus s = fs.getAclStatus(renamedFilePath);
 
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
@@ -1275,18 +1263,30 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     List<AclEntry> aclSpec1 = Lists.newArrayList(
         aclEntry(DEFAULT, GROUP, FOO, ALL),
         aclEntry(ACCESS, GROUP, BAR, ALL));
+
+    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
+        .getAbfsConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), AbfsOperationConstants.SETACL, true, 0));
     fs.setAcl(rootPath, aclSpec1);
+
+    fs.setListenerOperation(AbfsOperationConstants.GETACLSTATUS);
     fs.getAclStatus(rootPath);
 
+    fs.setListenerOperation(AbfsOperationConstants.SETOWNER);
     fs.setOwner(rootPath, TEST_OWNER, TEST_GROUP);
+    fs.setListenerOperation(AbfsOperationConstants.PERMISSION);
     fs.setPermission(rootPath, new FsPermission("777"));
 
     List<AclEntry> aclSpec2 = Lists.newArrayList(
         aclEntry(DEFAULT, USER, FOO, ALL),
         aclEntry(ACCESS, USER, BAR, ALL));
+    fs.setListenerOperation(AbfsOperationConstants.MODIFYACL);
     fs.modifyAclEntries(rootPath, aclSpec2);
+    fs.setListenerOperation(AbfsOperationConstants.REMOVEACLENTRIES);
     fs.removeAclEntries(rootPath, aclSpec2);
+    fs.setListenerOperation(AbfsOperationConstants.REMOVEDEFAULTACL);
     fs.removeDefaultAcl(rootPath);
+    fs.setListenerOperation(AbfsOperationConstants.REMOVEACL);
     fs.removeAcl(rootPath);
   }
 
