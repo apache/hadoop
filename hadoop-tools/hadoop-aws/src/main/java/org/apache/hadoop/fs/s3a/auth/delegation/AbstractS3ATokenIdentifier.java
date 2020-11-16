@@ -24,6 +24,8 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -140,6 +142,7 @@ public abstract class AbstractS3ATokenIdentifier
       final URI uri) {
     super(kind, owner, renewer, realUser);
     this.uri = requireNonNull(uri);
+    initializeIssueDate();
   }
 
   /**
@@ -164,6 +167,13 @@ public abstract class AbstractS3ATokenIdentifier
    */
   protected AbstractS3ATokenIdentifier(final Text kind) {
     super(kind);
+    initializeIssueDate();
+  }
+
+  private void initializeIssueDate() {
+    Clock clock = Clock.systemDefaultZone();
+    long now = clock.millis();
+    setIssueDate(now);
   }
 
   public String getBucket() {
