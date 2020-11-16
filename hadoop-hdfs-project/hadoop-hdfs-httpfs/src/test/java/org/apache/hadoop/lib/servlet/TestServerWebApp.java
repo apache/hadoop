@@ -43,6 +43,8 @@ public class TestServerWebApp extends HTestCase {
     assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmp/log");
     System.setProperty("TestServerWebApp0.log.dir", "/tmplog");
     assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmplog");
+    System.clearProperty("TestServerWebApp0.home.dir");
+    System.clearProperty("TestServerWebApp0.log.dir");
   }
 
   @Test
