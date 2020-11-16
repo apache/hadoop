@@ -71,9 +71,11 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.E_SELF_GENERATED_JOB_UUID;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_NO_SPARK_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
@@ -1499,16 +1501,16 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     Job job2 = newJob(outDir,
         c2,
         attempt2);
-    Configuration conf2 = job2.getConfiguration();
-    conf2.set("mapreduce.output.basename", "task2");
+    Configuration jobConf2 = job2.getConfiguration();
+    jobConf2.set("mapreduce.output.basename", "task2");
     String stage2Id = UUID.randomUUID().toString();
-    conf2.set(SPARK_WRITE_UUID,
+    jobConf2.set(SPARK_WRITE_UUID,
         stage2Id);
 
-    JobContext jContext2 = new JobContextImpl(conf2,
+    JobContext jContext2 = new JobContextImpl(jobConf2,
         taskAttempt2.getJobID());
     TaskAttemptContext tContext2 =
-        new TaskAttemptContextImpl(conf2, taskAttempt2);
+        new TaskAttemptContextImpl(jobConf2, taskAttempt2);
     AbstractS3ACommitter committer2 = createCommitter(outDir, tContext2);
     Assertions.assertThat(committer2.getJobAttemptPath(jContext2))
         .describedAs("Job attempt path of %s", committer2)
@@ -1548,7 +1550,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     if (multipartInitiatedInWrite) {
       // magic committer runs -commit job1 while a job2 TA has an open
       // writer (and hence: open MP Upload)
-      LOG.info("Commit Job 1");
+      LOG.info("With Multipart Initiated In Write: Commit Job 1");
       commitJob(committer1, jContext1);
     }
 
@@ -1567,7 +1569,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     if (!multipartInitiatedInWrite) {
       // if not a magic committer, commit the job now. Because at
       // this point the staging committer tasks from job2 will be pending
-      LOG.info("Commit Job 1");
+      LOG.info("With Multipart NOT Initiated In Write: Commit Job 1");
       assertJobAttemptPathExists(committer1, jContext1);
       commitJob(committer1, jContext1);
     }
@@ -1621,13 +1623,14 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         .describedAs("UUID source of %s", committer)
         .isEqualTo(AbstractS3ACommitter.JobUUIDSource.GeneratedLocally);
 
+    // examine the job configuration and verify that it has been updated
     Configuration jobConf = jobData.conf;
     Assertions.assertThat(jobConf.get(FS_S3A_COMMITTER_UUID, null))
         .describedAs("Config option " + FS_S3A_COMMITTER_UUID)
         .isEqualTo(uuid);
-    Assertions.assertThat(jobConf.get(SPARK_WRITE_UUID, null))
-        .describedAs("Config option " + SPARK_WRITE_UUID)
-        .isEqualTo(uuid);
+    Assertions.assertThat(jobConf.get(FS_S3A_COMMITTER_UUID_SOURCE, null))
+        .describedAs("Config option " + FS_S3A_COMMITTER_UUID_SOURCE)
+        .isEqualTo(AbstractS3ACommitter.JobUUIDSource.GeneratedLocally.getText());
 
     // because the task was set up in the job, it can have task
     // setup called, even though it had a random ID.
@@ -1643,7 +1646,9 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     assertNotEquals("job UUIDs",
         committer.getUUID(),
         committer2.getUUID());
-    intercept(PathCommitException.class, () -> {
+    // Task setup MUST fail.
+    intercept(PathCommitException.class,
+        E_SELF_GENERATED_JOB_UUID, () -> {
       committer2.setupTask(tContext2);
       return committer2;
     });

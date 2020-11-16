@@ -65,6 +65,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_NO_SPARK_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
 
 /**
@@ -94,14 +95,25 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_W
  * committer was large enough for more all the parallel POST requests.
  */
 public abstract class AbstractS3ACommitter extends PathOutputCommitter {
+
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractS3ACommitter.class);
 
   public static final String THREAD_PREFIX = "s3a-committer-pool-";
 
   /**
-   * Unique ID for a Job. On Spark this MUST NOT be the YARN JobID;
-   * on MapReduce it MUST BE that.
+   * Error string when task setup fails.
+   */
+  @VisibleForTesting
+  public static final String E_SELF_GENERATED_JOB_UUID
+      = "has a self-generated job UUID";
+
+  /**
+   * Unique ID for a Job.
+   * In MapReduce Jobs the YARN JobID suffices.
+   * On Spark this only be the YARN JobID
+   * it is known to be creating strongly unique IDs
+   * (i.e. SPARK-33402 is on the branch).
    */
   private final String uuid;
 
@@ -175,17 +187,17 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     setConf(context.getConfiguration());
     Pair<String, JobUUIDSource> id = buildJobUUID(
         conf, context.getJobID());
-    uuid = id.getLeft();
-    uuidSource = id.getRight();
+    this.uuid = id.getLeft();
+    this.uuidSource = id.getRight();
     LOG.info("Job UUID {} source {}", getUUID(), getUUIDSource().getText());
     initOutput(outputPath);
     LOG.debug("{} instantiated for job \"{}\" ID {} with destination {}",
         role, jobName(context), jobIdString(context), outputPath);
     S3AFileSystem fs = getDestS3AFS();
-    createJobMarker = context.getConfiguration().getBoolean(
+    this.createJobMarker = context.getConfiguration().getBoolean(
         CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
         DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER);
-    commitOperations = new CommitOperations(fs);
+    this.commitOperations = new CommitOperations(fs);
   }
 
   /**
@@ -483,11 +495,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       jobSetup = true;
       // patch job conf with the job UUID.
       Configuration c = context.getConfiguration();
-      c.set(FS_S3A_COMMITTER_UUID, this.getUUID());
-      if (getUUIDSource() == JobUUIDSource.GeneratedLocally) {
-        // we set the UUID up locally. Save it back to the job configuration
-        c.set(SPARK_WRITE_UUID, this.getUUID());
-      }
+      c.set(FS_S3A_COMMITTER_UUID, getUUID());
+      c.set(FS_S3A_COMMITTER_UUID_SOURCE, getUUIDSource().getText());
       Path dest = getOutputPath();
       if (createJobMarker){
         commitOperations.deleteSuccessMarker(dest);
@@ -517,7 +526,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         // generated locally.
         throw new PathCommitException(getOutputPath().toString(),
             "Task attempt " + attemptID
-                + " only has a self-generated job UUID");
+                + " " + E_SELF_GENERATED_JOB_UUID);
       }
       Path taskAttemptPath = getTaskAttemptPath(context);
       FileSystem fs = taskAttemptPath.getFileSystem(getConf());
@@ -1209,16 +1218,25 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * </p>
    * <p>
    * Spark will use a fake app ID based on the current time.
-   * This can lead to collisions on busy clusters.
-   *
+   * This can lead to collisions on busy clusters unless
+   * the specific spark release has SPARK-33402 applied.
+   * This appends a random long value to the timestamp, so
+   * is unique enough that the risk of collision is almost
+   * nonexistent.
+   * </p>
+   * <p>
+   *   The order of selection of a uuid is
    * </p>
    * <ol>
    *   <li>Value of
    *   {@link InternalCommitterConstants#FS_S3A_COMMITTER_UUID}.</li>
    *   <li>Value of
    *   {@link InternalCommitterConstants#SPARK_WRITE_UUID}.</li>
-   *   <li>If enabled: Self-generated uuid.</li>
-   *   <li>If not disabled: Application ID</li>
+   *   <li>If enabled through
+   *   {@link CommitConstants#FS_S3A_COMMITTER_GENERATE_UUID}:
+   *   Self-generated uuid.</li>
+   *   <li>If {@link CommitConstants#FS_S3A_COMMITTER_REQUIRE_UUID}
+   *   is not set: Application ID</li>
    * </ol>
    * The UUID bonding takes place during construction;
    * the staging committers use it to set up their wrapped
@@ -1263,16 +1281,18 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
 
     // Check the job hasn't declared a requirement for the UUID.
     // This allows or fail-fast validation of Spark behavior.
-    if (conf.getBoolean(FS_S3A_COMMITTER_REQUIRE_UUID, false)) {
+    if (conf.getBoolean(FS_S3A_COMMITTER_REQUIRE_UUID,
+        DEFAULT_S3A_COMMITTER_REQUIRE_UUID)) {
       throw new PathCommitException("", E_NO_SPARK_UUID);
     }
 
-    // see if the job can generate a random UUID
-    if (conf.getBoolean(FS_S3A_COMMITTER_GENERATE_UUID, false)) {
+    // see if the job can generate a random UUI`
+    if (conf.getBoolean(FS_S3A_COMMITTER_GENERATE_UUID,
+        DEFAULT_S3A_COMMITTER_GENERATE_UUID)) {
       // generate a random UUID. This is OK for a job, for a task
       // it means that the data may not get picked up.
       String newId = UUID.randomUUID().toString();
-      LOG.warn("No job ID in configuration; generating a randem ID: {}",
+      LOG.warn("No job ID in configuration; generating a random ID: {}",
           newId);
       return Pair.of(newId, JobUUIDSource.GeneratedLocally);
     }

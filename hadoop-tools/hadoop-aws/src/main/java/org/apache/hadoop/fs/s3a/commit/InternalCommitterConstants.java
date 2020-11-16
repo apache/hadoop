@@ -50,6 +50,12 @@ public final class InternalCommitterConstants {
       "fs.s3a.committer.uuid";
 
   /**
+   * Where did the UUID come from? {@value}.
+   */
+  public static final String FS_S3A_COMMITTER_UUID_SOURCE =
+      "fs.s3a.committer.uuid.source";
+
+  /**
    * Directory committer factory: {@value}.
    */
   public static final String STAGING_COMMITTER_FACTORY =
@@ -104,11 +110,6 @@ public final class InternalCommitterConstants {
    */
   public static final String SPARK_WRITE_UUID =
       "spark.sql.sources.writeJobUUID";
-
-  /**
-   * The App ID for jobs: {@value}.
-   */
-  public static final String SPARK_APP_ID = "spark.app.id";
 
   /**
    * Java temp dir: {@value}.

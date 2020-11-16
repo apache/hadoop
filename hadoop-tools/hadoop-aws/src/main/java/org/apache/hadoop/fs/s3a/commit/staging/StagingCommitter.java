@@ -117,7 +117,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
     this.uniqueFilenames = conf.getBoolean(
         FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
         DEFAULT_STAGING_COMMITTER_UNIQUE_FILENAMES);
-    setWorkPath(buildWorkPath(context, this.getUUID()));
+    setWorkPath(buildWorkPath(context, getUUID()));
     this.wrappedCommitter = createWrappedCommitter(context, conf);
     setOutputPath(constructorOutputPath);
     Path finalOutputPath = getOutputPath();
@@ -174,7 +174,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
     sb.append(", commitsDirectory=").append(commitsDirectory);
     sb.append(", uniqueFilenames=").append(uniqueFilenames);
     sb.append(", conflictResolution=").append(conflictResolution);
-    sb.append(". uploadPartSize=").append(uploadPartSize);
+    sb.append(", uploadPartSize=").append(uploadPartSize);
     if (wrappedCommitter != null) {
       sb.append(", wrappedCommitter=").append(wrappedCommitter);
     }

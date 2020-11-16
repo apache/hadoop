@@ -530,30 +530,29 @@ Amazon S3, that means S3Guard must *always* be enabled.
 
 Conflict management is left to the execution engine itself.
 
-## Committer Configuration Options
+## Common Committer Options
 
 
-| Option | Magic | Directory | Partitioned | Meaning | Default |
-|--------|-------|-----------|-------------|---------|---------|
-| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | X | X | X | Write a `_SUCCESS` file on the successful completion of the job. | `true` |
-| `fs.s3a.buffer.dir` | X | X | X | Local filesystem directory for data being written and/or staged. | `${hadoop.tmp.dir}/s3a` |
-| `fs.s3a.committer.magic.enabled` | X |  | | Enable "magic committer" support in the filesystem. | `false` |
-| `fs.s3a.committer.abort.pending.uploads` | X | X | X | list and abort all pending uploads under the destination path when the job is committed or aborted. | `true` |
-| `fs.s3a.committer.threads` | X | X | X | Number of threads in committers for parallel operations on files. | 8 |
-| `fs.s3a.committer.generate.uuid` |  | X | X | Generate a Job UUID if none is passed down from Spark | `false` |
-| `fs.s3a.committer.require.uuid` |  | X | X | Require the Job UUID to be passed down from Spark | `false` |
+| Option | Meaning | Default |
+|--------|---------|---------|
+| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Write a `_SUCCESS` file on the successful completion of the job. | `true` |
+| `fs.s3a.buffer.dir` | Local filesystem directory for data being written and/or staged. | `${hadoop.tmp.dir}/s3a` |
+| `fs.s3a.committer.magic.enabled` | Enable "magic committer" support in the filesystem. | `false` |
+| `fs.s3a.committer.abort.pending.uploads` | list and abort all pending uploads under the destination path when the job is committed or aborted. | `true` |
+| `fs.s3a.committer.threads` | Number of threads in committers for parallel operations on files. | 8 |
+| `fs.s3a.committer.generate.uuid` | Generate a Job UUID if none is passed down from Spark | `false` |
+| `fs.s3a.committer.require.uuid` |Require the Job UUID to be passed down from Spark | `false` |
 
 
-Staging committer (Directory and Partitioned) options
+## Staging committer (Directory and Partitioned) options
 
 
-| Option | Magic | Directory | Partitioned | Meaning | Default |
-|--------|-------|-----------|-------------|---------|---------|
-
-| `fs.s3a.committer.staging.conflict-mode` |  | X | X | Conflict resolution: `fail`, `append` or `replace`| `append` |
-| `fs.s3a.committer.staging.tmp.path` |  | X | X | Path in the cluster filesystem for temporary data. | `tmp/staging` |
-| `fs.s3a.committer.staging.unique-filenames` |  | X | X | Generate unique filenames. | `true` |
-| `fs.s3a.committer.staging.abort.pending.uploads` |  | X | X | Deprecated; replaced by `fs.s3a.committer.abort.pending.uploads`. |  |
+| Option | Meaning | Default |
+|--------|---------|---------|
+| `fs.s3a.committer.staging.conflict-mode` | Conflict resolution: `fail`, `append` or `replace`| `append` |
+| `fs.s3a.committer.staging.tmp.path` | Path in the cluster filesystem for temporary data. | `tmp/staging` |
+| `fs.s3a.committer.staging.unique-filenames` | Generate unique filenames. | `true` |
+| `fs.s3a.committer.staging.abort.pending.uploads` | Deprecated; replaced by `fs.s3a.committer.abort.pending.uploads`. |  `(false)` |
 
 
 ### Common Committer Options

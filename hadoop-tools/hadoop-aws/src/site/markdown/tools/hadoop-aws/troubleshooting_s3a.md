@@ -104,6 +104,7 @@ Fixes:
 revert to the JVM SSL implementation when the wildfly
 or native openssl libraries cannot be loaded.
 
+
 ## <a name="authentication"></a> Authentication Failure
 
 If Hadoop cannot authenticate with the S3 service endpoint,
@@ -286,7 +287,17 @@ There's two main causes
    classloader, so the JVM does not consider it to be an implementation.
    Fix: learn the entire JVM classloader model and see if you can then debug it.
    Tip: having both the AWS Shaded SDK and individual AWS SDK modules on your classpath
-   may be a cause of this
+   may be a cause of this.
+
+If you see this and you are trying to use the S3A connector with Spark, then the cause can
+be that the isolated classloader used to load Hive classes is interfering with the S3A
+connector's dynamic loading of `com.amazonaws` classes. To fix this, declare that that
+the classes in the aws SDK are loaded from the same classloader which instantiated
+the S3A FileSystem instance:
+
+```
+spark.sql.hive.metastore.sharedPrefixes com.amazonaws.
+```
 
 ## <a name="access_denied"></a> "The security token included in the request is invalid"
 

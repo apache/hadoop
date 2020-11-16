@@ -295,6 +295,12 @@ public final class CommitConstants {
       "fs.s3a.committer.require.uuid";
 
   /**
+   * Default value for {@link #FS_S3A_COMMITTER_REQUIRE_UUID}: {@value}.
+   */
+  public static final boolean DEFAULT_S3A_COMMITTER_REQUIRE_UUID =
+      false;
+
+  /**
    * Generate a UUID in job setup rather than fall back to
    * YARN Application attempt ID.
    * <p>
@@ -303,5 +309,11 @@ public final class CommitConstants {
    */
   public static final String FS_S3A_COMMITTER_GENERATE_UUID =
       "fs.s3a.committer.generate.uuid";
+
+  /**
+   * Default value for {@link #FS_S3A_COMMITTER_GENERATE_UUID}: {@value}.
+   */
+  public static final boolean DEFAULT_S3A_COMMITTER_GENERATE_UUID =
+      false;
 
 }
