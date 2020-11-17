@@ -99,7 +99,8 @@ public class TestS3ADelegationTokenSupport {
         UserGroupInformation.AuthenticationMethod.TOKEN,
         decodedUser.getAuthenticationMethod());
     assertEquals("origin", decoded.getOrigin());
-    assertEquals("issue date", identifier.getIssueDate(), decoded.getIssueDate());
+    assertEquals("issue date", identifier.getIssueDate(),
+        decoded.getIssueDate());
   }
 
   @Test
