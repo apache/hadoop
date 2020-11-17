@@ -1509,6 +1509,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   private boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
     for (String dir : dirSet) {
+      System.out.println("dir   " + dir + " and key = " + key);
       if (dir.isEmpty() || key.startsWith(dir + AbfsHttpConstants.FORWARD_SLASH)) {
         return true;
       }

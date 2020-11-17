@@ -4,11 +4,14 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -24,6 +27,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private static final String[] CLIENT_CORRELATIONID_LIST = {
@@ -118,6 +122,9 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         ITestAbfsReadWriteAndSeek.class.getMethod("testReadAndWriteWithDifferentBufferSizesAndSeek"));
     testClasses.put(new ITestAzureBlobFileSystemAppend(), //append
         ITestAzureBlobFileSystemAppend.class.getMethod("testTracingForAppend"));
+    testClasses.put(new ITestAzureBlobFileSystemFlush(),
+        ITestAzureBlobFileSystemFlush.class.getMethod(
+            "testTracingHeaderForAppendBlob")); //outputstream (appendblob)
     testClasses.put(new ITestAzureBlobFileSystemCreate(),
         ITestAzureBlobFileSystemCreate.class.getMethod(
             "testDefaultCreateOverwriteFileTest")); //create
@@ -157,15 +164,20 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
         .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
         AbfsOperationConstants.ACCESS, false, 0));
-    fs.access(new Path("/"), FsAction.READ);
+//    fs.access(new Path("/"), FsAction.READ);
 
     fs.setListenerOperation(AbfsOperationConstants.PATH);
     //unset namespaceEnabled config to call getAcl -> test tracing header
-    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
-    fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
+//    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
+//    fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
 
-    ITestAzureBlobFileSystemAppend test2 = new ITestAzureBlobFileSystemAppend();
-    test2.setup();
-    test2.testTracingForAppend();
+//    ITestAzureBlobFileSystemAppend test2 = new ITestAzureBlobFileSystemAppend();
+//    test2.setup();
+//    test2.testTracingForAppend();
+
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set(TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED, "true");
+    AzureBlobFileSystem fs1 = getFileSystem(config);
+
   }
 }

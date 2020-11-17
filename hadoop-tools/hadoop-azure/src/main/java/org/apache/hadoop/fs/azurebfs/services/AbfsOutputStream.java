@@ -213,6 +213,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       if (writableBytes <= numberOfBytesToWrite) {
         System.arraycopy(data, currentOffset, buffer, bufferIndex, writableBytes);
         bufferIndex += writableBytes;
+        System.out.println("going to write");
         writeCurrentBufferToService();
         currentOffset += writableBytes;
         numberOfBytesToWrite = numberOfBytesToWrite - writableBytes;
