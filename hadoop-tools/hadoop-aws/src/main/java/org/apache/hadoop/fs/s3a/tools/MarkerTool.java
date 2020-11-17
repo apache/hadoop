@@ -528,7 +528,7 @@ public final class MarkerTool extends S3GuardTool {
 
     // safety check: min and max are correctly ordered at this point.
     Preconditions.checkArgument(minMarkerCount <= maxMarkerCount,
-        "Min marker count of %d is greather than the max value of %d",
+        "The min marker count of %d is greater than the max value of %d",
         minMarkerCount, maxMarkerCount);
 
     ScanResult result = new ScanResult();
