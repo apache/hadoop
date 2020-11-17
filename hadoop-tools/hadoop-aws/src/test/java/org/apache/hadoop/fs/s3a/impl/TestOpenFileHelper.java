@@ -69,7 +69,6 @@ public class TestOpenFileHelper extends HadoopTestBase {
 
   private static final S3AOpenFileOperation OPERATION =
       new S3AOpenFileOperation(
-          INPUT_POLICY,
           CHANGE_POLICY,
           READ_AHEAD_RANGE,
           USERNAME,
@@ -78,7 +77,7 @@ public class TestOpenFileHelper extends HadoopTestBase {
   @Test
   public void testSimpleFile() throws Throwable {
     ObjectAssert<S3AOpenFileOperation.OpenFileInformation>
-        asst = assertFI(OPERATION.openSimpleFile(1024));
+        asst = assertFI(OPERATION.openSimpleFile(1024, INPUT_POLICY));
 
     asst.extracting(f -> f.getChangePolicy())
         .isEqualTo(CHANGE_POLICY);
@@ -313,7 +312,9 @@ public class TestOpenFileHelper extends HadoopTestBase {
       final OpenFileParameters parameters)
       throws IOException {
     return OPERATION.prepareToOpenFile(TESTPATH,
-        parameters, IO_FILE_BUFFER_SIZE_DEFAULT);
+        parameters,
+        IO_FILE_BUFFER_SIZE_DEFAULT,
+        INPUT_POLICY);
   }
 
   /**

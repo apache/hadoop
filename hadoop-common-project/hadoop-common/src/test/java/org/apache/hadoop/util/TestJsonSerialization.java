@@ -22,6 +22,7 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -31,8 +32,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.test.LambdaTestUtils;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test the JSON serialization helper.
@@ -181,5 +186,36 @@ public class TestJsonSerialization extends HadoopTestBase {
     }
   }
 
+  @Test
+  public void testFileSystemWithStatus() throws Throwable {
+    File tempFile = File.createTempFile("Keyval", ".json");
+    Path tempPath = new Path(tempFile.toURI());
+    LocalFileSystem fs = FileSystem.getLocal(new Configuration());
+    try {
+      serDeser.save(fs, tempPath, source, true);
+      KeyVal load = serDeser.load(fs, tempPath, fs.getFileStatus(tempPath));
+      assertEquals("loaded values", source, load);
+    } finally {
+      fs.delete(tempPath, false);
+    }
+  }
+
+  /**
+   * Handing a JSON parser an XML document must fail.
+    */
+  @Test
+  public void testParseError() throws Throwable {
+    LocalFileSystem fs = FileSystem.getLocal(new Configuration());
+    File tempFile = File.createTempFile("Keyval", ".json");
+    Path tempPath = new Path(tempFile.toURI());
+    try {
+      ContractTestUtils.createFile(fs, tempPath, true,
+          "<xml></xml>".getBytes(StandardCharsets.UTF_8));
+      intercept(PathIOException.class, () ->
+          serDeser.load(fs, tempPath, fs.getFileStatus(tempPath)));
+    } finally {
+      fs.delete(tempPath, false);
+    }
+  }
 
 }

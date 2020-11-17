@@ -36,8 +36,6 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
-import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
@@ -46,8 +44,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL;
@@ -236,53 +236,44 @@ public class JsonSerialization<T> {
 
   /**
    * Load from a Hadoop filesystem.
-   * There's a check for data availability after the file is open, by
-   * raising an EOFException if stream.available == 0.
-   * This allows for a meaningful exception without the round trip overhead
-   * of a getFileStatus call before opening the file. It may be brittle
-   * against an FS stream which doesn't return a value here, but the
-   * standard filesystems all do.
-   * JSON parsing and mapping problems
-   * are converted to IOEs.
    * @param fs filesystem
    * @param path path
    * @return a loaded object
-   * @throws IOException IO or JSON parse problems
+   * @throws PathIOException JSON parse problem
+   * @throws IOException IO problems
    */
   public T load(FileSystem fs, Path path) throws IOException {
+    return load(fs, path, null);
+  }
 
+  /**
+   * Load from a Hadoop filesystem.
+   * If a file status is supplied, it's passed in to the openFile()
+   * call so that FS implementations can optimize their opening.
+   * @param fs filesystem
+   * @param path path
+   * @param status status of the file to open.
+   * @return a loaded object
+   * @throws PathIOException JSON parse problem
+   * @throws EOFException file status references an empty file
+   * @throws IOException IO problems
+   */
+  public T load(FileSystem fs, Path path, FileStatus status)
+      throws IOException {
+
+    if (status != null && status.getLen() == 0) {
+      throw new EOFException("No data in " + path);
+    }
     try (FSDataInputStream dataInputStream =
              awaitFuture(fs.openFile(path)
                  .opt(FS_OPTION_OPENFILE_FADVISE,
                      FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL)
+                 .withFileStatus(status)
                  .build())) {
-      // throw an EOF exception if there is no data available.
-      if (dataInputStream.available() == 0) {
-        throw new EOFException("No data in " + path);
-      }
-      return fromDataInputStream(path, dataInputStream);
-    }
-  }
-
-  /**
-   * Read from a data input stream; convert all exceptions to
-   * IOExceptions.
-   * The stream is not explicitly closed.
-   * @param path path for errors
-   * @param dataInputStream source of data
-   * @return a loaded object
-   * @throws PathIOException IO or JSON parse problems
-   */
-  public T fromDataInputStream(final Path path,
-      final FSDataInputStream dataInputStream)
-      throws IOException {
-    // throw an EOF exception if there is no data available.
-    try {
       return fromJsonStream(dataInputStream);
     } catch (JsonProcessingException e) {
-      throw (IOException) new PathIOException(path.toString(),
-          "Failed to read JSON file " + e)
-          .initCause(e);
+      throw new PathIOException(path.toString(),
+          "Failed to read JSON file " + e, e);
     }
   }
 

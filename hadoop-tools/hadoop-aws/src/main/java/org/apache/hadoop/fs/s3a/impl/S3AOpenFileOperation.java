@@ -48,7 +48,7 @@ import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.
  * Helper class for openFile() logic, especially processing file status
  * args and length/etag/versionID.
  * <p>
- *  This got complex enough it merited removal from S3AFileSystemy -which
+ *  This got complex enough it merited removal from S3AFileSystem -which
  *  also permits unit testing.
  * </p>
  * <p>
@@ -62,9 +62,6 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AOpenFileOperation.class);
-
-  /**  Default input policy. */
-  private final S3AInputPolicy defaultInputPolicy;
 
   /**  Default change detection policy. */
   private final ChangeDetectionPolicy changePolicy;
@@ -80,20 +77,17 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
 
   /**
    * Instantiate with the default options from the filesystem.
-   * @param defaultInputPolicy input policy
    * @param changePolicy change detection policy
    * @param defaultReadAhead read ahead range
    * @param username username
    * @param defaultBufferSize buffer size
    */
   public S3AOpenFileOperation(
-      final S3AInputPolicy defaultInputPolicy,
       final ChangeDetectionPolicy changePolicy,
       final long defaultReadAhead,
       final String username,
       final int defaultBufferSize) {
     super(null);
-    this.defaultInputPolicy = defaultInputPolicy;
     this.changePolicy = changePolicy;
     this.defaultReadAhead = defaultReadAhead;
     this.username = username;
@@ -199,7 +193,8 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
   public OpenFileInformation prepareToOpenFile(
       final Path path,
       final OpenFileParameters parameters,
-      final long blockSize) throws IOException {
+      final long blockSize,
+      final S3AInputPolicy inputPolicy) throws IOException {
     Configuration options = parameters.getOptions();
     Set<String> mandatoryKeys = parameters.getMandatoryKeys();
     String sql = options.get(SelectConstants.SELECT_SQL, null);
@@ -217,6 +212,9 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
           InternalConstants.S3A_OPENFILE_KEYS,
           "for " + path + " in non-select file I/O");
     }
+
+    // was a status passed in via a withStatus() invocation in
+    // the builder API?
     FileStatus providedStatus = parameters.getStatus();
     S3AFileStatus fileStatus;
     if (providedStatus != null) {
@@ -244,7 +242,10 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
       LOG.debug("File was opened with a supplied FileStatus;"
               + " skipping getFileStatus call in open() operation: {}",
           providedStatus);
+
+      // what type is the status (and hence: what information does it contain?)
       if (providedStatus instanceof S3AFileStatus) {
+        // is it an S3AFileSystem status?
         S3AFileStatus st = (S3AFileStatus) providedStatus;
         versionId = st.getVersionId();
         eTag = st.getETag();
@@ -299,7 +300,7 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
     }
     // get the first known policy
     S3AInputPolicy seekPolicy = S3AInputPolicy.getFirstSupportedPolicy(policies,
-        defaultInputPolicy);
+        inputPolicy);
     // readahead range
     long readAhead = options.getLong(READAHEAD_RANGE, defaultReadAhead);
     // buffer size
@@ -314,9 +315,10 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
    * @return the parameters needed to open a file through open(path, bufferSize).
    * @param bufferSize  buffer size
    */
-  public OpenFileInformation openSimpleFile(final int bufferSize) {
+  public OpenFileInformation openSimpleFile(final int bufferSize,
+      final S3AInputPolicy inputPolicy) {
     return new OpenFileInformation(false, null, null,
-        defaultInputPolicy, changePolicy, defaultReadAhead, bufferSize);
+        inputPolicy, changePolicy, defaultReadAhead, bufferSize);
   }
 
 }

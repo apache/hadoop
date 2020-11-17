@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
@@ -529,13 +530,15 @@ public final class Constants {
    * General input. Some seeks, some reads.
    * Value: {@value}
    */
-  public static final String INPUT_FADV_NORMAL = "normal";
+  public static final String INPUT_FADV_NORMAL =
+      Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_NORMAL;
 
   /**
    * Optimized for sequential access.
    * Value: {@value}
    */
-  public static final String INPUT_FADV_SEQUENTIAL = "sequential";
+  public static final String INPUT_FADV_SEQUENTIAL =
+      Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL;
 
   /**
    * Optimized purely for random seek+read/positionedRead operations;
@@ -543,7 +546,8 @@ public final class Constants {
    * more efficient {@code seek()} operations.
    * Value: {@value}
    */
-  public static final String INPUT_FADV_RANDOM = "random";
+  public static final String INPUT_FADV_RANDOM =
+      Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_RANDOM;
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable

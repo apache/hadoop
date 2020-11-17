@@ -488,7 +488,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       listing = new Listing(listingOperationCallbacks, createStoreContext());
       // now the open file logic
       openFileHelper = new S3AOpenFileOperation(
-          inputPolicy,
           changeDetectionPolicy,
           readAhead,
           username,
@@ -992,9 +991,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Change the input policy for this FS.
+   * @deprecated use openFile() options
    * @param inputPolicy new policy
    */
   @InterfaceStability.Unstable
+  @Deprecated
   public void setInputPolicy(S3AInputPolicy inputPolicy) {
     Objects.requireNonNull(inputPolicy, "Null inputStrategy");
     LOG.debug("Setting input strategy: {}", inputPolicy);
@@ -1117,7 +1118,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
     entryPoint(INVOCATION_OPEN);
-    return open(qualify(f), openFileHelper.openSimpleFile(bufferSize));
+    return open(qualify(f),
+        openFileHelper.openSimpleFile(bufferSize, inputPolicy));
   }
 
   /**
@@ -1205,7 +1207,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return attributes to use when building the query.
    */
   private S3ObjectAttributes createObjectAttributes(
-      final Path path, final S3AFileStatus fileStatus) {
+      final Path path,
+      final S3AFileStatus fileStatus) {
     return createObjectAttributes(
         path,
         fileStatus.getETag(),
@@ -1237,7 +1240,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     entryPoint(INVOCATION_CREATE);
     final Path path = qualify(f);
     String key = pathToKey(path);
-    FileStatus status;
+    FileStatus status = null;
     try {
       // get the status or throw an FNFE.
       // when overwriting, there is no need to look for any existing file,
@@ -4845,7 +4848,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         openFileHelper.prepareToOpenFile(
             path,
             parameters,
-            getDefaultBlockSize(path));
+            getDefaultBlockSize(path),
+            inputPolicy);
     boolean isSelect = fileInformation.isSql();
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
     Configuration options = parameters.getOptions();
