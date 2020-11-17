@@ -1630,7 +1630,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         .isEqualTo(uuid);
     Assertions.assertThat(jobConf.get(FS_S3A_COMMITTER_UUID_SOURCE, null))
         .describedAs("Config option " + FS_S3A_COMMITTER_UUID_SOURCE)
-        .isEqualTo(AbstractS3ACommitter.JobUUIDSource.GeneratedLocally.getText());
+        .isEqualTo(AbstractS3ACommitter.JobUUIDSource.GeneratedLocally
+            .getText());
 
     // because the task was set up in the job, it can have task
     // setup called, even though it had a random ID.
@@ -1649,9 +1650,9 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // Task setup MUST fail.
     intercept(PathCommitException.class,
         E_SELF_GENERATED_JOB_UUID, () -> {
-      committer2.setupTask(tContext2);
-      return committer2;
-    });
+        committer2.setupTask(tContext2);
+        return committer2;
+      });
     // task abort with the self-generated option is fine.
     committer2.abortTask(tContext2);
   }
