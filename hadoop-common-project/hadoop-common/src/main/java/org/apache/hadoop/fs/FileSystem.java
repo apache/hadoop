@@ -2594,8 +2594,11 @@ public abstract class FileSystem extends Configured
         + "; Object Identity Hash: "
         + Integer.toHexString(System.identityHashCode(this)));
     // delete all files that were marked as delete-on-exit.
-    processDeleteOnExit();
-    CACHE.remove(this.key, this);
+    try {
+      processDeleteOnExit();
+    } finally {
+      CACHE.remove(this.key, this);
+    }
   }
 
   /**
@@ -3615,7 +3618,7 @@ public abstract class FileSystem extends Configured
         // note this will briefly remove and reinstate "fsToClose" from
         // the map. It is done in a synchronized block so will not be
         // visible to others.
-        fsToClose.close();
+        IOUtils.cleanupWithLogger(LOGGER, fsToClose);
       }
       return fs;
     }
