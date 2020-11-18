@@ -151,12 +151,13 @@ public class LocatedFileStatusFetcher {
       }
     } finally {
       lock.unlock();
+      // either the scan completed or an error was raised.
+      // in the case of an error shutting down the executor will interrupt all
+      // active threads, which can add noise to the logs.
+      LOG.debug("Scan complete: shutting down");
+      this.exec.shutdownNow();
     }
-    // either the scan completed or an error was raised.
-    // in the case of an error shutting down the executor will interrupt all
-    // active threads, which can add noise to the logs.
-    LOG.debug("Scan complete: shutting down");
-    this.exec.shutdownNow();
+
     if (this.unknownError != null) {
       LOG.debug("Scan failed", this.unknownError);
       if (this.unknownError instanceof Error) {
