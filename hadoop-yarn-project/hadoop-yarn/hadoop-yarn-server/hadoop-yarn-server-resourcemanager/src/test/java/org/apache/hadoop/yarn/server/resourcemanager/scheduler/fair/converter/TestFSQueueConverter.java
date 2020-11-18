@@ -68,7 +68,10 @@ public class TestFSQueueConverter {
           "root.admins.alice",
           "root.admins.bob",
           "root.users.joe",
-          "root.users.john");
+          "root.users.john",
+          "root.misc",
+          "root.misc.a",
+          "root.misc.b");
 
   private static final String FILE_PREFIX = "file:";
   private static final String FAIR_SCHEDULER_XML =
@@ -148,7 +151,7 @@ public class TestFSQueueConverter {
     converter.convertQueueHierarchy(rootQueue);
 
     // root children
-    assertEquals("root children", "default,admins,users",
+    assertEquals("root children", "default,admins,users,misc",
         csConfig.get(PREFIX + "root.queues"));
 
     // root.admins children
@@ -167,7 +170,8 @@ public class TestFSQueueConverter {
         Sets.newHashSet("root",
             "root.default",
             "root.admins",
-            "root.users"));
+            "root.users",
+            "root.misc"));
 
     assertNoValueForQueues(leafs, ".queues", csConfig);
   }
@@ -285,6 +289,29 @@ public class TestFSQueueConverter {
         csConfig.get(PREFIX + "root.admins.alice.capacity"));
     assertEquals("root.admins.bob capacity", "25.000",
         csConfig.get(PREFIX + "root.admins.bob.capacity"));
+
+    // root.misc
+    assertEquals("root.misc capacity", "0.000",
+        csConfig.get(PREFIX + "root.misc.capacity"));
+    assertEquals("root.misc.a capacity", "0.000",
+        csConfig.get(PREFIX + "root.misc.a.capacity"));
+    assertEquals("root.misc.b capacity", "0.000",
+        csConfig.get(PREFIX + "root.misc.b.capacity"));
+  }
+
+  @Test
+  public void testZeroSumCapacityValidation() {
+    converter = builder.build();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    Set<String> noZeroSumAllowedQueues = Sets.difference(ALL_QUEUES,
+        Sets.newHashSet("root.misc"));
+    assertNoValueForQueues(noZeroSumAllowedQueues, ".allow-zero-capacity-sum",
+        csConfig);
+
+    assertTrue("root.misc allow zero capacities", csConfig.getBoolean(
+        PREFIX + "root.misc.allow-zero-capacity-sum", false));
   }
 
   @Test
