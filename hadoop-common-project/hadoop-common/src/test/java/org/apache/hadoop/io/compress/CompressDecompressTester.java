@@ -473,8 +473,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
   private static <T extends Compressor, E extends Decompressor> boolean isAvailable(TesterPair<T, E> pair) {
     Compressor compressor = pair.compressor;
 
-    if (compressor.getClass().isAssignableFrom(Lz4Compressor.class)
-            && (NativeCodeLoader.isNativeCodeLoaded()))
+    if (compressor.getClass().isAssignableFrom(Lz4Compressor.class))
       return true;
 
     else if (compressor.getClass().isAssignableFrom(BuiltInZlibDeflater.class)
