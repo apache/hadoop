@@ -2123,12 +2123,10 @@ public class DistributedFileSystem extends FileSystem
    */
   private void checkTrashRootAndRemoveIfEmpty(final Path p) throws IOException {
     // If p is EZ root, skip the check
-    if (dfs.isHDFSEncryptionEnabled()) {
-      if (dfs.isEZRoot(p)) {
-        DFSClient.LOG.debug("{} is an encryption zone root. "
-            + "Skipping empty trash root check.", p);
-        return;
-      }
+    if (dfs.isHDFSEncryptionEnabled() && dfs.isEZRoot(p)) {
+      DFSClient.LOG.debug("{} is an encryption zone root. "
+          + "Skipping empty trash root check.", p);
+      return;
     }
     Path trashRoot = new Path(p, FileSystem.TRASH_PREFIX);
     try {

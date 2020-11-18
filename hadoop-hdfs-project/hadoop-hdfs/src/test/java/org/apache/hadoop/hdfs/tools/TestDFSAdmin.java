@@ -93,6 +93,7 @@ import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -923,6 +924,26 @@ public class TestDFSAdmin {
         .getECBlockGroupStats().getCorruptBlockGroups());
     assertEquals(highestPriorityLowRedundancyECBlocks, client.getNamenode()
         .getECBlockGroupStats().getHighestPriorityLowRedundancyBlocks());
+  }
+
+  @Test
+  public void testAllowSnapshotWhenTrashExists() throws Exception {
+    final Path dirPath = new Path("/ssdir3");
+    final Path trashRoot = new Path(dirPath, ".Trash");
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+
+    dfs.mkdirs(trashRoot);
+    // allowSnapshot should still succeed even when trash exists
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // disallowSnapshot should remove the empty trash
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+    assertFalse(dfs.exists(trashRoot));
+    
+    // Cleanup
+    dfs.delete(dirPath, true);
   }
 
   @Test
