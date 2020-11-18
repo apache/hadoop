@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -30,8 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
-
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * <p> This class is extended from the ViewFileSystem for the overloaded
@@ -179,16 +180,18 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
         conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL,
             Constants.CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL_DEFAULT);
 
-    Class<?> clazz = conf.getClass(mountTableConfigLoaderImplConf, null);
+    Class<? extends MountTableConfigLoader> clazz =
+        conf.getClass(mountTableConfigLoaderImplConf, null,
+            MountTableConfigLoader.class);
     if (clazz == null) {
-        throw new RuntimeException(
-            String.format("Errors on getting mount table loader class. The class is %s",
-                mountTableConfigLoaderImplConf));
+      throw new RuntimeException(
+          String.format("Errors on getting mount table loader class. "
+              + "The class is %s", mountTableConfigLoaderImplConf));
     }
 
     try {
       MountTableConfigLoader mountTableConfigLoader =
-          (MountTableConfigLoader) clazz.newInstance();
+          ReflectionUtils.newInstance(clazz, conf);
       return mountTableConfigLoader;
     } catch (Exception e) {
       throw new RuntimeException(e);
