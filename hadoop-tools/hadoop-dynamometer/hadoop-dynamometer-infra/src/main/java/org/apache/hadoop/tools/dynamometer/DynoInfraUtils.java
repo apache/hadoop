@@ -74,9 +74,9 @@ public final class DynoInfraUtils {
 
   public static final String APACHE_DOWNLOAD_MIRROR_KEY = DYNO_CONF_PREFIX
       + "apache-mirror";
-  // Set a generic mirror as the default.
+  // Set archive.apache.org as the default.
   public static final String APACHE_DOWNLOAD_MIRROR_DEFAULT =
-      "http://mirrors.ocf.berkeley.edu/apache/";
+      "http://archive.apache.org/dist/";
   private static final String APACHE_DOWNLOAD_MIRROR_SUFFIX_FORMAT =
       "hadoop/common/hadoop-%s/hadoop-%s.tar.gz";
   public static final String HADOOP_TAR_FILENAME_FORMAT = "hadoop-%s.tar.gz";
