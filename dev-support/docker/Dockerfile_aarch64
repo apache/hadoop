@@ -104,7 +104,7 @@ RUN mkdir -p /opt/spotbugs \
     && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.0.6/spotbugs-4.0.6.tgz \
       -o /opt/spotbugs.tgz \
     && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
-    && chmod +x /opt/spotbugs/*
+    && chmod +x /opt/spotbugs/bin/*
 ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
