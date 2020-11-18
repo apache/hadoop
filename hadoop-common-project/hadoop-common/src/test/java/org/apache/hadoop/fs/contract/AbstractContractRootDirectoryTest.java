@@ -265,7 +265,7 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
         fs.listFiles(root, true));
     describe("verifying consistency with treewalk's files");
     ContractTestUtils.TreeScanResults treeWalk = treeWalk(fs, root);
-    treeWalk.assertFieldsEquivalent("files", listing,
+    treeWalk.assertFieldsEquivalent("treewalk vs listFiles(/, true)", listing,
         treeWalk.getFiles(),
         listing.getFiles());
   }

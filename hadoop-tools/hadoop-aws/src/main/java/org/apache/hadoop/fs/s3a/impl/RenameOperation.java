@@ -211,14 +211,23 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    *     Only queuing objects here whose copy operation has
    *     been submitted and so is in that thread pool.
    *   </li>
+   *   <li>
+   *     If a path is supplied, then after the delete is executed
+   *     (and completes) the rename tracker from S3Guard will be
+   *     told of its deletion. Do not set this for directory
+   *     markers with children, as it may mistakenly add
+   *     tombstones into the table.
+   *   </li>
    * </ol>
    * This method must only be called from the primary thread.
-   * @param path path to the object
+   * @param path path to the object.
    * @param key key of the object.
    */
   private void queueToDelete(Path path, String key) {
     LOG.debug("Queueing to delete {}", path);
-    pathsToDelete.add(path);
+    if (path != null) {
+      pathsToDelete.add(path);
+    }
     keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
   }
 
@@ -234,7 +243,9 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    */
   private void queueToDelete(
       List<DirMarkerTracker.Marker> markersToDelete) {
-    markersToDelete.forEach(this::queueToDelete);
+    markersToDelete.forEach(m -> queueToDelete(
+        null,
+        m.getKey()));
   }
 
   /**
@@ -397,6 +408,7 @@ Are   * @throws IOException failure
           destStatus.getPath());
       // Although the dir marker policy doesn't always need to do this,
       // it's simplest just to be consistent here.
+      // note: updates the metastore as well a S3.
       callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false, null);
     }
 
@@ -408,7 +420,7 @@ Are   * @throws IOException failure
         false);
 
     final RemoteIterator<S3ALocatedFileStatus> iterator =
-        callbacks.listFilesAndEmptyDirectories(parentPath,
+        callbacks.listFilesAndDirectoryMarkers(parentPath,
             sourceStatus,
             true,
             true);
