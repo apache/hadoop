@@ -46,19 +46,4 @@ public final class StagingCommitterConstants {
    */
   public static final String STAGING_UPLOADS = "staging-uploads";
 
-  // Spark configuration keys
-
-  /**
-   * The UUID for jobs: {@value}.
-   */
-  public static final String SPARK_WRITE_UUID =
-      "spark.sql.sources.writeJobUUID";
-
-  /**
-   * The App ID for jobs.
-   */
-
-  public static final String SPARK_APP_ID = "spark.app.id";
-
-  public static final String JAVA_IO_TMPDIR = "java.io.tmpdir";
 }

@@ -110,7 +110,7 @@ public class TestStagingPartitionedJobCommit
         file.deleteOnExit();
         Path path = new Path(file.toURI());
         pendingSet.save(localFS, path, true);
-        activeCommit.add(path);
+        activeCommit.add(localFS.getFileStatus(path));
       }
       return activeCommit;
     }
