@@ -2122,6 +2122,14 @@ public class DistributedFileSystem extends FileSystem
    * @param p Path to a directory.
    */
   private void checkTrashRootAndRemoveIfEmpty(final Path p) throws IOException {
+    // If p is EZ root, skip the check
+    if (dfs.isHDFSEncryptionEnabled()) {
+      if (dfs.isEZRoot(p)) {
+        DFSClient.LOG.debug("{} is an encryption zone root. "
+            + "Skipping empty trash root check.", p);
+        return;
+      }
+    }
     Path trashRoot = new Path(p, FileSystem.TRASH_PREFIX);
     try {
       // listStatus has 4 possible outcomes here:
@@ -2139,9 +2147,10 @@ public class DistributedFileSystem extends FileSystem
       } else {
         if (fileStatuses.length == 1
             && !fileStatuses[0].isDirectory()
-            && !fileStatuses[0].getPath().equals(p)) {
+            && fileStatuses[0].getPath().toUri().getPath().equals(
+                trashRoot.toString())) {
           // Ignore the trash path because it is not a directory.
-          DFSClient.LOG.warn("{} is not a directory.", trashRoot);
+          DFSClient.LOG.warn("{} is not a directory. Ignored.", trashRoot);
         } else {
           throw new IOException("Found non-empty trash root at " +
               trashRoot + ". Rename or delete it, then try again.");
