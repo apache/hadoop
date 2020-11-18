@@ -207,7 +207,7 @@ public class SinglePendingCommit extends PersistentCommitData
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
-        "DelayedCompleteData{");
+        "SinglePendingCommit{");
     sb.append("version=").append(version);
     sb.append(", uri='").append(uri).append('\'');
     sb.append(", destination='").append(destinationKey).append('\'');

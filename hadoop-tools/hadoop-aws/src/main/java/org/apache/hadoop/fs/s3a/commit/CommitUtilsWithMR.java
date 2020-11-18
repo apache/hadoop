@@ -58,7 +58,7 @@ public final class CommitUtilsWithMR {
   /**
    * Get the Application Attempt ID for this job.
    * @param context the context to look in
-   * @return the Application Attempt ID for a given job.
+   * @return the Application Attempt ID for a given job, or 0
    */
   public static int getAppAttemptId(JobContext context) {
     return context.getConfiguration().getInt(
@@ -67,33 +67,32 @@ public final class CommitUtilsWithMR {
 
   /**
    * Compute the "magic" path for a job attempt.
-   * @param appAttemptId the ID of the application attempt for this job.
+   * @param jobUUID unique Job ID.
    * @param dest the final output directory
    * @return the path to store job attempt data.
    */
-  public static Path getMagicJobAttemptPath(int appAttemptId, Path dest) {
+  public static Path getMagicJobAttemptPath(String jobUUID, Path dest) {
     return new Path(getMagicJobAttemptsPath(dest),
-        formatAppAttemptDir(appAttemptId));
+        formatAppAttemptDir(jobUUID));
   }
 
   /**
    * Format the application attempt directory.
-   * @param attemptId attempt ID
+   * @param jobUUID unique Job ID.
    * @return the directory name for the application attempt
    */
-  public static String formatAppAttemptDir(int attemptId) {
-    return String.format("app-attempt-%04d", attemptId);
+  public static String formatAppAttemptDir(String jobUUID) {
+    return String.format("job-%s", jobUUID);
   }
 
   /**
    * Compute the path where the output of magic task attempts are stored.
-   * @param context the context of the job with magic tasks.
+   * @param jobUUID unique Job ID.
    * @param dest destination of work
    * @return the path where the output of magic task attempts are stored.
    */
-  public static Path getMagicTaskAttemptsPath(JobContext context, Path dest) {
-    return new Path(getMagicJobAttemptPath(
-        getAppAttemptId(context), dest), "tasks");
+  public static Path getMagicTaskAttemptsPath(String jobUUID, Path dest) {
+    return new Path(getMagicJobAttemptPath(jobUUID, dest), "tasks");
   }
 
   /**
@@ -102,48 +101,56 @@ public final class CommitUtilsWithMR {
    * This path is marked as a base path for relocations, so subdirectory
    * information is preserved.
    * @param context the context of the task attempt.
+   * @param jobUUID unique Job ID.
    * @param dest The output path to commit work into
    * @return the path where a task attempt should be stored.
    */
   public static Path getMagicTaskAttemptPath(TaskAttemptContext context,
+      String jobUUID,
       Path dest) {
-    return new Path(getBaseMagicTaskAttemptPath(context, dest), BASE);
+    return new Path(getBaseMagicTaskAttemptPath(context, jobUUID, dest),
+        BASE);
   }
 
   /**
    * Get the base Magic attempt path, without any annotations to mark relative
    * references.
    * @param context task context.
+   * @param jobUUID unique Job ID.
    * @param dest The output path to commit work into
    * @return the path under which all attempts go
    */
   public static Path getBaseMagicTaskAttemptPath(TaskAttemptContext context,
+      String jobUUID,
       Path dest) {
-    return new Path(getMagicTaskAttemptsPath(context, dest),
+    return new Path(getMagicTaskAttemptsPath(jobUUID, dest),
           String.valueOf(context.getTaskAttemptID()));
   }
 
   /**
    * Compute a path for temporary data associated with a job.
    * This data is <i>not magic</i>
-   * @param appAttemptId the ID of the application attempt for this job.
+   * @param jobUUID unique Job ID.
    * @param out output directory of job
    * @return the path to store temporary job attempt data.
    */
-  public static Path getTempJobAttemptPath(int appAttemptId, Path out) {
+  public static Path getTempJobAttemptPath(String jobUUID,
+      Path out) {
     return new Path(new Path(out, TEMP_DATA),
-        formatAppAttemptDir(appAttemptId));
+        formatAppAttemptDir(jobUUID));
   }
 
   /**
-   * Compute the path where the output of a given job attempt will be placed.
+   * Compute the path where the output of a given task attempt will be placed.
    * @param context task context
+   * @param jobUUID unique Job ID.
    * @param out output directory of job
    * @return the path to store temporary job attempt data.
    */
   public static Path getTempTaskAttemptPath(TaskAttemptContext context,
-      Path out) {
-    return new Path(getTempJobAttemptPath(getAppAttemptId(context), out),
+      final String jobUUID, Path out) {
+    return new Path(
+        getTempJobAttemptPath(jobUUID, out),
         String.valueOf(context.getTaskAttemptID()));
   }
 
