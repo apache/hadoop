@@ -70,7 +70,7 @@ public class Lz4Compressor implements Compressor {
       } else {
         lz4Compressor = lz4Factory.fastCompressor();
       }
-    } catch (Throwable t) {
+    } catch (AssertionError t) {
       throw new RuntimeException("lz4-java library is not available: " +
               "Lz4Compressor has not been loaded. You need to add " +
               "lz4-java.jar to your CLASSPATH. " + t, t);

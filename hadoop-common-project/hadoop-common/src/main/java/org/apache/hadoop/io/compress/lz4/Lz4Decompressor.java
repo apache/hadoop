@@ -59,7 +59,7 @@ public class Lz4Decompressor implements Decompressor {
     try {
       LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
       lz4Decompressor = lz4Factory.safeDecompressor();
-    } catch (Throwable t) {
+    } catch (AssertionError t) {
       throw new RuntimeException("lz4-java library is not available: " +
               "Lz4Decompressor has not been loaded. You need to add " +
               "lz4-java.jar to your CLASSPATH. " + t, t);
