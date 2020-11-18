@@ -653,7 +653,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
   }
 
   @Override
-  public ReplicaInfo moveBlockToTmpLocation(ExtendedBlock block,
+  public ReplicaInfo copyBlockToTmpLocation(ExtendedBlock block,
       ReplicaInfo replicaInfo, int smallBufferSize,
       Configuration conf) throws IOException {
     throw new UnsupportedOperationException(

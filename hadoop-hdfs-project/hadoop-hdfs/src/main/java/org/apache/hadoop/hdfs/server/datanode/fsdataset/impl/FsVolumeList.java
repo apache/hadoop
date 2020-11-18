@@ -132,6 +132,30 @@ class FsVolumeList {
   }
 
   /**
+   * Get volume by disk mount to place a block.
+   * This is useful when for same disk tiering.
+   *
+   * @param storageType The desired {@link StorageType}
+   * @param mount Disk mount of the volume
+   * @param blockSize Free space needed on the volume
+   * @return
+   * @throws IOException
+   */
+  FsVolumeReference getVolumeByMount(StorageType storageType,
+      String mount, long blockSize) throws IOException {
+    if (!enableSameDiskTiering) {
+      return null;
+    }
+    FsVolumeReference volume = mountVolumeMap
+        .getVolumeRefByMountAndStorageType(mount, storageType);
+    // Check if volume has enough capacity
+    if (volume != null && volume.getVolume().getAvailable() > blockSize) {
+      return volume;
+    }
+    return null;
+  }
+
+  /**
    * Get next volume.
    *
    * @param blockSize free space needed on the volume
