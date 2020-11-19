@@ -129,6 +129,7 @@ public interface Constants {
   String CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL =
       CONFIG_VIEWFS_PREFIX + ".config.loader.impl";
 
-  String CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL_DEFAULT =
-      HCFSMountTableConfigLoader.class.getName();
+  Class<? extends MountTableConfigLoader>
+      DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL =
+      HCFSMountTableConfigLoader.class;
 }

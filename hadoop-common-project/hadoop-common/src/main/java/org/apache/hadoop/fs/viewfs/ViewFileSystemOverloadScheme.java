@@ -18,6 +18,8 @@
 package org.apache.hadoop.fs.viewfs;
 
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL;
+import static org.apache.hadoop.fs.viewfs.Constants.DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -176,17 +178,17 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
 
   private MountTableConfigLoader getMountTableConfigLoader(
       final Configuration conf) {
-    String mountTableConfigLoaderImplConf =
-        conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL,
-            Constants.CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL_DEFAULT);
-
     Class<? extends MountTableConfigLoader> clazz =
-        conf.getClass(mountTableConfigLoaderImplConf, null,
-            MountTableConfigLoader.class);
+        conf.getClass(CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL,
+            DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL,
+                MountTableConfigLoader.class);
+
     if (clazz == null) {
       throw new RuntimeException(
           String.format("Errors on getting mount table loader class. "
-              + "The class is %s", mountTableConfigLoaderImplConf));
+              + "The fs.viewfs.mounttable.config.loader.impl conf is %s. ",
+                  conf.get(CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL,
+                      DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL.getName())));
     }
 
     try {
