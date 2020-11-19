@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.tools.dynamometer;
 
+import java.net.InetAddress;
+
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ImpersonationProvider;
@@ -32,7 +34,7 @@ public class AllowAllImpersonationProvider extends Configured
     // Do nothing
   }
 
-  public void authorize(UserGroupInformation user, String remoteAddress) {
+  public void authorize(UserGroupInformation user, InetAddress remoteAddress) {
     // Do nothing
   }
 
