@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.tools.util;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -199,6 +199,9 @@ public class DistCpUtils {
                               EnumSet<FileAttribute> attributes,
                               boolean preserveRawXattrs) throws IOException {
 
+    // strip out those attributes we don't need any more
+    attributes.remove(FileAttribute.BLOCKSIZE);
+    attributes.remove(FileAttribute.CHECKSUMTYPE);
     // If not preserving anything from FileStatus, don't bother fetching it.
     FileStatus targetFileStatus = attributes.isEmpty() ? null :
         targetFS.getFileStatus(path);

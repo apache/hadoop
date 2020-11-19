@@ -372,6 +372,29 @@ public interface MRJobConfig {
 
   public static final int TASK_EXIT_TIMEOUT_CHECK_INTERVAL_MS_DEFAULT = 20 * 1000;
 
+  /**
+   * TaskAttemptListenerImpl will log the task progress when the delta progress
+   * is larger than or equal the defined value.
+   * The double value has to be between 0, and 1 with two decimals.
+   */
+  String TASK_LOG_PROGRESS_DELTA_THRESHOLD =
+      "mapreduce.task.log.progress.delta.threshold";
+  /**
+   * Default delta progress is set to 5%.
+   */
+  double TASK_LOG_PROGRESS_DELTA_THRESHOLD_DEFAULT = 0.05;
+  /**
+   * TaskAttemptListenerImpl will log the task progress when the defined value
+   * in seconds expires.
+   * This helps to debug task attempts that are doing very slow progress.
+   */
+  String TASK_LOG_PROGRESS_WAIT_INTERVAL_SECONDS =
+      "mapreduce.task.log.progress.wait.interval-seconds";
+  /**
+   * Default period to log the task attempt progress is 60 seconds.
+   */
+  long TASK_LOG_PROGRESS_WAIT_INTERVAL_SECONDS_DEFAULT = 60L;
+
   public static final String TASK_ID = "mapreduce.task.id";
 
   public static final String TASK_OUTPUT_DIR = "mapreduce.task.output.dir";

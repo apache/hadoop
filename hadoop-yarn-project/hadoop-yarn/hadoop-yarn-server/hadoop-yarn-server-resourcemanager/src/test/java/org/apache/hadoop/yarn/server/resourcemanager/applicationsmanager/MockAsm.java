@@ -56,7 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.Records;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 @InterfaceAudience.Private
 public abstract class MockAsm extends MockApps {
@@ -146,17 +146,6 @@ public abstract class MockAsm extends MockApps {
     public int getMaxAppAttempts() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
-
-    @Override
-    public boolean isLogAggregationEnabled() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public boolean isLogAggregationFinished() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
     @Override
     public ApplicationReport createAndGetApplicationReport(
         String clientUserName,boolean allowAccess) {

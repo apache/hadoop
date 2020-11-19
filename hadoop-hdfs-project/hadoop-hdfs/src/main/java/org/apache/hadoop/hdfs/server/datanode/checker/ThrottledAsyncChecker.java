@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Timer;
@@ -117,8 +117,8 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
    * will receive the same Future.
    */
   @Override
-  public Optional<ListenableFuture<V>> schedule(Checkable<K, V> target,
-                                                K context) {
+  public synchronized Optional<ListenableFuture<V>> schedule(
+      Checkable<K, V> target, K context) {
     if (checksInProgress.containsKey(target)) {
       return Optional.empty();
     }
@@ -166,7 +166,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
       Checkable<K, V> target, ListenableFuture<V> lf) {
     Futures.addCallback(lf, new FutureCallback<V>() {
       @Override
-      public void onSuccess(@Nullable V result) {
+      public void onSuccess(V result) {
         synchronized (ThrottledAsyncChecker.this) {
           checksInProgress.remove(target);
           completedChecks.put(target, new LastCheckResult<>(

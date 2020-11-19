@@ -51,6 +51,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.Rpc
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -195,14 +196,18 @@ public class RPC {
   private static final String ENGINE_PROP = "rpc.engine";
 
   /**
-   * Set a protocol to use a non-default RpcEngine.
+   * Set a protocol to use a non-default RpcEngine if one
+   * is not specified in the configuration.
    * @param conf configuration to use
    * @param protocol the protocol interface
    * @param engine the RpcEngine impl
    */
   public static void setProtocolEngine(Configuration conf,
                                 Class<?> protocol, Class<?> engine) {
-    conf.setClass(ENGINE_PROP+"."+protocol.getName(), engine, RpcEngine.class);
+    if (conf.get(ENGINE_PROP+"."+protocol.getName()) == null) {
+      conf.setClass(ENGINE_PROP+"."+protocol.getName(), engine,
+                    RpcEngine.class);
+    }
   }
 
   // return the RpcEngine configured to handle a protocol
@@ -976,7 +981,18 @@ public class RPC {
            " ProtocolImpl=" + protocolImpl.getClass().getName() +
            " protocolClass=" + protocolClass.getName());
      }
-   }
+      String client = SecurityUtil.getClientPrincipal(protocolClass, getConf());
+      if (client != null) {
+        // notify the server's rpc scheduler that the protocol user has
+        // highest priority.  the scheduler should exempt the user from
+        // priority calculations.
+        try {
+          setPriorityLevel(UserGroupInformation.createRemoteUser(client), -1);
+        } catch (Exception ex) {
+          LOG.warn("Failed to set scheduling priority for " + client, ex);
+        }
+      }
+    }
    
    static class VerProtocolImpl {
      final long version;
@@ -1043,7 +1059,7 @@ public class RPC {
     
     private void initProtocolMetaInfo(Configuration conf) {
       RPC.setProtocolEngine(conf, ProtocolMetaInfoPB.class,
-          ProtobufRpcEngine.class);
+          ProtobufRpcEngine2.class);
       ProtocolMetaInfoServerSideTranslatorPB xlator = 
           new ProtocolMetaInfoServerSideTranslatorPB(this);
       BlockingService protocolInfoBlockingService = ProtocolInfoService
@@ -1067,7 +1083,7 @@ public class RPC {
     @Override
     public Writable call(RPC.RpcKind rpcKind, String protocol,
         Writable rpcRequest, long receiveTime) throws Exception {
-      return getRpcInvoker(rpcKind).call(this, protocol, rpcRequest,
+      return getServerRpcInvoker(rpcKind).call(this, protocol, rpcRequest,
           receiveTime);
     }
   }

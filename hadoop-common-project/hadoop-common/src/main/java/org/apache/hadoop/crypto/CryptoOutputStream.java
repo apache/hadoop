@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * CryptoOutputStream encrypts data. It is not thread-safe. AES CTR mode is

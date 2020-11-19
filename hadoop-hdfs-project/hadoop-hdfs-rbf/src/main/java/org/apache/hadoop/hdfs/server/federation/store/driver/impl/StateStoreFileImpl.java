@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 /**
  * StateStoreDriver implementation based on a local file.

@@ -46,14 +46,18 @@ public enum DistCpOptionSwitch {
    * only the corresponding file attribute is preserved.
    */
   PRESERVE_STATUS(DistCpConstants.CONF_LABEL_PRESERVE_STATUS,
-      new Option("p", true, "preserve status (rbugpcaxt)(replication, " +
+      new Option("p", true, "preserve status (rbugpcaxte)(replication, " +
           "block-size, user, group, permission, checksum-type, ACL, XATTR, " +
-          "timestamps). If -p is specified with no <arg>, then preserves " +
+          "timestamps, erasure coding policy). If -p is specified with no "
+          + "<arg>, then "
+          + "preserves " +
           "replication, block size, user, group, permission, checksum type " +
           "and timestamps. " +
           "raw.* xattrs are preserved when both the source and destination " +
           "paths are in the /.reserved/raw hierarchy (HDFS only). raw.* xattr" +
           "preservation is independent of the -p flag. " +
+          "Erasure coding policy is only preserved when both source and "
+          + "destination are of HDFS"+
           "Refer to the DistCp documentation for more details.")),
 
   /**

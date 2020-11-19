@@ -67,33 +67,6 @@ else()
 endif()
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${STORED_CMAKE_FIND_LIBRARY_SUFFIXES})
 
-# Require snappy.
-set(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-hadoop_set_find_shared_library_version("1")
-find_library(SNAPPY_LIBRARY
-    NAMES snappy
-    PATHS ${CUSTOM_SNAPPY_PREFIX} ${CUSTOM_SNAPPY_PREFIX}/lib
-          ${CUSTOM_SNAPPY_PREFIX}/lib64 ${CUSTOM_SNAPPY_LIB})
-set(CMAKE_FIND_LIBRARY_SUFFIXES ${STORED_CMAKE_FIND_LIBRARY_SUFFIXES})
-find_path(SNAPPY_INCLUDE_DIR
-    NAMES snappy.h
-    PATHS ${CUSTOM_SNAPPY_PREFIX} ${CUSTOM_SNAPPY_PREFIX}/include
-          ${CUSTOM_SNAPPY_INCLUDE})
-if(SNAPPY_LIBRARY AND SNAPPY_INCLUDE_DIR)
-    get_filename_component(HADOOP_SNAPPY_LIBRARY ${SNAPPY_LIBRARY} NAME)
-    set(SNAPPY_SOURCE_FILES
-        "${SRC}/io/compress/snappy/SnappyCompressor.c"
-        "${SRC}/io/compress/snappy/SnappyDecompressor.c")
-    set(REQUIRE_SNAPPY ${REQUIRE_SNAPPY}) # Stop warning about unused variable.
-    message(STATUS "Found Snappy: ${SNAPPY_LIBRARY}")
-else()
-    set(SNAPPY_INCLUDE_DIR "")
-    set(SNAPPY_SOURCE_FILES "")
-    if(REQUIRE_SNAPPY)
-        message(FATAL_ERROR "Required snappy library could not be found.  SNAPPY_LIBRARY=${SNAPPY_LIBRARY}, SNAPPY_INCLUDE_DIR=${SNAPPY_INCLUDE_DIR}, CUSTOM_SNAPPY_INCLUDE_DIR=${CUSTOM_SNAPPY_INCLUDE_DIR}, CUSTOM_SNAPPY_PREFIX=${CUSTOM_SNAPPY_PREFIX}, CUSTOM_SNAPPY_INCLUDE=${CUSTOM_SNAPPY_INCLUDE}")
-    endif()
-endif()
-
 # Require zstandard
 SET(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 hadoop_set_find_shared_library_version("1")
@@ -253,7 +226,6 @@ include_directories(
     ${JNI_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIRS}
     ${BZIP2_INCLUDE_DIR}
-    ${SNAPPY_INCLUDE_DIR}
     ${ISAL_INCLUDE_DIR}
     ${ZSTD_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
@@ -264,12 +236,7 @@ configure_file(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 hadoop_add_dual_library(hadoop
     main/native/src/exception.c
-    ${SRC}/io/compress/lz4/Lz4Compressor.c
-    ${SRC}/io/compress/lz4/Lz4Decompressor.c
-    ${SRC}/io/compress/lz4/lz4.c
-    ${SRC}/io/compress/lz4/lz4hc.c
     ${ISAL_SOURCE_FILES}
-    ${SNAPPY_SOURCE_FILES}
     ${ZSTD_SOURCE_FILES}
     ${OPENSSL_SOURCE_FILES}
     ${SRC}/io/compress/zlib/ZlibCompressor.c

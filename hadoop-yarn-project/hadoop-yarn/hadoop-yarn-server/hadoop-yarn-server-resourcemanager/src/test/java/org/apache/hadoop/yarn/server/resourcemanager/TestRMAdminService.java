@@ -97,9 +97,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
@@ -1457,6 +1457,11 @@ public class TestRMAdminService {
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
       // Do nothing
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      return ImmutableSet.copyOf(group);
     }
 
     public static void updateGroups() {

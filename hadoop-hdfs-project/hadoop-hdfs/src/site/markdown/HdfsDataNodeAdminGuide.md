@@ -52,7 +52,7 @@ And datanode admin states include the followings:
 * `NORMAL` The node is in service.
 * `DECOMMISSIONED` The node has been decommissioned.
 * `DECOMMISSION_INPROGRESS` The node is being transitioned to DECOMMISSIONED state.
-* `IN_MAINTENANCE` The node in in maintenance state.
+* `IN_MAINTENANCE` The node is in maintenance state.
 * `ENTERING_MAINTENANCE` The node is being transitioned to maintenance state.
 
 
@@ -109,7 +109,7 @@ Here is the list of currently supported properties by HDFS.
 |`port`| Optional. the port number of the datanode |
 |`maintenanceExpireTimeInMS`| Optional. The epoch time in milliseconds until which the datanode will remain in maintenance state. The default value is forever. |
 
-In the following example, `host1` and `host2` need to in service. `host3` need to be in decommissioned state. `host4` need to be in in maintenance state.
+In the following example, `host1` and `host2` need to be in service. `host3` needs to be in decommissioned state. `host4` needs to be in maintenance state.
 
 dfs.hosts file
 ```json

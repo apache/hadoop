@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
@@ -283,6 +283,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private ExecutorService flushAllExecutor;
   private CompletionService<Void> flushAllExecutorCompletionService;
   private int blockGroupIndex;
+  private long datanodeRestartTimeout;
 
   /** Construct a new output stream for creating a file. */
   DFSStripedOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
@@ -322,6 +323,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       streamers.add(streamer);
     }
     currentPackets = new DFSPacket[streamers.size()];
+    datanodeRestartTimeout = dfsClient.getConf().getDatanodeRestartTimeout();
     setCurrentStreamer(0);
   }
 
@@ -501,8 +503,14 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
     LOG.debug("Allocating new block group. The previous block group: "
         + prevBlockGroup);
-    final LocatedBlock lb = addBlock(excludedNodes, dfsClient, src,
-         prevBlockGroup, fileId, favoredNodes, getAddBlockFlags());
+    final LocatedBlock lb;
+    try {
+      lb = addBlock(excludedNodes, dfsClient, src,
+          prevBlockGroup, fileId, favoredNodes, getAddBlockFlags());
+    } catch (IOException ioe) {
+      closeAllStreamers();
+      throw ioe;
+    }
     assert lb.isStriped();
     // assign the new block to the current block group
     currentBlockGroup = lb.getBlock();
@@ -637,6 +645,11 @@ public class DFSStripedOutputStream extends DFSOutputStream
             "streamer: " + streamer);
         streamer.setExternalError();
         healthySet.add(streamer);
+      } else if (!streamer.streamerClosed()
+          && streamer.getErrorState().hasDatanodeError()
+          && streamer.getErrorState().doWaitForRestart()) {
+        healthySet.add(streamer);
+        failedStreamers.remove(streamer);
       }
     }
     return healthySet;
@@ -700,6 +713,14 @@ public class DFSStripedOutputStream extends DFSOutputStream
       }
       for (int i = 0; i < numAllBlocks; i++) {
         coordinator.offerStreamerUpdateResult(i, newFailed.size() == 0);
+      }
+      //wait for get notify to failed stream
+      if (newFailed.size() != 0) {
+        try {
+          Thread.sleep(datanodeRestartTimeout);
+        } catch (InterruptedException e) {
+          // Do nothing
+        }
       }
     }
   }

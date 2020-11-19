@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT;
 
@@ -28,11 +32,11 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.VolumeScanner.ScanResultHandler;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
@@ -65,6 +69,12 @@ public class BlockScanner {
    * The scanner configuration.
    */
   private Conf conf;
+
+  /**
+   * Timeout duration in milliseconds waiting for {@link VolumeScanner} to stop
+   * inside {@link #removeAllVolumeScanners}.
+   */
+  private long joinVolumeScannersTimeOutMs;
 
   @VisibleForTesting
   void setConf(Conf conf) {
@@ -112,6 +122,7 @@ public class BlockScanner {
     final long maxStalenessMs;
     final long scanPeriodMs;
     final long cursorSaveMs;
+    final boolean skipRecentAccessed;
     final Class<? extends ScanResultHandler> resultHandler;
 
     private static long getUnitTestLong(Configuration conf, String key,
@@ -163,6 +174,9 @@ public class BlockScanner {
       this.cursorSaveMs = Math.max(0L, getUnitTestLong(conf,
           INTERNAL_DFS_BLOCK_SCANNER_CURSOR_SAVE_INTERVAL_MS,
           INTERNAL_DFS_BLOCK_SCANNER_CURSOR_SAVE_INTERVAL_MS_DEFAULT));
+      this.skipRecentAccessed = conf.getBoolean(
+          DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED,
+          DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED_DEFAULT);
       if (allowUnitTestSettings) {
         this.resultHandler = (Class<? extends ScanResultHandler>)
             conf.getClass(INTERNAL_VOLUME_SCANNER_SCAN_RESULT_HANDLER,
@@ -179,6 +193,9 @@ public class BlockScanner {
 
   public BlockScanner(DataNode datanode, Configuration conf) {
     this.datanode = datanode;
+    setJoinVolumeScannersTimeOutMs(
+        conf.getLong(DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY,
+            DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_DEFAULT));
     this.conf = new Conf(conf);
     if (isEnabled()) {
       LOG.info("Initialized block scanner with targetBytesPerSec {}",
@@ -196,6 +213,13 @@ public class BlockScanner {
    */
   public boolean isEnabled() {
     return (conf.scanPeriodMs > 0) && (conf.targetBytesPerSec > 0);
+  }
+
+  /**
+   * Returns true if there is any scanner thread registered.
+   */
+  public synchronized boolean hasAnyRegisteredScanner() {
+    return !scanners.isEmpty();
   }
 
  /**
@@ -262,7 +286,10 @@ public class BlockScanner {
   /**
    * Stops and removes all volume scanners.
    *
-   * This function will block until all the volume scanners have stopped.
+   * This function is called on shutdown. It will return even if some of
+   * the scanners don't terminate in time. Since the scanners are daemon
+   * threads and do not alter the block content, it is safe to ignore
+   * such conditions on shutdown.
    */
   public synchronized void removeAllVolumeScanners() {
     for (Entry<String, VolumeScanner> entry : scanners.entrySet()) {
@@ -270,7 +297,7 @@ public class BlockScanner {
     }
     for (Entry<String, VolumeScanner> entry : scanners.entrySet()) {
       Uninterruptibles.joinUninterruptibly(entry.getValue(),
-          5, TimeUnit.MINUTES);
+          getJoinVolumeScannersTimeOutMs(), TimeUnit.MILLISECONDS);
     }
     scanners.clear();
   }
@@ -344,6 +371,14 @@ public class BlockScanner {
       return;
     }
     scanner.markSuspectBlock(block);
+  }
+
+  public long getJoinVolumeScannersTimeOutMs() {
+    return joinVolumeScannersTimeOutMs;
+  }
+
+  public void setJoinVolumeScannersTimeOutMs(long joinScannersTimeOutMs) {
+    this.joinVolumeScannersTimeOutMs = joinScannersTimeOutMs;
   }
 
   @InterfaceAudience.Private

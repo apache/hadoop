@@ -122,30 +122,17 @@ Options
 copyFromLocal
 -------------
 
-Usage: `hadoop fs -copyFromLocal <localsrc> URI`
-
-Similar to the `fs -put` command, except that the source is restricted to a local file reference.
-
-Options:
-
-* `-p` : Preserves access and modification times, ownership and the permissions.
-(assuming the permissions can be propagated across filesystems)
-* `-f` : Overwrites the destination if it already exists.
-* `-l` : Allow DataNode to lazily persist the file to disk, Forces a replication
- factor of 1. This flag will result in reduced durability. Use with care.
-* `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
+Identical to the -put command.
 
 copyToLocal
 -----------
 
-Usage: `hadoop fs -copyToLocal [-ignorecrc] [-crc] URI <localdst> `
-
-Similar to get command, except that the destination is restricted to a local file reference.
+Identical to the -get command.
 
 count
 -----
 
-Usage: `hadoop fs -count [-q] [-h] [-v] [-x] [-t [<storage type>]] [-u] [-e] <paths> `
+Usage: `hadoop fs -count [-q] [-h] [-v] [-x] [-t [<storage type>]] [-u] [-e] [-s] <paths> `
 
 Count the number of directories, files and bytes under the paths that match the specified file pattern. Get the quota and the usage. The output columns with -count are: DIR\_COUNT, FILE\_COUNT, CONTENT\_SIZE, PATHNAME
 
@@ -167,7 +154,9 @@ The -e option shows the erasure coding policy for each file.
 
 The output columns with -count -e are: DIR\_COUNT, FILE\_COUNT, CONTENT_SIZE, ERASURECODING\_POLICY, PATHNAME
 
-The ERASURECODING\_POLICY is name of the policy for the file. If a erasure coding policy is setted on that file, it will return name of the policy. If no erasure coding policy is setted, it will return \"Replicated\" which means it use replication storage strategy.
+The ERASURECODING\_POLICY is name of the policy for the file. If an erasure coding policy is set on that file, it will return the name of the policy. Otherwise, it will return \"Replicated\" which means it uses the replication storage strategy.
+
+The -s option shows the snapshot counts for each directory.
 
 Example:
 
@@ -179,6 +168,7 @@ Example:
 * `hadoop fs -count -u -h hdfs://nn1.example.com/file1`
 * `hadoop fs -count -u -h -v hdfs://nn1.example.com/file1`
 * `hadoop fs -count -e hdfs://nn1.example.com/file1`
+* `hadoop fs -count -s hdfs://nn1.example.com/file1`
 
 Exit Code:
 
@@ -535,7 +525,7 @@ Returns 0 on success and -1 on error.
 put
 ---
 
-Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [ - | <localsrc1>  .. ]. <dst>`
+Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [-t <thread count>] [ - | <localsrc1>  .. ]. <dst>`
 
 Copy single src, or multiple srcs from local file system to the destination file system.
 Also reads input from stdin and writes to destination file system if the source is set to "-"
@@ -547,6 +537,8 @@ Options:
 * `-p` : Preserves access and modification times, ownership and the permissions.
 (assuming the permissions can be propagated across filesystems)
 * `-f` : Overwrites the destination if it already exists.
+* `-t <thread count>` : Number of threads to be used, default is 1. Useful
+ when uploading a directory containing more than 1 file.
 * `-l` : Allow DataNode to lazily persist the file to disk, Forces a replication
  factor of 1. This flag will result in reduced durability. Use with care.
 * `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
@@ -820,6 +812,18 @@ Example:
 
 * `hadoop fs -truncate 55 /user/hadoop/file1 /user/hadoop/file2`
 * `hadoop fs -truncate -w 127 hdfs://nn1.example.com/user/hadoop/file1`
+
+concat
+--------
+
+Usage: `hadoop fs -concat <target file> <source files>`
+
+Concatenate existing source files into the target file. Target file and source
+files should be in the same directory.
+
+Example:
+
+* `hadoop fs -concat hdfs://cluster/user/hadoop/target-file hdfs://cluster/user/hadoop/file-0 hdfs://cluster/user/hadoop/file-1`
 
 usage
 -----
@@ -1100,6 +1104,7 @@ actually fail.
 | `setfattr` | generally unsupported permissions model |
 | `setrep`| has no effect |
 | `truncate` | generally unsupported |
+| `concat` | generally unsupported |
 
 Different object store clients *may* support these commands: do consult the
 documentation and test against the target store.

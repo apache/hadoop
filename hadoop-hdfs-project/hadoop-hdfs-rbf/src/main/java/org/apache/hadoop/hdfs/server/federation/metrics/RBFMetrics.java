@@ -88,7 +88,7 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of the Router metrics collector.
@@ -124,7 +124,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   private MountTableStore mountTableStore;
   /** Router state store. */
   private RouterStore routerStore;
-
+  /** The number of top token owners reported in metrics. */
+  private int topTokenRealOwners;
 
   public RBFMetrics(Router router) throws IOException {
     this.router = router;
@@ -166,7 +167,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     Configuration conf = router.getConfig();
     this.timeOut = conf.getTimeDuration(RBFConfigKeys.DN_REPORT_TIME_OUT,
         RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
-
+    this.topTokenRealOwners = conf.getInt(
+        RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY,
+        RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT);
   }
 
   /**
@@ -650,8 +653,48 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
+  public String getTopTokenRealOwners() {
+    RouterSecurityManager mgr =
+        this.router.getRpcServer().getRouterSecurityManager();
+    if (mgr != null && mgr.getSecretManager() != null) {
+      return JSON.toString(mgr.getSecretManager()
+          .getTopTokenRealOwners(this.topTokenRealOwners));
+    }
+    return "";
+  }
+
+  @Override
   public boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
+  }
+
+  @Override
+  public int getCorruptFilesCount() {
+    return getNameserviceAggregatedInt(MembershipStats::getCorruptFilesCount);
+  }
+
+  @Override
+  public long getScheduledReplicationBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getScheduledReplicationBlocks);
+  }
+
+  @Override
+  public long getNumberOfMissingBlocksWithReplicationFactorOne() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getNumberOfMissingBlocksWithReplicationFactorOne);
+  }
+
+  @Override
+  public long getHighestPriorityLowRedundancyReplicatedBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getHighestPriorityLowRedundancyReplicatedBlocks);
+  }
+
+  @Override
+  public long getHighestPriorityLowRedundancyECBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getHighestPriorityLowRedundancyECBlocks);
   }
 
   @Override

@@ -77,7 +77,7 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 
 @Path("/ws/v1/history")
@@ -423,6 +423,24 @@ public class HsWebServices extends WebServices {
     return new JobTaskAttemptCounterInfo(ta);
   }
 
+  /**
+   * Returns the user qualified path name of the remote log directory for
+   * each pre-configured log aggregation file controller.
+   *
+   * @param req                HttpServletRequest
+   * @return Path names grouped by file controller name
+   */
+  @GET
+  @Path("/remote-log-dir")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response getRemoteLogDirPath(@Context HttpServletRequest req,
+      @QueryParam(YarnWebServiceParams.REMOTE_USER) String user,
+      @QueryParam(YarnWebServiceParams.APP_ID) String appIdStr)
+      throws IOException {
+    init();
+    return logServlet.getRemoteLogDirPath(user, appIdStr);
+  }
+
   @GET
   @Path("/aggregatedlogs")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
@@ -434,10 +452,12 @@ public class HsWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
-      @DefaultValue("false") boolean redirectedFromNode) {
+      @DefaultValue("false") boolean redirectedFromNode,
+      @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
+      @DefaultValue("false") boolean manualRedirection) {
     init();
     return logServlet.getLogsInfo(hsr, appIdStr, appAttemptIdStr,
-        containerIdStr, nmId, redirectedFromNode);
+        containerIdStr, nmId, redirectedFromNode, manualRedirection);
   }
 
   @GET
@@ -449,14 +469,16 @@ public class HsWebServices extends WebServices {
       @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
-      @DefaultValue("false") boolean redirectedFromNode) {
+      @DefaultValue("false") boolean redirectedFromNode,
+      @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
+      @DefaultValue("false") boolean manualRedirection) {
     init();
 
     WrappedLogMetaRequest.Builder logMetaRequestBuilder =
         LogServlet.createRequestFromContainerId(containerIdStr);
 
     return logServlet.getContainerLogsInfo(hsr, logMetaRequestBuilder, nmId,
-        redirectedFromNode, null);
+        redirectedFromNode, null, manualRedirection);
   }
 
   @GET
@@ -474,10 +496,12 @@ public class HsWebServices extends WebServices {
           String size,
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
-      @DefaultValue("false") boolean redirectedFromNode) {
+      @DefaultValue("false") boolean redirectedFromNode,
+      @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
+      @DefaultValue("false") boolean manualRedirection) {
     init();
     return logServlet.getLogFile(req, containerIdStr, filename, format, size,
-        nmId, redirectedFromNode, null);
+        nmId, redirectedFromNode, null, manualRedirection);
   }
 
   @VisibleForTesting

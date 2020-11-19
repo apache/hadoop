@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.mapred;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapreduce.checkpoint.EnumCounter;
 
@@ -501,6 +501,8 @@ public class TestTaskAttemptListenerImpl {
 
     Configuration conf = new Configuration();
     conf.setLong(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 1);
+    conf.setDouble(MRJobConfig.TASK_LOG_PROGRESS_DELTA_THRESHOLD, 0.01);
+    conf.setDouble(MRJobConfig.TASK_LOG_PROGRESS_WAIT_INTERVAL_SECONDS, 1);
     tal.init(conf);
     tal.start();
 

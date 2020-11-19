@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.slf4j.Logger;
@@ -438,7 +438,7 @@ public class ResourceManager extends CompositeService
 
   protected QueueACLsManager createQueueACLsManager(ResourceScheduler scheduler,
       Configuration conf) {
-    return new QueueACLsManager(scheduler, conf);
+    return QueueACLsManager.getQueueACLsManager(scheduler, conf);
   }
 
   @VisibleForTesting
@@ -613,12 +613,20 @@ public class ResourceManager extends CompositeService
   // sanity check for configurations
   protected static void validateConfigs(Configuration conf) {
     // validate max-attempts
-    int globalMaxAppAttempts =
-        conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+    int rmMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    if (rmMaxAppAttempts <= 0) {
+      throw new YarnRuntimeException("Invalid rm am max attempts configuration"
+          + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
+          + "=" + rmMaxAppAttempts + ", it should be a positive integer.");
+    }
+    int globalMaxAppAttempts = conf.getInt(
+        YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS,
+        conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
     if (globalMaxAppAttempts <= 0) {
       throw new YarnRuntimeException("Invalid global max attempts configuration"
-          + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
+          + ", " + YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS
           + "=" + globalMaxAppAttempts + ", it should be a positive integer.");
     }
 

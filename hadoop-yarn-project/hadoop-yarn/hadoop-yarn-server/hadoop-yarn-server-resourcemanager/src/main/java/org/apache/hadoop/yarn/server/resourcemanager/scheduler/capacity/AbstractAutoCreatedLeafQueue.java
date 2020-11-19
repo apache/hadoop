@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common
@@ -65,6 +66,30 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
   public void setEntitlement(QueueEntitlement entitlement)
       throws SchedulerDynamicEditException {
      setEntitlement(NO_LABEL, entitlement);
+  }
+
+  @Override
+  protected Resource getMinimumAbsoluteResource(String queuePath,
+      String label) {
+    return super.getMinimumAbsoluteResource(csContext.getConfiguration()
+        .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
+        label);
+  }
+
+  @Override
+  protected Resource getMaximumAbsoluteResource(String queuePath,
+      String label) {
+    return super.getMaximumAbsoluteResource(csContext.getConfiguration()
+        .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
+        label);
+  }
+
+  @Override
+  protected boolean checkConfigTypeIsAbsoluteResource(String queuePath,
+      String label) {
+    return super.checkConfigTypeIsAbsoluteResource(csContext.getConfiguration()
+        .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
+        label);
   }
 
   /**

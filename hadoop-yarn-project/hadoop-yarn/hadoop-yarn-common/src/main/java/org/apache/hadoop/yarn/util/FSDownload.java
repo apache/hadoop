@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
@@ -53,10 +54,10 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
@@ -269,9 +270,12 @@ public class FSDownload implements Callable<Path> {
     FileSystem sourceFs = sCopy.getFileSystem(conf);
     FileStatus sStat = sourceFs.getFileStatus(sCopy);
     if (sStat.getModificationTime() != resource.getTimestamp()) {
-      throw new IOException("Resource " + sCopy +
-          " changed on src filesystem (expected " + resource.getTimestamp() +
-          ", was " + sStat.getModificationTime());
+      throw new IOException("Resource " + sCopy + " changed on src filesystem" +
+          " - expected: " +
+          "\"" + Times.formatISO8601(resource.getTimestamp()) + "\"" +
+          ", was: " +
+          "\"" + Times.formatISO8601(sStat.getModificationTime()) + "\"" +
+          ", current time: " + "\"" + Times.formatISO8601(Time.now()) + "\"");
     }
     if (resource.getVisibility() == LocalResourceVisibility.PUBLIC) {
       if (!isPublic(sourceFs, sCopy, sStat, statCache)) {

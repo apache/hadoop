@@ -24,6 +24,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -241,6 +243,7 @@ public class TestTimelineClient {
     // use kerberos to bypass the issue in HADOOP-11215
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
+    conf.set(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE, "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
     TimelineClientImpl client = createTimelineClient(conf);
@@ -490,6 +493,17 @@ public class TestTimelineClient {
       Thread.sleep(1000);
     }
     Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
+  }
+
+  @Test
+  public void testTimelineConnectorDestroy() {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    TimelineClientImpl client = createTimelineClient(conf);
+    Client mockJerseyClient = mock(Client.class);
+    client.connector.client = mockJerseyClient;
+    client.stop();
+    verify(mockJerseyClient, times(1)).destroy();
   }
 
   private void setupSSLConfig(YarnConfiguration conf) throws Exception {

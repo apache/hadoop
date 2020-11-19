@@ -19,19 +19,23 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
@@ -480,6 +484,50 @@ public class VolumeScanner extends Thread {
   }
 
   /**
+   * Get next block and check if it's needed to scan.
+   *
+   * @return  the candidate block.
+   */
+  ExtendedBlock getNextBlockToScan() {
+    ExtendedBlock block;
+    try {
+      block = curBlockIter.nextBlock();
+    } catch (IOException e) {
+      // There was an error listing the next block in the volume.  This is a
+      // serious issue.
+      LOG.warn("{}: nextBlock error on {}", this, curBlockIter);
+      // On the next loop iteration, curBlockIter#eof will be set to true, and
+      // we will pick a different block iterator.
+      return null;
+    }
+    if (block == null) {
+      // The BlockIterator is at EOF.
+      LOG.info("{}: finished scanning block pool {}",
+          this, curBlockIter.getBlockPoolId());
+      saveBlockIterator(curBlockIter);
+      return null;
+    } else if (conf.skipRecentAccessed) {
+      // Check the access time of block file to avoid scanning recently
+      // changed blocks, reducing disk IO.
+      try {
+        BlockLocalPathInfo blockLocalPathInfo =
+            volume.getDataset().getBlockLocalPathInfo(block);
+        BasicFileAttributes attr = Files.readAttributes(
+            new File(blockLocalPathInfo.getBlockPath()).toPath(),
+            BasicFileAttributes.class);
+        if (System.currentTimeMillis() - attr.lastAccessTime().
+            to(TimeUnit.MILLISECONDS) < conf.scanPeriodMs) {
+          return null;
+        }
+      } catch (IOException ioe) {
+        LOG.debug("Failed to get access time of block {}",
+            block, ioe);
+      }
+    }
+    return block;
+  }
+
+  /**
    * Run an iteration of the VolumeScanner loop.
    *
    * @param suspectBlock   A suspect block which we should scan, or null to
@@ -503,10 +551,10 @@ public class VolumeScanner extends Thread {
         return 30000L;
       }
 
-      // Find a usable block pool to scan.
       if (suspectBlock != null) {
         block = suspectBlock;
       } else {
+        // Find a usable block pool to scan.
         if ((curBlockIter == null) || curBlockIter.atEnd()) {
           long timeout = findNextUsableBlockIter();
           if (timeout > 0) {
@@ -524,22 +572,9 @@ public class VolumeScanner extends Thread {
           }
           return 0L;
         }
-        try {
-          block = curBlockIter.nextBlock();
-        } catch (IOException e) {
-          // There was an error listing the next block in the volume.  This is a
-          // serious issue.
-          LOG.warn("{}: nextBlock error on {}", this, curBlockIter);
-          // On the next loop iteration, curBlockIter#eof will be set to true, and
-          // we will pick a different block iterator.
-          return 0L;
-        }
+        block = getNextBlockToScan();
         if (block == null) {
-          // The BlockIterator is at EOF.
-          LOG.info("{}: finished scanning block pool {}",
-              this, curBlockIter.getBlockPoolId());
-          saveBlockIterator(curBlockIter);
-          return 0;
+          return 0L;
         }
       }
       if (curBlockIter != null) {
@@ -635,12 +670,14 @@ public class VolumeScanner extends Thread {
         LOG.error("{} exiting because of exception ", this, e);
       }
       LOG.info("{} exiting.", this);
+      VolumeScannerCBInjector.get().preSavingBlockIteratorTask(this);
       // Save the current position of all block iterators and close them.
       for (BlockIterator iter : blockIters) {
         saveBlockIterator(iter);
         IOUtils.cleanup(null, iter);
       }
     } finally {
+      VolumeScannerCBInjector.get().terminationCallBack(this);
       // When the VolumeScanner exits, release the reference we were holding
       // on the volume.  This will allow the volume to be removed later.
       IOUtils.cleanup(null, ref);
@@ -660,6 +697,7 @@ public class VolumeScanner extends Thread {
     stopping = true;
     notify();
     this.interrupt();
+    VolumeScannerCBInjector.get().shutdownCallBack(this);
   }
 
 

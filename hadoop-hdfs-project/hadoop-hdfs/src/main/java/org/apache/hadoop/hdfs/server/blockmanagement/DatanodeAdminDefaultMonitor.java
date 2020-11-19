@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -40,7 +40,7 @@ import java.util.Iterator;
 /**
  * Checks to see if datanodes have finished DECOMMISSION_INPROGRESS or
  * ENTERING_MAINTENANCE state.
- * <p/>
+ * <p>
  * Since this is done while holding the namesystem lock,
  * the amount of work per monitor tick is limited.
  */

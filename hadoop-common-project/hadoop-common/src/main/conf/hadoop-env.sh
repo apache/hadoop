@@ -391,15 +391,6 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 # export HDFS_DFSROUTER_OPTS=""
 
 ###
-# Ozone Manager specific parameters
-###
-# Specify the JVM options to be used when starting the Ozone Manager.
-# These options will be appended to the options specified as HADOOP_OPTS
-# and therefore may override any similar flags set in HADOOP_OPTS
-#
-# export HDFS_OM_OPTS=""
-
-###
 # HDFS StorageContainerManager specific parameters
 ###
 # Specify the JVM options to be used when starting the HDFS Storage Container Manager.

@@ -23,7 +23,7 @@ pipeline {
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
-        timeout (time: 5, unit: 'HOURS')
+        timeout (time: 20, unit: 'HOURS')
         timestamps()
         checkoutToSubdirectory('src')
     }
@@ -35,7 +35,7 @@ pipeline {
         DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.11.1'
+        YETUS_VERSION='6ab19e71eaf3234863424c6f684b34c1d3dcc0ce'
     }
 
     parameters {
@@ -61,7 +61,7 @@ pipeline {
             steps {
                 withCredentials(
                     [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
-                                  passwordVariable: 'GITHUB_PASSWORD',
+                                  passwordVariable: 'GITHUB_TOKEN',
                                   usernameVariable: 'GITHUB_USER'),
                     usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
                                         passwordVariable: 'JIRA_PASSWORD',
@@ -96,8 +96,8 @@ pipeline {
                         YETUS_ARGS+=("--basedir=${WORKSPACE}/${SOURCEDIR}")
 
                         # our project defaults come from a personality file
-                        # which will get loaded automatically by setting the project name
                         YETUS_ARGS+=("--project=hadoop")
+                        YETUS_ARGS+=("--personality=${WORKSPACE}/${SOURCEDIR}/dev-support/bin/hadoop.sh")
 
                         # lots of different output formats
                         YETUS_ARGS+=("--brief-report-file=${WORKSPACE}/${PATCHDIR}/brief.txt")
@@ -105,8 +105,7 @@ pipeline {
                         YETUS_ARGS+=("--html-report-file=${WORKSPACE}/${PATCHDIR}/report.html")
 
                         # enable writing back to Github
-                        YETUS_ARGS+=(--github-password="${GITHUB_PASSWORD}")
-                        YETUS_ARGS+=(--github-user=${GITHUB_USER})
+                        YETUS_ARGS+=(--github-token="${GITHUB_TOKEN}")
 
                         # enable writing back to ASF JIRA
                         YETUS_ARGS+=(--jira-password="${JIRA_PASSWORD}")
@@ -135,7 +134,7 @@ pipeline {
                         YETUS_ARGS+=("--plugins=all")
 
                         # use Hadoop's bundled shelldocs
-                        YETUS_ARGS+=("--shelldocs=/testptch/hadoop/dev-support/bin/shelldocs")
+                        YETUS_ARGS+=("--shelldocs=${WORKSPACE}/${SOURCEDIR}/dev-support/bin/shelldocs")
 
                         # don't let these tests cause -1s because we aren't really paying that
                         # much attention to them
@@ -145,6 +144,7 @@ pipeline {
                         # Dockerfile since we don't want to use the auto-pulled version.
                         YETUS_ARGS+=("--docker")
                         YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
+                        YETUS_ARGS+=("--mvn-custom-repos")
 
                         # effectively treat dev-suport as a custom maven module
                         YETUS_ARGS+=("--skip-dirs=dev-support")
@@ -154,6 +154,14 @@ pipeline {
 
                         # use emoji vote so it is easier to find the broken line
                         YETUS_ARGS+=("--github-use-emoji-vote")
+
+                        # test with Java 8 and 11
+                        YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
+                        YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
+                        YETUS_ARGS+=("--multijdktests=compile")
+
+                        # custom javadoc goals
+                        YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
 
                         "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''

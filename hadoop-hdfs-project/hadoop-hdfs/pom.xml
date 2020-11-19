@@ -20,11 +20,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-hdfs</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop HDFS</description>
   <name>Apache Hadoop HDFS</name>
   <packaging>jar</packaging>
@@ -68,8 +68,8 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -349,6 +349,9 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <id>replace-sources</id>
             <configuration>
               <skip>false</skip>
+              <excludes>
+                <exclude>**/DFSUtil.java</exclude>
+              </excludes>
             </configuration>
           </execution>
           <execution>
@@ -413,7 +416,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/main/webapps/static/moment.min.js</exclude>
             <exclude>src/main/webapps/static/dust-full-2.0.0.min.js</exclude>
             <exclude>src/main/webapps/static/dust-helpers-1.1.1.min.js</exclude>
-            <exclude>src/main/webapps/static/jquery-3.4.1.min.js</exclude>
+            <exclude>src/main/webapps/static/jquery-3.5.1.min.js</exclude>
             <exclude>src/main/webapps/static/jquery.dataTables.min.js</exclude>
             <exclude>src/main/webapps/static/json-bignum.js</exclude>
             <exclude>src/main/webapps/static/dataTables.bootstrap.css</exclude>

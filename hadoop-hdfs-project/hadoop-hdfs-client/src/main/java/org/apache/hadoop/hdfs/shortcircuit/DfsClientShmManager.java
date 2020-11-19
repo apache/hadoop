@@ -43,8 +43,8 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.DomainSocketWatcher;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -496,5 +496,15 @@ public class DfsClientShmManager implements Closeable {
   @VisibleForTesting
   public DomainSocketWatcher getDomainSocketWatcher() {
     return domainSocketWatcher;
+  }
+
+  @VisibleForTesting
+  public int getShmNum() {
+    int segments = 0;
+    for (EndpointShmManager endpointShmManager : datanodes.values()) {
+      segments +=
+          endpointShmManager.notFull.size() + endpointShmManager.full.size();
+    }
+    return segments;
   }
 }

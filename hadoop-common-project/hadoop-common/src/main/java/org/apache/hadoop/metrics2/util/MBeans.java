@@ -18,7 +18,7 @@
 package org.apache.hadoop.metrics2.util;
 
 import java.lang.management.ManagementFactory;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -28,12 +28,12 @@ import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,8 +70,7 @@ public final class MBeans {
    */
   static public ObjectName register(String serviceName, String nameName,
                                     Object theMbean) {
-    return register(serviceName, nameName, new HashMap<String, String>(),
-        theMbean);
+    return register(serviceName, nameName, Collections.emptyMap(), theMbean);
   }
 
   /**

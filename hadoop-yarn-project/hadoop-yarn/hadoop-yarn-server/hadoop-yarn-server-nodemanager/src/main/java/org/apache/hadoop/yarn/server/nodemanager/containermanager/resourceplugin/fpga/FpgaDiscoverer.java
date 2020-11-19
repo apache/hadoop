@@ -41,9 +41,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 public class FpgaDiscoverer extends Configured {
   private static final Logger LOG = LoggerFactory.getLogger(

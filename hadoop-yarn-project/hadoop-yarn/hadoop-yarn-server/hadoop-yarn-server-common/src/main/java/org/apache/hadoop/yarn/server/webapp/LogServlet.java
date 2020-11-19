@@ -18,19 +18,25 @@
 
 package org.apache.hadoop.yarn.server.webapp;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.RemoteLogPathEntry;
+import org.apache.hadoop.yarn.server.webapp.dao.RemoteLogPaths;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -44,7 +50,11 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.StreamingOutput;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -52,19 +62,28 @@ import java.util.List;
  * Used by various WebServices (AHS, ATS).
  */
 public class LogServlet extends Configured {
+
   private static final Logger LOG = LoggerFactory
       .getLogger(LogServlet.class);
 
   private static final Joiner JOINER = Joiner.on("");
   private static final String NM_DOWNLOAD_URI_STR = "/ws/v1/node/containers";
 
-  private final LogAggregationFileControllerFactory factory;
+  private LogAggregationFileControllerFactory factoryInstance = null;
   private final AppInfoProvider appInfoProvider;
 
   public LogServlet(Configuration conf, AppInfoProvider appInfoProvider) {
     super(conf);
-    this.factory = new LogAggregationFileControllerFactory(conf);
     this.appInfoProvider = appInfoProvider;
+  }
+
+  private LogAggregationFileControllerFactory getOrCreateFactory() {
+    if (factoryInstance != null) {
+      return factoryInstance;
+    } else {
+      factoryInstance = new LogAggregationFileControllerFactory(getConf());
+      return factoryInstance;
+    }
   }
 
   @VisibleForTesting
@@ -162,9 +181,50 @@ public class LogServlet extends Configured {
     }
   }
 
+  /**
+   * Returns the user qualified path name of the remote log directory for
+   * each pre-configured log aggregation file controller.
+   *
+   * @return {@link Response} object containing remote log dir path names
+   */
+  public Response getRemoteLogDirPath(String user, String applicationId)
+      throws IOException {
+    String remoteUser = user;
+    ApplicationId appId = applicationId != null ?
+        ApplicationIdPBImpl.fromString(applicationId) : null;
+
+    if (remoteUser == null) {
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      remoteUser = ugi.getUserName();
+    }
+
+    List<LogAggregationFileController> fileControllers =
+        getOrCreateFactory().getConfiguredLogAggregationFileControllerList();
+    List<RemoteLogPathEntry> paths = new ArrayList<>();
+
+    for (LogAggregationFileController fileController : fileControllers) {
+      String path;
+      if (appId != null) {
+        path = fileController.getRemoteAppLogDir(appId, remoteUser).toString();
+      } else {
+        path = LogAggregationUtils.getRemoteLogSuffixedDir(
+            fileController.getRemoteRootLogDir(),
+            remoteUser, fileController.getRemoteRootLogDirSuffix()).toString();
+      }
+
+      paths.add(new RemoteLogPathEntry(fileController.getFileControllerName(),
+          path));
+    }
+
+    RemoteLogPaths result = new RemoteLogPaths(paths);
+    Response.ResponseBuilder response = Response.ok().entity(result);
+    response.header("X-Content-Type-Options", "nosniff");
+    return response.build();
+  }
+
   public Response getLogsInfo(HttpServletRequest hsr, String appIdStr,
       String appAttemptIdStr, String containerIdStr, String nmId,
-      boolean redirectedFromNode) {
+      boolean redirectedFromNode, boolean manualRedirection) {
     ApplicationId appId = null;
     if (appIdStr != null) {
       try {
@@ -201,8 +261,9 @@ public class LogServlet extends Configured {
             .setContainerId(containerIdStr);
 
     return getContainerLogsInfo(hsr, logMetaRequestBuilder, nmId,
-        redirectedFromNode, null);
+        redirectedFromNode, null, manualRedirection);
   }
+
 
   /**
    * Returns information about the logs for a specific container.
@@ -212,14 +273,16 @@ public class LogServlet extends Configured {
    * @param nmId NodeManager id
    * @param redirectedFromNode whether the request was redirected
    * @param clusterId the id of the cluster
+   * @param manualRedirection whether to return a response with a Location
+   *                          instead of an automatic redirection
    * @return {@link Response} object containing information about the logs
    */
   public Response getContainerLogsInfo(HttpServletRequest req,
       WrappedLogMetaRequest.Builder builder,
       String nmId, boolean redirectedFromNode,
-      String clusterId) {
+      String clusterId, boolean manualRedirection) {
 
-    builder.setFactory(factory);
+    builder.setFactory(getOrCreateFactory());
 
     BasicAppInfo appInfo;
     try {
@@ -287,6 +350,10 @@ public class LogServlet extends Configured {
       if (query != null && !query.isEmpty()) {
         resURI += "?" + query;
       }
+      if (manualRedirection) {
+        return createLocationResponse(resURI, createEmptyLogsInfo());
+      }
+
       Response.ResponseBuilder response = Response.status(
           HttpServletResponse.SC_TEMPORARY_REDIRECT);
       response.header("Location", resURI);
@@ -297,6 +364,32 @@ public class LogServlet extends Configured {
     }
   }
 
+  /**
+   * Creates a response with empty payload and a location header to preserve
+   * API compatibility.
+   *
+   * @param uri redirection url
+   * @param emptyPayload a payload that is discarded
+   * @return a response with empty payload
+   */
+  private static <T> Response createLocationResponse(
+      String uri, T emptyPayload) {
+    Response.ResponseBuilder response = Response.status(
+        HttpServletResponse.SC_OK).entity(emptyPayload);
+    response.header("Location", uri);
+    response.header("Access-Control-Expose-Headers", "Location");
+    return response.build();
+  }
+
+  private static GenericEntity<List<ContainerLogsInfo>> createEmptyLogsInfo() {
+    return new GenericEntity<List<ContainerLogsInfo>>(
+        Collections.EMPTY_LIST, List.class);
+  }
+
+  private static StreamingOutput createEmptyStream() {
+    return outputStream -> outputStream.write(
+        "".getBytes(Charset.defaultCharset()));
+  }
 
   /**
    * Returns an aggregated log file belonging to a container.
@@ -309,11 +402,13 @@ public class LogServlet extends Configured {
    * @param nmId NodeManager id
    * @param redirectedFromNode whether the request was redirected
    * @param clusterId the id of the cluster
+   * @param manualRedirection whether to return a response with a Location
+   *                          instead of an automatic redirection
    * @return {@link Response} object containing information about the logs
    */
   public Response getLogFile(HttpServletRequest req, String containerIdStr,
       String filename, String format, String size, String nmId,
-      boolean redirectedFromNode, String clusterId) {
+      boolean redirectedFromNode, String clusterId, boolean manualRedirection) {
     ContainerId containerId;
     try {
       containerId = ContainerId.fromString(containerIdStr);
@@ -321,6 +416,8 @@ public class LogServlet extends Configured {
       return LogWebServiceUtils.createBadResponse(Status.NOT_FOUND,
           "Invalid ContainerId: " + containerIdStr);
     }
+
+    LogAggregationFileControllerFactory factory = getOrCreateFactory();
 
     final long length = LogWebServiceUtils.parseLongParam(size);
 
@@ -388,6 +485,12 @@ public class LogServlet extends Configured {
       if (query != null && !query.isEmpty()) {
         resURI += "?" + query;
       }
+
+
+      if (manualRedirection) {
+        return createLocationResponse(resURI, createEmptyStream());
+      }
+
       Response.ResponseBuilder response = Response.status(
           HttpServletResponse.SC_TEMPORARY_REDIRECT);
       response.header("Location", resURI);

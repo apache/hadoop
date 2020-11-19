@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +74,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
 
@@ -146,6 +146,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   volatile Priority priority = Priority.newInstance(0);
   private Map<String, Float> userWeights = new HashMap<String, Float>();
+  private int maxParallelApps;
 
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -390,6 +391,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       // and queue setting
       setupMaximumAllocation(configuration);
 
+      // Max parallel apps
+      int queueMaxParallelApps =
+          configuration.getMaxParallelAppsForQueue(getQueuePath());
+      setMaxParallelApps(queueMaxParallelApps);
+
       // initialized the queue state based on previous state, configured state
       // and its parent state.
       QueueState previous = getState();
@@ -524,30 +530,47 @@ public abstract class AbstractCSQueue implements CSQueue {
     return unionInheritedWeights;
   }
 
+  protected Resource getMinimumAbsoluteResource(String queuePath, String label) {
+    Resource minResource = csContext.getConfiguration()
+        .getMinimumResourceRequirement(label, queuePath, resourceTypes);
+    return minResource;
+  }
+
+  protected Resource getMaximumAbsoluteResource(String queuePath, String label) {
+    Resource maxResource = csContext.getConfiguration()
+        .getMaximumResourceRequirement(label, queuePath, resourceTypes);
+    return maxResource;
+  }
+
+  protected boolean checkConfigTypeIsAbsoluteResource(String queuePath,
+      String label) {
+    return csContext.getConfiguration().checkConfigTypeIsAbsoluteResource(label,
+        queuePath, resourceTypes);
+  }
+
   protected void updateConfigurableResourceRequirement(String queuePath,
       Resource clusterResource) {
     CapacitySchedulerConfiguration conf = csContext.getConfiguration();
     Set<String> configuredNodelabels = conf.getConfiguredNodeLabels(queuePath);
 
     for (String label : configuredNodelabels) {
-      Resource minResource = conf.getMinimumResourceRequirement(label,
-          queuePath, resourceTypes);
-      Resource maxResource = conf.getMaximumResourceRequirement(label,
-          queuePath, resourceTypes);
+      Resource minResource = getMinimumAbsoluteResource(queuePath, label);
+      Resource maxResource = getMaximumAbsoluteResource(queuePath, label);
 
       LOG.debug("capacityConfigType is '{}' for queue {}",
           capacityConfigType, getQueuePath());
 
+      CapacityConfigType localType = checkConfigTypeIsAbsoluteResource(
+          queuePath, label) ? CapacityConfigType.ABSOLUTE_RESOURCE
+              : CapacityConfigType.PERCENTAGE;
+
       if (this.capacityConfigType.equals(CapacityConfigType.NONE)) {
-        this.capacityConfigType = (!minResource.equals(Resources.none())
-            && queueCapacities.getAbsoluteCapacity(label) == 0f)
-                ? CapacityConfigType.ABSOLUTE_RESOURCE
-                : CapacityConfigType.PERCENTAGE;
+        this.capacityConfigType = localType;
         LOG.debug("capacityConfigType is updated as '{}' for queue {}",
             capacityConfigType, getQueuePath());
+      } else {
+        validateAbsoluteVsPercentageCapacityConfig(localType);
       }
-
-      validateAbsoluteVsPercentageCapacityConfig(minResource);
 
       // If min resource for a resource type is greater than its max resource,
       // throw exception to handle such error configs.
@@ -591,12 +614,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   private void validateAbsoluteVsPercentageCapacityConfig(
-      Resource minResource) {
-    CapacityConfigType localType = CapacityConfigType.PERCENTAGE;
-    if (!minResource.equals(Resources.none())) {
-      localType = CapacityConfigType.ABSOLUTE_RESOURCE;
-    }
-
+      CapacityConfigType localType) {
     if (!queuePath.equals("root")
         && !this.capacityConfigType.equals(localType)) {
       throw new IllegalArgumentException("Queue '" + getQueuePath()
@@ -1060,14 +1078,12 @@ public abstract class AbstractCSQueue implements CSQueue {
       if (Resources.greaterThanOrEqual(resourceCalculator, clusterResource,
           usedExceptKillable, currentLimitResource)) {
 
-        // if reservation continous looking enabled, check to see if could we
+        // if reservation continue looking enabled, check to see if could we
         // potentially use this node instead of a reserved node if the application
         // has reserved containers.
-        // TODO, now only consider reservation cases when the node has no label
-        if (this.reservationsContinueLooking && nodePartition.equals(
-            RMNodeLabelsManager.NO_LABEL) && Resources.greaterThan(
-            resourceCalculator, clusterResource, resourceCouldBeUnreserved,
-            Resources.none())) {
+        if (this.reservationsContinueLooking
+            && Resources.greaterThan(resourceCalculator, clusterResource,
+                resourceCouldBeUnreserved, Resources.none())) {
           // resource-without-reserved = used - reserved
           Resource newTotalWithoutReservedResource = Resources.subtract(
               usedExceptKillable, resourceCouldBeUnreserved);
@@ -1349,10 +1365,6 @@ public abstract class AbstractCSQueue implements CSQueue {
       if (getState() == QueueState.RUNNING) {
         LOG.info("The specified queue:" + getQueuePath()
             + " is already in the RUNNING state.");
-      } else if (getState() == QueueState.DRAINING) {
-        throw new YarnException(
-            "The queue:" + getQueuePath() + " is in the Stopping process. "
-            + "Please wait for the queue getting fully STOPPED.");
       } else {
         CSQueue parent = getParent();
         if (parent == null || parent.getState() == QueueState.RUNNING) {
@@ -1425,4 +1437,14 @@ public abstract class AbstractCSQueue implements CSQueue {
   public boolean getDefaultAppLifetimeWasSpecifiedInConfig() {
     return defaultAppLifetimeWasSpecifiedInConfig;
   }
+
+  public void setMaxParallelApps(int maxParallelApps) {
+    this.maxParallelApps = maxParallelApps;
+  }
+
+  public int getMaxParallelApps() {
+    return maxParallelApps;
+  }
+
+  abstract int getNumRunnableApps();
 }

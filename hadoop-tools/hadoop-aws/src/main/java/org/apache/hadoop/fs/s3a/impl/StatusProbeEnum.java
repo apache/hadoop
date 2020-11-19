@@ -21,9 +21,12 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.util.EnumSet;
 import java.util.Set;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Enum of probes which can be made of S3.
  */
+@InterfaceAudience.Private
 public enum StatusProbeEnum {
 
   /** The actual path. */
@@ -33,28 +36,23 @@ public enum StatusProbeEnum {
   /** LIST under the path. */
   List;
 
-  /** All probes. */
-  public static final Set<StatusProbeEnum> ALL = EnumSet.allOf(
-      StatusProbeEnum.class);
-
-  /** Skip the HEAD and only look for directories. */
-  public static final Set<StatusProbeEnum> DIRECTORIES =
-      EnumSet.of(DirMarker, List);
-
-  /** We only want the HEAD or dir marker. */
-  public static final Set<StatusProbeEnum> HEAD_OR_DIR_MARKER =
-      EnumSet.of(Head, DirMarker);
+  /** Look for files and directories. */
+  public static final Set<StatusProbeEnum> ALL =
+      EnumSet.of(Head, List);
 
   /** We only want the HEAD. */
   public static final Set<StatusProbeEnum> HEAD_ONLY =
       EnumSet.of(Head);
 
-  /** We only want the dir marker. */
-  public static final Set<StatusProbeEnum> DIR_MARKER_ONLY =
-      EnumSet.of(DirMarker);
-
-  /** We only want the dir marker. */
+  /** List operation only. */
   public static final Set<StatusProbeEnum> LIST_ONLY =
       EnumSet.of(List);
 
+  /** Look for files and directories. */
+  public static final Set<StatusProbeEnum> FILE =
+      HEAD_ONLY;
+
+  /** Skip the HEAD and only look for directories. */
+  public static final Set<StatusProbeEnum> DIRECTORIES =
+      LIST_ONLY;
 }

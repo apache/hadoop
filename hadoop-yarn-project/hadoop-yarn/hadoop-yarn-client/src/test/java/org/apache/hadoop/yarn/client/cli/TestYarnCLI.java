@@ -100,8 +100,8 @@ import org.eclipse.jetty.util.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 public class TestYarnCLI {
   private static final Logger LOG = LoggerFactory.getLogger(TestYarnCLI.class);
@@ -147,6 +147,7 @@ public class TestYarnCLI {
           null, null, false, Priority.newInstance(0), "high-mem", "high-mem");
       newApplicationReport.setLogAggregationStatus(LogAggregationStatus.SUCCEEDED);
       newApplicationReport.setPriority(Priority.newInstance(0));
+      newApplicationReport.setRMClusterId("Cluster1");
       ApplicationTimeout timeout = ApplicationTimeout
           .newInstance(ApplicationTimeoutType.LIFETIME, "UNLIMITED", -1);
       newApplicationReport.setApplicationTimeouts(
@@ -186,6 +187,7 @@ public class TestYarnCLI {
       pw.print("\tTimeoutType : LIFETIME");
       pw.print("\tExpiryTime : UNLIMITED");
       pw.println("\tRemainingTime : -1seconds");
+      pw.println("\tRMClusterId : Cluster1");
       pw.println();
       pw.close();
       String appReportStr = baos.toString("UTF-8");

@@ -123,7 +123,7 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
@@ -304,7 +304,11 @@ public abstract class Server {
     RpcKindMapValue val = rpcKindMap.get(ProtoUtil.convert(rpcKind));
     return (val == null) ? null : val.rpcRequestWrapperClass; 
   }
-  
+
+  protected RpcInvoker getServerRpcInvoker(RPC.RpcKind rpcKind) {
+    return getRpcInvoker(rpcKind);
+  }
+
   public static RpcInvoker  getRpcInvoker(RPC.RpcKind rpcKind) {
     RpcKindMapValue val = rpcKindMap.get(rpcKind);
     return (val == null) ? null : val.rpcInvoker; 
@@ -639,7 +643,22 @@ public abstract class Server {
           address.getPort(), e);
     }
   }
-  
+
+  @org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting
+  int getPriorityLevel(Schedulable e) {
+    return callQueue.getPriorityLevel(e);
+  }
+
+  @org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting
+  int getPriorityLevel(UserGroupInformation ugi) {
+    return callQueue.getPriorityLevel(ugi);
+  }
+
+  @org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting
+  void setPriorityLevel(UserGroupInformation ugi, int priority) {
+    callQueue.setPriorityLevel(ugi, priority);
+  }
+
   /**
    * Returns a handle to the rpcMetrics (required in tests)
    * @return rpc metrics
@@ -2039,7 +2058,7 @@ public abstract class Server {
             LOG.debug("SASL server successfully authenticated client: " + user);
           }
           rpcMetrics.incrAuthenticationSuccesses();
-          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
+          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user + " from " + toString());
           saslContextEstablished = true;
         }
       } catch (RpcServerException rse) { // don't re-wrap
@@ -2688,15 +2707,15 @@ public abstract class Server {
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
       call.markCallCoordinated(false);
       if(alignmentContext != null && call.rpcRequest != null &&
-          (call.rpcRequest instanceof ProtobufRpcEngine.RpcProtobufRequest)) {
+          (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest)) {
         // if call.rpcRequest is not RpcProtobufRequest, will skip the following
         // step and treat the call as uncoordinated. As currently only certain
         // ClientProtocol methods request made through RPC protobuf needs to be
         // coordinated.
         String methodName;
         String protoName;
-        ProtobufRpcEngine.RpcProtobufRequest req =
-            (ProtobufRpcEngine.RpcProtobufRequest) call.rpcRequest;
+        ProtobufRpcEngine2.RpcProtobufRequest req =
+            (ProtobufRpcEngine2.RpcProtobufRequest) call.rpcRequest;
         try {
           methodName = req.getRequestHeader().getMethodName();
           protoName = req.getRequestHeader().getDeclaringClassProtocolName();
@@ -3710,7 +3729,7 @@ public abstract class Server {
         if (count == null) {
           count = 1;
         } else {
-          count++;
+          count = count + 1;
         }
         userToConnectionsMap.put(user, count);
       }
@@ -3722,7 +3741,7 @@ public abstract class Server {
         if (count == null) {
           return;
         } else {
-          count--;
+          count = count - 1;
         }
         if (count == 0) {
           userToConnectionsMap.remove(user);

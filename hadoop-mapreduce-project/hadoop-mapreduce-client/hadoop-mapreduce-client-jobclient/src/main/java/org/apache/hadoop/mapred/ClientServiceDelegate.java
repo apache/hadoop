@@ -80,7 +80,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class ClientServiceDelegate {
   private static final Logger LOG =
@@ -225,7 +225,7 @@ public class ClientServiceDelegate {
         try {
           Thread.sleep(2000);
         } catch (InterruptedException e1) {
-          LOG.warn("getProxy() call interruped", e1);
+          LOG.warn("getProxy() call interrupted", e1);
           throw new YarnRuntimeException(e1);
         }
         try {
@@ -239,7 +239,7 @@ public class ClientServiceDelegate {
           return checkAndGetHSProxy(null, JobState.RUNNING);
         }
       } catch (InterruptedException e) {
-        LOG.warn("getProxy() call interruped", e);
+        LOG.warn("getProxy() call interrupted", e);
         throw new YarnRuntimeException(e);
       } catch (YarnException e) {
         throw new IOException(e);

@@ -71,7 +71,7 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Test suite covering lifeline protocol handling in the DataNode.

@@ -60,7 +60,7 @@ Many subcommands honor a common set of configuration options to alter their beha
 | `-files <comma separated list of files> ` | Specify comma separated files to be copied to the map reduce cluster. Applies only to job. |
 | `-fs <file:///> or <hdfs://namenode:port>` | Specify default filesystem URL to use. Overrides 'fs.defaultFS' property from configurations. |
 | `-jt <local> or <resourcemanager:port>` | Specify a ResourceManager. Applies only to job. |
-| `-libjars <comma seperated list of jars> ` | Specify comma separated jar files to include in the classpath. Applies only to job. |
+| `-libjars <comma separated list of jars> ` | Specify comma separated jar files to include in the classpath. Applies only to job. |
 
 Hadoop Common Commands
 ======================

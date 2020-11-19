@@ -25,7 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -358,6 +358,7 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
     return CURRENT_VERSION_INFO;
   }
 
+  @Override
   public void close() throws IOException {
     if (fileSystem != null) {
       fileSystem.close();

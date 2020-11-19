@@ -53,12 +53,13 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffList;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespaceVisitor;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 import org.apache.hadoop.util.StringUtils;
 import static org.apache.hadoop.io.erasurecode.ErasureCodeConstants.REPLICATION_POLICY_ID;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
@@ -374,17 +375,27 @@ public class INodeFile extends INodeWithAdditionalFields
     if (state == BlockUCState.COMPLETE) {
       return null;
     }
-    if (b.isStriped() || i < blocks.length - numCommittedAllowed) {
+    if (i < blocks.length - numCommittedAllowed) {
       return b + " is " + state + " but not COMPLETE";
     }
     if (state != BlockUCState.COMMITTED) {
       return b + " is " + state + " but neither COMPLETE nor COMMITTED";
     }
-    final int numExpectedLocations
-        = b.getUnderConstructionFeature().getNumExpectedLocations();
-    if (numExpectedLocations <= minReplication) {
-      return b + " is " + state + " but numExpectedLocations = "
-          + numExpectedLocations + " <= minReplication = " + minReplication;
+
+    if (b.isStriped()) {
+      BlockInfoStriped blkStriped = (BlockInfoStriped) b;
+      if (b.getUnderConstructionFeature().getNumExpectedLocations()
+          != blkStriped.getRealTotalBlockNum()) {
+        return b + " is a striped block in " + state + " with less then "
+            + "required number of blocks.";
+      }
+    } else {
+      final int numExpectedLocations =
+          b.getUnderConstructionFeature().getNumExpectedLocations();
+      if (numExpectedLocations <= minReplication) {
+        return b + " is " + state + " but numExpectedLocations = "
+            + numExpectedLocations + " <= minReplication = " + minReplication;
+      }
     }
     return null;
   }
@@ -1099,6 +1110,11 @@ public class INodeFile extends INodeWithAdditionalFields
       out.print(snapshotFeature);
     }
     out.println();
+  }
+
+  @Override
+  public void accept(NamespaceVisitor visitor, int snapshot) {
+    visitor.visitFile(this, snapshot);
   }
 
   /**

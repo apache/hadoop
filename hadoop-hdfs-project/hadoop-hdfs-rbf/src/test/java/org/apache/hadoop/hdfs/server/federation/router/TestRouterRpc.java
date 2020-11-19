@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.addDirectory;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.countContents;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createFile;
@@ -67,6 +68,8 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
@@ -82,8 +85,6 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -92,6 +93,9 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
@@ -108,6 +112,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
@@ -116,6 +121,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -128,8 +134,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Maps;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 /**
  * The the RPC interface of the {@link Router} implemented by
@@ -192,10 +198,21 @@ public class TestRouterRpc {
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
+    Configuration namenodeConf = new Configuration();
+    namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+        true);
+    // It's very easy to become overloaded for some specific dn in this small
+    // cluster, which will cause the EC file block allocation failure. To avoid
+    // this issue, we disable considerLoad option.
+    namenodeConf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY, false);
     cluster = new MiniRouterDFSCluster(false, NUM_SUBCLUSTERS);
     cluster.setNumDatanodesPerNameservice(NUM_DNS);
+    cluster.addNamenodeOverrides(namenodeConf);
     cluster.setIndependentDNs();
 
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 5);
+    cluster.addNamenodeOverrides(conf);
     // Start NNs and DNs and wait until ready
     cluster.startCluster();
 
@@ -213,6 +230,12 @@ public class TestRouterRpc {
     // Register and verify all NNs with all routers
     cluster.registerNamenodes();
     cluster.waitNamenodeRegistration();
+
+    // We decrease the DN heartbeat expire interval to make them dead faster
+    cluster.getCluster().getNamesystem(0).getBlockManager()
+        .getDatanodeManager().setHeartbeatExpireInterval(5000);
+    cluster.getCluster().getNamesystem(1).getBlockManager()
+        .getDatanodeManager().setHeartbeatExpireInterval(5000);
   }
 
   @AfterClass
@@ -427,6 +450,62 @@ public class TestRouterRpc {
     String badPath = "/unknownlocation/unknowndir";
     compareResponses(routerProtocol, nnProtocol, m,
         new Object[] {badPath, HdfsFileStatus.EMPTY_NAME, false});
+  }
+
+  @Test
+  public void testProxyListFilesLargeDir() throws IOException {
+    // Call listStatus against a dir with many files
+    // Create a parent point as well as a subfolder mount
+    // /parent
+    //    ns0 -> /parent
+    // /parent/file-7
+    //    ns0 -> /parent/file-7
+    // /parent/file-0
+    //    ns0 -> /parent/file-0
+    for (RouterContext rc : cluster.getRouters()) {
+      MockResolver resolver =
+          (MockResolver) rc.getRouter().getSubclusterResolver();
+      resolver.addLocation("/parent", ns, "/parent");
+      // file-0 is only in mount table
+      resolver.addLocation("/parent/file-0", ns, "/parent/file-0");
+      // file-7 is both in mount table and in file system
+      resolver.addLocation("/parent/file-7", ns, "/parent/file-7");
+    }
+
+    // Test the case when there is no subcluster path and only mount point
+    FileStatus[] result = routerFS.listStatus(new Path("/parent"));
+    assertEquals(2, result.length);
+    // this makes sure file[0-8] is added in order
+    assertEquals("file-0", result[0].getPath().getName());
+    assertEquals("file-7", result[1].getPath().getName());
+
+    // Create files and test full listing in order
+    NamenodeContext nn = cluster.getNamenode(ns, null);
+    FileSystem nnFileSystem = nn.getFileSystem();
+    for (int i = 1; i < 9; i++) {
+      createFile(nnFileSystem, "/parent/file-"+i, 32);
+    }
+
+    result = routerFS.listStatus(new Path("/parent"));
+    assertEquals(9, result.length);
+    // this makes sure file[0-8] is added in order
+    for (int i = 0; i < 9; i++) {
+      assertEquals("file-"+i, result[i].getPath().getName());
+    }
+
+    // Add file-9 and now this listing will be added from mount point
+    for (RouterContext rc : cluster.getRouters()) {
+      MockResolver resolver =
+          (MockResolver) rc.getRouter().getSubclusterResolver();
+      resolver.addLocation("/parent/file-9", ns, "/parent/file-9");
+    }
+    assertFalse(verifyFileExists(nnFileSystem, "/parent/file-9"));
+    result = routerFS.listStatus(new Path("/parent"));
+    // file-9 will be added by mount point
+    assertEquals(10, result.length);
+    for (int i = 0; i < 10; i++) {
+      assertEquals("file-"+i, result[i].getPath().getName());
+    }
   }
 
   @Test
@@ -859,6 +938,16 @@ public class TestRouterRpc {
     SnapshottableDirectoryStatus snapshotDir0 = dirList[0];
     assertEquals(snapshotPath, snapshotDir0.getFullPath().toString());
 
+    // check for snapshot listing through the Router
+    SnapshotStatus[] snapshots = routerProtocol.
+        getSnapshotListing(snapshotPath);
+    assertEquals(2, snapshots.length);
+    assertEquals(SnapshotTestHelper.getSnapshotRoot(
+        new Path(snapshotPath), snapshot1),
+        snapshots[0].getFullPath());
+    assertEquals(SnapshotTestHelper.getSnapshotRoot(
+        new Path(snapshotPath), snapshot2),
+        snapshots[1].getFullPath());
     // Check for difference report in two snapshot
     SnapshotDiffReport diffReport = routerProtocol.getSnapshotDiffReport(
         snapshotPath, snapshot1, snapshot2);
@@ -1718,6 +1807,66 @@ public class TestRouterRpc {
     assertArrayEquals(group, result);
   }
 
+  @Test
+  public void testGetCachedDatanodeReport() throws Exception {
+    RouterRpcServer rpcServer = router.getRouter().getRpcServer();
+    final DatanodeInfo[] datanodeReport =
+        rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+
+    // We should have 12 nodes in total
+    assertEquals(12, datanodeReport.length);
+
+    // We should be caching this information
+    DatanodeInfo[] datanodeReport1 =
+        rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+    assertArrayEquals(datanodeReport1, datanodeReport);
+
+    // Stop one datanode
+    MiniDFSCluster miniDFSCluster = getCluster().getCluster();
+    DataNodeProperties dnprop = miniDFSCluster.stopDataNode(0);
+
+    // We wait until the cached value is updated
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        DatanodeInfo[] dn = null;
+        try {
+          dn = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+        } catch (IOException ex) {
+          LOG.error("Error on getCachedDatanodeReport");
+        }
+        return !Arrays.equals(datanodeReport, dn);
+      }
+    }, 500, 5 * 1000);
+
+    // The cache should be updated now
+    final DatanodeInfo[] datanodeReport2 =
+        rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+    assertEquals(datanodeReport.length - 1, datanodeReport2.length);
+
+    // Restart the DN we just stopped
+    miniDFSCluster.restartDataNode(dnprop);
+    miniDFSCluster.waitActive();
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        DatanodeInfo[] dn = null;
+        try {
+          dn = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+        } catch (IOException ex) {
+          LOG.error("Error on getCachedDatanodeReport");
+        }
+        return datanodeReport.length == dn.length;
+      }
+    }, 500, 5 * 1000);
+
+    // The cache should be updated now
+    final DatanodeInfo[] datanodeReport3 =
+        rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+    assertEquals(datanodeReport.length, datanodeReport3.length);
+  }
+
   /**
    * Check the erasure coding policies in the Router and the Namenode.
    * @return The erasure coding policies.
@@ -1754,5 +1903,28 @@ public class TestRouterRpc {
       }
     }
     return null;
+  }
+
+  @Test
+  public void testMkdirsWithCallerContext() throws IOException {
+    GenericTestUtils.LogCapturer auditlog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+
+    // Current callerContext is null
+    assertNull(CallerContext.getCurrent());
+
+    // Set client context
+    CallerContext.setCurrent(
+        new CallerContext.Builder("clientContext").build());
+
+    // Create a directory via the router
+    String dirPath = "/test_dir_with_callercontext";
+    FsPermission permission = new FsPermission("755");
+    routerProtocol.mkdirs(dirPath, permission, false);
+
+    // The audit log should contains "callerContext=clientContext,clientIp:"
+    assertTrue(auditlog.getOutput()
+        .contains("callerContext=clientContext,clientIp:"));
+    assertTrue(verifyFileExists(routerFS, dirPath));
   }
 }

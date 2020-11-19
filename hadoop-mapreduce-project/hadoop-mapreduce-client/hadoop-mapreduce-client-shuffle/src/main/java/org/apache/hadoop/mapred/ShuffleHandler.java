@@ -133,13 +133,13 @@ import org.jboss.netty.util.Timer;
 import org.eclipse.jetty.http.HttpHeader;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.cache.RemovalListener;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 public class ShuffleHandler extends AuxiliaryService {
@@ -153,6 +153,18 @@ public class ShuffleHandler extends AuxiliaryService {
 
   public static final String SHUFFLE_READAHEAD_BYTES = "mapreduce.shuffle.readahead.bytes";
   public static final int DEFAULT_SHUFFLE_READAHEAD_BYTES = 4 * 1024 * 1024;
+
+  public static final String MAX_WEIGHT =
+      "mapreduce.shuffle.pathcache.max-weight";
+  public static final int DEFAULT_MAX_WEIGHT = 10 * 1024 * 1024;
+
+  public static final String EXPIRE_AFTER_ACCESS_MINUTES =
+      "mapreduce.shuffle.pathcache.expire-after-access-minutes";
+  public static final int DEFAULT_EXPIRE_AFTER_ACCESS_MINUTES = 5;
+
+  public static final String CONCURRENCY_LEVEL =
+      "mapreduce.shuffle.pathcache.concurrency-level";
+  public static final int DEFAULT_CONCURRENCY_LEVEL = 16;
   
   // pattern to identify errors related to the client closing the socket early
   // idea borrowed from Netty SslHandler
@@ -837,18 +849,6 @@ public class ShuffleHandler extends AuxiliaryService {
   }
 
   class Shuffle extends SimpleChannelUpstreamHandler {
-    private static final String MAX_WEIGHT =
-        "mapreduce.shuffle.pathcache.max-weight";
-    private static final int DEFAULT_MAX_WEIGHT = 10 * 1024 * 1024;
-
-    private static final String EXPIRE_AFTER_ACCESS_MINUTES =
-        "mapreduce.shuffle.pathcache.expire-after-access-minutes";
-    private static final int DEFAULT_EXPIRE_AFTER_ACCESS_MINUTES = 5;
-
-    private static final String CONCURRENCY_LEVEL =
-        "mapreduce.shuffle.pathcache.concurrency-level";
-    private static final int DEFAULT_CONCURRENCY_LEVEL = 16;
-
     private final IndexCache indexCache;
     private final
     LoadingCache<AttemptPathIdentifier, AttemptPathInfo> pathCache;

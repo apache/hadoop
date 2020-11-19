@@ -109,6 +109,12 @@ public class DataNodeMetrics {
   @Metric("Count of active dataNode xceivers")
   private MutableGaugeInt dataNodeActiveXceiversCount;
 
+  @Metric("Count of active DataNode packetResponder")
+  private MutableGaugeInt dataNodePacketResponderCount;
+
+  @Metric("Count of active DataNode block recovery worker")
+  private MutableGaugeInt dataNodeBlockRecoveryWorkerCount;
+
   @Metric MutableRate readBlockOp;
   @Metric MutableRate writeBlockOp;
   @Metric MutableRate blockChecksumOp;
@@ -166,6 +172,16 @@ public class DataNodeMetrics {
   private MutableCounterLong numProcessedCommands;
   @Metric("Rate of processed commands of all BPServiceActors")
   private MutableRate processedCommandsOp;
+
+  // FsDatasetImpl local file process metrics.
+  @Metric private MutableRate createRbwOp;
+  @Metric private MutableRate recoverRbwOp;
+  @Metric private MutableRate convertTemporaryToRbwOp;
+  @Metric private MutableRate createTemporaryOp;
+  @Metric private MutableRate finalizeBlockOp;
+  @Metric private MutableRate unfinalizeBlockOp;
+  @Metric private MutableRate checkAndUpdateOp;
+  @Metric private MutableRate updateReplicaUnderRecoveryOp;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   @Metric("Milliseconds spent on calling NN rpc")
@@ -525,6 +541,42 @@ public class DataNodeMetrics {
     dataNodeActiveXceiversCount.set(value);
   }
 
+  public int getDataNodeActiveXceiverCount() {
+    return dataNodeActiveXceiversCount.value();
+  }
+
+  public void incrDataNodePacketResponderCount() {
+    dataNodePacketResponderCount.incr();
+  }
+
+  public void decrDataNodePacketResponderCount() {
+    dataNodePacketResponderCount.decr();
+  }
+
+  public void setDataNodePacketResponderCount(int value) {
+    dataNodePacketResponderCount.set(value);
+  }
+
+  public int getDataNodePacketResponderCount() {
+    return dataNodePacketResponderCount.value();
+  }
+
+  public void incrDataNodeBlockRecoveryWorkerCount() {
+    dataNodeBlockRecoveryWorkerCount.incr();
+  }
+
+  public void decrDataNodeBlockRecoveryWorkerCount() {
+    dataNodeBlockRecoveryWorkerCount.decr();
+  }
+
+  public void setDataNodeBlockRecoveryWorkerCount(int value) {
+    dataNodeBlockRecoveryWorkerCount.set(value);
+  }
+
+  public int getDataNodeBlockRecoveryWorkerCount() {
+    return dataNodeBlockRecoveryWorkerCount.value();
+  }
+
   public void incrECDecodingTime(long decodingTimeNanos) {
     ecDecodingTimeNanos.incr(decodingTimeNanos);
   }
@@ -573,5 +625,69 @@ public class DataNodeMetrics {
    */
   public void addNumProcessedCommands(long latency) {
     processedCommandsOp.add(latency);
+  }
+
+  /**
+   * Add addCreateRbwOp metrics.
+   * @param latency milliseconds of create RBW file
+   */
+  public void addCreateRbwOp(long latency) {
+    createRbwOp.add(latency);
+  }
+
+  /**
+   * Add addRecoverRbwOp metrics.
+   * @param latency milliseconds of recovery RBW file
+   */
+  public void addRecoverRbwOp(long latency) {
+    recoverRbwOp.add(latency);
+  }
+
+  /**
+   * Add addConvertTemporaryToRbwOp metrics.
+   * @param latency milliseconds of convert temporary to RBW file
+   */
+  public void addConvertTemporaryToRbwOp(long latency) {
+    convertTemporaryToRbwOp.add(latency);
+  }
+
+  /**
+   * Add addCreateTemporaryOp metrics.
+   * @param latency milliseconds of create temporary block file
+   */
+  public void addCreateTemporaryOp(long latency) {
+    createTemporaryOp.add(latency);
+  }
+
+  /**
+   * Add addFinalizeBlockOp metrics.
+   * @param latency milliseconds of finalize block
+   */
+  public void addFinalizeBlockOp(long latency) {
+    finalizeBlockOp.add(latency);
+  }
+
+  /**
+   * Add addUnfinalizeBlockOp metrics.
+   * @param latency milliseconds of un-finalize block file
+   */
+  public void addUnfinalizeBlockOp(long latency) {
+    unfinalizeBlockOp.add(latency);
+  }
+
+  /**
+   * Add addCheckAndUpdateOp metrics.
+   * @param latency milliseconds of check and update block file
+   */
+  public void addCheckAndUpdateOp(long latency) {
+    checkAndUpdateOp.add(latency);
+  }
+
+  /**
+   * Add addUpdateReplicaUnderRecoveryOp metrics.
+   * @param latency milliseconds of update and replica under recovery block file
+   */
+  public void addUpdateReplicaUnderRecoveryOp(long latency) {
+    updateReplicaUnderRecoveryOp.add(latency);
   }
 }

@@ -16,18 +16,29 @@
 
 <!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
-**NOTE:  Hadoop's `s3:` and `s3n:` connectors have been removed.
-Please use `s3a:` as the connector to data hosted in S3 with Apache Hadoop.**
-
-**Consult the [s3n documentation](./s3n.html) for migration instructions.**
 
 
-See also:
+## <a name="compatibility"></a> Compatibility
+
+
+###  <a name="directory-marker-compatibility"></a> Directory Marker Compatibility
+
+1. This release can safely list/index/read S3 buckets where "empty directory"
+markers are retained.
+
+1. This release can be configured to retain these directory makers at the
+expense of being backwards incompatible.
+
+Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
+full details.
+
+## <a name="documents"></a> Documents
 
 * [Encryption](./encryption.html)
 * [Performance](./performance.html)
 * [S3Guard](./s3guard.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
+* [Controlling the S3A Directory Marker Behavior](directory_markers.html).
 * [Committing work to S3 with the "S3A Committers"](./committers.html)
 * [S3A Committers Architecture](./committer_architecture.html)
 * [Working with IAM Assumed Roles](./assumed_roles.html)
@@ -159,7 +170,7 @@ the number of files, during which time partial updates may be visible. If
 the operations are interrupted, the filesystem is left in an intermediate state.
 
 
-### Warning #2: Directories are mimiced
+### Warning #2: Directories are mimicked
 
 The S3A clients mimics directories by:
 
@@ -184,7 +195,7 @@ Parts of Hadoop relying on this can have unexpected behaviour. E.g. the
 performance recursive listings whenever possible.
 * It is possible to create files under files if the caller tries hard.
 * The time to rename a directory is proportional to the number of files
-underneath it (directory or indirectly) and the size of the files. (The copyis
+underneath it (directory or indirectly) and the size of the files. (The copy is
 executed inside the S3 storage, so the time is independent of the bandwidth
 from client to S3).
 * Directory renames are not atomic: they can fail partway through, and callers
@@ -320,7 +331,7 @@ export AWS_SECRET_ACCESS_KEY=my.secret.key
 
 If the environment variable `AWS_SESSION_TOKEN` is set, session authentication
 using "Temporary Security Credentials" is enabled; the Key ID and secret key
-must be set to the credentials for that specific sesssion.
+must be set to the credentials for that specific session.
 
 ```bash
 export AWS_SESSION_TOKEN=SECRET-SESSION-TOKEN
@@ -534,7 +545,7 @@ This means that the default S3A authentication chain can be defined as
     to directly authenticate with S3 and DynamoDB services.
     When S3A Delegation tokens are enabled, depending upon the delegation
     token binding it may be used
-    to communicate wih the STS endpoint to request session/role
+    to communicate with the STS endpoint to request session/role
     credentials.
 
     These are loaded and queried in sequence for a valid set of credentials.
@@ -630,13 +641,13 @@ The S3A configuration options with sensitive data
 and `fs.s3a.server-side-encryption.key`) can
 have their data saved to a binary file stored, with the values being read in
 when the S3A filesystem URL is used for data access. The reference to this
-credential provider then declareed in the hadoop configuration.
+credential provider then declared in the Hadoop configuration.
 
 For additional reading on the Hadoop Credential Provider API see:
 [Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
 
-The following configuration options can be storeed in Hadoop Credential Provider
+The following configuration options can be stored in Hadoop Credential Provider
 stores.
 
 ```
@@ -725,7 +736,7 @@ of credentials.
 
 ### Using secrets from credential providers
 
-Once the provider is set in the Hadoop configuration, hadoop commands
+Once the provider is set in the Hadoop configuration, Hadoop commands
 work exactly as if the secrets were in an XML file.
 
 ```bash
@@ -761,7 +772,7 @@ used to change the endpoint, encryption and authentication mechanisms of buckets
 S3Guard options, various minor options.
 
 Here are the S3A properties for use in production. The S3Guard options are
-documented in the [S3Guard documenents](./s3guard.html); some testing-related
+documented in the [S3Guard documents](./s3guard.html); some testing-related
 options are covered in [Testing](./testing.md).
 
 ```xml

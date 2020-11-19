@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.token.SecretManager;
@@ -165,7 +165,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
   private Server createServer(Class<?> pbProtocol, InetSocketAddress addr, Configuration conf, 
       SecretManager<? extends TokenIdentifier> secretManager, int numHandlers, 
       BlockingService blockingService, String portRangeConfig) throws IOException {
-    RPC.setProtocolEngine(conf, pbProtocol, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, pbProtocol, ProtobufRpcEngine2.class);
     RPC.Server server = new RPC.Builder(conf).setProtocol(pbProtocol)
         .setInstance(blockingService).setBindAddress(addr.getHostName())
         .setPort(addr.getPort()).setNumHandlers(numHandlers).setVerbose(false)

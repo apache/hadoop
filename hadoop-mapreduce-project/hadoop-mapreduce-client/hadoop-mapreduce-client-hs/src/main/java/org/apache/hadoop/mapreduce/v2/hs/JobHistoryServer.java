@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +64,6 @@ public class JobHistoryServer extends CompositeService {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(JobHistoryServer.class);
-  protected HistoryContext historyContext;
   private HistoryClientService clientService;
   private JobHistory jobHistoryService;
   protected JHSDelegationTokenSecretManager jhsDTSecretManager;
@@ -128,7 +127,6 @@ public class JobHistoryServer extends CompositeService {
       throw new YarnRuntimeException("History Server Failed to login", ie);
     }
     jobHistoryService = new JobHistory();
-    historyContext = (HistoryContext)jobHistoryService;
     stateStore = createStateStore(conf);
     this.jhsDTSecretManager = createJHSSecretManager(conf, stateStore);
     clientService = createHistoryClientService();
@@ -152,8 +150,7 @@ public class JobHistoryServer extends CompositeService {
 
   @VisibleForTesting
   protected HistoryClientService createHistoryClientService() {
-    return new HistoryClientService(historyContext, 
-        this.jhsDTSecretManager);
+    return new HistoryClientService(jobHistoryService, this.jhsDTSecretManager);
   }
 
   protected JHSDelegationTokenSecretManager createJHSSecretManager(

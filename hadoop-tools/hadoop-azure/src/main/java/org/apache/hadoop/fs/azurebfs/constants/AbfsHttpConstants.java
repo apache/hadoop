@@ -40,12 +40,16 @@ public final class AbfsHttpConstants {
   public static final String CHECK_ACCESS = "checkAccess";
   public static final String GET_STATUS = "getStatus";
   public static final String DEFAULT_TIMEOUT = "90";
+  public static final String APPEND_BLOB_TYPE = "appendblob";
   public static final String TOKEN_VERSION = "2";
 
+  public static final String JAVA_VENDOR = "java.vendor";
   public static final String JAVA_VERSION = "java.version";
   public static final String OS_NAME = "os.name";
   public static final String OS_VERSION = "os.version";
+  public static final String OS_ARCH = "os.arch";
 
+  public static final String APN_VERSION = "APN/1.0";
   public static final String CLIENT_VERSION = "Azure Blob FS/" + VersionInfo.getVersion();
 
   // Abfs Http Verb
@@ -71,6 +75,7 @@ public final class AbfsHttpConstants {
   public static final String SEMICOLON = ";";
   public static final String AT = "@";
   public static final String HTTP_HEADER_PREFIX = "x-ms-";
+  public static final String HASH = "#";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";

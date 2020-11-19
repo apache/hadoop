@@ -646,7 +646,7 @@ hierarchical namespace enabled, and set the following configuration settings:
 <property>
   <name>fs.azure.account.auth.type.{YOUR_ABFS_ACCOUNT_NAME}</name>
   <value>{AUTH TYPE}</value>
-  <description>The authorization type can be SharedKey, OAuth, or Custom. The
+  <description>The authorization type can be SharedKey, OAuth, Custom or SAS. The
   default is SharedKey.</description>
 </property>
 
@@ -792,6 +792,136 @@ hierarchical namespace enabled, and set the following configuration settings:
         </description>
     </property>
    -->
+
+```
+To run Delegation SAS test cases you must use a storage account with the
+hierarchical namespace enabled and set the following configuration settings:
+
+```xml
+<!--=========================== AUTHENTICATION  OPTIONS ===================-->
+<!--=============================   FOR SAS   ===========================-->
+<!-- To run ABFS Delegation SAS tests, you must register an app, create the
+     necessary role assignments, and set the configuration discussed below:
+
+    1) Register an app:
+      a) Login to https://portal.azure.com, select your AAD directory and search for app registrations.
+      b) Click "New registration".
+      c) Provide a display name, such as "abfs-app".
+      d) Set the account type to "Accounts in this organizational directory only ({YOUR_Tenant} only - Single tenant)".
+      e) For Redirect URI select Web and enter "http://localhost".
+      f) Click Register.
+
+    2)  Create necessary role assignments:
+      a) Login to https://portal.azure.com and find the Storage account with hierarchical namespace enabled
+         that you plan to run the tests against.
+      b) Select "Access Control (IAM)".
+      c) Select Role Assignments
+      d) Click Add and select "Add role assignments"
+      e) For Role and enter "Storage Blob Data Owner".
+      f) Under Select enter the name of the app you registered in step 1 and select it.
+      g) Click Save.
+      h) Repeat above steps to create a second role assignment for the app but this time for
+         the "Storage Blob Delegator" role.
+
+    3) Generate a new client secret for the application:
+      a) Login to https://portal.azure.com and find the app registered in step 1.
+      b) Select "Certificates and secrets".
+      c) Click "New client secret".
+      d) Enter a description (eg. Secret1)
+      e) Set expiration period.  Expires in 1 year is good.
+      f) Click Add
+      g) Copy the secret and expiration to a safe location.
+
+    4) Set the following configuration values:
+-->
+
+  <property>
+    <name>fs.azure.sas.token.provider.type</name>
+    <value>org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider</value>
+    <description>The fully qualified class name of the SAS token provider implementation.</description>
+  </property>
+
+  <property>
+    <name>fs.azure.test.app.service.principal.tenant.id</name>
+    <value>{TID}</value>
+    <description>Tenant ID for the application's service principal.</description>
+  </property>
+
+  <property>
+    <name>fs.azure.test.app.service.principal.object.id</name>
+    <value>{OID}</value>
+    <description>Object ID for the application's service principal.</description>
+  </property>
+
+  <property>
+    <name>fs.azure.test.app.id</name>
+    <value>{app id}</value>
+    <description>The application's ID, also known as the client id.</description>
+  </property>
+
+   <property>
+     <name>fs.azure.test.app.secret</name>
+     <value>{client secret}</value>
+     <description>The application's secret, also known as the client secret.</description>
+   </property>
+
+
+```
+
+To run CheckAccess test cases you must register an app with no RBAC and set
+the following configurations.
+```xml
+<!--===========================   FOR CheckAccess =========================-->
+<!-- To run ABFS CheckAccess SAS tests, you must register an app, with no role
+ assignments, and set the configuration discussed below:
+
+    1) Register a new app with no RBAC
+    2) As part of the test configs you need to provide the guid for the above
+created app. Please follow the below steps to fetch the guid.
+      a) Get an access token with the above created app. Please refer the
+ following documentation for the same. https://docs.microsoft
+.com/en-us/azure/active-directory/develop/v2-oauth2-client-creds-grant-flow#get-a-token
+      b) Decode the token fetched with the above step. You may use https
+://jwt.ms/ to decode the token
+      d) The oid field in the decoded string is the guid.
+    3) Set the following configurations:
+-->
+
+  <property>
+    <name>fs.azure.enable.check.access</name>
+    <value>true</value>
+    <description>By default the check access will be on. Checkaccess can
+    be turned off by changing this flag to false.</description>
+  </property>
+  <property>
+    <name>fs.azure.account.test.oauth2.client.id</name>
+    <value>{client id}</value>
+    <description>The client id(app id) for the app created on step 1
+    </description>
+  </property>
+  <property>
+    <name>fs.azure.account.test.oauth2.client.secret</name>
+    <value>{client secret}</value>
+    <description>
+The client secret(application's secret) for the app created on step 1
+    </description>
+  </property>
+  <property>
+    <name>fs.azure.check.access.testuser.guid</name>
+    <value>{guid}</value>
+    <description>The guid fetched on step 2</description>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.endpoint.{account name}.dfs.core
+.windows.net</name>
+    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+    <description>
+Token end point. This can be found through Azure portal. As part of CheckAccess
+test cases. The access will be tested for an FS instance created with the
+above mentioned client credentials. So this configuration is necessary to
+create the test FS instance.
+    </description>
+  </property>
 
 ```
 

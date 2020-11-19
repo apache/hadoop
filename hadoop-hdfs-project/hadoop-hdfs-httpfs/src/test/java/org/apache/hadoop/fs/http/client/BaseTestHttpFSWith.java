@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
@@ -59,6 +60,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestHdfs;
@@ -73,7 +75,7 @@ import org.junit.runners.Parameterized;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -364,6 +366,42 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs.close();
   }
 
+  private void testListSymLinkStatus() throws Exception {
+    if (isLocalFS()) {
+      // do not test the the symlink for local FS.
+      return;
+    }
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    boolean isWebhdfs = fs instanceof WebHdfsFileSystem;
+    Path path =
+        new Path(getProxiedFSTestDir() + "-symlink", "targetFoo.txt");
+    OutputStream os = fs.create(path);
+    os.write(1);
+    os.close();
+    Path linkPath =
+        new Path(getProxiedFSTestDir()+ "-symlink", "symlinkFoo.txt");
+    fs.createSymlink(path, linkPath, false);
+    fs = getHttpFSFileSystem();
+    FileStatus linkStatus = fs.getFileStatus(linkPath);
+    FileStatus status1 = fs.getFileStatus(path);
+
+    FileStatus[] stati = fs.listStatus(path.getParent());
+    assertEquals(2, stati.length);
+
+    int countSymlink = 0;
+    for (int i = 0; i < stati.length; i++) {
+      FileStatus fStatus = stati[i];
+      countSymlink += fStatus.isSymlink() ? 1 : 0;
+    }
+    assertEquals(1, countSymlink);
+
+    assertFalse(status1.isSymlink());
+    if (isWebhdfs) {
+      assertTrue(linkStatus.isSymlink());
+    }
+    fs.close();
+  }
+
   private void testListStatus() throws Exception {
     FileSystem fs = FileSystem.get(getProxiedFSConf());
     boolean isDFS = fs instanceof DistributedFileSystem;
@@ -521,9 +559,18 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs = getHttpFSFileSystem();
     fs.setWorkingDirectory(new Path("/tmp"));
     workingDir = fs.getWorkingDirectory();
-    fs.close();
     assertEquals(workingDir.toUri().getPath(),
         new Path("/tmp").toUri().getPath());
+    final FileSystem httpFs = getHttpFSFileSystem();
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid DFS directory name /foo:bar",
+        () -> httpFs.setWorkingDirectory(new Path("/foo:bar")));
+    fs.setWorkingDirectory(new Path("/bar"));
+    workingDir = fs.getWorkingDirectory();
+    httpFs.close();
+    fs.close();
+    assertEquals(workingDir.toUri().getPath(),
+        new Path("/bar").toUri().getPath());
   }
 
   private void testTrashRoot() throws Exception {
@@ -1148,7 +1195,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
-    GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY, SATISFYSTORAGEPOLICY
+    GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
+    SATISFYSTORAGEPOLICY
   }
 
   private void operation(Operation op) throws Exception {
@@ -1179,6 +1227,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case LIST_STATUS:
       testListStatus();
+      testListSymLinkStatus();
       break;
     case WORKING_DIRECTORY:
       testWorkingdirectory();
@@ -1268,6 +1317,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GET_SNAPSHOTTABLE_DIRECTORY_LIST:
       testGetSnapshottableDirListing();
+      break;
+    case GET_SNAPSHOT_LIST:
+      testGetSnapshotListing();
       break;
     case GET_SERVERDEFAULTS:
       testGetServerDefaults();
@@ -1646,6 +1698,50 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertEquals(JsonUtil.toJsonString(sds),
         JsonUtil.toJsonString(dfssds));
   }
+
+  private void testGetSnapshotListing() throws Exception {
+    if (!this.isLocalFS()) {
+      // Create a directory with snapshot allowed
+      Path path = new Path("/tmp/tmp-snap-test");
+      createSnapshotTestsPreconditions(path);
+      // Get the FileSystem instance that's being tested
+      FileSystem fs = this.getHttpFSFileSystem();
+      // Check FileStatus
+      Assert.assertTrue(fs.getFileStatus(path).isSnapshotEnabled());
+      // Create a file and take a snapshot
+      Path file1 = new Path(path, "file1");
+      testCreate(file1, false);
+      fs.createSnapshot(path, "snap1");
+      // Create another file and take a snapshot
+      Path file2 = new Path(path, "file2");
+      testCreate(file2, false);
+      fs.createSnapshot(path, "snap2");
+      // Get snapshot diff
+      SnapshotStatus[] snapshotStatus = null;
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        snapshotStatus = httpFS.getSnapshotListing(path);
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        snapshotStatus = webHdfsFileSystem.getSnapshotListing(path);
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() +
+            " doesn't support getSnapshotDiff");
+      }
+      // Verify result with DFS
+      DistributedFileSystem dfs = (DistributedFileSystem)
+          FileSystem.get(path.toUri(), this.getProxiedFSConf());
+      SnapshotStatus[] dfsStatus =
+          dfs.getSnapshotListing(path);
+      Assert.assertEquals(JsonUtil.toJsonString(snapshotStatus),
+          JsonUtil.toJsonString(dfsStatus));
+      // Cleanup
+      fs.deleteSnapshot(path, "snap2");
+      fs.deleteSnapshot(path, "snap1");
+      fs.delete(path, true);
+    }
+  }
+
 
   private void testGetSnapshottableDirListing() throws Exception {
     if (!this.isLocalFS()) {

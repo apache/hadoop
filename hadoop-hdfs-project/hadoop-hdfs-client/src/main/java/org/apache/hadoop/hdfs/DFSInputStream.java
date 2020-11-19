@@ -88,7 +88,7 @@ import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import javax.annotation.Nonnull;
 
@@ -181,10 +181,13 @@ public class DFSInputStream extends FSInputStream
   private byte[] oneByteBuf; // used for 'int read()'
 
   protected void addToLocalDeadNodes(DatanodeInfo dnInfo) {
+    DFSClient.LOG.debug("Add {} to local dead nodes, previously was {}.",
+            dnInfo, deadNodes);
     deadNodes.put(dnInfo, dnInfo);
   }
 
   protected void removeFromLocalDeadNodes(DatanodeInfo dnInfo) {
+    DFSClient.LOG.debug("Remove {} from local dead nodes.", dnInfo);
     deadNodes.remove(dnInfo);
   }
 
@@ -1054,10 +1057,21 @@ public class DFSInputStream extends FSInputStream
     StorageType[] storageTypes = block.getStorageTypes();
     DatanodeInfo chosenNode = null;
     StorageType storageType = null;
-    if (nodes != null) {
+    if (dfsClient.getConf().isReadUseCachePriority()) {
+      DatanodeInfo[] cachedLocs = block.getCachedLocations();
+      if (cachedLocs != null) {
+        for (int i = 0; i < cachedLocs.length; i++) {
+          if (isValidNode(cachedLocs[i], ignoredNodes)) {
+            chosenNode = cachedLocs[i];
+            break;
+          }
+        }
+      }
+    }
+
+    if (chosenNode == null && nodes != null) {
       for (int i = 0; i < nodes.length; i++) {
-        if (!dfsClient.getDeadNodes(this).containsKey(nodes[i])
-            && (ignoredNodes == null || !ignoredNodes.contains(nodes[i]))) {
+        if (isValidNode(nodes[i], ignoredNodes)) {
           chosenNode = nodes[i];
           // Storage types are ordered to correspond with nodes, so use the same
           // index to get storage type.
@@ -1075,7 +1089,9 @@ public class DFSInputStream extends FSInputStream
     final String dnAddr =
         chosenNode.getXferAddr(dfsClient.getConf().isConnectToDnViaHostname());
     DFSClient.LOG.debug("Connecting to datanode {}", dnAddr);
-    InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr);
+    boolean uriCacheEnabled = dfsClient.getConf().isUriCacheEnabled();
+    InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr,
+        -1, null, uriCacheEnabled);
     return new DNAddrPair(chosenNode, targetAddr, storageType, block);
   }
 
@@ -1088,6 +1104,15 @@ public class DFSInputStream extends FSInputStream
     DFSClient.LOG.warn("No live nodes contain block " + lostBlock.getBlock() +
         " after checking nodes = " + Arrays.toString(nodes) +
         ", ignoredNodes = " + ignoredNodes);
+  }
+
+  private boolean isValidNode(DatanodeInfo node,
+      Collection<DatanodeInfo> ignoredNodes) {
+    if (!dfsClient.getDeadNodes(this).containsKey(node)
+        && (ignoredNodes == null || !ignoredNodes.contains(node))) {
+      return true;
+    }
+    return false;
   }
 
   private static String getBestNodeDNAddrPairErrorString(

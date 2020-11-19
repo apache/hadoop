@@ -65,13 +65,14 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownThreadsHelper;
 import org.apache.hadoop.util.concurrent.HadoopThreadPoolExecutor;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.slf4j.Logger;
@@ -917,6 +918,10 @@ public class HistoryFileManager extends AbstractService {
    *           if there was a error while scanning
    */
   void scanIntermediateDirectory() throws IOException {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+    }
+
     // TODO it would be great to limit how often this happens, except in the
     // case where we are looking for a particular job.
     List<FileStatus> userDirList = JobHistoryUtils.localGlobber(

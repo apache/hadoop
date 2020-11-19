@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPo
 import org.apache.hadoop.yarn.server.federation.policies.router.PriorityRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Policy that allows operator to configure "weights" for routing. This picks a

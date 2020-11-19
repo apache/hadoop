@@ -216,6 +216,16 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.admin.mount.check.enable</name>
+    <value>false</value>
+    <description>
+      If true, add/update mount table will include a destination check to make
+      sure the file exists in downstream namenodes, and changes to mount table
+      will fail if the file doesn't exist in any of the destination namenode.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.http-address</name>
     <value>0.0.0.0:50071</value>
     <description>
@@ -260,6 +270,18 @@
     <value>true</value>
     <description>
       If the HTTP service to handle client requests in the router is enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.fs-limits.max-component-length</name>
+    <value>0</value>
+    <description>
+      Defines the maximum number of bytes in UTF-8 encoding in each
+      component of a path at Router side. A value of 0 will disable the check.
+      Support multiple size unit suffix(case insensitive). It is act as
+      configuration dfs.namenode.fs-limits.max-component-length at NameNode
+      side.
     </description>
   </property>
 
@@ -642,6 +664,16 @@
     <description>
       Class to implement state store to delegation tokens.
       Default implementation uses zookeeper as the backend to store delegation tokens.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.top.num.token.realowners</name>
+    <value>10</value>
+    <description>
+      The number of top real owners by tokens count to report in the JMX metrics.
+      Real owners are the effective users whose cretential are used to generate
+      the tokens.
     </description>
   </property>
 

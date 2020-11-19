@@ -45,7 +45,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Unit tests for FSConfigToCSConfigArgumentHandler.
@@ -650,5 +650,36 @@ public class TestFSConfigToCSConfigArgumentHandler {
     argumentHandler.parseAndConvert(args);
 
     verifyZeroInteractions(mockValidator);
+  }
+
+  @Test
+  public void testEnabledAsyncScheduling() throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+            new FSConfigToCSConfigArgumentHandler(conversionOptions, mockValidator);
+
+    String[] args = getArgumentsAsArrayWithDefaults("-f",
+            FSConfigConverterTestCommons.FS_ALLOC_FILE, "-p",
+            "-a");
+    argumentHandler.parseAndConvert(args);
+
+    assertTrue("-a switch had no effect",
+            conversionOptions.isEnableAsyncScheduler());
+  }
+
+  @Test
+  public void testDisabledAsyncScheduling() throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+            new FSConfigToCSConfigArgumentHandler(conversionOptions, mockValidator);
+
+    String[] args = getArgumentsAsArrayWithDefaults("-f",
+            FSConfigConverterTestCommons.FS_ALLOC_FILE, "-p");
+    argumentHandler.parseAndConvert(args);
+
+    assertFalse("-a switch wasn't provided but async scheduling option is true",
+            conversionOptions.isEnableAsyncScheduler());
   }
 }

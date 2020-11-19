@@ -62,10 +62,10 @@ import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -717,7 +717,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public DDBPathMetadata get(Path path, boolean wantEmptyDirectoryFlag)
       throws IOException {
     checkPath(path);
-    LOG.debug("Get from table {} in region {}: {}. wantEmptyDirectory={}",
+    LOG.debug("Get from table {} in region {}: {} ; wantEmptyDirectory={}",
         tableName, region, path, wantEmptyDirectoryFlag);
     DDBPathMetadata result = innerGet(path, wantEmptyDirectoryFlag);
     LOG.debug("result of get {} is: {}", path, result);
@@ -912,17 +912,27 @@ public class DynamoDBMetadataStore implements MetadataStore,
       DDBPathMetadata oldEntry = ancestorState.put(path, entry);
       boolean addAncestors = true;
       if (oldEntry != null) {
-        if (!oldEntry.getFileStatus().isDirectory()
-            || !entry.getFileStatus().isDirectory()) {
-          // check for and warn if the existing bulk operation overwrote it.
-          // this should never occur outside tests explicitly creating it
+        // check for and warn if the existing bulk operation has an inconsistent
+        // entry.
+        // two directories or two files are both allowed.
+        // file-over-file can happen in multipart uploaders when the same
+        // uploader is overwriting file entries to the same destination as
+        // part of its bulk operation.
+        boolean oldWasDir = oldEntry.getFileStatus().isDirectory();
+        boolean newIsDir = entry.getFileStatus().isDirectory();
+        if ((oldWasDir && !newIsDir)
+            || (!oldWasDir && newIsDir)) {
           LOG.warn("Overwriting a S3Guard file created in the operation: {}",
               oldEntry);
           LOG.warn("With new entry: {}", entry);
           // restore the old state
           ancestorState.put(path, oldEntry);
           // then raise an exception
-          throw new PathIOException(path.toString(), E_INCONSISTENT_UPDATE);
+          throw new PathIOException(path.toString(),
+              String.format("%s old %s new %s",
+                  E_INCONSISTENT_UPDATE,
+                  oldEntry,
+                  entry));
         } else {
           // a directory is already present. Log and continue.
           LOG.debug("Directory at {} being updated with value {}",

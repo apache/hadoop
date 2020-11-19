@@ -24,10 +24,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
@@ -102,10 +104,12 @@ public class RouterSnapshot {
       result = firstelement.getValue();
       result = result.replaceFirst(loc.getDest(), loc.getSrc());
     } else {
-      result = rpcClient.invokeSequential(
-          locations, method, String.class, null);
-      RemoteLocation loc = locations.get(0);
-      result = result.replaceFirst(loc.getDest(), loc.getSrc());
+      RemoteResult<RemoteLocation, String> response =
+          rpcClient.invokeSequential(method, locations, String.class, null);
+      RemoteLocation loc = response.getLocation();
+      String invokedResult = response.getResult();
+      result = invokedResult
+          .replaceFirst(loc.getDest(), loc.getSrc());
     }
     return result;
   }
@@ -155,6 +159,41 @@ public class RouterSnapshot {
             nss, method, true, false, SnapshottableDirectoryStatus[].class);
 
     return RouterRpcServer.merge(ret, SnapshottableDirectoryStatus.class);
+  }
+
+  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ);
+    final List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(snapshotRoot, true, false);
+    RemoteMethod remoteMethod = new RemoteMethod("getSnapshotListing",
+        new Class<?>[]{String.class},
+        new RemoteParam());
+    SnapshotStatus[] response;
+    if (rpcServer.isInvokeConcurrent(snapshotRoot)) {
+      Map<RemoteLocation, SnapshotStatus[]> ret = rpcClient.invokeConcurrent(
+          locations, remoteMethod, true, false, SnapshotStatus[].class);
+      response = ret.values().iterator().next();
+      String src = ret.keySet().iterator().next().getSrc();
+      String dst = ret.keySet().iterator().next().getDest();
+      for (SnapshotStatus s : response) {
+        String mountPath = DFSUtil.bytes2String(s.getParentFullPath()).
+            replaceFirst(src, dst);
+        s.setParentFullPath(DFSUtil.string2Bytes(mountPath));
+      }
+    } else {
+      RemoteResult<RemoteLocation, SnapshotStatus[]> invokedResponse = rpcClient
+          .invokeSequential(remoteMethod, locations, SnapshotStatus[].class,
+              null);
+      RemoteLocation loc = invokedResponse.getLocation();
+      response = invokedResponse.getResult();
+      for (SnapshotStatus s : response) {
+        String mountPath = DFSUtil.bytes2String(s.getParentFullPath()).
+            replaceFirst(loc.getDest(), loc.getSrc());
+        s.setParentFullPath(DFSUtil.string2Bytes(mountPath));
+      }
+    }
+    return response;
   }
 
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,

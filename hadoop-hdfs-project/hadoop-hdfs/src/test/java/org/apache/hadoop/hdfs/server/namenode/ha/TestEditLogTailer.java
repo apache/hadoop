@@ -62,7 +62,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.mockito.Mockito;
 
 @RunWith(Parameterized.class)

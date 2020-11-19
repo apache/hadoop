@@ -34,14 +34,16 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespaceVisitor;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.security.AccessControlException;
 
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
@@ -281,12 +283,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * @param name Name of the snapshot.
    * @param mtime The snapshot creation time set by Time.now().
    */
-  public Snapshot addSnapshot(int id, String name,
-      final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit, long mtime)
+  public Snapshot addSnapshot(SnapshotManager snapshotManager, String name,
+      final LeaseManager leaseManager, long mtime)
       throws SnapshotException {
-    return getDirectorySnapshottableFeature().addSnapshot(this, id, name,
-        leaseManager, captureOpenFiles, maxSnapshotLimit, mtime);
+    return getDirectorySnapshottableFeature().addSnapshot(this,
+        snapshotManager, name, leaseManager, mtime);
   }
 
   /**
@@ -294,11 +295,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * @param snapshotName Name of the snapshot.
    * @param mtime The snapshot deletion time set by Time.now().
    */
-  public Snapshot removeSnapshot(
-      ReclaimContext reclaimContext, String snapshotName, long mtime)
+  public Snapshot removeSnapshot(ReclaimContext reclaimContext,
+      String snapshotName, long mtime, SnapshotManager snapshotManager)
       throws SnapshotException {
     return getDirectorySnapshottableFeature().removeSnapshot(
-        reclaimContext, this, snapshotName, mtime);
+        reclaimContext, this, snapshotName, mtime, snapshotManager);
   }
 
   /**
@@ -544,7 +545,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
     }
 
     final INode removed = children.remove(i);
-    Preconditions.checkState(removed == child);
+    Preconditions.checkState(removed.equals(child));
     return true;
   }
 
@@ -993,6 +994,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
       this.snapshotId = snapshot;
       this.inode = inode;
     }
+  }
+
+  @Override
+  public void accept(NamespaceVisitor visitor, int snapshot) {
+    visitor.visitDirectoryRecursively(this, snapshot);
   }
 
   public final int getChildrenNum(final int snapshotId) {

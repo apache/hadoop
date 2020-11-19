@@ -41,11 +41,6 @@
       <item name="git" href="https://gitbox.apache.org/repos/asf/hadoop.git" />
     </links>
 
-    <breadcrumbs position="left">
-      <item name="Apache" href="http://www.apache.org/" />
-      <item name="Hadoop" href="http://hadoop.apache.org/"/>
-    </breadcrumbs>
-
     <menu name="General" inherit="top">
       <item name="Overview" href="index.html"/>
       <item name="Single Node Setup" href="hadoop-project-dist/hadoop-common/SingleCluster.html"/>
@@ -85,6 +80,7 @@
       <item name="Observer NameNode" href="hadoop-project-dist/hadoop-hdfs/ObserverNameNode.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
       <item name="ViewFs" href="hadoop-project-dist/hadoop-hdfs/ViewFs.html"/>
+      <item name="ViewFsOverloadScheme" href="hadoop-project-dist/hadoop-hdfs/ViewFsOverloadScheme.html"/>
       <item name="Snapshots" href="hadoop-project-dist/hadoop-hdfs/HdfsSnapshots.html"/>
       <item name="Edits Viewer" href="hadoop-project-dist/hadoop-hdfs/HdfsEditsViewer.html"/>
       <item name="Image Viewer" href="hadoop-project-dist/hadoop-hdfs/HdfsImageViewer.html"/>
@@ -197,6 +193,7 @@
       <item name="Hadoop Archives" href="hadoop-archives/HadoopArchives.html"/>
       <item name="Hadoop Archive Logs" href="hadoop-archive-logs/HadoopArchiveLogs.html"/>
       <item name="DistCp" href="hadoop-distcp/DistCp.html"/>
+      <item name="HDFS Federation Balance" href="hadoop-federation-balance/HDFSFederationBalance.html"/>
       <item name="GridMix" href="hadoop-gridmix/GridMix.html"/>
       <item name="Rumen" href="hadoop-rumen/Rumen.html"/>
       <item name="Resource Estimator Service" href="hadoop-resourceestimator/ResourceEstimator.html"/>

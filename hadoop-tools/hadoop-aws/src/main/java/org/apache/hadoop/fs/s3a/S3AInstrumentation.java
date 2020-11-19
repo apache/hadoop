@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,6 +156,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       INVOCATION_RENAME,
       OBJECT_COPY_REQUESTS,
       OBJECT_DELETE_REQUESTS,
+      OBJECT_DELETE_OBJECTS,
       OBJECT_LIST_REQUESTS,
       OBJECT_CONTINUE_LIST_REQUESTS,
       OBJECT_METADATA_REQUESTS,
@@ -193,7 +194,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED,
       STORE_IO_THROTTLED,
       DELEGATION_TOKENS_ISSUED,
-      FILES_DELETE_REJECTED
+      FILES_DELETE_REJECTED,
+      MULTIPART_INSTANTIATED,
+      MULTIPART_PART_PUT,
+      MULTIPART_PART_PUT_BYTES,
+      MULTIPART_UPLOAD_ABORTED,
+      MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED,
+      MULTIPART_UPLOAD_COMPLETED,
+      MULTIPART_UPLOAD_STARTED
   };
 
   private static final Statistic[] GAUGES_TO_CREATE = {

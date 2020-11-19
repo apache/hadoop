@@ -198,7 +198,7 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
@@ -509,6 +509,9 @@ public class ClientRMService extends AbstractService implements
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
     ContainerId containerId = request.getContainerId();
+    if (containerId == null) {
+      throw new ContainerNotFoundException("Invalid container id: null");
+    }
     ApplicationAttemptId appAttemptId = containerId.getApplicationAttemptId();
     ApplicationId appId = appAttemptId.getApplicationId();
     UserGroupInformation callerUGI = getCallerUgi(appId,
@@ -609,6 +612,8 @@ public class ClientRMService extends AbstractService implements
           submissionContext.getQueue());
       throw RPCUtil.getRemoteException(ie);
     }
+
+    checkTags(submissionContext.getApplicationTags());
 
     if (timelineServiceV2Enabled) {
       // Sanity check for flow run
@@ -750,6 +755,31 @@ public class ClientRMService extends AbstractService implements
         attemptId);
 
     return response;
+  }
+
+  private void checkTags(Set<String> tags) throws YarnException {
+    int appMaxTags = getConfig().getInt(
+        YarnConfiguration.RM_APPLICATION_MAX_TAGS,
+        YarnConfiguration.DEFAULT_RM_APPLICATION_MAX_TAGS);
+    int appMaxTagLength = getConfig().getInt(
+        YarnConfiguration.RM_APPLICATION_MAX_TAG_LENGTH,
+        YarnConfiguration.DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH);
+    if (tags.size() > appMaxTags) {
+      throw RPCUtil.getRemoteException(new IllegalArgumentException(
+          "Too many applicationTags, a maximum of only " + appMaxTags
+              + " are allowed!"));
+    }
+    for (String tag : tags) {
+      if (tag.length() > appMaxTagLength) {
+        throw RPCUtil.getRemoteException(
+            new IllegalArgumentException("Tag " + tag + " is too long, "
+                + "maximum allowed length of a tag is " + appMaxTagLength));
+      }
+      if (!org.apache.commons.lang3.StringUtils.isAsciiPrintable(tag)) {
+        throw RPCUtil.getRemoteException(new IllegalArgumentException(
+            "A tag can only have ASCII " + "characters! Invalid tag - " + tag));
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")

@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -94,7 +95,7 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of Task interface.
@@ -142,7 +143,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private boolean historyTaskStartGenerated = false;
   // Launch time reported in history events.
   private long launchTime;
-  
+  private boolean speculationEnabled = false;
+
   private static final SingleArcTransition<TaskImpl, TaskEvent> 
      ATTEMPT_KILLED_TRANSITION = new AttemptKilledTransition();
   private static final SingleArcTransition<TaskImpl, TaskEvent> 
@@ -325,6 +327,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     this.appContext = appContext;
     this.encryptedShuffle = conf.getBoolean(MRConfig.SHUFFLE_SSL_ENABLED_KEY,
                                             MRConfig.SHUFFLE_SSL_ENABLED_DEFAULT);
+    this.speculationEnabled = taskType.equals(TaskType.MAP) ?
+        conf.getBoolean(MRJobConfig.MAP_SPECULATIVE, false) :
+        conf.getBoolean(MRJobConfig.REDUCE_SPECULATIVE, false);
 
     // This "this leak" is okay because the retained pointer is in an
     //  instance variable.
@@ -1079,13 +1084,19 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         if (task.successfulAttempt == null) {
           boolean shouldAddNewAttempt = true;
           if (task.inProgressAttempts.size() > 0) {
-            // if not all of the inProgressAttempts are hanging for resource
-            for (TaskAttemptId attemptId : task.inProgressAttempts) {
-              if (((TaskAttemptImpl) task.getAttempt(attemptId))
-                  .isContainerAssigned()) {
-                shouldAddNewAttempt = false;
-                break;
+            if(task.speculationEnabled) {
+              // if not all of the inProgressAttempts are hanging for resource
+              for (TaskAttemptId attemptId : task.inProgressAttempts) {
+                if (((TaskAttemptImpl) task.getAttempt(attemptId))
+                    .isContainerAssigned()) {
+                  shouldAddNewAttempt = false;
+                  break;
+                }
               }
+            } else {
+              // No need to add new attempt if there are in progress attempts
+              // when speculation is false
+              shouldAddNewAttempt = false;
             }
           }
           if (shouldAddNewAttempt) {

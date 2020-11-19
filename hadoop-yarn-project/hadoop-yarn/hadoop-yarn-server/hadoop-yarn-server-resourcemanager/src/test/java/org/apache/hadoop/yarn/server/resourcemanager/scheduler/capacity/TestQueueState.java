@@ -157,6 +157,23 @@ public class TestQueueState {
     Assert.assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
     Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
 
+    // set Q2 state to RUNNING and do reinitialize.
+    // Q2 should transit from DRAINING to RUNNING
+    csConf.setState(Q2_PATH, QueueState.RUNNING);
+    conf = new YarnConfiguration(csConf);
+    cs.reinitialize(conf, rmContext);
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
+
+    // set Q2 state to stop and do reinitialize.
+    csConf.setState(Q2_PATH, QueueState.STOPPED);
+    conf = new YarnConfiguration(csConf);
+    cs.reinitialize(conf, rmContext);
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    Assert.assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
+
     // set Q1 state to stop and do reinitialize.
     csConf.setState(Q1_PATH, QueueState.STOPPED);
     conf = new YarnConfiguration(csConf);
@@ -201,6 +218,7 @@ public class TestQueueState {
         CommonNodeLabelsManager.NO_LABEL);
     when(application.compareInputOrderTo(any(FiCaSchedulerApp.class)))
         .thenCallRealMethod();
+    when(application.isRunnable()).thenReturn(true);
     return application;
   }
 

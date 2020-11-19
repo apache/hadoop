@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.ActiveStandbyElector;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.util.BasicDiskValidator;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -93,11 +94,6 @@ public class YarnConfiguration extends Configuration {
           YARN_SITE_CONFIGURATION_FILE,
           CORE_SITE_CONFIGURATION_FILE));
 
-  @Evolving
-  public static final int APPLICATION_MAX_TAGS = 10;
-
-  @Evolving
-  public static final int APPLICATION_MAX_TAG_LENGTH = 100;
 
   static {
     addDeprecatedKeys();
@@ -206,6 +202,18 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_PORT = 8032;
   public static final String DEFAULT_RM_ADDRESS =
     "0.0.0.0:" + DEFAULT_RM_PORT;
+
+  /**Max number of application tags.*/
+  public static final String RM_APPLICATION_MAX_TAGS = RM_PREFIX
+      + "application.max-tags";
+
+  public static final int DEFAULT_RM_APPLICATION_MAX_TAGS = 10;
+
+  /**Max length of each application tag.*/
+  public static final String RM_APPLICATION_MAX_TAG_LENGTH = RM_PREFIX
+      + "application.max-tag.length";
+
+  public static final int DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH = 100;
 
   public static final String RM_APPLICATION_MASTER_SERVICE_PROCESSORS =
       RM_PREFIX + "application-master-service.processors";
@@ -354,6 +362,8 @@ public class YarnConfiguration extends Configuration {
       + "webapp.ui2.war-file-path";
   public static final String YARN_API_SERVICES_ENABLE = "yarn."
       + "webapp.api-service.enable";
+  public static final String YARN_WEBAPP_UI1_ENABLE_TOOLS = "yarn."
+      + "webapp.ui1.tools.enable";
 
   @Private
   public static final String DEFAULT_YARN_API_SYSTEM_SERVICES_CLASS =
@@ -502,12 +512,19 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_ADMIN_CLIENT_THREAD_COUNT = 1;
   
   /**
-   * The maximum number of application attempts.
-   * It's a global setting for all application masters.
+   * The maximum number of application attempts for
+   * an application, if unset by user.
    */
   public static final String RM_AM_MAX_ATTEMPTS =
     RM_PREFIX + "am.max-attempts";
   public static final int DEFAULT_RM_AM_MAX_ATTEMPTS = 2;
+
+  /**
+   * The maximum number of application attempts.
+   * It's a global setting for all application masters.
+   */
+  public static final String GLOBAL_RM_AM_MAX_ATTEMPTS =
+      RM_PREFIX + "am.global.max-attempts";
   
   /** The keytab for the resource manager.*/
   public static final String RM_KEYTAB = 
@@ -671,6 +688,30 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "nodemanagers.heartbeat-interval-ms";
   public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS = 1000;
 
+  /** Enable Heartbeat Interval Scaling based on cpu utilization. */
+  public static final String RM_NM_HEARTBEAT_INTERVAL_SCALING_ENABLE =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-scaling-enable";
+  public static final boolean
+      DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SCALING_ENABLE = false;
+
+  public static final String RM_NM_HEARTBEAT_INTERVAL_MIN_MS =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-min-ms";
+  public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MIN_MS = 1000;
+
+  public static final String RM_NM_HEARTBEAT_INTERVAL_MAX_MS =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-max-ms";
+  public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MAX_MS = 1000;
+
+  public static final String RM_NM_HEARTBEAT_INTERVAL_SPEEDUP_FACTOR =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-speedup-factor";
+  public static final float
+      DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SPEEDUP_FACTOR = 1.0f;
+
+  public static final String RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR =
+      RM_PREFIX + "nodemanagers.heartbeat-interval-slowdown-factor";
+  public static final float
+      DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR = 1.0f;
+
   /** Number of worker threads that write the history data. */
   public static final String RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
       RM_PREFIX + "history-writer.multi-threaded-dispatcher.pool-size";
@@ -729,6 +770,9 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "delegation-token.max-conf-size-bytes";
   public static final int DEFAULT_RM_DELEGATION_TOKEN_MAX_CONF_SIZE_BYTES =
       12800;
+  public static final String RM_DELEGATION_TOKEN_ALWAYS_CANCEL =
+      RM_PREFIX + "delegation-token.always-cancel";
+  public static final boolean DEFAULT_RM_DELEGATION_TOKEN_ALWAYS_CANCEL = false;
 
   public static final String RM_DT_RENEWER_THREAD_TIMEOUT =
       RM_PREFIX + "delegation-token-renewer.thread-timeout";
@@ -1067,6 +1111,7 @@ public class YarnConfiguration extends Configuration {
   
   /** Default queue name */
   public static final String DEFAULT_QUEUE_NAME = "default";
+  public static final String DEFAULT_QUEUE_FULL_NAME = "root.default";
 
   /**
    * Buckets (in minutes) for the number of apps running in each queue.
@@ -1891,6 +1936,25 @@ public class YarnConfiguration extends Configuration {
   public static final String APPLICATION_TAG_BASED_PLACEMENT_USER_WHITELIST =
           APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".username.whitelist";
 
+  /** Enable switch for container log monitoring. */
+  public static final String NM_CONTAINER_LOG_MONITOR_ENABLED =
+      NM_PREFIX + "container-log-monitor.enable";
+  public static final boolean DEFAULT_NM_CONTAINER_LOG_MONITOR_ENABLED = false;
+  /** How often to monitor logs generated by containers. */
+  public static final String NM_CONTAINER_LOG_MON_INTERVAL_MS =
+      NM_PREFIX + "container-log-monitor.interval-ms";
+  public static final int DEFAULT_NM_CONTAINER_LOG_MON_INTERVAL_MS = 60000;
+  /** The disk space limit for a single container log directory. */
+  public static final String NM_CONTAINER_LOG_DIR_SIZE_LIMIT_BYTES =
+      NM_PREFIX + "container-log-monitor.dir-size-limit-bytes";
+  public static final long DEFAULT_NM_CONTAINER_LOG_DIR_SIZE_LIMIT_BYTES =
+      1000000000L;
+  /** The disk space limit for all of a container's logs. */
+  public static final String NM_CONTAINER_LOG_TOTAL_SIZE_LIMIT_BYTES =
+      NM_PREFIX + "container-log-monitor.total-size-limit-bytes";
+  public static final long DEFAULT_NM_CONTAINER_LOG_TOTAL_SIZE_LIMIT_BYTES =
+      10000000000L;
+
   /** Enable/disable container metrics. */
   @Private
   public static final String NM_CONTAINER_METRICS_ENABLE =
@@ -1998,6 +2062,13 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_HEALTH_CHECK_INTERVAL_MS = 
       NM_PREFIX + "health-checker.interval-ms";
   public static final long DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
+
+  /** Whether or not to run the node health script before the NM
+   *  starts up.*/
+  public static final String NM_HEALTH_CHECK_RUN_BEFORE_STARTUP =
+      NM_PREFIX + "health-checker.run-before-startup";
+  public static final boolean DEFAULT_NM_HEALTH_CHECK_RUN_BEFORE_STARTUP =
+      false;
 
   /** Health check time out period for all scripts.*/
   public static final String NM_HEALTH_CHECK_TIMEOUT_MS =
@@ -2368,6 +2439,21 @@ public class YarnConfiguration extends Configuration {
   /** Host pid namespace for containers is disabled by default. */
   public static final boolean DEFAULT_NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
       false;
+
+  public static final String YARN_HTTP_WEBAPP_EXTERNAL_CLASSES =
+      "yarn.http.rmwebapp.external.classes";
+
+  public static final String YARN_HTTP_WEBAPP_SCHEDULER_PAGE =
+      "yarn.http.rmwebapp.scheduler.page.class";
+
+  public static final String YARN_HTTP_WEBAPP_CUSTOM_DAO_CLASSES =
+      "yarn.http.rmwebapp.custom.dao.classes";
+
+  public static final String YARN_HTTP_WEBAPP_CUSTOM_UNWRAPPED_DAO_CLASSES =
+      "yarn.http.rmwebapp.custom.unwrapped.dao.classes";
+
+  public static final String YARN_WEBAPP_CUSTOM_WEBSERVICE_CLASS =
+      "yarn.webapp.custom.webservice.class";
 
   /**
    * Whether or not users are allowed to request that Docker containers honor
@@ -3236,6 +3322,18 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_TIMELINE_V2_CLIENT_DRAIN_TIME_MILLIS
       = 2000L;
 
+  /**
+   * The configuration prefix of timeline HTTP authentication.
+   */
+  public static final String TIMELINE_HTTP_AUTH_PREFIX =
+          TIMELINE_SERVICE_PREFIX + "http-authentication.";
+
+  /**
+   * The authentication type for timeline HTTP authentication.
+   */
+  public static final String TIMELINE_HTTP_AUTH_TYPE =
+          TIMELINE_HTTP_AUTH_PREFIX + AuthenticationFilter.AUTH_TYPE;
+
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
   @Private
@@ -4001,6 +4099,11 @@ public class YarnConfiguration extends Configuration {
   /** URI for NodeLabelManager */
   public static final String FS_NODE_LABELS_STORE_ROOT_DIR = NODE_LABELS_PREFIX
       + "fs-store.root-dir";
+
+  /** FS store file replication. */
+  public static final String FS_STORE_FILE_REPLICATION = YARN_PREFIX
+      + "fs-store.file.replication";
+  public static final int DEFAULT_FS_STORE_FILE_REPLICATION = 0;
 
   /**
    * Node-attribute configurations.

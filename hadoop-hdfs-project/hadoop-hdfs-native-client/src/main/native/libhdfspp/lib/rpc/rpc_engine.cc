@@ -24,6 +24,8 @@
 
 #include <algorithm>
 
+#include <boost/date_time/posix_time/posix_time_duration.hpp>
+
 namespace hdfs {
 
 template <class T>
@@ -171,7 +173,7 @@ std::shared_ptr<RpcConnection> RpcEngine::NewConnection()
 {
   LOG_DEBUG(kRPC, << "RpcEngine::NewConnection called");
 
-  return std::make_shared<RpcConnectionImpl<::asio::ip::tcp::socket>>(shared_from_this());
+  return std::make_shared<RpcConnectionImpl<boost::asio::ip::tcp::socket>>(shared_from_this());
 }
 
 std::shared_ptr<RpcConnection> RpcEngine::InitializeConnection()
@@ -307,8 +309,8 @@ void RpcEngine::RpcCommsError(
       if (head_action->delayMillis > 0) {
         auto weak_conn = std::weak_ptr<RpcConnection>(conn_);
         retry_timer.expires_from_now(
-            std::chrono::milliseconds(head_action->delayMillis));
-        retry_timer.async_wait([this, weak_conn](asio::error_code ec) {
+            boost::posix_time::milliseconds(head_action->delayMillis));
+        retry_timer.async_wait([this, weak_conn](boost::system::error_code ec) {
           auto strong_conn = weak_conn.lock();
           if ( (!ec) && (strong_conn) ) {
             strong_conn->ConnectAndFlush(last_endpoints_);

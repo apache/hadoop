@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapred.nativetask.util;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 @InterfaceAudience.Private

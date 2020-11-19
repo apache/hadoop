@@ -31,7 +31,7 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.ClientId;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.TestRPC.TestImpl;
@@ -177,7 +177,7 @@ public class TestRMAuditLogger {
       expLog.append("\tRESOURCE=<memory:1536, vcores:1>");
     }
     if (callerContext != null) {
-      if (callerContext.getContext() != null) {
+      if (callerContext.isContextValid()) {
         expLog.append("\tCALLERCONTEXT=context");
       }
       if (callerContext.getSignature() != null) {
@@ -328,7 +328,7 @@ public class TestRMAuditLogger {
       expLog.append("\tRESOURCE=<memory:1536, vcores:1>");
     }
     if (callerContext != null) {
-      if (callerContext.getContext() != null) {
+      if (callerContext.isContextValid()) {
         expLog.append("\tCALLERCONTEXT=context");
       }
       if (callerContext.getSignature() != null) {
@@ -420,7 +420,7 @@ public class TestRMAuditLogger {
   public void testRMAuditLoggerWithIP() throws Exception {
     Configuration conf = new Configuration();
     RPC.setProtocolEngine(conf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     // Create server side implementation
     MyTestRPCServer serverImpl = new MyTestRPCServer();

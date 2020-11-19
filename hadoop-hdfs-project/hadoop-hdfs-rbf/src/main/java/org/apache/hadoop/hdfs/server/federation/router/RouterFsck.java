@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -48,6 +49,7 @@ import org.slf4j.LoggerFactory;
  * Wrapper for the Router to offer the Namenode FSCK.
  */
 @InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class RouterFsck {
 
   public static final Logger LOG =
@@ -69,6 +71,10 @@ public class RouterFsck {
   public void fsck() {
     final long startTime = Time.monotonicNow();
     try {
+      String warnMsg = "Now FSCK to DFSRouter is unstable feature. " +
+          "There may be incompatible changes between releases.";
+      LOG.warn(warnMsg);
+      out.println(warnMsg);
       String msg = "Federated FSCK started by " +
           UserGroupInformation.getCurrentUser() + " from " + remoteAddress +
           " at " + new Date();

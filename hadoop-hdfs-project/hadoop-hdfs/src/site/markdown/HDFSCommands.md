@@ -158,6 +158,16 @@ Usage: `hdfs lsSnapshottableDir [-help]`
 
 Get the list of snapshottable directories. When this is run as a super user, it returns all snapshottable directories. Otherwise it returns those directories that are owned by the current user.
 
+### `lsSnapshot`
+
+Usage: `hdfs lsSnapshot [-help]`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-help` | print help |
+
+Get the list of snapshots for a snapshottable directory.
+
 ### `jmxget`
 
 Usage: `hdfs jmxget [-localVM ConnectorURL | -port port | -server mbeanserver | -service service]`
@@ -693,4 +703,42 @@ Usage: `hdfs debug recoverLease -path <path> [-retries <num-retries>]`
 | [`-path` *path*] | HDFS path for which to recover the lease. |
 | [`-retries` *num-retries*] | Number of times the client will retry calling recoverLease. The default number of retries is 1. |
 
-Recover the lease on the specified path. The path must reside on an HDFS filesystem. The default number of retries is 1.
+Recover the lease on the specified path. The path must reside on an HDFS file system. The default number of retries is 1.
+
+dfsadmin with ViewFsOverloadScheme
+----------------------------------
+
+Usage: `hdfs dfsadmin -fs <child fs mount link URI> <dfsadmin command options>`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-fs` *child fs mount link URI* | Its a logical mount link path to child file system in ViewFS world. This uri typically formed as src mount link prefixed with fs.defaultFS. Please note, this is not an actual child file system uri, instead its a logical mount link uri pointing to actual child file system|
+
+Example command usage:
+   `hdfs dfsadmin -fs hdfs://nn1 -safemode enter`
+
+In ViewFsOverloadScheme, we may have multiple child file systems as mount point mappings as shown in [ViewFsOverloadScheme Guide](./ViewFsOverloadScheme.html). Here -fs option is an optional generic parameter supported by dfsadmin. When users want to execute commands on one of the child file system, they need to pass that file system mount mapping link uri to -fs option. Let's take an example mount link configuration and dfsadmin command below.
+
+Mount link:
+
+```xml
+<property>
+  <name>fs.defaultFS</name>
+  <value>hdfs://MyCluster1</value>
+</property>
+
+<property>
+  <name>fs.viewfs.mounttable.MyCluster1./user</name>
+  <value>hdfs://MyCluster2/user</value>
+  <!-- mount table name : MyCluster1
+       mount link mapping: hdfs://MyCluster1/user --> hdfs://MyCluster2/user
+       mount link path: /user
+       mount link uri: hdfs://MyCluster1/user
+       mount target uri for /user: hdfs://MyCluster2/user -->
+</property>
+```
+
+If user wants to talk to `hdfs://MyCluster2/`, then they can pass -fs option (`-fs hdfs://MyCluster1/user`)
+Since /user was mapped to a cluster `hdfs://MyCluster2/user`, dfsadmin resolve the passed (`-fs hdfs://MyCluster1/user`) to target fs (`hdfs://MyCluster2/user`).
+This way users can get the access to all hdfs child file systems in ViewFsOverloadScheme.
+If there is no `-fs` option provided, then it will try to connect to the configured fs.defaultFS cluster if a cluster running with the fs.defaultFS uri.

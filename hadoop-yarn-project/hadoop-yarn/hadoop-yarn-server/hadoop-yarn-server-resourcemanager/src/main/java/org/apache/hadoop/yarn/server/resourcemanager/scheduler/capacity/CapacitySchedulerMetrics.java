@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -26,6 +26,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,6 +50,8 @@ public class CapacitySchedulerMetrics {
   @Metric("Scheduler commit success") MutableRate commitSuccess;
   @Metric("Scheduler commit failure") MutableRate commitFailure;
   @Metric("Scheduler node update") MutableRate nodeUpdate;
+  @Metric("Scheduler node heartbeat interval") MutableQuantiles
+      schedulerNodeHBInterval;
 
   private static volatile CapacitySchedulerMetrics INSTANCE = null;
   private static MetricsRegistry registry;
@@ -115,5 +118,14 @@ public class CapacitySchedulerMetrics {
   @VisibleForTesting
   public long getNumOfCommitSuccess() {
     return this.commitSuccess.lastStat().numSamples();
+  }
+
+  public void addSchedulerNodeHBInterval(long heartbeatInterval) {
+    schedulerNodeHBInterval.add(heartbeatInterval);
+  }
+
+  @VisibleForTesting
+  public long getNumOfSchedulerNodeHBInterval() {
+    return this.schedulerNodeHBInterval.getEstimator().getCount();
   }
 }

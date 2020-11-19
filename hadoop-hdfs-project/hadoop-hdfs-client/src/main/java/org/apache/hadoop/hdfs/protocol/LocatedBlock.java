@@ -22,14 +22,14 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Associates a block with the Datanodes that contain its replicas
@@ -158,7 +158,7 @@ public class LocatedBlock {
    * {@link org.apache.hadoop.hdfs.protocol.LocatedBlock#updateCachedStorageInfo}
    * to update the cached Storage ID/Type arrays.
    */
-  public DatanodeInfo[] getLocations() {
+  public DatanodeInfoWithStorage[] getLocations() {
     return locs;
   }
 
@@ -268,6 +268,7 @@ public class LocatedBlock {
         + "; corrupt=" + corrupt
         + "; offset=" + offset
         + "; locs=" + Arrays.asList(locs)
+        + "; cachedLocs=" + Arrays.asList(cachedLocs)
         + "}";
   }
 

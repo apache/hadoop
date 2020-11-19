@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.isNull;
 
-import java.util.Arrays;
+import java.io.IOException;
+import java.util.Collections;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
@@ -34,10 +35,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.TestUserGroupMappingPlacementRule.QueueMappingTestData.QueueMappingTestDataBuilder;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.PrimaryGroupMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
@@ -46,7 +46,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestUserGroupMappingPlacementRule {
-  YarnConfiguration conf = new YarnConfiguration();
+  private final YarnConfiguration conf = new YarnConfiguration();
 
   @Before
   public void setup() {
@@ -54,9 +54,27 @@ public class TestUserGroupMappingPlacementRule {
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
   }
 
-  private void verifyQueueMapping(QueueMappingTestData queueMappingTestData)
-      throws YarnException {
+  private void createQueueHierarchy(
+      CapacitySchedulerQueueManager queueManager) {
+    MockQueueHierarchyBuilder.create()
+        .withQueueManager(queueManager)
+        .withQueue("root.default")
+        .withQueue("root.agroup.a")
+        .withQueue("root.bgroup")
+        .withQueue("root.usergroup.c")
+        .withQueue("root.asubgroup2")
+        .withQueue("root.bsubgroup2.b")
+        .withQueue("root.users.primarygrouponly")
+        .withQueue("root.devs.primarygrouponly")
+        .withQueue("root.admins.primarygrouponly")
+        .withManagedParentQueue("root.managedParent")
+        .build();
 
+    when(queueManager.getQueue(isNull())).thenReturn(null);
+  }
+
+  private void verifyQueueMapping(QueueMappingTestData queueMappingTestData)
+      throws IOException, YarnException {
     QueueMapping queueMapping = queueMappingTestData.queueMapping;
     String inputUser = queueMappingTestData.inputUser;
     String inputQueue = queueMappingTestData.inputQueue;
@@ -64,350 +82,581 @@ public class TestUserGroupMappingPlacementRule {
     boolean overwrite = queueMappingTestData.overwrite;
     String expectedParentQueue = queueMappingTestData.expectedParentQueue;
 
-    Groups groups = new Groups(conf);
-    UserGroupMappingPlacementRule rule = new UserGroupMappingPlacementRule(
-        overwrite, Arrays.asList(queueMapping), groups);
-    CapacitySchedulerQueueManager queueManager =
-        mock(CapacitySchedulerQueueManager.class);
+    MappingRule rule = MappingRule.createLegacyRule(
+        queueMapping.getType().toString(),
+        queueMapping.getSource(),
+        queueMapping.getFullPath());
 
-    ParentQueue agroup = mock(ParentQueue.class);
-    when(agroup.getQueuePath()).thenReturn("root.agroup");
-    ParentQueue bsubgroup2 = mock(ParentQueue.class);
-    when(bsubgroup2.getQueuePath()).thenReturn("root.bsubgroup2");
+    CSMappingPlacementRule engine = setupEngine(rule, overwrite);
 
-    ManagedParentQueue managedParent = mock(ManagedParentQueue.class);
-    when(managedParent.getQueueName()).thenReturn("root.managedParent");
-
-    LeafQueue a = mock(LeafQueue.class);
-    when(a.getQueuePath()).thenReturn("root.agroup.a");
-    when(a.getParent()).thenReturn(agroup);
-    LeafQueue b = mock(LeafQueue.class);
-    when(b.getQueuePath()).thenReturn("root.bsubgroup2.b");
-    when(b.getParent()).thenReturn(bsubgroup2);
-    LeafQueue asubgroup2 = mock(LeafQueue.class);
-    when(asubgroup2.getQueuePath()).thenReturn("root.asubgroup2");
-
-    when(queueManager.getQueue("a")).thenReturn(a);
-    when(queueManager.getQueue("b")).thenReturn(b);
-    when(queueManager.getQueue("agroup")).thenReturn(agroup);
-    when(queueManager.getQueue("bsubgroup2")).thenReturn(bsubgroup2);
-    when(queueManager.getQueue("asubgroup2")).thenReturn(asubgroup2);
-    when(queueManager.getQueue("managedParent")).thenReturn(managedParent);
-
-    when(queueManager.getQueue("root.agroup")).thenReturn(agroup);
-    when(queueManager.getQueue("root.bsubgroup2")).thenReturn(bsubgroup2);
-    when(queueManager.getQueue("root.asubgroup2")).thenReturn(asubgroup2);
-    when(queueManager.getQueue("root.agroup.a")).thenReturn(a);
-    when(queueManager.getQueue("root.bsubgroup2.b")).thenReturn(b);
-    when(queueManager.getQueue("root.managedParent")).thenReturn(managedParent);
-
-    when(queueManager.getQueueByFullName("root.agroup")).thenReturn(agroup);
-    when(queueManager.getQueueByFullName("root.bsubgroup2"))
-        .thenReturn(bsubgroup2);
-    when(queueManager.getQueueByFullName("root.asubgroup2"))
-        .thenReturn(asubgroup2);
-    when(queueManager.getQueueByFullName("root.agroup.a")).thenReturn(a);
-    when(queueManager.getQueueByFullName("root.bsubgroup2.b")).thenReturn(b);
-    when(queueManager.getQueueByFullName("root.managedParent"))
-        .thenReturn(managedParent);
-
-
-    rule.setQueueManager(queueManager);
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
     asc.setQueue(inputQueue);
-    ApplicationPlacementContext ctx = rule.getPlacementForApp(asc, inputUser);
+    ApplicationPlacementContext ctx = engine.getPlacementForApp(asc, inputUser);
     Assert.assertEquals("Queue", expectedQueue,
         ctx != null ? ctx.getQueue() : inputQueue);
-    if (expectedParentQueue != null) {
+    if (ctx != null && expectedParentQueue != null) {
       Assert.assertEquals("Parent Queue", expectedParentQueue,
           ctx.getParentQueue());
     }
   }
 
+  CSMappingPlacementRule setupEngine(MappingRule rule,
+                                     boolean override)
+      throws IOException {
+
+    CapacitySchedulerConfiguration csConf =
+        mock(CapacitySchedulerConfiguration.class);
+    when(csConf.getMappingRules()).thenReturn(Collections.singletonList(rule));
+    when(csConf.getOverrideWithQueueMappings())
+        .thenReturn(override);
+    CapacitySchedulerQueueManager queueManager =
+        mock(CapacitySchedulerQueueManager.class);
+    createQueueHierarchy(queueManager);
+
+    CSMappingPlacementRule engine = new CSMappingPlacementRule();
+    Groups groups = new Groups(conf);
+
+    CapacityScheduler cs = mock(CapacityScheduler.class);
+    when(cs.getConfiguration()).thenReturn(csConf);
+    when(cs.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
+
+    engine.setGroups(groups);
+    engine.setFailOnConfigError(false);
+    engine.initialize(cs);
+
+    return engine;
+  }
+
   @Test
-  public void testSecondaryGroupMapping() throws YarnException {
+  public void testSecondaryGroupMapping() throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%secondary_group").build())
-                .inputUser("a")
-                .expectedQueue("root.asubgroup2")
-                .build());
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%secondary_group").build())
+            .inputUser("a")
+            .expectedQueue("asubgroup2")
+            .expectedParentQueue("root")
+            .build());
 
     // PrimaryGroupMapping.class returns only primary group, no secondary groups
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         PrimaryGroupMapping.class, GroupMappingServiceProvider.class);
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%secondary_group")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("default")
-                .build());
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%secondary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("default")
+            .build());
   }
 
   @Test
-  public void testNullGroupMapping() throws YarnException {
+  public void testNullGroupMapping() throws IOException, YarnException {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         NullGroupsMapping.class, GroupMappingServiceProvider.class);
-    try {
-      verifyQueueMapping(
-          QueueMappingTestDataBuilder.create()
-                  .queueMapping(QueueMappingBuilder.create()
-                                  .type(MappingType.USER)
-                                  .source("%user")
-                                  .queue("%secondary_group")
-                                  .build())
-                  .inputUser("a")
-                  .expectedQueue("default")
-                  .build());
-      fail("No Groups for user 'a'");
-    } catch (YarnException e) {
-      // Exception is expected as there are no groups for given user
-    }
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%secondary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("default")
+            .build());
   }
 
   @Test
-  public void testMapping() throws YarnException {
+  public void testSimpleUserMappingToSpecificQueue()
+      throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("a")
-                                .queue("q1")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("q1")
-                .build());
-    verifyQueueMapping(
-        QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.GROUP)
-                                .source("agroup")
-                                .queue("q1")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("q1")
-                .build());
-    verifyQueueMapping(
-        QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("q2")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("q2")
-                .build());
-    verifyQueueMapping(
-        QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%user")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("a")
-                .build());
-    verifyQueueMapping(
-        QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%primary_group")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("root.agroup")
-                .build());
-    verifyQueueMapping(
-        QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%user")
-                                .parentQueue("%primary_group")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("a")
-                .expectedParentQueue("root.agroup")
-                .build());
-    verifyQueueMapping(
-        QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%user")
-                                .parentQueue("%secondary_group")
-                                .build())
-                .inputUser("b")
-                .expectedQueue("b")
-                .expectedParentQueue("root.bsubgroup2")
-                .build());
-    verifyQueueMapping(
-        QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.GROUP)
-                                .source("asubgroup1")
-                                .queue("q1")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("q1")
-                .build());
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("a")
+                .queue("a")
+                .build())
+            .inputUser("a")
+            .expectedQueue("a")
+            .build());
+  }
 
-    // "agroup" queue exists
+  @Test
+  public void testSimpleGroupMappingToSpecificQueue()
+      throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%primary_group")
-                                .parentQueue("bsubgroup2")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("root.agroup")
-                .build());
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.GROUP)
+                .source("agroup")
+                .queue("a")
+                .build())
+            .inputUser("a")
+            .expectedQueue("a")
+            .build());
+  }
 
+  @Test
+  public void testUserMappingToSpecificQueueForEachUser()
+      throws IOException, YarnException {
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("b")
+                .build())
+            .inputUser("a")
+            .expectedQueue("b")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToQueueNamedAsUsername()
+      throws IOException, YarnException {
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%user")
+                .build())
+            .inputUser("a")
+            .expectedQueue("a")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToQueueNamedGroupOfTheUser()
+      throws IOException, YarnException {
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%primary_group")
+                .build())
+            .inputUser("b")
+            .expectedQueue("bgroup")
+            .expectedParentQueue("root")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToQueueNamedAsUsernameWithPrimaryGroupAsParentQueue()
+      throws IOException, YarnException {
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%user")
+                .parentQueue("%primary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("a")
+            .expectedParentQueue("root.agroup")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToPrimaryGroupInvalidNestedPlaceholder()
+      throws IOException, YarnException {
+    // u:%user:%primary_group.%random, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%random")
+                .parentQueue("%primary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToSecondaryGroupInvalidNestedPlaceholder()
+      throws IOException, YarnException {
+    // u:%user:%secondary_group.%random, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%random")
+                .parentQueue("%secondary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingDiffersFromSubmitterQueueDoesNotExist()
+      throws IOException, YarnException {
+    // u:a:%random, submitter: xyz, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("a")
+                .queue("%random")
+                .build())
+            .inputUser("xyz")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testSpecificUserMappingToPrimaryGroup()
+      throws IOException, YarnException {
+    // u:a:%primary_group
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("b")
+                .queue("%primary_group")
+                .build())
+            .inputUser("b")
+            .expectedQueue("bgroup")
+            .build());
+  }
+
+  @Test
+  public void testSpecificUserMappingToSecondaryGroup()
+      throws IOException, YarnException {
+    // u:a:%secondary_group
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("a")
+                .queue("%secondary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("asubgroup2")
+            .build());
+  }
+
+  @Test
+  public void testSpecificUserMappingWithNoSecondaryGroup()
+      throws IOException, YarnException {
+    // u:nosecondarygroupuser:%secondary_group, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("nosecondarygroupuser")
+                .queue("%secondary_group")
+                .build())
+            .inputUser("nosecondarygroupuser")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testGenericUserMappingWithNoSecondaryGroup()
+      throws IOException, YarnException {
+    // u:%user:%user, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%user")
+                .parentQueue("%secondary_group")
+                .build())
+            .inputUser("nosecondarygroupuser")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToNestedUserPrimaryGroupWithAmbiguousQueues()
+      throws IOException, YarnException {
+    // u:%user:%user, submitter nosecondarygroupuser, queue is ambiguous
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%user")
+                .parentQueue("%primary_group")
+                .build())
+            .inputUser("nosecondarygroupuser")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testResolvedQueueIsNotManaged()
+      throws IOException, YarnException {
+    // u:%user:%primary_group.%user, "admins" group will be "root",
+    // resulting parent queue will be "root" which is not managed
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%user")
+                .parentQueue("%primary_group")
+                .build())
+            .inputUser("admins")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToPrimaryGroupWithAmbiguousQueues()
+      throws IOException, YarnException {
+    // u:%user:%primary_group, submitter nosecondarygroupuser,
+    // queue is ambiguous
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%primary_group")
+                .build())
+            .inputUser("nosecondarygroupuser")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToQueueNamedAsUsernameWithSecondaryGroupAsParentQueue()
+      throws IOException, YarnException {
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%user")
+                .parentQueue("%secondary_group")
+                .build())
+            .inputUser("b")
+            .expectedQueue("b")
+            .expectedParentQueue("root.bsubgroup2")
+            .build());
+  }
+
+  @Test
+  public void testGroupMappingToStaticQueue()
+      throws IOException, YarnException {
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.GROUP)
+                .source("asubgroup1")
+                .queue("a")
+                .build())
+            .inputUser("a")
+            .expectedQueue("a")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToQueueNamedAsGroupNameWithRootAsParentQueue()
+      throws IOException, YarnException {
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%primary_group")
+                .parentQueue("root")
+                .build())
+            .inputUser("b")
+            .expectedQueue("bgroup")
+            .expectedParentQueue("root")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToPrimaryGroupQueueDoesNotExistUnmanagedParent()
+      throws IOException, YarnException {
     // "abcgroup" queue doesn't exist, %primary_group queue, not managed parent
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%primary_group")
-                                .parentQueue("bsubgroup2")
-                                .build())
-                .inputUser("abc")
-                .expectedQueue("default")
-                .build());
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%primary_group")
+                .parentQueue("bsubgroup2")
+                .build())
+            .inputUser("abc")
+            .expectedQueue("default")
+            .build());
+  }
 
+  @Test
+  public void testUserMappingToPrimaryGroupQueueDoesNotExistManagedParent()
+      throws IOException, YarnException {
     // "abcgroup" queue doesn't exist, %primary_group queue, managed parent
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%primary_group")
-                                .parentQueue("managedParent")
-                                .build())
-                .inputUser("abc")
-                .expectedQueue("root.abcgroup")
-                .build());
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%primary_group")
+                .parentQueue("managedParent")
+                .build())
+            .inputUser("abc")
+            .expectedQueue("abcgroup")
+            .expectedParentQueue("root.managedParent")
+            .build());
+  }
 
+  @Test
+  public void testUserMappingToSecondaryGroupQueueDoesNotExist()
+      throws IOException, YarnException {
     // "abcgroup" queue doesn't exist, %secondary_group queue
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%secondary_group")
-                                .parentQueue("bsubgroup2")
-                                .build())
-                .inputUser("abc")
-                .expectedQueue("default")
-                .build());
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%secondary_group")
+                .parentQueue("bsubgroup2")
+                .build())
+            .inputUser("abc")
+            .expectedQueue("default")
+            .build());
+  }
 
+  @Test
+  public void testUserMappingToSecondaryGroupQueueUnderParent()
+      throws IOException, YarnException {
     // "asubgroup2" queue exists, %secondary_group queue
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
-                .queueMapping(QueueMappingBuilder.create()
-                                .type(MappingType.USER)
-                                .source("%user")
-                                .queue("%secondary_group")
-                                .parentQueue("bsubgroup2")
-                                .build())
-                .inputUser("a")
-                .expectedQueue("root.asubgroup2")
-                .build());
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%secondary_group")
+                .parentQueue("root")
+                .build())
+            .inputUser("a")
+            .expectedQueue("asubgroup2")
+            .expectedParentQueue("root")
+            .build());
+  }
 
+  @Test
+  public void testUserMappingToSpecifiedQueueOverwritesInputQueueFromMapping()
+      throws IOException, YarnException {
     // specify overwritten, and see if user specified a queue, and it will be
     // overridden
-   verifyQueueMapping(
-       QueueMappingTestDataBuilder.create()
-               .queueMapping(QueueMappingBuilder.create()
-                               .type(MappingType.USER)
-                               .source("user")
-                               .queue("q1")
-                               .build())
-               .inputUser("user")
-               .inputQueue("q2")
-               .expectedQueue("q1")
-               .overwrite(true)
-               .build());
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("user")
+                .queue("a")
+                .build())
+            .inputUser("user")
+            .inputQueue("b")
+            .expectedQueue("a")
+            .overwrite(true)
+            .build());
+  }
 
-   // if overwritten not specified, it should be which user specified
-   verifyQueueMapping(
-       QueueMappingTestDataBuilder.create()
-               .queueMapping(QueueMappingBuilder.create()
-                               .type(MappingType.USER)
-                               .source("user")
-                               .queue("q1")
-                               .build())
-               .inputUser("user")
-               .inputQueue("q2")
-               .expectedQueue("q2")
-               .build());
+  @Test
+  public void testUserMappingToExplicitlySpecifiedQueue()
+      throws IOException, YarnException {
+    // if overwritten not specified, it should be which user specified
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("user")
+                .queue("a")
+                .build())
+            .inputUser("user")
+            .inputQueue("b")
+            .expectedQueue("b")
+            .build());
+  }
 
-   // if overwritten not specified, it should be which user specified
-   verifyQueueMapping(
-      QueueMappingTestDataBuilder.create()
-              .queueMapping(QueueMappingBuilder.create()
-                              .type(MappingType.GROUP)
-                              .source("usergroup")
-                              .queue("%user")
-                              .parentQueue("usergroup")
-                              .build())
-              .inputUser("user")
-              .inputQueue("default")
-              .expectedQueue("user")
-              .build());
+  @Test
+  public void testGroupMappingToExplicitlySpecifiedQueue()
+      throws IOException, YarnException {
+    // if overwritten not specified, it should be which user specified
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.GROUP)
+                .source("usergroup")
+                .queue("%user")
+                .parentQueue("usergroup")
+                .build())
+            .inputUser("user")
+            .inputQueue("c")
+            .expectedQueue("c")
+            .build());
+  }
 
-   // if overwritten not specified, it should be which user specified
-   verifyQueueMapping(
-      QueueMappingTestDataBuilder.create()
-              .queueMapping(QueueMappingBuilder.create()
-                              .type(MappingType.GROUP)
-                              .source("usergroup")
-                              .queue("%user")
-                              .parentQueue("usergroup")
-                              .build())
-              .inputUser("user")
-              .inputQueue("agroup")
-              .expectedQueue("user")
-              .overwrite(true)
-              .build());
+  @Test
+  public void testGroupMappingToSpecifiedQueueOverwritesInputQueueFromMapping()
+      throws IOException, YarnException {
+    // if overwritten not specified, it should be which user specified
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.GROUP)
+                .source("usergroup")
+                .queue("b")
+                .parentQueue("root.bsubgroup2")
+                .build())
+            .inputUser("user")
+            .inputQueue("a")
+            .expectedQueue("b")
+            .overwrite(true)
+            .build());
+  }
 
-   // If user specific queue is enabled for a specified group under a given
-   // parent queue
-   verifyQueueMapping(
-      QueueMappingTestDataBuilder.create()
-              .queueMapping(QueueMappingBuilder.create()
-                              .type(MappingType.GROUP)
-                              .source("agroup")
-                              .queue("%user")
-                              .parentQueue("parent1")
-                              .build())
-              .inputUser("a")
-              .expectedQueue("a")
-              .build());
+  @Test
+  public void testGroupMappingToSpecifiedQueueUnderAGivenParentQueue()
+      throws IOException, YarnException {
+    // If user specific queue is enabled for a specified group under a given
+    // parent queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.GROUP)
+                .source("agroup")
+                .queue("%user")
+                .parentQueue("root.agroup")
+                .build())
+            .inputUser("a")
+            .expectedQueue("a")
+            .build());
+  }
 
-   // If user specific queue is enabled for a specified group without parent
-   // queue
-   verifyQueueMapping(
-      QueueMappingTestDataBuilder.create()
-              .queueMapping(QueueMappingBuilder.create()
-                              .type(MappingType.GROUP)
-                              .source("agroup")
-                              .queue("%user")
-                              .build())
-              .inputUser("a")
-              .expectedQueue("a")
-              .build());
+  @Test
+  public void testGroupMappingToSpecifiedQueueWithoutParentQueue()
+      throws IOException, YarnException {
+    // If user specific queue is enabled for a specified group without parent
+    // queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.GROUP)
+                .source("agroup")
+                .queue("%user")
+                .build())
+            .inputUser("a")
+            .expectedQueue("a")
+            .build());
   }
 
   /**

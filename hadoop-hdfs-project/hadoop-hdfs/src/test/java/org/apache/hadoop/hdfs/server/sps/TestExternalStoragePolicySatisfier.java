@@ -98,7 +98,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Tests the external sps service plugins.
@@ -444,6 +444,33 @@ public class TestExternalStoragePolicySatisfier {
     // Wait till namenode notified about the block location details
     DFSTestUtil.waitExpectedStorageType(FILE, StorageType.ARCHIVE, 3, 35000,
         dfs);
+  }
+
+  @Test(timeout = 300000)
+  public void testWhenStoragePolicySetToALLNVDIMM()
+          throws Exception {
+    try {
+      createCluster();
+      // Change policy to ALL_NVDIMM
+      dfs.setStoragePolicy(new Path(FILE), "ALL_NVDIMM");
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.NVDIMM, StorageType.DISK},
+              {StorageType.NVDIMM, StorageType.DISK},
+              {StorageType.NVDIMM, StorageType.DISK}};
+
+      startAdditionalDNs(config, 3, NUM_OF_DATANODES, newtypes,
+              STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
+
+      dfs.satisfyStoragePolicy(new Path(FILE));
+      hdfsCluster.triggerHeartbeats();
+      // Wait till StorgePolicySatisfier Identified that block
+      // to move to MVDIMM areas
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.NVDIMM, 3,
+          30000, dfs);
+    } finally {
+      shutdownCluster();
+    }
   }
 
   @Test(timeout = 300000)
@@ -1019,6 +1046,8 @@ public class TestExternalStoragePolicySatisfier {
             {StorageType.DISK, StorageType.SSD},
             {StorageType.DISK, StorageType.DISK}};
     config.setLong("dfs.block.size", 2 * DEFAULT_BLOCK_SIZE);
+    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+        false);
     long dnCapacity = 1024 * DEFAULT_BLOCK_SIZE + (2 * DEFAULT_BLOCK_SIZE - 1);
     try {
       hdfsCluster = startCluster(config, diskTypes, NUM_OF_DATANODES,

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
@@ -60,9 +61,11 @@ import java.nio.charset.Charset;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -70,6 +73,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.http.client.HttpFSUtils;
+import org.apache.hadoop.fs.http.client.HttpFSFileSystem.Operation;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.NoRedirectParam;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -88,6 +93,7 @@ import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestHdfs;
@@ -100,7 +106,7 @@ import org.junit.Test;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
@@ -165,6 +171,11 @@ public class TestHttpFSServer extends HFSTestCase {
     @Override
     public List<String> getGroups(String user) throws IOException {
       return Arrays.asList(HadoopUsersConfTestHelper.getHadoopUserGroups(user));
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      return new HashSet<>(getGroups(user));
     }
 
   }
@@ -1505,6 +1516,23 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
   }
 
+  private void verifyGetSnapshotList(DistributedFileSystem dfs, Path path)
+      throws Exception {
+    // Send a request
+    HttpURLConnection conn = sendRequestToHttpFSServer(path.toString(),
+        "GETSNAPSHOTLIST", "");
+    // Should return HTTP_OK
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // Verify the response
+    BufferedReader reader =
+        new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    // The response should be a one-line JSON string.
+    String dirLst = reader.readLine();
+    // Verify the content of status with DFS API.
+    SnapshotStatus[] dfsDirLst = dfs.getSnapshotListing(path);
+    Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+  }
+
   @Test
   @TestDir
   @TestJetty
@@ -1540,6 +1568,35 @@ public class TestHttpFSServer extends HFSTestCase {
     verifyGetSnapshottableDirectoryList(dfs);
   }
 
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testGetSnapshotList() throws Exception {
+    createHttpFSServer(false, false);
+    // Create test directories
+    String pathStr = "/tmp/tmp-snap-list-test-1";
+    createDirWithHttp(pathStr, "700", null);
+    Path path = new Path(pathStr);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(
+        path.toUri(), TestHdfsHelper.getHdfsConf());
+    // Enable snapshot for path1
+    dfs.allowSnapshot(path);
+    Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    // Verify response when there is one snapshottable directory
+    verifyGetSnapshotList(dfs, path);
+    // Create a file and take a snapshot
+    String file1 = pathStr + "/file1";
+    createWithHttp(file1, null);
+    dfs.createSnapshot(path, "snap1");
+    // Create another file and take a snapshot
+    String file2 = pathStr + "/file2";
+    createWithHttp(file2, null);
+    dfs.createSnapshot(path, "snap2");
+    verifyGetSnapshotList(dfs, path);
+  }
+
   @Test
   @TestDir
   @TestJetty
@@ -1565,7 +1622,7 @@ public class TestHttpFSServer extends HFSTestCase {
         new InputStreamReader(conn.getInputStream()));
     String location = (String)json.get("Location");
     Assert.assertTrue(location.contains(DataParam.NAME));
-    Assert.assertTrue(location.contains(NoRedirectParam.NAME));
+    Assert.assertFalse(location.contains(NoRedirectParam.NAME));
     Assert.assertTrue(location.contains("CREATE"));
     Assert.assertTrue("Wrong location: " + location,
         location.startsWith(TestJettyHelper.getJettyURL().toString()));
@@ -1833,5 +1890,79 @@ public class TestHttpFSServer extends HFSTestCase {
     Map<String, byte[]> xAttrs = dfs.getXAttrs(path1);
     assertTrue(
         xAttrs.containsKey(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testNoRedirectWithData() throws Exception {
+    createHttpFSServer(false, false);
+
+    final String path = "/file";
+    final String username = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    // file creation which should not redirect
+    URL url = new URL(TestJettyHelper.getJettyURL(),
+        MessageFormat.format(
+            "/webhdfs/v1{0}?user.name={1}&op=CREATE&data=true&noredirect=true",
+            path, username));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.PUT);
+    conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+    conn.setDoOutput(true);
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    JSONObject json = (JSONObject) new JSONParser()
+        .parse(new InputStreamReader(conn.getInputStream()));
+
+    // get the location to write
+    String location = (String) json.get("Location");
+    Assert.assertTrue(location.contains(DataParam.NAME));
+    Assert.assertTrue(location.contains("CREATE"));
+    url = new URL(location);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.PUT);
+    conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+    conn.setDoOutput(true);
+    conn.connect();
+    final String writeStr = "write some content";
+    OutputStream os = conn.getOutputStream();
+    os.write(writeStr.getBytes());
+    os.close();
+    // Verify that file got created
+    Assert.assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+    json = (JSONObject) new JSONParser()
+        .parse(new InputStreamReader(conn.getInputStream()));
+    location = (String) json.get("Location");
+    Assert.assertEquals(TestJettyHelper.getJettyURL() + "/webhdfs/v1" + path,
+        location);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testContentType() throws Exception {
+    createHttpFSServer(false, false);
+    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    Path dir = new Path("/tmp");
+    Path file = new Path(dir, "foo");
+    fs.mkdirs(dir);
+    fs.create(file);
+
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1/tmp/foo?user.name={0}&op=open&offset=1&length=2", user));
+
+    // test jsonParse with non-json type.
+    final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(Operation.OPEN.getMethod());
+    conn.connect();
+
+    LambdaTestUtils.intercept(IOException.class,
+        "Content-Type \"text/html;charset=iso-8859-1\" "
+            + "is incompatible with \"application/json\"",
+        () -> HttpFSUtils.jsonParse(conn));
+    conn.disconnect();
   }
 }

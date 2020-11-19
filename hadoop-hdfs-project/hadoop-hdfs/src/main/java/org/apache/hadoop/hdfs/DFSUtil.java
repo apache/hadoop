@@ -39,7 +39,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_P
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
@@ -72,6 +71,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.security.AccessControlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +92,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.AuthFilterInitializer;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -103,11 +103,11 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 @InterfaceAudience.Private
@@ -627,8 +627,9 @@ public class DFSUtil {
                                                DFS_NAMENODE_RPC_ADDRESS_KEY);
     if (addressList.isEmpty()) {
       throw new IOException("Incorrect configuration: namenode address "
-              + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + " or "
-              + DFS_NAMENODE_RPC_ADDRESS_KEY
+              + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + "." + parentNameServices
+              + " or "
+              + DFS_NAMENODE_RPC_ADDRESS_KEY + "." + parentNameServices
               + " is not configured.");
     }
     return addressList;
@@ -1294,6 +1295,27 @@ public class DFSUtil {
    */
   public static void addPBProtocol(Configuration conf, Class<?> protocol,
       BlockingService service, RPC.Server server) throws IOException {
+    RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine2.class);
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
+  }
+
+  /**
+   * Add protobuf based protocol to the {@link RPC.Server}.
+   * This engine uses Protobuf 2.5.0. Recommended to upgrade to
+   * Protobuf 3.x from hadoop-thirdparty and use
+   * {@link DFSUtil#addPBProtocol(Configuration, Class, BlockingService,
+   * RPC.Server)}.
+   * @param conf configuration
+   * @param protocol Protocol interface
+   * @param service service that implements the protocol
+   * @param server RPC server to which the protocol &amp; implementation is
+   *               added to
+   * @throws IOException
+   */
+  @Deprecated
+  public static void addPBProtocol(Configuration conf, Class<?> protocol,
+      com.google.protobuf.BlockingService service, RPC.Server server)
+      throws IOException {
     RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine.class);
     server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
   }
@@ -1754,7 +1776,6 @@ public class DFSUtil {
    *                                was found.
    * @throws ParentNotDirectoryException
    * @throws UnresolvedLinkException
-   * @throws FileNotFoundException
    */
   public static void checkProtectedDescendants(
       FSDirectory fsd, INodesInPath iip)
@@ -1784,6 +1805,18 @@ public class DFSUtil {
         throw new AccessControlException(
             "Cannot delete/rename non-empty protected subdirectory "
             + descendant);
+      }
+    }
+
+    if (fsd.isProtectedSubDirectoriesEnable()) {
+      while (!src.isEmpty()) {
+        int index = src.lastIndexOf(Path.SEPARATOR_CHAR);
+        src = src.substring(0, index);
+        if (protectedDirs.contains(src)) {
+          throw new AccessControlException(
+              "Cannot delete/rename subdirectory under protected subdirectory "
+              + src);
+        }
       }
     }
   }

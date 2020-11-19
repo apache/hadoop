@@ -23,7 +23,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;
@@ -47,12 +47,14 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.web.JsonUtilClient;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -70,9 +72,9 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -197,6 +199,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTR_VALUE_JSON = "value";
   public static final String XATTRNAMES_JSON = "XAttrNames";
   public static final String ECPOLICY_JSON = "ecPolicyObj";
+  public static final String SYMLINK_JSON = "symlink";
 
   public static final String FILE_CHECKSUM_JSON = "FileChecksum";
   public static final String CHECKSUM_ALGORITHM_JSON = "algorithm";
@@ -261,7 +264,8 @@ public class HttpFSFileSystem extends FileSystem
     ALLOWSNAPSHOT(HTTP_PUT), DISALLOWSNAPSHOT(HTTP_PUT),
     CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
     RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET),
-    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSERVERDEFAULTS(HTTP_GET),
+    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSNAPSHOTLIST(HTTP_GET),
+    GETSERVERDEFAULTS(HTTP_GET),
     CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(
         HTTP_GET), UNSETECPOLICY(HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT);
 
@@ -801,6 +805,11 @@ public class HttpFSFileSystem extends FileSystem
    */
   @Override
   public void setWorkingDirectory(Path newDir) {
+    String result = newDir.toUri().getPath();
+    if (!DFSUtilClient.isValidName(result)) {
+      throw new IllegalArgumentException(
+          "Invalid DFS directory name " + result);
+    }
     workingDir = newDir;
   }
 
@@ -1093,6 +1102,9 @@ public class HttpFSFileSystem extends FileSystem
     String pathSuffix = (String) json.get(PATH_SUFFIX_JSON);
     Path path = (pathSuffix.equals("")) ? parent : new Path(parent, pathSuffix);
     FILE_TYPE type = FILE_TYPE.valueOf((String) json.get(TYPE_JSON));
+    String symLinkValue =
+        type == FILE_TYPE.SYMLINK ? (String) json.get(SYMLINK_JSON) : null;
+    Path symLink = symLinkValue == null ? null : new Path(symLinkValue);
     long len = (Long) json.get(LENGTH_JSON);
     String owner = (String) json.get(OWNER_JSON);
     String group = (String) json.get(GROUP_JSON);
@@ -1117,11 +1129,12 @@ public class HttpFSFileSystem extends FileSystem
           new FsPermissionExtension(permission, aBit, eBit, ecBit);
       FileStatus fileStatus = new FileStatus(len, FILE_TYPE.DIRECTORY == type,
           replication, blockSize, mTime, aTime, deprecatedPerm, owner, group,
-          null, path, FileStatus.attributes(aBit, eBit, ecBit, seBit));
+          symLink, path, FileStatus.attributes(aBit, eBit, ecBit, seBit));
       return fileStatus;
     } else {
       return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
-          replication, blockSize, mTime, aTime, permission, owner, group, path);
+          replication, blockSize, mTime, aTime, permission, owner, group,
+          symLink, path);
     }
   }
 
@@ -1574,6 +1587,18 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return JsonUtilClient.toSnapshottableDirectoryList(json);
+  }
+
+  public SnapshotStatus[] getSnapshotListing(Path snapshotRoot)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETSNAPSHOTLIST.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.GETSNAPSHOTLIST.getMethod(),
+        params, snapshotRoot, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toSnapshotList(json);
   }
 
   /**

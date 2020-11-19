@@ -149,7 +149,7 @@ public abstract class MountTable extends BaseRecord {
     // Set permission fields
     UserGroupInformation ugi = NameNode.getRemoteUser();
     record.setOwnerName(ugi.getShortUserName());
-    String group = ugi.getGroups().isEmpty() ? ugi.getShortUserName()
+    String group = ugi.getGroupsSet().isEmpty() ? ugi.getShortUserName()
         : ugi.getPrimaryGroupName();
     record.setGroupName(group);
     record.setMode(new FsPermission(
@@ -430,6 +430,8 @@ public abstract class MountTable extends BaseRecord {
         .append(this.isReadOnly())
         .append(this.getDestOrder())
         .append(this.isFaultTolerant())
+        .append(this.getQuota().getQuota())
+        .append(this.getQuota().getSpaceQuota())
         .toHashCode();
   }
 
@@ -443,6 +445,9 @@ public abstract class MountTable extends BaseRecord {
           .append(this.isReadOnly(), other.isReadOnly())
           .append(this.getDestOrder(), other.getDestOrder())
           .append(this.isFaultTolerant(), other.isFaultTolerant())
+          .append(this.getQuota().getQuota(), other.getQuota().getQuota())
+          .append(this.getQuota().getSpaceQuota(),
+              other.getQuota().getSpaceQuota())
           .isEquals();
     }
     return false;

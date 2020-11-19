@@ -24,7 +24,7 @@ import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.BufferedInputStream;
 import java.io.DataInput;
@@ -40,6 +40,8 @@ import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.net.JarURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -81,7 +83,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -105,8 +107,8 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -1025,11 +1027,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     properties = null;                            // trigger reload
     finalParameters.clear();                      // clear site-limits
   }
-  
+
   private synchronized void addResourceObject(Resource resource) {
     resources.add(resource);                      // add to resources
     restrictSystemProps |= resource.isParserRestricted();
-    reloadConfiguration();
+    loadProps(properties, resources.size() - 1, false);
   }
 
   private static final int MAX_SUBST = 20;
@@ -1690,7 +1692,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return true;
     else if (StringUtils.equalsIgnoreCase("false", valueString))
       return false;
-    else return defaultValue;
+    else {
+      LOG.warn("Invalid value for boolean: " + valueString +
+               ", choose default value: " + defaultValue + " for " + name);
+      return defaultValue;
+    }
   }
 
   /** 
@@ -2870,12 +2876,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
-      Map<String, String[]> backup = updatingResource != null ?
-          new ConcurrentHashMap<String, String[]>(updatingResource) : null;
-      loadResources(properties, resources, quietmode);
+      loadProps(properties, 0, true);
+    }
+    return properties;
+  }
 
+  /**
+   * Loads the resource at a given index into the properties.
+   * @param props the object containing the loaded properties.
+   * @param startIdx the index where the new resource has been added.
+   * @param fullReload flag whether we do complete reload of the conf instead
+   *                   of just loading the new resource.
+   */
+  private synchronized void loadProps(final Properties props,
+      final int startIdx, final boolean fullReload) {
+    if (props != null) {
+      Map<String, String[]> backup =
+          updatingResource != null
+              ? new ConcurrentHashMap<>(updatingResource) : null;
+      loadResources(props, resources, startIdx, fullReload, quietmode);
       if (overlay != null) {
-        properties.putAll(overlay);
+        props.putAll(overlay);
         if (backup != null) {
           for (Map.Entry<Object, Object> item : overlay.entrySet()) {
             String key = (String) item.getKey();
@@ -2887,7 +2908,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
       }
     }
-    return properties;
   }
 
   /**
@@ -2989,14 +3009,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   private void loadResources(Properties properties,
                              ArrayList<Resource> resources,
+                             int startIdx,
+                             boolean fullReload,
                              boolean quiet) {
-    if(loadDefaults) {
+    if(loadDefaults && fullReload) {
       for (String resource : defaultResources) {
         loadResource(properties, new Resource(resource, false), quiet);
       }
     }
     
-    for (int i = 0; i < resources.size(); i++) {
+    for (int i = startIdx; i < resources.size(); i++) {
       Resource ret = loadResource(properties, resources.get(i), quiet);
       if (ret != null) {
         resources.set(i, ret);
@@ -3243,7 +3265,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           File href = new File(confInclude);
           if (!href.isAbsolute()) {
             // Included resources are relative to the current resource
-            File baseFile = new File(name).getParentFile();
+            File baseFile;
+
+            try {
+              baseFile = new File(new URI(name));
+            } catch (IllegalArgumentException | URISyntaxException e) {
+              baseFile = new File(name);
+            }
+
+            baseFile = baseFile.getParentFile();
             href = new File(baseFile, href.getPath());
           }
           if (!href.exists()) {
@@ -3865,6 +3895,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     Pattern p = Pattern.compile(regex);
 
     Map<String,String> result = new HashMap<String,String>();
+    List<String> resultKeys = new ArrayList<>();
     Matcher m;
 
     for(Map.Entry<Object,Object> item: getProps().entrySet()) {
@@ -3872,11 +3903,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           item.getValue() instanceof String) {
         m = p.matcher((String)item.getKey());
         if(m.find()) { // match
-          result.put((String) item.getKey(),
-              substituteVars(getProps().getProperty((String) item.getKey())));
+          resultKeys.add((String) item.getKey());
         }
       }
     }
+    resultKeys.forEach(item ->
+            result.put(item, substituteVars(getProps().getProperty(item))));
     return result;
   }
 

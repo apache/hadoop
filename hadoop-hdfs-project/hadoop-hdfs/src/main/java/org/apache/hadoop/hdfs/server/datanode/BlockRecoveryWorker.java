@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -600,17 +600,22 @@ public class BlockRecoveryWorker {
     Daemon d = new Daemon(datanode.threadGroup, new Runnable() {
       @Override
       public void run() {
-        for(RecoveringBlock b : blocks) {
-          try {
-            logRecoverBlock(who, b);
-            if (b.isStriped()) {
-              new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
-            } else {
-              new RecoveryTaskContiguous(b).recover();
+        datanode.metrics.incrDataNodeBlockRecoveryWorkerCount();
+        try {
+          for (RecoveringBlock b : blocks) {
+            try {
+              logRecoverBlock(who, b);
+              if (b.isStriped()) {
+                new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
+              } else {
+                new RecoveryTaskContiguous(b).recover();
+              }
+            } catch (IOException e) {
+              LOG.warn("recover Block: {} FAILED: {}", b, e);
             }
-          } catch (IOException e) {
-            LOG.warn("recoverBlocks FAILED: " + b, e);
           }
+        } finally {
+          datanode.metrics.decrDataNodeBlockRecoveryWorkerCount();
         }
       }
     });

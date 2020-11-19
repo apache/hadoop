@@ -75,9 +75,9 @@ import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.

@@ -244,9 +244,11 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
           Path.getPathWithoutSchemeAndAuthority(locEvent.getLocation());
       rsrc.size = locEvent.getSize();
       for (ContainerId container : rsrc.ref) {
-        rsrc.dispatcher.getEventHandler().handle(
+        final ContainerResourceLocalizedEvent localizedEvent =
             new ContainerResourceLocalizedEvent(
-              container, rsrc.rsrc, rsrc.localPath));
+                container, rsrc.rsrc, rsrc.localPath);
+        localizedEvent.setSize(rsrc.size);
+        rsrc.dispatcher.getEventHandler().handle(localizedEvent);
       }
     }
   }
@@ -281,9 +283,11 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       ResourceRequestEvent reqEvent = (ResourceRequestEvent) event;
       ContainerId container = reqEvent.getContext().getContainerId();
       rsrc.ref.add(container);
-      rsrc.dispatcher.getEventHandler().handle(
+      final ContainerResourceLocalizedEvent localizedEvent =
           new ContainerResourceLocalizedEvent(
-            container, rsrc.rsrc, rsrc.localPath));
+              container, rsrc.rsrc, rsrc.localPath);
+      localizedEvent.setSize(-rsrc.size);
+      rsrc.dispatcher.getEventHandler().handle(localizedEvent);
     }
   }
 

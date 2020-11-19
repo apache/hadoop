@@ -187,8 +187,8 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 public class TestClientRMService {
 
@@ -590,6 +590,51 @@ public class TestClientRMService {
       Assert.assertEquals(ex.getMessage(),
           "Trying to kill an absent " +
               "application " + request.getApplicationId());
+    }
+  }
+
+  @Test
+  public void testApplicationTagsValidation() throws IOException {
+    YarnConfiguration conf = new YarnConfiguration();
+    int maxtags = 3, appMaxTagLength = 5;
+    conf.setInt(YarnConfiguration.RM_APPLICATION_MAX_TAGS, maxtags);
+    conf.setInt(YarnConfiguration.RM_APPLICATION_MAX_TAG_LENGTH,
+        appMaxTagLength);
+    MockRM rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+
+    ClientRMService rmService = rm.getClientRMService();
+
+    List<String> tags = Arrays.asList("Tag1", "Tag2", "Tag3", "Tag4");
+    validateApplicationTag(rmService, tags,
+        "Too many applicationTags, a maximum of only " + maxtags
+            + " are allowed!");
+
+    tags = Arrays.asList("ApplicationTag1", "ApplicationTag2",
+        "ApplicationTag3");
+    // tags are converted to lowercase in
+    // ApplicationSubmissionContext#setApplicationTags
+    validateApplicationTag(rmService, tags,
+        "Tag applicationtag1 is too long, maximum allowed length of a tag is "
+            + appMaxTagLength);
+
+    tags = Arrays.asList("tãg1", "tag2#");
+    validateApplicationTag(rmService, tags,
+        "A tag can only have ASCII characters! Invalid tag - tãg1");
+    rm.close();
+  }
+
+  private void validateApplicationTag(ClientRMService rmService,
+      List<String> tags, String errorMsg) {
+    SubmitApplicationRequest submitRequest = mockSubmitAppRequest(
+        getApplicationId(101), MockApps.newAppName(), QUEUE_1,
+        new HashSet<String>(tags));
+    try {
+      rmService.submitApplication(submitRequest);
+      Assert.fail();
+    } catch (Exception ex) {
+      Assert.assertTrue(ex.getMessage().contains(errorMsg));
     }
   }
 

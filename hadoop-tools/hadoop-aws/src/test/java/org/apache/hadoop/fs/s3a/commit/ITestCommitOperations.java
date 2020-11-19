@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.amazonaws.services.s3.model.PartETag;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -22,6 +22,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeFloat;
@@ -29,7 +30,7 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @Metrics(about="Metrics for node manager", context="yarn")
 public class NodeManagerMetrics {
@@ -97,6 +98,21 @@ public class NodeManagerMetrics {
   MutableGaugeInt nodeUsedVMemGB;
   @Metric("Current CPU utilization")
   MutableGaugeFloat nodeCpuUtilization;
+
+  @Metric("Missed localization requests in bytes")
+      MutableCounterLong localizedCacheMissBytes;
+  @Metric("Cached localization requests in bytes")
+      MutableCounterLong localizedCacheHitBytes;
+  @Metric("Localization cache hit ratio (bytes)")
+      MutableGaugeInt localizedCacheHitBytesRatio;
+  @Metric("Missed localization requests (files)")
+      MutableCounterLong localizedCacheMissFiles;
+  @Metric("Cached localization requests (files)")
+      MutableCounterLong localizedCacheHitFiles;
+  @Metric("Localization cache hit ratio (files)")
+      MutableGaugeInt localizedCacheHitFilesRatio;
+  @Metric("Container localization time in milliseconds")
+      MutableRate localizationDurationMillis;
 
   // CHECKSTYLE:ON:VisibilityModifier
 
@@ -410,5 +426,39 @@ public class NodeManagerMetrics {
 
   public void setNodeCpuUtilization(float cpuUtilization) {
     this.nodeCpuUtilization.set(cpuUtilization);
+  }
+
+  private void updateLocalizationHitRatios() {
+    updateLocalizationHitRatio(localizedCacheHitBytes, localizedCacheMissBytes,
+        localizedCacheHitBytesRatio);
+    updateLocalizationHitRatio(localizedCacheHitFiles, localizedCacheMissFiles,
+        localizedCacheHitFilesRatio);
+  }
+
+  private static void updateLocalizationHitRatio(MutableCounterLong hitCounter,
+      MutableCounterLong missedCounter, MutableGaugeInt ratioGauge) {
+    final long hits = hitCounter.value();
+    final long misses = missedCounter.value();
+    final long total = hits + misses;
+    if (total > 0) {
+      ratioGauge.set((int)(100 * hits / total));
+    }
+  }
+
+  public void localizationCacheHitMiss(long size) {
+    if (size > 0) {
+      localizedCacheMissBytes.incr(size);
+      localizedCacheMissFiles.incr();
+      updateLocalizationHitRatios();
+    } else if (size < 0) {
+      // cached: recorded negative, restore the sign
+      localizedCacheHitBytes.incr(-size);
+      localizedCacheHitFiles.incr();
+      updateLocalizationHitRatios();
+    }
+  }
+
+  public void localizationComplete(long downloadMillis) {
+    localizationDurationMillis.add(downloadMillis);
   }
 }

@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -87,9 +87,9 @@ public class AvailableSpaceBlockPlacementPolicy extends
     Preconditions.checkArgument(clusterMap instanceof DFSNetworkTopology);
     DFSNetworkTopology dfsClusterMap = (DFSNetworkTopology)clusterMap;
     DatanodeDescriptor a = (DatanodeDescriptor) dfsClusterMap
-        .chooseRandomWithStorageType(scope, excludedNode, type);
+        .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     DatanodeDescriptor b = (DatanodeDescriptor) dfsClusterMap
-        .chooseRandomWithStorageType(scope, excludedNode, type);
+        .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     return select(a, b, false);
   }
 

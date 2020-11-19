@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.task.annotation.Checkpointable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /** An {@link OutputCommitter} that commits files specified
  * in job output directory i.e. ${mapreduce.output.fileoutputformat.outputdir}.

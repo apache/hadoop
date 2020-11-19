@@ -40,7 +40,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Test if we can correctly delay the deletion of blocks.

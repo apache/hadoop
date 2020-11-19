@@ -39,10 +39,10 @@ import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import static org.junit.Assert.*;
 
 public class CompressDecompressTester<T extends Compressor, E extends Decompressor> {
@@ -79,27 +79,6 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     };
   }
 
-  private static boolean isNativeSnappyLoadable() {
-    boolean snappyAvailable = false;
-    boolean loaded = false;
-    try {
-      System.loadLibrary("snappy");
-      logger.warn("Snappy native library is available");
-      snappyAvailable = true;
-      boolean hadoopNativeAvailable = NativeCodeLoader.isNativeCodeLoaded();
-      loaded = snappyAvailable && hadoopNativeAvailable;
-      if (loaded) {
-        logger.info("Snappy native library loaded");
-      } else {
-        logger.warn("Snappy native library not loaded");
-      }
-    } catch (Throwable t) {
-      logger.warn("Failed to load snappy: ", t);
-      return false;
-    }
-    return loaded;
-  }
-
   public static <T extends Compressor, E extends Decompressor> CompressDecompressTester<T, E> of(
       byte[] rawData) {
     return new CompressDecompressTester<T, E>(rawData);
@@ -126,7 +105,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     builder.add(new TesterPair<T, E>(name, compressor, decompressor));
   }
 
-  public void test() throws InstantiationException, IllegalAccessException {
+  public void test() throws Exception {
     pairs = builder.build();
     pairs = assertionDelegate.filterOnAssumeWhat(pairs);
 
@@ -287,47 +266,45 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
 
       @Override
       public void assertCompression(String name, Compressor compressor,
-          Decompressor decompressor, byte[] rawData) {
+          Decompressor decompressor, byte[] rawData) throws Exception {
 
         int cSize = 0;
         int decompressedSize = 0;
-        byte[] compressedResult = new byte[rawData.length];
+        // Snappy compression can increase data size
+        int maxCompressedLength = 32 + rawData.length + rawData.length/6;
+        byte[] compressedResult = new byte[maxCompressedLength];
         byte[] decompressedBytes = new byte[rawData.length];
-        try {
-          assertTrue(
-              joiner.join(name, "compressor.needsInput before error !!!"),
-              compressor.needsInput());
-          assertTrue(
+        assertTrue(
+            joiner.join(name, "compressor.needsInput before error !!!"),
+            compressor.needsInput());
+        assertEquals(
               joiner.join(name, "compressor.getBytesWritten before error !!!"),
-              compressor.getBytesWritten() == 0);
-          compressor.setInput(rawData, 0, rawData.length);
-          compressor.finish();
-          while (!compressor.finished()) {
-            cSize += compressor.compress(compressedResult, 0,
-                compressedResult.length);
-          }
-          compressor.reset();
-
-          assertTrue(
-              joiner.join(name, "decompressor.needsInput() before error !!!"),
-              decompressor.needsInput());
-          decompressor.setInput(compressedResult, 0, cSize);
-          assertFalse(
-              joiner.join(name, "decompressor.needsInput() after error !!!"),
-              decompressor.needsInput());
-          while (!decompressor.finished()) {
-            decompressedSize = decompressor.decompress(decompressedBytes, 0,
-                decompressedBytes.length);
-          }
-          decompressor.reset();
-          assertTrue(joiner.join(name, " byte size not equals error !!!"),
-              decompressedSize == rawData.length);
-          assertArrayEquals(
-              joiner.join(name, " byte arrays not equals error !!!"), rawData,
-              decompressedBytes);
-        } catch (Exception ex) {
-          fail(joiner.join(name, ex.getMessage()));
+            0, compressor.getBytesWritten());
+        compressor.setInput(rawData, 0, rawData.length);
+        compressor.finish();
+        while (!compressor.finished()) {
+          cSize += compressor.compress(compressedResult, 0,
+              compressedResult.length);
         }
+        compressor.reset();
+
+        assertTrue(
+            joiner.join(name, "decompressor.needsInput() before error !!!"),
+            decompressor.needsInput());
+        decompressor.setInput(compressedResult, 0, cSize);
+        assertFalse(
+            joiner.join(name, "decompressor.needsInput() after error !!!"),
+            decompressor.needsInput());
+        while (!decompressor.finished()) {
+          decompressedSize = decompressor.decompress(decompressedBytes, 0,
+              decompressedBytes.length);
+        }
+        decompressor.reset();
+        assertEquals(joiner.join(name, " byte size not equals error !!!"),
+            rawData.length, decompressedSize);
+        assertArrayEquals(
+            joiner.join(name, " byte arrays not equals error !!!"), rawData,
+            decompressedBytes);
       }
     }),
 
@@ -434,7 +411,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
               joiner.join(name, "byte arrays not equals error !!!"),
               originalRawData, decompressOut.toByteArray());
         } catch (Exception ex) {
-          fail(joiner.join(name, ex.getMessage()));
+          throw new AssertionError(name + ex, ex);
         } finally {
           try {
             compressedOut.close();
@@ -496,8 +473,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
   private static <T extends Compressor, E extends Decompressor> boolean isAvailable(TesterPair<T, E> pair) {
     Compressor compressor = pair.compressor;
 
-    if (compressor.getClass().isAssignableFrom(Lz4Compressor.class)
-            && (NativeCodeLoader.isNativeCodeLoaded()))
+    if (compressor.getClass().isAssignableFrom(Lz4Compressor.class))
       return true;
 
     else if (compressor.getClass().isAssignableFrom(BuiltInZlibDeflater.class)
@@ -506,11 +482,10 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
 
     else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)) {
       return ZlibFactory.isNativeZlibLoaded(new Configuration());
-    }              
-    else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)
-            && isNativeSnappyLoadable())
+    } else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)) {
       return true;
-    
+    }
+
     return false;      
   }
   
@@ -519,6 +494,6 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     protected final Logger logger = Logger.getLogger(getClass());
 
     abstract void assertCompression(String name, Compressor compressor,
-        Decompressor decompressor, byte[] originalRawData);
+        Decompressor decompressor, byte[] originalRawData) throws Exception;
   }
 }

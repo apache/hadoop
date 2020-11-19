@@ -113,7 +113,19 @@ Currently the only Metadata Store-independent setting, besides the
 implementation class above, are the *allow authoritative* and *fail-on-error*
 flags.
 
-#### Allow Authoritative
+#### <a name="authoritative"></a>  Authoritative S3Guard
+
+Authoritative S3Guard is a complicated configuration which delivers performance
+at the expense of being unsafe for other applications to use the same directory
+tree/bucket unless configured consistently.
+
+It can also be used to support [directory marker retention](directory_markers.html)
+in higher-performance but non-backwards-compatible modes.
+
+Most deployments do not use this setting -it is ony used in deployments where
+specific parts of a bucket (e.g. Apache Hive managed tables) are known to
+have exclusive access by a single application (Hive) and other tools/applications
+from exactly the same Hadoop release.
 
 The _authoritative_ expression in S3Guard is present in two different layers, for
 two different reasons:
@@ -178,7 +190,7 @@ recommended that you leave the default setting here:
     <value>false</value>
 </property>
 ```
-.
+
 Note that a MetadataStore MAY persist this bit in the directory listings. (Not
 MUST).
 
@@ -1235,6 +1247,35 @@ that S3Guard tracks recent changes to file metadata to implement consistency.
 Deleting the metadata store table will simply result in a period of eventual
 consistency for any file modifications that were made right before the table
 was deleted.
+
+### Enabling a log message whenever S3Guard is *disabled*
+
+When dealing with support calls related to the S3A connector, "is S3Guard on?"
+is the usual opening question. This can be determined by looking at the application logs for
+messages about S3Guard starting -the absence of S3Guard can only be inferred by the absence
+of such messages.
+
+There is a another strategy: have the S3A Connector log whenever *S3Guard is not enabled*
+
+This can be done in the configuration option `fs.s3a.s3guard.disabled.warn.level`
+
+```xml
+<property>
+ <name>fs.s3a.s3guard.disabled.warn.level</name>
+ <value>silent</value>
+ <description>
+   Level to print a message when S3Guard is disabled.
+   Values: 
+   "warn": log at WARN level
+   "inform": log at INFO level
+   "silent": log at DEBUG level
+   "fail": raise an exception
+ </description>
+</property>
+```
+
+The `fail` option is clearly more than logging; it exists as an extreme debugging
+tool. Use with care.
 
 ### Failure Semantics
 

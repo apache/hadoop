@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_BIND_HOST_KEY;
@@ -54,9 +56,9 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
@@ -220,11 +222,12 @@ public class HAUtil {
    * @return true if the NN should allow read operations while in standby mode.
    */
   public static boolean shouldAllowStandbyReads(Configuration conf) {
-    return conf.getBoolean("dfs.ha.allow.stale.reads", false);
+    return conf.getBoolean(DFS_HA_ALLOW_STALE_READ_KEY,
+        DFS_HA_ALLOW_STALE_READ_DEFAULT);
   }
   
   public static void setAllowStandbyReads(Configuration conf, boolean val) {
-    conf.setBoolean("dfs.ha.allow.stale.reads", val);
+    conf.setBoolean(DFS_HA_ALLOW_STALE_READ_KEY, val);
   }
 
   /**

@@ -21,10 +21,12 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +35,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
@@ -43,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
@@ -75,6 +80,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   private String testUrl;
   private AuthType authType;
   private boolean useConfiguredFileSystem = false;
+  private boolean usingFilesystemForSASTests = false;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
@@ -116,6 +122,10 @@ public abstract class AbstractAbfsIntegrationTest extends
     this.testUrl = defaultUri.toString();
     abfsConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
     abfsConfig.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
+    if (abfsConfig.get(FS_AZURE_TEST_APPENDBLOB_ENABLED) == "true") {
+      String appendblobDirs = this.testUrl + "," + abfsConfig.get(FS_AZURE_CONTRACT_TEST_URI);
+      rawConfig.set(FS_AZURE_APPEND_BLOB_KEY, appendblobDirs);
+    }
     // For testing purposes, an IP address and port may be provided to override
     // the host specified in the FileSystem URI.  Also note that the format of
     // the Azure Storage Service URI changes from
@@ -171,8 +181,13 @@ public abstract class AbstractAbfsIntegrationTest extends
         return;
       }
 
-      // Delete all uniquely created filesystem from the account
-      if (!useConfiguredFileSystem) {
+      if (usingFilesystemForSASTests) {
+        abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey.name());
+        AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+        tempFs.getAbfsStore().deleteFilesystem();
+      }
+      else if (!useConfiguredFileSystem) {
+        // Delete all uniquely created filesystem from the account
         final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
         abfsStore.deleteFilesystem();
 
@@ -219,6 +234,16 @@ public abstract class AbstractAbfsIntegrationTest extends
           defaultUri.toString());
 
     useConfiguredFileSystem = true;
+  }
+
+  protected void createFilesystemForSASTests() throws Exception {
+    // The SAS tests do not have permission to create a filesystem
+    // so first create temporary instance of the filesystem using SharedKey
+    // then re-use the filesystem it creates with SAS auth instead of SharedKey.
+    AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+    Assert.assertTrue(tempFs.exists(new Path("/")));
+    abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.name());
+    usingFilesystemForSASTests = true;
   }
 
   public AzureBlobFileSystem getFileSystem() throws IOException {
@@ -270,6 +295,11 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected void setFileSystemName(String fileSystemName) {
     this.fileSystemName = fileSystemName;
   }
+
+  protected String getMethodName() {
+    return methodName.getMethodName();
+  }
+
   protected String getFileSystemName() {
     return fileSystemName;
   }
@@ -382,5 +412,38 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected AbfsDelegationTokenManager getDelegationTokenManager()
       throws IOException {
     return getFileSystem().getDelegationTokenManager();
+  }
+
+  /**
+   * Generic create File and enabling AbfsOutputStream Flush.
+   *
+   * @param fs   AzureBlobFileSystem that is initialised in the test.
+   * @param path Path of the file to be created.
+   * @return AbfsOutputStream for writing.
+   * @throws AzureBlobFileSystemException
+   */
+  protected AbfsOutputStream createAbfsOutputStreamWithFlushEnabled(
+      AzureBlobFileSystem fs,
+      Path path) throws AzureBlobFileSystemException {
+    AzureBlobFileSystemStore abfss = fs.getAbfsStore();
+    abfss.getAbfsConfiguration().setDisableOutputStreamFlush(false);
+
+    return (AbfsOutputStream) abfss.createFile(path, fs.getFsStatistics(),
+        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
+  }
+
+  /**
+   * Custom assertion for AbfsStatistics which have statistics, expected
+   * value and map of statistics and value as its parameters.
+   * @param statistic the AbfsStatistics which needs to be asserted.
+   * @param expectedValue the expected value of the statistics.
+   * @param metricMap map of (String, Long) with statistics name as key and
+   *                  statistics value as map value.
+   */
+  protected long assertAbfsStatistics(AbfsStatistic statistic,
+      long expectedValue, Map<String, Long> metricMap) {
+    assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
+        (long) metricMap.get(statistic.getStatName()));
+    return expectedValue;
   }
 }

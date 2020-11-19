@@ -15,6 +15,23 @@
    limitations under the License.
 -->
 <FindBugsFilter>
+     <!-- This reference equality check is an intentional light weight
+          check to avoid re-validating the token when re-used. -->
+     <Match>
+       <Class name="org.apache.hadoop.fs.azurebfs.utils.CachedSASToken" />
+       <Method name="update" />
+       <Bug pattern="ES_COMPARING_PARAMETER_STRING_WITH_EQ" />
+     </Match>
+
+     <!-- This is intentional. The unsynchronized field access is safe
+          and only synchronized access is used when using the sasToken
+          for authorization. -->
+     <Match>
+       <Class name="org.apache.hadoop.fs.azurebfs.utils.CachedSASToken" />
+       <Field name="sasToken" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
+
      <!-- It is okay to skip up to end of file. No need to check return value. -->
      <Match>
        <Class name="org.apache.hadoop.fs.azure.AzureNativeFileSystemStore" />
@@ -24,7 +41,7 @@
      </Match>
 
      <!-- Returning fully loaded array to iterate through is a convenience
-	  and helps performance. -->
+          and helps performance. -->
      <Match>
        <Class name="org.apache.hadoop.fs.azure.NativeAzureFileSystem$FolderRenamePending" />
        <Method name="getFiles" />
@@ -40,7 +57,7 @@
      </Match>
      
      <!-- Using a key set iterator is fine because this is not a performance-critical
-	  method. -->
+          method. -->
      <Match>
        <Class name="org.apache.hadoop.fs.azure.PageBlobOutputStream" />
        <Method name="logAllStackTraces" />

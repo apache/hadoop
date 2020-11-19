@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
 
@@ -29,6 +31,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,8 +68,11 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -74,8 +80,8 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A client proxy for Router to NN communication using the NN ClientProtocol.
@@ -114,11 +120,14 @@ public class RouterRpcClient {
   private final RetryPolicy retryPolicy;
   /** Optional perf monitor. */
   private final RouterRpcMonitor rpcMonitor;
+  /** Field separator of CallerContext. */
+  private final String contextFieldSeparator;
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
       Pattern.compile("\\tat (.*)\\.(.*)\\((.*):(\\d*)\\)");
 
+  private static final String CLIENT_IP_STR = "clientIp";
 
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
@@ -135,6 +144,9 @@ public class RouterRpcClient {
     this.namenodeResolver = resolver;
 
     Configuration clientConf = getClientConfiguration(conf);
+    this.contextFieldSeparator =
+        clientConf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
+            HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     this.connectionManager = new ConnectionManager(clientConf);
     this.connectionManager.start();
 
@@ -404,6 +416,8 @@ public class RouterRpcClient {
           + router.getRouterId());
     }
 
+    appendClientIpToCallerContextIfAbsent();
+
     Object ret = null;
     if (rpcMonitor != null) {
       rpcMonitor.proxyOp();
@@ -519,6 +533,29 @@ public class RouterRpcClient {
   }
 
   /**
+   * For tracking which is the actual client address.
+   * It adds trace info "clientIp:ip" to caller context if it's absent.
+   */
+  private void appendClientIpToCallerContextIfAbsent() {
+    String clientIpInfo = CLIENT_IP_STR + ":" + Server.getRemoteAddress();
+    final CallerContext ctx = CallerContext.getCurrent();
+    if (isClientIpInfoAbsent(clientIpInfo, ctx)) {
+      String origContext = ctx == null ? null : ctx.getContext();
+      byte[] origSignature = ctx == null ? null : ctx.getSignature();
+      CallerContext.setCurrent(
+          new CallerContext.Builder(origContext, contextFieldSeparator)
+              .append(clientIpInfo)
+              .setSignature(origSignature)
+              .build());
+    }
+  }
+
+  private boolean isClientIpInfoAbsent(String clientIpInfo, CallerContext ctx){
+    return ctx == null || ctx.getContext() == null
+        || !ctx.getContext().contains(clientIpInfo);
+  }
+
+  /**
    * Invokes a method on the designated object. Catches exceptions specific to
    * the invocation.
    *
@@ -582,9 +619,9 @@ public class RouterRpcClient {
    * @return If the exception comes from an unavailable subcluster.
    */
   public static boolean isUnavailableException(IOException ioe) {
-    if (ioe instanceof ConnectException ||
-        ioe instanceof ConnectTimeoutException ||
+    if (ioe instanceof ConnectTimeoutException ||
         ioe instanceof EOFException ||
+        ioe instanceof SocketException ||
         ioe instanceof StandbyException) {
       return true;
     }
@@ -849,6 +886,45 @@ public class RouterRpcClient {
       final List<? extends RemoteLocationContext> locations,
       final RemoteMethod remoteMethod, Class<T> expectedResultClass,
       Object expectedResultValue) throws IOException {
+    return (T) invokeSequential(remoteMethod, locations, expectedResultClass,
+        expectedResultValue).getResult();
+  }
+
+  /**
+   * Invokes sequential proxy calls to different locations. Continues to invoke
+   * calls until the success condition is met, or until all locations have been
+   * attempted.
+   *
+   * The success condition may be specified by:
+   * <ul>
+   * <li>An expected result class
+   * <li>An expected result value
+   * </ul>
+   *
+   * If no expected result class/values are specified, the success condition is
+   * a call that does not throw a remote exception.
+   *
+   * This returns RemoteResult, which contains the invoked location as well
+   * as the result.
+   *
+   * @param <R> The type of the remote location.
+   * @param <T> The type of the remote method return.
+   * @param remoteMethod The remote method and parameters to invoke.
+   * @param locations List of locations/nameservices to call concurrently.
+   * @param expectedResultClass In order to be considered a positive result, the
+   *          return type must be of this class.
+   * @param expectedResultValue In order to be considered a positive result, the
+   *          return value must equal the value of this object.
+   * @return The result of the first successful call, or if no calls are
+   *         successful, the result of the first RPC call executed, along with
+   *         the invoked location in form of RemoteResult.
+   * @throws IOException if the success condition is not met, return the first
+   *                     remote exception generated.
+   */
+  public <R extends RemoteLocationContext, T> RemoteResult invokeSequential(
+      final RemoteMethod remoteMethod, final List<R> locations,
+      Class<T> expectedResultClass, Object expectedResultValue)
+      throws IOException {
 
     final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     final Method m = remoteMethod.getMethod();
@@ -867,9 +943,9 @@ public class RouterRpcClient {
         if (isExpectedClass(expectedResultClass, result) &&
             isExpectedValue(expectedResultValue, result)) {
           // Valid result, stop here
-          @SuppressWarnings("unchecked")
-          T ret = (T)result;
-          return ret;
+          @SuppressWarnings("unchecked") R location = (R) loc;
+          @SuppressWarnings("unchecked") T ret = (T) result;
+          return new RemoteResult<>(location, ret);
         }
         if (firstResult == null) {
           firstResult = result;
@@ -907,9 +983,8 @@ public class RouterRpcClient {
       throw thrownExceptions.get(0);
     }
     // Return the first result, whether it is the value or not
-    @SuppressWarnings("unchecked")
-    T ret = (T)firstResult;
-    return ret;
+    @SuppressWarnings("unchecked") T ret = (T) firstResult;
+    return new RemoteResult<>(locations.get(0), ret);
   }
 
   /**
@@ -1239,6 +1314,9 @@ public class RouterRpcClient {
 
     List<T> orderedLocations = new ArrayList<>();
     List<Callable<Object>> callables = new ArrayList<>();
+    // transfer originCall & callerContext to worker threads of executor.
+    final Call originCall = Server.getCurCall().get();
+    final CallerContext originContext = CallerContext.getCurrent();
     for (final T location : locations) {
       String nsId = location.getNameserviceId();
       final List<? extends FederationNamenodeContext> namenodes =
@@ -1256,12 +1334,20 @@ public class RouterRpcClient {
             nnLocation = (T)new RemoteLocation(nsId, nnId, location.getDest());
           }
           orderedLocations.add(nnLocation);
-          callables.add(() -> invokeMethod(ugi, nnList, proto, m, paramList));
+          callables.add(
+              () -> {
+                transferThreadLocalContext(originCall, originContext);
+                return invokeMethod(ugi, nnList, proto, m, paramList);
+              });
         }
       } else {
         // Call the objectGetter in order of nameservices in the NS list
         orderedLocations.add(location);
-        callables.add(() ->  invokeMethod(ugi, namenodes, proto, m, paramList));
+        callables.add(
+            () -> {
+              transferThreadLocalContext(originCall, originContext);
+              return invokeMethod(ugi, namenodes, proto, m, paramList);
+            });
       }
     }
 
@@ -1326,6 +1412,20 @@ public class RouterRpcClient {
       throw new IOException(
           "Unexpected error while invoking API " + ex.getMessage(), ex);
     }
+  }
+
+  /**
+   * Transfer origin thread local context which is necessary to current
+   * worker thread when invoking method concurrently by executor service.
+   *
+   * @param originCall origin Call required for getting remote client ip.
+   * @param originContext origin CallerContext which should be transferred
+   *                      to server side.
+   */
+  private void transferThreadLocalContext(
+      final Call originCall, final CallerContext originContext) {
+    Server.getCurCall().set(originCall);
+    CallerContext.setCurrent(originContext);
   }
 
   /**

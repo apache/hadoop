@@ -62,7 +62,7 @@ import org.apache.log4j.Level;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Test cases regarding pipeline recovery during NN failover.

@@ -21,7 +21,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DAT
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_NEW_QOP_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -64,8 +64,8 @@ import org.apache.hadoop.security.token.Token;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Negotiates SASL for DataTransferProtocol on behalf of a client.  There are
@@ -548,14 +548,19 @@ public class SaslDataTransferClient {
           DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
       if (requestedQopContainsPrivacy(saslProps)) {
         // Negotiate cipher suites if configured.  Currently, the only supported
-        // cipher suite is AES/CTR/NoPadding, but the protocol allows multiple
-        // values for future expansion.
+        // cipher suite is AES/CTR/NoPadding or SM4/CTR/Nopadding,
+        // but the protocol allows multiple values for future expansion.
         if (cipherSuites != null && !cipherSuites.isEmpty()) {
-          if (!cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
+          CipherOption option = null;
+          if (cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
+            option = new CipherOption(CipherSuite.AES_CTR_NOPADDING);
+          } else if (cipherSuites.equals(
+              CipherSuite.SM4_CTR_NOPADDING.getName())) {
+            option = new CipherOption(CipherSuite.SM4_CTR_NOPADDING);
+          } else {
             throw new IOException(String.format("Invalid cipher suite, %s=%s",
                 DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuites));
           }
-          CipherOption option = new CipherOption(CipherSuite.AES_CTR_NOPADDING);
           cipherOptions = Lists.newArrayListWithCapacity(1);
           cipherOptions.add(option);
         }

@@ -56,10 +56,10 @@ import org.slf4j.event.Level;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public class TestBackupNode {
   public static final Logger LOG =

@@ -35,8 +35,8 @@ import org.apache.hadoop.hdfs.net.PeerServer;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.util.Daemon;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 
@@ -188,6 +188,9 @@ class DataXceiverServer implements Runnable {
     this.maxXceiverCount =
       conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
                   DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT);
+    Preconditions.checkArgument(this.maxXceiverCount >= 1,
+        DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY +
+        " should not be less than 1.");
 
     this.estimateBlockSize = conf.getLongBytes(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
@@ -229,7 +232,7 @@ class DataXceiverServer implements Runnable {
         int curXceiverCount = datanode.getXceiverCount();
         if (curXceiverCount > maxXceiverCount) {
           throw new IOException("Xceiver count " + curXceiverCount
-              + " exceeds the limit of concurrent xcievers: "
+              + " exceeds the limit of concurrent xceivers: "
               + maxXceiverCount);
         }
 

@@ -79,7 +79,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -227,7 +227,7 @@ public class JobHistoryEventHandler extends AbstractService
       }
       }
     } catch (IOException e) {
-      LOG.error("Failed checking for the existance of history intermediate " +
+      LOG.error("Failed checking for the existence of history intermediate " +
       		"done directory: [" + doneDirPath + "]");
       throw new YarnRuntimeException(e);
     }

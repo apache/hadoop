@@ -56,6 +56,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.Whitebox;
 import org.mockito.Mockito;
+import static org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer.FSIMAGE_ATTRIBUTE_KEY;
 
 /**
  * This is a utility class to expose NameNode functionality for unit tests.
@@ -127,6 +128,17 @@ public class NameNodeAdapter {
    */
   public static Server getRpcServer(NameNode namenode) {
     return ((NameNodeRpcServer)namenode.getRpcServer()).clientRpcServer;
+  }
+
+  /**
+   * Sets the FSImage used in the NameNodeHttpServer and returns the old value.
+   */
+  public static FSImage getAndSetFSImageInHttpServer(NameNode namenode,
+      FSImage fsImage) {
+    FSImage previous = (FSImage) namenode.httpServer.getHttpServer()
+        .getAttribute(FSIMAGE_ATTRIBUTE_KEY);
+    namenode.httpServer.setFSImage(fsImage);
+    return  previous;
   }
 
   public static DelegationTokenSecretManager getDtSecretManager(

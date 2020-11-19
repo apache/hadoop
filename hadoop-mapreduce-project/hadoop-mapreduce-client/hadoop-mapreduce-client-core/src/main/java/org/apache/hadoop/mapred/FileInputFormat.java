@@ -48,7 +48,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,7 +193,8 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
         if (stat.isDirectory()) {
           addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
         } else {
-          result.add(stat);
+          result.add(org.apache.hadoop.mapreduce.lib.input.
+              FileInputFormat.shrinkStatus(stat));
         }
       }
     }
@@ -290,7 +291,8 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
                   addInputPathRecursively(result, fs, stat.getPath(),
                       inputFilter);
                 } else {
-                  result.add(stat);
+                  result.add(org.apache.hadoop.mapreduce.lib.input.
+                      FileInputFormat.shrinkStatus(stat));
                 }
               }
             }

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
@@ -734,6 +734,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
         YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
+    conf.setInt(YarnConfiguration.NM_VCORES, 1);
     setConf(conf);
     setupInternal(3);
     ServiceClient client = createClient(getConf());

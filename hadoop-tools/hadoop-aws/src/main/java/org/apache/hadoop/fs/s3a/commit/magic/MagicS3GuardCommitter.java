@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TASK_ATTEMPT_ID;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
@@ -96,6 +97,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   public void setupJob(JobContext context) throws IOException {
     try (DurationInfo d = new DurationInfo(LOG,
         "Setup Job %s", jobIdString(context))) {
+      super.setupJob(context);
       Path jobAttemptPath = getJobAttemptPath(context);
       getDestinationFS(jobAttemptPath,
           context.getConfiguration()).mkdirs(jobAttemptPath);
@@ -127,16 +129,6 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
         "Deleting magic directory %s", path)) {
       Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
           () -> deleteWithWarning(getDestFS(), path, true));
-    }
-  }
-
-  @Override
-  public void setupTask(TaskAttemptContext context) throws IOException {
-    try (DurationInfo d = new DurationInfo(LOG,
-        "Setup Task %s", context.getTaskAttemptID())) {
-      Path taskAttemptPath = getTaskAttemptPath(context);
-      FileSystem fs = taskAttemptPath.getFileSystem(getConf());
-      fs.mkdirs(taskAttemptPath);
     }
   }
 
@@ -207,13 +199,14 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       throw failures.get(0).getValue();
     }
     // patch in IDs
-    String jobId = String.valueOf(context.getJobID());
+    String jobId = getUUID();
     String taskId = String.valueOf(context.getTaskAttemptID());
     for (SinglePendingCommit commit : pendingSet.getCommits()) {
       commit.setJobId(jobId);
       commit.setTaskId(taskId);
     }
-
+    pendingSet.putExtraData(TASK_ATTEMPT_ID, taskId);
+    pendingSet.setJobId(jobId);
     Path jobAttemptPath = getJobAttemptPath(context);
     TaskAttemptID taskAttemptID = context.getTaskAttemptID();
     Path taskOutcomePath = new Path(jobAttemptPath,
@@ -221,7 +214,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
         CommitConstants.PENDINGSET_SUFFIX);
     LOG.info("Saving work of {} to {}", taskAttemptID, taskOutcomePath);
     try {
-      pendingSet.save(getDestFS(), taskOutcomePath, false);
+      // We will overwrite if there exists a pendingSet file already
+      pendingSet.save(getDestFS(), taskOutcomePath, true);
     } catch (IOException e) {
       LOG.warn("Failed to save task commit data to {} ",
           taskOutcomePath, e);
@@ -257,11 +251,12 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
 
   /**
    * Compute the path where the output of a given job attempt will be placed.
+   * For the magic committer, the path includes the job UUID.
    * @param appAttemptId the ID of the application attempt for this job.
    * @return the path to store job attempt data.
    */
   protected Path getJobAttemptPath(int appAttemptId) {
-    return getMagicJobAttemptPath(appAttemptId, getOutputPath());
+    return getMagicJobAttemptPath(getUUID(), getOutputPath());
   }
 
   /**
@@ -272,12 +267,12 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @return the path where a task attempt should be stored.
    */
   public Path getTaskAttemptPath(TaskAttemptContext context) {
-    return getMagicTaskAttemptPath(context, getOutputPath());
+    return getMagicTaskAttemptPath(context, getUUID(), getOutputPath());
   }
 
   @Override
   protected Path getBaseTaskAttemptPath(TaskAttemptContext context) {
-    return getBaseMagicTaskAttemptPath(context, getOutputPath());
+    return getBaseMagicTaskAttemptPath(context, getUUID(), getOutputPath());
   }
 
   /**
@@ -287,13 +282,16 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    * @return a path for temporary data.
    */
   public Path getTempTaskAttemptPath(TaskAttemptContext context) {
-    return CommitUtilsWithMR.getTempTaskAttemptPath(context, getOutputPath());
+    return CommitUtilsWithMR.getTempTaskAttemptPath(context,
+        getUUID(),
+        getOutputPath());
   }
 
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "MagicCommitter{");
+    sb.append(super.toString());
     sb.append('}');
     return sb.toString();
   }

@@ -188,7 +188,7 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.nativeio.NativeIO;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -222,13 +222,13 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.htrace.core.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 import org.slf4j.Logger;
@@ -1015,7 +1015,7 @@ public class DataNode extends ReconfigurableBase
     
     // Add all the RPC protocols that the Datanode implements    
     RPC.setProtocolEngine(getConf(), ClientDatanodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     ClientDatanodeProtocolServerSideTranslatorPB clientDatanodeProtocolXlator = 
           new ClientDatanodeProtocolServerSideTranslatorPB(this);
     BlockingService service = ClientDatanodeProtocolService
@@ -1082,8 +1082,7 @@ public class DataNode extends ReconfigurableBase
     }
 
     // Is the user a member of the super group?
-    List<String> groups = Arrays.asList(callerUgi.getGroupNames());
-    if (groups.contains(supergroup)) {
+    if (callerUgi.getGroupsSet().contains(supergroup)) {
       return;
     }
     // Not a superuser.
@@ -1580,7 +1579,7 @@ public class DataNode extends ReconfigurableBase
     if (storageInfo == null) {
       // it's null in the case of SimulatedDataSet
       storageInfo = new StorageInfo(
-          DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION,
+          DataNodeLayoutVersion.getCurrentLayoutVersion(),
           nsInfo.getNamespaceID(), nsInfo.clusterID, nsInfo.getCTime(),
           NodeType.DATA_NODE);
     }
@@ -1661,7 +1660,9 @@ public class DataNode extends ReconfigurableBase
       // a block pool id
       String bpId = bpos.getBlockPoolId();
 
-      blockScanner.disableBlockPoolId(bpId);
+      if (blockScanner.hasAnyRegisteredScanner()) {
+        blockScanner.disableBlockPoolId(bpId);
+      }
 
       if (data != null) {
         data.shutdownBlockPool(bpId);
@@ -2146,6 +2147,8 @@ public class DataNode extends ReconfigurableBase
     }
     if (metrics != null) {
       metrics.setDataNodeActiveXceiversCount(0);
+      metrics.setDataNodePacketResponderCount(0);
+      metrics.setDataNodeBlockRecoveryWorkerCount(0);
     }
 
    // IPC server needs to be shutdown late in the process, otherwise
@@ -2244,7 +2247,20 @@ public class DataNode extends ReconfigurableBase
   /** Number of concurrent xceivers per node. */
   @Override // DataNodeMXBean
   public int getXceiverCount() {
-    return threadGroup == null ? 0 : threadGroup.activeCount();
+    if (metrics == null) {
+      return 0;
+    }
+    return metrics.getDataNodeActiveXceiverCount();
+  }
+
+  @Override // DataNodeMXBean
+  public int getActiveTransferThreadCount() {
+    if (metrics == null) {
+      return 0;
+    }
+    return metrics.getDataNodeActiveXceiverCount()
+        + metrics.getDataNodePacketResponderCount()
+        + metrics.getDataNodeBlockRecoveryWorkerCount();
   }
 
   @Override // DataNodeMXBean
@@ -2696,7 +2712,11 @@ public class DataNode extends ReconfigurableBase
    *  If this thread is specifically interrupted, it will stop waiting.
    */
   public void runDatanodeDaemon() throws IOException {
-    blockPoolManager.startAll();
+
+    // Verify that blockPoolManager has been started.
+    if (!isDatanodeUp()) {
+      throw new IOException("Failed to instantiate DataNode.");
+    }
 
     // start dataXceiveServer
     dataXceiverServer.start();
@@ -3045,7 +3065,7 @@ public class DataNode extends ReconfigurableBase
     final BlockConstructionStage stage;
 
     //get replica information
-    try(AutoCloseableLock lock = data.acquireDatasetLock()) {
+    try(AutoCloseableLock lock = data.acquireDatasetReadLock()) {
       Block storedBlock = data.getStoredBlock(b.getBlockPoolId(),
           b.getBlockId());
       if (null == storedBlock) {
@@ -3431,7 +3451,7 @@ public class DataNode extends ReconfigurableBase
       unhealthyVolumes = volumeChecker.checkAllVolumes(data);
       lastDiskErrorCheck = Time.monotonicNow();
     } catch (InterruptedException e) {
-      LOG.error("Interruped while running disk check", e);
+      LOG.error("Interrupted while running disk check", e);
       throw new IOException("Interrupted while running disk check", e);
     }
 

@@ -24,7 +24,8 @@
 #include <mutex>
 #include <string>
 
-#include <asio/error_code.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/system/error_code.hpp>
 #include <openssl/rand.h>
 #include <google/protobuf/io/coded_stream.h>
 
@@ -41,7 +42,7 @@ namespace hdfs {
 typedef std::lock_guard<std::mutex> mutex_guard;
 
 
-Status ToStatus(const ::asio::error_code &ec);
+Status ToStatus(const boost::system::error_code &ec);
 
 // Determine size of buffer that needs to be allocated in order to serialize msg
 // in delimited format
@@ -75,7 +76,7 @@ bool lock_held(T & mutex) {
 // Shutdown and close a socket safely; will check if the socket is open and
 // catch anything thrown by asio.
 // Returns a string containing error message on failure, otherwise an empty string.
-std::string SafeDisconnect(asio::ip::tcp::socket *sock);
+std::string SafeDisconnect(boost::asio::ip::tcp::socket *sock);
 
 
 // The following helper function is used for classes that look like the following:
@@ -94,13 +95,13 @@ std::string SafeDisconnect(asio::ip::tcp::socket *sock);
 // it's a asio socket, and nullptr if it's anything else.
 
 template <typename sock_t>
-inline asio::ip::tcp::socket *get_asio_socket_ptr(sock_t *s) {
+inline boost::asio::ip::tcp::socket *get_asio_socket_ptr(sock_t *s) {
   (void)s;
   return nullptr;
 }
 template<>
-inline asio::ip::tcp::socket *get_asio_socket_ptr<asio::ip::tcp::socket>
-                                            (asio::ip::tcp::socket *s) {
+inline boost::asio::ip::tcp::socket *get_asio_socket_ptr<boost::asio::ip::tcp::socket>
+                                            (boost::asio::ip::tcp::socket *s) {
   return s;
 }
 

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.security.token.block;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -44,10 +44,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultiset;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multiset;
 
 /**
  * BlockTokenSecretManager can be instantiated in 2 modes, master mode

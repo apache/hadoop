@@ -59,7 +59,7 @@ if "%1" == "--loglevel" (
     )
   )
 
-  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies classpath crypto dfsrouter dfsrouteradmin debug
+  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck fsImageValidation balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir lsSnapshot cacheadmin mover storagepolicies classpath crypto dfsrouter dfsrouteradmin debug
   for %%i in ( %hdfscommands% ) do (
     if %hdfs-command% == %%i set hdfscommand=true
   )
@@ -121,6 +121,11 @@ goto :eof
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_CLIENT_OPTS%
   goto :eof
 
+:fsImageValidation
+  set CLASS=org.apache.hadoop.hdfs.server.namenode.FsImageValidation
+  set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_CLIENT_OPTS%
+  goto :eof
+
 :balancer
   set CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_BALANCER_OPTS%
@@ -160,6 +165,10 @@ goto :eof
 
 :lsSnapshottableDir
   set CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
+  goto :eof
+
+:lsSnapshot
+  set CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshot
   goto :eof
 
 :cacheadmin
@@ -236,6 +245,7 @@ goto :eof
   @echo   dfsadmin             run a DFS admin client
   @echo   haadmin              run a DFS HA admin client
   @echo   fsck                 run a DFS filesystem checking utility
+  @echo   fsImageValidation    run FsImageValidation to check an fsimage
   @echo   balancer             run a cluster balancing utility
   @echo   jmxget               get JMX exported values from NameNode or DataNode.
   @echo   oiv                  apply the offline fsimage viewer to an fsimage
@@ -247,6 +257,8 @@ goto :eof
   @echo                        current directory contents with a snapshot
   @echo   lsSnapshottableDir   list all snapshottable dirs owned by the current user
   @echo 						Use -help to see options
+  @echo   lsSnapshot           list all snapshots for a snapshottable dir
+  @echo                         Use -help to see options
   @echo   cacheadmin           configure the HDFS cache
   @echo   crypto               configure HDFS encryption zones
   @echo   mover                run a utility to move block replicas across storage types

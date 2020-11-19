@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class extends {@link DataStreamer} to support writing striped blocks
@@ -143,7 +143,8 @@ public class StripedDataStreamer extends DataStreamer {
 
       // set up the pipeline again with the remaining nodes. when a striped
       // data streamer comes here, it must be in external error state.
-      assert getErrorState().hasExternalError();
+      assert getErrorState().hasExternalError()
+          || getErrorState().doWaitForRestart();
       success = createBlockOutputStream(nodes, nodeStorageTypes,
           nodeStorageIDs, newGS, true);
 

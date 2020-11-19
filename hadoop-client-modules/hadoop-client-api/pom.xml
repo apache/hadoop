@@ -18,11 +18,11 @@
 <parent>
    <groupId>org.apache.hadoop</groupId>
    <artifactId>hadoop-project</artifactId>
-   <version>3.3.0-SNAPSHOT</version>
+   <version>3.4.0-SNAPSHOT</version>
    <relativePath>../../hadoop-project</relativePath>
 </parent>
   <artifactId>hadoop-client-api</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Client</description>
@@ -143,6 +143,8 @@
                         <exclude>org/w3c/dom/**/*</exclude>
                         <exclude>org/xml/sax/*</exclude>
                         <exclude>org/xml/sax/**/*</exclude>
+                        <exclude>org/bouncycastle/*</exclude>
+                        <exclude>org/bouncycastle/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>

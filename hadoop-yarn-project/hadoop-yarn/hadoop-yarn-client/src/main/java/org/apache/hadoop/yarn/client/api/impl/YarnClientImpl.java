@@ -30,9 +30,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -40,6 +43,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
@@ -131,6 +135,8 @@ import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -142,7 +148,7 @@ import org.eclipse.jetty.websocket.api.WebSocketException;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -310,8 +316,20 @@ public class YarnClientImpl extends YarnClient {
 
     // Automatically add the timeline DT into the CLC
     // Only when the security and the timeline service are both enabled
-    if (isSecurityEnabled() && timelineV1ServiceEnabled) {
+    if (isSecurityEnabled() && timelineV1ServiceEnabled &&
+            getConfig().get(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE)
+                    .equals(KerberosAuthenticationHandler.TYPE)) {
       addTimelineDelegationToken(appContext.getAMContainerSpec());
+    }
+
+    // Automatically add the DT for Log Aggregation path
+    // This is useful when a separate storage is used for log aggregation
+    try {
+      if (isSecurityEnabled()) {
+        addLogAggregationDelegationToken(appContext.getAMContainerSpec());
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to obtain delegation token for Log Aggregation Path", e);
     }
 
     //TODO: YARN-1763:Handle RM failovers during the submitApplication call.
@@ -371,6 +389,47 @@ public class YarnClientImpl extends YarnClient {
     }
 
     return applicationId;
+  }
+
+  private void addLogAggregationDelegationToken(
+      ContainerLaunchContext clc) throws YarnException, IOException {
+    Credentials credentials = new Credentials();
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    ByteBuffer tokens = clc.getTokens();
+    if (tokens != null) {
+      dibb.reset(tokens);
+      credentials.readTokenStorageStream(dibb);
+      tokens.rewind();
+    }
+
+    Configuration conf = getConfig();
+    String masterPrincipal = YarnClientUtils.getRmPrincipal(conf);
+    if (StringUtils.isEmpty(masterPrincipal)) {
+      throw new IOException(
+          "Can't get Master Kerberos principal for use as renewer");
+    }
+    LOG.debug("Delegation Token Renewer: " + masterPrincipal);
+
+    LogAggregationFileControllerFactory factory =
+        new LogAggregationFileControllerFactory(conf);
+    LogAggregationFileController fileController =
+        factory.getFileControllerForWrite();
+    Path remoteRootLogDir = fileController.getRemoteRootLogDir();
+    FileSystem fs = remoteRootLogDir.getFileSystem(conf);
+
+    final org.apache.hadoop.security.token.Token<?>[] finalTokens =
+        fs.addDelegationTokens(masterPrincipal, credentials);
+    if (finalTokens != null) {
+      for (org.apache.hadoop.security.token.Token<?> token : finalTokens) {
+        LOG.info("Added delegation token for log aggregation path "
+            + remoteRootLogDir + "; "+token);
+      }
+    }
+
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    clc.setTokens(tokens);
   }
 
   private void addTimelineDelegationToken(

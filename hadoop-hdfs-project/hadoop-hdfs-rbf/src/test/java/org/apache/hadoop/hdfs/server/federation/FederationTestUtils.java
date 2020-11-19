@@ -92,7 +92,7 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Helper utilities for testing HDFS Federation.
@@ -138,8 +138,15 @@ public final class FederationTestUtils {
   public static NamenodeStatusReport createNamenodeReport(String ns, String nn,
       HAServiceState state) {
     Random rand = new Random();
-    NamenodeStatusReport report = new NamenodeStatusReport(ns, nn,
-        "localhost:" + rand.nextInt(10000), "localhost:" + rand.nextInt(10000),
+    return createNamenodeReport(ns, nn, "localhost:"
+        + rand.nextInt(10000), state);
+  }
+
+  public static NamenodeStatusReport createNamenodeReport(String ns, String nn,
+      String rpcAddress, HAServiceState state) {
+    Random rand = new Random();
+    NamenodeStatusReport report = new NamenodeStatusReport(ns, nn, rpcAddress,
+        "localhost:" + rand.nextInt(10000),
         "localhost:" + rand.nextInt(10000), "http",
         "testwebaddress-" + ns + nn);
     if (state == null) {
@@ -187,7 +194,7 @@ public final class FederationTestUtils {
         }
         return false;
       }
-    }, 1000, 20 * 1000);
+    }, 1000, 60 * 1000);
   }
 
   /**
@@ -474,7 +481,10 @@ public final class FederationTestUtils {
 
   /**
    * Add a mount table entry in some name services and wait until it is
-   * available.
+   * available. If there are multiple routers,
+   * {@link #createMountTableEntry(List, String, DestinationOrder, Collection)}
+   * should be used instead because the method does not refresh
+   * the mount tables of the other routers.
    * @param router Router to change.
    * @param mountPoint Name of the mount point.
    * @param order Order of the mount table entry.

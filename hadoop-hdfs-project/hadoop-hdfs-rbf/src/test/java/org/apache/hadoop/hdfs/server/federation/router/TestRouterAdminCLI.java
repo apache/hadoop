@@ -64,7 +64,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Tests Router admin commands.
@@ -520,6 +520,187 @@ public class TestRouterAdminCLI {
   }
 
   @Test
+  public void testUpdateMountTableWithoutPermission() throws Exception {
+    UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
+    String superUserName = superUser.getShortUserName();
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+
+    try {
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount table using super user.
+      String[] argv = new String[]{"-add", "/testpath3-1", "ns0", "/testdir3-1",
+          "-owner", superUserName, "-group", superUserName, "-mode", "755"};
+      assertEquals(0, ToolRunner.run(admin, argv));
+
+      UserGroupInformation remoteUser = UserGroupInformation
+          .createRemoteUser(TEST_USER);
+      UserGroupInformation.setLoginUser(remoteUser);
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // update mount table using normal user
+      argv = new String[]{"-update", "/testpath3-1", "ns0", "/testdir3-2",
+          "-owner", TEST_USER, "-group", TEST_USER, "-mode", "777"};
+      assertEquals("Normal user update mount table which created by " +
+          "superuser unexpected.", -1, ToolRunner.run(admin, argv));
+    } finally {
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+    }
+  }
+
+  @Test
+  public void testOperateMountTableWithGroupPermission() throws Exception {
+    UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+
+    try {
+      String testUserA = "test-user-a";
+      String testUserB = "test-user-b";
+      String testUserC = "test-user-c";
+      String testUserD = "test-user-d";
+      String testGroup = "test-group";
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount point with usera.
+      UserGroupInformation userA = UserGroupInformation.createUserForTesting(
+          testUserA, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userA);
+
+      String[] argv = new String[]{"-add", "/testpath4-1", "ns0", "/testdir4-1",
+          "-owner", testUserA, "-group", testGroup, "-mode", "775"};
+      assertEquals("Normal user can't add mount table unexpected.", 0,
+          ToolRunner.run(admin, argv));
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // update mount point with userb which is same group with owner.
+      UserGroupInformation userB = UserGroupInformation.createUserForTesting(
+          testUserB, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userB);
+      argv = new String[]{"-update", "/testpath4-1", "ns0", "/testdir4-2",
+          "-owner", testUserA, "-group", testGroup, "-mode", "775"};
+      assertEquals("Another user in same group can't update mount table " +
+          "unexpected.", 0, ToolRunner.run(admin, argv));
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // update mount point with userc which is not same group with owner.
+      UserGroupInformation userC = UserGroupInformation.createUserForTesting(
+          testUserC, new String[] {});
+      UserGroupInformation.setLoginUser(userC);
+      argv = new String[]{"-update", "/testpath4-1", "ns0", "/testdir4-3",
+          "-owner", testUserA, "-group", testGroup, "-mode", "775"};
+      assertEquals("Another user not in same group have no permission but " +
+              "update mount table successful unexpected.", -1,
+          ToolRunner.run(admin, argv));
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount point with userd but immediate parent of mount point
+      // does not exist.
+      UserGroupInformation userD = UserGroupInformation.createUserForTesting(
+          testUserD, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userD);
+      argv = new String[]{"-add", "/testpath4-1/foo/bar", "ns0",
+          "/testdir4-1/foo/bar", "-owner", testUserD, "-group", testGroup,
+          "-mode", "775"};
+      assertEquals("Normal user can't add mount table unexpected.", 0,
+          ToolRunner.run(admin, argv));
+
+      // test remove mount point with userc.
+      UserGroupInformation.setLoginUser(userC);
+      argv = new String[]{"-rm", "/testpath4-1"};
+      assertEquals(-1, ToolRunner.run(admin, argv));
+
+      // test remove mount point with userb.
+      UserGroupInformation.setLoginUser(userB);
+      assertEquals("Another user in same group can't remove mount table " +
+          "unexpected.", 0, ToolRunner.run(admin, argv));
+    } finally {
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+    }
+  }
+
+  @Test
+  public void testOperateMountTableWithSuperUserPermission() throws Exception {
+    UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+
+    try {
+      String testUserA = "test-user-a";
+      String testGroup = "test-group";
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount point with usera.
+      UserGroupInformation userA = UserGroupInformation.createUserForTesting(
+          testUserA, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userA);
+      String[] argv = new String[]{"-add", "/testpath5-1", "ns0", "/testdir5-1",
+          "-owner", testUserA, "-group", testGroup, "-mode", "755"};
+      assertEquals(0, ToolRunner.run(admin, argv));
+
+      // test update mount point with super user.
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      UserGroupInformation.setLoginUser(superUser);
+      argv = new String[]{"-update", "/testpath5-1", "ns0", "/testdir5-2",
+          "-owner", testUserA, "-group", testGroup, "-mode", "755"};
+      assertEquals("Super user can't update mount table unexpected.", 0,
+          ToolRunner.run(admin, argv));
+
+      // test remove mount point with super user.
+      argv = new String[]{"-rm", "/testpath5-1"};
+      assertEquals("Super user can't remove mount table unexpected.", 0,
+          ToolRunner.run(admin, argv));
+    } finally {
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+    }
+  }
+
+  @Test
+  public void testAddMountTableIfParentExist() throws Exception {
+    UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+
+    try {
+      String testUserA = "test-user-a";
+      String testUserB = "test-user-b";
+      String testGroup = "test-group";
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount point with usera.
+      UserGroupInformation userA = UserGroupInformation.createUserForTesting(
+          testUserA, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userA);
+      String[] argv = new String[]{"-add", "/testpath6-1", "ns0", "/testdir6-1",
+          "-owner", testUserA, "-group", testGroup, "-mode", "755"};
+      assertEquals(0, ToolRunner.run(admin, argv));
+
+      // add mount point with userb will be success since the nearest parent
+      // does not exist but have other EXECUTE permission.
+      UserGroupInformation userB = UserGroupInformation.createUserForTesting(
+          testUserB, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userB);
+      argv = new String[]{"-add", "/testpath6-1/parent/foo", "ns0",
+          "/testdir6-1/parent/foo", "-owner", testUserA, "-group", testGroup,
+          "-mode", "755"};
+      assertEquals(0, ToolRunner.run(admin, argv));
+
+      // add mount point with userb will be failure since the nearest parent
+      // does exist but no WRITE permission.
+      argv = new String[]{"-add", "/testpath6-1/foo", "ns0",
+          "/testdir6-1/foo", "-owner", testUserA, "-group", testGroup,
+          "-mode", "755"};
+      assertEquals(-1, ToolRunner.run(admin, argv));
+    } finally {
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+    }
+  }
+
+  @Test
   public void testMountTablePermissions() throws Exception {
     // re-set system out for testing
     System.setOut(new PrintStream(out));
@@ -932,6 +1113,10 @@ public class TestRouterAdminCLI {
     // ensure the Router become RUNNING state
     waitState(RouterServiceState.RUNNING);
     assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
+    final RouterClientProtocol clientProtocol =
+        routerContext.getRouter().getRpcServer().getClientProtocolModule();
+    assertEquals(HAServiceState.ACTIVE, clientProtocol.getHAServiceState());
+
     assertEquals(0,
         ToolRunner.run(admin, new String[] {"-safemode", "enter" }));
 
@@ -944,6 +1129,7 @@ public class TestRouterAdminCLI {
     // verify state using RBFMetrics
     assertEquals(RouterServiceState.SAFEMODE.toString(), jsonString);
     assertTrue(routerContext.getRouter().getSafemodeService().isInSafeMode());
+    assertEquals(HAServiceState.STANDBY, clientProtocol.getHAServiceState());
 
     System.setOut(new PrintStream(out));
     assertEquals(0,
@@ -955,6 +1141,7 @@ public class TestRouterAdminCLI {
     // verify state
     assertEquals(RouterServiceState.RUNNING.toString(), jsonString);
     assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
+    assertEquals(HAServiceState.ACTIVE, clientProtocol.getHAServiceState());
 
     out.reset();
     assertEquals(0, ToolRunner.run(admin, new String[] {"-safemode", "get" }));

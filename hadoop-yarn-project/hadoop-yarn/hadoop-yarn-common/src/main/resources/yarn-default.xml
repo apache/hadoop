@@ -257,6 +257,12 @@
   </property>
 
   <property>
+    <description>Enable tools section in all ui1 webapp.</description>
+    <name>yarn.webapp.ui1.tools.enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>
       Explicitly provide WAR file path for ui2 if needed.
     </description>
@@ -327,11 +333,10 @@
   </property>
 
   <property>
-    <description>The maximum number of application attempts. It's a global
-    setting for all application masters. Each application master can specify
-    its individual maximum number of application attempts via the API, but the
-    individual number cannot be more than the global upper bound. If it is,
-    the resourcemanager will override it. The default number is set to 2, to
+    <description>The default maximum number of application attempts, if unset by
+    the user. Each application master can specify its individual maximum number of application
+    attempts via the API, but the individual number cannot be more than the global upper bound in
+    yarn.resourcemanager.am.global.max-attempts. The default number is set to 2, to
     allow at least one retry for AM.</description>
     <name>yarn.resourcemanager.am.max-attempts</name>
     <value>2</value>
@@ -806,6 +811,16 @@
   </property>
 
   <property>
+    <description>If true, ResourceManager will always try to cancel delegation
+      tokens after the application completes, even if the client sets
+      shouldCancelAtEnd false.  References to delegation tokens are tracked,
+      so they will not be canceled until all sub-tasks are done using them.
+    </description>
+    <name>yarn.resourcemanager.delegation-token.always-cancel</name>
+    <value>false</value>
+  </property>
+
+  <property>
   <description>If true, ResourceManager will have proxy-user privileges.
     Use case: In a secure cluster, YARN requires the user hdfs delegation-tokens to
     do localization and log-aggregation on behalf of the user. If this is set to true,
@@ -843,6 +858,56 @@
     <description>The heart-beat interval in milliseconds for every NodeManager in the cluster.</description>
     <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-ms</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <description>Enables heart-beat interval scaling.  The NodeManager
+      heart-beat interval will scale based on the difference between the CPU
+      utilization on the node and the cluster-wide average CPU utilization.
+    </description>
+    <name>
+      yarn.resourcemanager.nodemanagers.heartbeat-interval-scaling-enable
+    </name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this is the
+      minimum heart-beat interval in milliseconds
+    </description>
+    <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-min-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this is the
+      maximum heart-beat interval in milliseconds</description>
+    <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-max-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this controls
+      the degree of adjustment when speeding up heartbeat intervals.
+      At 1.0, 20% less than average CPU utilization will result in a 20%
+      decrease in heartbeat interval.
+    </description>
+    <name>
+      yarn.resourcemanager.nodemanagers.heartbeat-interval-speedup-factor
+    </name>
+    <value>1.0</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this controls
+      the degree of adjustment when slowing down heartbeat intervals.
+      At 1.0, 20% greater than average CPU utilization will result in a 20%
+      increase in heartbeat interval.
+    </description>
+    <name>
+      yarn.resourcemanager.nodemanagers.heartbeat-interval-slowdown-factor
+    </name>
+    <value>1.0</value>
   </property>
 
   <property>
@@ -1651,6 +1716,34 @@
   </property>
 
   <property>
+    <description>Flag to enable the container log monitor which enforces
+      container log directory size limits.</description>
+    <name>yarn.nodemanager.container-log-monitor.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>How often to check the usage of a container's log directories
+      in milliseconds</description>
+    <name>yarn.nodemanager.container-log-monitor.interval-ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>The disk space limit, in bytes, for a single
+      container log directory</description>
+    <name>yarn.nodemanager.container-log-monitor.dir-size-limit-bytes</name>
+    <value>1000000000</value>
+  </property>
+
+  <property>
+    <description>The disk space limit, in bytes, for all of a container's
+      logs</description>
+    <name>yarn.nodemanager.container-log-monitor.total-size-limit-bytes</name>
+    <value>10000000000</value>
+  </property>
+
+  <property>
     <description>Class that calculates containers current resource utilization.
     If not set, the value for yarn.nodemanager.resource-calculator.class will
     be used.</description>
@@ -1667,6 +1760,13 @@
     <description>Health check script time out period.</description>
     <name>yarn.nodemanager.health-checker.timeout-ms</name>
     <value>1200000</value>
+  </property>
+
+  <property>
+    <description>Whether or not to run the node health script
+    before the NM starts up.</description>
+    <name>yarn.nodemanager.health-checker.run-before-startup</name>
+    <value>false</value>
   </property>
 
   <property>
@@ -3325,6 +3425,51 @@
   </property>
 
   <property>
+    <description>
+    Used to specify custom web services for Resourcemanager. Value can be
+    classnames separated by comma.
+    Ex: org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices,
+    org.apache.hadoop.yarn.server.resourcemanager.webapp.DummyClass
+    </description>
+    <name>yarn.http.rmwebapp.external.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom scheduler page
+    </description>
+    <name>yarn.http.rmwebapp.scheduler.page.class</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom DAO classes used by custom web services.
+    </description>
+    <name>yarn.http.rmwebapp.custom.dao.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom DAO classes used by custom web services which requires
+    root unwrapping.
+    </description>
+    <name>yarn.http.rmwebapp.custom.unwrapped.dao.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom WebServices class to bind with RMWebApp overriding
+    the default RMWebServices.
+    </description>
+    <name>yarn.webapp.custom.webservice.class</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>The Node Label script to run. Script output Line starting with
      "NODE_PARTITION:" will be considered as Node Label Partition. In case of
      multiple lines have this pattern, then last one will be considered
@@ -3707,6 +3852,14 @@
     </description>
     <name>yarn.node-labels.fs-store.impl.class</name>
     <value>org.apache.hadoop.yarn.nodelabels.FileSystemNodeLabelsStore</value>
+  </property>
+
+  <property>
+    <description>The replication factor for the FS store
+     files. Default value is 0, means it will use file system
+      default replication.</description>
+    <name>yarn.fs-store.file.replication</name>
+    <value>0</value>
   </property>
 
   <property>
@@ -4533,5 +4686,32 @@
     <description>Whether or not to allow application submissions via REST. Default is true.</description>
     <name>yarn.webapp.enable-rest-app-submissions</name>
     <value>true</value>
+  </property>
+
+   <property>
+    <description>
+      The maximum number of application attempts. It's a global
+      setting for all application masters. Each application master can specify
+      its individual maximum number of application attempts via the API, but the
+      individual number cannot be more than the global upper bound. If it is,
+      the resourcemanager will override it. The default number value is set to
+      yarn.resourcemanager.am.max-attempts.
+    </description>
+    <name>yarn.resourcemanager.am.global.max-attempts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Max number of application tags set by user in ApplicationSubmissionContext
+      while submitting application</description>
+    <name>yarn.resourcemanager.application.max-tags</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>Max length of each application tag set by user in ApplicationSubmissionContext
+      while submitting application.</description>
+    <name>yarn.resourcemanager.application.max-tag.length</name>
+    <value>100</value>
   </property>
 </configuration>

@@ -53,6 +53,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -90,6 +92,7 @@ public class TestRouterMountTable {
         .admin()
         .rpc()
         .build();
+    conf.setInt(RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY, 20);
     cluster.addRouterOverrides(conf);
     cluster.startCluster();
     cluster.startRouters();
@@ -187,6 +190,55 @@ public class TestRouterMountTable {
     mountTable.loadCache(true);
 
     return addResponse.getStatus();
+  }
+
+  /**
+   * Update a mount table entry to the mount table through the admin API.
+   * @param entry Mount table entry to update.
+   * @return If it was successfully update.
+   * @throws IOException Problems adding entries.
+   */
+  private boolean updateMountTable(final MountTable entry) throws IOException {
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTableManager = client.getMountTableManager();
+    UpdateMountTableEntryRequest updateRequest =
+        UpdateMountTableEntryRequest.newInstance(entry);
+    UpdateMountTableEntryResponse updateResponse =
+        mountTableManager.updateMountTableEntry(updateRequest);
+
+    // Reload the Router cache
+    mountTable.loadCache(true);
+
+    return updateResponse.getStatus();
+  }
+
+  /**
+   * Verify that the maximum number of bytes in each component of a
+   * destination path.
+   */
+  @Test
+  public void testMountPointLimit() throws Exception {
+    // Add mount table entry
+    MountTable addEntry = MountTable.newInstance("/testdir-shortlength",
+        Collections.singletonMap("ns0", "/testdir-shortlength"));
+    assertTrue(addMountTable(addEntry));
+
+    final MountTable longAddEntry = MountTable.newInstance(
+        "/testdir-verylonglength",
+        Collections.singletonMap("ns0", "/testdir-verylonglength"));
+    LambdaTestUtils.intercept(IOException.class,
+        "The maximum path component name limit of testdir-verylonglength in "
+            + "directory /testdir-verylonglength is exceeded",
+        () -> addMountTable(longAddEntry));
+
+    final MountTable updateEntry = MountTable.newInstance(
+        "/testdir-shortlength",
+        Collections.singletonMap("ns0", "/testdir-shortlength-change-to-long"));
+    LambdaTestUtils.intercept(IOException.class,
+        "The maximum path component name limit of " +
+            "testdir-shortlength-change-to-long in directory " +
+            "/testdir-shortlength-change-to-long is exceeded",
+        () -> updateMountTable(updateEntry));
   }
 
   /**
@@ -290,6 +342,37 @@ public class TestRouterMountTable {
     }
   }
 
+  /**
+   * Verify the getMountPointStatus result of passing in different parameters.
+   */
+  @Test
+  public void testGetMountPointStatus() throws IOException {
+    MountTable addEntry = MountTable.newInstance("/testA/testB/testC/testD",
+        Collections.singletonMap("ns0", "/testA/testB/testC/testD"));
+    assertTrue(addMountTable(addEntry));
+    RouterClientProtocol clientProtocol = new RouterClientProtocol(
+        nnFs0.getConf(), routerContext.getRouter().getRpcServer());
+    String src = "/";
+    String child = "testA";
+    Path childPath = new Path(src, child);
+    HdfsFileStatus dirStatus =
+        clientProtocol.getMountPointStatus(childPath.toString(), 0, 0);
+    assertEquals(child, dirStatus.getLocalName());
+
+    String src1 = "/testA";
+    String child1 = "testB";
+    Path childPath1 = new Path(src1, child1);
+    HdfsFileStatus dirStatus1 =
+        clientProtocol.getMountPointStatus(childPath1.toString(), 0, 0);
+    assertEquals(child1, dirStatus1.getLocalName());
+
+    String src2 = "/testA/testB";
+    String child2 = "testC";
+    Path childPath2 = new Path(src2, child2);
+    HdfsFileStatus dirStatus2 =
+        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0);
+    assertEquals(child2, dirStatus2.getLocalName());
+  }
   /**
    * GetListing of testPath through router.
    */

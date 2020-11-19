@@ -26,11 +26,13 @@ import java.util.stream.Stream;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -57,6 +59,10 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.getStatusWithEmptyDirFlag;
  */
 public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
 
+  /**
+   * Rename an empty directory, verify that the empty dir
+   * marker moves in both S3Guard and in the S3A FS.
+   */
   @Test
   public void testRenameEmptyDir() throws Throwable {
     S3AFileSystem fs = getFileSystem();
@@ -67,7 +73,7 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
     String destDirMarker = fs.pathToKey(destDir) + "/";
     // set things up.
     mkdirs(sourceDir);
-    // there'a source directory marker
+    // there's source directory marker
     fs.getObjectMetadata(sourceDirMarker);
     S3AFileStatus srcStatus = getEmptyDirStatus(sourceDir);
     assertEquals("Must be an empty dir: " + srcStatus, Tristate.TRUE,
@@ -82,8 +88,12 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
         () -> getEmptyDirStatus(sourceDir));
     // and verify that there's no dir marker hidden under a tombstone
     intercept(FileNotFoundException.class,
-        () -> Invoker.once("HEAD", sourceDirMarker,
-            () -> fs.getObjectMetadata(sourceDirMarker)));
+        () -> Invoker.once("HEAD", sourceDirMarker, () -> {
+          ObjectMetadata md = fs.getObjectMetadata(sourceDirMarker);
+          return String.format("Object %s of length %d",
+              sourceDirMarker, md.getInstanceLength());
+        }));
+
     // the parent dir mustn't be confused
     S3AFileStatus baseStatus = getEmptyDirStatus(basePath);
     assertEquals("Must not be an empty dir: " + baseStatus, Tristate.FALSE,
@@ -277,4 +287,27 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
     s3.putObject(putObjectRequest);
   }
 
+  @Test
+  public void testDirMarkerDelete() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    assumeFilesystemHasMetadatastore(getFileSystem());
+    Path baseDir = methodPath();
+    Path subFile = new Path(baseDir, "subdir/file.txt");
+    // adds the s3guard entry
+    fs.mkdirs(baseDir);
+    touch(fs, subFile);
+    // PUT a marker
+    createEmptyObject(fs, fs.pathToKey(baseDir) + "/");
+    fs.delete(baseDir, true);
+    assertPathDoesNotExist("Should have been deleted", baseDir);
+
+    // now create the dir again
+    fs.mkdirs(baseDir);
+    FileStatus fileStatus = fs.getFileStatus(baseDir);
+    Assertions.assertThat(fileStatus)
+        .matches(FileStatus::isDirectory, "Not a directory");
+    Assertions.assertThat(fs.listStatus(baseDir))
+        .describedAs("listing of %s", baseDir)
+        .isEmpty();
+  }
 }

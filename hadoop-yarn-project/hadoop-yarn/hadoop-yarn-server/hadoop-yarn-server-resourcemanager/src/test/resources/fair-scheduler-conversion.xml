@@ -73,6 +73,15 @@
                 <maxAMShare>-1.0</maxAMShare>
             </queue>
         </queue>
+        <queue name="misc" type="parent">
+          <weight>0</weight>
+          <queue name="a">
+            <weight>0</weight>
+          </queue>
+          <queue name="b">
+            <weight>0</weight>
+          </queue>
+        </queue>
     </queue>
     <user name="alice">
       <maxRunningApps>30</maxRunningApps>
@@ -87,6 +96,9 @@
     <queuePlacementPolicy>
         <rule name="nestedUserQueue" create="false">
             <rule name="default" create="false" queue="admins.devs"/>
+        </rule>
+        <rule name="nestedUserQueue" create="false">
+            <rule name="primaryGroup" create="false" queue="users.devs"/>
         </rule>
         <rule name="specified" create="true"/>
         <rule name="nestedUserQueue" create="true">

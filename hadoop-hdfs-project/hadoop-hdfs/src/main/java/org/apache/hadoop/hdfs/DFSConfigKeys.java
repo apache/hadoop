@@ -239,9 +239,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY;
   public static final boolean DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_DEFAULT =
       true;
+  public static final String
+      DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY =
+      "dfs.namenode.redundancy.considerLoadByStorageType";
+  public static final boolean
+      DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_DEFAULT = false;
   public static final String  DFS_NAMENODE_READ_CONSIDERLOAD_KEY =
       "dfs.namenode.read.considerLoad";
   public static final boolean DFS_NAMENODE_READ_CONSIDERLOAD_DEFAULT =
+      false;
+  public static final String DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY =
+      "dfs.namenode.read.considerStorageType";
+  public static final boolean DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_DEFAULT =
       false;
   public static final String  DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR =
       "dfs.namenode.redundancy.considerLoad.factor";
@@ -496,8 +505,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_NAMENODE_SNAPSHOT_MAX_LIMIT =
       "dfs.namenode.snapshot.max.limit";
-
   public static final int DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT = 65536;
+  public static final String
+      DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT =
+      "dfs.namenode.snapshot.filesystem.limit";
+  // default value is same as snapshot quota set for a snapshottable directory
+  public static final int
+      DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT_DEFAULT = 65536;
+
   public static final String DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL =
       "dfs.namenode.snapshot.skiplist.interval";
   public static final int DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL_DEFAULT =
@@ -602,6 +617,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DATANODE_LOCK_FAIR_KEY =
       "dfs.datanode.lock.fair";
   public static final boolean DFS_DATANODE_LOCK_FAIR_DEFAULT = true;
+  public static final String DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY =
+      "dfs.datanode.lock.read.write.enabled";
+  public static final Boolean DFS_DATANODE_LOCK_READ_WRITE_ENABLED_DEFAULT =
+      true;
   public static final String  DFS_DATANODE_LOCK_REPORTING_THRESHOLD_MS_KEY =
       "dfs.datanode.lock-reporting-threshold-ms";
   public static final long
@@ -671,7 +690,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       600;
   /**
    * The maximum number of getBlocks RPCs data movement utilities can make to
-   * a NameNode per second. Values <= 0 disable throttling. This affects
+   * a NameNode per second. Values &lt;= 0 disable throttling. This affects
    * anything that uses a NameNodeConnector, i.e., the Balancer, Mover,
    * and StoragePolicySatisfier.
    */
@@ -750,6 +769,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.storage.policy.satisfier.retry.max.attempts";
   public static final int DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT =
       3;
+  public static final String DFS_STORAGE_DEFAULT_POLICY =
+      "dfs.storage.default.policy";
+  public static final HdfsConstants.StoragePolicy
+      DFS_STORAGE_DEFAULT_POLICY_DEFAULT = HdfsConstants.StoragePolicy.HOT;
+
   public static final String DFS_SPS_MAX_OUTSTANDING_PATHS_KEY =
       "dfs.storage.policy.satisfier.max.outstanding.paths";
   public static final int DFS_SPS_MAX_OUTSTANDING_PATHS_DEFAULT = 10000;
@@ -842,6 +866,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT = 21 * 24;  // 3 weeks.
   public static final String  DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND = "dfs.block.scanner.volume.bytes.per.second";
   public static final long    DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND_DEFAULT = 1048576L;
+  /**
+   * The amount of time in milliseconds that the BlockScanner times out waiting
+   * for the VolumeScanner thread to join during a shutdown call.
+   */
+  public static final String  DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY =
+      "dfs.block.scanner.volume.join.timeout.ms";
+  public static final long DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_DEFAULT =
+      TimeUnit.SECONDS.toMillis(5);
+  public static final String  DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED =
+      "dfs.block.scanner.skip.recent.accessed";
+  public static final boolean DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED_DEFAULT =
+      false;
   public static final String  DFS_DATANODE_TRANSFERTO_ALLOWED_KEY = "dfs.datanode.transferTo.allowed";
   public static final boolean DFS_DATANODE_TRANSFERTO_ALLOWED_DEFAULT = true;
   public static final String  DFS_HEARTBEAT_INTERVAL_KEY = "dfs.heartbeat.interval";
@@ -960,7 +996,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_IMAGE_TRANSFER_RATE_KEY =
                                            "dfs.image.transfer.bandwidthPerSec";
-  public static final long DFS_IMAGE_TRANSFER_RATE_DEFAULT = 0;  //no throttling
+  public static final long DFS_IMAGE_TRANSFER_RATE_DEFAULT = 52428800;
 
   public static final String DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY =
       "dfs.image.transfer-bootstrap-standby.bandwidthPerSec";
@@ -1087,6 +1123,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final float   DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT =
       0.6f;
   public static final String
+      DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY =
+      "dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy"
+          + ".balanced-space-preference-fraction";
+  public static final float
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT =
+      0.6f;
+  public static final String
       DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY =
       "dfs.namenode.available-space-block-placement-policy.balance-local-node";
   public static final boolean
@@ -1160,6 +1203,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.ha.nn.not-become-active-in-safemode";
   public static final boolean DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT =
       false;
+  public static final String DFS_HA_ALLOW_STALE_READ_KEY =
+      "dfs.ha.allow.stale.reads";
+  public static final boolean DFS_HA_ALLOW_STALE_READ_DEFAULT = false;
 
   // Security-related configs
   public static final String DFS_ENCRYPT_DATA_TRANSFER_KEY = "dfs.encrypt.data.transfer";
@@ -1353,7 +1399,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.parallel.volumes.load.threads.num";
   public static final String DFS_DATANODE_BLOCK_ID_LAYOUT_UPGRADE_THREADS_KEY =
       "dfs.datanode.block.id.layout.upgrade.threads";
-  public static final int DFS_DATANODE_BLOCK_ID_LAYOUT_UPGRADE_THREADS = 12;
+  public static final int DFS_DATANODE_BLOCK_ID_LAYOUT_UPGRADE_THREADS = 6;
 
   public static final String DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_KEY =
       "dfs.namenode.inotify.max.events.per.rpc";
@@ -1459,6 +1505,36 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY =
       "dfs.namenode.state.context.enabled";
   public static final boolean DFS_NAMENODE_STATE_CONTEXT_ENABLED_DEFAULT = false;
+
+  /**
+   * whether to protect the subdirectories of directories which
+   * set on fs.protected.directories.
+   */
+  public static final String DFS_PROTECTED_SUBDIRECTORIES_ENABLE =
+      "dfs.protected.subdirectories.enable";
+  // Default value for DFS_PROTECTED_SUBDIRECTORIES_ENABLE.
+  public static final boolean DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT =
+      false;
+
+  /**
+   *  HDFS-15548 to allow DISK/ARCHIVE configured on the same disk mount.
+   *  The default ratio will be applied if DISK/ARCHIVE are configured
+   *  on same disk mount.
+   *
+   *  Beware that capacity usage might be larger than 100% if there are already
+   *  data blocks exist and the configured ratio is small, which will
+   *  prevent the volume from taking new blocks until capacity is balanced out.
+   */
+  public static final String DFS_DATANODE_ALLOW_SAME_DISK_TIERING =
+      "dfs.datanode.same-disk-tiering.enabled";
+  public static final boolean DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT =
+      false;
+
+  public static final String
+      DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE =
+      "dfs.datanode.reserve-for-archive.default.percentage";
+  public static final double
+      DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE_DEFAULT = 0.0;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated

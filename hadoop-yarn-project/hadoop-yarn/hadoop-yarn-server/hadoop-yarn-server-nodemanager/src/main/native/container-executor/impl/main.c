@@ -71,7 +71,7 @@ static void display_usage(FILE *stream) {
       "            initialize container:  %2d appid tokens nm-local-dirs "
       "nm-log-dirs cmd app...\n"
       "            launch container:      %2d appid containerid workdir "
-      "container-script tokens pidfile nm-local-dirs nm-log-dirs resources ",
+      "container-script tokens http-option pidfile nm-local-dirs nm-log-dirs resources ",
       INITIALIZE_CONTAINER, LAUNCH_CONTAINER);
 
   if(is_tc_support_enabled()) {
@@ -80,10 +80,15 @@ static void display_usage(FILE *stream) {
     fputs("\n", stream);
   }
 
+  fputs(
+      "                                      where http-option is one of:\n"
+      "                                      --http\n"
+      "                                      --https keystorepath truststorepath\n", stream);
+
   de = is_docker_support_enabled() ? enabled : disabled;
   fprintf(stream,
-      "%11s launch docker container:      %2d appid containerid workdir "
-      "container-script tokens pidfile nm-local-dirs nm-log-dirs "
+      "%11s launch docker container:%2d appid containerid workdir "
+      "container-script tokens http-option pidfile nm-local-dirs nm-log-dirs "
       "docker-command-file resources ", de, LAUNCH_DOCKER_CONTAINER);
 
   if(is_tc_support_enabled()) {
@@ -91,6 +96,11 @@ static void display_usage(FILE *stream) {
   } else {
     fputs("\n", stream);
   }
+
+  fputs(
+      "                                      where http-option is one of:\n"
+      "                                      --http\n"
+      "                                      --https keystorepath truststorepath\n", stream);
 
   fprintf(stream,
       "            signal container:      %2d container-pid signal\n"
@@ -648,14 +658,14 @@ int main(int argc, char **argv) {
   assert_valid_setup(argv[0]);
 
   int operation = -1;
-  int ret = validate_arguments(argc, argv, &operation);
-
-  if (ret != 0) {
-    flush_and_close_log_files();
-    return ret;
-  }
-
   int exit_code = 0;
+  exit_code = validate_arguments(argc, argv, &operation);
+
+  if (exit_code != 0 || operation == -1) {
+    // if operation is still -1, the work was done in validate_arguments
+    // e.g. for --module-gpu
+    goto cleanup;
+  }
 
   switch (operation) {
   case CHECK_SETUP:
@@ -821,6 +831,7 @@ int main(int argc, char **argv) {
     break;
   }
 
+cleanup:
   if (exit_code) {
     fprintf(ERRORFILE, "Nonzero exit code=%d, error message='%s'\n", exit_code,
             get_error_message(exit_code));

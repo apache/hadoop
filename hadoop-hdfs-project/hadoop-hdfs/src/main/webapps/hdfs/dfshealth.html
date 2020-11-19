@@ -250,13 +250,15 @@
 
 <script type="text/x-dust-template" id="tmpl-snapshot">
 <div class="page-header"><h1>Snapshot Summary</h1></div>
-<div class="page-header"><h1><small>Snapshottable directories: {@size key=SnapshottableDirectories}{/size}</small></div>
+<div class="snapshot-stats"><h2><small>Snapshottable Directories: {@size key=SnapshottableDirectories}{/size}</small></div>
+<div class="snapshot-stats"><h2><small>Total Snapshots: {@size key=Snapshots}{/size}</small></div>
 <small>
-<table class="table">
+<table class="table" id="table-snapshots">
   <thead>
     <tr>
+      <th></th>
       <th>Path</th>
-      <th>Snapshot Number</th>
+      <th>Snapshots Count</th>
       <th>Snapshot Quota</th>
       <th>Modification Time</th>
       <th>Permission</th>
@@ -264,40 +266,23 @@
       <th>Group</th>
     </tr>
   </thead>
-  {#SnapshottableDirectories}
-  <tr>
-    <td>{path}</td>
-    <td>{snapshotNumber}</td>
-    <td>{snapshotQuota}</td>
-    <td>{modificationTime|date_tostring}</td>
-    <td>{permission|helper_to_permission}</td>
-    <td>{owner}</td>
-    <td>{group}</td>
-  </tr>
-  {/SnapshottableDirectories}
-</table>
-</small>
-
-<div class="page-header"><h1><small>Snapshots: {@size key=Snapshots}{/size}</small></div>
-
-<small>
-<table class="table">
-  <thead>
+  <tbody>
+    {#SnapshottableDirectories}
     <tr>
-      <th>Snapshot ID</th>
-      <th>Snapshot Directory</th>
-      <th>Modification Time</th>
+      <td class="details-control"></td>
+      <td ng-value="{path}">{path}</td>
+      <td ng-value="{snapshotNumber}">{snapshotNumber}</td>
+      <td ng-value="{snapshotQuota}">{snapshotQuota}</td>
+      <td ng-value="{modificationTime}">{modificationTime|date_tostring}</td>
+      <td>{permission|helper_to_permission}</td>
+      <td ng-value="{owner}">{owner}</td>
+      <td ng-value="{group}">{group}</td>
     </tr>
-  </thead>
-  {#Snapshots}
-  <tr>
-    <td>{snapshotID}</td>
-    <td>{snapshotDirectory}</td>
-    <td>{modificationTime|date_tostring}</td>
-  </tr>
-  {/Snapshots}
+    {/SnapshottableDirectories}
+  </tbody>
 </table>
 </small>
+
 </script>
 
 <script type="text/x-dust-template" id="tmpl-datanode">
@@ -371,6 +356,8 @@
     <td></td>
     <td></td>
     <td></td>
+    <td></td>
+    <td></td>>
   </tr>
   {/DeadNodes}
 </table>
@@ -489,7 +476,7 @@ There are no reported volume failures.
 </table>
 </script>
 
-<script type="text/javascript" src="/static/jquery-3.4.1.min.js">
+<script type="text/javascript" src="/static/jquery-3.5.1.min.js">
 </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
 </script><script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap.min.js">
 </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">

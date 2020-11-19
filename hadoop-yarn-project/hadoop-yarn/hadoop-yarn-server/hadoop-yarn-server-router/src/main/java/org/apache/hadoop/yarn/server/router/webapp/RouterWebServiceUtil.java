@@ -22,6 +22,7 @@ import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,8 +38,11 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
@@ -49,6 +53,7 @@ import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.apache.hadoop.yarn.webapp.util.WebServiceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +98,7 @@ public final class RouterWebServiceUtil {
       final String webApp, final HttpServletRequest hsr,
       final Class<T> returnType, final HTTPMethods method,
       final String targetPath, final Object formParam,
-      final Map<String, String[]> additionalParam) {
+      final Map<String, String[]> additionalParam, Configuration conf) {
 
     UserGroupInformation callerUGI = null;
 
@@ -128,7 +133,7 @@ public final class RouterWebServiceUtil {
           ClientResponse response = RouterWebServiceUtil.invokeRMWebService(
               webApp, targetPath, method,
               (hsr == null) ? null : hsr.getPathInfo(), paramMap, formParam,
-              getMediaTypeFromHttpServletRequest(hsr, returnType));
+              getMediaTypeFromHttpServletRequest(hsr, returnType), conf);
           if (Response.class.equals(returnType)) {
             return (T) RouterWebServiceUtil.clientResponseToResponse(response);
           }
@@ -161,10 +166,15 @@ public final class RouterWebServiceUtil {
    */
   private static ClientResponse invokeRMWebService(String webApp, String path,
       HTTPMethods method, String additionalPath,
-      Map<String, String[]> queryParams, Object formParam, String mediaType) {
-    Client client = Client.create();
-
-    WebResource webResource = client.resource(webApp).path(path);
+      Map<String, String[]> queryParams, Object formParam, String mediaType,
+      Configuration conf) {
+    Client client = WebServiceClient.getWebServiceClient().createClient();
+    InetSocketAddress socketAddress = NetUtils
+        .getConnectAddress(NetUtils.createSocketAddr(webApp));
+    String scheme = YarnConfiguration.useHttps(conf) ? "https://" : "http://";
+    String webAddress = scheme + socketAddress.getHostName() + ":"
+        + socketAddress.getPort();
+    WebResource webResource = client.resource(webAddress).path(path);
 
     if (additionalPath != null && !additionalPath.isEmpty()) {
       webResource = webResource.path(additionalPath);

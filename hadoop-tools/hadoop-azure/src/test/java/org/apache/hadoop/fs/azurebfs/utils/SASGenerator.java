@@ -19,104 +19,76 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
-import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Locale;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
- * Test container SAS generator.
+ * Test SAS generator.
  */
-public class SASGenerator {
+public abstract class SASGenerator {
 
-  private static final String HMAC_SHA256 = "HmacSHA256";
-  private static final int TOKEN_START_PERIOD_IN_SECONDS = 5 * 60;
-  private static final int TOKEN_EXPIRY_PERIOD_IN_SECONDS = 24 * 60 * 60;
-  public static final DateTimeFormatter ISO_8601_UTC_DATE_FORMATTER =
+  public enum AuthenticationVersion {
+    Nov18("2018-11-09"),
+    Dec19("2019-12-12"),
+    Feb20("2020-02-10");
+
+    private final String ver;
+
+    AuthenticationVersion(String version) {
+      this.ver = version;
+    }
+
+    @Override
+    public String toString() {
+      return ver;
+    }
+  }
+
+  protected static final Logger LOG = LoggerFactory.getLogger(SASGenerator.class);
+  public static final Duration FIVE_MINUTES = Duration.ofMinutes(5);
+  public static final Duration ONE_DAY = Duration.ofDays(1);
+  public static final DateTimeFormatter ISO_8601_FORMATTER =
       DateTimeFormatter
           .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT)
           .withZone(ZoneId.of("UTC"));
+
   private Mac hmacSha256;
   private byte[] key;
 
-  public SASGenerator(byte[] key) {
+  // hide default constructor
+  private SASGenerator() {
+  }
+
+  /**
+   * Called by subclasses to initialize the cryptographic SHA-256 HMAC provider.
+   * @param key - a 256-bit secret key
+   */
+  protected SASGenerator(byte[] key) {
     this.key = key;
     initializeMac();
-  }
-
-  public String getContainerSASWithFullControl(String accountName, String containerName) {
-    String sp = "rcwdl";
-    String sv = "2018-11-09";
-    String sr = "c";
-    String st = ISO_8601_UTC_DATE_FORMATTER.format(Instant.now().minusSeconds(TOKEN_START_PERIOD_IN_SECONDS));
-    String se =
-        ISO_8601_UTC_DATE_FORMATTER.format(Instant.now().plusSeconds(TOKEN_EXPIRY_PERIOD_IN_SECONDS));
-
-    String signature = computeSignatureForSAS(sp, st, se, sv, "c",
-        accountName, containerName);
-
-    AbfsUriQueryBuilder qb = new AbfsUriQueryBuilder();
-    qb.addQuery("sp", sp);
-    qb.addQuery("st", st);
-    qb.addQuery("se", se);
-    qb.addQuery("sv", sv);
-    qb.addQuery("sr", sr);
-    qb.addQuery("sig", signature);
-    return qb.toString().substring(1);
-  }
-
-  private String computeSignatureForSAS(String sp, String st,
-      String se, String sv, String sr, String accountName, String containerName) {
-
-    StringBuilder sb = new StringBuilder();
-    sb.append(sp);
-    sb.append("\n");
-    sb.append(st);
-    sb.append("\n");
-    sb.append(se);
-    sb.append("\n");
-    // canonicalized resource
-    sb.append("/blob/");
-    sb.append(accountName);
-    sb.append("/");
-    sb.append(containerName);
-    sb.append("\n");
-    sb.append("\n"); // si
-    sb.append("\n"); // sip
-    sb.append("\n"); // spr
-    sb.append(sv);
-    sb.append("\n");
-    sb.append(sr);
-    sb.append("\n");
-    sb.append("\n"); // - For optional : rscc - ResponseCacheControl
-    sb.append("\n"); // - For optional : rscd - ResponseContentDisposition
-    sb.append("\n"); // - For optional : rsce - ResponseContentEncoding
-    sb.append("\n"); // - For optional : rscl - ResponseContentLanguage
-    sb.append("\n"); // - For optional : rsct - ResponseContentType
-
-    String stringToSign = sb.toString();
-    return computeHmac256(stringToSign);
   }
 
   private void initializeMac() {
     // Initializes the HMAC-SHA256 Mac and SecretKey.
     try {
-      hmacSha256 = Mac.getInstance(HMAC_SHA256);
-      hmacSha256.init(new SecretKeySpec(key, HMAC_SHA256));
+      hmacSha256 = Mac.getInstance("HmacSHA256");
+      hmacSha256.init(new SecretKeySpec(key, "HmacSHA256"));
     } catch (final Exception e) {
       throw new IllegalArgumentException(e);
     }
   }
 
-  private String computeHmac256(final String stringToSign) {
+  protected String computeHmac256(final String stringToSign) {
     byte[] utf8Bytes;
     try {
-      utf8Bytes = stringToSign.getBytes(AbfsHttpConstants.UTF_8);
+      utf8Bytes = stringToSign.getBytes(StandardCharsets.UTF_8.toString());
     } catch (final UnsupportedEncodingException e) {
       throw new IllegalArgumentException(e);
     }

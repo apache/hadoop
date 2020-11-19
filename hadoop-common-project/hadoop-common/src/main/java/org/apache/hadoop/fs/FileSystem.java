@@ -83,12 +83,12 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.Tracer;
 import org.apache.htrace.core.TraceScope;
 
-import com.google.common.base.Preconditions;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
@@ -132,22 +132,35 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
  * New methods may be marked as Unstable or Evolving for their initial release,
  * as a warning that they are new and may change based on the
  * experience of use in applications.
+ * <p></p>
  * <b>Important note for developers</b>
- *
- * If you're making changes here to the public API or protected methods,
+ * <p></p>
+ * If you are making changes here to the public API or protected methods,
  * you must review the following subclasses and make sure that
  * they are filtering/passing through new methods as appropriate.
+ * <p></p>
  *
- * {@link FilterFileSystem}: methods are passed through.
+ * {@link FilterFileSystem}: methods are passed through. If not,
+ * then {@code TestFilterFileSystem.MustNotImplement} must be
+ * updated with the unsupported interface.
+ * Furthermore, if the new API's support is probed for via
+ * {@link #hasPathCapability(Path, String)} then
+ * {@link FilterFileSystem#hasPathCapability(Path, String)}
+ * must return false, always.
+ * <p></p>
  * {@link ChecksumFileSystem}: checksums are created and
  * verified.
+ * <p></p>
  * {@code TestHarFileSystem} will need its {@code MustNotImplement}
  * interface updated.
+ * <p></p>
  *
  * There are some external places your changes will break things.
  * Do co-ordinate changes here.
+ * <p></p>
  *
  * HBase: HBoss
+ * <p></p>
  * Hive: HiveShim23
  * {@code shims/0.23/src/main/java/org/apache/hadoop/hive/shims/Hadoop23Shims.java}
  *
@@ -278,7 +291,8 @@ public abstract class FileSystem extends Configured
    * @return the uri of the default filesystem
    */
   public static URI getDefaultUri(Configuration conf) {
-    URI uri = URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
+    URI uri =
+        URI.create(fixName(conf.getTrimmed(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
     if (uri.getScheme() == null) {
       throw new IllegalArgumentException("No scheme in default FS: " + uri);
     }
@@ -607,6 +621,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException a problem arose closing one or more filesystem.
    */
   public static void closeAll() throws IOException {
+    debugLogFileSystemClose("closeAll", "");
     CACHE.closeAll();
   }
 
@@ -617,8 +632,22 @@ public abstract class FileSystem extends Configured
    * @throws IOException a problem arose closing one or more filesystem.
    */
   public static void closeAllForUGI(UserGroupInformation ugi)
-  throws IOException {
+      throws IOException {
+    debugLogFileSystemClose("closeAllForUGI", "UGI: " + ugi);
     CACHE.closeAll(ugi);
+  }
+
+  private static void debugLogFileSystemClose(String methodName,
+      String additionalInfo) {
+    if (LOGGER.isDebugEnabled()) {
+      Throwable throwable = new Throwable().fillInStackTrace();
+      LOGGER.debug("FileSystem.{}() by method: {}); {}", methodName,
+          throwable.getStackTrace()[2], additionalInfo);
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("FileSystem.{}() full stack trace:", methodName,
+            throwable);
+      }
+    }
   }
 
   /**
@@ -2200,7 +2229,9 @@ public abstract class FileSystem extends Configured
     @Override
     @SuppressWarnings("unchecked")
     public T next() throws IOException {
-      Preconditions.checkState(hasNext(), "No more items in iterator");
+      if (!hasNext()) {
+        throw new NoSuchElementException("No more items in iterator");
+      }
       if (i == entries.getEntries().length) {
         fetchMore();
       }
@@ -2556,6 +2587,9 @@ public abstract class FileSystem extends Configured
    */
   @Override
   public void close() throws IOException {
+    debugLogFileSystemClose("close", "Key: " + key + "; URI: " + getUri()
+        + "; Object Identity Hash: "
+        + Integer.toHexString(System.identityHashCode(this)));
     // delete all files that were marked as delete-on-exit.
     processDeleteOnExit();
     CACHE.remove(this.key, this);
@@ -2642,6 +2676,20 @@ public abstract class FileSystem extends Configured
   public abstract FileStatus getFileStatus(Path f) throws IOException;
 
   /**
+   * Synchronize client metadata state.
+   * <p>
+   * In some FileSystem implementations such as HDFS metadata
+   * synchronization is essential to guarantee consistency of read requests
+   * particularly in HA setting.
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  public void msync() throws IOException, UnsupportedOperationException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method msync");
+  }
+
+  /**
    * Checks if the user can access a path.  The mode specifies which access
    * checks to perform.  If the requested permissions are granted, then the
    * method returns normally.  If access is denied, then the method throws an
@@ -2694,7 +2742,7 @@ public abstract class FileSystem extends Configured
       if (perm.getUserAction().implies(mode)) {
         return;
       }
-    } else if (ugi.getGroups().contains(stat.getGroup())) {
+    } else if (ugi.getGroupsSet().contains(stat.getGroup())) {
       if (perm.getGroupAction().implies(mode)) {
         return;
       }
@@ -4643,4 +4691,17 @@ public abstract class FileSystem extends Configured
 
   }
 
+  /**
+   * Create a multipart uploader.
+   * @param basePath file path under which all files are uploaded
+   * @return a MultipartUploaderBuilder object to build the uploader
+   * @throws IOException if some early checks cause IO failures.
+   * @throws UnsupportedOperationException if support is checked early.
+   */
+  @InterfaceStability.Unstable
+  public MultipartUploaderBuilder createMultipartUploader(Path basePath)
+      throws IOException {
+    methodNotSupported();
+    return null;
+  }
 }
