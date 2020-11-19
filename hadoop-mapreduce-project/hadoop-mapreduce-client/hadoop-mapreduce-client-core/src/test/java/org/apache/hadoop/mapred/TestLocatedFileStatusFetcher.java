@@ -18,6 +18,14 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.File;
+import java.io.IOException;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -25,16 +33,14 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
-
-public class TestLocatedFileStatusFetcher {
+/**
+ *  Test that the executor service has been shut down
+ *  when the LocatedFileStatusFetcher is interrupted.
+ */
+public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
 
   private Configuration conf;
   private FileSystem fileSys;
@@ -87,7 +93,8 @@ public class TestLocatedFileStatusFetcher {
     t.interrupt();
     t.join();
     // Check the status for executor service
-    Assert.assertTrue(fetcher.getListeningExecutorService().isShutdown());
+    Assert.assertTrue("The executor service should have been shut down",
+        fetcher.getListeningExecutorService().isShutdown());
   }
 
   static class MockFileSystem extends LocalFileSystem {
