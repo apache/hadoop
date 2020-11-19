@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -402,4 +403,10 @@ public class LocatedFileStatusFetcher {
       registerError(t);
     }
   }
+
+  @VisibleForTesting
+  ListeningExecutorService getListeningExecutorService() {
+    return exec;
+  }
+
 }
