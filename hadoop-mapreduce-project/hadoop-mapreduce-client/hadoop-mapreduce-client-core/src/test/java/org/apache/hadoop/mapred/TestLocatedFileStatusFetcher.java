@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -46,7 +47,7 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
   private FileSystem fileSys;
   private boolean mkdirs;
   private File dir = GenericTestUtils.getTestDir("test-localfs");
-  private static long TIME_FOR_SLEEP = 10000;
+  private static CountDownLatch LATCH = new CountDownLatch(1);
 
   @Before
   public void setup() throws Exception {
@@ -56,7 +57,7 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
   }
 
   @After
-  public void after() throws IOException {
+  public void after() {
     if (mkdirs) {
       FileUtil.fullyDelete(dir);
     }
@@ -88,7 +89,7 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
     };
 
     t.start();
-    Thread.sleep(TIME_FOR_SLEEP / 2);
+    LATCH.await();
 
     t.interrupt();
     t.join();
@@ -101,9 +102,12 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
     @Override
     public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
         throws IOException {
+      // The executor service now is running tasks
+      LATCH.countDown();
       try {
-        Thread.sleep(TIME_FOR_SLEEP);
-      } catch (Exception e) {
+        // Try to sleep some time
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
         // Ignore this exception as fs waiting on the result
         // might not be interrupted immediately
       }
