@@ -31,6 +31,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
@@ -183,6 +184,10 @@ public class MiniDFSCluster implements AutoCloseable {
 
   // Changing this default may break some tests that assume it is 2.
   private static final int DEFAULT_STORAGES_PER_DATANODE = 2;
+
+  // do not consider load factor when selecting a datanode.
+  private static final boolean DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD =
+      false;
 
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
@@ -494,6 +499,19 @@ public class MiniDFSCluster implements AutoCloseable {
     }
 
     /**
+     * set the value of DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY in the config
+     * file.
+     *
+     * @param val passed to the flag. This allows overriding the default value
+     *            {@link #DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD}.
+     * @return the builder object.
+     */
+    public Builder setNNRedundancyConsiderLoad(final boolean val) {
+      conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY, val);
+      return this;
+    }
+
+    /**
      * Construct the actual MiniDFSCluster
      */
     public MiniDFSCluster build() throws IOException {
@@ -509,6 +527,10 @@ public class MiniDFSCluster implements AutoCloseable {
               DEFAULT_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC);
       conf.setLong(DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY,
           defaultScannerVolumeTimeOut);
+      // default is false. do not consider load factor when selecting a
+      // datanode.
+      conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+          DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
       this.storagesPerDatanode =
           FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
     }

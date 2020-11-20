@@ -839,10 +839,8 @@ public class TestDFSClientRetries {
   public void testGetFileChecksum() throws Exception {
     final String f = "/testGetFileChecksum";
     final Path p = new Path(f);
-    // HDFS-15461: the number of datanode is higher than the number of replicas.
-    //             That way when a DN fails, the pipeline can recover.
     final int numReplicas = 3;
-    final int numDatanodes = numReplicas + 1;
+    final int numDatanodes = numReplicas;
     final MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
     try {
