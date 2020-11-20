@@ -634,9 +634,9 @@ For instance, HDFS may raise an `InvalidPathException`.
 
     result = FSDataOutputStream
 
-A zero byte file must exist at the end of the specified path, visible to all.
+A zero byte file MUST exist at the end of the specified path, visible to all.
 
-The updated (valid) FileSystem must contains all the parent directories of the path, as created by `mkdirs(parent(p))`.
+The updated (valid) FileSystem MUST contain all the parent directories of the path, as created by `mkdirs(parent(p))`.
 
 The result is `FSDataOutputStream`, which through its operations may generate new filesystem states with updated values of
 `FS.Files[p]`

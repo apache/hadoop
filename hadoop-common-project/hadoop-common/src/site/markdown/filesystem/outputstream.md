@@ -63,7 +63,9 @@ through a chain of streams.
 ## Output Stream Model
 
 For this specification, an output stream can be viewed as a list of bytes
-stored in in the client
+stored in the client -the `hsync()` and `hflush()` operations the actions
+which propagate the data to be visible to other readers of the file and/or
+made durable.
 
 ```python
 buffer: List[byte]
@@ -196,14 +198,14 @@ As the HDFS implementation is considered the de-facto specification of
 the FileSystem APIs, the fact that `write()` is thread-safe is significant.
 
 For compatibility, not only SHOULD other FS clients be thread-safe,
-but new HDFS featues, such as encryption and Erasure Coding SHOULD also
+but new HDFS features, such as encryption and Erasure Coding SHOULD also
 implement consistent behavior with the core HDFS output stream.
 
 Put differently:
 
 *It isn't enough for Output Streams to implement the core semantics
 of `java.io.OutputStream`: they need to implement the extra semantics
-of `HdfsDataOutputStream`, especially for HBase to work correctly.
+of `HdfsDataOutputStream`, especially for HBase to work correctly.*
 
 The concurrent `write()` call is the most significant tightening of
 the Java specification.
@@ -268,10 +270,6 @@ offset < data.length else raise IndexOutOfBoundsException
 offset + len < data.length else raise IndexOutOfBoundsException
 ```
 
-There may be an explicit limit on the size of cached data, or an implicit
-limit based by the available capacity of the destination filesystem.
-When a limit is reached, `write()` SHOULD fail with an `IOException`.
-
 After the operation has returned, the buffer may be re-used. The outcome
 of updates to the buffer while the `write()` operation is in progress is undefined.
 
@@ -329,9 +327,10 @@ and should be invoked after writing every single line of output, after
 writing small 4KB blocks or similar.
 
 Forwarding this to a full flush across a distributed filesystem, or worse,
-a distant object store, is very underperformant
-
-See [HADOOP-16548](https://issues.apache.org/jira/browse/HADOOP-16548)
+a distant object store, is very inefficient.
+Filesystem clients which do uprate a `flush()` to an `hflush()` will eventually
+have to roll back that feature: 
+[HADOOP-16548](https://issues.apache.org/jira/browse/HADOOP-16548).
 
 ### <a name="close"></a>`close()`
 
@@ -350,8 +349,7 @@ updated).
 After `close()` is invoked, all subsequent `write()` calls on the stream
 MUST fail with an `IOException`.
 
-
-Any locking/leaseholding mechanism is also required to release its lock/lease.
+Any locking/leaseholding mechanism MUST release its lock/lease.
 
 ```python
 Stream'.open = false
@@ -360,7 +358,7 @@ FS' = FS where data(FS', path) == buffer
 
 The `close()` call MAY fail during its operation.
 
-1. Callers of the API MUST expect for some calls to fail and SHOULD code appropriately.
+1. Callers of the API MUST expect for some calls to  `close()` to fail and SHOULD code appropriately.
 Catching and swallowing exceptions, while common, is not always the ideal solution.
 1. Even after a failure, `close()` MUST place the stream into a closed state.
 Follow-on calls to `close()` are ignored, and calls to other methods
@@ -382,8 +380,19 @@ may hide serious problems.
 delay in `close()` does not block the thread so long that the heartbeat times
 out.
 
-And for implementors: have a look at [HADOOP-16785](https://issues.apache.org/jira/browse/HADOOP-16785)
-to see examples of complications here.
+Implementors:
+
+* Have a look at [HADOOP-16785](https://issues.apache.org/jira/browse/HADOOP-16785)
+to see examples of complications in close.
+* Incrementally writing blocks before a close operation results in a behavior which
+matches client expectations better: write failures to surface earlier and close
+to be more housekeeping than the actual upload.
+* If block uploads are executed in separate threads, the output stream `close()`
+call MUST block until all the asynchronous uploads have completed; any error raised
+MUST be reported.
+If multiple errors were raised, the stream can choose which to propagate.
+What is important is: when `close()` returns without an error, applications expect
+the data to have been successfully written.
 
 ### HDFS and `OutputStream.close()`
 
@@ -651,7 +660,7 @@ filesystem. After returning to the caller, the data MUST be visible to other rea
 it MAY be durable. That is: it does not have to be persisted, merely guaranteed
 to be consistently visible to all clients attempting to open a new stream reading
 data at the path.
-1. `Syncable.hsync()` MUST flush the data and persist data to the underlying durable
+1. `Syncable.hsync()` MUST transmit the data as per `hflush` the data and persist data to the underlying durable
 storage.
 1. `close()` The first call to `close()` MUST flush out all remaining data in
 the buffers, and persist it.
@@ -663,6 +672,21 @@ metadata, distributed stores would overload fast.
 Thus: `flush()` is often treated at most as a cue to flush data to the network
 buffers -but not commit to writing any data.
 It is only the `Syncable` interface which offers guarantees.
+
+The two `Syncable` operations `hsync()` and `hflush()` differ purely by the extra guarantee of `hsync()`: the data must be persisted.
+If `hsync()` is implemented, then `hflush()` can be implemented simply
+by invoking `hsync()`
+
+```java
+public void hflush() throws IOException {
+  hsync();
+}
+```
+
+This is perfectly acceptable as an implementation: the semantics of `hflush()`
+are satisifed.
+What is not acceptable is downgrading `hsync()` to `hflush()`, as the durability guarantee is no longer met.
+
 
 ### <a name="concurrency"></a> Concurrency
 
@@ -858,7 +882,7 @@ be visible: `data(FS', path) = data(FS, path)`.
 
 1. The check for existing data in a `create()` call with `overwrite=False`, may
 take place in the `create()` call itself, in the `close()` call prior to/during
-the write, or at some point in between. Expect in the special case that the
+the write, or at some point in between. In the special case that the
 object store supports an atomic `PUT` operation, the check for existence of
 existing data and the subsequent creation of data at the path contains a race
 condition: other clients may create data at the path between the existence check

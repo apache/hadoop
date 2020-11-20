@@ -24,9 +24,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * This is the interface for flush/sync operation.
+ * This is the interface for flush/sync operations.
  * Consult the Hadoop filesystem specification for the definition of the
- * semantics of this operation.
+ * semantics of these operations.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
