@@ -102,6 +102,8 @@
         <configuration>
           <excludes>
             <exclude>src/main/native/testData/*</exclude>
+            <exclude>**/lz4.h</exclude>
+            <exclude>**/lz4.c</exclude>
           </excludes>
         </configuration>
       </plugin>
