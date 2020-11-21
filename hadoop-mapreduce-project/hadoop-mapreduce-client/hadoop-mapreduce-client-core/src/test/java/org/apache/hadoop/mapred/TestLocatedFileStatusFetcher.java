@@ -105,11 +105,11 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
       // The executor service now is running tasks
       LATCH.countDown();
       try {
-        // Try to sleep some time
+        // Try to sleep some time to let LocatedFileStatusFetcher#getFileStatuses be
+        // interrupted before the getting file info task finishes.
         Thread.sleep(5000);
       } catch (InterruptedException e) {
-        // Ignore this exception as fs waiting on the result
-        // might not be interrupted immediately
+        // Ignore this exception
       }
       return super.globStatus(pathPattern, filter);
     }
