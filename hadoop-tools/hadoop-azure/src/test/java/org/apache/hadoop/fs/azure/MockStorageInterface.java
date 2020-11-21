@@ -139,9 +139,10 @@ public class MockStorageInterface extends StorageInterface {
 
   private static URI convertKeyToEncodedUri(String key) {
     try {
-      URI unEncodedURI = new URI(key);
-      return new URIBuilder().setPath(unEncodedURI.getRawPath())
-          .setScheme(unEncodedURI.getScheme()).build();
+     Path p = new Path(key);
+     URI unEncodedURI = p.toUri();
+     return new URIBuilder().setPath(unEncodedURI.getPath())
+         .setScheme(unEncodedURI.getScheme()).build();
     } catch (URISyntaxException e) {
       int i = e.getIndex();
       String details;
