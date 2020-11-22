@@ -219,6 +219,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>assertj-core</artifactId>
         <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.lz4</groupId>
+      <artifactId>lz4-java</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
