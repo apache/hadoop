@@ -46,8 +46,8 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
   private Configuration conf;
   private FileSystem fileSys;
   private boolean mkdirs;
-  private File dir = GenericTestUtils.getTestDir("test-localfs");
-  private static CountDownLatch LATCH = new CountDownLatch(1);
+  private File dir = GenericTestUtils.getTestDir("test-lfs-fetcher");
+  private static final CountDownLatch LATCH = new CountDownLatch(1);
 
   @Before
   public void setup() throws Exception {
@@ -68,8 +68,8 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
     Path scanPath = new Path(dir.getAbsolutePath());
     mkdirs = fileSys.mkdirs(scanPath);
     Path[] dirs = new Path[] {scanPath};
-    final LocatedFileStatusFetcher fetcher = new LocatedFileStatusFetcher(conf, dirs, true,
-        new PathFilter() {
+    final LocatedFileStatusFetcher fetcher = new LocatedFileStatusFetcher(conf,
+        dirs, true, new PathFilter() {
           @Override
           public boolean accept(Path path) {
             return true;
@@ -105,8 +105,9 @@ public class TestLocatedFileStatusFetcher extends AbstractHadoopTestBase {
       // The executor service now is running tasks
       LATCH.countDown();
       try {
-        // Try to sleep some time to let LocatedFileStatusFetcher#getFileStatuses be
-        // interrupted before the getting file info task finishes.
+        // Try to sleep some time to
+        // let LocatedFileStatusFetcher#getFileStatuses be interrupted before
+        // the getting file info task finishes.
         Thread.sleep(5000);
       } catch (InterruptedException e) {
         // Ignore this exception
