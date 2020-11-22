@@ -199,7 +199,10 @@ public class Balancer {
       + "\tWhether to run the balancer during an ongoing HDFS upgrade."
       + "This is usually not desired since it will not affect used space "
       + "on over-utilized machines."
-      + "\n\t[-asService]\tRun as a long running service.";
+      + "\n\t[-asService]\tRun as a long running service."
+      + "\n\t[-sortTopNodes]" +
+      "\tSort over-utilized nodes by capacity to" +
+      " bring down top used datanode faster.";
 
   @VisibleForTesting
   private static volatile boolean serviceRunning = false;
@@ -215,6 +218,7 @@ public class Balancer {
   private final double threshold;
   private final long maxSizeToMove;
   private final long defaultBlockSize;
+  private final boolean sortTopNodes;
 
   // all data node lists
   private final Collection<Source> overUtilized = new LinkedList<Source>();
@@ -328,6 +332,7 @@ public class Balancer {
     this.policy = p.getBalancingPolicy();
     this.sourceNodes = p.getSourceNodes();
     this.runDuringUpgrade = p.getRunDuringUpgrade();
+    this.sortTopNodes = p.getSortTopNodes();
 
     this.maxSizeToMove = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
@@ -424,6 +429,10 @@ public class Balancer {
       }
     }
 
+    if (sortTopNodes) {
+      sortOverUtilizedNodes();
+    }
+
     logUtilizationCollections();
     
     Preconditions.checkState(dispatcher.getStorageGroupMap().size()
@@ -433,6 +442,18 @@ public class Balancer {
     
     // return number of bytes to be moved in order to make the cluster balanced
     return Math.max(overLoadedBytes, underLoadedBytes);
+  }
+
+  private void sortOverUtilizedNodes() {
+    LOG.info("Sorting over-utilized nodes by capacity" +
+        " to bring down top used datanode capacity faster");
+
+    List<Source> list = (List<Source>) overUtilized;
+    list.sort(
+        (Source source1, Source source2) ->
+        - (Float.compare(source1.getDatanodeInfo().getDfsUsedPercent(),
+            source2.getDatanodeInfo().getDfsUsedPercent()))
+    );
   }
 
   private static long computeMaxSize2Move(final long capacity, final long remaining,
@@ -961,6 +982,10 @@ public class Balancer {
             } else if ("-asService".equalsIgnoreCase(args[i])) {
               b.setRunAsService(true);
               LOG.info("Balancer will run as a long running service");
+            } else if ("-sortTopNodes".equalsIgnoreCase(args[i])) {
+              b.setSortTopNodes(true);
+              LOG.info("Balancer will sort nodes by" +
+                  " capacity usage percentage to prioritize top used nodes");
             } else {
               throw new IllegalArgumentException("args = "
                   + Arrays.toString(args));
