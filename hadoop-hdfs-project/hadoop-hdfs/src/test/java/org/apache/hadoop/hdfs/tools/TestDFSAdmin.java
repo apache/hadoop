@@ -972,7 +972,7 @@ public class TestDFSAdmin {
     assertEquals(0, ToolRunner.run(dfsAdmin,
         new String[]{"-disallowSnapshot", dirPath.toString()}));
     assertFalse(dfs.exists(trashRoot));
-    
+
     // Cleanup
     dfs.delete(dirPath, true);
   }
