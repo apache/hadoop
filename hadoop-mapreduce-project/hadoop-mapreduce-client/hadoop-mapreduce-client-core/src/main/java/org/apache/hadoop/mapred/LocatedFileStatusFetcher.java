@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -151,12 +152,13 @@ public class LocatedFileStatusFetcher {
       }
     } finally {
       lock.unlock();
+      // either the scan completed or an error was raised.
+      // in the case of an error shutting down the executor will interrupt all
+      // active threads, which can add noise to the logs.
+      LOG.debug("Scan complete: shutting down");
+      this.exec.shutdownNow();
     }
-    // either the scan completed or an error was raised.
-    // in the case of an error shutting down the executor will interrupt all
-    // active threads, which can add noise to the logs.
-    LOG.debug("Scan complete: shutting down");
-    this.exec.shutdownNow();
+
     if (this.unknownError != null) {
       LOG.debug("Scan failed", this.unknownError);
       if (this.unknownError instanceof Error) {
@@ -401,4 +403,10 @@ public class LocatedFileStatusFetcher {
       registerError(t);
     }
   }
+
+  @VisibleForTesting
+  ListeningExecutorService getListeningExecutorService() {
+    return exec;
+  }
+
 }
