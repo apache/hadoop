@@ -451,7 +451,7 @@ public class Balancer {
     List<Source> list = (List<Source>) overUtilized;
     list.sort(
         (Source source1, Source source2) ->
-        - (Float.compare(source1.getDatanodeInfo().getDfsUsedPercent(),
+        -(Float.compare(source1.getDatanodeInfo().getDfsUsedPercent(),
             source2.getDatanodeInfo().getDfsUsedPercent()))
     );
   }

@@ -2293,7 +2293,7 @@ public class TestBalancer {
             Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf,
             BalancerParameters.DEFAULT.getMaxIdleIteration());
     final Balancer b = new Balancer(connectors.get(0), p, conf);
-    Result r = b.runOneIteration();
+    Balancer.Result r = b.runOneIteration();
 
     cluster.triggerDeletionReports();
     cluster.triggerBlockReports();
