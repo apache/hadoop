@@ -146,7 +146,7 @@ public class MaxRunningAppsEnforcer {
 
   /**
    * This is called after reloading the allocation configuration when the
-   * scheduler is reinitilized
+   * scheduler is reinitialized
    *
    * Checks to see whether any non-runnable applications become runnable
    * now that the max running apps of given queue has been changed
