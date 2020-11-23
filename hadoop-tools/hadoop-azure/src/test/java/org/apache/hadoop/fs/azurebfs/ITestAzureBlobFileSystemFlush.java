@@ -243,7 +243,6 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     boolean isAppendBlob = true;
     if (!fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
       isAppendBlob = false;
-      System.out.println("append false");
     }
 
     try (FSDataOutputStream stream = fs.create(testFilePath)) {

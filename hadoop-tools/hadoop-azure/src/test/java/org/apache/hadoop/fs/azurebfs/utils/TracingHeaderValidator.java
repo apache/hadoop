@@ -36,12 +36,6 @@ public class TracingHeaderValidator implements Listener {
     return tracingHeaderValidator;
   }
 
-  public TracingHeaderValidator getClone(String operation) {
-    TracingHeaderValidator tracingHeaderValidator = getClone();
-    tracingHeaderValidator.operation = operation;
-    return tracingHeaderValidator;
-  }
-
   public TracingHeaderValidator(String clientCorrelationID,
       String fileSystemID, String operation,
       boolean needsPrimaryRequestID, int retryNum) {
@@ -67,7 +61,9 @@ public class TracingHeaderValidator implements Listener {
       if (!operation.equals(AbfsOperationConstants.READ)) {
         Assertions.assertThat(primaryRequestID)
             .describedAs("Should have primaryReqId").isNotEmpty();
-      } else {
+        //      } else {
+      }
+      if (!primaryRequestID.isEmpty() && !id_list[3].isEmpty()){
         Assertions.assertThat(id_list[3])
             .describedAs("PrimaryReqID should be common for these requests")
             .isEqualTo(primaryRequestID);
@@ -75,14 +71,11 @@ public class TracingHeaderValidator implements Listener {
       Assertions.assertThat(id_list[2]).describedAs(
           "FilesystemID should be same for requests with same filesystem")
           .isEqualTo(fileSystemID);
-      System.out.println("primaryreq " + primaryRequestID);
     }
       if (!streamID.isEmpty()) {
-        System.out.println("check stream" + streamID);
         Assertions.assertThat(id_list[4])
             .describedAs("Stream id should be common for these requests")
             .isEqualTo(streamID);
-        System.out.println("streamid " + streamID);
       }
   }
 
@@ -92,7 +85,6 @@ public class TracingHeaderValidator implements Listener {
   }
 
   private void validateBasicFormat(String[] id_list) {
-    System.out.println("basic test " + operation);
     Assertions.assertThat(id_list)
         .describedAs("header should have 7 elements").hasSize(7);
 

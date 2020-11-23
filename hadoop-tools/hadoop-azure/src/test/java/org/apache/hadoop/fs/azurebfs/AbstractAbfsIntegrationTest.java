@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContextFormat;
 import org.junit.After;
@@ -159,7 +160,8 @@ public abstract class AbstractAbfsIntegrationTest extends
     TracingContextFormat format = abfsConf == null? TracingContextFormat.ALL_ID_FORMAT :
         abfsConf.getTracingContextFormat();
 
-    return new TracingContext(corrID, fsID, "TS", isCont, format, null);
+    return new TracingContext(corrID, fsID, AbfsOperationConstants.TESTOP, isCont,
+        format, null);
   }
 
 

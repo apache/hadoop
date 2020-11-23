@@ -58,9 +58,7 @@ public class ITestAzureBlobFileSystemAppend extends
     try(FSDataOutputStream stream = fs.create(TEST_FILE_PATH)) {
       final byte[] b = new byte[1024];
       new Random().nextBytes(b);
-      System.out.println("going to write");
       stream.write(b, 1000, 0);
-      System.out.println("done write");
       assertEquals(0, stream.getPos());
     }
   }

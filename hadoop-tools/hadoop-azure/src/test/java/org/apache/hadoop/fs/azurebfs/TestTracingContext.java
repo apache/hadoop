@@ -114,8 +114,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     //map to avoid creating new instance and calling setup() for each test
     Map<AbstractAbfsIntegrationTest, Method> testClasses = new HashMap<>();
 
-//    testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
-//        ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
+    testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
+        ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
     testClasses.put(new ITestAbfsReadWriteAndSeek(32), //open, read, write
     ITestAbfsReadWriteAndSeek.class.getMethod("testReadAheadRequestID"));
     testClasses.put(new ITestAbfsReadWriteAndSeek(32), //read
@@ -147,7 +147,6 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     // removeaclentries, removedefaultacl, removeacl
 
     for (AbstractAbfsIntegrationTest testClass : testClasses.keySet()) {
-      System.out.println(testClass.methodName.getMethodName());
       testClass.setup();
       testClasses.get(testClass).invoke(testClass);
       testClass.teardown();
@@ -164,20 +163,11 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
         .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
         AbfsOperationConstants.ACCESS, false, 0));
-//    fs.access(new Path("/"), FsAction.READ);
+    fs.access(new Path("/"), FsAction.READ);
 
     fs.setListenerOperation(AbfsOperationConstants.PATH);
     //unset namespaceEnabled config to call getAcl -> test tracing header
-//    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
-//    fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
-
-//    ITestAzureBlobFileSystemAppend test2 = new ITestAzureBlobFileSystemAppend();
-//    test2.setup();
-//    test2.testTracingForAppend();
-
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED, "true");
-    AzureBlobFileSystem fs1 = getFileSystem(config);
-
+    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
+    fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
   }
 }
