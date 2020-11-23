@@ -2293,7 +2293,7 @@ public class TestBalancer {
             Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf,
             BalancerParameters.DEFAULT.getMaxIdleIteration());
     final Balancer b = new Balancer(connectors.get(0), p, conf);
-    Balancer.Result r = b.runOneIteration();
+    Result balancerResult = b.runOneIteration();
 
     cluster.triggerDeletionReports();
     cluster.triggerBlockReports();
@@ -2307,7 +2307,7 @@ public class TestBalancer {
       maxUsage = Math.max(maxUsage, datanodeReport[i].getDfsUsed());
     }
 
-    assertEquals(200, r.bytesAlreadyMoved);
+    assertEquals(200, balancerResult.bytesAlreadyMoved);
     // 100% and 95% used nodes will be balanced, so top used will be 900
     assertEquals(900, maxUsage);
   }

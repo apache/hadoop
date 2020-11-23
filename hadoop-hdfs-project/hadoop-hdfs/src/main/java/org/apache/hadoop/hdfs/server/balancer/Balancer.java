@@ -200,9 +200,9 @@ public class Balancer {
       + "This is usually not desired since it will not affect used space "
       + "on over-utilized machines."
       + "\n\t[-asService]\tRun as a long running service."
-      + "\n\t[-sortTopNodes]" +
-      "\tSort over-utilized nodes by capacity to" +
-      " bring down top used datanode faster.";
+      + "\n\t[-sortTopNodes]"
+      + "\tSort over-utilized nodes by capacity to"
+      + " bring down top used datanode faster.";
 
   @VisibleForTesting
   private static volatile boolean serviceRunning = false;
@@ -448,12 +448,16 @@ public class Balancer {
     LOG.info("Sorting over-utilized nodes by capacity" +
         " to bring down top used datanode capacity faster");
 
-    List<Source> list = (List<Source>) overUtilized;
-    list.sort(
-        (Source source1, Source source2) ->
-        -(Float.compare(source1.getDatanodeInfo().getDfsUsedPercent(),
-            source2.getDatanodeInfo().getDfsUsedPercent()))
-    );
+    if (overUtilized instanceof List) {
+      List<Source> list = (List<Source>) overUtilized;
+      list.sort(
+          (Source source1, Source source2) ->
+              (Float.compare(source2.getDatanodeInfo().getDfsUsedPercent(),
+                  source1.getDatanodeInfo().getDfsUsedPercent()))
+      );
+    } else {
+      LOG.error("Collection overUtilized is not a List, skip sorting.");
+    }
   }
 
   private static long computeMaxSize2Move(final long capacity, final long remaining,

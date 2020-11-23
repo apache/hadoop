@@ -183,8 +183,8 @@ final class BalancerParameters {
       return this;
     }
 
-    Builder setSortTopNodes(boolean sortTopNodes) {
-      this.sortTopNodes = sortTopNodes;
+    Builder setSortTopNodes(boolean shouldSortTopNodes) {
+      this.sortTopNodes = shouldSortTopNodes;
       return this;
     }
 
