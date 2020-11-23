@@ -99,22 +99,23 @@ public class ServiceAuthorizationManager {
     }
     
     // get client principal key to verify (if available)
-    KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
-    String clientPrincipal = null; 
-    if (krbInfo != null) {
-      String clientKey = krbInfo.clientPrincipal();
-      if (clientKey != null && !clientKey.isEmpty()) {
-        try {
-          clientPrincipal = SecurityUtil.getServerPrincipal(
-              conf.get(clientKey), addr);
-        } catch (IOException e) {
-          throw (AuthorizationException) new AuthorizationException(
-              "Can't figure out Kerberos principal name for connection from "
-                  + addr + " for user=" + user + " protocol=" + protocol)
-              .initCause(e);
-        }
+    String clientPrincipal = null;
+
+
+    try {
+      clientPrincipal = SecurityUtil.getClientPrincipal(protocol, conf);
+      if (clientPrincipal != null) {
+
+        clientPrincipal = SecurityUtil.getServerPrincipal(clientPrincipal,
+            addr);
       }
+    } catch (IOException e) {
+      throw (AuthorizationException) new AuthorizationException(
+          "Can't figure out Kerberos principal name for connection from "
+              + addr + " for user=" + user + " protocol=" + protocol)
+          .initCause(e);
     }
+    
     if((clientPrincipal != null && !clientPrincipal.equals(user.getUserName())) || 
        acls.length != 2  || !acls[0].isUserAllowed(user) || acls[1].isUserAllowed(user)) {
       String cause = clientPrincipal != null ?
