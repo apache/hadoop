@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * A simple memory key-value store to help mock the Windows Azure Storage
  * implementation for unit testing.
@@ -163,7 +165,10 @@ public class InMemoryBlockBlobStore {
 
   @SuppressWarnings("unchecked")
   public synchronized HashMap<String, String> getMetadata(String key) {
-    return (HashMap<String, String>) blobs.get(key).metadata.clone();
+    Entry entry = requireNonNull(blobs.get(key), "entry for " + key);
+    return (HashMap<String, String>) requireNonNull(entry.metadata,
+        "metadata for " + key)
+        .clone();
   }
 
   public synchronized HashMap<String, String> getContainerMetadata() {
