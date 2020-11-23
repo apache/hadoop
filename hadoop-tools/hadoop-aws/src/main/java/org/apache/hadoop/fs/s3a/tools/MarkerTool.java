@@ -36,6 +36,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -395,10 +396,22 @@ public final class MarkerTool extends S3GuardTool {
     } else {
       filterPolicy = null;
     }
+    int minMarkerCount = scanArgs.getMinMarkerCount();
+    int maxMarkerCount = scanArgs.getMaxMarkerCount();
+    if (minMarkerCount > maxMarkerCount) {
+      // swap min and max if they are wrong.
+      // this is to ensure any test scripts written to work around
+      // HADOOP-17332 and min/max swapping continue to work.
+      println(out, "Swapping -min (%d) and -max (%d) values",
+          minMarkerCount, maxMarkerCount);
+      int m = minMarkerCount;
+      minMarkerCount = maxMarkerCount;
+      maxMarkerCount = m;
+    }
     ScanResult result = scan(target,
         scanArgs.isDoPurge(),
-        scanArgs.getMaxMarkerCount(),
-        scanArgs.getMinMarkerCount(),
+        minMarkerCount,
+        maxMarkerCount,
         scanArgs.getLimit(),
         filterPolicy);
     return result;
@@ -512,6 +525,11 @@ public final class MarkerTool extends S3GuardTool {
       final int limit,
       final DirectoryPolicy filterPolicy)
       throws IOException, ExitUtil.ExitException {
+
+    // safety check: min and max are correctly ordered at this point.
+    Preconditions.checkArgument(minMarkerCount <= maxMarkerCount,
+        "The min marker count of %d is greater than the max value of %d",
+        minMarkerCount, maxMarkerCount);
 
     ScanResult result = new ScanResult();
 
