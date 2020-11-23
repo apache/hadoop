@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertNotNull;
 
 /**
  * A simple memory key-value store to help mock the Windows Azure Storage
