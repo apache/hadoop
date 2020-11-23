@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,8 +48,6 @@ import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.security.AccessControlException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -70,7 +67,6 @@ import java.util.EnumSet;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HdfsAdmin {
-  private static final Logger LOG = LoggerFactory.getLogger(HdfsAdmin.class);
   final private DistributedFileSystem dfs;
   public static final FsPermission TRASH_PERMISSION = new FsPermission(
       FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
@@ -174,15 +170,7 @@ public class HdfsAdmin {
   public void allowSnapshot(Path path) throws IOException {
     dfs.allowSnapshot(path);
     if (dfs.isSnapshotTrashRootEnabled()) {
-      try {
-        dfs.provisionSnapshotTrash(path, TRASH_PERMISSION);
-      } catch (FileAlreadyExistsException ex) {
-        // Don't throw on FileAlreadyExistsException since it is likely due to
-        // admin allowing snapshot on an EZ root.
-        LOG.warn(ex.getMessage());
-        LOG.info("You can safely ignore the above warning if you are allowing "
-            + "snapshot on an encryption zone, as the EZ already has a trash.");
-      }
+      dfs.provisionSnapshotTrash(path, TRASH_PERMISSION);
     }
   }
 

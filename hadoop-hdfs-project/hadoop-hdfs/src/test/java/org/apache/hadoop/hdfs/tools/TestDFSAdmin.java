@@ -933,11 +933,42 @@ public class TestDFSAdmin {
     final DistributedFileSystem dfs = cluster.getFileSystem();
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
 
+    // Case 1: trash directory exists and permission matches
     dfs.mkdirs(trashRoot);
+    dfs.setPermission(trashRoot, TRASH_PERMISSION);
     // allowSnapshot should still succeed even when trash exists
     assertEquals(0, ToolRunner.run(dfsAdmin,
         new String[]{"-allowSnapshot", dirPath.toString()}));
-    // disallowSnapshot should remove the empty trash
+    // Clean up. disallowSnapshot should remove the empty trash
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+    assertFalse(dfs.exists(trashRoot));
+
+    // Case 2: trash directory exists and but permission doesn't match
+    dfs.mkdirs(trashRoot);
+    dfs.setPermission(trashRoot, new FsPermission((short)0755));
+    // allowSnapshot should fail here
+    assertEquals(-1, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // Correct trash permission and retry
+    dfs.setPermission(trashRoot, TRASH_PERMISSION);
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // Clean up
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+    assertFalse(dfs.exists(trashRoot));
+
+    // Case 3: trash directory path is taken by a file
+    dfs.create(trashRoot).close();
+    // allowSnapshot should fail here
+    assertEquals(-1, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // Remove the file and retry
+    dfs.delete(trashRoot, false);
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+    // Clean up
     assertEquals(0, ToolRunner.run(dfsAdmin,
         new String[]{"-disallowSnapshot", dirPath.toString()}));
     assertFalse(dfs.exists(trashRoot));

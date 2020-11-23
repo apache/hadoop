@@ -3009,19 +3009,24 @@ public class DistributedFileSystem extends FileSystem
     Path trashPath = new Path(path, FileSystem.TRASH_PREFIX);
     try {
       FileStatus trashFileStatus = getFileStatus(trashPath);
+      boolean throwException = false;
       String errMessage = "Can't provision trash for snapshottable directory " +
           pathStr + " because trash path " + trashPath.toString() +
           " already exists.";
       if (!trashFileStatus.isDirectory()) {
+        throwException = true;
         errMessage += "\r\n" +
             "WARNING: " + trashPath.toString() + " is not a directory.";
       }
       if (!trashFileStatus.getPermission().equals(trashPermission)) {
+        throwException = true;
         errMessage += "\r\n" +
             "WARNING: Permission of " + trashPath.toString() +
             " differs from provided permission " + trashPermission;
       }
-      throw new FileAlreadyExistsException(errMessage);
+      if (throwException) {
+        throw new FileAlreadyExistsException(errMessage);
+      }
     } catch (FileNotFoundException ignored) {
       // Trash path doesn't exist. Continue
     }
