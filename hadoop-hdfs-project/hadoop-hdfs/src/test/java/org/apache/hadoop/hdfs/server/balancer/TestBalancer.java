@@ -2211,7 +2211,6 @@ public class TestBalancer {
         getBlocksMaxQps, getBlockCallsPerSecond <= getBlocksMaxQps);
   }
 
-
   @Test(timeout = 60000)
   public void testBalancerWithSortTopNodes() throws Exception {
     final Configuration conf = new HdfsConfiguration();
