@@ -118,7 +118,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
     testClasses.put(new ITestAbfsReadWriteAndSeek(32), //open, read, write
     ITestAbfsReadWriteAndSeek.class.getMethod("testReadAheadRequestID"));
-    testClasses.put(new ITestAbfsReadWriteAndSeek(32), //read
+    testClasses.put(new ITestAbfsReadWriteAndSeek(32), //read (bypassreadahead)
         ITestAbfsReadWriteAndSeek.class.getMethod("testReadAndWriteWithDifferentBufferSizesAndSeek"));
     testClasses.put(new ITestAzureBlobFileSystemAppend(), //append
         ITestAzureBlobFileSystemAppend.class.getMethod("testTracingForAppend"));
@@ -151,7 +151,6 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
       testClasses.get(testClass).invoke(testClass);
       testClass.teardown();
     }
-    testExternalOps();
   }
 
   @Test

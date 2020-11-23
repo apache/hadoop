@@ -122,7 +122,7 @@ public class TracingContext {
     case TWO_ID_FORMAT: header = clientCorrelationID + ":" + header;
     }
     if (listener != null) {
-      listener.afterOp(header);
+      listener.callTracingHeaderValidator(header);
     }
     return header;
   }

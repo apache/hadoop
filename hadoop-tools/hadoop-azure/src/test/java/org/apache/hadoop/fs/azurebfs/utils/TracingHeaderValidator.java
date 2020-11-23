@@ -17,15 +17,9 @@ public class TracingHeaderValidator implements Listener {
   // {3}[0-9a-f]{12}[)}]?$
 
   @Override
-  public void afterOp(String tracingContextHeader) {
+  public void callTracingHeaderValidator(String tracingContextHeader) {
     validateTracingHeader(tracingContextHeader);
   }
-
-  @Override
-  public void updatePrimaryRequestID(String primaryRequestID) {
-    this.primaryRequestID = primaryRequestID;
-  }
-
 
   @Override
   public TracingHeaderValidator getClone() {
@@ -57,31 +51,16 @@ public class TracingHeaderValidator implements Listener {
   private void validateTracingHeader(String tracingContextHeader) {
     String[] id_list = tracingContextHeader.split(":");
     validateBasicFormat(id_list);
-    if (needsPrimaryRequestID) {
-      if (!operation.equals(AbfsOperationConstants.READ)) {
-        Assertions.assertThat(primaryRequestID)
-            .describedAs("Should have primaryReqId").isNotEmpty();
-        //      } else {
-      }
-      if (!primaryRequestID.isEmpty() && !id_list[3].isEmpty()){
-        Assertions.assertThat(id_list[3])
-            .describedAs("PrimaryReqID should be common for these requests")
-            .isEqualTo(primaryRequestID);
-      }
-      Assertions.assertThat(id_list[2]).describedAs(
-          "FilesystemID should be same for requests with same filesystem")
-          .isEqualTo(fileSystemID);
+    if (!primaryRequestID.isEmpty() && !id_list[3].isEmpty()){
+      Assertions.assertThat(id_list[3])
+          .describedAs("PrimaryReqID should be common for these requests")
+          .isEqualTo(primaryRequestID);
     }
-      if (!streamID.isEmpty()) {
-        Assertions.assertThat(id_list[4])
-            .describedAs("Stream id should be common for these requests")
-            .isEqualTo(streamID);
-      }
-  }
-
-  @VisibleForTesting
-  public void setOperation(String operation) {
-    this.operation = operation;
+    if (!streamID.isEmpty()) {
+      Assertions.assertThat(id_list[4])
+          .describedAs("Stream id should be common for these requests")
+          .isEqualTo(streamID);
+    }
   }
 
   private void validateBasicFormat(String[] id_list) {
@@ -111,5 +90,15 @@ public class TracingHeaderValidator implements Listener {
     Assertions.assertThat(retryCount)
         .describedAs("Retry count incorrect")
         .isEqualTo(retryNum);
+  }
+
+  @Override
+  public void setOperation(String operation) {
+    this.operation = operation;
+  }
+
+  @Override
+  public void updatePrimaryRequestID(String primaryRequestID) {
+    this.primaryRequestID = primaryRequestID;
   }
 }

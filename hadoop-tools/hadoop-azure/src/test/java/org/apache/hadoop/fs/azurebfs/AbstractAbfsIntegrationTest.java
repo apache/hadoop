@@ -143,8 +143,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   protected boolean getIsNamespaceEnabled(AzureBlobFileSystem fs) throws IOException {
-    return fs.getAbfsStore().getIsNamespaceEnabled(getTestTracingContext(fs,
-        false));
+    return fs.getIsNamespaceEnabled(getTestTracingContext(fs, false));
   }
 
   public TracingContext getTestTracingContext(AzureBlobFileSystem fs,
