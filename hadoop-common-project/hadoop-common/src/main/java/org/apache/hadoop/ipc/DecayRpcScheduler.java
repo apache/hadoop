@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,6 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.AtomicDoubleArray;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -179,6 +181,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   private MetricsProxy metricsProxy;
   private final CostProvider costProvider;
 
+  private final Map<String, Integer> staticPriorities = new HashMap<>();
   /**
    * This TimerTask will call decayCurrentCosts until
    * the scheduler has been garbage collected.
@@ -486,7 +489,7 @@ public class DecayRpcScheduler implements RpcScheduler,
       AtomicLong value = entry.getValue().get(0);
 
       long snapshot = value.get();
-      int computedLevel = computePriorityLevel(snapshot);
+      int computedLevel = computePriorityLevel(snapshot, id);
 
       nextCache.put(id, computedLevel);
     }
@@ -536,7 +539,11 @@ public class DecayRpcScheduler implements RpcScheduler,
    * @param cost the cost for an identity
    * @return scheduling decision from 0 to numLevels - 1
    */
-  private int computePriorityLevel(long cost) {
+  private int computePriorityLevel(long cost, Object identity) {
+    Integer staticPriority = staticPriorities.get(identity);
+    if (staticPriority != null) {
+      return staticPriority.intValue();
+    }
     long totalCallSnapshot = totalDecayedCallCost.get();
 
     double proportion = 0;
@@ -576,9 +583,18 @@ public class DecayRpcScheduler implements RpcScheduler,
     // Cache was no good, compute it
     List<AtomicLong> costList = callCosts.get(identity);
     long currentCost = costList == null ? 0 : costList.get(0).get();
-    int priority = computePriorityLevel(currentCost);
+    int priority = computePriorityLevel(currentCost, identity);
     LOG.debug("compute priority for {} priority {}", identity, priority);
     return priority;
+  }
+
+  private String getIdentity(Schedulable obj) {
+    String identity = this.identityProvider.makeIdentity(obj);
+    if (identity == null) {
+      // Identity provider did not handle this
+      identity = DECAYSCHEDULER_UNKNOWN_IDENTITY;
+    }
+    return identity;
   }
 
   /**
@@ -589,13 +605,40 @@ public class DecayRpcScheduler implements RpcScheduler,
   @Override
   public int getPriorityLevel(Schedulable obj) {
     // First get the identity
-    String identity = this.identityProvider.makeIdentity(obj);
-    if (identity == null) {
-      // Identity provider did not handle this
-      identity = DECAYSCHEDULER_UNKNOWN_IDENTITY;
-    }
+    String identity = getIdentity(obj);
+    // highest priority users may have a negative priority but their
+    // calls will be priority 0.
+    return Math.max(0, cachedOrComputedPriorityLevel(identity));
+  }
 
+  @VisibleForTesting
+  int getPriorityLevel(UserGroupInformation ugi) {
+    String identity = getIdentity(newSchedulable(ugi));
+    // returns true priority of the user.
     return cachedOrComputedPriorityLevel(identity);
+  }
+
+  @VisibleForTesting
+  void setPriorityLevel(UserGroupInformation ugi, int priority) {
+    String identity = getIdentity(newSchedulable(ugi));
+    priority = Math.min(numLevels - 1, priority);
+    LOG.info("Setting priority for user:" + identity + "=" + priority);
+    staticPriorities.put(identity, priority);
+  }
+
+  // dummy instance to conform to identity provider api.
+  private static Schedulable newSchedulable(UserGroupInformation ugi) {
+    return new Schedulable() {
+      @Override
+      public UserGroupInformation getUserGroupInformation() {
+        return ugi;
+      }
+
+      @Override
+      public int getPriorityLevel() {
+        return 0;
+      }
+    };
   }
 
   @Override

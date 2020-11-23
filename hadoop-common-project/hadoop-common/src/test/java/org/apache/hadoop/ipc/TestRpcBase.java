@@ -62,6 +62,8 @@ public class TestRpcBase {
 
   protected final static String SERVER_PRINCIPAL_KEY =
       "test.ipc.server.principal";
+  protected final static String CLIENT_PRINCIPAL_KEY =
+      "test.ipc.client.principal";
   protected final static String ADDRESS = "0.0.0.0";
   protected final static int PORT = 0;
   protected static InetSocketAddress addr;
@@ -271,7 +273,8 @@ public class TestRpcBase {
     }
   }
 
-  @KerberosInfo(serverPrincipal = SERVER_PRINCIPAL_KEY)
+  @KerberosInfo(serverPrincipal = SERVER_PRINCIPAL_KEY,
+                clientPrincipal = CLIENT_PRINCIPAL_KEY)
   @TokenInfo(TestTokenSelector.class)
   @ProtocolInfo(protocolName = "org.apache.hadoop.ipc.TestRpcBase$TestRpcService",
       protocolVersion = 1)
