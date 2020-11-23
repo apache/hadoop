@@ -64,7 +64,7 @@ public class ITestAbfsInputStreamReadFooter
       int fileSize = i * ONE_MB;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      int length = ONE_KB;
+      int length = AbfsInputStream.FOOTER_SIZE;
       try (FSDataInputStream iStream = fs.open(testFilePath)) {
         byte[] buffer = new byte[length];
 
@@ -106,13 +106,13 @@ public class ITestAbfsInputStreamReadFooter
 
   private void testSeekToEndAndReadWithConf(boolean optimizeFooterRead) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem(optimizeFooterRead);
-    for (int i = 1; i <= 10; i++) {
+    for (int i = 5; i <= 10; i++) {
       String fileName = methodName.getMethodName() + i;
       int fileSize = i * ONE_MB;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      seekReadAndTest(fs, testFilePath, fileSize - AbfsInputStream.FOOTER_DELTA,
-          AbfsInputStream.FOOTER_DELTA, fileContent);
+      seekReadAndTest(fs, testFilePath, fileSize - AbfsInputStream.FOOTER_SIZE,
+          AbfsInputStream.FOOTER_SIZE, fileContent);
     }
   }
 

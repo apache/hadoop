@@ -47,7 +47,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
-  public static final int FOOTER_DELTA = 8;
+  public static final int FOOTER_SIZE = 8;
 
   private boolean firstRead = true;
 
@@ -77,8 +77,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
 
-  private final boolean readSmallFilesCompletely;
-  private final boolean optimizeFooterRead;
+  final AbfsInputStreamContext context;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -99,9 +98,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
-    this.readSmallFilesCompletely = abfsInputStreamContext
-        .readSmallFilesCompletely();
-    this.optimizeFooterRead = abfsInputStreamContext.optimizeFooterRead();
+    this.context = abfsInputStreamContext;
   }
 
   public String getPath() {
@@ -172,21 +169,16 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IndexOutOfBoundsException();
     }
 
-    if (firstRead && this.readSmallFilesCompletely
-        && contentLength <= bufferSize) { //  Read small files completely
-      if (readFileCompletely() == -1) {
-        return -1;
-      }
-    } else if (firstRead && this.optimizeFooterRead && fCursor
-        == contentLength - FOOTER_DELTA) {  //  Read the last one block if the
-      // read is for the footer
-      if (readLastBlock() == -1) {
-        return -1;
-      }
+    int bytesRead = 0;
+    if (shouldReadFully()) {
+      bytesRead = readFileCompletely();
+    } else if (shouldReadLastBlock(len)) {
+      bytesRead = readLastBlock();
     } else {
-      if (readOneBlock(b) == -1) {
-        return -1;
-      }
+      bytesRead = readOneBlock(b);
+    }
+    if (bytesRead == -1) {
+      return -1;
     }
     fCursorAfterLastRead = fCursor;
 
@@ -207,44 +199,50 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return bytesToRead;
   }
 
-  private long readFileCompletely() throws IOException {
-    bCursor = (int) getPos();
-    //  Read full file in case the file size <= buffer size
-    buffer = new byte[bufferSize];
-    long bytesRead = readInternal(0, buffer, 0, (int) contentLength, true);
-    firstRead = false;
+  private boolean shouldReadFully() {
+    return this.firstRead && this.context.readSmallFilesCompletely()
+        && this.contentLength <= this.bufferSize;
+  }
 
+  private int readFileCompletely() throws IOException {
+    buffer = new byte[bufferSize];
+    bCursor = (int) fCursor;
+    int bytesRead = readInternal(0, buffer, 0, (int) contentLength, true);
+    firstRead = false;
     if (bytesRead == -1) {
       return -1;
     }
-
-    limit = (int) bytesRead;
+    limit = bytesRead;
     fCursor = bytesRead;
     return bytesRead;
   }
 
-  private long readLastBlock() throws IOException {
-    bCursor = (int) (
-        ((contentLength < bufferSize) ? contentLength : bufferSize)
-            - FOOTER_DELTA);
-    buffer = new byte[bufferSize];
-    long startPos = (contentLength < bufferSize)
-        ? 0
-        : contentLength - bufferSize;
-    long bytesRead = readInternal(startPos, buffer, 0, bufferSize, true);
-    firstRead = false;
+  private boolean shouldReadLastBlock(int len) {
+    return this.firstRead && this.context.optimizeFooterRead()
+        && len == FOOTER_SIZE
+        && this.fCursor == this.contentLength - FOOTER_SIZE;
+  }
 
+  private int readLastBlock() throws IOException {
+    buffer = new byte[bufferSize];
+    bCursor = (int) (((contentLength < bufferSize) ? contentLength : bufferSize)
+        - FOOTER_SIZE);
+    long lastBlockStartPos = (contentLength < bufferSize) ?
+        0 :
+        contentLength - bufferSize;
+    int bytesRead = readInternal(lastBlockStartPos, buffer, 0, bufferSize,
+        true);
+    firstRead = false;
     if (bytesRead == -1) {
       return -1;
     }
-
-    limit += (int) bytesRead;
-    fCursor = contentLength;
+    limit = bytesRead;
+    fCursor = lastBlockStartPos + bytesRead;
     return bytesRead;
   }
 
-  private long readOneBlock(final byte[] b) throws IOException {
-    long bytesRead = 0;
+  private int readOneBlock(final byte[] b) throws IOException {
+    int bytesRead = 0;
     if (bCursor == limit) { //If buffer is empty, then fill the buffer.
 
       //If EOF, then return -1
