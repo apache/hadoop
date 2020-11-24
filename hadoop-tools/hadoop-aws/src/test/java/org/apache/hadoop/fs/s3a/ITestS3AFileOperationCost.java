@@ -267,8 +267,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
             false,
             StatusProbeEnum.ALL,
             ROOT_FILE_STATUS_PROBE);
+    String rootStatusContent = rootStatus.toString();
     Assertions.assertThat(rootStatus.isDirectory())
-            .describedAs("Status returned should be a directory")
+            .describedAs("Status returned should be a directory "
+                    + rootStatusContent)
             .isEqualTo(true);
     Assertions.assertThat(rootStatus.isEmptyDirectory())
             .isEqualTo(Tristate.UNKNOWN);
@@ -279,7 +281,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
             StatusProbeEnum.ALL,
             FILE_STATUS_DIR_PROBE);
     Assertions.assertThat(rootStatus.isDirectory())
-            .describedAs("Status returned should be a directory")
+            .describedAs("Status returned should be a directory "
+                    + rootStatusContent)
             .isEqualTo(true);
     Assertions.assertThat(rootStatus.isEmptyDirectory())
             .isNotEqualByComparingTo(Tristate.UNKNOWN);
