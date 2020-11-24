@@ -42,20 +42,18 @@ import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.
 /**
  * Builder for filesystem/filecontext operations of various kinds,
  * with option support.
- * <p></p>
- * <pre>
+ *
+ * <code>
  *   .opt("foofs:option.a", true)
  *   .opt("foofs:option.b", "value")
  *   .opt("fs.s3a.open.option.etag", "9fe4c37c25b")
  *   .must("foofs:cache", true)
  *   .must("barfs:cache-size", 256 * 1024 * 1024)
  *   .build();
- * </pre>
- * <p></p>
+ * </code>
  *
  * Configuration keys declared in an {@code opt()} may be ignored by
  * a builder which does not recognise them.
- * <p></p>
  *
  * Configuration keys declared in a {@code must()} function set must
  * be understood by the implementation or a

@@ -194,12 +194,12 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
       byte[] out = new byte[(int) longLen];
       intercept(EOFException.class,
           () -> in3.readFully(0, out));
-        in3.seek(longLen - 1);
-        assertEquals("read past real EOF on " + in3,
-            -1, in3.read());
-        in3.close();
-        return in3.toString();
-      },
+      in3.seek(longLen - 1);
+      assertEquals("read past real EOF on " + in3,
+          -1, in3.read());
+      in3.close();
+      return in3.toString();
+    },
         // two GET calls were made, one for readFully,
         // the second on the read() past the EOF
         // the operation has got as far as S3

@@ -312,7 +312,8 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
 
   /**
    * Open a simple file.
-   * @return the parameters needed to open a file through open(path, bufferSize).
+   * @return the parameters needed to open a file through
+   * {@code open(path, bufferSize)}.
    * @param bufferSize  buffer size
    */
   public OpenFileInformation openSimpleFile(final int bufferSize,

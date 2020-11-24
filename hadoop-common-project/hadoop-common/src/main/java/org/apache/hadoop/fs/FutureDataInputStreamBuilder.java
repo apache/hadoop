@@ -28,12 +28,12 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Builder for input streams and subclasses whose return value is
  * actually a completable future: this allows for better asynchronous
  * operation.
- * <p></p>
+ *
  * To be more generic, {@link #opt(String, int)} and {@link #must(String, int)}
  * variants provide implementation-agnostic way to customize the builder.
  * Each FS-specific builder implementation can interpret the FS-specific
  * options accordingly, for example:
- * <p></p>
+ *
  * If the option is not related to the file system, the option will be ignored.
  * If the option is must, but not supported/known by the file system, an
  * {@link IllegalArgumentException} will be thrown.
