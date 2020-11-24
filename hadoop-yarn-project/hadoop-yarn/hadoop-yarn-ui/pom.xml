@@ -202,7 +202,7 @@
                 <phase>generate-resources</phase>
                 <id>bower install</id>
                 <configuration>
-                  <arguments>install</arguments>
+                  <arguments>install --allow-root</arguments>
                 </configuration>
                 <goals>
                   <goal>bower</goal>
