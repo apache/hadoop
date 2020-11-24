@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.util;
 
+import javax.annotation.Nullable;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -258,7 +259,7 @@ public class JsonSerialization<T> {
    * @throws EOFException file status references an empty file
    * @throws IOException IO problems
    */
-  public T load(FileSystem fs, Path path, FileStatus status)
+  public T load(FileSystem fs, Path path, @Nullable FileStatus status)
       throws IOException {
 
     if (status != null && status.getLen() == 0) {

@@ -241,7 +241,7 @@ public class CommitOperations {
     List<Pair<LocatedFileStatus, IOException>> failures = new ArrayList<>(1);
     for (LocatedFileStatus status : statusList) {
       try {
-        commits.add(SinglePendingCommit.load(fs, status.getPath()));
+        commits.add(SinglePendingCommit.load(fs, status.getPath(), status));
       } catch (IOException e) {
         LOG.warn("Failed to load commit file {}", status.getPath(), e);
         failures.add(Pair.of(status, e));
@@ -324,10 +324,12 @@ public class CommitOperations {
       LOG.debug("No files to abort under {}", pendingDir);
     }
     while (pendingFiles.hasNext()) {
-      Path pendingFile = pendingFiles.next().getPath();
+      LocatedFileStatus status = pendingFiles.next();
+      Path pendingFile = status.getPath();
       if (pendingFile.getName().endsWith(CommitConstants.PENDING_SUFFIX)) {
         try {
-          abortSingleCommit(SinglePendingCommit.load(fs, pendingFile));
+          abortSingleCommit(SinglePendingCommit.load(fs, pendingFile,
+              status));
         } catch (FileNotFoundException e) {
           LOG.debug("listed file already deleted: {}", pendingFile);
         } catch (IOException | IllegalArgumentException e) {

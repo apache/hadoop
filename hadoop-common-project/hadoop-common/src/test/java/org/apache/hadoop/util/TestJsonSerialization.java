@@ -176,7 +176,7 @@ public class TestJsonSerialization extends HadoopTestBase {
     Path tempPath = new Path(tempFile.toURI());
     LocalFileSystem fs = FileSystem.getLocal(new Configuration());
     try {
-      LambdaTestUtils.intercept(EOFException.class,
+      LambdaTestUtils.intercept(PathIOException.class,
           () -> serDeser.load(fs, tempPath));
       fs.delete(tempPath, false);
       LambdaTestUtils.intercept(FileNotFoundException.class,
