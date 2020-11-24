@@ -180,7 +180,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (bytesRead == -1) {
       return -1;
     }
-    fCursorAfterLastRead = fCursor;
 
     //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
     //(bytes returned may be less than requested)
@@ -212,6 +211,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (bytesRead == -1) {
       return -1;
     }
+    fCursorAfterLastRead = fCursor;
     limit = bytesRead;
     fCursor = bytesRead;
     return bytesRead;
@@ -236,6 +236,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (bytesRead == -1) {
       return -1;
     }
+    fCursorAfterLastRead = fCursor;
     limit = bytesRead;
     fCursor = lastBlockStartPos + bytesRead;
     return bytesRead;
@@ -269,6 +270,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         return -1;
       }
 
+      fCursorAfterLastRead = fCursor;
       limit += bytesRead;
       fCursor += bytesRead;
     }
