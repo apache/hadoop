@@ -3144,6 +3144,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         "s3GetFileStatus(%s) wants to know if a directory is empty but"
             + " does not request a list probe", path);
 
+    if (key.isEmpty() && !needEmptyDirectoryFlag) {
+      return new S3AFileStatus(Tristate.UNKNOWN, path, username);
+    }
+
     if (!key.isEmpty() && !key.endsWith("/")
         && probes.contains(StatusProbeEnum.Head)) {
       try {
