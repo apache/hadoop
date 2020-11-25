@@ -4951,6 +4951,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * This is purely for testing, as it force initializes all static
+   * initializers. See HADOOP-17385 for details.
+   */
+  @InterfaceAudience.Private
+  public static void initializeClass() {
+    LOG.debug("Initialize S3A class");
+  }
+
+  /**
    * The implementation of context accessors.
    */
   private class ContextAccessorsImpl implements ContextAccessors {
