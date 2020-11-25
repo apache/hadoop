@@ -1302,7 +1302,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
 
     TracingHeaderValidator tracingHeaderValidator = new TracingHeaderValidator(
         conf.getClientCorrelationID(), fs.getFileSystemID(),
-        AbfsOperationConstants.GETFILESTATUS, false, 1);
+        AbfsOperationConstants.GETFILESTATUS, false, 0);
     fs.registerListener(tracingHeaderValidator);
     FileStatus oldFileStatus = fs.getFileStatus(filePath);
     tracingHeaderValidator.setOperation(AbfsOperationConstants.SETOWNER);

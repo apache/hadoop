@@ -242,13 +242,13 @@ public class ITestAzureBlobFileSystemDelete extends
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     when(mockClient.deletePath("/NonExistingPath", false,
-        null, any(TracingContext.class))).thenCallRealMethod();
+        null, getTestTracingContext(fs, false))).thenCallRealMethod();
 
     Assertions.assertThat(mockClient.deletePath(
         "/NonExistingPath",
         false,
         null,
-        getTestTracingContext(fs, true))
+        getTestTracingContext(fs, false))
         .getResult()
         .getStatusCode())
         .describedAs("Idempotency check reports successful "
