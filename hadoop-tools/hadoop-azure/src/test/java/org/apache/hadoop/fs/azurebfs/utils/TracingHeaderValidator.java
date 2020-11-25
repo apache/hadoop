@@ -1,7 +1,6 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.assertj.core.api.Assertions;
 
 public class TracingHeaderValidator implements Listener {
@@ -80,7 +79,7 @@ public class TracingHeaderValidator implements Listener {
         .matches(GUID_PATTERN);
     Assertions.assertThat(id_list[2]).describedAs("Filesystem ID incorrect")
         .isEqualTo(fileSystemID);
-    if (needsPrimaryRequestID && !operation.equals(AbfsOperationConstants.READ)) {
+    if (needsPrimaryRequestID && !operation.equals(HdfsOperationConstants.READ)) {
       Assertions.assertThat(id_list[3]).describedAs("should have primaryReqId")
           .isNotEmpty();
     }

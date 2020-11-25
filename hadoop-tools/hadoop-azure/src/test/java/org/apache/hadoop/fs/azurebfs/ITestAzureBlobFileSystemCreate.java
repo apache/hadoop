@@ -25,7 +25,7 @@ import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
@@ -100,7 +100,7 @@ public class ITestAzureBlobFileSystemCreate extends
     } catch (FileNotFoundException expected) {
     }
     fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
-        fs.getFileSystemID(), AbfsOperationConstants.MKDIR,
+        fs.getFileSystemID(), HdfsOperationConstants.MKDIR,
         false, 0));
     fs.mkdirs(TEST_FOLDER_PATH);
     fs.registerListener(null);
@@ -273,7 +273,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     // Case 2: Not Overwrite - File pre-exists
     fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
-        fs.getFileSystemID(), AbfsOperationConstants.CREATE, false, 0));
+        fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0));
     intercept(FileAlreadyExistsException.class,
         () -> fs.create(nonOverwriteFile, false));
     fs.registerListener(null);
@@ -303,7 +303,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     // Case 4: Overwrite - File pre-exists
     fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
-        fs.getFileSystemID(), AbfsOperationConstants.CREATE, true,
+        fs.getFileSystemID(), HdfsOperationConstants.CREATE, true,
         0));
     fs.create(overwriteFilePath, true);
     fs.registerListener(null);

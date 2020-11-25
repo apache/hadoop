@@ -23,7 +23,7 @@ import java.util.EnumSet;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Assume;
 import org.junit.Test;
@@ -59,10 +59,10 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
 
     // after setting the xAttr on the file, the value should be retrievable
     fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
-        fs.getFileSystemID(), AbfsOperationConstants.SETATTR,
+        fs.getFileSystemID(), HdfsOperationConstants.SET_ATTR,
         true, 0));
     fs.setXAttr(testFile, attributeName1, attributeValue1);
-    fs.setListenerOperation(AbfsOperationConstants.GETATTR);
+    fs.setListenerOperation(HdfsOperationConstants.GET_ATTR);
     assertArrayEquals(attributeValue1, fs.getXAttr(testFile, attributeName1));
     fs.registerListener(null);
 

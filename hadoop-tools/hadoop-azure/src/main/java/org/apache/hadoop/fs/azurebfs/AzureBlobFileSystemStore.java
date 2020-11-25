@@ -1029,7 +1029,8 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       final AbfsRestOperation op = client.setOwner(getRelativePath(path),
               transformedOwner,
-              transformedGroup, tracingContext);
+              transformedGroup,
+              tracingContext);
 
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }

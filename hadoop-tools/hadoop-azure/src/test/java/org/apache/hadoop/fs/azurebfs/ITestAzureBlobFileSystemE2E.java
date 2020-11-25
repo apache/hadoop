@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
@@ -144,11 +144,11 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     final byte[] r = new byte[TEST_DEFAULT_READ_BUFFER_SIZE];
     AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     TracingHeaderValidator tracingHeaderValidator = new TracingHeaderValidator
-        (conf.getClientCorrelationID(), fs.getFileSystemID(), AbfsOperationConstants.OPEN,
+        (conf.getClientCorrelationID(), fs.getFileSystemID(), HdfsOperationConstants.OPEN,
         false, 0);
     fs.registerListener(tracingHeaderValidator);
     FSDataInputStream inputStream = fs.open(testFilePath, TEST_DEFAULT_BUFFER_SIZE);
-    tracingHeaderValidator.setOperation(AbfsOperationConstants.READ);
+    tracingHeaderValidator.setOperation(HdfsOperationConstants.READ);
     ((AbfsInputStream)inputStream.getWrappedStream()).registerListener(tracingHeaderValidator);
     int result = inputStream.read(r);
 

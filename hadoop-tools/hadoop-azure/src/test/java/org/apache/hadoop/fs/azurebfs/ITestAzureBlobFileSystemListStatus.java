@@ -29,7 +29,7 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
 
@@ -89,7 +89,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     AbfsConfiguration conf = fs1.getAbfsStore().getAbfsConfiguration();
     fs1.registerListener(new TracingHeaderValidator(
         conf.getClientCorrelationID(),
-        fs1.getFileSystemID(), AbfsOperationConstants.LISTSTATUS, true,
+        fs1.getFileSystemID(), HdfsOperationConstants.LISTSTATUS, true,
         0));
     FileStatus[] files = fs1.listStatus(new Path("/"));
     assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);

@@ -1,17 +1,11 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
-import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -27,7 +21,6 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
   private static final String[] CLIENT_CORRELATIONID_LIST = {
@@ -57,7 +50,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
       boolean includeInHeader) throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
-        fs.getFileSystemID(), AbfsOperationConstants.TESTOP,
+        fs.getFileSystemID(), HdfsOperationConstants.TEST_OP,
         TracingContextFormat.ALL_ID_FORMAT,null);
     String correlationID = tracingContext.toString().split(":")[0];
     if (includeInHeader) {
@@ -161,10 +154,10 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
         .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
-        AbfsOperationConstants.ACCESS, false, 0));
+        HdfsOperationConstants.ACCESS, false, 0));
     fs.access(new Path("/"), FsAction.READ);
 
-    fs.setListenerOperation(AbfsOperationConstants.PATH);
+    fs.setListenerOperation(HdfsOperationConstants.HAS_PATH_CAPABILITY);
     //unset namespaceEnabled config to call getAcl -> test tracing header
     fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
     fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);

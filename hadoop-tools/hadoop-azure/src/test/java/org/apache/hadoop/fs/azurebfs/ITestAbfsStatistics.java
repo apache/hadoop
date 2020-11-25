@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
-import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;

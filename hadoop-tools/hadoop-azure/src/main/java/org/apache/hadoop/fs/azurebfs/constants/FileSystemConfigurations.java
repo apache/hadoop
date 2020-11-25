@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContextFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -81,9 +82,6 @@ public final class FileSystemConfigurations {
 
   public static final DelegatingSSLSocketFactory.SSLChannelMode DEFAULT_FS_AZURE_SSL_CHANNEL_MODE
       = DelegatingSSLSocketFactory.SSLChannelMode.Default;
-  public static final int DEFAULT_TRACINGCONTEXT_FORMAT =
-      TracingContextFormat.ALL_ID_FORMAT.ordinal();
-  //ordinal has associated risks - check
 
   public static final boolean DEFAULT_ENABLE_DELEGATION_TOKEN = false;
   public static final boolean DEFAULT_ENABLE_HTTPS = true;

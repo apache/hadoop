@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -78,7 +78,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
       ((AbfsOutputStream)stream.getWrappedStream()).registerListener(new
           TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-          fs.getFileSystemID(), AbfsOperationConstants.CREATE,
+          fs.getFileSystemID(), HdfsOperationConstants.CREATE,
           false, 0));
       stream.write(b);
     }
@@ -87,12 +87,12 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     int result;
     TracingHeaderValidator tracingHeaderValidator = new TracingHeaderValidator(
         abfsConfiguration.getClientCorrelationID(), fs.getFileSystemID(),
-        AbfsOperationConstants.OPEN, false, 0);
+        HdfsOperationConstants.OPEN, false, 0);
     fs.registerListener(tracingHeaderValidator);
     try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
       ((AbfsInputStream)inputStream.getWrappedStream()).registerListener(new
               TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-          fs.getFileSystemID(), AbfsOperationConstants.READ,
+          fs.getFileSystemID(), HdfsOperationConstants.READ,
           false, 0));
       result = inputStream.read(readBuffer, 0, bufferSize*4);
     }
@@ -117,7 +117,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(new
           TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-          fs.getFileSystemID(), AbfsOperationConstants.READ, true,
+          fs.getFileSystemID(), HdfsOperationConstants.READ, true,
           0,
           ((AbfsInputStream) inputStream.getWrappedStream()).getStreamID()));
       inputStream.seek(bufferSize);

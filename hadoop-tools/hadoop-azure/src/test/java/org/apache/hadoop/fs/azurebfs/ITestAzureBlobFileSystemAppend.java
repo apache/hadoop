@@ -22,9 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
-import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Test;
 
@@ -73,7 +71,7 @@ public class ITestAzureBlobFileSystemAppend extends
 
     fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
         .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
-        AbfsOperationConstants.APPEND, false, 0));
+        HdfsOperationConstants.APPEND, false, 0));
     fs.append(filePath);
   }
 
@@ -91,7 +89,7 @@ public class ITestAzureBlobFileSystemAppend extends
     fs.create(TEST_FILE_PATH);
     fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
         .getAbfsConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), AbfsOperationConstants.APPEND,
+        fs.getFileSystemID(), HdfsOperationConstants.APPEND,
         false, 0));
     FSDataOutputStream in = fs.append(TEST_FILE_PATH, 10);
     byte[] buf = new byte[100];

@@ -26,8 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsOperationConstants;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -150,7 +149,7 @@ public class ITestAzureBlobFileSystemDelete extends
     Path dir = new Path("/test");
     fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
         .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
-        AbfsOperationConstants.DELETE, false, 0));
+        HdfsOperationConstants.DELETE, false, 0));
     // first try a non-recursive delete, expect failure
     intercept(FileAlreadyExistsException.class,
         () -> fs.delete(dir, false));

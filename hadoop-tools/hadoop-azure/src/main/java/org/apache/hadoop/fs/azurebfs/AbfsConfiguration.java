@@ -231,12 +231,6 @@ public class AbfsConfiguration{
           DefaultValue = EMPTY_STRING)
   private String clientCorrelationID;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_TRACINGCONTEXT_FORMAT,
-          DefaultValue = 1)// DEFAULT_TRACINGCONTEXT_FORMATSIZE)
-  private int inputTracingContextFormat;
-
-  private final TracingContextFormat tracingContextFormat;
-
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
   private boolean enableDelegationToken;
@@ -284,8 +278,6 @@ public class AbfsConfiguration{
         field.set(this, validateBoolean(field));
       }
     }
-    tracingContextFormat =
-        TracingContextFormat.valueOf(inputTracingContextFormat);
   }
 
   public Trilean getIsNamespaceEnabledAccount() {
@@ -306,17 +298,6 @@ public class AbfsConfiguration{
    */
   public String getClientCorrelationID() {
     return clientCorrelationID;
-  }
-
-  /**
-   * Config to allow user to pick format of x-ms-client-request-id header
-   * 0 -> client-req-id
-   * 1 -> all IDs (default)
-   * 2 -> client-corr-id : client-req-id
-   * @return tracingContextFormat config
-   */
-  public TracingContextFormat getTracingContextFormat() {
-    return tracingContextFormat;
   }
 
   /**
@@ -657,6 +638,14 @@ public class AbfsConfiguration{
 
   public DelegatingSSLSocketFactory.SSLChannelMode getPreferredSSLFactoryOption() {
     return getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
+  }
+
+  /**
+   * Enum config to allow user to pick format of x-ms-client-request-id header
+   * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
+   */
+  public TracingContextFormat getTracingContextFormat() {
+    return getEnum(FS_AZURE_TRACINGCONTEXT_FORMAT, TracingContextFormat.ALL_ID_FORMAT);
   }
 
   public AuthType getAuthType(String accountName) {

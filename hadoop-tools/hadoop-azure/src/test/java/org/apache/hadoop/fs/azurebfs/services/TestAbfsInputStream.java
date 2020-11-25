@@ -203,7 +203,7 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class));
+            any(String.class), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testFailedReadAheadEviction.txt");
 
@@ -218,7 +218,8 @@ public class TestAbfsInputStream extends
     // at java.util.Stack.peek(Stack.java:102)
     // at java.util.Stack.pop(Stack.java:84)
     // at org.apache.hadoop.fs.azurebfs.services.ReadBufferManager.queueReadAhead
-    ReadBufferManager.getBufferManager().queueReadAhead(inputStream, 0, ONE_KB);
+    ReadBufferManager.getBufferManager().queueReadAhead(inputStream, 0,
+        ONE_KB, getTestTracingContext(getFileSystem(), true));
   }
 
   /**
