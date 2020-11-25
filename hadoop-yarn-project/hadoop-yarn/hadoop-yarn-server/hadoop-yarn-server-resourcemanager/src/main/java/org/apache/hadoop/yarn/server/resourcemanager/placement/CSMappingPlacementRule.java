@@ -181,6 +181,10 @@ public class CSMappingPlacementRule extends PlacementRule {
       return;
     }
     Set<String> groupsSet = groups.getGroupsSet(user);
+    if (groupsSet.isEmpty()) {
+      LOG.warn("There are no groups for user {}", user);
+      return;
+    }
     String secondaryGroup = null;
     Iterator<String> it = groupsSet.iterator();
     String primaryGroup = it.next();
