@@ -2122,6 +2122,12 @@ public class DistributedFileSystem extends FileSystem
    * @param p Path to a directory.
    */
   private void checkTrashRootAndRemoveIfEmpty(final Path p) throws IOException {
+    // If p is EZ root, skip the check
+    if (dfs.isHDFSEncryptionEnabled() && dfs.isEZRoot(p)) {
+      DFSClient.LOG.debug("{} is an encryption zone root. "
+          + "Skipping empty trash root check.", p);
+      return;
+    }
     Path trashRoot = new Path(p, FileSystem.TRASH_PREFIX);
     try {
       // listStatus has 4 possible outcomes here:
@@ -2139,9 +2145,10 @@ public class DistributedFileSystem extends FileSystem
       } else {
         if (fileStatuses.length == 1
             && !fileStatuses[0].isDirectory()
-            && !fileStatuses[0].getPath().equals(p)) {
+            && fileStatuses[0].getPath().toUri().getPath().equals(
+                trashRoot.toString())) {
           // Ignore the trash path because it is not a directory.
-          DFSClient.LOG.warn("{} is not a directory.", trashRoot);
+          DFSClient.LOG.warn("{} is not a directory. Ignored.", trashRoot);
         } else {
           throw new IOException("Found non-empty trash root at " +
               trashRoot + ". Rename or delete it, then try again.");
@@ -3002,19 +3009,24 @@ public class DistributedFileSystem extends FileSystem
     Path trashPath = new Path(path, FileSystem.TRASH_PREFIX);
     try {
       FileStatus trashFileStatus = getFileStatus(trashPath);
+      boolean throwException = false;
       String errMessage = "Can't provision trash for snapshottable directory " +
           pathStr + " because trash path " + trashPath.toString() +
           " already exists.";
       if (!trashFileStatus.isDirectory()) {
+        throwException = true;
         errMessage += "\r\n" +
             "WARNING: " + trashPath.toString() + " is not a directory.";
       }
       if (!trashFileStatus.getPermission().equals(trashPermission)) {
+        throwException = true;
         errMessage += "\r\n" +
             "WARNING: Permission of " + trashPath.toString() +
             " differs from provided permission " + trashPermission;
       }
-      throw new FileAlreadyExistsException(errMessage);
+      if (throwException) {
+        throw new FileAlreadyExistsException(errMessage);
+      }
     } catch (FileNotFoundException ignored) {
       // Trash path doesn't exist. Continue
     }
