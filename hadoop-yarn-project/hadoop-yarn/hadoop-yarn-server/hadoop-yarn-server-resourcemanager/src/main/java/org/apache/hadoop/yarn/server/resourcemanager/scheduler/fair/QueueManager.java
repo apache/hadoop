@@ -403,7 +403,7 @@ public class QueueManager {
     // Ad hoc queues do not exist in the configured queues map
     if (!configuredQueues.get(FSQueueType.LEAF).contains(child.getName()) &&
         !configuredQueues.get(FSQueueType.PARENT).contains(child.getName())) {
-      // For ad hoc queues, set their max reource allocations based on
+      // For ad hoc queues, set their max resource allocations based on
       // their parents' default child settings.
       ConfigurableResource maxChild = parent.getMaxChildQueueResource();
 
