@@ -54,6 +54,8 @@ public class FedBalanceContext implements Writable {
   private TrashOption trashOpt;
   /* How long will the procedures be delayed. */
   private long delayDuration;
+  /* The threshold of diff entries. */
+  private int diffThreshold;
 
   private Configuration conf;
 
@@ -91,6 +93,10 @@ public class FedBalanceContext implements Writable {
     return bandwidthLimit;
   }
 
+  public int getDiffThreshold() {
+    return diffThreshold;
+  }
+
   public TrashOption getTrashOpt() {
     return trashOpt;
   }
@@ -107,6 +113,7 @@ public class FedBalanceContext implements Writable {
     out.writeInt(bandwidthLimit);
     out.writeInt(trashOpt.ordinal());
     out.writeLong(delayDuration);
+    out.writeInt(diffThreshold);
   }
 
   @Override
@@ -122,6 +129,7 @@ public class FedBalanceContext implements Writable {
     bandwidthLimit = in.readInt();
     trashOpt = TrashOption.values()[in.readInt()];
     delayDuration = in.readLong();
+    diffThreshold = in.readInt();
   }
 
   @Override
@@ -146,6 +154,7 @@ public class FedBalanceContext implements Writable {
         .append(bandwidthLimit, bc.bandwidthLimit)
         .append(trashOpt, bc.trashOpt)
         .append(delayDuration, bc.delayDuration)
+        .append(diffThreshold, bc.diffThreshold)
         .isEquals();
   }
 
@@ -161,6 +170,7 @@ public class FedBalanceContext implements Writable {
         .append(bandwidthLimit)
         .append(trashOpt)
         .append(delayDuration)
+        .append(diffThreshold)
         .build();
   }
 
@@ -180,6 +190,7 @@ public class FedBalanceContext implements Writable {
     builder.append(", map=").append(mapNum);
     builder.append(", bandwidth=").append(bandwidthLimit);
     builder.append(", delayDuration=").append(delayDuration);
+    builder.append(", diffThreshold=").append(diffThreshold);
     return builder.toString();
   }
 
@@ -194,6 +205,7 @@ public class FedBalanceContext implements Writable {
     private int bandwidthLimit;
     private TrashOption trashOpt;
     private long delayDuration;
+    private int diffThreshold;
 
     /**
      * This class helps building the FedBalanceContext.
@@ -264,6 +276,14 @@ public class FedBalanceContext implements Writable {
     }
 
     /**
+     * Specify the threshold of diff entries.
+     */
+    public Builder setDiffThreshold(int value) {
+      this.diffThreshold = value;
+      return this;
+    }
+
+    /**
      * Build the FedBalanceContext.
      *
      * @return the FedBalanceContext obj.
@@ -280,6 +300,7 @@ public class FedBalanceContext implements Writable {
       context.bandwidthLimit = this.bandwidthLimit;
       context.trashOpt = this.trashOpt;
       context.delayDuration = this.delayDuration;
+      context.diffThreshold = this.diffThreshold;
       return context;
     }
   }

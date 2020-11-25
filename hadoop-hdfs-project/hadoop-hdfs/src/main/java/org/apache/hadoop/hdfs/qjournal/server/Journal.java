@@ -1178,6 +1178,8 @@ public class Journal implements Closeable {
     // directory will be renamed.  It will be reopened lazily on next access.
     IOUtils.cleanupWithLogger(LOG, committedTxnId);
     storage.getJournalManager().doRollback();
+    // HADOOP-17142: refresh properties after rollback performed.
+    storage.refreshStorage();
   }
 
   synchronized void discardSegments(long startTxId) throws IOException {

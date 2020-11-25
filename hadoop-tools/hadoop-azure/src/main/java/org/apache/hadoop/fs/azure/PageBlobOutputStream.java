@@ -580,6 +580,7 @@ final class PageBlobOutputStream extends OutputStream implements Syncable, Strea
       // Restore the interrupted status
       Thread.currentThread().interrupt();
     }
+    checkStreamState();
     LOG.debug("Leaving PageBlobOutputStream#hsync(). Total hsync duration = "
   	  + (System.currentTimeMillis() - start) + " msec.");
   }

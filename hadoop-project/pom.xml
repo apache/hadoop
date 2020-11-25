@@ -101,12 +101,11 @@
     <zookeeper.version>3.5.6</zookeeper.version>
     <curator.version>4.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
-    <spotbugs.version>4.1.3</spotbugs.version>
+    <spotbugs.version>4.0.6</spotbugs.version>
     <dnsjava.version>2.1.7</dnsjava.version>
 
     <guava.version>27.0-jre</guava.version>
     <guice.version>4.0</guice.version>
-    <joda-time.version>2.9.9</joda-time.version>
 
     <bouncycastle.version>1.60</bouncycastle.version>
 
@@ -117,7 +116,7 @@
     <!-- Apache Commons dependencies -->
     <commons-beanutils.version>1.9.4</commons-beanutils.version>
     <commons-cli.version>1.2</commons-cli.version>
-    <commons-codec.version>1.14</commons-codec.version>
+    <commons-codec.version>1.15</commons-codec.version>
     <commons-collections.version>3.2.2</commons-collections.version>
     <commons-compress.version>1.19</commons-compress.version>
     <commons-csv.version>1.0</commons-csv.version>
@@ -144,7 +143,8 @@
     <metrics.version>3.2.4</metrics.version>
     <netty3.version>3.10.6.Final</netty3.version>
     <netty4.version>4.1.50.Final</netty4.version>
-    <snappy-java.version>1.1.7.7</snappy-java.version>
+    <snappy-java.version>1.1.8.1</snappy-java.version>
+    <lz4-java.version>1.7.1</lz4-java.version>
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
@@ -186,7 +186,7 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.11.563</aws-java-sdk.version>
+    <aws-java-sdk.version>1.11.901</aws-java-sdk.version>
     <hsqldb.version>2.3.4</hsqldb.version>
     <frontend-maven-plugin.version>1.6</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
@@ -199,7 +199,7 @@
     <declared.hadoop.version>${hadoop.version}</declared.hadoop.version>
 
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
-    <snakeyaml.version>1.16</snakeyaml.version>
+    <snakeyaml.version>1.26</snakeyaml.version>
     <hbase.one.version>1.4.8</hbase.one.version>
     <hbase.two.version>2.0.2</hbase.two.version>
     <junit.version>4.12</junit.version>
@@ -1569,12 +1569,6 @@
         <version>${bouncycastle.version}</version>
       </dependency>
 
-     <dependency>
-        <groupId>joda-time</groupId>
-        <artifactId>joda-time</artifactId>
-        <version>${joda-time.version}</version>
-     </dependency>
-
       <dependency>
           <groupId>com.nimbusds</groupId>
           <artifactId>nimbus-jose-jwt</artifactId>
@@ -1798,6 +1792,11 @@
         <groupId>org.xerial.snappy</groupId>
         <artifactId>snappy-java</artifactId>
         <version>${snappy-java.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.lz4</groupId>
+        <artifactId>lz4-java</artifactId>
+        <version>${lz4-java.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

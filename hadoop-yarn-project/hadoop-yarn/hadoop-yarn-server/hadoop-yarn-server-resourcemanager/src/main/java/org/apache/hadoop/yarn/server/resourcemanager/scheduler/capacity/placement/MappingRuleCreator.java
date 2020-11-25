@@ -50,9 +50,9 @@ public class MappingRuleCreator {
   private static final String ALL_USER = "*";
   private static Logger LOG = LoggerFactory.getLogger(MappingRuleCreator.class);
 
-  public MappingRulesDescription getMappingRulesFromJson(String jsonPath)
+  public MappingRulesDescription getMappingRulesFromJsonFile(String filePath)
       throws IOException {
-    byte[] fileContents = Files.readAllBytes(Paths.get(jsonPath));
+    byte[] fileContents = Files.readAllBytes(Paths.get(filePath));
     return getMappingRulesFromJson(fileContents);
   }
 
@@ -62,8 +62,21 @@ public class MappingRuleCreator {
     return objectMapper.readValue(contents, MappingRulesDescription.class);
   }
 
-  public List<MappingRule> getMappingRules(String jsonPath) throws IOException {
-    MappingRulesDescription desc = getMappingRulesFromJson(jsonPath);
+  MappingRulesDescription getMappingRulesFromJson(String contents)
+      throws IOException {
+    ObjectMapper objectMapper = new ObjectMapper();
+    return objectMapper.readValue(contents, MappingRulesDescription.class);
+  }
+
+  public List<MappingRule> getMappingRulesFromFile(String jsonPath)
+      throws IOException {
+    MappingRulesDescription desc = getMappingRulesFromJsonFile(jsonPath);
+    return getMappingRules(desc);
+  }
+
+  public List<MappingRule> getMappingRulesFromString(String json)
+      throws IOException {
+    MappingRulesDescription desc = getMappingRulesFromJson(json);
     return getMappingRules(desc);
   }
 

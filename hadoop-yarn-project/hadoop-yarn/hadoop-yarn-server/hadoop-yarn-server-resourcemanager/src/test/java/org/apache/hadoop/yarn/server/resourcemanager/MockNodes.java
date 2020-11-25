@@ -335,6 +335,13 @@ public class MockNodes {
     public Resource getPhysicalResource() {
       return this.physicalResource;
     }
+
+    @Override
+    public long calculateHeartBeatInterval(
+        long defaultInterval, long minInterval, long maxInterval,
+        float speedupFactor, float slowdownFactor) {
+      return defaultInterval;
+    }
   };
 
   private static RMNode buildRMNode(int rack, final Resource perNode,

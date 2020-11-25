@@ -17,16 +17,22 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doThrow;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -246,5 +252,76 @@ public class TestDFSStripedOutputStream {
       GenericTestUtils
           .assertExceptionContains("less than the cell size", expected);
     }
+  }
+
+  @Test
+  public void testExceptionInCloseECFileWithRecoverLease() throws Exception {
+    Configuration config = new Configuration();
+    config.setBoolean(RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY, true);
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), config);
+    DFSClient spyClient = Mockito.spy(client);
+    DFSOutputStream dfsOutputStream =
+        spyClient.create("/testExceptionInCloseECFileWithRecoverLease",
+            FsPermission.getFileDefault(), EnumSet.of(CreateFlag.CREATE),
+            (short) 3, 1024*1024, null, 1024, null);
+    assertTrue("stream should be a DFSStripedOutputStream",
+        dfsOutputStream instanceof DFSStripedOutputStream);
+    DFSOutputStream spyDFSOutputStream = Mockito.spy(dfsOutputStream);
+    doThrow(new IOException("Emulated IOException in close"))
+        .when(spyDFSOutputStream).completeFile(Mockito.any());
+    try {
+      spyDFSOutputStream.close();
+      fail();
+    } catch (IOException ioe) {
+      assertTrue(spyDFSOutputStream.isLeaseRecovered());
+      waitForFileClosed("/testExceptionInCloseECFileWithRecoverLease");
+      assertTrue(isFileClosed("/testExceptionInCloseECFileWithRecoverLease"));
+    }
+  }
+
+  @Test
+  public void testExceptionInCloseECFileWithoutRecoverLease() throws Exception {
+    Configuration config = new Configuration();
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), config);
+    DFSClient spyClient = Mockito.spy(client);
+    DFSOutputStream dfsOutputStream =
+        spyClient.create("/testExceptionInCloseECFileWithoutRecoverLease",
+            FsPermission.getFileDefault(), EnumSet.of(CreateFlag.CREATE),
+            (short) 3, 1024*1024, null, 1024, null);
+    assertTrue("stream should be a DFSStripedOutputStream",
+        dfsOutputStream instanceof DFSStripedOutputStream);
+    DFSOutputStream spyDFSOutputStream = Mockito.spy(dfsOutputStream);
+    doThrow(new IOException("Emulated IOException in close"))
+        .when(spyDFSOutputStream).completeFile(Mockito.any());
+    try {
+      spyDFSOutputStream.close();
+      fail();
+    } catch (IOException ioe) {
+      assertFalse(spyDFSOutputStream.isLeaseRecovered());
+      try {
+        waitForFileClosed("/testExceptionInCloseECFileWithoutRecoverLease");
+      } catch (TimeoutException e) {
+        assertFalse(
+            isFileClosed("/testExceptionInCloseECFileWithoutRecoverLease"));
+      }
+    }
+  }
+
+  private boolean isFileClosed(String path) throws IOException {
+    return cluster.getFileSystem().isFileClosed(new Path(path));
+  }
+
+  private void waitForFileClosed(String path) throws Exception {
+    GenericTestUtils.waitFor(() -> {
+      boolean closed;
+      try {
+        closed = isFileClosed(path);
+      } catch (IOException e) {
+        return false;
+      }
+      return closed;
+    }, 1000, 5000);
   }
 }
