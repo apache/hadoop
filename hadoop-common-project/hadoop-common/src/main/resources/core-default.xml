@@ -1925,20 +1925,13 @@
 </property>
 
 <property>
-  <name>fs.s3a.committer.staging.abort.pending.uploads</name>
+  <name>fs.s3a.committer.abort.pending.uploads</name>
   <value>true</value>
   <description>
-    Should the staging committers abort all pending uploads to the destination
+    Should the committers abort all pending uploads to the destination
     directory?
 
-    Changing this if more than one partitioned committer is
-    writing to the same destination tree simultaneously; otherwise
-    the first job to complete will cancel all outstanding uploads from the
-    others. However, it may lead to leaked outstanding uploads from failed
-    tasks. If disabled, configure the bucket lifecycle to remove uploads
-    after a time period, and/or set up a workflow to explicitly delete
-    entries. Otherwise there is a risk that uncommitted uploads may run up
-    bills.
+    Set to false if more than one job is writing to the same directory tree.
   </description>
 </property>
 

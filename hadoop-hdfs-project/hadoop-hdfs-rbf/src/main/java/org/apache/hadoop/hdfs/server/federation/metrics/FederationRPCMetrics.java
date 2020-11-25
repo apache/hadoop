@@ -50,9 +50,9 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   @Metric("Number of operations the Router proxied to a Namenode")
   private MutableCounterLong proxyOp;
 
-  @Metric("Number of operations to fail to reach NN")
-  private MutableCounterLong proxyOpFailureStandby;
   @Metric("Number of operations to hit a standby NN")
+  private MutableCounterLong proxyOpFailureStandby;
+  @Metric("Number of operations to fail to reach NN")
   private MutableCounterLong proxyOpFailureCommunicate;
   @Metric("Number of operations to hit a client overloaded Router")
   private MutableCounterLong proxyOpFailureClientOverloaded;

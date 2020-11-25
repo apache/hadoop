@@ -166,11 +166,11 @@ public final class FutureIOSupport {
    * Propagate options to any builder, converting everything with the
    * prefix to an option where, if there were 2+ dot-separated elements,
    * it is converted to a schema.
-   * <pre>
+   * <pre>{@code
    *   fs.example.s3a.option => s3a:option
    *   fs.example.fs.io.policy => s3a.io.policy
    *   fs.example.something => something
-   * </pre>
+   * }</pre>
    * @param builder builder to modify
    * @param conf configuration to read
    * @param optionalPrefix prefix for optional settings
@@ -196,11 +196,11 @@ public final class FutureIOSupport {
    * Propagate options to any builder, converting everything with the
    * prefix to an option where, if there were 2+ dot-separated elements,
    * it is converted to a schema.
-   * <pre>
+   * <pre>{@code
    *   fs.example.s3a.option => s3a:option
    *   fs.example.fs.io.policy => s3a.io.policy
    *   fs.example.something => something
-   * </pre>
+   * }</pre>
    * @param builder builder to modify
    * @param conf configuration to read
    * @param prefix prefix to scan/strip

@@ -381,9 +381,7 @@ public class TestEncryptedTransfer {
     // use 4 datanodes to make sure that after 1 data node is stopped,
     // client only retries establishing pipeline with the 4th node.
     int numDataNodes = 4;
-    // do not consider load factor when selecting a data node
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
+
     setEncryptionConfigKeys();
 
     cluster = new MiniDFSCluster.Builder(conf)

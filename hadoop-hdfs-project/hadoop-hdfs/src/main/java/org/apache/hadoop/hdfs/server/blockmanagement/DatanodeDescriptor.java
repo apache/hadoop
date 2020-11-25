@@ -404,6 +404,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     long totalBlockPoolUsed = 0;
     long totalDfsUsed = 0;
     long totalNonDfsUsed = 0;
+    Set<String> visitedMount = new HashSet<>();
     Set<DatanodeStorageInfo> failedStorageInfos = null;
 
     // Decide if we should check for any missing StorageReport and mark it as
@@ -472,7 +473,17 @@ public class DatanodeDescriptor extends DatanodeInfo {
       totalRemaining += report.getRemaining();
       totalBlockPoolUsed += report.getBlockPoolUsed();
       totalDfsUsed += report.getDfsUsed();
-      totalNonDfsUsed += report.getNonDfsUsed();
+      String mount = report.getMount();
+      // For volumes on the same mount,
+      // ignore duplicated volumes for nonDfsUsed.
+      if (mount == null || mount.isEmpty()) {
+        totalNonDfsUsed += report.getNonDfsUsed();
+      } else {
+        if (!visitedMount.contains(mount)) {
+          totalNonDfsUsed += report.getNonDfsUsed();
+          visitedMount.add(mount);
+        }
+      }
     }
 
     // Update total metrics for the node.

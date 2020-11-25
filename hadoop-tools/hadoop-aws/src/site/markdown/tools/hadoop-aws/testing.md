@@ -1499,36 +1499,69 @@ export HADOOP_OPTIONAL_TOOLS="hadoop-aws"
 Run some basic s3guard commands as well as file operations.
 
 ```bash
-export BUCKET=s3a://example-bucket-name
+export BUCKETNAME=example-bucket-name
+export BUCKET=s3a://$BUCKETNAME
 
 bin/hadoop s3guard bucket-info $BUCKET
-bin/hadoop s3guard set-capacity $BUCKET
-bin/hadoop s3guard set-capacity -read 15 -write 15 $BUCKET
+
 bin/hadoop s3guard uploads $BUCKET
+# repeat twice, once with "no" and once with "yes" as responses
+bin/hadoop s3guard uploads -abort $BUCKET
+
+# ---------------------------------------------------
+# assuming s3guard is enabled
+# if on pay-by-request, expect an error message and exit code of -1
+bin/hadoop s3guard set-capacity $BUCKET
+
+# skip for PAY_PER_REQUEST
+bin/hadoop s3guard set-capacity -read 15 -write 15 $BUCKET
+
+bin/hadoop s3guard bucket-info -guarded $BUCKET 
+
 bin/hadoop s3guard diff $BUCKET/
 bin/hadoop s3guard prune -minutes 10 $BUCKET/
-bin/hadoop s3guard import $BUCKET/
+bin/hadoop s3guard import -verbose $BUCKET/
+bin/hadoop s3guard authoritative -verbose $BUCKET
+
+# ---------------------------------------------------
+# root filesystem operatios
+# ---------------------------------------------------
+
 bin/hadoop fs -ls $BUCKET/
+# assuming file is not yet created, expect error and status code of 1
 bin/hadoop fs -ls $BUCKET/file
+
+# exit code of 0 even when path doesn't exist
 bin/hadoop fs -rm -R -f $BUCKET/dir-no-trailing
 bin/hadoop fs -rm -R -f $BUCKET/dir-trailing/
+
+# error because it is a directory
 bin/hadoop fs -rm $BUCKET/
+
 bin/hadoop fs -touchz $BUCKET/file
-# expect I/O error as root dir is not empty
-bin/hadoop fs -rm -r $BUCKET/
-bin/hadoop fs -rm -r $BUCKET/\*
-# now success
+# expect I/O error as it is the root directory
 bin/hadoop fs -rm -r $BUCKET/
 
+# succeeds
+bin/hadoop fs -rm -r $BUCKET/\*
+
+# ---------------------------------------------------
+# File operations
+# ---------------------------------------------------
+
 bin/hadoop fs -mkdir $BUCKET/dir-no-trailing
-# fails with S3Guard
+# used to fail with S3Guard
 bin/hadoop fs -mkdir $BUCKET/dir-trailing/
 bin/hadoop fs -touchz $BUCKET/file
 bin/hadoop fs -ls $BUCKET/
 bin/hadoop fs -mv $BUCKET/file $BUCKET/file2
 # expect "No such file or directory"
 bin/hadoop fs -stat $BUCKET/file
+
+# expect success
 bin/hadoop fs -stat $BUCKET/file2
+
+# expect "file exists"
 bin/hadoop fs -mkdir $BUCKET/dir-no-trailing
 bin/hadoop fs -mv $BUCKET/file2 $BUCKET/dir-no-trailing
 bin/hadoop fs -stat $BUCKET/dir-no-trailing/file2
@@ -1545,8 +1578,57 @@ bin/hadoop fs -checksum $BUCKET/dir-no-trailing/file2
 # expect "etag" + a long string
 bin/hadoop fs -D fs.s3a.etag.checksum.enabled=true -checksum $BUCKET/dir-no-trailing/file2
 bin/hadoop fs -expunge -immediate -fs $BUCKET
+
+# ---------------------------------------------------
+# Delegation Token support
+# ---------------------------------------------------
+
+# failure unless delegation tokens are enabled
 bin/hdfs fetchdt --webservice $BUCKET secrets.bin
+# success
 bin/hdfs fetchdt -D fs.s3a.delegation.token.binding=org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding --webservice $BUCKET secrets.bin
+bin/hdfs fetchdt -print secrets.bin
+
+# expect warning "No TokenRenewer defined for token kind S3ADelegationToken/Session"
+bin/hdfs fetchdt -renew secrets.bin
+
+# ---------------------------------------------------
+# Directory markers
+# ---------------------------------------------------
+
+# require success
+bin/hadoop s3guard bucket-info -markers aware $BUCKET
+# expect failure unless bucket policy is keep
+bin/hadoop s3guard bucket-info -markers keep $BUCKET/path
+
+# you may need to set this on a per-bucket basis if you have already been
+# playing with options
+bin/hadoop s3guard -D fs.s3a.directory.marker.retention=keep bucket-info -markers keep $BUCKET/path
+bin/hadoop s3guard -D fs.s3a.bucket.$BUCKETNAME.directory.marker.retention=keep bucket-info -markers keep $BUCKET/path
+
+# expect to see "Directory markers will be kept" messages and status code of "46"
+bin/hadoop fs -D fs.s3a.bucket.$BUCKETNAME.directory.marker.retention=keep -mkdir $BUCKET/p1
+bin/hadoop fs -D fs.s3a.bucket.$BUCKETNAME.directory.marker.retention=keep -mkdir $BUCKET/p1/p2
+bin/hadoop fs -D fs.s3a.bucket.$BUCKETNAME.directory.marker.retention=keep -touchz $BUCKET/p1/p2/file
+
+# expect failure as markers will be found for /p1/ and /p1/p2/
+bin/hadoop s3guard markers -audit -verbose $BUCKET
+
+# clean will remove markers
+bin/hadoop s3guard markers -clean -verbose $BUCKET
+
+# expect success and exit code of 0
+bin/hadoop s3guard markers -audit -verbose $BUCKET
+
+# ---------------------------------------------------
+# S3 Select on Landsat
+# ---------------------------------------------------
+
+export LANDSATGZ=s3a://landsat-pds/scene_list.gz
+
+bin/hadoop s3guard select -header use -compression gzip $LANDSATGZ \
+ "SELECT s.entityId,s.cloudCover FROM S3OBJECT s WHERE s.cloudCover < '0.0' LIMIT 100"
+
 ```
 
 ### Other tests

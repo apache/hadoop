@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
@@ -1769,7 +1770,8 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Synchronize client metadata state with Active NameNode.
-   * <p/>In HA the client synchronizes its state with the Active NameNode
+   * <p>
+   * In HA the client synchronizes its state with the Active NameNode
    * in order to guarantee subsequent read consistency from Observer Nodes.
    * @throws IOException
    */
@@ -2145,7 +2147,7 @@ public class DistributedFileSystem extends FileSystem
               trashRoot + ". Rename or delete it, then try again.");
         }
       }
-    } catch (FileNotFoundException ignored) {
+    } catch (FileNotFoundException | AccessControlException ignored) {
     }
   }
 

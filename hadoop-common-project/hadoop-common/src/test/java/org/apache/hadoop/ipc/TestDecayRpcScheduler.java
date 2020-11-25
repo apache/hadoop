@@ -48,9 +48,8 @@ import java.util.concurrent.TimeUnit;
 public class TestDecayRpcScheduler {
   private Schedulable mockCall(String id) {
     Schedulable mockCall = mock(Schedulable.class);
-    UserGroupInformation ugi = mock(UserGroupInformation.class);
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(id);
 
-    when(ugi.getUserName()).thenReturn(id);
     when(mockCall.getUserGroupInformation()).thenReturn(ugi);
 
     return mockCall;

@@ -89,8 +89,8 @@ public interface Constants {
   /**
    * Config variable for specifying a regex link which uses regular expressions
    * as source and target could use group captured in src.
-   * E.g. (^/(?<firstDir>\\w+), /prefix-${firstDir}) =>
-   *   (/path1/file1 => /prefix-path1/file1)
+   * E.g. {@literal (^/(?<firstDir>\\w+), /prefix-${firstDir}) =>
+   *   (/path1/file1 => /prefix-path1/file1)}
    */
   String CONFIG_VIEWFS_LINK_REGEX = "linkRegex";
 
@@ -125,4 +125,11 @@ public interface Constants {
       "fs.viewfs.ignore.port.in.mount.table.name";
 
   boolean CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT = false;
+
+  String CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL =
+      CONFIG_VIEWFS_PREFIX + ".config.loader.impl";
+
+  Class<? extends MountTableConfigLoader>
+      DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL =
+      HCFSMountTableConfigLoader.class;
 }

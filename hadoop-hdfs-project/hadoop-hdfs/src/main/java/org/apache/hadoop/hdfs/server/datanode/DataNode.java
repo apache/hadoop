@@ -1579,7 +1579,7 @@ public class DataNode extends ReconfigurableBase
     if (storageInfo == null) {
       // it's null in the case of SimulatedDataSet
       storageInfo = new StorageInfo(
-          DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION,
+          DataNodeLayoutVersion.getCurrentLayoutVersion(),
           nsInfo.getNamespaceID(), nsInfo.clusterID, nsInfo.getCTime(),
           NodeType.DATA_NODE);
     }
@@ -1660,7 +1660,9 @@ public class DataNode extends ReconfigurableBase
       // a block pool id
       String bpId = bpos.getBlockPoolId();
 
-      blockScanner.disableBlockPoolId(bpId);
+      if (blockScanner.hasAnyRegisteredScanner()) {
+        blockScanner.disableBlockPoolId(bpId);
+      }
 
       if (data != null) {
         data.shutdownBlockPool(bpId);

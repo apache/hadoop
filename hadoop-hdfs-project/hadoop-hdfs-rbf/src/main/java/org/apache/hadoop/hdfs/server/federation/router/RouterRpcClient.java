@@ -72,6 +72,7 @@ import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -414,7 +415,8 @@ public class RouterRpcClient {
           " with params " + Arrays.deepToString(params) + " from "
           + router.getRouterId());
     }
-    appendClientIpToCallerContext();
+
+    appendClientIpToCallerContextIfAbsent();
 
     Object ret = null;
     if (rpcMonitor != null) {
@@ -531,17 +533,26 @@ public class RouterRpcClient {
   }
 
   /**
-   * For Tracking which is the actual client address.
-   * It adds key/value (clientIp/"ip") pair to the caller context.
+   * For tracking which is the actual client address.
+   * It adds trace info "clientIp:ip" to caller context if it's absent.
    */
-  private void appendClientIpToCallerContext() {
+  private void appendClientIpToCallerContextIfAbsent() {
+    String clientIpInfo = CLIENT_IP_STR + ":" + Server.getRemoteAddress();
     final CallerContext ctx = CallerContext.getCurrent();
-    String origContext = ctx == null ? null : ctx.getContext();
-    byte[] origSignature = ctx == null ? null : ctx.getSignature();
-    CallerContext.setCurrent(
-        new CallerContext.Builder(origContext, contextFieldSeparator)
-            .append(CLIENT_IP_STR, Server.getRemoteAddress())
-            .setSignature(origSignature).build());
+    if (isClientIpInfoAbsent(clientIpInfo, ctx)) {
+      String origContext = ctx == null ? null : ctx.getContext();
+      byte[] origSignature = ctx == null ? null : ctx.getSignature();
+      CallerContext.setCurrent(
+          new CallerContext.Builder(origContext, contextFieldSeparator)
+              .append(clientIpInfo)
+              .setSignature(origSignature)
+              .build());
+    }
+  }
+
+  private boolean isClientIpInfoAbsent(String clientIpInfo, CallerContext ctx){
+    return ctx == null || ctx.getContext() == null
+        || !ctx.getContext().contains(clientIpInfo);
   }
 
   /**
@@ -1303,6 +1314,9 @@ public class RouterRpcClient {
 
     List<T> orderedLocations = new ArrayList<>();
     List<Callable<Object>> callables = new ArrayList<>();
+    // transfer originCall & callerContext to worker threads of executor.
+    final Call originCall = Server.getCurCall().get();
+    final CallerContext originContext = CallerContext.getCurrent();
     for (final T location : locations) {
       String nsId = location.getNameserviceId();
       final List<? extends FederationNamenodeContext> namenodes =
@@ -1320,12 +1334,20 @@ public class RouterRpcClient {
             nnLocation = (T)new RemoteLocation(nsId, nnId, location.getDest());
           }
           orderedLocations.add(nnLocation);
-          callables.add(() -> invokeMethod(ugi, nnList, proto, m, paramList));
+          callables.add(
+              () -> {
+                transferThreadLocalContext(originCall, originContext);
+                return invokeMethod(ugi, nnList, proto, m, paramList);
+              });
         }
       } else {
         // Call the objectGetter in order of nameservices in the NS list
         orderedLocations.add(location);
-        callables.add(() ->  invokeMethod(ugi, namenodes, proto, m, paramList));
+        callables.add(
+            () -> {
+              transferThreadLocalContext(originCall, originContext);
+              return invokeMethod(ugi, namenodes, proto, m, paramList);
+            });
       }
     }
 
@@ -1390,6 +1412,20 @@ public class RouterRpcClient {
       throw new IOException(
           "Unexpected error while invoking API " + ex.getMessage(), ex);
     }
+  }
+
+  /**
+   * Transfer origin thread local context which is necessary to current
+   * worker thread when invoking method concurrently by executor service.
+   *
+   * @param originCall origin Call required for getting remote client ip.
+   * @param originContext origin CallerContext which should be transferred
+   *                      to server side.
+   */
+  private void transferThreadLocalContext(
+      final Call originCall, final CallerContext originContext) {
+    Server.getCurCall().set(originCall);
+    CallerContext.setCurrent(originContext);
   }
 
   /**

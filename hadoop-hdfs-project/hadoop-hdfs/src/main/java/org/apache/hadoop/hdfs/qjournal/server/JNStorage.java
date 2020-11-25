@@ -236,6 +236,10 @@ class JNStorage extends Storage {
   
   void analyzeStorage() throws IOException {
     this.state = sd.analyzeStorage(StartupOption.REGULAR, this);
+    refreshStorage();
+  }
+
+  void refreshStorage() throws IOException {
     if (state == StorageState.NORMAL) {
       readProperties(sd);
     }

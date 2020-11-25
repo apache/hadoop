@@ -103,7 +103,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         KEY_HUGE_PARTITION_SIZE,
         DEFAULT_HUGE_PARTITION_SIZE);
     assertTrue("Partition size too small: " + partitionSize,
-        partitionSize > MULTIPART_MIN_SIZE);
+        partitionSize >= MULTIPART_MIN_SIZE);
     conf.setLong(SOCKET_SEND_BUFFER, _1MB);
     conf.setLong(SOCKET_RECV_BUFFER, _1MB);
     conf.setLong(MIN_MULTIPART_THRESHOLD, partitionSize);

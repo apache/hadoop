@@ -730,6 +730,14 @@ public class AdminService extends CompositeService implements
       // refresh dynamic resource in ResourceTrackerService
       this.rm.getRMContext().getResourceTrackerService().
           updateDynamicResourceConfiguration(newConf);
+
+      // Update our heartbeat configuration as well
+      Configuration ysconf =
+          getConfiguration(new Configuration(false),
+              YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+      this.rm.getRMContext().getResourceTrackerService()
+        .updateHeartBeatConfiguration(ysconf);
+
       RMAuditLogger.logSuccess(user.getShortUserName(), operation,
               "AdminService");
       return response;

@@ -53,6 +53,11 @@
   </property>
 
   <property>
+    <name>fs.contract.rename-returns-false-if-dest-exists</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <name>fs.contract.rename-remove-dest-if-empty-dir</name>
     <value>true</value>
   </property>

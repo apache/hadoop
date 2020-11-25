@@ -923,7 +923,7 @@ public class DFSOutputStream extends FSOutputSummer
    * If recoverLeaseOnCloseException is true and an exception occurs when
    * closing a file, recover lease.
    */
-  private void recoverLease(boolean recoverLeaseOnCloseException) {
+  protected void recoverLease(boolean recoverLeaseOnCloseException) {
     if (recoverLeaseOnCloseException) {
       try {
         dfsClient.endFileLease(fileId);
