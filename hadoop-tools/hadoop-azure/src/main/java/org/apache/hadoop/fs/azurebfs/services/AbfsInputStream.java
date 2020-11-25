@@ -154,15 +154,27 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
   }
 
-  private boolean shouldReadFully() {
-    return this.firstRead && this.context.readSmallFilesCompletely()
-        && this.contentLength <= this.bufferSize;
-  }
+  private int validate(byte[] b, int off, int len) throws IOException {
+    if (closed) {
+      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+    }
 
-  private boolean shouldReadLastBlock(int len) {
-    return this.firstRead && this.context.optimizeFooterRead()
-        && len == FOOTER_SIZE
-        && this.fCursor == this.contentLength - FOOTER_SIZE;
+    Preconditions.checkNotNull(b);
+    LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
+        off, len);
+
+    if (len == 0) {
+      return 0;
+    }
+
+    if (this.available() == 0) {
+      return -1;
+    }
+
+    if (off < 0 || len < 0 || len > b.length - off) {
+      throw new IndexOutOfBoundsException();
+    }
+    return 1; // 1 indicate success
   }
 
   private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
@@ -203,6 +215,35 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       fCursorAfterLastRead = fCursor;
     }
     return copyToUserBuffer(b, off, len);
+  }
+
+  private int copyToUserBuffer(byte[] b, int off, int len){
+    //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
+    //(bytes returned may be less than requested)
+    int bytesRemaining = limit - bCursor;
+    int bytesToRead = Math.min(len, bytesRemaining);
+    System.arraycopy(buffer, bCursor, b, off, bytesToRead);
+    bCursor += bytesToRead;
+    if (statistics != null) {
+      statistics.incrementBytesRead(bytesToRead);
+    }
+    if (streamStatistics != null) {
+      // Bytes read from the local buffer.
+      streamStatistics.bytesReadFromBuffer(bytesToRead);
+      streamStatistics.bytesRead(bytesToRead);
+    }
+    return bytesToRead;
+  }
+
+  private boolean shouldReadFully() {
+    return this.firstRead && this.context.readSmallFilesCompletely()
+        && this.contentLength <= this.bufferSize;
+  }
+
+  private boolean shouldReadLastBlock(int len) {
+    return this.firstRead && this.context.optimizeFooterRead()
+        && len == FOOTER_SIZE
+        && this.fCursor == this.contentLength - FOOTER_SIZE;
   }
 
   private int readFileCompletely(final byte[] b, final int off, final int len) throws IOException {
@@ -246,48 +287,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     limit = bytesRead;
     fCursor = lastBlockStartPos + bytesRead;
     return copyToUserBuffer(b, off, len);
-  }
-
-
-  private int validate(byte[] b, int off, int len) throws IOException {
-    if (closed) {
-      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-    }
-
-    Preconditions.checkNotNull(b);
-    LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
-        off, len);
-
-    if (len == 0) {
-      return 0;
-    }
-
-    if (this.available() == 0) {
-      return -1;
-    }
-
-    if (off < 0 || len < 0 || len > b.length - off) {
-      throw new IndexOutOfBoundsException();
-    }
-    return 1; // 1 indicate success
-  }
-
-  private int copyToUserBuffer(byte[] b, int off, int len){
-    //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
-    //(bytes returned may be less than requested)
-    int bytesRemaining = limit - bCursor;
-    int bytesToRead = Math.min(len, bytesRemaining);
-    System.arraycopy(buffer, bCursor, b, off, bytesToRead);
-    bCursor += bytesToRead;
-    if (statistics != null) {
-      statistics.incrementBytesRead(bytesToRead);
-    }
-    if (streamStatistics != null) {
-      // Bytes read from the local buffer.
-      streamStatistics.bytesReadFromBuffer(bytesToRead);
-      streamStatistics.bytesRead(bytesToRead);
-    }
-    return bytesToRead;
   }
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
