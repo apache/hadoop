@@ -42,6 +42,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -178,6 +179,11 @@ public class TestTaskAttempt{
   @BeforeClass
   public static void setupBeforeClass() {
     ResourceUtils.resetResourceTypes(new Configuration());
+  }
+
+  @Before
+  public void before() {
+    TaskAttemptImpl.RESOURCE_REQUEST_CACHE.clear();
   }
 
   @After
@@ -1634,6 +1640,7 @@ public class TestTaskAttempt{
       TestAppender testAppender = new TestAppender();
       final Logger logger = Logger.getLogger(TaskAttemptImpl.class);
       try {
+        TaskAttemptImpl.RESOURCE_REQUEST_CACHE.clear();
         logger.addAppender(testAppender);
         EventHandler eventHandler = mock(EventHandler.class);
         Clock clock = SystemClock.getInstance();
