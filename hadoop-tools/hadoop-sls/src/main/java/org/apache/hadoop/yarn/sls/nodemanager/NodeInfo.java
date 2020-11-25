@@ -246,6 +246,13 @@ public class NodeInfo {
     @Override
     public void resetUpdatedCapability() {
     }
+
+    @Override
+    public long calculateHeartBeatInterval(
+        long defaultInterval, long minInterval, long maxInterval,
+        float speedupFactor, float slowdownFactor) {
+      return defaultInterval;
+    }
   }
 
   public static RMNode newNodeInfo(String rackName, String hostName,

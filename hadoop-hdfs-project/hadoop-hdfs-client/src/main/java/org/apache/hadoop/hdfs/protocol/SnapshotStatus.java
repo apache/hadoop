@@ -73,9 +73,18 @@ public class SnapshotStatus {
     this.parentFullPath = parentFullPath;
   }
 
+  public SnapshotStatus(HdfsFileStatus dirStatus,
+                                      int snapshotID, boolean isDeleted,
+                                      byte[] parentFullPath) {
+    this.dirStatus = dirStatus;
+    this.snapshotID = snapshotID;
+    this.isDeleted = isDeleted;
+    this.parentFullPath = parentFullPath;
+  }
+
   /**
-   * sets the prent path name.
-   * @param path parent path
+   * sets the path name.
+   * @param path path
    */
   public void setParentFullPath(byte[] path) {
     parentFullPath = path;
@@ -174,7 +183,7 @@ public class SnapshotStatus {
     return Math.max(n, String.valueOf(value).length());
   }
 
-  static String getSnapshotPath(String snapshottableDir,
+  public static String getSnapshotPath(String snapshottableDir,
                                 String snapshotRelativePath) {
     String parentFullPathStr =
         snapshottableDir == null || snapshottableDir.isEmpty() ?
@@ -187,5 +196,10 @@ public class SnapshotStatus {
         .append(Path.SEPARATOR)
         .append(snapshotRelativePath)
         .toString();
+  }
+
+  public static String getParentPath(String snapshotPath) {
+    int index = snapshotPath.indexOf(HdfsConstants.DOT_SNAPSHOT_DIR);
+    return index == -1 ? snapshotPath : snapshotPath.substring(0, index - 1);
   }
 }

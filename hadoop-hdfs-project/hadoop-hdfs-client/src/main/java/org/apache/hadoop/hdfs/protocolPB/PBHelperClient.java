@@ -28,12 +28,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.base.Preconditions;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Shorts;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Shorts;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.CodedInputStream;
 
@@ -565,6 +565,8 @@ public class PBHelperClient {
     switch (proto) {
     case AES_CTR_NOPADDING:
       return CipherSuite.AES_CTR_NOPADDING;
+    case SM4_CTR_NOPADDING:
+      return CipherSuite.SM4_CTR_NOPADDING;
     default:
       // Set to UNKNOWN and stash the unknown enum value
       CipherSuite suite = CipherSuite.UNKNOWN;
@@ -603,6 +605,8 @@ public class PBHelperClient {
       return HdfsProtos.CipherSuiteProto.UNKNOWN;
     case AES_CTR_NOPADDING:
       return HdfsProtos.CipherSuiteProto.AES_CTR_NOPADDING;
+    case SM4_CTR_NOPADDING:
+      return HdfsProtos.CipherSuiteProto.SM4_CTR_NOPADDING;
     default:
       return null;
     }
@@ -1957,7 +1961,7 @@ public class PBHelperClient {
     return new StorageReport(p.hasStorage() ? convert(p.getStorage())
         : new DatanodeStorage(p.getStorageUuid()), p.getFailed(),
         p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
-        p.getBlockPoolUsed(), nonDfsUsed);
+        p.getBlockPoolUsed(), nonDfsUsed, p.getMount());
   }
 
   public static DatanodeStorage convert(DatanodeStorageProto s) {
@@ -2692,7 +2696,8 @@ public class PBHelperClient {
         .setDfsUsed(r.getDfsUsed()).setRemaining(r.getRemaining())
         .setStorageUuid(r.getStorage().getStorageID())
         .setStorage(convert(r.getStorage()))
-        .setNonDfsUsed(r.getNonDfsUsed());
+        .setNonDfsUsed(r.getNonDfsUsed())
+        .setMount(r.getMount());
     return builder.build();
   }
 

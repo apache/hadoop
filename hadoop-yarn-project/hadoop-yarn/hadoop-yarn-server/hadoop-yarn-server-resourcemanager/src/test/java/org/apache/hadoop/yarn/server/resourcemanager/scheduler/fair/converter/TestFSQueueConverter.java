@@ -47,7 +47,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 
 /**
@@ -68,7 +68,10 @@ public class TestFSQueueConverter {
           "root.admins.alice",
           "root.admins.bob",
           "root.users.joe",
-          "root.users.john");
+          "root.users.john",
+          "root.misc",
+          "root.misc.a",
+          "root.misc.b");
 
   private static final String FILE_PREFIX = "file:";
   private static final String FAIR_SCHEDULER_XML =
@@ -135,7 +138,6 @@ public class TestFSQueueConverter {
         .withCapacitySchedulerConfig(csConfig)
         .withPreemptionEnabled(false)
         .withSizeBasedWeight(false)
-        .withAutoCreateChildQueues(false)
         .withClusterResource(CLUSTER_RESOURCE)
         .withQueueMaxAMShareDefault(MAX_AM_SHARE_DEFAULT)
         .withQueueMaxAppsDefault(MAX_APPS_DEFAULT)
@@ -149,7 +151,7 @@ public class TestFSQueueConverter {
     converter.convertQueueHierarchy(rootQueue);
 
     // root children
-    assertEquals("root children", "default,admins,users",
+    assertEquals("root children", "default,admins,users,misc",
         csConfig.get(PREFIX + "root.queues"));
 
     // root.admins children
@@ -168,7 +170,8 @@ public class TestFSQueueConverter {
         Sets.newHashSet("root",
             "root.default",
             "root.admins",
-            "root.users"));
+            "root.users",
+            "root.misc"));
 
     assertNoValueForQueues(leafs, ".queues", csConfig);
   }
@@ -286,6 +289,29 @@ public class TestFSQueueConverter {
         csConfig.get(PREFIX + "root.admins.alice.capacity"));
     assertEquals("root.admins.bob capacity", "25.000",
         csConfig.get(PREFIX + "root.admins.bob.capacity"));
+
+    // root.misc
+    assertEquals("root.misc capacity", "0.000",
+        csConfig.get(PREFIX + "root.misc.capacity"));
+    assertEquals("root.misc.a capacity", "0.000",
+        csConfig.get(PREFIX + "root.misc.a.capacity"));
+    assertEquals("root.misc.b capacity", "0.000",
+        csConfig.get(PREFIX + "root.misc.b.capacity"));
+  }
+
+  @Test
+  public void testZeroSumCapacityValidation() {
+    converter = builder.build();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    Set<String> noZeroSumAllowedQueues = Sets.difference(ALL_QUEUES,
+        Sets.newHashSet("root.misc"));
+    assertNoValueForQueues(noZeroSumAllowedQueues, ".allow-zero-capacity-sum",
+        csConfig);
+
+    assertTrue("root.misc allow zero capacities", csConfig.getBoolean(
+        PREFIX + "root.misc.allow-zero-capacity-sum", false));
   }
 
   @Test
@@ -308,36 +334,9 @@ public class TestFSQueueConverter {
   }
 
   @Test
-  public void testQueueAutoCreateChildQueue() {
-    converter = builder
-        .withCapacitySchedulerConfig(csConfig)
-        .withAutoCreateChildQueues(true)
-        .build();
-
-    converter.convertQueueHierarchy(rootQueue);
-
-    Set<String> parentQueues = Sets.newHashSet(
-        "root.admins",
-        "root.users");
-
-    Set<String> leafQueues = Sets.newHashSet(
-        "root.default",
-        "root.admins.alice",
-        "root.admins.bob",
-        "root.users.joe",
-        "root.users.john");
-
-    assertTrueForQueues(parentQueues, ".auto-create-child-queue.enabled",
-        csConfig);
-    assertNoValueForQueues(leafQueues, ".auto-create-child-queue.enabled",
-        csConfig);
-  }
-
-  @Test
   public void testQueueWithNoAutoCreateChildQueue() {
     converter = builder
         .withCapacitySchedulerConfig(csConfig)
-        .withAutoCreateChildQueues(false)
         .build();
 
     converter.convertQueueHierarchy(rootQueue);

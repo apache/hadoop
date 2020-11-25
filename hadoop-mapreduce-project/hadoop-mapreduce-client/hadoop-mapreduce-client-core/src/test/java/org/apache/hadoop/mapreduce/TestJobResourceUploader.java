@@ -399,6 +399,7 @@ public class TestJobResourceUploader {
       Path expectedRemotePath) throws IOException, URISyntaxException {
     Path dstPath = new Path("hdfs://localhost:1234/home/hadoop/");
     DistributedFileSystem fs = mock(DistributedFileSystem.class);
+    when(fs.makeQualified(any(Path.class))).thenReturn(dstPath);
     // make sure that FileUtils.copy() doesn't try to copy anything
     when(fs.mkdirs(any(Path.class))).thenReturn(false);
     when(fs.getUri()).thenReturn(dstPath.toUri());
@@ -407,6 +408,7 @@ public class TestJobResourceUploader {
     JobConf jConf = new JobConf();
     Path originalPath = spy(path);
     FileSystem localFs = mock(FileSystem.class);
+    when(localFs.makeQualified(any(Path.class))).thenReturn(path);
     FileStatus fileStatus = mock(FileStatus.class);
     when(localFs.getFileStatus(any(Path.class))).thenReturn(fileStatus);
     when(fileStatus.isDirectory()).thenReturn(true);
@@ -420,8 +422,14 @@ public class TestJobResourceUploader {
         originalPath, jConf, (short) 1);
 
     ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
-    verify(fs).makeQualified(pathCaptor.capture());
-    Assert.assertEquals("Path", expectedRemotePath, pathCaptor.getValue());
+    verify(fs, times(2)).makeQualified(pathCaptor.capture());
+    List<Path> paths = pathCaptor.getAllValues();
+    // first call is invoked on a path which was created by the test,
+    // but the second one is created in copyRemoteFiles()
+    Assert.assertEquals("Expected remote path",
+        expectedRemotePath, paths.get(0));
+    Assert.assertEquals("Expected remote path",
+        expectedRemotePath, paths.get(1));
   }
 
   private void testErasureCodingSetting(boolean defaultBehavior)

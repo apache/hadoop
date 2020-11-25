@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.dynamometer;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

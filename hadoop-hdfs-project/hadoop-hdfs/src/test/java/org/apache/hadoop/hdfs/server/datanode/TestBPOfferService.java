@@ -34,6 +34,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,16 +44,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
@@ -90,8 +95,8 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 public class TestBPOfferService {
 
@@ -107,8 +112,6 @@ public class TestBPOfferService {
   private long firstLeaseId = 0;
   private long secondLeaseId = 0;
   private long nextFullBlockReportLeaseId = 1L;
-  private int fullBlockReportCount = 0;
-  private int incrBlockReportCount = 0;
 
   static {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
@@ -231,14 +234,6 @@ public class TestBPOfferService {
     }
   }
 
-  private void setBlockReportCount(int count) {
-    fullBlockReportCount = count;
-  }
-
-  private void setIncreaseBlockReportCount(int count) {
-    incrBlockReportCount += count;
-  }
-
   /**
    * Test that the BPOS can register to talk to two different NNs,
    * sends block reports to both, etc.
@@ -285,26 +280,24 @@ public class TestBPOfferService {
     int totalTestBlocks = 4000;
     Thread addNewBlockThread = null;
     final AtomicInteger count = new AtomicInteger(0);
-
+    DataNodeFaultInjector prevDNFaultInjector = null;
+    Set<Long> blocks = new TreeSet<>();
     try {
       waitForBothActors(bpos);
       waitForInitialization(bpos);
+      prevDNFaultInjector = DataNodeFaultInjector.get();
       DataNodeFaultInjector.set(new DataNodeFaultInjector() {
         public void blockUtilSendFullBlockReport() {
           try {
-            GenericTestUtils.waitFor(() -> {
-              if(count.get() > 2000) {
-                return true;
-              }
-              return false;
-            }, 100, 1000);
+            GenericTestUtils.waitFor(() -> count.get() > 2000,
+                100, 1000);
           } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("error DataNodeFaultInjector", e);
           }
         }
       });
 
-      countBlockReportItems(FAKE_BLOCK, mockNN1);
+      countBlockReportItems(FAKE_BLOCK, mockNN1, blocks);
       addNewBlockThread = new Thread(() -> {
         for (int i = 0; i < totalTestBlocks; i++) {
           SimulatedFSDataset fsDataset = (SimulatedFSDataset) mockFSDataset;
@@ -318,45 +311,39 @@ public class TestBPOfferService {
             count.addAndGet(1);
             Thread.sleep(1);
           } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("error addNewBlockThread", e);
           }
         }
       });
       addNewBlockThread.start();
 
       // Make sure that generate blocks for DataNode and IBR not empty now.
-      GenericTestUtils.waitFor(() -> {
-        if(count.get() > 0) {
-          return true;
-        }
-        return false;
-      }, 100, 1000);
+      GenericTestUtils.waitFor(() -> count.get() > 0, 100, 1000);
 
       // Trigger re-register using DataNode Command.
       datanodeCommands[0] = new DatanodeCommand[]{RegisterCommand.REGISTER};
+
       bpos.triggerHeartbeatForTests();
-
-      try {
-        GenericTestUtils.waitFor(() -> {
-          if(fullBlockReportCount == totalTestBlocks ||
-              incrBlockReportCount == totalTestBlocks) {
-            return true;
-          }
-          return false;
-        }, 1000, 15000);
-      } catch (Exception e) {}
-
-      // Verify FBR/IBR count is equal to generate number.
-      assertTrue(fullBlockReportCount == totalTestBlocks ||
-          incrBlockReportCount == totalTestBlocks);
-    } finally {
       addNewBlockThread.join();
+      addNewBlockThread = null;
+      // Verify FBR/IBR count is equal to generate number.
+      try {
+        GenericTestUtils.waitFor(() -> blocks.size() == totalTestBlocks,
+            1000, 15000);
+      } catch (Exception e) {
+        fail(String.format("Timed out waiting for blocks count. "
+            + "reported = %d, expected = %d. Exception: %s",
+            blocks.size(), totalTestBlocks, e.getMessage()));
+      }
+
+    } finally {
+      if (addNewBlockThread != null) {
+        addNewBlockThread.interrupt();
+      }
       bpos.stop();
       bpos.join();
 
-      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
-        public void blockUtilSendFullBlockReport() {}
-      });
+      DataNodeFaultInjector.set(prevDNFaultInjector);
     }
   }
 
@@ -716,7 +703,8 @@ public class TestBPOfferService {
    * which assume no deleting blocks here.
    */
   private void countBlockReportItems(final ExtendedBlock fakeBlock,
-      final DatanodeProtocolClientSideTranslatorPB mockNN) throws Exception {
+      final DatanodeProtocolClientSideTranslatorPB mockNN,
+      final Set<Long> blocks) throws Exception {
     final String fakeBlockPoolId = fakeBlock.getBlockPoolId();
     final ArgumentCaptor<StorageBlockReport[]> captor =
         ArgumentCaptor.forClass(StorageBlockReport[].class);
@@ -725,7 +713,9 @@ public class TestBPOfferService {
     Mockito.doAnswer((Answer<Object>) invocation -> {
       Object[] arguments = invocation.getArguments();
       StorageBlockReport[] list = (StorageBlockReport[])arguments[2];
-      setBlockReportCount(list[0].getBlocks().getNumberOfBlocks());
+      for (BlockReportReplica brr : list[0].getBlocks()) {
+        blocks.add(brr.getBlockId());
+      }
       return null;
     }).when(mockNN).blockReport(
         Mockito.any(),
@@ -739,7 +729,9 @@ public class TestBPOfferService {
       Object[] arguments = invocation.getArguments();
       StorageReceivedDeletedBlocks[] list =
           (StorageReceivedDeletedBlocks[])arguments[2];
-      setIncreaseBlockReportCount(list[0].getBlocks().length);
+      for (ReceivedDeletedBlockInfo rdbi : list[0].getBlocks()) {
+        blocks.add(rdbi.getBlock().getBlockId());
+      }
       return null;
     }).when(mockNN).blockReceivedAndDeleted(
         Mockito.any(),
@@ -1210,6 +1202,28 @@ public class TestBPOfferService {
       // Check new metric result about processedCommandsOp.
       // One command send back to DataNode here is #FinalizeCommand.
       assertCounter("ProcessedCommandsOpNumOps", 1L, mrb);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 5000)
+  public void testCommandProcessingThreadExit() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(1).build();
+    try {
+      List<DataNode> datanodes = cluster.getDataNodes();
+      DataNode dataNode = datanodes.get(0);
+      List<BPOfferService> allBpOs = dataNode.getAllBpOs();
+      BPOfferService bpos = allBpOs.get(0);
+      waitForInitialization(bpos);
+      BPServiceActor actor = bpos.getBPServiceActors().get(0);
+      // Stop and wait util actor exit.
+      actor.stopCommandProcessingThread();
+      GenericTestUtils.waitFor(() -> !actor.isAlive(), 100, 3000);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -25,7 +25,7 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.UUID;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

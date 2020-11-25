@@ -31,6 +31,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
+import org.apache.hadoop.util.Time;
 
 import static java.util.Objects.requireNonNull;
 
@@ -140,6 +141,7 @@ public abstract class AbstractS3ATokenIdentifier
       final URI uri) {
     super(kind, owner, renewer, realUser);
     this.uri = requireNonNull(uri);
+    initializeIssueDate();
   }
 
   /**
@@ -164,6 +166,11 @@ public abstract class AbstractS3ATokenIdentifier
    */
   protected AbstractS3ATokenIdentifier(final Text kind) {
     super(kind);
+    initializeIssueDate();
+  }
+
+  private void initializeIssueDate() {
+    setIssueDate(Time.now());
   }
 
   public String getBucket() {

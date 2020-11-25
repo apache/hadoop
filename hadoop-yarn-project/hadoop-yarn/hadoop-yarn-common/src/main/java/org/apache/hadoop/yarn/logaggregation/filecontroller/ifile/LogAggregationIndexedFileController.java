@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller.ifile;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.File;
 import java.io.FileInputStream;

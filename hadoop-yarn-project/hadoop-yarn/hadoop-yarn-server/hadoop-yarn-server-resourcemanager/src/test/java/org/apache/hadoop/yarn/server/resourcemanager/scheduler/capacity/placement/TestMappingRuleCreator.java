@@ -43,7 +43,7 @@ public class TestMappingRuleCreator {
   private static final String DEFAULT_QUEUE = "root.default";
   private static final String SECONDARY_GROUP = "users";
   private static final String PRIMARY_GROUP = "superuser";
-  private static final String APPLICATION_NAME = "MapReduce";
+  private static final String APPLICATION_NAME = "testapplication";
   private static final String SPECIFIED_QUEUE = "root.users.hadoop";
   private static final String USER_NAME = "testuser";
 
@@ -314,6 +314,21 @@ public class TestMappingRuleCreator {
     rule.setParentQueue("root");
 
     verifyPlacementSucceeds("root.users.testuser");
+  }
+
+  @Test
+  public void testApplicationNamePlacement() {
+    rule.setPolicy(Policy.APPLICATION_NAME);
+
+    verifyPlacementSucceeds(APPLICATION_NAME);
+  }
+
+  @Test
+  public void testApplicationNamePlacementWithParent() {
+    rule.setPolicy(Policy.APPLICATION_NAME);
+    rule.setParentQueue("root.applications");
+
+    verifyPlacementSucceeds("root.applications." + APPLICATION_NAME);
   }
 
   @Test

@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.csi.client;
 
 import csi.v0.Csi;
 import org.apache.commons.io.FileUtils;
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;

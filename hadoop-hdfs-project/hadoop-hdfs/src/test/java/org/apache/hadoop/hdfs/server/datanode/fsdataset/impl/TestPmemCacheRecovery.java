@@ -63,7 +63,7 @@ import org.junit.Test;
 import org.slf4j.event.Level;
 
 import java.util.function.Supplier;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 /**
  * Tests HDFS persistent memory cache by PmemMappableBlockLoader.

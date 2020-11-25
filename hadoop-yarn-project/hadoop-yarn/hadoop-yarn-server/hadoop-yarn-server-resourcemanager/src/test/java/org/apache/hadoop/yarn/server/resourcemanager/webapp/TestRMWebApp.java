@@ -72,7 +72,7 @@ import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -247,8 +247,13 @@ public class TestRMWebApp {
   }
 
   public static ResourceManager mockRm(RMContext rmContext) throws IOException {
+    return mockRm(rmContext, false);
+  }
+
+  public static ResourceManager mockRm(RMContext rmContext,
+      boolean useDRC) throws IOException {
     ResourceManager rm = mock(ResourceManager.class);
-    ResourceScheduler rs = mockCapacityScheduler();
+    ResourceScheduler rs = mockCapacityScheduler(useDRC);
     ApplicationACLsManager aclMgr = mockAppACLsManager();
     ClientRMService clientRMService = mockClientRMService(rmContext);
     when(rm.getResourceScheduler()).thenReturn(rs);
@@ -259,9 +264,14 @@ public class TestRMWebApp {
   }
 
   public static CapacityScheduler mockCapacityScheduler() throws IOException {
+    return mockCapacityScheduler(false);
+  }
+
+  public static CapacityScheduler mockCapacityScheduler(boolean useDRC)
+      throws IOException {
     // stolen from TestCapacityScheduler
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    setupQueueConfiguration(conf);
+    setupQueueConfiguration(conf, useDRC);
 
     CapacityScheduler cs = new CapacityScheduler();
     YarnConfiguration yarnConf = new YarnConfiguration();
@@ -313,6 +323,11 @@ public class TestRMWebApp {
 
 
   static void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
+    setupQueueConfiguration(conf, false);
+  }
+
+  static void setupQueueConfiguration(CapacitySchedulerConfiguration conf,
+      boolean useDRC) {
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
 
@@ -358,6 +373,10 @@ public class TestRMWebApp {
     conf.setCapacity(C11, 15);
     conf.setCapacity(C12, 45);
     conf.setCapacity(C13, 40);
+    if (useDRC) {
+      conf.set("yarn.scheduler.capacity.resource-calculator",
+          "org.apache.hadoop.yarn.util.resource.DominantResourceCalculator");
+    }
   }
 
   public static ResourceManager mockFifoRm(int apps, int racks, int nodes,

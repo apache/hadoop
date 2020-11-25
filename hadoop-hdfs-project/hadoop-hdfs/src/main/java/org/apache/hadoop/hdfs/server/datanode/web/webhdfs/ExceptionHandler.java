@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.sun.jersey.api.ParamException;
 import com.sun.jersey.api.container.ContainerException;
 import io.netty.buffer.Unpooled;

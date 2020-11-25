@@ -57,9 +57,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.function.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public class TestBackupNode {
   public static final Logger LOG =

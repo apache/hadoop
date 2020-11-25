@@ -861,6 +861,56 @@
   </property>
 
   <property>
+    <description>Enables heart-beat interval scaling.  The NodeManager
+      heart-beat interval will scale based on the difference between the CPU
+      utilization on the node and the cluster-wide average CPU utilization.
+    </description>
+    <name>
+      yarn.resourcemanager.nodemanagers.heartbeat-interval-scaling-enable
+    </name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this is the
+      minimum heart-beat interval in milliseconds
+    </description>
+    <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-min-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this is the
+      maximum heart-beat interval in milliseconds</description>
+    <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-max-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this controls
+      the degree of adjustment when speeding up heartbeat intervals.
+      At 1.0, 20% less than average CPU utilization will result in a 20%
+      decrease in heartbeat interval.
+    </description>
+    <name>
+      yarn.resourcemanager.nodemanagers.heartbeat-interval-speedup-factor
+    </name>
+    <value>1.0</value>
+  </property>
+
+  <property>
+    <description>If heart-beat interval scaling is enabled, this controls
+      the degree of adjustment when slowing down heartbeat intervals.
+      At 1.0, 20% greater than average CPU utilization will result in a 20%
+      increase in heartbeat interval.
+    </description>
+    <name>
+      yarn.resourcemanager.nodemanagers.heartbeat-interval-slowdown-factor
+    </name>
+    <value>1.0</value>
+  </property>
+
+  <property>
     <description>The minimum allowed version of a connecting nodemanager.  The valid values are
       NONE (no version checking), EqualToRM (the nodemanager's version is equal to
       or greater than the RM version), or a Version String.</description>
@@ -1663,6 +1713,34 @@
     yarn.nodemanager.resource-monitor.interval-ms will be used.
     If 0 or negative, container monitoring is disabled.</description>
     <name>yarn.nodemanager.container-monitor.interval-ms</name>
+  </property>
+
+  <property>
+    <description>Flag to enable the container log monitor which enforces
+      container log directory size limits.</description>
+    <name>yarn.nodemanager.container-log-monitor.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>How often to check the usage of a container's log directories
+      in milliseconds</description>
+    <name>yarn.nodemanager.container-log-monitor.interval-ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>The disk space limit, in bytes, for a single
+      container log directory</description>
+    <name>yarn.nodemanager.container-log-monitor.dir-size-limit-bytes</name>
+    <value>1000000000</value>
+  </property>
+
+  <property>
+    <description>The disk space limit, in bytes, for all of a container's
+      logs</description>
+    <name>yarn.nodemanager.container-log-monitor.total-size-limit-bytes</name>
+    <value>10000000000</value>
   </property>
 
   <property>
@@ -3774,6 +3852,14 @@
     </description>
     <name>yarn.node-labels.fs-store.impl.class</name>
     <value>org.apache.hadoop.yarn.nodelabels.FileSystemNodeLabelsStore</value>
+  </property>
+
+  <property>
+    <description>The replication factor for the FS store
+     files. Default value is 0, means it will use file system
+      default replication.</description>
+    <name>yarn.fs-store.file.replication</name>
+    <value>0</value>
   </property>
 
   <property>

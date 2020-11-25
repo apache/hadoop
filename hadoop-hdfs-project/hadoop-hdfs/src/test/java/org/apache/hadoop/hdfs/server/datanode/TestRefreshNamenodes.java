@@ -26,14 +26,16 @@ import java.net.InetSocketAddress;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology.NSConf;
 import org.junit.Test;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Tests datanode refresh namenode list functionality.
@@ -87,6 +89,38 @@ public class TestRefreshNamenodes {
       assertEquals("",
           Joiner.on(",").join(
             Sets.symmetricDifference(nnAddrsFromCluster, nnAddrsFromDN)));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout=10000)
+  public void testRefreshNameNodeDeadLock() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster.waitActive();
+
+      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+        @Override
+        public void delayWhenOfferServiceHoldLock() {
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+        }
+      });
+
+      DataNode dn = cluster.getDataNodes().get(0);
+      Configuration dnConf = dn.getConf();
+      dnConf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1");
+      dnConf.set(DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY + ".ns1",
+          "mock:8022");
+      dn.refreshNamenodes(dnConf);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

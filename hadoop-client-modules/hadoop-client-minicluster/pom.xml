@@ -322,6 +322,10 @@
           <groupId>dnsjava</groupId>
           <artifactId>dnsjava</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop.thirdparty</groupId>
+          <artifactId>hadoop-shaded-guava</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <!-- Add optional runtime dependency on the in-development timeline server module
@@ -492,6 +496,10 @@
           <artifactId>jetty-util</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.apache.hadoop.thirdparty</groupId>
+          <artifactId>hadoop-shaded-guava</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>com.google.guava</groupId>
           <artifactId>guava</artifactId>
         </exclusion>
@@ -545,6 +553,10 @@
         <exclusion>
           <groupId>com.google.guava</groupId>
           <artifactId>guava</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop.thirdparty</groupId>
+          <artifactId>hadoop-shaded-guava</artifactId>
         </exclusion>
         <exclusion>
           <groupId>commons-logging</groupId>
@@ -666,10 +678,8 @@
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>log4j:log4j</exclude>
-                      <exclude>org.eclipse.jetty.websocket:*</exclude>
-                      <exclude>javax.websocket:javax.websocket-api</exclude>
-                      <exclude>javax.annotation:javax.annotation-api</exclude>
-                      <exclude>org.eclipse.jetty:jetty-jndi</exclude>
+                      <exclude>org.eclipse.jetty.websocket:websocket-common</exclude>
+                      <exclude>org.eclipse.jetty.websocket:websocket-api</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
@@ -719,13 +729,6 @@
                         <exclude>testdata/*</exclude>
                       </excludes>
                     </filter>
-                    <!-- Skip terminal html and javascript -->
-                    <filter>
-                      <artifact>org.apache.hadoop:hadoop-yarn-server-nodemanager:*</artifact>
-                      <excludes>
-                        <exclude>TERMINAL/**/*</exclude>
-                      </excludes>
-                    </filter>
 
                     <!-- Mockito tries to include its own unrelocated copy of hamcrest. :( -->
                     <filter>
@@ -768,6 +771,13 @@
                     <filter>
                       <!-- skip jetty license info already incorporated into LICENSE/NOTICE -->
                       <artifact>org.eclipse.jetty:*</artifact>
+                      <excludes>
+                        <exclude>about.html</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <!-- skip jetty license info already incorporated into LICENSE/NOTICE -->
+                      <artifact>org.eclipse.jetty.websocket:*</artifact>
                       <excludes>
                         <exclude>about.html</exclude>
                       </excludes>
@@ -869,6 +879,8 @@
                         <exclude>org/w3c/dom/**/*</exclude>
                         <exclude>org/xml/sax/*</exclude>
                         <exclude>org/xml/sax/**/*</exclude>
+                        <exclude>org/bouncycastle/*</exclude>
+                        <exclude>org/bouncycastle/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
@@ -960,6 +972,13 @@
                     </relocation>
                     <relocation>
                       <pattern>javax/websocket/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.websocket.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
+                      <pattern>javax/annotation/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.javax.websocket.</shadedPattern>
                       <excludes>
                         <exclude>**/pom.xml</exclude>

@@ -17,15 +17,22 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.QueueACLsTestBase;
+import org.junit.Test;
 
 public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
   @Override
@@ -132,6 +139,7 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
         .reinitialize(csConf, resourceManager.getRMContext());
   }
 
+
   private void setQueueCapacity(CapacitySchedulerConfiguration csConf,
                float capacity, String queuePath) {
     csConf.setCapacity(queuePath, capacity);
@@ -141,5 +149,39 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
                String queueAcl, String queuePath) {
     csConf.setAcl(queuePath, QueueACL.ADMINISTER_QUEUE, queueAcl);
     csConf.setAcl(queuePath, QueueACL.SUBMIT_APPLICATIONS, queueAcl);
+  }
+
+  @Test
+  public void testCheckAccessForUserWithOnlyLeafNameProvided() {
+    testCheckAccess(false, "dynamicQueue");
+  }
+
+  @Test
+  public void testCheckAccessForUserWithFullPathProvided() {
+    testCheckAccess(true, "root.users.dynamicQueue");
+  }
+
+  @Test
+  public void testCheckAccessForRootQueue() {
+    testCheckAccess(false, "root");
+  }
+
+  private void testCheckAccess(boolean expectedResult, String queueName) {
+    CapacitySchedulerQueueManager qm =
+        mock(CapacitySchedulerQueueManager.class);
+    CSQueue root = mock(ParentQueue.class);
+    CSQueue users = mock(ManagedParentQueue.class);
+    when(qm.getQueue("root")).thenReturn(root);
+    when(qm.getQueue("root.users")).thenReturn(users);
+    when(users.hasAccess(any(QueueACL.class),
+        any(UserGroupInformation.class))).thenReturn(true);
+    UserGroupInformation mockUGI = mock(UserGroupInformation.class);
+
+    CapacityScheduler cs =
+        (CapacityScheduler) resourceManager.getResourceScheduler();
+    cs.setQueueManager(qm);
+
+    assertEquals("checkAccess() failed", expectedResult,
+        cs.checkAccess(mockUGI, QueueACL.ADMINISTER_QUEUE, queueName));
   }
 }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Date;
 
@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.IntrusiveCollection.Element;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Namenode class that tracks state related to a cached path.

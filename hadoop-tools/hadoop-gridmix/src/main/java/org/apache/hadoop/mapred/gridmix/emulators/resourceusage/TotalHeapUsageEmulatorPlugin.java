@@ -20,7 +20,7 @@ package org.apache.hadoop.mapred.gridmix.emulators.resourceusage;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.gridmix.Progressive;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;

@@ -23,8 +23,8 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.util.Random;
-import com.google.common.base.Charsets;
-import com.google.common.primitives.Bytes;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

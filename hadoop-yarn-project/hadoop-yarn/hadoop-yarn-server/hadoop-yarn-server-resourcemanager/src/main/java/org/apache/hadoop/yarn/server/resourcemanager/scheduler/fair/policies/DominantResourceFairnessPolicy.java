@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -147,7 +147,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
      * @return &lt; 0, 0, or &gt; 0 if the first item is less than, equal to,
      * or greater than the second item, respectively
      */
-    protected int compareAttribrutes(Schedulable s1, Schedulable s2) {
+    protected int compareAttributes(Schedulable s1, Schedulable s2) {
       int res = (int) Math.signum(s1.getStartTime() - s2.getStartTime());
 
       if (res == 0) {
@@ -219,7 +219,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
       }
 
       if (res == 0) {
-        res = compareAttribrutes(s1, s2);
+        res = compareAttributes(s1, s2);
       }
 
       return res;
@@ -423,7 +423,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
       }
 
       if (res == 0) {
-        res = compareAttribrutes(s1, s2);
+        res = compareAttributes(s1, s2);
       }
 
       return res;

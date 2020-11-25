@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 import java.util.Set;
 import org.apache.commons.logging.Log;
@@ -41,6 +41,7 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -927,7 +928,9 @@ public class NameNode extends ReconfigurableBase implements
         new PrivilegedExceptionAction<FileSystem>() {
           @Override
           public FileSystem run() throws IOException {
-            return FileSystem.get(conf);
+            FileSystem dfs = new DistributedFileSystem();
+            dfs.initialize(FileSystem.getDefaultUri(conf), conf);
+            return dfs;
           }
         });
     this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
@@ -2015,6 +2018,9 @@ public class NameNode extends ReconfigurableBase implements
     public void startActiveServices() throws IOException {
       try {
         namesystem.startActiveServices();
+        if (namesystem.isSnapshotTrashRootEnabled()) {
+          namesystem.checkAndProvisionSnapshotTrashRoots();
+        }
         startTrashEmptier(getConf());
       } catch (Throwable t) {
         doImmediateShutdown(t);

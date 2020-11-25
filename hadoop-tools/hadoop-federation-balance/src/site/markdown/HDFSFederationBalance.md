@@ -101,6 +101,7 @@ Command `submit` has 5 options:
 | -bandwidth | Specify bandwidth per map in MB. | 10 |
 | -delay | Specify the delayed duration(millie seconds) when the job needs to retry. | 1000 |
 | -moveToTrash | This options has 3 values: `trash` (move the source path to trash), `delete` (delete the source path directly) and `skip` (skip both trash and deletion). By default the server side trash interval is used. If the trash is disabled in the server side, the default trash interval 60 minutes is used. | trash |
+| -diffThreshold | Specify the threshold of the diff entries that used in incremental copy stage. If the diff entries size is no greater than the threshold and the open files check is satisfied(no open files or force close all open files), the fedBalance will go to the final round of distcp. Setting to 0 means waiting until there is no diff.| 0 |
 
 ### Configuration Options
 --------------------

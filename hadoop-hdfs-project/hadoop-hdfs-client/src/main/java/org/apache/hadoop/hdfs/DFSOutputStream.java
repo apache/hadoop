@@ -72,8 +72,8 @@ import org.apache.htrace.core.TraceScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
@@ -923,7 +923,7 @@ public class DFSOutputStream extends FSOutputSummer
    * If recoverLeaseOnCloseException is true and an exception occurs when
    * closing a file, recover lease.
    */
-  private void recoverLease(boolean recoverLeaseOnCloseException) {
+  protected void recoverLease(boolean recoverLeaseOnCloseException) {
     if (recoverLeaseOnCloseException) {
       try {
         dfsClient.endFileLease(fileId);

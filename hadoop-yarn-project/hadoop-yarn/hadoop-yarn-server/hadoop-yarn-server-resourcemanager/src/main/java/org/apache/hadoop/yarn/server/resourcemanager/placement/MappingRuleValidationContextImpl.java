@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
@@ -154,20 +154,22 @@ public class MappingRuleValidationContextImpl
     }
 
     if (!(parentQueue instanceof ManagedParentQueue)) {
-      for (CSQueue queue : parentQueue.getChildQueues()) {
-        if (queue instanceof LeafQueue) {
-          //if a non managed parent queue has at least one leaf queue, this
-          //mapping can be valid, we cannot do any more checks
-          return true;
+      if (parentQueue.getChildQueues() != null) {
+        for (CSQueue queue : parentQueue.getChildQueues()) {
+          if (queue instanceof LeafQueue) {
+            //if a non managed parent queue has at least one leaf queue, this
+            //mapping can be valid, we cannot do any more checks
+            return true;
+          }
         }
       }
 
       //There is no way we can place anything into the queue referenced by the
       // rule, because we cannot auto create, and we don't have any leaf queues
-      //Actually this branch is not accessibe with the current queue hierarchy,
+      //Actually this branch is not accessible with the current queue hierarchy,
       //there should be no parents without any leaf queues. This condition says
       //for sanity checks
-      throw new YarnException("Target queue path '" + path + "' has" +
+      throw new YarnException("Target queue path '" + path + "' has " +
           "a non-managed parent queue which has no LeafQueues either.");
     }
 

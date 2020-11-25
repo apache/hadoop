@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -164,6 +166,26 @@ public class TestFsDatasetImpl {
     when(storage.getNumStorageDirs()).thenReturn(numDirs);
   }
 
+  private static StorageLocation createStorageWithStorageType(String subDir,
+      StorageType storageType, Configuration conf, DataStorage storage,
+      DataNode dataNode) throws IOException {
+    String archiveStorageType = "[" + storageType + "]";
+    String path = BASE_DIR + subDir;
+    new File(path).mkdirs();
+    String pathUri = new Path(path).toUri().toString();
+    StorageLocation loc = StorageLocation.parse(archiveStorageType + pathUri);
+    Storage.StorageDirectory sd = new Storage.StorageDirectory(
+        loc);
+    DataStorage.createStorageID(sd, false, conf);
+
+    DataStorage.VolumeBuilder builder =
+        new DataStorage.VolumeBuilder(storage, sd);
+    when(storage.prepareVolume(eq(dataNode), eq(loc),
+        anyList()))
+        .thenReturn(builder);
+    return loc;
+  }
+
   private int getNumVolumes() {
     try (FsDatasetSpi.FsVolumeReferences volumes =
         dataset.getFsVolumeReferences()) {
@@ -201,9 +223,9 @@ public class TestFsDatasetImpl {
     assertEquals(0, dataset.getNumFailedVolumes());
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testReadLockEnabledByDefault()
-      throws IOException, InterruptedException {
+      throws Exception {
     final FsDatasetSpi ds = dataset;
     AtomicBoolean accessed = new AtomicBoolean(false);
     CountDownLatch latch = new CountDownLatch(1);
@@ -213,7 +235,8 @@ public class TestFsDatasetImpl {
       public void run() {
         try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
           latch.countDown();
-          sleep(10000);
+          // wait for the waiter thread to access the lock.
+          waiterLatch.await();
         } catch (Exception e) {
         }
       }
@@ -221,29 +244,33 @@ public class TestFsDatasetImpl {
 
     Thread waiter = new Thread() {
       public void run() {
-        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
+        try {
+          latch.await();
+        } catch (InterruptedException e) {
           waiterLatch.countDown();
+          return;
+        }
+        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
           accessed.getAndSet(true);
+          // signal the holder thread.
+          waiterLatch.countDown();
         } catch (Exception e) {
         }
       }
     };
-
-    holder.start();
-    latch.await();
     waiter.start();
-    waiterLatch.await();
+    holder.start();
+    holder.join();
+    waiter.join();
     // The holder thread is still holding the lock, but the waiter can still
     // run as the lock is a shared read lock.
     assertEquals(true, accessed.get());
     holder.interrupt();
-    holder.join();
-    waiter.join();
   }
 
   @Test(timeout=10000)
   public void testReadLockCanBeDisabledByConfig()
-      throws IOException, InterruptedException {
+      throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setBoolean(
         DFSConfigKeys.DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY, false);
@@ -256,41 +283,52 @@ public class TestFsDatasetImpl {
 
       CountDownLatch latch = new CountDownLatch(1);
       CountDownLatch waiterLatch = new CountDownLatch(1);
-      AtomicBoolean accessed = new AtomicBoolean(false);
+      // create a synchronized list and verify the order of elements.
+      List<Integer> syncList =
+          Collections.synchronizedList(new ArrayList<>());
+
 
       Thread holder = new Thread() {
         public void run() {
+          latch.countDown();
           try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-            latch.countDown();
-            sleep(10000);
+            syncList.add(0);
           } catch (Exception e) {
+            return;
+          }
+          try {
+            waiterLatch.await();
+            syncList.add(2);
+          } catch (InterruptedException e) {
           }
         }
       };
 
       Thread waiter = new Thread() {
         public void run() {
+          try {
+            // wait for holder to get into the critical section.
+            latch.await();
+          } catch (InterruptedException e) {
+            waiterLatch.countDown();
+          }
           try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
-            accessed.getAndSet(true);
+            syncList.add(1);
             waiterLatch.countDown();
           } catch (Exception e) {
           }
         }
       };
-
-      holder.start();
-      latch.await();
       waiter.start();
-      Thread.sleep(200);
-      // Waiting thread should not have been able to update the variable
-      // as the read lock is disabled and hence an exclusive lock.
-      assertEquals(false, accessed.get());
-      holder.interrupt();
-      holder.join();
-      waiterLatch.await();
-      // After the holder thread exits, the variable is updated.
-      assertEquals(true, accessed.get());
+      holder.start();
+
       waiter.join();
+      holder.join();
+
+      // verify that the synchronized list has the correct sequence.
+      assertEquals(
+          "The sequence of checkpoints does not correspond to shared lock",
+          syncList, Arrays.asList(0, 1, 2));
     } finally {
       cluster.shutdown();
     }
@@ -338,6 +376,57 @@ public class TestFsDatasetImpl {
     }
     assertEquals(actualVolumes.size(), expectedVolumes.size());
     assertTrue(actualVolumes.containsAll(expectedVolumes));
+  }
+
+  // When turning on same disk tiering,
+  // we should prevent misconfig that
+  // volumes with same storage type created on same mount.
+  @Test
+  public void testAddVolumeWithSameDiskTiering() throws IOException {
+    datanode = mock(DataNode.class);
+    storage = mock(DataStorage.class);
+    this.conf = new Configuration();
+    this.conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 0);
+    this.conf.set(DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY,
+        replicaCacheRootDir);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        true);
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
+        0.5);
+
+    when(datanode.getConf()).thenReturn(conf);
+    final DNConf dnConf = new DNConf(datanode);
+    when(datanode.getDnConf()).thenReturn(dnConf);
+    final BlockScanner disabledBlockScanner = new BlockScanner(datanode);
+    when(datanode.getBlockScanner()).thenReturn(disabledBlockScanner);
+    final ShortCircuitRegistry shortCircuitRegistry =
+        new ShortCircuitRegistry(conf);
+    when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+
+    createStorageDirs(storage, conf, 1);
+    dataset = new FsDatasetImpl(datanode, storage, conf);
+
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    for (String bpid : BLOCK_POOL_IDS) {
+      nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, bpid, 1));
+    }
+    dataset.addVolume(
+        createStorageWithStorageType("archive1",
+            StorageType.ARCHIVE, conf, storage, datanode), nsInfos);
+    assertEquals(2, dataset.getVolumeCount());
+
+    // Add second ARCHIVAL volume should fail fsDataSetImpl.
+    try {
+      dataset.addVolume(
+          createStorageWithStorageType("archive2",
+              StorageType.ARCHIVE, conf, storage, datanode), nsInfos);
+      fail("Should throw exception for" +
+          " same storage type already exists on same mount.");
+    } catch (IOException e) {
+      assertTrue(e.getMessage()
+          .startsWith("Storage type ARCHIVE already exists on same mount:"));
+    }
   }
 
   @Test

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.net.URI;
 import java.net.URISyntaxException;

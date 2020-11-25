@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.service;
 
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.registry.client.api.RegistryOperations;

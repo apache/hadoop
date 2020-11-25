@@ -22,13 +22,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -39,6 +42,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.deleteChildren;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dumpStats;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.iteratorToList;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.listChildren;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toList;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.treeWalk;
@@ -242,6 +246,13 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
             + "listStatus = " + listStatusResult
             + "listFiles = " + listFilesResult,
         fileList.size() <= statuses.length);
+    List<FileStatus> statusList = (List<FileStatus>) iteratorToList(
+            fs.listStatusIterator(root));
+    Assertions.assertThat(statusList)
+            .describedAs("Result of listStatus(/) and listStatusIterator(/)"
+                    + " must match")
+            .hasSameElementsAs(Arrays.stream(statuses)
+                    .collect(Collectors.toList()));
   }
 
   @Test
@@ -254,7 +265,7 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
         fs.listFiles(root, true));
     describe("verifying consistency with treewalk's files");
     ContractTestUtils.TreeScanResults treeWalk = treeWalk(fs, root);
-    treeWalk.assertFieldsEquivalent("files", listing,
+    treeWalk.assertFieldsEquivalent("treewalk vs listFiles(/, true)", listing,
         treeWalk.getFiles(),
         listing.getFiles());
   }

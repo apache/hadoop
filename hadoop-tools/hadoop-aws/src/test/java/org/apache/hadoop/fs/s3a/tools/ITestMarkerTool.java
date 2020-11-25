@@ -259,8 +259,25 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
         AUDIT,
         m(OPT_LIMIT), 0,
         m(OPT_OUT), audit,
-        m(OPT_MIN), expectedMarkersWithBaseDir,
-        m(OPT_MAX), expectedMarkersWithBaseDir,
+        m(OPT_MIN), expectedMarkersWithBaseDir - 1,
+        m(OPT_MAX), expectedMarkersWithBaseDir + 1,
+        createdPaths.base);
+    expectMarkersInOutput(audit, expectedMarkersWithBaseDir);
+  }
+
+  @Test
+  public void testRunAuditWithExpectedMarkersSwappedMinMax() throws Throwable {
+    describe("Run a verbose audit with the min/max ranges swapped;"
+        + " see HADOOP-17332");
+    // a run under the keeping FS will create paths
+    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
+    final File audit = tempAuditFile();
+    run(MARKERS, V,
+        AUDIT,
+        m(OPT_LIMIT), 0,
+        m(OPT_OUT), audit,
+        m(OPT_MIN), expectedMarkersWithBaseDir + 1,
+        m(OPT_MAX), expectedMarkersWithBaseDir - 1,
         createdPaths.base);
     expectMarkersInOutput(audit, expectedMarkersWithBaseDir);
   }

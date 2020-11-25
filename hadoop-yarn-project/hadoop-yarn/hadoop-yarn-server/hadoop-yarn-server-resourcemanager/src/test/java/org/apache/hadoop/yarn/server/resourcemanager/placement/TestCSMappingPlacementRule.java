@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -28,17 +28,26 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static junit.framework.TestCase.*;
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertNotNull;
+import static junit.framework.TestCase.assertNull;
+import static junit.framework.TestCase.assertTrue;
+import static junit.framework.TestCase.fail;
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.FairQueuePlacementUtils.DOT;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -47,6 +56,10 @@ import static org.mockito.Mockito.when;
 public class TestCSMappingPlacementRule {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestCSMappingPlacementRule.class);
+
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
+
   private Map<String, Set<String>> userGroups = ImmutableMap.of(
       "alice", ImmutableSet.of("p_alice", "user", "developer"),
       "bob", ImmutableSet.of("p_bob", "user", "developer"),
@@ -443,5 +456,106 @@ public class TestCSMappingPlacementRule {
         "Charlie should be placed to root.man.user because he is not a " +
         "developer nor in the p_alice group", engine, app, "charlie",
         "root.man.user");
+  }
+
+  void assertConfigTestResult(List<MappingRule> rules) {
+    assertEquals("We only specified one rule", 1, rules.size());
+    MappingRule rule = rules.get(0);
+    String ruleStr = rule.toString();
+    assertTrue("Rule's matcher variable should be %user",
+        ruleStr.contains("variable='%user'"));
+    assertTrue("Rule's match value should be bob",
+        ruleStr.contains("value='bob'"));
+    assertTrue("Rule's action should be place to queue", ruleStr.contains(
+        "action=PlaceToQueueAction{queueName='%primary_group'}"));
+  }
+
+  @Test
+  public void testLegacyConfiguration() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_LEGACY);
+    conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING,
+        "u:bob:%primary_group");
+
+    List<MappingRule> rules = conf.getMappingRules();
+    assertConfigTestResult(rules);
+  }
+
+  @Test
+  public void testJSONConfiguration() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON,
+        "{\"rules\": [{" +
+        "    \"type\": \"user\"," +
+        "    \"matches\": \"bob\"," +
+        "    \"policy\": \"custom\"," +
+        "    \"customPlacement\": \"%primary_group\"," +
+        "    \"fallbackResult\":\"skip\"" +
+        "}]}");
+
+    List<MappingRule> rules = conf.getMappingRules();
+    assertConfigTestResult(rules);
+  }
+
+  @Test
+  public void testEmptyJSONConfiguration() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON, "");
+
+    List<MappingRule> rules = conf.getMappingRules();
+    assertEquals("We expect no rules", 0, rules.size());
+  }
+
+  @Test(expected = IOException.class)
+  public void testInvalidJSONConfiguration() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON,
+        "I'm a bad JSON, since I'm not a JSON.");
+    List<MappingRule> rules = conf.getMappingRules();
+  }
+
+  @Test(expected = IOException.class)
+  public void testMissingJSONFileConfiguration() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON_FILE,
+        "/dev/null/nofile");
+    List<MappingRule> rules = conf.getMappingRules();
+  }
+
+  @Test
+  public void testJSONFileConfiguration() throws IOException {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
+
+    File jsonFile = folder.newFile("testJSONFileConfiguration.json");
+
+    BufferedWriter writer = new BufferedWriter(new FileWriter(jsonFile));
+    try {
+      writer.write("{\"rules\": [{" +
+          "    \"type\": \"user\"," +
+          "    \"matches\": \"bob\"," +
+          "    \"policy\": \"custom\"," +
+          "    \"customPlacement\": \"%primary_group\"," +
+          "    \"fallbackResult\":\"skip\"" +
+          "}]}");
+    } finally {
+      writer.close();
+    }
+
+    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON_FILE,
+        jsonFile.getAbsolutePath());
+    List<MappingRule> rules = conf.getMappingRules();
+
+    assertConfigTestResult(rules);
   }
 }

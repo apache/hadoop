@@ -41,7 +41,7 @@ import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,8 +55,8 @@ import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.util.DurationInfo;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.longOption;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
@@ -131,6 +131,8 @@ public class WriteOperationHelper implements WriteOperations {
    */
   void operationRetried(String text, Exception ex, int retries,
       boolean idempotent) {
+    LOG.info("{}: Retried {}: {}", text, retries, ex.toString());
+    LOG.debug("Stack", ex);
     owner.operationRetried(text, ex, retries, idempotent);
   }
 
@@ -323,7 +325,9 @@ public class WriteOperationHelper implements WriteOperations {
   public void abortMultipartUpload(String destKey, String uploadId,
       Retried retrying)
       throws IOException {
-    invoker.retry("Aborting multipart upload", destKey, true,
+    invoker.retry("Aborting multipart upload ID " + uploadId,
+        destKey,
+        true,
         retrying,
         () -> owner.abortMultipartUpload(
             destKey,
@@ -585,7 +589,8 @@ public class WriteOperationHelper implements WriteOperations {
   @Retries.RetryTranslated
   public UploadPartResult uploadPart(UploadPartRequest request)
       throws IOException {
-    return retry("upload part",
+    return retry("upload part #" + request.getPartNumber()
+        + " upload ID "+ request.getUploadId(),
         request.getKey(),
         true,
         () -> owner.uploadPart(request));

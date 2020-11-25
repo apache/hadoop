@@ -86,10 +86,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * The underlying volume used to store replica.
@@ -134,6 +134,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final FileIoProvider fileIoProvider;
   private final DataNodeVolumeMetrics metrics;
   private URI baseURI;
+  private boolean enableSameDiskTiering;
+  private final String mount;
+  private double reservedForArchive;
 
   /**
    * Per-volume worker pool that processes new blocks to cache.
@@ -190,6 +193,18 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
+    this.enableSameDiskTiering =
+        conf.getBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+            DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
+    if (enableSameDiskTiering && usage != null) {
+      this.mount = usage.getMount();
+    } else {
+      mount = "";
+    }
+  }
+
+  String getMount() {
+    return mount;
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -407,11 +422,15 @@ public class FsVolumeImpl implements FsVolumeSpi {
    * Return either the configured capacity of the file system if configured; or
    * the capacity of the file system excluding space reserved for non-HDFS.
    *
+   * When same-disk-tiering is turned on, the reported capacity
+   * will take reservedForArchive value into consideration of.
+   *
    * @return the unreserved number of bytes left in this filesystem. May be
    *         zero.
    */
   @VisibleForTesting
   public long getCapacity() {
+    long capacity;
     if (configuredCapacity < 0L) {
       long remaining;
       if (cachedCapacity > 0L) {
@@ -419,9 +438,18 @@ public class FsVolumeImpl implements FsVolumeSpi {
       } else {
         remaining = usage.getCapacity() - getReserved();
       }
-      return Math.max(remaining, 0L);
+      capacity = Math.max(remaining, 0L);
+    } else {
+      capacity = configuredCapacity;
     }
-    return configuredCapacity;
+
+    if (enableSameDiskTiering && dataset.getMountVolumeMap() != null) {
+      double capacityRatio = dataset.getMountVolumeMap()
+          .getCapacityRatioByMountAndStorageType(mount, storageType);
+      capacity = (long) (capacity * capacityRatio);
+    }
+
+    return capacity;
   }
 
   /**
@@ -452,7 +480,34 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   long getActualNonDfsUsed() throws IOException {
-    return usage.getUsed() - getDfsUsed();
+    // DISK and ARCHIVAL on same disk
+    // should share the same amount of reserved capacity.
+    // When calculating actual non dfs used,
+    // exclude DFS used capacity by another volume.
+    if (enableSameDiskTiering &&
+        (storageType == StorageType.DISK
+            || storageType == StorageType.ARCHIVE)) {
+      StorageType counterpartStorageType = storageType == StorageType.DISK
+          ? StorageType.ARCHIVE : StorageType.DISK;
+      FsVolumeReference counterpartRef = dataset
+          .getMountVolumeMap()
+          .getVolumeRefByMountAndStorageType(mount, counterpartStorageType);
+      if (counterpartRef != null) {
+        FsVolumeImpl counterpartVol = (FsVolumeImpl) counterpartRef.getVolume();
+        long used = getDfUsed() - getDfsUsed() - counterpartVol.getDfsUsed();
+        counterpartRef.close();
+        return used;
+      }
+    }
+    return getDfUsed() - getDfsUsed();
+  }
+
+  /**
+   * This function is only used for Mock.
+   */
+  @VisibleForTesting
+  public long getDfUsed() {
+    return usage.getUsed();
   }
 
   private long getRemainingReserved() throws IOException {

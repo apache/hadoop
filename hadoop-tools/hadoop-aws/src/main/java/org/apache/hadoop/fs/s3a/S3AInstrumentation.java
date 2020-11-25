@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,6 +156,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       INVOCATION_RENAME,
       OBJECT_COPY_REQUESTS,
       OBJECT_DELETE_REQUESTS,
+      OBJECT_DELETE_OBJECTS,
       OBJECT_LIST_REQUESTS,
       OBJECT_CONTINUE_LIST_REQUESTS,
       OBJECT_METADATA_REQUESTS,

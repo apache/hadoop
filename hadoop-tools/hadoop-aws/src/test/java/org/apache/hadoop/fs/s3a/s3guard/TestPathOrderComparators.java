@@ -25,7 +25,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 
-import static com.google.common.collect.Lists.newArrayList;
+import static org.apache.hadoop.thirdparty.com.google.common.collect.Lists.newArrayList;
 import static org.apache.hadoop.fs.s3a.s3guard.PathOrderComparators.TOPMOST_PATH_FIRST;
 import static org.apache.hadoop.fs.s3a.s3guard.PathOrderComparators.TOPMOST_PATH_LAST;
 import static org.assertj.core.api.Assertions.assertThat;

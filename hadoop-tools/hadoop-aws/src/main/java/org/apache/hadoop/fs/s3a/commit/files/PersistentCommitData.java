@@ -40,7 +40,7 @@ public abstract class PersistentCommitData implements Serializable {
    * If this is changed the value of {@code serialVersionUID} will change,
    * to avoid deserialization problems.
    */
-  public static final int VERSION = 1;
+  public static final int VERSION = 2;
 
   /**
    * Validate the data: those fields which must be non empty, must be set.

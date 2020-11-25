@@ -21,7 +21,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.fs.ChecksumException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Wrapper around JNI support code to do checksum computation

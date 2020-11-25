@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +93,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
         whenRaw(FILE_STATUS_FILE_PROBE
             .plus(LIST_LOCATED_STATUS_LIST_OP)),
         whenAuthoritative(LIST_LOCATED_STATUS_LIST_OP),
-        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP
+            .plus(S3GUARD_NONAUTH_FILE_STATUS_PROBE)));
   }
 
   @Test
@@ -187,7 +189,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
             whenRaw(LIST_STATUS_LIST_OP
                     .plus(GET_FILE_STATUS_ON_FILE)),
             whenAuthoritative(LIST_STATUS_LIST_OP),
-            whenNonauth(LIST_STATUS_LIST_OP));
+            whenNonauth(LIST_STATUS_LIST_OP
+                .plus(S3GUARD_NONAUTH_FILE_STATUS_PROBE)));
   }
 
   @Test
@@ -254,6 +257,36 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     interceptRawGetFileStatusFNFE(methodPath(), false,
         StatusProbeEnum.ALL,
         GET_FILE_STATUS_FNFE);
+  }
+
+  @Test
+  public void testCostOfRootFileStatus() throws Throwable {
+    Path root = path("/");
+    S3AFileStatus rootStatus = verifyRawInnerGetFileStatus(
+            root,
+            false,
+            StatusProbeEnum.ALL,
+            ROOT_FILE_STATUS_PROBE);
+    String rootStatusContent = rootStatus.toString();
+    Assertions.assertThat(rootStatus.isDirectory())
+            .describedAs("Status returned should be a directory "
+                    + rootStatusContent)
+            .isEqualTo(true);
+    Assertions.assertThat(rootStatus.isEmptyDirectory())
+            .isEqualTo(Tristate.UNKNOWN);
+
+    rootStatus = verifyRawInnerGetFileStatus(
+            root,
+            true,
+            StatusProbeEnum.ALL,
+            FILE_STATUS_DIR_PROBE);
+    Assertions.assertThat(rootStatus.isDirectory())
+            .describedAs("Status returned should be a directory "
+                    + rootStatusContent)
+            .isEqualTo(true);
+    Assertions.assertThat(rootStatus.isEmptyDirectory())
+            .isNotEqualByComparingTo(Tristate.UNKNOWN);
+
   }
 
   @Test

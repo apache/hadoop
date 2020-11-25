@@ -35,6 +35,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -71,11 +75,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.AppNameMappingPlacementRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 
@@ -162,9 +161,9 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QUEUE_MAPPING;
 
@@ -244,6 +243,8 @@ public class CapacityScheduler extends
   private long asyncMaxPendingBacklogs;
 
   private CSMaxRunningAppsEnforcer maxRunningEnforcer;
+
+  private boolean activitiesManagerEnabled = true;
 
   public CapacityScheduler() {
     super(CapacityScheduler.class.getName());
@@ -342,7 +343,9 @@ public class CapacityScheduler extends
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
 
       this.activitiesManager = new ActivitiesManager(rmContext);
-      activitiesManager.init(conf);
+      if (activitiesManagerEnabled) {
+        activitiesManager.init(conf);
+      }
       initializeQueues(this.conf);
       this.isLazyPreemptionEnabled = conf.getLazyPreemptionEnabled();
 
@@ -400,7 +403,9 @@ public class CapacityScheduler extends
   private void startSchedulerThreads() {
     writeLock.lock();
     try {
-      activitiesManager.start();
+      if (activitiesManagerEnabled) {
+        activitiesManager.start();
+      }
       if (scheduleAsynchronously) {
         Preconditions.checkNotNull(asyncSchedulerThreads,
             "asyncSchedulerThreads is null");
@@ -434,7 +439,9 @@ public class CapacityScheduler extends
   public void serviceStop() throws Exception {
     writeLock.lock();
     try {
-      this.activitiesManager.stop();
+      if (activitiesManagerEnabled) {
+        this.activitiesManager.stop();
+      }
       if (scheduleAsynchronously && asyncSchedulerThreads != null) {
         for (Thread t : asyncSchedulerThreads) {
           t.interrupt();
@@ -671,24 +678,14 @@ public class CapacityScheduler extends
     }
   }
 
-  @VisibleForTesting
-  public PlacementRule getUserGroupMappingPlacementRule() throws IOException {
-    readLock.lock();
-    try {
-      UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule();
-      ugRule.initialize(this);
-      return ugRule;
-    } finally {
-      readLock.unlock();
-    }
-  }
 
-  public PlacementRule getAppNameMappingPlacementRule() throws IOException {
+  @VisibleForTesting
+  public PlacementRule getCSMappingPlacementRule() throws IOException {
     readLock.lock();
     try {
-      AppNameMappingPlacementRule anRule = new AppNameMappingPlacementRule();
-      anRule.initialize(this);
-      return anRule;
+      CSMappingPlacementRule mappingRule = new CSMappingPlacementRule();
+      mappingRule.initialize(this);
+      return mappingRule;
     } finally {
       readLock.unlock();
     }
@@ -710,19 +707,18 @@ public class CapacityScheduler extends
     }
 
     placementRuleStrs = new ArrayList<>(distinguishRuleSet);
+    boolean csMappingAdded = false;
 
     for (String placementRuleStr : placementRuleStrs) {
       switch (placementRuleStr) {
       case YarnConfiguration.USER_GROUP_PLACEMENT_RULE:
-        PlacementRule ugRule = getUserGroupMappingPlacementRule();
-        if (null != ugRule) {
-          placementRules.add(ugRule);
-        }
-        break;
       case YarnConfiguration.APP_NAME_PLACEMENT_RULE:
-        PlacementRule anRule = getAppNameMappingPlacementRule();
-        if (null != anRule) {
-          placementRules.add(anRule);
+        if (!csMappingAdded) {
+          PlacementRule csMappingRule = getCSMappingPlacementRule();
+          if (null != csMappingRule) {
+            placementRules.add(csMappingRule);
+            csMappingAdded = true;
+          }
         }
         break;
       default:
@@ -2282,6 +2278,21 @@ public class CapacityScheduler extends
   public boolean checkAccess(UserGroupInformation callerUGI,
       QueueACL acl, String queueName) {
     CSQueue queue = getQueue(queueName);
+
+    if (queueName.startsWith("root.")) {
+      // can only check proper ACLs if the path is fully qualified
+      while (queue == null) {
+        int sepIndex = queueName.lastIndexOf(".");
+        String parentName = queueName.substring(0, sepIndex);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Queue {} does not exist, checking parent {}",
+              queueName, parentName);
+        }
+        queueName = parentName;
+        queue = queueManager.getQueue(queueName);
+      }
+    }
+
     if (queue == null) {
       LOG.debug("ACL not found for queue access-type {} for queue {}",
           acl, queueName);
@@ -3286,11 +3297,22 @@ public class CapacityScheduler extends
     this.maxRunningEnforcer = enforcer;
   }
 
+
   /**
    * Returning true as capacity scheduler supports placement constraints.
    */
   @Override
   public boolean placementConstraintEnabled() {
     return true;
+  }
+
+  @VisibleForTesting
+  public void setActivitiesManagerEnabled(boolean enabled) {
+    this.activitiesManagerEnabled = enabled;
+  }
+
+  @VisibleForTesting
+  public void setQueueManager(CapacitySchedulerQueueManager qm) {
+    this.queueManager = qm;
   }
 }

@@ -69,7 +69,7 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Functional tests for QuorumJournalManager.

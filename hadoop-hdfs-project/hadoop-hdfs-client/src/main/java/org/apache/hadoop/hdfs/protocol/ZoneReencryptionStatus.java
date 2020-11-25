@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 
 /**

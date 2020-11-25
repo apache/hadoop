@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.fedbalance;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -89,6 +89,8 @@ public class DistCpProcedure extends BalanceProcedure {
   private boolean forceCloseOpenFiles;
   /* Disable write by setting the mount point readonly. */
   private boolean useMountReadOnly;
+  /* The threshold of diff entries. */
+  private int diffThreshold;
 
   private FsPermission fPerm; // the permission of the src.
   private AclStatus acl; // the acl of the src.
@@ -134,6 +136,7 @@ public class DistCpProcedure extends BalanceProcedure {
     this.bandWidth = context.getBandwidthLimit();
     this.forceCloseOpenFiles = context.getForceCloseOpenFiles();
     this.useMountReadOnly = context.getUseMountReadOnly();
+    this.diffThreshold = context.getDiffThreshold();
     srcFs = (DistributedFileSystem) context.getSrc().getFileSystem(conf);
     dstFs = (DistributedFileSystem) context.getDst().getFileSystem(conf);
   }
@@ -227,12 +230,8 @@ public class DistCpProcedure extends BalanceProcedure {
       } else {
         throw new RetryException(); // wait job complete.
       }
-    } else if (!verifyDiff()) {
-      if (!verifyOpenFiles() || forceCloseOpenFiles) {
-        updateStage(Stage.DISABLE_WRITE);
-      } else {
-        throw new RetryException();
-      }
+    } else if (diffDistCpStageDone()) {
+      updateStage(Stage.DISABLE_WRITE);
     } else {
       submitDiffDistCp();
     }
@@ -372,14 +371,38 @@ public class DistCpProcedure extends BalanceProcedure {
   }
 
   /**
-   * Verify whether the src has changed since CURRENT_SNAPSHOT_NAME snapshot.
+   * Check whether the conditions are satisfied for moving to the next stage.
+   * If the diff entries size is no greater than the threshold and the open
+   * files could be force closed or there is no open file, then moving to the
+   * next stage.
    *
-   * @return true if the src has changed.
+   * @return true if moving to the next stage. false if the conditions are not
+   * satisfied.
+   * @throws RetryException if the conditions are not satisfied and the diff
+   * size is under the given threshold scope.
    */
-  private boolean verifyDiff() throws IOException {
+  @VisibleForTesting
+  boolean diffDistCpStageDone() throws IOException, RetryException {
+    int diffSize = getDiffSize();
+    if (diffSize <= diffThreshold) {
+      if (forceCloseOpenFiles || !verifyOpenFiles()) {
+        return true;
+      } else {
+        throw new RetryException();
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Get number of the diff entries.
+   *
+   * @return number of the diff entries.
+   */
+  private int getDiffSize() throws IOException {
     SnapshotDiffReport diffReport =
         srcFs.getSnapshotDiffReport(src, CURRENT_SNAPSHOT_NAME, "");
-    return diffReport.getDiffList().size() > 0;
+    return diffReport.getDiffList().size();
   }
 
   /**

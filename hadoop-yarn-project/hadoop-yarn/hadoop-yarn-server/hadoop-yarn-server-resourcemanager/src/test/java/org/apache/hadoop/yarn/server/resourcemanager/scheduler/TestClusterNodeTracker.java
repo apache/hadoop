@@ -24,11 +24,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -40,10 +42,17 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestClusterNodeTracker {
   private ClusterNodeTracker<FSSchedulerNode> nodeTracker;
+  private ClusterMetrics metrics;
 
   @Before
   public void setup() {
+    metrics = ClusterMetrics.getMetrics();
     nodeTracker = new ClusterNodeTracker<>();
+  }
+
+  @After
+  public void teardown() {
+    ClusterMetrics.destroy();
   }
 
   private void addEight4x4Nodes() {
@@ -63,6 +72,15 @@ public class TestClusterNodeTracker {
 
     assertEquals("Incorrect number of nodes in each rack",
         4, nodeTracker.nodeCount("rack0"));
+  }
+
+  @Test
+  public void testIncrCapability() {
+    addEight4x4Nodes();
+    assertEquals("Cluster Capability Memory incorrect",
+        metrics.getCapabilityMB(), (4096 * 8));
+    assertEquals("Cluster Capability Vcores incorrect",
+        metrics.getCapabilityVirtualCores(), 4 * 8);
   }
 
   @Test

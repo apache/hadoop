@@ -48,7 +48,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -121,9 +121,9 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -171,7 +171,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             volume.getDfsUsed(),
             volume.getAvailable(),
             volume.getBlockPoolUsed(bpid),
-            volume.getNonDfsUsed());
+            volume.getNonDfsUsed(),
+            volume.getMount()
+        );
         reports.add(sr);
       } catch (ClosedChannelException e) {
         continue;
@@ -188,6 +190,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
       return r != null ? (FsVolumeImpl) r.getVolume() : null;
     }
+  }
+
+  MountVolumeMap getMountVolumeMap() {
+    return volumes.getMountVolumeMap();
   }
 
   @Override // FsDatasetSpi
@@ -365,7 +371,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             RoundRobinVolumeChoosingPolicy.class,
             VolumeChoosingPolicy.class), conf);
     volumes = new FsVolumeList(volumeFailureInfos, datanode.getBlockScanner(),
-        blockChooserImpl);
+        blockChooserImpl, conf);
     asyncDiskService = new FsDatasetAsyncDiskService(datanode, this);
     asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode, conf);
     deletingBlock = new HashMap<String, Set<Long>>();
@@ -464,12 +470,27 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         LOG.error(errorMsg);
         throw new IOException(errorMsg);
       }
+      // Check if there is same storage type on the mount.
+      // Only useful when same disk tiering is turned on.
+      FsVolumeImpl volumeImpl = (FsVolumeImpl) ref.getVolume();
+      FsVolumeReference checkRef = volumes
+          .getMountVolumeMap()
+          .getVolumeRefByMountAndStorageType(
+              volumeImpl.getMount(), volumeImpl.getStorageType());
+      if (checkRef != null) {
+        final String errorMsg = String.format(
+            "Storage type %s already exists on same mount: %s.",
+            volumeImpl.getStorageType(), volumeImpl.getMount());
+        checkRef.close();
+        LOG.error(errorMsg);
+        throw new IOException(errorMsg);
+      }
       volumeMap.mergeAll(replicaMap);
       storageMap.put(sd.getStorageUuid(),
           new DatanodeStorage(sd.getStorageUuid(),
               DatanodeStorage.State.NORMAL,
               storageType));
-      asyncDiskService.addVolume((FsVolumeImpl) ref.getVolume());
+      asyncDiskService.addVolume(volumeImpl);
       volumes.addVolume(ref);
     }
   }
@@ -1957,28 +1978,32 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           continue;
         }
         String volStorageID = b.getVolume().getStorageID();
-        if (!builders.containsKey(volStorageID)) {
+        switch(b.getState()) {
+        case FINALIZED:
+        case RBW:
+        case RWR:
+          break;
+        case RUR:
+          // use the original replica.
+          b = b.getOriginalReplica();
+          break;
+        case TEMPORARY:
+          continue;
+        default:
+          assert false : "Illegal ReplicaInfo state.";
+          continue;
+        }
+        BlockListAsLongs.Builder storageBuilder = builders.get(volStorageID);
+        // a storage in the process of failing will not be in the volumes list
+        // but will be in the replica map.
+        if (storageBuilder != null) {
+          storageBuilder.add(b);
+        } else {
           if (!missingVolumesReported.contains(volStorageID)) {
             LOG.warn("Storage volume: " + volStorageID + " missing for the"
                 + " replica block: " + b + ". Probably being removed!");
             missingVolumesReported.add(volStorageID);
           }
-          continue;
-        }
-        switch(b.getState()) {
-        case FINALIZED:
-        case RBW:
-        case RWR:
-          builders.get(volStorageID).add(b);
-          break;
-        case RUR:
-          ReplicaInfo orig = b.getOriginalReplica();
-          builders.get(volStorageID).add(orig);
-          break;
-        case TEMPORARY:
-          break;
-        default:
-          assert false : "Illegal ReplicaInfo state.";
         }
       }
     }

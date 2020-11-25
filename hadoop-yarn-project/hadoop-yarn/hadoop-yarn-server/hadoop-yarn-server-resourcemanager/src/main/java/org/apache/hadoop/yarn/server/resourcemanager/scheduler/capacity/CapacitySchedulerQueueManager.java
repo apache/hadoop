@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerQueueMan
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  *

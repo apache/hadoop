@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;

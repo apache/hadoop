@@ -30,7 +30,7 @@ function personality_globals
   #shellcheck disable=SC2034
   PATCH_BRANCH_DEFAULT=trunk
   #shellcheck disable=SC2034
-  PATCH_NAMING_RULE="https://wiki.apache.org/hadoop/HowToContribute"
+  PATCH_NAMING_RULE="https://cwiki.apache.org/confluence/display/HADOOP/How+To+Contribute"
   #shellcheck disable=SC2034
   JIRA_ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
   #shellcheck disable=SC2034

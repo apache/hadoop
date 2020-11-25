@@ -30,8 +30,8 @@ import java.net.InetSocketAddress;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.List;
 
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
+import org.apache.hadoop.thirdparty.com.google.common.io.ByteArrayDataOutput;
+import org.apache.hadoop.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -74,8 +74,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.PerformanceAdvisory;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

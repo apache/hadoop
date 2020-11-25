@@ -314,6 +314,17 @@
 </property>
 
   <property>
+    <name>dfs.namenode.redundancy.considerLoadByStorageType</name>
+    <value>false</value>
+    <description>
+      Decide if chooseTarget considers the target's load with respect to the
+      storage type. Typically to be used when datanodes contain homogenous
+      storage types. Irrelevent if dfs.namenode.redundancy.considerLoad is
+      false.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.redundancy.considerLoad.factor</name>
     <value>2.0</value>
     <description>The factor by which a node's load can exceed the average
@@ -1436,13 +1447,13 @@
 
 <property>
   <name>dfs.image.transfer.bandwidthPerSec</name>
-  <value>0</value>
+  <value>52428800</value>
   <description>
         Maximum bandwidth used for regular image transfers (instead of
         bootstrapping the standby namenode), in bytes per second.
         This can help keep normal namenode operations responsive during
         checkpointing.
-        A default value of 0 indicates that throttling is disabled.
+        A default value is 50mb per second.
         The maximum bandwidth used for bootstrapping standby namenode is
         configured with dfs.image.transfer-bootstrap-standby.bandwidthPerSec.
         Support multiple size unit suffix(case insensitive), as described
@@ -1601,6 +1612,15 @@
     If this is true, scanner will check the access time of block file to avoid
     scanning blocks accessed during recent scan peroid, reducing disk IO.
     This feature will not work if the DataNode volume has noatime mount option.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.scanner.volume.join.timeout.ms</name>
+  <value>5000</value>
+  <description>
+    The amount of time in milliseconds that the BlockScanner times out waiting
+    for the VolumeScanner thread to join during a shutdown call.
   </description>
 </property>
 
@@ -3296,7 +3316,7 @@
 
 <property>
   <name>dfs.datanode.block.id.layout.upgrade.threads</name>
-  <value>12</value>
+  <value>6</value>
   <description>The number of threads to use when creating hard links from
     current to previous blocks during upgrade of a DataNode to block ID-based
     block layout (see HDFS-6482 for details on the layout).</description>
@@ -4439,6 +4459,14 @@
 </property>
 
 <property>
+  <name>dfs.data.transfer.max.packet.size</name>
+  <value>16777216</value>
+  <description>
+    The max size of any single packet.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.balance.max.concurrent.moves</name>
   <value>100</value>
   <description>
@@ -4999,7 +5027,7 @@
   <name>dfs.namenode.replication.max-streams</name>
   <value>2</value>
   <description>
-    Hard limit for the number of highest-priority replication streams.
+    Hard limit for the number of replication streams other than those with highest-priority.
   </description>
 </property>
 
@@ -5992,4 +6020,29 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.datanode.same-disk-tiering.enabled</name>
+    <value>false</value>
+    <description>
+        HDFS-15548 to allow DISK/ARCHIVE to be
+        configured on the same disk mount to manage disk IO.
+        When this is enabled, datanode will control the capacity
+        of DISK/ARCHIVE based on reserve-for-archive.percentage.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.reserve-for-archive.default.percentage</name>
+    <value>0.0</value>
+    <description>
+        Default disk capacity ratio of ARCHIVE volume,
+        expected the value to be between 0 to 1.
+        This will be applied when DISK/ARCHIVE volumes are configured
+        on the same mount, which is detected by datanode.
+        Beware that capacity usage might be >100% if there are already
+        data blocks exist and the configured ratio is small, which will
+        prevent the volume from taking new blocks
+        until capacity is balanced out.
+    </description>
+  </property>
 </configuration>

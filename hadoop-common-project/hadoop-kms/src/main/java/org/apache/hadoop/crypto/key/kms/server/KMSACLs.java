@@ -29,13 +29,14 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Provides access to the <code>AccessControlList</code>s used by KMS,
@@ -68,6 +69,10 @@ public class KMSACLs implements Runnable, KeyACLs {
   public static final String ACL_DEFAULT = AccessControlList.WILDCARD_ACL_VALUE;
 
   public static final int RELOADER_SLEEP_MILLIS = 1000;
+
+  // Allow both ROLLOVER and DELETE to invalidate cache.
+  public static final EnumSet<KMSACLs.Type> INVALIDATE_CACHE_TYPES =
+      EnumSet.of(KMSACLs.Type.ROLLOVER, KMSACLs.Type.DELETE);
 
   private volatile Map<Type, AccessControlList> acls;
   private volatile Map<Type, AccessControlList> blacklistedAcls;
@@ -269,6 +274,27 @@ public class KMSACLs implements Runnable, KeyACLs {
       throw new AuthorizationException(String.format(
           (key != null) ? UNAUTHORIZED_MSG_WITH_KEY
                         : UNAUTHORIZED_MSG_WITHOUT_KEY,
+          ugi.getShortUserName(), operation, key));
+    }
+  }
+
+  public void assertAccess(EnumSet<Type> aclTypes,
+      UserGroupInformation ugi, KMSOp operation, String key)
+      throws AccessControlException {
+    boolean accessAllowed = false;
+    for (KMSACLs.Type type : aclTypes) {
+      if (KMSWebApp.getACLs().hasAccess(type, ugi)){
+        accessAllowed = true;
+        break;
+      }
+    }
+
+    if (!accessAllowed) {
+      KMSWebApp.getUnauthorizedCallsMeter().mark();
+      KMSWebApp.getKMSAudit().unauthorized(ugi, operation, key);
+      throw new AuthorizationException(String.format(
+          (key != null) ? UNAUTHORIZED_MSG_WITH_KEY
+              : UNAUTHORIZED_MSG_WITHOUT_KEY,
           ugi.getShortUserName(), operation, key));
     }
   }

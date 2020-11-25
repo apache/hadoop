@@ -29,7 +29,7 @@ import javax.crypto.ShortBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.NativeCodeLoader;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.PerformanceAdvisory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,10 +45,11 @@ public final class OpensslCipher {
       LoggerFactory.getLogger(OpensslCipher.class.getName());
   public static final int ENCRYPT_MODE = 1;
   public static final int DECRYPT_MODE = 0;
-  
-  /** Currently only support AES/CTR/NoPadding. */
+
+  /** Currently only support AES/CTR/NoPadding and SM4/CTR/NoPadding. */
   private enum AlgMode {
-    AES_CTR;
+    AES_CTR,
+    SM4_CTR;
     
     static int get(String algorithm, String mode) 
         throws NoSuchAlgorithmException {
@@ -76,6 +77,7 @@ public final class OpensslCipher {
   private long context = 0;
   private final int alg;
   private final int padding;
+  private long engine;
   
   private static final String loadingFailureReason;
 
@@ -100,10 +102,16 @@ public final class OpensslCipher {
     return loadingFailureReason;
   }
   
-  private OpensslCipher(long context, int alg, int padding) {
+  private OpensslCipher(long context, int alg, int padding, long engine) {
     this.context = context;
     this.alg = alg;
     this.padding = padding;
+    this.engine = engine;
+  }
+
+  public static OpensslCipher getInstance(String transformation)
+      throws NoSuchAlgorithmException, NoSuchPaddingException {
+    return getInstance(transformation, null);
   }
   
   /**
@@ -112,6 +120,8 @@ public final class OpensslCipher {
    * 
    * @param transformation the name of the transformation, e.g., 
    * AES/CTR/NoPadding.
+   * @param engineId the openssl engine to use.if not set,
+   * defalut engine will be used.
    * @return OpensslCipher an <code>OpensslCipher</code> object
    * @throws NoSuchAlgorithmException if <code>transformation</code> is null, 
    * empty, in an invalid format, or if Openssl doesn't implement the 
@@ -119,13 +129,15 @@ public final class OpensslCipher {
    * @throws NoSuchPaddingException if <code>transformation</code> contains 
    * a padding scheme that is not available.
    */
-  public static final OpensslCipher getInstance(String transformation) 
+  public static OpensslCipher getInstance(
+      String transformation, String engineId)
       throws NoSuchAlgorithmException, NoSuchPaddingException {
     Transform transform = tokenizeTransformation(transformation);
     int algMode = AlgMode.get(transform.alg, transform.mode);
     int padding = Padding.get(transform.padding);
     long context = initContext(algMode, padding);
-    return new OpensslCipher(context, algMode, padding);
+    long engine = (engineId != null) ? initEngine(engineId) : 0;
+    return new OpensslCipher(context, algMode, padding, engine);
   }
   
   /** Nested class for algorithm, mode and padding. */
@@ -175,7 +187,7 @@ public final class OpensslCipher {
    * @param iv crypto iv
    */
   public void init(int mode, byte[] key, byte[] iv) {
-    context = init(context, mode, alg, padding, key, iv);
+    context = init(context, mode, alg, padding, key, iv, engine);
   }
   
   /**
@@ -255,8 +267,9 @@ public final class OpensslCipher {
   /** Forcibly clean the context. */
   public void clean() {
     if (context != 0) {
-      clean(context);
+      clean(context, engine);
       context = 0;
+      engine = 0;
     }
   }
 
@@ -273,17 +286,19 @@ public final class OpensslCipher {
   private native static void initIDs();
   
   private native static long initContext(int alg, int padding);
+
+  private native static long initEngine(String engineId);
   
   private native long init(long context, int mode, int alg, int padding, 
-      byte[] key, byte[] iv);
-  
+      byte[] key, byte[] iv, long engineNum);
+
   private native int update(long context, ByteBuffer input, int inputOffset, 
       int inputLength, ByteBuffer output, int outputOffset, int maxOutputLength);
   
   private native int doFinal(long context, ByteBuffer output, int offset, 
       int maxOutputLength);
   
-  private native void clean(long context);
-  
+  private native void clean(long ctx, long engineNum);
+
   public native static String getLibraryName();
 }

@@ -87,7 +87,7 @@ public abstract class StripedBlockChecksumReconstructor
 
         // step3: calculate checksum
         checksumDataLen += checksumWithTargetOutput(
-            targetBuffer.array(), toReconstructLen);
+            getBufferArray(targetBuffer), toReconstructLen);
 
         updatePositionInBlock(toReconstructLen);
         requestedLen -= toReconstructLen;
@@ -140,7 +140,7 @@ public abstract class StripedBlockChecksumReconstructor
     // case-2) length of data bytes which is less than bytesPerCRC
     if (requestedLen <= toReconstructLen) {
       int remainingLen = Math.toIntExact(requestedLen);
-      outputData = Arrays.copyOf(targetBuffer.array(), remainingLen);
+      outputData = Arrays.copyOf(outputData, remainingLen);
 
       int partialLength = remainingLen % getChecksum().getBytesPerChecksum();
 
@@ -206,5 +206,20 @@ public abstract class StripedBlockChecksumReconstructor
 
   public long getChecksumDataLen() {
     return checksumDataLen;
+  }
+
+  /**
+   * Gets an array corresponding the buffer.
+   * @param buffer the input buffer.
+   * @return the array with content of the buffer.
+   */
+  private static byte[] getBufferArray(ByteBuffer buffer) {
+    byte[] buff = new byte[buffer.remaining()];
+    if (buffer.hasArray()) {
+      buff = buffer.array();
+    } else {
+      buffer.slice().get(buff);
+    }
+    return buff;
   }
 }

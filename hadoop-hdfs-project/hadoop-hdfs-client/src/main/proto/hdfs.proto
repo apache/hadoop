@@ -158,6 +158,7 @@ message StorageReportProto {
   optional uint64 blockPoolUsed = 6 [ default = 0 ];
   optional DatanodeStorageProto storage = 7; // supersedes StorageUuid
   optional uint64 nonDfsUsed = 8;
+  optional string mount = 9;
 }
 
 /**
@@ -296,6 +297,7 @@ message DataEncryptionKeyProto {
 enum CipherSuiteProto {
     UNKNOWN = 1;
     AES_CTR_NOPADDING = 2;
+    SM4_CTR_NOPADDING = 3;
 }
 
 /**

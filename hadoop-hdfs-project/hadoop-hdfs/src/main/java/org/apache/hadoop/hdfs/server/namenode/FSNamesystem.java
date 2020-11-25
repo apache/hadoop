@@ -108,7 +108,7 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotDeletionGc;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
@@ -339,12 +339,12 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -388,6 +388,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "dfs.namenode.snapshot.trashroot.enabled";
   public static final boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT
       = false;
+  private static final FsPermission SHARED_TRASH_PERMISSION =
+      new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
 
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
@@ -3319,10 +3321,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw e;
     }
     getEditLog().logSync();
+    logAuditEvent(ret, operationName, src);
     if (toRemovedBlocks != null) {
       removeBlocks(toRemovedBlocks); // Incremental deletion of blocks
     }
-    logAuditEvent(true, operationName, src);
     return ret;
   }
 
@@ -8522,6 +8524,32 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw e;
     }
     logAuditEvent(true, operationName, src);
+  }
+
+  /**
+   * Check if snapshot roots are created for all existing snapshottable
+   * directories. Create them if not.
+   */
+  void checkAndProvisionSnapshotTrashRoots() throws IOException {
+    SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
+    if (dirStatusList == null) {
+      return;
+    }
+    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+      String currDir = dirStatus.getFullPath().toString();
+      if (!currDir.endsWith(Path.SEPARATOR)) {
+        currDir += Path.SEPARATOR;
+      }
+      String trashPath = currDir + FileSystem.TRASH_PREFIX;
+      HdfsFileStatus fileStatus = getFileInfo(trashPath, false, false, false);
+      if (fileStatus == null) {
+        LOG.info("Trash doesn't exist for snapshottable directory {}. "
+            + "Creating trash at {}", currDir, trashPath);
+        PermissionStatus permissionStatus = new PermissionStatus(getRemoteUser()
+            .getShortUserName(), null, SHARED_TRASH_PERMISSION);
+        mkdirs(trashPath, permissionStatus, false);
+      }
+    }
   }
 
   private Supplier<String> getLockReportInfoSupplier(String src) {

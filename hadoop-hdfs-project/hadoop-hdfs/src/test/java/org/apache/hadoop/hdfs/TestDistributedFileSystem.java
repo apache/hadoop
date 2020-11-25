@@ -20,9 +20,11 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -67,6 +69,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem.Statistics.StatisticsData;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
@@ -77,6 +80,7 @@ import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.fs.PathOperationException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.fs.StorageType;
@@ -1617,7 +1621,7 @@ public class TestDistributedFileSystem {
       cluster.waitActive();
       DistributedFileSystem dfs = cluster.getFileSystem();
       FsServerDefaults fsServerDefaults = dfs.getServerDefaults();
-      Assert.assertNotNull(fsServerDefaults);
+      assertNotNull(fsServerDefaults);
     } finally {
       cluster.shutdown();
     }
@@ -2155,8 +2159,9 @@ public class TestDistributedFileSystem {
     try {
       DistributedFileSystem dfs = cluster.getFileSystem();
       Path testDir = new Path("/ssgtr/test1/");
+      Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
       Path file0path = new Path(testDir, "file-0");
-      dfs.create(file0path);
+      dfs.create(file0path).close();
 
       Path trBeforeAllowSnapshot = dfs.getTrashRoot(file0path);
       String trBeforeAllowSnapshotStr = trBeforeAllowSnapshot.toUri().getPath();
@@ -2165,6 +2170,15 @@ public class TestDistributedFileSystem {
       assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
 
       dfs.allowSnapshot(testDir);
+
+      // Provision trash root
+      // Note: DFS#allowSnapshot doesn't auto create trash root.
+      //  Only HdfsAdmin#allowSnapshot creates trash root when
+      //  dfs.namenode.snapshot.trashroot.enabled is set to true on NameNode.
+      dfs.provisionSnapshotTrash(testDir, TRASH_PERMISSION);
+      // Expect trash root to be created with permission 777 and sticky bit
+      FileStatus trashRootFileStatus = dfs.getFileStatus(testDirTrashRoot);
+      assertEquals(TRASH_PERMISSION, trashRootFileStatus.getPermission());
 
       Path trAfterAllowSnapshot = dfs.getTrashRoot(file0path);
       String trAfterAllowSnapshotStr = trAfterAllowSnapshot.toUri().getPath();
@@ -2182,6 +2196,7 @@ public class TestDistributedFileSystem {
       assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
 
       // Cleanup
+      // DFS#disallowSnapshot would remove empty trash root without throwing.
       dfs.disallowSnapshot(testDir);
       dfs.delete(testDir, true);
       dfs.delete(test2Dir, true);
@@ -2469,7 +2484,8 @@ public class TestDistributedFileSystem {
       dfs.allowSnapshot(testDir);
       // Create trash root manually
       Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
-      dfs.mkdirs(testDirTrashRoot);
+      Path dirInsideTrash = new Path(testDirTrashRoot, "user1");
+      dfs.mkdirs(dirInsideTrash);
       // Try disallowing snapshot, should throw
       LambdaTestUtils.intercept(IOException.class,
           () -> dfs.disallowSnapshot(testDir));
@@ -2477,6 +2493,59 @@ public class TestDistributedFileSystem {
       dfs.delete(testDirTrashRoot, true);
       dfs.disallowSnapshot(testDir);
       // Cleanup
+      dfs.delete(testDir, true);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testCopyBetweenFsEqualPath() throws Exception {
+    Configuration conf = getTestConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path filePath = new Path("/dir/file");
+      dfs.create(filePath).close();
+      FileStatus fstatus = dfs.getFileStatus(filePath);
+      LambdaTestUtils.intercept(PathOperationException.class,
+          () -> FileUtil.copy(dfs, fstatus, dfs, filePath, false, true, conf));
+    }
+  }
+
+  @Test
+  public void testNameNodeCreateSnapshotTrashRootOnStartup()
+      throws Exception {
+    // Start NN with dfs.namenode.snapshot.trashroot.enabled=false
+    Configuration conf = getTestConfiguration();
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", false);
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final Path testDir = new Path("/disallowss/test2/");
+      final Path file0path = new Path(testDir, "file-0");
+      dfs.create(file0path).close();
+      dfs.allowSnapshot(testDir);
+      // .Trash won't be created right now since snapshot trash is disabled
+      final Path trashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
+      assertFalse(dfs.exists(trashRoot));
+      // Set dfs.namenode.snapshot.trashroot.enabled=true
+      conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
+      cluster.setNameNodeConf(0, conf);
+      cluster.restartNameNode(0);
+      // Check .Trash existence, should be created now
+      assertTrue(dfs.exists(trashRoot));
+      // Check permission
+      FileStatus trashRootStatus = dfs.getFileStatus(trashRoot);
+      assertNotNull(trashRootStatus);
+      assertEquals(TRASH_PERMISSION, trashRootStatus.getPermission());
+
+      // Cleanup
+      dfs.delete(trashRoot, true);
+      dfs.disallowSnapshot(testDir);
       dfs.delete(testDir, true);
     } finally {
       if (cluster != null) {

@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 

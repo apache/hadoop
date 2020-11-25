@@ -18,10 +18,10 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.UnmodifiableIterator;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.UnmodifiableIterator;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

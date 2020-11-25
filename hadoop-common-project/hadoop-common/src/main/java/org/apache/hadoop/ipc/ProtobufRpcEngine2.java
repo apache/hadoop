@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.*;
 import org.apache.hadoop.thirdparty.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -350,6 +350,11 @@ public class ProtobufRpcEngine2 implements RpcEngine {
     return new Server(protocol, protocolImpl, conf, bindAddress, port,
         numHandlers, numReaders, queueSizePerHandler, verbose, secretManager,
         portRangeConfig, alignmentContext);
+  }
+
+  @VisibleForTesting
+  public static void clearClientCache() {
+    CLIENTS.clearCache();
   }
 
   public static class Server extends RPC.Server {

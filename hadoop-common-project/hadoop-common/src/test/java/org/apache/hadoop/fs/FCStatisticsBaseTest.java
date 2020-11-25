@@ -38,7 +38,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.function.Supplier;
-import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

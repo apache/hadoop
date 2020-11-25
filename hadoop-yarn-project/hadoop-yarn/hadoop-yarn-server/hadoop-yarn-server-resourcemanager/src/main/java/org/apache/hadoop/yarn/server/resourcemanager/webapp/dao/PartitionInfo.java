@@ -16,18 +16,31 @@
  * limitations under the License.
  */
 
+package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-#ifndef ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
-#define ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
-#include "org_apache_hadoop.h"
+/**
+ * XML element uses to represent partitionInfo.
+ */
+@XmlRootElement(name = "partitionInfo")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class PartitionInfo {
 
-#ifdef UNIX
-#include <dlfcn.h>
-#endif
+  @XmlElement(name = "resourceAvailable")
+  private ResourceInfo resourceAvailable;
 
-#include <jni.h>
-#include <snappy-c.h>
-#include <stddef.h>
+  public PartitionInfo() {
+  }
 
-#endif //ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
+  public PartitionInfo(ResourceInfo resourceAvailable) {
+    this.resourceAvailable = resourceAvailable;
+  }
+
+  public ResourceInfo getResourceAvailable() {
+    return resourceAvailable;
+  }
+}

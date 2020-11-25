@@ -159,6 +159,7 @@ public class TestAbsoluteResourceWithAutoQueue
 
       csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
           ResourceScheduler.class);
+      csConf.setOverrideWithQueueMappings(true);
 
       mockRM = new MockRM(csConf);
       cs = (CapacityScheduler) mockRM.getResourceScheduler();
