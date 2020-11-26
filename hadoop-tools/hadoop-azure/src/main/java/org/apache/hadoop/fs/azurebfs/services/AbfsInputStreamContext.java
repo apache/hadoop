@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Class to hold extra input stream configs.
  */
@@ -28,6 +30,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   private int readAheadQueueDepth;
 
   private boolean tolerateOobAppends;
+
+  private int readAheadRange;
 
   private AbfsInputStreamStatistics streamStatistics;
 
@@ -54,6 +58,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withReadAheadRange(
+          final int readAheadRange) {
+    this.readAheadRange = readAheadRange;
+    return this;
+  }
+
   public AbfsInputStreamContext withStreamStatistics(
       final AbfsInputStreamStatistics streamStatistics) {
     this.streamStatistics = streamStatistics;
@@ -62,6 +72,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public AbfsInputStreamContext build() {
     // Validation of parameters to be done here.
+    Preconditions.checkArgument(readAheadRange > 0,
+            "Read ahead range should be greater than 0");
     return this;
   }
 
@@ -75,6 +87,10 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isTolerateOobAppends() {
     return tolerateOobAppends;
+  }
+
+  public int getReadAheadRange() {
+    return readAheadRange;
   }
 
   public AbfsInputStreamStatistics getStreamStatistics() {
