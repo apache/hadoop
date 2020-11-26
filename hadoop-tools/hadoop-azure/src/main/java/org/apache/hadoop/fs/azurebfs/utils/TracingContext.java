@@ -114,6 +114,7 @@ public class TracingContext {
 
   public String toString() {
     String header = clientRequestID; //case 0, no IDs for correlation
+    System.out.println("---TC--- " + format);
     switch (format) {
     case ALL_ID_FORMAT: header =
         clientCorrelationID + ":" + header + ":" + fileSystemID + ":" + primaryRequestID
@@ -122,7 +123,7 @@ public class TracingContext {
     case TWO_ID_FORMAT: header = clientCorrelationID + ":" + header;
     }
     if (listener != null) {
-      listener.callTracingHeaderValidator(header);
+      listener.callTracingHeaderValidator(header, format);
     }
     return header;
   }

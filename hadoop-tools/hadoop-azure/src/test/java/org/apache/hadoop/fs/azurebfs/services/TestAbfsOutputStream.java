@@ -471,6 +471,8 @@ public final class TestAbfsOutputStream {
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
             any(TracingContext.class))).thenReturn(op);
 
+    System.out.println(op + "op++");
+
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
             populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
                     false), tracingContext);

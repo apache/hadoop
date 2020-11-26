@@ -12,11 +12,14 @@ public class TracingHeaderValidator implements Listener {
   String operation;
   int retryNum;
   String GUID_PATTERN = "[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}";
+  private TracingContextFormat format;
   // client-req-id as per docs: ^[{(]?[0-9a-f]{8}[-]?([0-9a-f]{4}[-]?)
   // {3}[0-9a-f]{12}[)}]?$
 
   @Override
-  public void callTracingHeaderValidator(String tracingContextHeader) {
+  public void callTracingHeaderValidator(String tracingContextHeader,
+      TracingContextFormat format) {
+    this.format = format;
     validateTracingHeader(tracingContextHeader);
   }
 
@@ -50,6 +53,8 @@ public class TracingHeaderValidator implements Listener {
   private void validateTracingHeader(String tracingContextHeader) {
     String[] id_list = tracingContextHeader.split(":");
     validateBasicFormat(id_list);
+    if (format != TracingContextFormat.ALL_ID_FORMAT)
+      return;
     if (!primaryRequestID.isEmpty() && !id_list[3].isEmpty()){
       Assertions.assertThat(id_list[3])
           .describedAs("PrimaryReqID should be common for these requests")
@@ -63,8 +68,20 @@ public class TracingHeaderValidator implements Listener {
   }
 
   private void validateBasicFormat(String[] id_list) {
-    Assertions.assertThat(id_list)
-        .describedAs("header should have 7 elements").hasSize(7);
+    if (format == TracingContextFormat.ALL_ID_FORMAT) {
+      Assertions.assertThat(id_list)
+          .describedAs("header should have 7 elements").hasSize(7);
+    } else if (format == TracingContextFormat.TWO_ID_FORMAT) {
+      Assertions.assertThat(id_list)
+          .describedAs("header should have 2 elements").hasSize(2);
+    } else {
+      Assertions.assertThat(id_list)
+          .describedAs("header should have 1 element").hasSize(1);
+      Assertions.assertThat(id_list[0])
+          .describedAs("Client request ID is a guid")
+          .matches(GUID_PATTERN);
+      return;
+    }
 
     if(clientCorrelationID.matches("[a-zA-Z0-9-]*")) {
       Assertions.assertThat(id_list[0]).describedAs("Correlation ID should match config")
@@ -77,6 +94,10 @@ public class TracingHeaderValidator implements Listener {
     Assertions.assertThat(id_list[1])
         .describedAs("Client request ID is a guid")
         .matches(GUID_PATTERN);
+
+    if (format != TracingContextFormat.ALL_ID_FORMAT)
+      return;
+
     Assertions.assertThat(id_list[2]).describedAs("Filesystem ID incorrect")
         .isEqualTo(fileSystemID);
     if (needsPrimaryRequestID && !operation.equals(HdfsOperationConstants.READ)) {

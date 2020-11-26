@@ -151,7 +151,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return connection.getHeaderField(httpHeader);
   }
 
-  @com.google.common.annotations.VisibleForTesting
+  @org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting
   public String getRequestHeader(String httpHeader) {
     return connection.getRequestProperties().get(httpHeader).toString();
   }

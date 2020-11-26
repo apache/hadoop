@@ -478,6 +478,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
       AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose, cachedSasToken.get(),
           new TracingContext(tracingContext));
+      System.out.println(op + "--");
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
