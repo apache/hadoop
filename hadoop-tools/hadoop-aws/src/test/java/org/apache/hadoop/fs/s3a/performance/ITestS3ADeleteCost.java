@@ -267,6 +267,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
 
     verifyMetrics(() -> {
       file(new Path(srcDir, "source.txt"));
+      LOG.info("Metrics: {}\n{}", getMetricSummary(), getFileSystem());
       return "after touch(fs, srcFilePath) " + getMetricSummary();
     },
         with(DIRECTORIES_CREATED, 0),
