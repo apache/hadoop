@@ -138,6 +138,12 @@
     <dependency>
       <groupId>org.apache.ranger</groupId>
       <artifactId>ranger-raz-hook-s3</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-bundle</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 </project>
