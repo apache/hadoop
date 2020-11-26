@@ -257,7 +257,7 @@
               <execution>
                 <phase>package</phase>
                 <goals>
-                  <goal>javadoc-no-fork</goal>
+                  <goal>javadoc</goal>
                 </goals>
               </execution>
             </executions>
