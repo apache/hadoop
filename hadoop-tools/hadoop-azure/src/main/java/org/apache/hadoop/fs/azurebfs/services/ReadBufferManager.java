@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -36,12 +37,14 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
  */
 final class ReadBufferManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReadBufferManager.class);
+  private static final int ONE_KB = 1024;
+  private static final int ONE_MB = ONE_KB * ONE_KB;
 
   private static final int NUM_BUFFERS = 16;
-  private static final int BLOCK_SIZE = 4 * 1024 * 1024;
   private static final int NUM_THREADS = 8;
   private static final int DEFAULT_THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
 
+  private static int blockSize = 4 * ONE_MB;
   private static int thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;    // array of byte[] buffers, to hold the data that is read
@@ -50,21 +53,37 @@ final class ReadBufferManager {
   private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
   private LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
   private LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
-  private static final ReadBufferManager BUFFER_MANAGER; // singleton, initialized in static initialization block
-
-  static {
-    BUFFER_MANAGER = new ReadBufferManager();
-    BUFFER_MANAGER.init();
-  }
+  private static ReadBufferManager bufferManager; // singleton, initialized in static initialization block
+  private static final ReentrantLock LOCK = new ReentrantLock();
 
   static ReadBufferManager getBufferManager() {
-    return BUFFER_MANAGER;
+    if (bufferManager == null) {
+      LOCK.lock();
+      try {
+        if (bufferManager == null) {
+          bufferManager = new ReadBufferManager();
+          bufferManager.init();
+        }
+      } finally {
+        LOCK.unlock();
+      }
+    }
+    return bufferManager;
+  }
+
+  static void setReadBufferManagerConfigs(int readAheadBlockSize) {
+    if (bufferManager == null) {
+      LOGGER.debug(
+          "ReadBufferManager not initialized yet. Overriding readAheadBlockSize as {}",
+          readAheadBlockSize);
+      blockSize = readAheadBlockSize;
+    }
   }
 
   private void init() {
     buffers = new byte[NUM_BUFFERS][];
     for (int i = 0; i < NUM_BUFFERS; i++) {
-      buffers[i] = new byte[BLOCK_SIZE];  // same buffers are reused. The byte array never goes back to GC
+      buffers[i] = new byte[blockSize];  // same buffers are reused. The byte array never goes back to GC
       freeList.add(i);
     }
     for (int i = 0; i < NUM_THREADS; i++) {
@@ -124,10 +143,10 @@ final class ReadBufferManager {
       buffer.setBufferindex(bufferIndex);
       readAheadQueue.add(buffer);
       notifyAll();
-    }
-    if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("Done q-ing readAhead for file {} offset {} buffer idx {}",
-          stream.getPath(), requestedOffset, buffer.getBufferindex());
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("Done q-ing readAhead for file {} offset {} buffer idx {}",
+            stream.getPath(), requestedOffset, buffer.getBufferindex());
+      }
     }
   }
 
@@ -272,6 +291,7 @@ final class ReadBufferManager {
       return evict(nodeToEvict);
     }
 
+    LOGGER.trace("No buffer eligible for eviction");
     // nothing can be evicted
     return false;
   }
@@ -481,6 +501,67 @@ final class ReadBufferManager {
   @VisibleForTesting
   void callTryEvict() {
     tryEvict();
+  }
+
+  /**
+   * Test method that can clean up the current state of readAhead buffers and
+   * the lists. Will also trigger a fresh init.
+   */
+  @VisibleForTesting
+  void testResetReadBufferManager() {
+    synchronized (this) {
+      ArrayList<ReadBuffer> completedBuffers = new ArrayList<>();
+      for (ReadBuffer buf : completedReadList) {
+        if (buf != null) {
+          completedBuffers.add(buf);
+        }
+      }
+
+      for (ReadBuffer buf : completedBuffers) {
+        evict(buf);
+      }
+
+      readAheadQueue.clear();
+      inProgressList.clear();
+      completedReadList.clear();
+      freeList.clear();
+      for (int i = 0; i < NUM_BUFFERS; i++) {
+        buffers[i] = null;
+      }
+      buffers = null;
+      resetBufferManager();
+    }
+  }
+
+  /**
+   * Reset buffer manager to null.
+   */
+  @VisibleForTesting
+  static void resetBufferManager() {
+    bufferManager = null;
+  }
+
+  /**
+   * Reset readAhead buffer to needed readAhead block size and
+   * thresholdAgeMilliseconds.
+   * @param readAheadBlockSize
+   * @param thresholdAgeMilliseconds
+   */
+  @VisibleForTesting
+  void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds) {
+    setBlockSize(readAheadBlockSize);
+    setThresholdAgeMilliseconds(thresholdAgeMilliseconds);
+    testResetReadBufferManager();
+  }
+
+  @VisibleForTesting
+  static void setBlockSize(int readAheadBlockSize) {
+    blockSize = readAheadBlockSize;
+  }
+
+  @VisibleForTesting
+  int getReadAheadBlockSize() {
+    return blockSize;
   }
 
   /**
