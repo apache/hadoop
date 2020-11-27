@@ -536,6 +536,8 @@ public class CapacityScheduler extends
    * @param cs
    */
   static void schedule(CapacityScheduler cs) throws InterruptedException{
+    // First randomize the start point
+    int current = 0;
     Collection<FiCaSchedulerNode> nodes = cs.nodeTracker.getAllNodes();
 
     // If nodes size is 0 (when there are no node managers registered,
@@ -544,9 +546,8 @@ public class CapacityScheduler extends
     if(nodeSize == 0) {
       return;
     }
+
     if (!cs.multiNodePlacementEnabled) {
-      // First randomize the start point
-      int current = 0;
       int start = random.nextInt(nodeSize);
 
       // To avoid too verbose DEBUG logging, only print debug log once for
@@ -585,17 +586,20 @@ public class CapacityScheduler extends
         printedVerboseLoggingForAsyncScheduling = true;
       }
     } else {
-      //Get all partitions
+      // Get all partitions
       List<String> partitions = cs.nodeTracker.getPartitions();
       int partitionSize = partitions.size();
       // First randomize the start point
       int start = random.nextInt(partitionSize);
-      int current = 0;
       // Allocate containers of partition [start, end)
       for (String partititon : partitions) {
         if (current++ >= start) {
-          cs.allocateContainersToNode(cs.getCandidateNodeSet(partititon),
-                  false);
+          CandidateNodeSet<FiCaSchedulerNode> candidates =
+                  cs.getCandidateNodeSet(partititon);
+          if (candidates == null) {
+            continue;
+          }
+          cs.allocateContainersToNode(candidates, false);
         }
       }
 
@@ -606,8 +610,12 @@ public class CapacityScheduler extends
         if (current++ > start) {
           break;
         }
-        cs.allocateContainersToNode(cs.getCandidateNodeSet(partititon),
-                false);
+        CandidateNodeSet<FiCaSchedulerNode> candidates =
+                cs.getCandidateNodeSet(partititon);
+        if (candidates == null) {
+          continue;
+        }
+        cs.allocateContainersToNode(candidates, false);
       }
 
     }
