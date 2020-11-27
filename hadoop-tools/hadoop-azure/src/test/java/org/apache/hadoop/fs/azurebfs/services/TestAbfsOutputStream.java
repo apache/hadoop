@@ -25,6 +25,7 @@ import java.util.Random;
 
 import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContextFormat;
 import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;
@@ -87,7 +88,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
         anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(),
             any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
@@ -141,14 +142,14 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
-    TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
+    TracingContext tracingContext = new TracingContext("test-corr-id",
             "test-fs-id", HdfsOperationConstants.WRITE,
-                abfsConf.getTracingContextFormat(), null);
+                TracingContextFormat.ALL_ID_FORMAT, null);
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
         anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(),
             any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
@@ -217,7 +218,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
         anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(),
             any(TracingContext.class))).thenReturn(op);
     when(op.getSasToken()).thenReturn("testToken");
     when(op.getResult()).thenReturn(httpOp);
@@ -400,7 +401,7 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
         anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(),
             any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(
@@ -465,7 +466,7 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
         anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(),
-        anyString(), any(TracingContext.class))).thenReturn(op);
+        any(), any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false),

@@ -476,8 +476,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
 
-      AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose, cachedSasToken.get(),
-          new TracingContext(tracingContext));
+      AbfsRestOperation op = client.flush(path, offset, retainUncommitedData,
+          isClose, cachedSasToken.get(), new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {

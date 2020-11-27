@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -239,14 +240,15 @@ public class ITestAzureBlobFileSystemDelete extends
     when(idempotencyRetOp.getResult()).thenReturn(http200Op);
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
+    TracingContext tracingContext = getTestTracingContext(fs, false);
     when(mockClient.deletePath("/NonExistingPath", false,
-        null, getTestTracingContext(fs, false))).thenCallRealMethod();
+        null, tracingContext)).thenCallRealMethod();
 
     Assertions.assertThat(mockClient.deletePath(
         "/NonExistingPath",
         false,
         null,
-        getTestTracingContext(fs, false))
+        tracingContext)
         .getResult()
         .getStatusCode())
         .describedAs("Idempotency check reports successful "
