@@ -148,16 +148,17 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public TracingContext getTestTracingContext(AzureBlobFileSystem fs,
       boolean isCont) {
-    if (fs == null) {
-      return new TracingContext("test-corr-id", "test-fs-id", "TS", false,
-          TracingContextFormat.ALL_ID_FORMAT, null);
-    }
+//    if (fs == null) {
+//      return new TracingContext("test-corr-id", "test-fs-id", "TS", false,
+//          TracingContextFormat.ALL_ID_FORMAT, null);
+//    }
     String fsID = fs.getFileSystemID();
     AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
-    String corrID = abfsConf == null? "test-corr-id" :
-        abfsConf.getClientCorrelationID();
-    TracingContextFormat format = abfsConf == null? TracingContextFormat.ALL_ID_FORMAT :
-        abfsConf.getTracingContextFormat();
+//    String corrID = abfsConf == null? "test-corr-id" :
+    String corrID = abfsConf.getClientCorrelationID();
+    TracingContextFormat format = abfsConf.getTracingContextFormat();
+//    TracingContextFormat format = abfsConf == null? TracingContextFormat.ALL_ID_FORMAT :
+//        abfsConf.getTracingContextFormat();
 
     return new TracingContext(corrID, fsID, HdfsOperationConstants.TEST_OP, isCont,
         format, null);

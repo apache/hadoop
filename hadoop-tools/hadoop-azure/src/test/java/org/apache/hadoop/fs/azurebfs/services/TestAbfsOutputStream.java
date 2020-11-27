@@ -83,9 +83,6 @@ public final class TestAbfsOutputStream {
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
-    TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", HdfsOperationConstants.WRITE,
-                abfsConf.getTracingContextFormat(), null);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
@@ -94,8 +91,10 @@ public final class TestAbfsOutputStream {
             any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
-            populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
-                    false), tracingContext);
+        populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false),
+        new TracingContext(abfsConf.getClientCorrelationID(), "test-fs-id",
+            HdfsOperationConstants.WRITE, abfsConf.getTracingContextFormat(),
+            null));
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
     out.write(b);
@@ -461,21 +460,18 @@ public final class TestAbfsOutputStream {
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
-    TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
-            "test-fs-id", HdfsOperationConstants.WRITE,
-                abfsConf.getTracingContextFormat(), null);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(),
         anyInt(), any(), anyBoolean(), any(TracingContext.class))).thenReturn(op);
-    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
-            any(TracingContext.class))).thenReturn(op);
-
-    System.out.println(op + "op++");
+    when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(),
+        anyString(), any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
-            populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
-                    false), tracingContext);
+        populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false),
+        new TracingContext(abfsConf.getClientCorrelationID(), "test-fs-id",
+            HdfsOperationConstants.WRITE, abfsConf.getTracingContextFormat(),
+            null));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 

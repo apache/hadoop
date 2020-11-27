@@ -69,9 +69,6 @@ public class ITestAzureBlobFileSystemAppend extends
     ContractTestUtils.touch(fs, filePath);
     fs.delete(filePath, false);
 
-    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
-        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
-        HdfsOperationConstants.APPEND, false, 0));
     fs.append(filePath);
   }
 
@@ -91,8 +88,6 @@ public class ITestAzureBlobFileSystemAppend extends
         .getAbfsConfiguration().getClientCorrelationID(),
         fs.getFileSystemID(), HdfsOperationConstants.APPEND,
         false, 0));
-    FSDataOutputStream in = fs.append(TEST_FILE_PATH, 10);
-    byte[] buf = new byte[100];
-    in.write(buf, 0, 5);
+    fs.append(TEST_FILE_PATH, 10);
   }
 }

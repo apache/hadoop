@@ -82,16 +82,11 @@ public class ITestAzureBlobFileSystemListStatus extends
     }
 
     es.shutdownNow();
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(FS_AZURE_CLIENT_CORRELATIONID, "validconfig");
-    AzureBlobFileSystem fs1 =
-        (AzureBlobFileSystem) FileSystem.newInstance(config);
-    AbfsConfiguration conf = fs1.getAbfsStore().getAbfsConfiguration();
-    fs1.registerListener(new TracingHeaderValidator(
-        conf.getClientCorrelationID(),
-        fs1.getFileSystemID(), HdfsOperationConstants.LISTSTATUS, true,
+    fs.registerListener(new TracingHeaderValidator(
+        getConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), HdfsOperationConstants.LISTSTATUS, true,
         0));
-    FileStatus[] files = fs1.listStatus(new Path("/"));
+    FileStatus[] files = fs.listStatus(new Path("/"));
     assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
   }
 

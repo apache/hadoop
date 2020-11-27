@@ -1226,7 +1226,6 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.registerListener(null);
     AclEntry[] expected = new AclEntry[] { };
     AclStatus s = fs.getAclStatus(renamedFilePath);
-
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(expected, returned);
     assertPermission(fs, renamedFilePath, (short) RW_R);

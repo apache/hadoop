@@ -17,7 +17,9 @@ import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
@@ -80,23 +82,6 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(requestHeader)
         .describedAs("Client Request Header should match TracingContext")
         .isEqualTo(tracingContext.toString());
-
-    // use fn below or pass listener to run all TracingHeaderValidator checks
-    checkRequiredIDs(requestHeader);
-  }
-
-  private void checkRequiredIDs(String requestHeader) {
-    String[] id_list = requestHeader.split(":");
-
-    Assertions.assertThat(id_list[1])
-        .describedAs("client-req-id should be a guid")
-        .matches(GUID_PATTERN);
-    Assertions.assertThat(id_list[2])
-        .describedAs("filesystem-id should not be empty")
-        .isNotEmpty();
-    Assertions.assertThat(id_list[1])
-        .describedAs("client-request-id should be unique")
-        .isNotEqualTo(prevClientRequestID);
   }
 
   @Ignore
@@ -104,7 +89,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   //call test methods from the respective test classes
   //can be ignored when running all tests as these get covered
   public void runCorrelationTestForAllMethods() throws Exception {
-    //map to avoid creating new instance and calling setup() for each test
+    //map to group together creating new instance and calling setup() for tests
     Map<AbstractAbfsIntegrationTest, Method> testClasses = new HashMap<>();
 
     testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
@@ -144,21 +129,21 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
       testClasses.get(testClass).invoke(testClass);
       testClass.teardown();
     }
+    testExternalOps();
   }
 
   @Test
   //rename this test
   public void testExternalOps() throws Exception {
-    //validate tracing header for access, hasPathCapability,
-    // getIsNamespaceEnabled
+    //validate tracing header for access, hasPathCapability
     AzureBlobFileSystem fs = getFileSystem();
     fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
         .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
         HdfsOperationConstants.ACCESS, false, 0));
-    fs.access(new Path("/"), FsAction.READ);
+    fs.access(new Path("/"), FsAction.ALL);
 
     fs.setListenerOperation(HdfsOperationConstants.HAS_PATH_CAPABILITY);
-    //unset namespaceEnabled config to call getAcl -> test tracing header
+    //unset namespaceEnabled config to call getAcl
     fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
     fs.hasPathCapability(new Path("/"), CommonPathCapabilities.FS_ACLS);
   }

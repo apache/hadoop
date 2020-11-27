@@ -176,7 +176,6 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
         + "exists methods on Abfs");
 
     AzureBlobFileSystem fs = getFileSystem();
-    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     Path createFilePath = path(getMethodName());
     Path destCreateFilePath = path(getMethodName() + "New");
 

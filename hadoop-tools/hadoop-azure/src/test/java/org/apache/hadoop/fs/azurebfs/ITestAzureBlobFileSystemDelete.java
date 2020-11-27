@@ -72,7 +72,6 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testDeleteRoot() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
 
     fs.mkdirs(new Path("/testFolder0"));
     fs.mkdirs(new Path("/testFolder1"));
