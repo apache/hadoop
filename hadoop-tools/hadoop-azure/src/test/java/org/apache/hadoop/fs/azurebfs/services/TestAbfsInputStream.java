@@ -22,10 +22,17 @@ import java.io.IOException;
 
 import org.junit.Assert;
 import org.junit.Test;
+import java.util.Arrays;
 
 import org.assertj.core.api.Assertions;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TimeoutException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
@@ -51,9 +58,17 @@ public class TestAbfsInputStream extends
   private static final int ONE_KB = 1 * 1024;
   private static final int TWO_KB = 2 * 1024;
   private static final int THREE_KB = 3 * 1024;
+  private static final int SIXTEEN_KB = 16 * ONE_KB;
+  private static final int FORTY_EIGHT_KB = 48 * ONE_KB;
+  private static final int ONE_MB = 1 * 1024 * 1024;
+  private static final int FOUR_MB = 4 * ONE_MB;
+  private static final int EIGHT_MB = 8 * ONE_MB;
+  private static final int TEST_READAHEAD_DEPTH_2 = 2;
+  private static final int TEST_READAHEAD_DEPTH_4 = 4;
   private static final int REDUCED_READ_BUFFER_AGE_THRESHOLD = 3000; // 3 sec
   private static final int INCREASED_READ_BUFFER_AGE_THRESHOLD =
       REDUCED_READ_BUFFER_AGE_THRESHOLD * 10; // 30 sec
+  private static final int ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE = 16 * ONE_MB;
 
   private AbfsRestOperation getMockRestOp() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -84,8 +99,35 @@ public class TestAbfsInputStream extends
         null,
         FORWARD_SLASH + fileName,
         THREE_KB,
-        inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10),
+        inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10).withReadAheadBlockSize(ONE_KB),
         "eTag");
+
+    inputStream.setCachedSasToken(
+        TestCachedSASToken.getTestCachedSASTokenInstance());
+
+    return inputStream;
+  }
+
+  public AbfsInputStream getAbfsInputStream(AbfsClient abfsClient,
+      String fileName,
+      int fileSize,
+      String eTag,
+      int readAheadQueueDepth,
+      int readBufferSize,
+      boolean alwaysReadBufferSize,
+      int readAheadBlockSize) {
+    AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
+    // Create AbfsInputStream with the client instance
+    AbfsInputStream inputStream = new AbfsInputStream(
+        abfsClient,
+        null,
+        FORWARD_SLASH + fileName,
+        fileSize,
+        inputStreamContext.withReadBufferSize(readBufferSize)
+            .withReadAheadQueueDepth(readAheadQueueDepth)
+            .withShouldReadBufferSizeAlways(alwaysReadBufferSize)
+            .withReadAheadBlockSize(readAheadBlockSize),
+        eTag);
 
     inputStream.setCachedSasToken(
         TestCachedSASToken.getTestCachedSASTokenInstance());
@@ -496,4 +538,183 @@ public class TestAbfsInputStream extends
     checkEvictedStatus(inputStream, 0, true);
   }
 
+  /**
+   * Test readahead with different config settings for request request size and
+   * readAhead block size
+   * @throws Exception
+   */
+  @Test
+  public void testDiffReadRequestSizeAndRAHBlockSize() throws Exception {
+    // Set requestRequestSize = 4MB and readAheadBufferSize=8MB
+    resetReadBufferManager(FOUR_MB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
+    testReadAheadConfigs(FOUR_MB, TEST_READAHEAD_DEPTH_4, false, EIGHT_MB);
+
+    // Test for requestRequestSize =16KB and readAheadBufferSize=16KB
+    resetReadBufferManager(SIXTEEN_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
+    AbfsInputStream inputStream = testReadAheadConfigs(SIXTEEN_KB,
+        TEST_READAHEAD_DEPTH_2, true, SIXTEEN_KB);
+    testReadAheads(inputStream, SIXTEEN_KB, SIXTEEN_KB);
+
+    // Test for requestRequestSize =16KB and readAheadBufferSize=48KB
+    resetReadBufferManager(FORTY_EIGHT_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
+    inputStream = testReadAheadConfigs(SIXTEEN_KB, TEST_READAHEAD_DEPTH_2, true,
+        FORTY_EIGHT_KB);
+    testReadAheads(inputStream, SIXTEEN_KB, FORTY_EIGHT_KB);
+
+    // Test for requestRequestSize =48KB and readAheadBufferSize=16KB
+    resetReadBufferManager(FORTY_EIGHT_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
+    inputStream = testReadAheadConfigs(FORTY_EIGHT_KB, TEST_READAHEAD_DEPTH_2,
+        true,
+        SIXTEEN_KB);
+    testReadAheads(inputStream, FORTY_EIGHT_KB, SIXTEEN_KB);
+  }
+
+
+  private void testReadAheads(AbfsInputStream inputStream,
+      int readRequestSize,
+      int readAheadRequestSize)
+      throws Exception {
+    if (readRequestSize > readAheadRequestSize) {
+      readAheadRequestSize = readRequestSize;
+    }
+
+    byte[] firstReadBuffer = new byte[readRequestSize];
+    byte[] secondReadBuffer = new byte[readAheadRequestSize];
+
+    // get the expected bytes to compare
+    byte[] expectedFirstReadAheadBufferContents = new byte[readRequestSize];
+    byte[] expectedSecondReadAheadBufferContents = new byte[readAheadRequestSize];
+    getExpectedBufferData(0, readRequestSize, expectedFirstReadAheadBufferContents);
+    getExpectedBufferData(readRequestSize, readAheadRequestSize,
+        expectedSecondReadAheadBufferContents);
+
+    Assertions.assertThat(inputStream.read(firstReadBuffer, 0, readRequestSize))
+        .describedAs("Read should be of exact requested size")
+        .isEqualTo(readRequestSize);
+
+    assertTrue("Data mismatch found in RAH1",
+        Arrays.equals(firstReadBuffer,
+            expectedFirstReadAheadBufferContents));
+
+    Assertions.assertThat(inputStream.read(secondReadBuffer, 0, readAheadRequestSize))
+        .describedAs("Read should be of exact requested size")
+        .isEqualTo(readAheadRequestSize);
+
+    assertTrue("Data mismatch found in RAH2",
+        Arrays.equals(secondReadBuffer,
+            expectedSecondReadAheadBufferContents));
+  }
+
+  public AbfsInputStream testReadAheadConfigs(int readRequestSize,
+      int readAheadQueueDepth,
+      boolean alwaysReadBufferSizeEnabled,
+      int readAheadBlockSize) throws Exception {
+    Configuration
+        config = new Configuration(
+        this.getRawConfiguration());
+    config.set("fs.azure.read.request.size", Integer.toString(readRequestSize));
+    config.set("fs.azure.readaheadqueue.depth",
+        Integer.toString(readAheadQueueDepth));
+    config.set("fs.azure.read.alwaysReadBufferSize",
+        Boolean.toString(alwaysReadBufferSizeEnabled));
+    config.set("fs.azure.read.readahead.blocksize",
+        Integer.toString(readAheadBlockSize));
+    if (readRequestSize > readAheadBlockSize) {
+      readAheadBlockSize = readRequestSize;
+    }
+
+    Path testPath = new Path(
+        "/testReadAheadConfigs");
+    final AzureBlobFileSystem fs = createTestFile(testPath,
+        ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE, config);
+    byte[] byteBuffer = new byte[ONE_MB];
+    AbfsInputStream inputStream = this.getAbfsStore(fs)
+        .openFileForRead(testPath, null);
+
+    Assertions.assertThat(inputStream.getBufferSize())
+        .describedAs("Unexpected AbfsInputStream buffer size")
+        .isEqualTo(readRequestSize);
+
+    Assertions.assertThat(inputStream.getReadAheadQueueDepth())
+        .describedAs("Unexpected ReadAhead queue depth")
+        .isEqualTo(readAheadQueueDepth);
+
+    Assertions.assertThat(inputStream.shouldAlwaysReadBufferSize())
+        .describedAs("Unexpected AlwaysReadBufferSize settings")
+        .isEqualTo(alwaysReadBufferSizeEnabled);
+
+    Assertions.assertThat(ReadBufferManager.getBufferManager().getReadAheadBlockSize())
+        .describedAs("Unexpected readAhead block size")
+        .isEqualTo(readAheadBlockSize);
+
+    return inputStream;
+  }
+
+  private void getExpectedBufferData(int offset, int length, byte[] b) {
+    boolean startFillingIn = false;
+    int indexIntoBuffer = 0;
+    char character = 'a';
+
+    for (int i = 0; i < (offset + length); i++) {
+      if (i == offset) {
+        startFillingIn = true;
+      }
+
+      if ((startFillingIn) && (indexIntoBuffer < length)) {
+        b[indexIntoBuffer] = (byte) character;
+        indexIntoBuffer++;
+      }
+
+      character = (character == 'z') ? 'a' : (char) ((int) character + 1);
+    }
+  }
+
+  private AzureBlobFileSystem createTestFile(Path testFilePath, long testFileSize,
+      Configuration config) throws Exception {
+    AzureBlobFileSystem fs;
+
+    if (config == null) {
+      fs = this.getFileSystem();
+    } else {
+      final AzureBlobFileSystem currentFs = getFileSystem();
+      fs = (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
+          config);
+    }
+
+    if (fs.exists(testFilePath)) {
+      FileStatus status = fs.getFileStatus(testFilePath);
+      if (status.getLen() >= testFileSize) {
+        return fs;
+      }
+    }
+
+    byte[] buffer = new byte[EIGHT_MB];
+    char character = 'a';
+    for (int i = 0; i < buffer.length; i++) {
+      buffer[i] = (byte) character;
+      character = (character == 'z') ? 'a' : (char) ((int) character + 1);
+    }
+
+    try (FSDataOutputStream outputStream = fs.create(testFilePath)) {
+      int bytesWritten = 0;
+      while (bytesWritten < testFileSize) {
+        outputStream.write(buffer);
+        bytesWritten += buffer.length;
+      }
+    }
+
+    Assertions.assertThat(fs.getFileStatus(testFilePath).getLen())
+        .describedAs("File not created of expected size")
+        .isEqualTo(testFileSize);
+
+    return fs;
+  }
+
+  private void resetReadBufferManager(int bufferSize, int threshold) {
+    ReadBufferManager.getBufferManager()
+        .testResetReadBufferManager(bufferSize, threshold);
+    // Trigger GC as aggressive recreation of ReadBufferManager buffers
+    // by successive tests can lead to OOM based on the dev VM/machine capacity.
+    System.gc();
+  }
 }
