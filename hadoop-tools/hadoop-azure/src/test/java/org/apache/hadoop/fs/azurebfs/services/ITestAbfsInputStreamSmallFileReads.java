@@ -93,63 +93,63 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
   @Test
   public void testSeekToBeginingAndReadSmallFileWithConfTrue()
       throws Exception {
-    testSeekAndReadWithConf(SeekTo.BEGIN, 1, 4, true);
+    testSeekAndReadWithConf(SeekTo.BEGIN, 2, 4, true);
   }
 
   @Test
   public void testSeekToBeginingAndReadSmallFileWithConfFalse()
       throws Exception {
-    testSeekAndReadWithConf(SeekTo.BEGIN, 1, 4, false);
+    testSeekAndReadWithConf(SeekTo.BEGIN, 2, 4, false);
   }
 
   @Test
   public void testSeekToBeginingAndReadBigFileWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(SeekTo.BEGIN, 5, 8, true);
+    testSeekAndReadWithConf(SeekTo.BEGIN, 5, 6, true);
   }
 
   @Test
   public void testSeekToBeginingAndReadBigFileWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(SeekTo.BEGIN, 5, 8, false);
+    testSeekAndReadWithConf(SeekTo.BEGIN, 5, 6, false);
   }
 
   @Test
   public void testSeekToEndAndReadSmallFileWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(SeekTo.END, 1, 4, true);
+    testSeekAndReadWithConf(SeekTo.END, 2, 4, true);
   }
 
   @Test
   public void testSeekToEndAndReadSmallFileWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(SeekTo.END, 1, 4, false);
+    testSeekAndReadWithConf(SeekTo.END, 2, 4, false);
   }
 
   @Test
   public void testSeekToEndAndReadBigFileWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(SeekTo.END, 5, 8, true);
+    testSeekAndReadWithConf(SeekTo.END, 5, 6, true);
   }
 
   @Test
   public void testSeekToEndAndReaBigFiledWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(SeekTo.END, 5, 8, false);
+    testSeekAndReadWithConf(SeekTo.END, 5, 6, false);
   }
 
   @Test
   public void testSeekToMiddleAndReadSmallFileWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(SeekTo.MIDDLE, 1, 4, true);
+    testSeekAndReadWithConf(SeekTo.MIDDLE, 2, 4, true);
   }
 
   @Test
   public void testSeekToMiddleAndReadSmallFileWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(SeekTo.MIDDLE, 1, 4, false);
+    testSeekAndReadWithConf(SeekTo.MIDDLE, 2, 4, false);
   }
 
   @Test
   public void testSeekToMiddleAndReaBigFileWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(SeekTo.MIDDLE, 5, 8, true);
+    testSeekAndReadWithConf(SeekTo.MIDDLE, 5, 6, true);
   }
 
   @Test
   public void testSeekToMiddleAndReadBigFileWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(SeekTo.MIDDLE, 5, 8, false);
+    testSeekAndReadWithConf(SeekTo.MIDDLE, 5, 6, false);
   }
 
   private void testSeekAndReadWithConf(SeekTo seekTo, int startFileSizeInMB,
