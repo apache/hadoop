@@ -37,8 +37,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -272,9 +272,9 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   public boolean rename(final Path src, final Path dst) throws IOException {
-    LOG.debug(
-        "AzureBlobFileSystem.rename src: {} dst: {}", src.toString(), dst.toString());
+    LOG.debug("AzureBlobFileSystem.rename src: {} dst: {}", src, dst);
     statIncrement(CALL_RENAME);
+
     trailingPeriodCheck(dst);
 
     Path parentFolder = src.getParent();
@@ -323,6 +323,7 @@ public class AzureBlobFileSystem extends FileSystem {
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath);
       return true;
     } catch(AzureBlobFileSystemException ex) {
+      LOG.debug("Rename operation failed. ", ex);
       checkException(
               src,
               ex,
@@ -778,7 +779,7 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public void modifyAclEntries(final Path path, final List<AclEntry> aclSpec)
       throws IOException {
-    LOG.debug("AzureBlobFileSystem.modifyAclEntries path: {}", path.toString());
+    LOG.debug("AzureBlobFileSystem.modifyAclEntries path: {}", path);
 
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
@@ -927,7 +928,7 @@ public class AzureBlobFileSystem extends FileSystem {
    */
   @Override
   public AclStatus getAclStatus(final Path path) throws IOException {
-    LOG.debug("AzureBlobFileSystem.getAclStatus path: {}", path.toString());
+    LOG.debug("AzureBlobFileSystem.getAclStatus path: {}", path);
 
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(

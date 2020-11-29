@@ -28,6 +28,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -51,7 +52,7 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 
 @Private
@@ -349,7 +350,9 @@ public class TimelineClientImpl extends TimelineClient {
     client.start();
     try {
       if (UserGroupInformation.isSecurityEnabled()
-          && conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false)) {
+          && conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false)
+          && conf.get(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE)
+              .equals(KerberosAuthenticationHandler.TYPE)) {
         Token<TimelineDelegationTokenIdentifier> token =
             client.getDelegationToken(
                 UserGroupInformation.getCurrentUser().getUserName());

@@ -63,8 +63,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * This class is used in Namesystem's jetty to retrieve/upload a file 
@@ -112,12 +112,25 @@ public class ImageServlet extends HttpServlet {
     recentImageCheckTimePrecision = ratio;
   }
 
+  private FSImage getAndValidateFSImage(ServletContext context,
+      final HttpServletResponse response)
+      throws IOException {
+    final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
+    if (nnImage == null) {
+      String errorMsg = "NameNode initialization not yet complete. "
+          + "FSImage has not been set in the NameNode.";
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, errorMsg);
+      throw new IOException(errorMsg);
+    }
+    return nnImage;
+  }
+
   @Override
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
     try {
       final ServletContext context = getServletContext();
-      final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
+      final FSImage nnImage = getAndValidateFSImage(context, response);
       final GetImageParams parsedParams = new GetImageParams(request, response);
       final Configuration conf = (Configuration) context
           .getAttribute(JspHelper.CURRENT_CONF);
@@ -524,7 +537,7 @@ public class ImageServlet extends HttpServlet {
       final HttpServletResponse response) throws ServletException, IOException {
     try {
       ServletContext context = getServletContext();
-      final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
+      final FSImage nnImage = getAndValidateFSImage(context, response);
       final Configuration conf = (Configuration) getServletContext()
           .getAttribute(JspHelper.CURRENT_CONF);
       final PutImageParams parsedParams = new PutImageParams(request, response,

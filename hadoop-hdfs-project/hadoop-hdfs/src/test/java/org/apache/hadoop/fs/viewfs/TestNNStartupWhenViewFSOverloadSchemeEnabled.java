@@ -60,7 +60,7 @@ public class TestNNStartupWhenViewFSOverloadSchemeEnabled {
   @Test(timeout = 30000)
   public void testHANameNodeAndDataNodeStartup() throws Exception {
     cluster = new MiniDFSCluster.Builder(CONF)
-        .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(1)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(0)
         .waitSafeMode(false).build();
     cluster.waitActive();
     cluster.transitionToActive(0);
@@ -73,7 +73,7 @@ public class TestNNStartupWhenViewFSOverloadSchemeEnabled {
   @Test(timeout = 30000)
   public void testNameNodeAndDataNodeStartup() throws Exception {
     cluster =
-        new MiniDFSCluster.Builder(CONF).numDataNodes(1).waitSafeMode(false)
+        new MiniDFSCluster.Builder(CONF).numDataNodes(0).waitSafeMode(false)
             .build();
     cluster.waitActive();
   }

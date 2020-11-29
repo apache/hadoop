@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueuePlacementRuleUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.MappingRuleCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -62,6 +64,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -280,6 +283,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String QUEUE_MAPPING = PREFIX + "queue-mappings";
 
   @Private
+  public static final String QUEUE_MAPPING_NAME =
+      YarnConfiguration.QUEUE_PLACEMENT_RULES + ".app-name";
+
+  @Private
   public static final String ENABLE_QUEUE_MAPPING_OVERRIDE = QUEUE_MAPPING + "-override.enable";
 
   @Private
@@ -381,6 +388,23 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String MAX_PARALLEL_APPLICATIONS = "max-parallel-apps";
 
   public static final int DEFAULT_MAX_PARALLEL_APPLICATIONS = Integer.MAX_VALUE;
+
+  public static final String ALLOW_ZERO_CAPACITY_SUM =
+      "allow-zero-capacity-sum";
+
+  public static final boolean DEFAULT_ALLOW_ZERO_CAPACITY_SUM = false;
+  public static final String MAPPING_RULE_FORMAT =
+      PREFIX + "mapping-rule-format";
+  public static final String MAPPING_RULE_JSON =
+      PREFIX + "mapping-rule-json";
+  public static final String MAPPING_RULE_JSON_FILE =
+      PREFIX + "mapping-rule-json-file";
+
+  public static final String MAPPING_RULE_FORMAT_LEGACY = "legacy";
+  public static final String MAPPING_RULE_FORMAT_JSON = "json";
+
+  public static final String MAPPING_RULE_FORMAT_DEFAULT =
+      MAPPING_RULE_FORMAT_LEGACY;
 
   /**
    * Different resource types supported.
@@ -1159,6 +1183,93 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return mappings;
   }
 
+  public List<MappingRule> parseLegacyMappingRules() {
+    List<MappingRule> mappings = new ArrayList<MappingRule>();
+    Collection<String> mappingsString =
+        getTrimmedStringCollection(QUEUE_MAPPING);
+
+    for (String mappingValue : mappingsString) {
+      String[] mapping =
+          StringUtils.getTrimmedStringCollection(mappingValue, ":")
+              .toArray(new String[] {});
+      if (mapping.length != 3 || mapping[1].length() == 0
+          || mapping[2].length() == 0) {
+        throw new IllegalArgumentException(
+            "Illegal queue mapping " + mappingValue);
+      }
+
+      if (mapping[0].equals("u") || mapping[0].equals("g")) {
+        mappings.add(MappingRule.createLegacyRule(
+            mapping[0], mapping[1], mapping[2]));
+      } else {
+        throw new IllegalArgumentException(
+            "unknown mapping prefix " + mapping[0]);
+      }
+    }
+
+    mappingsString = getTrimmedStringCollection(QUEUE_MAPPING_NAME);
+    for (String mappingValue : mappingsString) {
+      String[] mapping =
+          StringUtils.getTrimmedStringCollection(mappingValue, ":")
+              .toArray(new String[] {});
+      if (mapping.length != 2 || mapping[1].length() == 0) {
+        throw new IllegalArgumentException(
+            "Illegal queue mapping " + mappingValue);
+      }
+
+      mappings.add(MappingRule.createLegacyRule(mapping[0], mapping[1]));
+    }
+
+    return mappings;
+  }
+
+  public List<MappingRule> parseJSONMappingRules() throws IOException {
+    String mappingJson = get(MAPPING_RULE_JSON, "");
+    String mappingJsonFile = get(MAPPING_RULE_JSON_FILE, "");
+    MappingRuleCreator creator = new MappingRuleCreator();
+
+    if (!mappingJson.equals("")) {
+      LOG.info("Reading mapping rules from provided inline JSON '{}'.",
+          mappingJson);
+      try {
+        return creator.getMappingRulesFromString(mappingJson);
+      } catch (IOException e) {
+        LOG.error("Error parsing mapping rule inline JSON.");
+        throw e;
+      }
+    } else if (!mappingJsonFile.equals("")) {
+      LOG.info("Reading mapping rules from JSON file '{}'.",
+          mappingJsonFile);
+      try {
+        return creator.getMappingRulesFromFile(mappingJsonFile.trim());
+      } catch (IOException e) {
+        LOG.error("Error reading or parsing mapping rule JSON file '{}'.",
+            mappingJsonFile);
+        throw e;
+      }
+    } else {
+      LOG.warn("Mapping rule is set to JSON, but no inline JSON nor a JSON " +
+          "file was provided! Starting with no mapping rules!");
+    }
+
+    return new ArrayList<>();
+  }
+
+  public List<MappingRule> getMappingRules() throws IOException {
+    String mappingFormat =
+        get(MAPPING_RULE_FORMAT, MAPPING_RULE_FORMAT_DEFAULT);
+    if (mappingFormat.equals(MAPPING_RULE_FORMAT_LEGACY)) {
+      return parseLegacyMappingRules();
+    } else if (mappingFormat.equals(MAPPING_RULE_FORMAT_JSON)) {
+      return parseJSONMappingRules();
+    } else {
+      throw new IllegalArgumentException(
+          "Illegal queue mapping format '" + mappingFormat + "' please use '" +
+          MAPPING_RULE_FORMAT_LEGACY + "' or '" + MAPPING_RULE_FORMAT_JSON +
+          "'");
+    }
+  }
+
   @Private
   @VisibleForTesting
   public void setQueuePlacementRules(Collection<String> queuePlacementRules) {
@@ -1182,6 +1293,24 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     setStrings(QUEUE_MAPPING, StringUtils.join(",", queueMappingStrs));
+  }
+
+
+  @Private
+  @VisibleForTesting
+  public void setAppNameMappings(List<QueueMapping> queueMappings) {
+    if (queueMappings == null) {
+      return;
+    }
+
+    List<String> queueMappingStrs = new ArrayList<>();
+    for (QueueMapping mapping : queueMappings) {
+      String rule = mapping.toString();
+      String[] parts = rule.split(":");
+      queueMappingStrs.add(parts[1] + ":" + parts[2]);
+    }
+
+    setStrings(QUEUE_MAPPING_NAME, StringUtils.join(",", queueMappingStrs));
   }
 
   @Private
@@ -1425,6 +1554,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         : defaultMaxParallelAppsForUser;
   }
 
+  public boolean getAllowZeroCapacitySum(String queue) {
+    return getBoolean(getQueuePrefix(queue)
+        + ALLOW_ZERO_CAPACITY_SUM, DEFAULT_ALLOW_ZERO_CAPACITY_SUM);
+  }
+
+  public void setAllowZeroCapacitySum(String queue, boolean value) {
+    setBoolean(getQueuePrefix(queue)
+        + ALLOW_ZERO_CAPACITY_SUM, value);
+  }
   private static final String PREEMPTION_CONFIG_PREFIX =
       "yarn.resourcemanager.monitor.capacity.preemption.";
 
@@ -2164,6 +2302,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           + DOT + type;
     }
     set(prefix, resourceString.toString());
+  }
+
+  public boolean checkConfigTypeIsAbsoluteResource(String label, String queue,
+      Set<String> resourceTypes) {
+    String propertyName = getNodeLabelPrefix(queue, label) + CAPACITY;
+    String resourceString = get(propertyName);
+    if (resourceString == null || resourceString.isEmpty()) {
+      return false;
+    }
+
+    Matcher matcher = RESOURCE_PATTERN.matcher(resourceString);
+    if (matcher.find()) {
+      return true;
+    }
+    return false;
   }
 
   private Resource internalGetLabeledResourceRequirementForQueue(String queue,

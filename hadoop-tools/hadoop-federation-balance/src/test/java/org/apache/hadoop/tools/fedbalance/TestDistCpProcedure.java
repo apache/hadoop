@@ -171,6 +171,33 @@ public class TestDistCpProcedure {
     cleanup(fs, new Path(testRoot));
   }
 
+  @Test
+  public void testDiffThreshold() throws Exception {
+    String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
+    DistributedFileSystem fs =
+        (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcfiles);
+    Path src = new Path(testRoot, SRCDAT);
+    Path dst = new Path(testRoot, DSTDAT);
+
+    FedBalanceContext context = buildContext(src, dst, MOUNT, 10);
+    DistCpProcedure dcProcedure =
+        new DistCpProcedure("distcp-procedure", null, 1000, context);
+    executeProcedure(dcProcedure, Stage.DIFF_DISTCP,
+        () -> dcProcedure.initDistCp());
+    // Test distcp with diff entries number no greater than threshold.
+    Path lastPath = new Path(src, "a");
+    for (int i = 0; i < 5; i++) {
+      Path newPath = new Path(src, "a-" + i);
+      fs.rename(lastPath, newPath);
+      lastPath = newPath;
+      assertTrue(dcProcedure.diffDistCpStageDone());
+      executeProcedure(dcProcedure, Stage.DISABLE_WRITE,
+          () -> dcProcedure.diffDistCp());
+    }
+    cleanup(fs, new Path(testRoot));
+  }
+
   @Test(timeout = 30000)
   public void testDiffDistCp() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
@@ -351,9 +378,14 @@ public class TestDistCpProcedure {
   }
 
   private FedBalanceContext buildContext(Path src, Path dst, String mount) {
+    return buildContext(src, dst, mount, 0);
+  }
+
+  private FedBalanceContext buildContext(Path src, Path dst, String mount,
+      int diffThreshold) {
     return new FedBalanceContext.Builder(src, dst, mount, conf).setMapNum(10)
         .setBandwidthLimit(1).setTrash(TrashOption.TRASH).setDelayDuration(1000)
-        .build();
+        .setDiffThreshold(diffThreshold).build();
   }
 
   interface Call {

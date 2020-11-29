@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -338,8 +338,6 @@ public class TestReplication {
    */
   public void runReplication(boolean simulated) throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     if (simulated) {
       SimulatedFSDataset.setFactory(conf);
     }

@@ -61,7 +61,7 @@ RUN apt-get -q update \
         libsnappy-dev \
         libssl-dev \
         libtool \
-        libzstd1-dev \
+        libzstd-dev \
         locales \
         make \
         maven \
@@ -92,6 +92,21 @@ ENV MAVEN_HOME /usr
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV FINDBUGS_HOME /usr
 
+#######
+# Install Boost 1.72 (1.65 ships with Bionic)
+#######
+# hadolint ignore=DL3003
+RUN mkdir -p /opt/boost-library \
+    && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
+    && mv boost_1_72_0.tar.bz2 /opt/boost-library \
+    && cd /opt/boost-library \
+    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
+    && cd /opt/boost-library/boost_1_72_0 \
+    && ./bootstrap.sh --prefix=/usr/ \
+    && ./b2 --without-python install \
+    && cd /root \
+    && rm -rf /opt/boost-library
+
 ######
 # Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
 ######
@@ -114,6 +129,8 @@ ENV PATH "${PATH}:/opt/protobuf/bin"
 # https://github.com/PyCQA/pylint/issues/2294
 ####
 RUN pip2 install \
+    astroid==1.6.6 \
+    isort==4.3.21 \
     configparser==4.0.2 \
     pylint==1.9.2
 
@@ -123,10 +140,11 @@ RUN pip2 install \
 RUN pip2 install python-dateutil==2.7.3
 
 ###
-# Install node.js 10.21.0 for web UI framework (4.2.6 ships with Xenial)
+# Install node.js 10.x for web UI framework (4.2.6 ships with Xenial)
 ###
+# hadolint ignore=DL3008
 RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs=10.21.0-1nodesource1 \
+    && apt-get install -y --no-install-recommends nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g bower@1.8.8

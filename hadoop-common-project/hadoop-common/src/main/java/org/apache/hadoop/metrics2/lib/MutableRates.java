@@ -21,8 +21,8 @@ package org.apache.hadoop.metrics2.lib;
 import java.lang.reflect.Method;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.*;
-import com.google.common.collect.Sets;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

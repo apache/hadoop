@@ -32,8 +32,8 @@ import org.apache.hadoop.security.ShellBasedIdMapping.PassThroughMap;
 import org.apache.hadoop.security.ShellBasedIdMapping.StaticMapping;
 import org.junit.Test;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.BiMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashBiMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -49,7 +49,7 @@ import org.apache.hadoop.net.unix.DomainSocket.DomainChannel;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 public class TestDomainSocket {
   private static TemporarySocketDirectory sockDir;

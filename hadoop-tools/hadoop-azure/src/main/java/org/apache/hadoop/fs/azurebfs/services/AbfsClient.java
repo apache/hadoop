@@ -30,8 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -62,7 +62,7 @@ public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private final String xMsVersion = "2018-11-09";
+  private final String xMsVersion = "2019-12-12";
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
@@ -77,15 +77,13 @@ public class AbfsClient implements Closeable {
 
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
-                    final ExponentialRetryPolicy exponentialRetryPolicy,
-                    final AbfsPerfTracker abfsPerfTracker,
-                    final AbfsCounters abfsCounters) {
+                    final AbfsClientContext abfsClientContext) {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
-    this.retryPolicy = exponentialRetryPolicy;
+    this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
 
@@ -105,29 +103,23 @@ public class AbfsClient implements Closeable {
     }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
-    this.abfsPerfTracker = abfsPerfTracker;
-    this.abfsCounters = abfsCounters;
+    this.abfsPerfTracker = abfsClientContext.getAbfsPerfTracker();
+    this.abfsCounters = abfsClientContext.getAbfsCounters();
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
-                    final ExponentialRetryPolicy exponentialRetryPolicy,
                     final AccessTokenProvider tokenProvider,
-                    final AbfsPerfTracker abfsPerfTracker,
-                    final AbfsCounters abfsCounters) {
-    this(baseUrl, sharedKeyCredentials, abfsConfiguration,
-        exponentialRetryPolicy, abfsPerfTracker, abfsCounters);
+                    final AbfsClientContext abfsClientContext) {
+    this(baseUrl, sharedKeyCredentials, abfsConfiguration, abfsClientContext);
     this.tokenProvider = tokenProvider;
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
-                    final ExponentialRetryPolicy exponentialRetryPolicy,
                     final SASTokenProvider sasTokenProvider,
-                    final AbfsPerfTracker abfsPerfTracker,
-                    final AbfsCounters abfsCounters) {
-    this(baseUrl, sharedKeyCredentials, abfsConfiguration,
-        exponentialRetryPolicy, abfsPerfTracker, abfsCounters);
+                    final AbfsClientContext abfsClientContext) {
+    this(baseUrl, sharedKeyCredentials, abfsConfiguration, abfsClientContext);
     this.sasTokenProvider = sasTokenProvider;
   }
 
@@ -273,7 +265,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
                                       final String permission, final String umask,
-                                      final boolean isAppendBlob) throws AzureBlobFileSystemException {
+                                      final boolean isAppendBlob, final String eTag) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
@@ -285,6 +277,10 @@ public class AbfsClient implements Closeable {
 
     if (umask != null && !umask.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_UMASK, umask));
+    }
+
+    if (eTag != null && !eTag.isEmpty()) {
+      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -336,10 +332,19 @@ public class AbfsClient implements Closeable {
             url,
             requestHeaders);
     Instant renameRequestStartTime = Instant.now();
-    op.execute();
-
-    if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
-      return renameIdempotencyCheckOp(renameRequestStartTime, op, destination);
+    try {
+      op.execute();
+    } catch (AzureBlobFileSystemException e) {
+        final AbfsRestOperation idempotencyOp = renameIdempotencyCheckOp(
+            renameRequestStartTime, op, destination);
+        if (idempotencyOp.getResult().getStatusCode()
+            == op.getResult().getStatusCode()) {
+          // idempotency did not return different result
+          // throw back the exception
+          throw e;
+        } else {
+          return idempotencyOp;
+        }
     }
 
     return op;
@@ -369,14 +374,21 @@ public class AbfsClient implements Closeable {
       // exists. Check on destination status and if it has a recent LMT timestamp.
       // If yes, return success, else fall back to original rename request failure response.
 
-      final AbfsRestOperation destStatusOp = getPathStatus(destination, false);
-      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
-        String lmt = destStatusOp.getResult().getResponseHeader(
-            HttpHeaderConfigurations.LAST_MODIFIED);
+      try {
+        final AbfsRestOperation destStatusOp = getPathStatus(destination,
+            false);
+        if (destStatusOp.getResult().getStatusCode()
+            == HttpURLConnection.HTTP_OK) {
+          String lmt = destStatusOp.getResult().getResponseHeader(
+              HttpHeaderConfigurations.LAST_MODIFIED);
 
-        if (DateTimeUtils.isRecentlyModified(lmt, renameRequestStartTime)) {
-          return destStatusOp;
+          if (DateTimeUtils.isRecentlyModified(lmt, renameRequestStartTime)) {
+            return destStatusOp;
+          }
         }
+      } catch (AzureBlobFileSystemException e) {
+        // GetFileStatus on the destination failed, return original op
+        return op;
       }
     }
 
@@ -570,10 +582,18 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_DELETE,
             url,
             requestHeaders);
+    try {
     op.execute();
-
-    if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
-      return deleteIdempotencyCheckOp(op);
+    } catch (AzureBlobFileSystemException e) {
+      final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
+      if (idempotencyOp.getResult().getStatusCode()
+          == op.getResult().getStatusCode()) {
+        // idempotency did not return different result
+        // throw back the exception
+        throw e;
+      } else {
+        return idempotencyOp;
+      }
     }
 
     return op;
@@ -822,7 +842,8 @@ public class AbfsClient implements Closeable {
     return createRequestUrl(EMPTY_STRING, query);
   }
 
-  private URL createRequestUrl(final String path, final String query)
+  @VisibleForTesting
+  protected URL createRequestUrl(final String path, final String query)
           throws AzureBlobFileSystemException {
     final String base = baseUrl.toString();
     String encodedPath = path;

@@ -45,7 +45,6 @@
       <artifactId>hadoop-hdfs-client</artifactId>
     </dependency>
 
-
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -86,8 +85,8 @@
       <artifactId>jersey-client</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-cli</groupId>
@@ -242,7 +241,7 @@
             <exclude>src/main/resources/webapps/static/dt-1.10.18/js/jquery.dataTables.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jt/jquery.jstree.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/jquery-ui-1.12.1.custom.min.js</exclude>
-            <exclude>src/main/resources/webapps/static/jquery/jquery-3.4.1.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/jquery/jquery-3.5.1.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_index</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>

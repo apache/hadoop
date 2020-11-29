@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -1228,6 +1229,9 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         timelineClientBestEffort);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
         timelineVersion);
+    // Timeline Delegation token and client is only used for kerberos
+    conf.set(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE,
+            KerberosAuthenticationHandler.TYPE);
     MockYarnClient client = new MockYarnClient();
     MockYarnClient spyClient = spy(client);
     when(spyClient.createTimelineClient()).thenThrow(mockErr);

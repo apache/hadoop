@@ -83,8 +83,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /** Dispatching block replica moves between datanodes. */
 @InterfaceAudience.Private
@@ -392,7 +392,7 @@ public class Dispatcher {
 
         sendRequest(out, eb, accessToken);
         receiveResponse(in);
-        nnc.getBytesMoved().addAndGet(reportedBlock.getNumBytes());
+        nnc.addBytesMoved(reportedBlock.getNumBytes());
         target.getDDatanode().setHasSuccess();
         LOG.info("Successfully moved " + this);
       } catch (IOException e) {
@@ -1064,6 +1064,10 @@ public class Dispatcher {
     return nnc.getBytesMoved().get();
   }
 
+  long getBblocksMoved() {
+    return nnc.getBlocksMoved().get();
+  }
+
   long bytesToMove() {
     Preconditions.checkState(
         storageGroupMap.size() >= sources.size() + targets.size(),
@@ -1081,6 +1085,14 @@ public class Dispatcher {
   void add(Source source, StorageGroup target) {
     sources.add(source);
     targets.add(target);
+  }
+
+  public int moveTasksTotal() {
+    int b = 0;
+    for (Source src : sources) {
+      b += src.tasks.size();
+    }
+    return b;
   }
 
   private boolean shouldIgnore(DatanodeInfo dn) {
@@ -1164,12 +1176,13 @@ public class Dispatcher {
    */
   private long dispatchBlockMoves() throws InterruptedException {
     final long bytesLastMoved = getBytesMoved();
+    final long blocksLastMoved = getBblocksMoved();
     final Future<?>[] futures = new Future<?>[sources.size()];
 
     int concurrentThreads = Math.min(sources.size(),
         ((ThreadPoolExecutor)dispatchExecutor).getCorePoolSize());
     assert concurrentThreads > 0 : "Number of concurrent threads is 0.";
-    LOG.debug("Balancer concurrent dispatcher threads = {}", concurrentThreads);
+    LOG.info("Balancer concurrent dispatcher threads = {}", concurrentThreads);
 
     // Determine the size of each mover thread pool per target
     int threadsPerTarget = maxMoverThreads/targets.size();
@@ -1211,6 +1224,9 @@ public class Dispatcher {
 
     // wait for all reportedBlock moving to be done
     waitForMoveCompletion(targets);
+    LOG.info("Total bytes (blocks) moved in this iteration {} ({})",
+        StringUtils.byteDesc(getBytesMoved() - bytesLastMoved),
+        (getBblocksMoved() - blocksLastMoved));
 
     return getBytesMoved() - bytesLastMoved;
   }

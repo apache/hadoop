@@ -31,8 +31,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY;
@@ -101,7 +101,7 @@ public abstract class CryptoCodec implements Configurable, Closeable {
         HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_DEFAULT);
     return getInstance(conf, CipherSuite.convert(name));
   }
-  
+
   private static List<Class<? extends CryptoCodec>> getCodecClasses(
       Configuration conf, CipherSuite cipherSuite) {
     List<Class<? extends CryptoCodec>> result = Lists.newArrayList();
@@ -112,6 +112,10 @@ public abstract class CryptoCodec implements Configurable, Closeable {
         .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY)) {
       codecString = conf.get(configName, CommonConfigurationKeysPublic
           .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_DEFAULT);
+    } else if (configName.equals(CommonConfigurationKeysPublic
+            .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_KEY)){
+      codecString = conf.get(configName, CommonConfigurationKeysPublic
+              .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_DEFAULT);
     } else {
       codecString = conf.get(configName);
     }

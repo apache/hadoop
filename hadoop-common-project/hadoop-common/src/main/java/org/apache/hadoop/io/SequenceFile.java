@@ -24,7 +24,7 @@ import java.util.*;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.Options.CreateOpts;

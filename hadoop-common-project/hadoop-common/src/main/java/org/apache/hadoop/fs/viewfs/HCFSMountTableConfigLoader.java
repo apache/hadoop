@@ -42,7 +42,7 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
    * Loads the mount-table configuration from hadoop compatible file system and
    * add the configuration items to given configuration. Mount-table
    * configuration format should be suffixed with version number.
-   * Format: mount-table.<versionNumber>.xml
+   * Format: {@literal mount-table.<versionNumber>.xml}
    * Example: mount-table.1.xml
    * When user wants to update mount-table, the expectation is to upload new
    * mount-table configuration file with monotonically increasing integer as

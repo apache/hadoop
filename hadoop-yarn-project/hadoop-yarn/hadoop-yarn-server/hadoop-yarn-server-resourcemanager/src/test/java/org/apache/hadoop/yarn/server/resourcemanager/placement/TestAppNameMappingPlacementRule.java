@@ -20,19 +20,24 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
-import java.util.Arrays;
+import java.io.IOException;
+import java.util.Collections;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.placement.FairQueuePlacementUtils.DOT;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -55,24 +60,37 @@ public class TestAppNameMappingPlacementRule {
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
   }
 
+  private void createQueueHierarchy(
+      CapacitySchedulerQueueManager queueManager) {
+    MockQueueHierarchyBuilder.create()
+        .withQueueManager(queueManager)
+        .withQueue(ROOT_QUEUE + DOT + Q1_QUEUE)
+        .withQueue(ROOT_QUEUE + DOT + Q2_QUEUE)
+        .withQueue(ROOT_QUEUE + DOT + DEFAULT_QUEUE)
+        .withQueue(ROOT_QUEUE + DOT + AMBIGUOUS_QUEUE)
+        .withQueue(ROOT_QUEUE + DOT + USER_NAME + DOT + AMBIGUOUS_QUEUE)
+        .build();
+
+    when(queueManager.getQueue(isNull())).thenReturn(null);
+  }
+
   private void verifyQueueMapping(QueueMapping queueMapping,
-      String user, String expectedQueue) throws YarnException {
+                                  String user, String expectedQueue)
+      throws IOException, YarnException {
     verifyQueueMapping(queueMapping, user,
         queueMapping.getQueue(), expectedQueue, false);
   }
 
   private void verifyQueueMapping(QueueMapping queueMapping,
-      String user, String inputQueue, String expectedQueue,
-      boolean overwrite) throws YarnException {
-    AppNameMappingPlacementRule rule = new AppNameMappingPlacementRule(
-        overwrite, Arrays.asList(queueMapping));
+                                  String user, String inputQueue,
+                                  String expectedQueue, boolean overwrite)
+      throws IOException, YarnException {
+    MappingRule rule = MappingRule.createLegacyRule(
+        queueMapping.getType().toString(),
+        queueMapping.getSource(),
+        queueMapping.getFullPath());
 
-    CapacitySchedulerQueueManager qm =
-        mock(CapacitySchedulerQueueManager.class);
-    when(qm.isAmbiguous(Mockito.isA(String.class))).thenReturn(false);
-    when(qm.isAmbiguous(AMBIGUOUS_QUEUE)).thenReturn(true);
-
-    rule.queueManager = qm;
+    CSMappingPlacementRule engine = setupEngine(rule, overwrite);
 
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
@@ -87,10 +105,37 @@ public class TestAppNameMappingPlacementRule {
       appName = APP_NAME;
     }
     asc.setApplicationName(appName);
-    ApplicationPlacementContext ctx = rule.getPlacementForApp(asc,
+    ApplicationPlacementContext ctx = engine.getPlacementForApp(asc,
         user);
     Assert.assertEquals(expectedQueue,
         ctx != null ? ctx.getQueue() : inputQueue);
+  }
+
+  CSMappingPlacementRule setupEngine(MappingRule rule, boolean override)
+      throws IOException {
+
+    CapacitySchedulerConfiguration csConf =
+        mock(CapacitySchedulerConfiguration.class);
+    when(csConf.getMappingRules()).thenReturn(Collections.singletonList(rule));
+    when(csConf.getOverrideWithQueueMappings())
+        .thenReturn(override);
+    CapacitySchedulerQueueManager queueManager =
+        mock(CapacitySchedulerQueueManager.class);
+
+    createQueueHierarchy(queueManager);
+
+    CSMappingPlacementRule engine = new CSMappingPlacementRule();
+    Groups groups = new Groups(conf);
+
+    CapacityScheduler cs = mock(CapacityScheduler.class);
+    when(cs.getConfiguration()).thenReturn(csConf);
+    when(cs.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
+
+    engine.setGroups(groups);
+    engine.setFailOnConfigError(false);
+    engine.initialize(cs);
+
+    return engine;
   }
 
   public QueueMapping getQueueMapping(String source, String queue) {
@@ -98,7 +143,7 @@ public class TestAppNameMappingPlacementRule {
   }
 
   public QueueMapping getQueueMapping(String source, String parent,
-      String queue) {
+                                      String queue) {
     return QueueMapping.QueueMappingBuilder.create()
         .type(QueueMapping.MappingType.APPLICATION)
         .source(source)
@@ -108,68 +153,71 @@ public class TestAppNameMappingPlacementRule {
   }
 
   @Test
-  public void testSpecificAppNameMappedToDefinedQueue() throws YarnException {
+  public void testSpecificAppNameMappedToDefinedQueue()
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME, Q1_QUEUE),
         USER_NAME, Q1_QUEUE);
   }
 
   @Test
-  public void testPlaceholderAppSourceMappedToQueue() throws YarnException {
+  public void testPlaceholderAppSourceMappedToQueue()
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APPLICATION_PLACEHOLDER, Q2_QUEUE),
         USER_NAME, Q2_QUEUE);
   }
 
   @Test
   public void testPlaceHolderAppSourceAndQueueMappedToAppNameQueue()
-      throws YarnException {
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APPLICATION_PLACEHOLDER,
         APPLICATION_PLACEHOLDER), USER_NAME, APP_NAME);
   }
 
   @Test
   public void testQueueInMappingOverridesSpecifiedQueue()
-      throws YarnException {
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME,
         Q1_QUEUE), USER_NAME, Q2_QUEUE, Q1_QUEUE, true);
   }
 
   @Test
   public void testQueueInMappingDoesNotOverrideSpecifiedQueue()
-      throws YarnException {
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME,
         Q1_QUEUE), USER_NAME, Q2_QUEUE, Q2_QUEUE, false);
   }
 
   @Test
   public void testDefaultQueueInMappingIsNotUsedWithoutOverride()
-      throws YarnException {
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME,
         DEFAULT_QUEUE), USER_NAME, Q2_QUEUE, Q2_QUEUE, false);
   }
 
   @Test
   public void testDefaultQueueInMappingEqualsToInputQueue()
-      throws YarnException {
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME,
         DEFAULT_QUEUE), USER_NAME, DEFAULT_QUEUE, DEFAULT_QUEUE, false);
   }
 
   @Test
-  public void testMappingSourceDiffersFromInputQueue() throws YarnException {
+  public void testMappingSourceDiffersFromInputQueue()
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(MAPREDUCE_APP_NAME,
         Q1_QUEUE), USER_NAME, DEFAULT_QUEUE, DEFAULT_QUEUE, false);
   }
 
-  @Test(expected = YarnException.class)
+  @Test
   public void testMappingContainsAmbiguousLeafQueueWithoutParent()
-      throws YarnException {
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME, AMBIGUOUS_QUEUE),
         USER_NAME, DEFAULT_QUEUE, DEFAULT_QUEUE, false);
   }
 
   @Test
   public void testMappingContainsAmbiguousLeafQueueWithParent()
-      throws YarnException {
+      throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME, ROOT_QUEUE, AMBIGUOUS_QUEUE),
         USER_NAME, DEFAULT_QUEUE, AMBIGUOUS_QUEUE, false);
   }

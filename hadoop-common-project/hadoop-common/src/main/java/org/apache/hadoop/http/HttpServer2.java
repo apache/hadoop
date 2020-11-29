@@ -50,9 +50,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1346,7 +1346,11 @@ public final class HttpServer2 implements FilterContainer {
       try {
         bindListener(listener);
         return;
-      } catch (BindException ex) {
+      } catch (IOException ex) {
+        if (!(ex instanceof BindException)
+            && !(ex.getCause() instanceof BindException)) {
+          throw ex;
+        }
         // Ignore exception. Move to next port.
         ioException = ex;
       }

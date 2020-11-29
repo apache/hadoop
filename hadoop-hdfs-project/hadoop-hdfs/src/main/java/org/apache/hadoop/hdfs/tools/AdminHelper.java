@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,7 +43,7 @@ public class AdminHelper {
   static final int MAX_LINE_WIDTH = 80;
   static final String HELP_COMMAND_NAME = "-help";
 
-  static DistributedFileSystem getDFS(Configuration conf)
+  public static DistributedFileSystem getDFS(Configuration conf)
       throws IOException {
     FileSystem fs = FileSystem.get(conf);
     return checkAndGetDFS(fs, conf);

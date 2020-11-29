@@ -58,6 +58,9 @@ public final class AbfsIoUtils {
         if (key.contains("Cookie")) {
           values = "*cookie info*";
         }
+        if (key.equals("sig")) {
+          values = "XXXX";
+        }
         LOG.debug("  {}={}",
             key,
             values);

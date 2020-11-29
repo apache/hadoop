@@ -18,19 +18,25 @@
 
 package org.apache.hadoop.yarn.server.webapp;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.RemoteLogPathEntry;
+import org.apache.hadoop.yarn.server.webapp.dao.RemoteLogPaths;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -45,6 +51,7 @@ import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -172,6 +179,47 @@ public class LogServlet extends Configured {
               "Application attempt %s does not belong to application %s!",
               applicationAttemptId, applicationId));
     }
+  }
+
+  /**
+   * Returns the user qualified path name of the remote log directory for
+   * each pre-configured log aggregation file controller.
+   *
+   * @return {@link Response} object containing remote log dir path names
+   */
+  public Response getRemoteLogDirPath(String user, String applicationId)
+      throws IOException {
+    String remoteUser = user;
+    ApplicationId appId = applicationId != null ?
+        ApplicationIdPBImpl.fromString(applicationId) : null;
+
+    if (remoteUser == null) {
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      remoteUser = ugi.getUserName();
+    }
+
+    List<LogAggregationFileController> fileControllers =
+        getOrCreateFactory().getConfiguredLogAggregationFileControllerList();
+    List<RemoteLogPathEntry> paths = new ArrayList<>();
+
+    for (LogAggregationFileController fileController : fileControllers) {
+      String path;
+      if (appId != null) {
+        path = fileController.getRemoteAppLogDir(appId, remoteUser).toString();
+      } else {
+        path = LogAggregationUtils.getRemoteLogSuffixedDir(
+            fileController.getRemoteRootLogDir(),
+            remoteUser, fileController.getRemoteRootLogDirSuffix()).toString();
+      }
+
+      paths.add(new RemoteLogPathEntry(fileController.getFileControllerName(),
+          path));
+    }
+
+    RemoteLogPaths result = new RemoteLogPaths(paths);
+    Response.ResponseBuilder response = Response.ok().entity(result);
+    response.header("X-Content-Type-Options", "nosniff");
+    return response.build();
   }
 
   public Response getLogsInfo(HttpServletRequest hsr, String appIdStr,

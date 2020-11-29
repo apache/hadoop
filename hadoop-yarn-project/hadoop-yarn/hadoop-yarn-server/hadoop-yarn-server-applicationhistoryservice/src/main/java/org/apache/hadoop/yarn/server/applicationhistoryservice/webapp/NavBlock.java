@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import com.google.inject.Inject;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -26,6 +30,13 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import static org.apache.hadoop.util.GenericsUtil.isLog4jLogger;
 
 public class NavBlock extends HtmlBlock {
+
+  private Configuration conf;
+
+  @Inject
+  public NavBlock(Configuration conf) {
+    this.conf = conf;
+  }
 
   @Override
   public void render(Block html) {
@@ -61,11 +72,11 @@ public class NavBlock extends HtmlBlock {
         __().
         __();
 
-    Hamlet.UL<Hamlet.DIV<Hamlet>> tools = nav.h3("Tools").ul();
-    tools.li().a("/conf", "Configuration").__()
-        .li().a("/logs", "Local logs").__()
-        .li().a("/stacks", "Server stacks").__()
-        .li().a("/jmx?qry=Hadoop:*", "Server metrics").__();
+    Hamlet.UL<Hamlet.DIV<Hamlet>> tools = WebPageUtils.appendToolSection(nav, conf);
+
+    if (tools == null) {
+      return;
+    }
 
     if (addErrorsAndWarningsLink) {
       tools.li().a(url("errors-and-warnings"), "Errors/Warnings").__();

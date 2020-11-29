@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.common.primitives.SignedBytes;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.SignedBytes;
 import java.net.URISyntaxException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -1038,6 +1038,18 @@ public class DFSUtilClient {
       UserGroupInformation ugi) {
     String ezpath = ez.getPath();
     return (ezpath.equals("/") ? ezpath : ezpath + Path.SEPARATOR)
+        + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
+  }
+
+  /**
+   * Returns trash root in a snapshottable directory.
+   * @param ssRoot String of path to a snapshottable directory root.
+   * @param ugi user of trash owner.
+   * @return unqualified path of trash root.
+   */
+  public static String getSnapshotTrashRoot(String ssRoot,
+      UserGroupInformation ugi) {
+    return (ssRoot.equals("/") ? ssRoot : ssRoot + Path.SEPARATOR)
         + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
   }
 }

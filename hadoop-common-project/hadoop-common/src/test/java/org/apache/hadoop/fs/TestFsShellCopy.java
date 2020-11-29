@@ -23,6 +23,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -34,6 +35,7 @@ import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -175,7 +177,20 @@ public class TestFsShellCopy {
     checkPut(dirPath, targetDir, true);
   }
 
-  
+  @Test
+  public void testCopyBetweenFsEqualPath() throws Exception {
+    Path testRoot = new Path(testRootDir, "testPutFile");
+    lfs.delete(testRoot, true);
+    lfs.mkdirs(testRoot);
+
+    Path filePath = new Path(testRoot, "sameSourceTarget");
+    lfs.create(filePath).close();
+    final FileStatus status = lfs.getFileStatus(filePath);
+    LambdaTestUtils.intercept(PathOperationException.class, () ->
+        FileUtil.copy(lfs, status, lfs, filePath, false, true, conf)
+    );
+  }
+
   private void checkPut(Path srcPath, Path targetDir, boolean useWindowsPath)
   throws Exception {
     lfs.delete(targetDir, true);
@@ -681,6 +696,29 @@ public class TestFsShellCopy {
     } finally {
       // make sure the test file can be deleted
       lfs.setPermission(src, new FsPermission((short)0755));
+    }
+  }
+
+  @Test
+  public void testLazyPersistDirectOverwrite() throws Exception {
+    Path testRoot = new Path(testRootDir, "testLazyPersistDirectOverwrite");
+    try {
+      lfs.delete(testRoot, true);
+      lfs.mkdirs(testRoot);
+      Path filePath = new Path(testRoot, new Path("srcFile"));
+      lfs.create(filePath).close();
+      // Put with overwrite in direct mode.
+      String[] argv =
+          new String[] {"-put", "-f", "-l", "-d", filePath.toString(),
+              filePath.toString()};
+      assertEquals(0, shell.run(argv));
+
+      // Put without overwrite in direct mode shouldn't be success.
+      argv = new String[] {"-put", "-l", "-d", filePath.toString(),
+          filePath.toString()};
+      assertNotEquals(0, shell.run(argv));
+    } finally {
+      lfs.delete(testRoot, true);
     }
   }
 }

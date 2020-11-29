@@ -22,6 +22,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_NO
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY;
@@ -30,6 +31,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
@@ -75,11 +77,12 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.InMemoryLevelDBAliasMapClient;
+import org.apache.hadoop.hdfs.server.datanode.VolumeScanner;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
@@ -142,10 +145,10 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -171,9 +174,20 @@ public class MiniDFSCluster implements AutoCloseable {
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
   public static final String  DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY
       = DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY + ".testing";
+  /**
+   * For the Junit tests, this is the default value of the The amount of time
+   * in milliseconds that the BlockScanner times out waiting for the
+   * {@link VolumeScanner} thread to join during a shutdown call.
+   */
+  public static final long DEFAULT_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC =
+      TimeUnit.SECONDS.toMillis(30);
 
   // Changing this default may break some tests that assume it is 2.
   private static final int DEFAULT_STORAGES_PER_DATANODE = 2;
+
+  // do not consider load factor when selecting a datanode.
+  private static final boolean DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD =
+      false;
 
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
@@ -217,8 +231,7 @@ public class MiniDFSCluster implements AutoCloseable {
 
     public Builder(Configuration conf) {
       this.conf = conf;
-      this.storagesPerDatanode =
-          FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
+      initDefaultConfigurations();
       if (null == conf.get(HDFS_MINIDFS_BASEDIR)) {
         conf.set(HDFS_MINIDFS_BASEDIR,
             new File(getBaseDirectory()).getAbsolutePath());
@@ -227,8 +240,7 @@ public class MiniDFSCluster implements AutoCloseable {
 
     public Builder(Configuration conf, File basedir) {
       this.conf = conf;
-      this.storagesPerDatanode =
-          FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
+      initDefaultConfigurations();
       if (null == basedir) {
         throw new IllegalArgumentException(
             "MiniDFSCluster base directory cannot be null");
@@ -487,10 +499,40 @@ public class MiniDFSCluster implements AutoCloseable {
     }
 
     /**
+     * set the value of DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY in the config
+     * file.
+     *
+     * @param val passed to the flag. This allows overriding the default value
+     *            {@link #DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD}.
+     * @return the builder object.
+     */
+    public Builder setNNRedundancyConsiderLoad(final boolean val) {
+      conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY, val);
+      return this;
+    }
+
+    /**
      * Construct the actual MiniDFSCluster
      */
     public MiniDFSCluster build() throws IOException {
       return new MiniDFSCluster(this);
+    }
+
+    /**
+     * Initializes default values for the cluster.
+     */
+    private void initDefaultConfigurations() {
+      long defaultScannerVolumeTimeOut =
+          conf.getLong(DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY,
+              DEFAULT_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC);
+      conf.setLong(DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY,
+          defaultScannerVolumeTimeOut);
+      // default is false. do not consider load factor when selecting a
+      // datanode.
+      conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
+          DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
+      this.storagesPerDatanode =
+          FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
     }
   }
   
@@ -621,6 +663,10 @@ public class MiniDFSCluster implements AutoCloseable {
       this.nameserviceId = nameserviceId;
       this.nnId = nnId;
       this.startOpt = startOpt;
+      this.conf = conf;
+    }
+
+    public void setConf(Configuration conf) {
       this.conf = conf;
     }
     
@@ -2186,6 +2232,17 @@ public class MiniDFSCluster implements AutoCloseable {
   }
 
   /**
+   * Update an existing NameNode's configuration.
+   */
+  public void setNameNodeConf(int nnIndex, Configuration nnConf) {
+    NameNodeInfo info = getNN(nnIndex);
+    if (info == null) {
+      throw new RuntimeException("Invalid nnIndex!");
+    }
+    info.setConf(nnConf);
+  }
+
+  /**
    * Restart the namenode at a given index. Optionally wait for the cluster
    * to become active.
    */
@@ -2679,7 +2736,8 @@ public class MiniDFSCluster implements AutoCloseable {
   public void rollEditLogAndTail(int nnIndex) throws Exception {
     getNameNode(nnIndex).getRpcServer().rollEditLog();
     for (int i = 2; i < getNumNameNodes(); i++) {
-      getNameNode(i).getNamesystem().getEditLogTailer().doTailEdits();
+      long el = getNameNode(i).getNamesystem().getEditLogTailer().doTailEdits();
+      LOG.info("editsLoaded {}", el);
     }
   }
 

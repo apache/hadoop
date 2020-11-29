@@ -18,15 +18,14 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
+import java.util.List;
 
+import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -92,12 +91,13 @@ public class TestQueueMappings {
     // space trimming
     conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING, "    u : a : " + Q1);
     cs.reinitialize(conf, null);
-    checkQMapping(
-        QueueMappingBuilder.create()
-                .type(MappingType.USER)
-                .source("a")
-                .queue(Q1)
-                .build());
+
+    List<MappingRule> rules = cs.getConfiguration().getMappingRules();
+
+    String ruleStr = rules.get(0).toString();
+    assert(ruleStr.contains("variable='%user'"));
+    assert(ruleStr.contains("value='a'"));
+    assert(ruleStr.contains("queueName='q1'"));
   }
 
   @Test
@@ -154,14 +154,5 @@ public class TestQueueMappings {
     }
     Assert.assertTrue("invalid mapping did not throw exception for " + reason,
         fail);
-  }
-
-  private void checkQMapping(QueueMapping expected)
-          throws IOException {
-    UserGroupMappingPlacementRule rule =
-        (UserGroupMappingPlacementRule) cs.getRMContext()
-            .getQueuePlacementManager().getPlacementRules().get(0);
-    QueueMapping queueMapping = rule.getQueueMappings().get(0);
-    Assert.assertEquals(queueMapping, expected);
   }
 }

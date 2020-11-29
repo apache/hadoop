@@ -398,6 +398,12 @@ public class FileUtil {
                              Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
+
+    if (srcFS.makeQualified(src).equals(dstFS.makeQualified(dst))) {
+      throw new PathOperationException("Source (" + src + ") and destination " +
+          "(" + dst + ") are equal in the copy command.");
+    }
+
     if (srcStatus.isDirectory()) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
@@ -1806,7 +1812,7 @@ public class FileUtil {
    * specified charset. This utility method opens the file for writing, creating
    * the file if it does not exist, or overwrites an existing file.
    *
-   * @param FileContext the file context with which to create the file
+   * @param fs the file context with which to create the file
    * @param path the path to the file
    * @param charseq the char sequence to write to the file
    * @param cs the charset to use for encoding

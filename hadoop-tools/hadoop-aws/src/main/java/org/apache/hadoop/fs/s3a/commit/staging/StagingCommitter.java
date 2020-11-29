@@ -26,7 +26,6 @@ import java.util.Locale;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,16 +45,14 @@ import org.apache.hadoop.fs.s3a.commit.Tasks;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.util.DurationInfo;
 
-import static com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
-import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
@@ -95,7 +92,6 @@ public class StagingCommitter extends AbstractS3ACommitter {
   public static final String NAME = "staging";
   private final Path constructorOutputPath;
   private final long uploadPartSize;
-  private final String uuid;
   private final boolean uniqueFilenames;
   private final FileOutputCommitter wrappedCommitter;
 
@@ -118,15 +114,14 @@ public class StagingCommitter extends AbstractS3ACommitter {
     Configuration conf = getConf();
     this.uploadPartSize = conf.getLongBytes(
         MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-    this.uuid = getUploadUUID(conf, context.getJobID());
     this.uniqueFilenames = conf.getBoolean(
         FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
         DEFAULT_STAGING_COMMITTER_UNIQUE_FILENAMES);
-    setWorkPath(buildWorkPath(context, uuid));
+    setWorkPath(buildWorkPath(context, getUUID()));
     this.wrappedCommitter = createWrappedCommitter(context, conf);
     setOutputPath(constructorOutputPath);
     Path finalOutputPath = getOutputPath();
-    Preconditions.checkNotNull(finalOutputPath, "Output path cannot be null");
+    checkNotNull(finalOutputPath, "Output path cannot be null");
     S3AFileSystem fs = getS3AFileSystem(finalOutputPath,
         context.getConfiguration(), false);
     s3KeyPrefix = fs.pathToKey(finalOutputPath);
@@ -156,7 +151,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
 
     // explicitly choose commit algorithm
     initFileOutputCommitterOptions(context);
-    commitsDirectory = Paths.getMultipartUploadCommitsDirectory(conf, uuid);
+    commitsDirectory = Paths.getMultipartUploadCommitsDirectory(conf,
+        getUUID());
     return new FileOutputCommitter(commitsDirectory, context);
   }
 
@@ -175,46 +171,15 @@ public class StagingCommitter extends AbstractS3ACommitter {
   public String toString() {
     final StringBuilder sb = new StringBuilder("StagingCommitter{");
     sb.append(super.toString());
+    sb.append(", commitsDirectory=").append(commitsDirectory);
+    sb.append(", uniqueFilenames=").append(uniqueFilenames);
     sb.append(", conflictResolution=").append(conflictResolution);
+    sb.append(", uploadPartSize=").append(uploadPartSize);
     if (wrappedCommitter != null) {
       sb.append(", wrappedCommitter=").append(wrappedCommitter);
     }
     sb.append('}');
     return sb.toString();
-  }
-
-  /**
-   * Get the UUID of an upload; may be the job ID.
-   * Spark will use a fake app ID based on the current minute and job ID 0.
-   * To avoid collisions, the key policy is:
-   * <ol>
-   *   <li>Value of {@link InternalCommitterConstants#FS_S3A_COMMITTER_STAGING_UUID}.</li>
-   *   <li>Value of {@code "spark.sql.sources.writeJobUUID"}.</li>
-   *   <li>Value of {@code "spark.app.id"}.</li>
-   *   <li>JobId passed in.</li>
-   * </ol>
-   * The staging UUID is set in in {@link #setupJob(JobContext)} and so will
-   * be valid in all sequences where the job has been set up for the
-   * configuration passed in.
-   * @param conf job/task configuration
-   * @param jobId Job ID
-   * @return an ID for use in paths.
-   */
-  public static String getUploadUUID(Configuration conf, String jobId) {
-    return conf.getTrimmed(
-        InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID,
-        conf.getTrimmed(SPARK_WRITE_UUID,
-            conf.getTrimmed(SPARK_APP_ID, jobId)));
-  }
-
-  /**
-   * Get the UUID of a Job.
-   * @param conf job/task configuration
-   * @param jobId Job ID
-   * @return an ID for use in paths.
-   */
-  public static String getUploadUUID(Configuration conf, JobID jobId) {
-    return getUploadUUID(conf, jobId.toString());
   }
 
   /**
@@ -309,7 +274,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @return the location of pending job attempts.
    */
   private static Path getPendingJobAttemptsPath(Path out) {
-    Preconditions.checkNotNull(out, "Null 'out' path");
+    checkNotNull(out, "Null 'out' path");
     return new Path(out, TEMPORARY);
   }
 
@@ -330,12 +295,12 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * @param context task context
    */
   private static void validateContext(TaskAttemptContext context) {
-    Preconditions.checkNotNull(context, "null context");
-    Preconditions.checkNotNull(context.getTaskAttemptID(),
+    checkNotNull(context, "null context");
+    checkNotNull(context.getTaskAttemptID(),
         "null task attempt ID");
-    Preconditions.checkNotNull(context.getTaskAttemptID().getTaskID(),
+    checkNotNull(context.getTaskAttemptID().getTaskID(),
         "null task ID");
-    Preconditions.checkNotNull(context.getTaskAttemptID().getJobID(),
+    checkNotNull(context.getTaskAttemptID().getJobID(),
         "null job ID");
   }
 
@@ -377,7 +342,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
 
     // get files on the local FS in the attempt path
     Path attemptPath = getTaskAttemptPath(context);
-    Preconditions.checkNotNull(attemptPath,
+    checkNotNull(attemptPath,
         "No attemptPath path in {}", this);
 
     LOG.debug("Scanning {} for files to commit", attemptPath);
@@ -401,7 +366,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
    */
   protected String getFinalKey(String relative, JobContext context) {
     if (uniqueFilenames) {
-      return getS3KeyPrefix(context) + "/" + Paths.addUUID(relative, uuid);
+      return getS3KeyPrefix(context) + "/"
+          + Paths.addUUID(relative, getUUID());
     } else {
       return getS3KeyPrefix(context) + "/" + relative;
     }
@@ -452,11 +418,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
    */
   @Override
   public void setupJob(JobContext context) throws IOException {
-    LOG.debug("{}, Setting up job {}", getRole(), jobIdString(context));
-    context.getConfiguration().set(
-        InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID, uuid);
-    wrappedCommitter.setupJob(context);
     super.setupJob(context);
+    wrappedCommitter.setupJob(context);
   }
 
   /**
@@ -540,19 +503,6 @@ public class StagingCommitter extends AbstractS3ACommitter {
   }
 
   @Override
-  protected void abortPendingUploadsInCleanup(boolean suppressExceptions)
-      throws IOException {
-    if (getConf()
-        .getBoolean(FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS, true)) {
-      super.abortPendingUploadsInCleanup(suppressExceptions);
-    } else {
-      LOG.info("Not cleanup up pending uploads to {} as {} is false ",
-          getOutputPath(),
-          FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS);
-    }
-  }
-
-  @Override
   protected void abortJobInternal(JobContext context,
       boolean suppressExceptions) throws IOException {
     String r = getRole();
@@ -608,8 +558,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
     Path taskAttemptPath = getTaskAttemptPath(context);
     try (DurationInfo d = new DurationInfo(LOG,
         "%s: setup task attempt path %s ", getRole(), taskAttemptPath)) {
-      // create the local FS
-      taskAttemptPath.getFileSystem(getConf()).mkdirs(taskAttemptPath);
+      super.setupTask(context);
       wrappedCommitter.setupTask(context);
     }
   }
@@ -695,6 +644,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
       context.progress();
 
       PendingSet pendingCommits = new PendingSet(commitCount);
+      pendingCommits.putExtraData(TASK_ATTEMPT_ID,
+          context.getTaskAttemptID().toString());
       try {
         Tasks.foreach(taskOutput)
             .stopOnFailure()
@@ -828,15 +779,6 @@ public class StagingCommitter extends AbstractS3ACommitter {
    */
   private String getS3KeyPrefix(JobContext context) {
     return s3KeyPrefix;
-  }
-
-  /**
-   * A UUID for this upload, as calculated with.
-   * {@link #getUploadUUID(Configuration, String)}
-   * @return the UUID for files
-   */
-  protected String getUUID() {
-    return uuid;
   }
 
   /**

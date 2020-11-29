@@ -34,6 +34,8 @@ If a user wants to continue use the same fs.defaultFS and wants to have more mou
 Example if fs.defaultFS is `hdfs://mycluster`, then the mount link configuration key name should be like in the following format `fs.viewfs.mounttable.*mycluster*.link.<mountLinkPath>`.
 Even if the initialized fs uri has hostname:port, it will simply ignore the port number and only consider the hostname as the mount table name.  We will discuss more example configurations in following sections.
 If there are no mount links configured with the initializing uri's hostname as the mount table name, then it will automatically consider the current uri as fallback(`fs.viewfs.mounttable.*mycluster*.linkFallback`) target fs uri.
+If the initialized uri contains path part, it will consider only scheme and authority part, but not the path part. Example, if the initialized uri contains `hdfs://mycluster/data`, it will consider only `hdfs://mycluster` as fallback target fs uri.
+The path part `data` will be ignored.
 
 Another important improvement with the ViewFileSystemOverloadScheme is, administrators need not copy the `mount-table.xml` configuration file to 1000s of client nodes. Instead, they can keep the mount-table configuration file in a Hadoop compatible file system. So, keeping the configuration file in a central place makes administrators life easier as they can update mount-table in single place.
 

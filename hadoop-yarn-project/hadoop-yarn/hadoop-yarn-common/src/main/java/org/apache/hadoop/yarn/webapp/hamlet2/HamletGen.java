@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp.hamlet2;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 import java.io.IOException;
 import java.io.PrintWriter;

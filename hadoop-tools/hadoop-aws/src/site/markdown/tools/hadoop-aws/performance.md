@@ -629,6 +629,8 @@ being placed on the classpath.
 
 ## Tuning FileSystem Initialization.
 
+### Disabling bucket existence checks
+
 When an S3A Filesystem instance is created and initialized, the client
 checks if the bucket provided is valid. This can be slow.
 You can ignore bucket validation by configuring `fs.s3a.bucket.probe` as follows:
@@ -642,3 +644,52 @@ You can ignore bucket validation by configuring `fs.s3a.bucket.probe` as follows
 
 Note: if the bucket does not exist, this issue will surface when operations are performed
 on the filesystem; you will see `UnknownStoreException` stack traces.
+
+### Rate limiting parallel FileSystem creation operations
+
+Applications normally ask for filesystems from the shared cache,
+via `FileSystem.get()` or `Path.getFileSystem()`.
+The cache, `FileSystem.CACHE` will, for each user, cachec one instance of a filesystem
+for a given URI.
+All calls to `FileSystem.get` for a cached FS for a URI such
+as `s3a://landsat-pds/` will return that singe single instance.
+
+FileSystem instances are created on-demand for the cache,
+and will be done in each thread which requests an instance.
+This is done outside of any synchronisation block.
+Once a task has an initialized FileSystem instance, it will, in a synchronized block
+add it to the cache.
+If it turns out that the cache now already has an instance for that URI, it will
+revert the cached copy to it, and close the FS instance it has just created.
+
+If a FileSystem takes time to be initialized, and many threads are trying to
+retrieve a FileSystem instance for the same S3 bucket in parallel,
+All but one of the threads will be doing useless work, and may unintentionally
+be creating lock contention on shared objects.
+
+There is an option, `fs.creation.parallel.count`, which uses a semaphore
+to limit the number of FS instances which may be created in parallel.
+
+Setting this to a low number will reduce the amount of wasted work,
+at the expense of limiting the number of FileSystem clients which
+can be created simultaneously for different object stores/distributed
+filesystems.
+
+For example, a value of four would put an upper limit on the number
+of wasted instantiations of a connector for the `s3a://landsat-pds/`
+bucket.
+
+```xml
+<property>
+  <name>fs.creation.parallel.count</name>
+  <value>4</value>
+</property>
+```
+
+It would also mean that if four threads were in the process
+of creating such connectors, all threads trying to create
+connectors for other buckets, would end up blocking too.
+
+Consider experimenting with this when running applications
+where many threads may try to simultaneously interact
+with the same slow-to-initialize object stores.

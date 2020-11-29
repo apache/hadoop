@@ -43,7 +43,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.BlobRequestOptions;
@@ -580,6 +580,7 @@ final class PageBlobOutputStream extends OutputStream implements Syncable, Strea
       // Restore the interrupted status
       Thread.currentThread().interrupt();
     }
+    checkStreamState();
     LOG.debug("Leaving PageBlobOutputStream#hsync(). Total hsync duration = "
   	  + (System.currentTimeMillis() - start) + " msec.");
   }

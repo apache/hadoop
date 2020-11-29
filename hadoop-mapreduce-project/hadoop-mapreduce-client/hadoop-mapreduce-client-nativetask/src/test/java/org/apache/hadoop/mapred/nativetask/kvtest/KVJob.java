@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Longs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;

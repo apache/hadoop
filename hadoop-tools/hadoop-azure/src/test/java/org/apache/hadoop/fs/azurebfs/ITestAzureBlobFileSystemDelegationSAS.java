@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import org.junit.Assert;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
@@ -53,6 +55,7 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test Perform Authorization Check operation
@@ -381,4 +384,30 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
     assertArrayEquals(propertyValue, fs.getXAttr(reqPath, propertyName));
   }
+
+  @Test
+  public void testSignatureMask() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    String src = "/testABC/test.xt";
+    fs.create(new Path(src));
+    AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
+        .renamePath(src, "/testABC" + "/abc.txt", null);
+    AbfsHttpOperation result = abfsHttpRestOperation.getResult();
+    String url = result.getSignatureMaskedUrl();
+    String encodedUrl = result.getSignatureMaskedEncodedUrl();
+    Assertions.assertThat(url.substring(url.indexOf("sig=")))
+        .describedAs("Signature query param should be masked")
+        .startsWith("sig=XXXX");
+    Assertions.assertThat(encodedUrl.substring(encodedUrl.indexOf("sig%3D")))
+        .describedAs("Signature query param should be masked")
+        .startsWith("sig%3DXXXX");
+  }
+
+  @Test
+  public void testSignatureMaskOnExceptionMessage() throws Exception {
+    intercept(IOException.class, "sig=XXXX",
+        () -> getFileSystem().getAbfsClient()
+            .renamePath("testABC/test.xt", "testABC/abc.txt", null));
+  }
+
 }

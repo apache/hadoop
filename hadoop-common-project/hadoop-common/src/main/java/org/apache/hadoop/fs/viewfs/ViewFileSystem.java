@@ -33,7 +33,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,8 +41,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -114,6 +114,7 @@ public class ViewFileSystem extends FileSystem {
   static class InnerCache {
     private Map<Key, FileSystem> map = new HashMap<>();
     private FsGetter fsCreator;
+    private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     InnerCache(FsGetter fsCreator) {
       this.fsCreator = fsCreator;
@@ -121,12 +122,27 @@ public class ViewFileSystem extends FileSystem {
 
     FileSystem get(URI uri, Configuration config) throws IOException {
       Key key = new Key(uri);
-      if (map.get(key) == null) {
-        FileSystem fs = fsCreator.getNewInstance(uri, config);
+      FileSystem fs = null;
+      try {
+        rwLock.readLock().lock();
+        fs = map.get(key);
+        if (fs != null) {
+          return fs;
+        }
+      } finally {
+        rwLock.readLock().unlock();
+      }
+      try {
+        rwLock.writeLock().lock();
+        fs = map.get(key);
+        if (fs != null) {
+          return fs;
+        }
+        fs = fsCreator.getNewInstance(uri, config);
         map.put(key, fs);
         return fs;
-      } else {
-        return map.get(key);
+      } finally {
+        rwLock.writeLock().unlock();
       }
     }
 
@@ -140,9 +156,13 @@ public class ViewFileSystem extends FileSystem {
       }
     }
 
-    InnerCache unmodifiableCache() {
-      map = Collections.unmodifiableMap(map);
-      return this;
+    void clear() {
+      try {
+        rwLock.writeLock().lock();
+        map.clear();
+      } finally {
+        rwLock.writeLock().unlock();
+      }
     }
 
     /**
@@ -259,12 +279,13 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Returns the ViewFileSystem type.
-   * @return <code>viewfs</code>
+   * Returns false as it does not support to add fallback link automatically on
+   * no mounts.
    */
-  String getType() {
-    return FsConstants.VIEWFS_TYPE;
+  boolean supportAutoAddingFallbackOnNoMounts() {
+    return false;
   }
+
 
   /**
    * Called after a new FileSystem instance is constructed.
@@ -293,19 +314,19 @@ public class ViewFileSystem extends FileSystem {
     try {
       myUri = new URI(getScheme(), authority, "/", null, null);
       boolean initingUriAsFallbackOnNoMounts =
-          !FsConstants.VIEWFS_TYPE.equals(getType());
-      fsState = new InodeTree<FileSystem>(conf, tableName, theUri,
+          supportAutoAddingFallbackOnNoMounts();
+      fsState = new InodeTree<FileSystem>(conf, tableName, myUri,
           initingUriAsFallbackOnNoMounts) {
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
-            FileSystem fs;
-            if (enableInnerCache) {
-              fs = innerCache.get(uri, config);
-            } else {
-              fs = fsGetter.get(uri, config);
-            }
-            return new ChRootedFileSystem(fs, uri);
+          FileSystem fs;
+          if (enableInnerCache) {
+            fs = innerCache.get(uri, config);
+          } else {
+            fs = fsGetter.get(uri, config);
+          }
+          return new ChRootedFileSystem(fs, uri);
         }
 
         @Override
@@ -334,7 +355,7 @@ public class ViewFileSystem extends FileSystem {
       // All fs instances are created and cached on startup. The cache is
       // readonly after the initialize() so the concurrent access of the cache
       // is safe.
-      cache = innerCache.unmodifiableCache();
+      cache = innerCache;
     }
   }
 
@@ -406,7 +427,7 @@ public class ViewFileSystem extends FileSystem {
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.append(res.remainingPath, bufferSize, progress);
   }
-  
+
   @Override
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       EnumSet<CreateFlag> flags, int bufferSize, short replication,
@@ -649,18 +670,52 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public boolean rename(final Path src, final Path dst) throws IOException {
     // passing resolveLastComponet as false to catch renaming a mount point to 
-    // itself. We need to catch this as an internal operation and fail.
-    InodeTree.ResolveResult<FileSystem> resSrc = 
-      fsState.resolve(getUriPath(src), false); 
-  
+    // itself. We need to catch this as an internal operation and fail if no
+    // fallback.
+    InodeTree.ResolveResult<FileSystem> resSrc =
+        fsState.resolve(getUriPath(src), false);
+
     if (resSrc.isInternalDir()) {
-      throw readOnlyMountTable("rename", src);
+      if (fsState.getRootFallbackLink() == null) {
+        // If fallback is null, we can't rename from src.
+        throw readOnlyMountTable("rename", src);
+      }
+      InodeTree.ResolveResult<FileSystem> resSrcWithLastComp =
+          fsState.resolve(getUriPath(src), true);
+      if (resSrcWithLastComp.isInternalDir() || resSrcWithLastComp
+          .isLastInternalDirLink()) {
+        throw readOnlyMountTable("rename", src);
+      } else {
+        // This is fallback and let's set the src fs with this fallback
+        resSrc = resSrcWithLastComp;
+      }
     }
-      
-    InodeTree.ResolveResult<FileSystem> resDst = 
-      fsState.resolve(getUriPath(dst), false);
+
+    InodeTree.ResolveResult<FileSystem> resDst =
+        fsState.resolve(getUriPath(dst), false);
+
     if (resDst.isInternalDir()) {
-          throw readOnlyMountTable("rename", dst);
+      if (fsState.getRootFallbackLink() == null) {
+        // If fallback is null, we can't rename to dst.
+        throw readOnlyMountTable("rename", dst);
+      }
+      // if the fallback exist, we may have chance to rename to fallback path
+      // where dst parent is matching to internalDir.
+      InodeTree.ResolveResult<FileSystem> resDstWithLastComp =
+          fsState.resolve(getUriPath(dst), true);
+      if (resDstWithLastComp.isInternalDir()) {
+        // We need to get fallback here. If matching fallback path not exist, it
+        // will fail later. This is a very special case: Even though we are on
+        // internal directory, we should allow to rename, so that src files will
+        // moved under matching fallback dir.
+        resDst = new InodeTree.ResolveResult<FileSystem>(
+            InodeTree.ResultKind.INTERNAL_DIR,
+            fsState.getRootFallbackLink().getTargetFileSystem(), "/",
+            new Path(resDstWithLastComp.resolvedPath), false);
+      } else {
+        // The link resolved to some target fs or fallback fs.
+        resDst = resDstWithLastComp;
+      }
     }
 
     URI srcUri = resSrc.targetFileSystem.getUri();
@@ -937,6 +992,12 @@ public class ViewFileSystem extends FileSystem {
     for (InodeTree.MountPoint<FileSystem> mountPoint : mountPoints) {
       FileSystem targetFs = mountPoint.target.targetFileSystem;
       children.addAll(Arrays.asList(targetFs.getChildFileSystems()));
+    }
+
+    if (fsState.isRootInternalDir() && fsState.getRootFallbackLink() != null) {
+      children.addAll(Arrays.asList(
+          fsState.getRootFallbackLink().targetFileSystem
+              .getChildFileSystems()));
     }
     return children.toArray(new FileSystem[]{});
   }
@@ -1256,6 +1317,23 @@ public class ViewFileSystem extends FileSystem {
     public BlockLocation[] getFileBlockLocations(final FileStatus fs,
         final long start, final long len) throws
         FileNotFoundException, IOException {
+
+      // When application calls listFiles on internalDir, it would return
+      // RemoteIterator from InternalDirOfViewFs. If there is a fallBack, there
+      // is a chance of files exists under that internalDir in fallback.
+      // Iterator#next will call getFileBlockLocations with that files. So, we
+      // should return getFileBlockLocations on fallback. See HDFS-15532.
+      if (!InodeTree.SlashPath.equals(fs.getPath()) && this.fsState
+          .getRootFallbackLink() != null) {
+        FileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path parent = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        Path pathToFallbackFs = new Path(parent, fs.getPath().getName());
+        return linkedFallbackFs
+            .getFileBlockLocations(pathToFallbackFs, start, len);
+      }
+
       checkPathIsSlash(fs.getPath());
       throw new FileNotFoundException("Path points to dir not a file");
     }
@@ -1421,7 +1499,7 @@ public class ViewFileSystem extends FileSystem {
 
     @Override
     public boolean mkdirs(Path dir, FsPermission permission)
-        throws AccessControlException, FileAlreadyExistsException {
+        throws IOException {
       if (theInternalDir.isRoot() && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
@@ -1451,7 +1529,7 @@ public class ViewFileSystem extends FileSystem {
                     .append(linkedFallbackFs.getUri());
             LOG.debug(msg.toString(), e);
           }
-          return false;
+          throw e;
         }
       }
 
@@ -1459,8 +1537,7 @@ public class ViewFileSystem extends FileSystem {
     }
 
     @Override
-    public boolean mkdirs(Path dir)
-        throws AccessControlException, FileAlreadyExistsException {
+    public boolean mkdirs(Path dir) throws IOException {
       return mkdirs(dir, null);
     }
 
@@ -1684,6 +1761,7 @@ public class ViewFileSystem extends FileSystem {
     super.close();
     if (enableInnerCache && cache != null) {
       cache.closeAll();
+      cache.clear();
     }
   }
 }

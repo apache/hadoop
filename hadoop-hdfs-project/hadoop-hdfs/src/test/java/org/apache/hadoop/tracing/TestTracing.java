@@ -26,27 +26,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.Span;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestTracing {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
-
-  private Tracer prevTracer;
 
   private final static Configuration TRACING_CONF;
   private final static Configuration NO_TRACING_CONF;
@@ -87,21 +81,21 @@ public class TestTracing {
     long endTime = System.currentTimeMillis();
     ts.close();
 
-    String[] expectedSpanNames = {
-      "testWriteTraceHooks",
-      "ClientProtocol#create",
-      "ClientNamenodeProtocol#create",
-      "ClientProtocol#fsync",
-      "ClientNamenodeProtocol#fsync",
-      "ClientProtocol#complete",
-      "ClientNamenodeProtocol#complete",
-      "newStreamForCreate",
-      "DFSOutputStream#write",
-      "DFSOutputStream#close",
-      "dataStreamer",
-      "OpWriteBlockProto",
-      "ClientProtocol#addBlock",
-      "ClientNamenodeProtocol#addBlock"
+    String[] expectedSpanNames = new String[]{
+        "testWriteTraceHooks",
+        "ClientProtocol#create",
+        "ClientNamenodeProtocol#create",
+        "ClientProtocol#fsync",
+        "ClientNamenodeProtocol#fsync",
+        "ClientProtocol#complete",
+        "ClientNamenodeProtocol#complete",
+        "newStreamForCreate",
+        "DFSOutputStream#write",
+        "DFSOutputStream#close",
+        "dataStreamer",
+        "OpWriteBlockProto",
+        "ClientProtocol#addBlock",
+        "ClientNamenodeProtocol#addBlock"
     };
     SetSpanReceiver.assertSpanNamesFound(expectedSpanNames);
 
@@ -109,23 +103,21 @@ public class TestTracing {
     Map<String, List<Span>> map = SetSpanReceiver.getMap();
     Span s = map.get("testWriteTraceHooks").get(0);
     Assert.assertNotNull(s);
-    long spanStart = s.getStartTimeMillis();
-    long spanEnd = s.getStopTimeMillis();
 
     // Spans homed in the top trace shoud have same trace id.
     // Spans having multiple parents (e.g. "dataStreamer" added by HDFS-7054)
     // and children of them are exception.
-    String[] spansInTopTrace = {
-      "testWriteTraceHooks",
-      "ClientProtocol#create",
-      "ClientNamenodeProtocol#create",
-      "ClientProtocol#fsync",
-      "ClientNamenodeProtocol#fsync",
-      "ClientProtocol#complete",
-      "ClientNamenodeProtocol#complete",
-      "newStreamForCreate",
-      "DFSOutputStream#write",
-      "DFSOutputStream#close",
+    String[] spansInTopTrace = new String[]{
+        "testWriteTraceHooks",
+        "ClientProtocol#create",
+        "ClientNamenodeProtocol#create",
+        "ClientProtocol#fsync",
+        "ClientNamenodeProtocol#fsync",
+        "ClientProtocol#complete",
+        "ClientNamenodeProtocol#complete",
+        "newStreamForCreate",
+        "DFSOutputStream#write",
+        "DFSOutputStream#close",
     };
     for (String desc : spansInTopTrace) {
       for (Span span : map.get(desc)) {
@@ -150,11 +142,11 @@ public class TestTracing {
     ts.close();
     long endTime = System.currentTimeMillis();
 
-    String[] expectedSpanNames = {
-      "testReadTraceHooks",
-      "ClientProtocol#getBlockLocations",
-      "ClientNamenodeProtocol#getBlockLocations",
-      "OpReadBlockProto"
+    String[] expectedSpanNames = new String[]{
+        "testReadTraceHooks",
+        "ClientProtocol#getBlockLocations",
+        "ClientNamenodeProtocol#getBlockLocations",
+        "OpReadBlockProto"
     };
     SetSpanReceiver.assertSpanNamesFound(expectedSpanNames);
 
@@ -221,7 +213,7 @@ public class TestTracing {
   }
 
   @After
-  public void shutDown() throws IOException {
+  public void shutDown() {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;

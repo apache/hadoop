@@ -34,13 +34,15 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Unstable
 public enum StorageType {
   // sorted by the speed of the storage types, from fast to slow
-  RAM_DISK(true),
-  SSD(false),
-  DISK(false),
-  ARCHIVE(false),
-  PROVIDED(false);
+  RAM_DISK(true, true),
+  NVDIMM(false, true),
+  SSD(false, false),
+  DISK(false, false),
+  ARCHIVE(false, false),
+  PROVIDED(false, false);
 
   private final boolean isTransient;
+  private final boolean isRAM;
 
   public static final StorageType DEFAULT = DISK;
 
@@ -48,12 +50,17 @@ public enum StorageType {
 
   private static final StorageType[] VALUES = values();
 
-  StorageType(boolean isTransient) {
+  StorageType(boolean isTransient, boolean isRAM) {
     this.isTransient = isTransient;
+    this.isRAM = isRAM;
   }
 
   public boolean isTransient() {
     return isTransient;
+  }
+
+  public boolean isRAM() {
+    return isRAM;
   }
 
   public boolean supportTypeQuota() {

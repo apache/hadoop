@@ -221,6 +221,12 @@ public interface HdfsClientConfigKeys {
       "dfs.encrypt.data.transfer.cipher.key.bitlength";
   int    DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT = 128;
 
+  public static final String
+          DFS_DATA_TRANSFER_MAX_PACKET_SIZE =
+          "dfs.data.transfer.max.packet.size";
+  public static final int DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT =
+          16 * 1024 * 1024;
+
   String DFS_TRUSTEDCHANNEL_RESOLVER_CLASS =
       "dfs.trustedchannel.resolver.class";
 
@@ -362,6 +368,9 @@ public interface HdfsClientConfigKeys {
     String  EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_KEY =
         PREFIX + "exclude.nodes.cache.expiry.interval.millis";
     long    EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT = 10*MINUTE;
+    String RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY =
+        PREFIX + "recover.lease.on.close.exception";
+    boolean RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT = false;
 
     interface ByteArrayManager {
       String PREFIX = Write.PREFIX + "byte-array-manager.";
@@ -413,6 +422,9 @@ public interface HdfsClientConfigKeys {
     String PREFIX = HdfsClientConfigKeys.PREFIX + "read.";
 
     String  PREFETCH_SIZE_KEY = PREFIX + "prefetch.size";
+
+    String URI_CACHE_KEY = PREFIX + "uri.cache.enabled";
+    boolean URI_CACHE_DEFAULT = false;
 
     interface ShortCircuit {
       String PREFIX = Read.PREFIX + "shortcircuit.";

@@ -1393,4 +1393,37 @@ public class TestFileTruncate {
         fs.getQuotaUsage(root).getSpaceConsumed());
 
   }
+
+  /**
+   * Test truncate on a snapshotted file.
+   */
+  @Test
+  public void testTruncatewithRenameandSnapshot() throws Exception {
+    final Path dir = new Path("/dir");
+    fs.mkdirs(dir, new FsPermission((short) 0777));
+    final Path file = new Path(dir, "file");
+    final Path movedFile = new Path("/file");
+
+    // 1. create a file and snapshot for dir which is having a file
+    DFSTestUtil.createFile(fs, file, 10, (short) 3, 0);
+    fs.allowSnapshot(dir);
+    Path snapshotPath = fs.createSnapshot(dir, "s0");
+    assertTrue(fs.exists(snapshotPath));
+
+    // 2. move the file
+    fs.rename(file, new Path("/"));
+
+    // 3.truncate the moved file
+    final boolean isReady = fs.truncate(movedFile, 5);
+    if (!isReady) {
+      checkBlockRecovery(movedFile);
+    }
+    FileStatus fileStatus = fs.getFileStatus(movedFile);
+    assertEquals(5, fileStatus.getLen());
+
+    // 4. get block locations of file which is in snapshot
+    LocatedBlocks locations = fs.getClient().getNamenode()
+        .getBlockLocations("/dir/.snapshot/s0/file", 0, 10);
+    assertEquals(10, locations.get(0).getBlockSize());
+  }
 }

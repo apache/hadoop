@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.security.UserGroupInformation;

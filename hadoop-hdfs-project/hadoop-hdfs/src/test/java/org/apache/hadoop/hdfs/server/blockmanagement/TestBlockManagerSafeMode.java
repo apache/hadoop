@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -527,8 +527,8 @@ public class TestBlockManagerSafeMode {
                 "threshold %.4f of total blocks %d.%n",
             0, BLOCK_THRESHOLD, THRESHOLD, BLOCK_TOTAL)));
     assertTrue(tip.contains(
-        String.format("The number of live datanodes %d has reached the " +
-            "minimum number %d. ", dn.getNumLiveDataNodes(), DATANODE_NUM)));
+        "The number of live datanodes is not calculated " +
+            "since reported blocks hasn't reached the threshold."));
     assertTrue(tip.contains("Safe mode will be turned off automatically once " +
         "the thresholds have been reached."));
 

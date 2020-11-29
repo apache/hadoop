@@ -198,8 +198,9 @@ public class PartitionedStagingCommitter extends StagingCommitter {
           .stopOnFailure()
           .suppressExceptions(false)
           .executeWith(submitter)
-          .run(path -> {
-            PendingSet pendingSet = PendingSet.load(sourceFS, path);
+          .run(status -> {
+            PendingSet pendingSet = PendingSet.load(sourceFS,
+                status);
             Path lastParent = null;
             for (SinglePendingCommit commit : pendingSet.getCommits()) {
               Path parent = commit.destinationPath().getParent();

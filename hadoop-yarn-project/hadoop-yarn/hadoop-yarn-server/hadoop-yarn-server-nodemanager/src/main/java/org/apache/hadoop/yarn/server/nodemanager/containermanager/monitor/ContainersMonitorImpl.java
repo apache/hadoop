@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupElasticMemoryController;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -45,11 +46,14 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerLogsUtils;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 
 import java.util.Arrays;
+import java.io.File;
 import java.util.Map;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -67,6 +71,10 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   private long monitoringInterval;
   private MonitoringThread monitoringThread;
+  private int logCheckInterval;
+  private LogMonitorThread logMonitorThread;
+  private long logDirSizeLimit;
+  private long logTotalSizeLimit;
   private CGroupElasticMemoryController oomListenerThread;
   private boolean containerMetricsEnabled;
   private long containerMetricsPeriodMs;
@@ -94,6 +102,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   private boolean elasticMemoryEnforcement;
   private boolean strictMemoryEnforcement;
   private boolean containersMonitorEnabled;
+  private boolean logMonitorEnabled;
 
   private long maxVCoresAllottedForContainers;
 
@@ -122,6 +131,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     this.monitoringThread = new MonitoringThread();
 
+    this.logMonitorThread = new LogMonitorThread();
+
     this.containersUtilization = ResourceUtilization.newInstance(0, 0, 0.0f);
   }
 
@@ -132,6 +143,16 @@ public class ContainersMonitorImpl extends AbstractService implements
         this.conf.getLong(YarnConfiguration.NM_CONTAINER_MON_INTERVAL_MS,
             this.conf.getLong(YarnConfiguration.NM_RESOURCE_MON_INTERVAL_MS,
                 YarnConfiguration.DEFAULT_NM_RESOURCE_MON_INTERVAL_MS));
+
+    this.logCheckInterval =
+        conf.getInt(YarnConfiguration.NM_CONTAINER_LOG_MON_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_NM_CONTAINER_LOG_MON_INTERVAL_MS);
+    this.logDirSizeLimit =
+        conf.getLong(YarnConfiguration.NM_CONTAINER_LOG_DIR_SIZE_LIMIT_BYTES,
+            YarnConfiguration.DEFAULT_NM_CONTAINER_LOG_DIR_SIZE_LIMIT_BYTES);
+    this.logTotalSizeLimit =
+        conf.getLong(YarnConfiguration.NM_CONTAINER_LOG_TOTAL_SIZE_LIMIT_BYTES,
+            YarnConfiguration.DEFAULT_NM_CONTAINER_LOG_TOTAL_SIZE_LIMIT_BYTES);
 
     this.resourceCalculatorPlugin =
         ResourceCalculatorPlugin.getContainersMonitorPlugin(this.conf);
@@ -214,6 +235,11 @@ public class ContainersMonitorImpl extends AbstractService implements
         isContainerMonitorEnabled() && monitoringInterval > 0;
     LOG.info("ContainersMonitor enabled: {}", containersMonitorEnabled);
 
+    logMonitorEnabled =
+            conf.getBoolean(YarnConfiguration.NM_CONTAINER_LOG_MONITOR_ENABLED,
+                    YarnConfiguration.DEFAULT_NM_CONTAINER_LOG_MONITOR_ENABLED);
+    LOG.info("Container Log Monitor Enabled: "+ logMonitorEnabled);
+
     nodeCpuPercentageForYARN =
         NodeManagerHardwareUtils.getNodeCpuPercentage(this.conf);
 
@@ -284,13 +310,16 @@ public class ContainersMonitorImpl extends AbstractService implements
     if (oomListenerThread != null) {
       oomListenerThread.start();
     }
+    if (logMonitorEnabled) {
+      this.logMonitorThread.start();
+    }
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
+    stopped = true;
     if (containersMonitorEnabled) {
-      stopped = true;
       this.monitoringThread.interrupt();
       try {
         this.monitoringThread.join();
@@ -304,6 +333,13 @@ public class ContainersMonitorImpl extends AbstractService implements
         } finally {
           this.oomListenerThread = null;
         }
+      }
+    }
+    if (logMonitorEnabled) {
+      this.logMonitorThread.interrupt();
+      try {
+        this.logMonitorThread.join();
+      } catch (InterruptedException e) {
       }
     }
     super.serviceStop();
@@ -648,15 +684,20 @@ public class ContainersMonitorImpl extends AbstractService implements
       long vmemLimit = ptInfo.getVmemLimit();
       long pmemLimit = ptInfo.getPmemLimit();
       if (AUDITLOG.isDebugEnabled()) {
+        int vcoreLimit = ptInfo.getCpuVcores();
+        long cumulativeCpuTime = pTree.getCumulativeCpuTime();
         AUDITLOG.debug(
             "Resource usage of ProcessTree {} for container-id {}:" +
-            " {} CPU:{} CPU/core:{}",
+            " {} %CPU: {} %CPU-cores: {}" +
+            " vCores-used: {} of {} Cumulative-CPU-ms: {}",
             pId, containerId,
             formatUsageString(
                 currentVmemUsage, vmemLimit,
                 currentPmemUsage, pmemLimit),
             cpuUsagePercentPerCore,
-            cpuUsageTotalCoresPercentage);
+            cpuUsageTotalCoresPercentage,
+            milliVcoresUsed / 1000, vcoreLimit,
+            cumulativeCpuTime);
       }
 
       // Add resource utilization for this container
@@ -747,7 +788,8 @@ public class ContainersMonitorImpl extends AbstractService implements
         containerExitStatus = ContainerExitStatus.KILLED_EXCEEDED_PMEM;
       }
 
-      if (isMemoryOverLimit) {
+      if (isMemoryOverLimit
+          && trackingContainers.remove(containerId) != null) {
         // Virtual or physical memory over limit. Fail the container and
         // remove
         // the corresponding process tree
@@ -761,7 +803,6 @@ public class ContainersMonitorImpl extends AbstractService implements
         eventDispatcher.getEventHandler().handle(
                 new ContainerKillEvent(containerId,
                       containerExitStatus, msg));
-        trackingContainers.remove(containerId);
         LOG.info("Removed ProcessTree with root {}", pId);
       }
     }
@@ -826,6 +867,72 @@ public class ContainersMonitorImpl extends AbstractService implements
           TraditionalBinaryPrefix.long2String(pmemLimit, "", 1),
           TraditionalBinaryPrefix.long2String(currentVmemUsage, "", 1),
           TraditionalBinaryPrefix.long2String(vmemLimit, "", 1));
+    }
+  }
+
+  private class LogMonitorThread extends Thread {
+    LogMonitorThread() {
+      super("Container Log Monitor");
+    }
+
+    @Override
+    public void run() {
+      while (!stopped && !Thread.currentThread().isInterrupted()) {
+        for (Entry<ContainerId, ProcessTreeInfo> entry :
+            trackingContainers.entrySet()) {
+          ContainerId containerId = entry.getKey();
+          ProcessTreeInfo ptInfo = entry.getValue();
+          Container container = context.getContainers().get(containerId);
+          if (container == null) {
+            continue;
+          }
+          try {
+            List<File> logDirs = ContainerLogsUtils.getContainerLogDirs(
+                containerId, container.getUser(), context);
+            long totalLogDataBytes = 0;
+            for (File dir : logDirs) {
+              long currentDirSizeBytes = FileUtil.getDU(dir);
+              totalLogDataBytes += currentDirSizeBytes;
+              String killMsg = null;
+              if (currentDirSizeBytes > logDirSizeLimit) {
+                killMsg = String.format(
+                    "Container [pid=%s,containerID=%s] is logging beyond "
+                        + "the container single log directory limit.%n"
+                        + "Limit: %d Log Directory Size: %d Log Directory: %s"
+                        + "%nKilling container.%n",
+                    ptInfo.getPID(), containerId, logDirSizeLimit,
+                    currentDirSizeBytes, dir);
+              } else if (totalLogDataBytes > logTotalSizeLimit) {
+                killMsg = String.format(
+                    "Container [pid=%s,containerID=%s] is logging beyond "
+                        + "the container total log limit.%n"
+                        + "Limit: %d Total Size: >=%d"
+                        + "%nKilling container.%n",
+                    ptInfo.getPID(), containerId, logTotalSizeLimit,
+                    totalLogDataBytes);
+              }
+              if (killMsg != null
+                  && trackingContainers.remove(containerId) != null) {
+                LOG.warn(killMsg);
+                eventDispatcher.getEventHandler().handle(
+                    new ContainerKillEvent(containerId,
+                        ContainerExitStatus.KILLED_FOR_EXCESS_LOGS, killMsg));
+                LOG.info("Removed ProcessTree with root " + ptInfo.getPID());
+                break;
+              }
+            }
+          } catch (Exception e) {
+            LOG.warn("Uncaught exception in ContainerMemoryManager "
+                + "while monitoring log usage for " + containerId, e);
+          }
+        }
+        try {
+          Thread.sleep(logCheckInterval);
+        } catch (InterruptedException e) {
+          LOG.info("Log monitor thread was interrupted. "
+              + "Stopping container log monitoring.");
+        }
+      }
     }
   }
 

@@ -27,9 +27,9 @@ import java.util.PriorityQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
 
 /**
@@ -146,7 +146,7 @@ public class MaxRunningAppsEnforcer {
 
   /**
    * This is called after reloading the allocation configuration when the
-   * scheduler is reinitilized
+   * scheduler is reinitialized
    *
    * Checks to see whether any non-runnable applications become runnable
    * now that the max running apps of given queue has been changed

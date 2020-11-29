@@ -102,5 +102,9 @@ public class BulkOperationState implements Closeable {
      * Mkdir operation.
      */
     Mkdir,
+    /**
+     * Multipart upload operation.
+     */
+    Upload
   }
 }

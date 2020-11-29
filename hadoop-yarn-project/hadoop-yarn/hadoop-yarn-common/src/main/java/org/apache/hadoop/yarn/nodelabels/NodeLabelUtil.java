@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.nodelabels;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
 

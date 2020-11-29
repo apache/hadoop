@@ -76,10 +76,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.impl.FileSystemMultipartUploaderBuilder;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
@@ -104,6 +106,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FileEncryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -132,10 +135,10 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
@@ -365,8 +368,8 @@ public class WebHdfsFileSystem extends FileSystem
       Token<?> token = tokenSelector.selectToken(
           new Text(getCanonicalServiceName()), ugi.getTokens());
       // ugi tokens are usually indicative of a task which can't
-      // refetch tokens.  even if ugi has credentials, don't attempt
-      // to get another token to match hdfs/rpc behavior
+      // refetch tokens.  Don't attempt to fetch tokens from the
+      // namenode in this situation.
       if (token != null) {
         LOG.debug("Using UGI token: {}", token);
         canRefreshDelegationToken = false;
@@ -389,6 +392,9 @@ public class WebHdfsFileSystem extends FileSystem
   @VisibleForTesting
   synchronized boolean replaceExpiredDelegationToken() throws IOException {
     boolean replaced = false;
+    if (attemptReplaceDelegationTokenFromUGI()) {
+      return true;
+    }
     if (canRefreshDelegationToken) {
       Token<?> token = getDelegationToken(null);
       LOG.debug("Replaced expired token: {}", token);
@@ -396,6 +402,17 @@ public class WebHdfsFileSystem extends FileSystem
       replaced = (token != null);
     }
     return replaced;
+  }
+
+  private synchronized boolean attemptReplaceDelegationTokenFromUGI() {
+    Token<?> token = tokenSelector.selectToken(
+            new Text(getCanonicalServiceName()), ugi.getTokens());
+    if (token != null && !token.equals(delegationToken)) {
+      LOG.debug("Replaced expired token with new UGI token: {}", token);
+      setDelegationToken(token);
+      return true;
+    }
+    return false;
   }
 
   @Override
@@ -1457,6 +1474,19 @@ public class WebHdfsFileSystem extends FileSystem
     }.run();
   }
 
+  public SnapshotStatus[] getSnapshotListing(final Path snapshotDir)
+      throws IOException {
+    storageStatistics
+        .incrementOpCounter(OpType.GET_SNAPSHOT_LIST);
+    final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTLIST;
+    return new FsPathResponseRunner<SnapshotStatus[]>(op, snapshotDir) {
+      @Override
+      SnapshotStatus[] decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.toSnapshotList(json);
+      }
+    }.run();
+  }
+
   @Override
   public boolean setReplication(final Path p, final short replication
   ) throws IOException {
@@ -2123,6 +2153,12 @@ public class WebHdfsFileSystem extends FileSystem
       return cap.get();
     }
     return super.hasPathCapability(p, capability);
+  }
+
+  @Override
+  public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
+      throws IOException {
+    return new FileSystemMultipartUploaderBuilder(this, basePath);
   }
 
   /**

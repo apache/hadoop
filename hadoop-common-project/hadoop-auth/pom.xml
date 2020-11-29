@@ -184,9 +184,14 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <scope>compile</scope>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -252,7 +257,7 @@
               <execution>
                 <phase>package</phase>
                 <goals>
-                  <goal>javadoc</goal>
+                  <goal>javadoc-no-fork</goal>
                 </goals>
               </execution>
             </executions>

@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +74,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
 
@@ -542,6 +542,12 @@ public abstract class AbstractCSQueue implements CSQueue {
     return maxResource;
   }
 
+  protected boolean checkConfigTypeIsAbsoluteResource(String queuePath,
+      String label) {
+    return csContext.getConfiguration().checkConfigTypeIsAbsoluteResource(label,
+        queuePath, resourceTypes);
+  }
+
   protected void updateConfigurableResourceRequirement(String queuePath,
       Resource clusterResource) {
     CapacitySchedulerConfiguration conf = csContext.getConfiguration();
@@ -554,16 +560,17 @@ public abstract class AbstractCSQueue implements CSQueue {
       LOG.debug("capacityConfigType is '{}' for queue {}",
           capacityConfigType, getQueuePath());
 
+      CapacityConfigType localType = checkConfigTypeIsAbsoluteResource(
+          queuePath, label) ? CapacityConfigType.ABSOLUTE_RESOURCE
+              : CapacityConfigType.PERCENTAGE;
+
       if (this.capacityConfigType.equals(CapacityConfigType.NONE)) {
-        this.capacityConfigType = (!minResource.equals(Resources.none())
-            && queueCapacities.getAbsoluteCapacity(label) == 0f)
-                ? CapacityConfigType.ABSOLUTE_RESOURCE
-                : CapacityConfigType.PERCENTAGE;
+        this.capacityConfigType = localType;
         LOG.debug("capacityConfigType is updated as '{}' for queue {}",
             capacityConfigType, getQueuePath());
+      } else {
+        validateAbsoluteVsPercentageCapacityConfig(localType);
       }
-
-      validateAbsoluteVsPercentageCapacityConfig(minResource);
 
       // If min resource for a resource type is greater than its max resource,
       // throw exception to handle such error configs.
@@ -607,12 +614,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   private void validateAbsoluteVsPercentageCapacityConfig(
-      Resource minResource) {
-    CapacityConfigType localType = CapacityConfigType.PERCENTAGE;
-    if (!minResource.equals(Resources.none())) {
-      localType = CapacityConfigType.ABSOLUTE_RESOURCE;
-    }
-
+      CapacityConfigType localType) {
     if (!queuePath.equals("root")
         && !this.capacityConfigType.equals(localType)) {
       throw new IllegalArgumentException("Queue '" + getQueuePath()

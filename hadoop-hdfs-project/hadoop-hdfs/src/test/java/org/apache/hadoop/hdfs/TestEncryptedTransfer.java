@@ -32,7 +32,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -381,9 +381,7 @@ public class TestEncryptedTransfer {
     // use 4 datanodes to make sure that after 1 data node is stopped,
     // client only retries establishing pipeline with the 4th node.
     int numDataNodes = 4;
-    // do not consider load factor when selecting a data node
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
+
     setEncryptionConfigKeys();
 
     cluster = new MiniDFSCluster.Builder(conf)

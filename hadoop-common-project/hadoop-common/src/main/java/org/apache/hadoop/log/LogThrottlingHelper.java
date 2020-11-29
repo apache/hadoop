@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.log;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;

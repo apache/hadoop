@@ -33,7 +33,7 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -159,7 +159,11 @@ public class CommitOperations {
     LOG.debug("Committing single commit {}", commit);
     MaybeIOE outcome;
     String destKey = "unknown destination";
-    try {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Committing file %s size %s",
+        commit.getDestinationKey(),
+        commit.getLength())) {
+
       commit.validate();
       destKey = commit.getDestinationKey();
       long l = innerCommit(commit, operationState);
@@ -273,7 +277,7 @@ public class CommitOperations {
                     ? (" defined in " + commit.getFilename())
                     : "";
     String uploadId = commit.getUploadId();
-    LOG.info("Aborting commit to object {}{}", destKey, origin);
+    LOG.info("Aborting commit ID {} to object {}{}", uploadId, destKey, origin);
     abortMultipartCommit(destKey, uploadId);
   }
 
@@ -287,7 +291,8 @@ public class CommitOperations {
    */
   private void abortMultipartCommit(String destKey, String uploadId)
       throws IOException {
-    try {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Aborting commit ID %s to path %s", uploadId, destKey)) {
       writeOperations.abortMultipartCommit(destKey, uploadId);
     } finally {
       statistics.commitAborted();
@@ -462,7 +467,11 @@ public class CommitOperations {
     String uploadId = null;
 
     boolean threw = true;
-    try {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Upload staged file from %s to %s",
+        localFile.getAbsolutePath(),
+        destPath)) {
+
       statistics.commitCreated();
       uploadId = writeOperations.initiateMultiPartUpload(destKey);
       long length = localFile.length();

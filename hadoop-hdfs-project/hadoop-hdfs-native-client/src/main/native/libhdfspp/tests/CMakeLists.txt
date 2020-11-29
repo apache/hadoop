@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+find_package(Boost REQUIRED COMPONENTS date_time)
+
 # Delegate some functionality to libhdfs, until libhdfspp is complete.
 set (LIBHDFS_SRC_DIR ../../libhdfs)
 set (LIBHDFS_TESTS_DIR ../../libhdfs-tests)
@@ -81,7 +83,7 @@ add_memcheck_test(retry_policy retry_policy_test)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_executable(rpc_engine_test rpc_engine_test.cc ${PROTO_TEST_SRCS} ${PROTO_TEST_HDRS})
-target_link_libraries(rpc_engine_test test_common rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(rpc_engine_test test_common rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
 add_memcheck_test(rpc_engine rpc_engine_test)
 
 add_executable(bad_datanode_test bad_datanode_test.cc)

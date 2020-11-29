@@ -85,6 +85,8 @@ public enum Statistic {
       "Calls of rename()"),
   OBJECT_COPY_REQUESTS("object_copy_requests", "Object copy requests"),
   OBJECT_DELETE_REQUESTS("object_delete_requests", "Object delete requests"),
+  OBJECT_DELETE_OBJECTS("object_delete_objects",
+      "Objects deleted in delete requests"),
   OBJECT_LIST_REQUESTS("object_list_requests",
       "Number of object listings made"),
   OBJECT_CONTINUE_LIST_REQUESTS("object_continue_list_requests",
@@ -234,7 +236,29 @@ public enum Statistic {
       "Rate of S3 request throttling"),
 
   DELEGATION_TOKENS_ISSUED("delegation_tokens_issued",
-      "Number of delegation tokens issued");
+      "Number of delegation tokens issued"),
+
+  MULTIPART_INSTANTIATED(
+      "multipart_instantiated",
+      "Multipart Uploader Instantiated"),
+  MULTIPART_PART_PUT(
+      "multipart_part_put",
+      "Multipart Part Put Operation"),
+  MULTIPART_PART_PUT_BYTES(
+      "multipart_part_put_bytes",
+      "Multipart Part Put Bytes"),
+  MULTIPART_UPLOAD_ABORTED(
+      "multipart_upload_aborted",
+      "Multipart Upload Aborted"),
+  MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED(
+      "multipart_upload_abort_under_path_invoked",
+      "Multipart Upload Abort Udner Path Invoked"),
+  MULTIPART_UPLOAD_COMPLETED(
+      "multipart_upload_completed",
+      "Multipart Upload Completed"),
+  MULTIPART_UPLOAD_STARTED(
+      "multipart_upload_started",
+      "Multipart Upload Started");
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

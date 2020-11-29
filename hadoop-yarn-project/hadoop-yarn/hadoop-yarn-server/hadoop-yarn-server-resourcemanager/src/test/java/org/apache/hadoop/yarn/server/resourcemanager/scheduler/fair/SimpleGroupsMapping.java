@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 
 public class SimpleGroupsMapping implements GroupMappingServiceProvider {
@@ -50,7 +50,13 @@ public class SimpleGroupsMapping implements GroupMappingServiceProvider {
 
   @Override
   public Set<String> getGroupsSet(String user) throws IOException {
-    return ImmutableSet.of(user + "group", user + "subgroup1",
-        user + "subgroup2");
+    if ("admins".equals(user)) {
+      return ImmutableSet.of("root");
+    } else if ("nosecondarygroupuser".equals(user)) {
+      return ImmutableSet.of("primarygrouponly");
+    } else {
+      return ImmutableSet.of(user + "group", user + "subgroup1",
+          user + "subgroup2");
+    }
   }
 }

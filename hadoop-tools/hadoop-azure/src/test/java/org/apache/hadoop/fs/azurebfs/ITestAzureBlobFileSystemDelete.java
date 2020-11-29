@@ -30,6 +30,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -38,9 +39,12 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -168,7 +172,8 @@ public class ITestAzureBlobFileSystemDelete extends
     // Set retryCount to non-zero
     when(op.isARetriedRequest()).thenReturn(true);
 
-    // Mock instance of Http Operation response. This will return HTTP:Not Found
+    // Case 1: Mock instance of Http Operation response. This will return
+    // HTTP:Not Found
     AbfsHttpOperation http404Op = mock(AbfsHttpOperation.class);
     when(http404Op.getStatusCode()).thenReturn(HTTP_NOT_FOUND);
 
@@ -181,6 +186,64 @@ public class ITestAzureBlobFileSystemDelete extends
         .describedAs(
             "Delete is considered idempotent by default and should return success.")
         .isEqualTo(HTTP_OK);
+
+    // Case 2: Mock instance of Http Operation response. This will return
+    // HTTP:Bad Request
+    AbfsHttpOperation http400Op = mock(AbfsHttpOperation.class);
+    when(http400Op.getStatusCode()).thenReturn(HTTP_BAD_REQUEST);
+
+    // Mock delete response to 400
+    when(op.getResult()).thenReturn(http400Op);
+
+    Assertions.assertThat(testClient.deleteIdempotencyCheckOp(op)
+        .getResult()
+        .getStatusCode())
+        .describedAs(
+            "Idempotency check to happen only for HTTP 404 response.")
+        .isEqualTo(HTTP_BAD_REQUEST);
+
+  }
+
+  @Test
+  public void testDeleteIdempotencyTriggerHttp404() throws Exception {
+
+    final AzureBlobFileSystem fs = getFileSystem();
+    AbfsClient client = TestAbfsClient.createTestClientFromCurrentContext(
+        fs.getAbfsStore().getClient(),
+        this.getConfiguration());
+
+    // Case 1: Not a retried case should throw error back
+    intercept(AbfsRestOperationException.class,
+        () -> client.deletePath(
+        "/NonExistingPath",
+        false,
+        null));
+
+    // mock idempotency check to mimic retried case
+    AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(
+        fs.getAbfsStore().getClient(),
+        this.getConfiguration());
+
+    // Case 2: Mimic retried case
+    // Idempotency check on Delete always returns success
+    AbfsRestOperation idempotencyRetOp = mock(AbfsRestOperation.class);
+    AbfsHttpOperation http200Op = mock(AbfsHttpOperation.class);
+    when(http200Op.getStatusCode()).thenReturn(HTTP_OK);
+    when(idempotencyRetOp.getResult()).thenReturn(http200Op);
+
+    doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
+    when(mockClient.deletePath("/NonExistingPath", false,
+        null)).thenCallRealMethod();
+
+    Assertions.assertThat(mockClient.deletePath(
+        "/NonExistingPath",
+        false,
+        null)
+        .getResult()
+        .getStatusCode())
+        .describedAs("Idempotency check reports successful "
+            + "delete. 200OK should be returned")
+        .isEqualTo(idempotencyRetOp.getResult().getStatusCode());
   }
 
 }

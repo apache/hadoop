@@ -25,11 +25,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +48,7 @@ public class PacketReceiver implements Closeable {
    * The max size of any single packet. This prevents OOMEs when
    * invalid data is sent.
    */
-  public static final int MAX_PACKET_SIZE = 16 * 1024 * 1024;
+  public static final int MAX_PACKET_SIZE;
 
   static final Logger LOG = LoggerFactory.getLogger(PacketReceiver.class);
 
@@ -73,6 +76,13 @@ public class PacketReceiver implements Closeable {
    * The packet header of the most recently read packet.
    */
   private PacketHeader curHeader;
+
+  static {
+    Configuration conf = new HdfsConfiguration();
+    MAX_PACKET_SIZE = conf.getInt(HdfsClientConfigKeys.
+                    DFS_DATA_TRANSFER_MAX_PACKET_SIZE,
+            HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT);
+  }
 
   public PacketReceiver(boolean useDirectBuffers) {
     this.useDirectBuffers = useDirectBuffers;

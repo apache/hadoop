@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
@@ -212,7 +212,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final ResourceLocalizationService rsrcLocalizationSrvc;
   private final AbstractContainersLauncher containersLauncher;
   private final AuxServices auxiliaryServices;
-  private final NodeManagerMetrics metrics;
+  @VisibleForTesting final NodeManagerMetrics metrics;
 
   protected final NodeStatusUpdater nodeStatusUpdater;
 

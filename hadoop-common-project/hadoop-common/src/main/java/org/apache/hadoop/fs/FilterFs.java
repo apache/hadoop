@@ -125,6 +125,11 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  public void msync() throws IOException, UnsupportedOperationException {
+    myFs.msync();
+  }
+
+  @Override
   public void access(Path path, FsAction mode) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
     checkPath(path);
@@ -447,5 +452,11 @@ public abstract class FilterFs extends AbstractFileSystem {
       final String capability)
       throws IOException {
     return myFs.hasPathCapability(path, capability);
+  }
+
+  @Override
+  public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
+      throws IOException {
+    return myFs.createMultipartUploader(basePath);
   }
 }

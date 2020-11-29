@@ -47,9 +47,9 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * A directory with this feature is a snapshottable directory, where snapshots
@@ -172,27 +172,25 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   /**
    * Add a snapshot.
    * @param snapshotRoot Root of the snapshot.
+   * @param snapshotManager SnapshotManager Instance.
    * @param name Name of the snapshot.
-   * @param mtime The snapshot creation time set by Time.now().
+   * @param leaseManager
    * @throws SnapshotException Throw SnapshotException when there is a snapshot
    *           with the same name already exists or snapshot quota exceeds
    */
-  public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
-      final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit, long now)
+  public Snapshot addSnapshot(INodeDirectory snapshotRoot,
+                              SnapshotManager snapshotManager, String name,
+                              final LeaseManager leaseManager, long now)
       throws SnapshotException {
+    int id = snapshotManager.getSnapshotCounter();
     //check snapshot quota
     final int n = getNumSnapshots();
     if (n + 1 > snapshotQuota) {
       throw new SnapshotException("Failed to add snapshot: there are already "
           + n + " snapshot(s) and the snapshot quota is "
           + snapshotQuota);
-    } else if (n + 1 > maxSnapshotLimit) {
-      throw new SnapshotException(
-          "Failed to add snapshot: there are already " + n
-              + " snapshot(s) and the max snapshot limit is "
-              + maxSnapshotLimit);
     }
+    snapshotManager.checkPerDirectorySnapshotLimit(n);
     final Snapshot s = new Snapshot(id, name, snapshotRoot);
     final byte[] nameBytes = s.getRoot().getLocalNameBytes();
     final int i = searchSnapshot(nameBytes);
@@ -209,7 +207,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);
 
-    if (captureOpenFiles) {
+    if (snapshotManager.captureOpenFiles()) {
       try {
         Set<INodesInPath> openFilesIIP =
             leaseManager.getINodeWithLeases(snapshotRoot);
@@ -239,15 +237,35 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    */
   public Snapshot removeSnapshot(
       INode.ReclaimContext reclaimContext, INodeDirectory snapshotRoot,
-      String snapshotName, long now) throws SnapshotException {
+      String snapshotName, long now, SnapshotManager snapshotManager)
+      throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
+      // considering a sequence like this with snapshots S1 and s2
+      // 1. Ordered snapshot deletion feature is turned on
+      // 2. Delete S2 creating edit log entry for S2 deletion
+      // 3. Delete S1
+      // 4. S2 gets deleted by snapshot gc thread creating edit log record for
+      //    S2 deletion again
+      // 5. Disable Ordered snapshot deletion feature
+      // 6. Restarting Namenode
+      // In this case, when edit log replay happens actual deletion of S2
+      // will happen when first edit log for S2 deletion gets replayed and
+      // the second edit log record replay for S2 deletion will fail as snapshot
+      // won't exist thereby failing the Namenode start
+      // The idea here is to check during edit log replay, if a certain snapshot
+      // is not found and the ordered snapshot deletion is off, ignore the error
+      if (!snapshotManager.isSnapshotDeletionOrdered() &&
+          !snapshotManager.isImageLoaded()) {
+        return null;
+      }
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
           + " from path " + snapshotRoot.getFullPathName()
           + ": the snapshot does not exist.");
     } else {
       final Snapshot snapshot = snapshotsByNames.get(i);
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
+      snapshotManager.assertPrior(snapshotRoot, snapshotName, prior);
       snapshotRoot.cleanSubtree(reclaimContext, snapshot.getId(), prior);
       // remove from snapshotsByNames after successfully cleaning the subtree
       snapshotsByNames.remove(i);
@@ -358,7 +376,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * @throws SnapshotException If snapshotName is not null or empty, but there
    *           is no snapshot matching the name.
    */
-  private Snapshot getSnapshotByName(INodeDirectory snapshotRoot,
+  public Snapshot getSnapshotByName(INodeDirectory snapshotRoot,
       String snapshotName) throws SnapshotException {
     Snapshot s = null;
     if (snapshotName != null && !snapshotName.isEmpty()) {

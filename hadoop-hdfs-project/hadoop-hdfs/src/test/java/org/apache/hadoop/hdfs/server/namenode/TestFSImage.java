@@ -35,7 +35,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.NativeCodeLoader;
@@ -1151,5 +1153,64 @@ public class TestFSImage {
         lastSubSection.getLength() + lastSubSection.getOffset());
     // The first sub-section and parent section should have the same offset
     assertEquals(parent.getOffset(), subSec.get(0).getOffset());
+  }
+
+  @Test
+  public void testUpdateBlocksMapAndNameCacheAsync() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    FSDirectory fsdir = cluster.getNameNode().namesystem.getFSDirectory();
+    File workingDir = GenericTestUtils.getTestDir();
+
+    File preRestartTree = new File(workingDir, "preRestartTree");
+    File postRestartTree = new File(workingDir, "postRestartTree");
+
+    Path baseDir = new Path("/user/foo");
+    fs.mkdirs(baseDir);
+    fs.allowSnapshot(baseDir);
+    for (int i = 0; i < 5; i++) {
+      Path dir = new Path(baseDir, Integer.toString(i));
+      fs.mkdirs(dir);
+      for (int j = 0; j < 5; j++) {
+        Path file = new Path(dir, Integer.toString(j));
+        FSDataOutputStream os = fs.create(file);
+        os.write((byte) j);
+        os.close();
+      }
+      fs.createSnapshot(baseDir, "snap_"+i);
+      fs.rename(new Path(dir, "0"), new Path(dir, "renamed"));
+    }
+    SnapshotTestHelper.dumpTree2File(fsdir, preRestartTree);
+
+    // checkpoint
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    cluster.restartNameNode();
+    cluster.waitActive();
+    fs = cluster.getFileSystem();
+    fsdir = cluster.getNameNode().namesystem.getFSDirectory();
+
+    // Ensure all the files created above exist, and blocks is correct.
+    for (int i = 0; i < 5; i++) {
+      Path dir = new Path(baseDir, Integer.toString(i));
+      assertTrue(fs.getFileStatus(dir).isDirectory());
+      for (int j = 0; j < 5; j++) {
+        Path file = new Path(dir, Integer.toString(j));
+        if (j == 0) {
+          file = new Path(dir, "renamed");
+        }
+        FSDataInputStream in = fs.open(file);
+        int n = in.readByte();
+        assertEquals(j, n);
+        in.close();
+      }
+    }
+    SnapshotTestHelper.dumpTree2File(fsdir, postRestartTree);
+    SnapshotTestHelper.compareDumpedTreeInFile(
+        preRestartTree, postRestartTree, true);
   }
 }

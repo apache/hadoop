@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.security.Groups;
 import org.slf4j.Logger;
@@ -114,9 +114,9 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final String C = CapacitySchedulerConfiguration.ROOT + ".c";
   public static final String D = CapacitySchedulerConfiguration.ROOT + ".d";
   public static final String E = CapacitySchedulerConfiguration.ROOT + ".e";
-  public static final String ASUBGROUP1 =
+  public static final String ESUBGROUP1 =
       CapacitySchedulerConfiguration.ROOT + ".esubgroup1";
-  public static final String AGROUP =
+  public static final String FGROUP =
       CapacitySchedulerConfiguration.ROOT + ".fgroup";
   public static final String A1 = A + ".a1";
   public static final String A2 = A + ".a2";
@@ -124,14 +124,14 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final String B2 = B + ".b2";
   public static final String B3 = B + ".b3";
   public static final String B4 = B + ".b4subgroup1";
-  public static final String ASUBGROUP1_A = ASUBGROUP1 + ".e";
-  public static final String AGROUP_A = AGROUP + ".f";
+  public static final String ESUBGROUP1_A = ESUBGROUP1 + ".e";
+  public static final String FGROUP_F = FGROUP + ".f";
   public static final float A_CAPACITY = 20f;
   public static final float B_CAPACITY = 20f;
   public static final float C_CAPACITY = 20f;
   public static final float D_CAPACITY = 20f;
-  public static final float ASUBGROUP1_CAPACITY = 10f;
-  public static final float AGROUP_CAPACITY = 10f;
+  public static final float ESUBGROUP1_CAPACITY = 10f;
+  public static final float FGROUP_CAPACITY = 10f;
 
   public static final float A1_CAPACITY = 30;
   public static final float A2_CAPACITY = 70;
@@ -371,8 +371,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setCapacity(B, B_CAPACITY);
     conf.setCapacity(C, C_CAPACITY);
     conf.setCapacity(D, D_CAPACITY);
-    conf.setCapacity(ASUBGROUP1, ASUBGROUP1_CAPACITY);
-    conf.setCapacity(AGROUP, AGROUP_CAPACITY);
+    conf.setCapacity(ESUBGROUP1, ESUBGROUP1_CAPACITY);
+    conf.setCapacity(FGROUP, FGROUP_CAPACITY);
 
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1", "a2" });
@@ -391,12 +391,12 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setCapacity(B4, B4_CAPACITY);
     conf.setUserLimitFactor(B4, 100.0f);
 
-    conf.setQueues(ASUBGROUP1, new String[] {"e"});
-    conf.setCapacity(ASUBGROUP1_A, 100f);
-    conf.setUserLimitFactor(ASUBGROUP1_A, 100.0f);
-    conf.setQueues(AGROUP, new String[] {"f"});
-    conf.setCapacity(AGROUP_A, 100f);
-    conf.setUserLimitFactor(AGROUP_A, 100.0f);
+    conf.setQueues(ESUBGROUP1, new String[] {"e"});
+    conf.setCapacity(ESUBGROUP1_A, 100f);
+    conf.setUserLimitFactor(ESUBGROUP1_A, 100.0f);
+    conf.setQueues(FGROUP, new String[] {"f"});
+    conf.setCapacity(FGROUP_F, 100f);
+    conf.setUserLimitFactor(FGROUP_F, 100.0f);
 
     conf.setUserLimitFactor(C, 1.0f);
     conf.setAutoCreateChildQueueEnabled(C, true);

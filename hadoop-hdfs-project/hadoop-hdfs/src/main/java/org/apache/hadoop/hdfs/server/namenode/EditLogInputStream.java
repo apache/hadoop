@@ -209,4 +209,9 @@ public abstract class EditLogInputStream implements Closeable {
    * even faster data source (e.g. a byte buffer).
    */
   public abstract boolean isLocalLog();
+
+  @Override
+  public String toString() {
+    return getName();
+  }
 }

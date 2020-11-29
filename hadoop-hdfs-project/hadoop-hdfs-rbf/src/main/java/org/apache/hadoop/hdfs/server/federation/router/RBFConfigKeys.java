@@ -277,6 +277,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY =
       FEDERATION_ROUTER_PREFIX + "fs-limits.max-component-length";
   public static final int DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_DEFAULT = 0;
+  public static final String DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "admin.mount.check.enable";
+  public static final boolean DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE_DEFAULT =
+      false;
 
   // HDFS Router-based federation web
   public static final String DFS_ROUTER_HTTP_ENABLE =
@@ -308,9 +312,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_QUOTA_ENABLE =
       FEDERATION_ROUTER_PREFIX + "quota.enable";
   public static final boolean DFS_ROUTER_QUOTA_ENABLED_DEFAULT = false;
-  public static final String DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL =
+  public static final String DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL =
       FEDERATION_ROUTER_PREFIX + "quota-cache.update.interval";
-  public static final long DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL_DEFAULT =
+  public static final long DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL_DEFAULT =
       60000;
 
   // HDFS Router security

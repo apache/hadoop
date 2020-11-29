@@ -89,7 +89,7 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Represents an application attempt from the viewpoint of the FIFO or Capacity
@@ -736,7 +736,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
             + " on node " + node + ", currently has "
             + reservedContainers.size()
             + " at priority " + schedulerKey.getPriority()
-            + "; currentReservation " + this.attemptResourceUsage.getReserved()
+            + "; currentReservation "
+            + this.attemptResourceUsage.getReserved(node.getPartition())
             + " on node-label=" + node.getPartition());
         return true;
       }
