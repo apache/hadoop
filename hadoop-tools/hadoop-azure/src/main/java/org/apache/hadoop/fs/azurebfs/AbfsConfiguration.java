@@ -235,6 +235,7 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
   private boolean enableDelegationToken;
 
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ALWAYS_USE_HTTPS,
           DefaultValue = DEFAULT_ENABLE_HTTPS)
   private boolean alwaysUseHttps;
