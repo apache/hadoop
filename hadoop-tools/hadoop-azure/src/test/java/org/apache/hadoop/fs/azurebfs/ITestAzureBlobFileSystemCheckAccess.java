@@ -222,11 +222,7 @@ public class ITestAzureBlobFileSystemCheckAccess
     Path testFilePath = setupTestDirectoryAndUserAccess("/test3.txt",
         FsAction.EXECUTE);
     AzureBlobFileSystem fs = (AzureBlobFileSystem)testUserFs;
-    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
-        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
-        HdfsOperationConstants.ACCESS, false, 0));
     assertAccessible(testFilePath, FsAction.EXECUTE);
-    fs.registerListener(null);
 
     assertInaccessible(testFilePath, FsAction.READ);
     assertInaccessible(testFilePath, FsAction.WRITE);

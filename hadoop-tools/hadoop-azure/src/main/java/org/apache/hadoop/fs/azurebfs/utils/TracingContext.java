@@ -48,7 +48,7 @@ public class TracingContext {
     this.clientCorrelationID = validateClientCorrelationID(clientCorrelationID);
     streamID = EMPTY_STRING;
     retryCount = 0;
-    primaryRequestID = "";
+    primaryRequestID = EMPTY_STRING;
     format = tracingContextFormat;
     this.listener = listener;
   }
