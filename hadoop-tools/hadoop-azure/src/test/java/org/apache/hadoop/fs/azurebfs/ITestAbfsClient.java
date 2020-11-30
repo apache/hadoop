@@ -32,21 +32,14 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.permission.FsPermission;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -69,8 +62,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsClient abfsClient =  fs.getAbfsClient();
 
     try {
-      AbfsRestOperation op = abfsClient.listPath("/", true, LIST_MAX_RESULTS,
-          "===========", getTestTracingContext(fs, true));
+      AbfsRestOperation op = abfsClient
+          .listPath("/", true, LIST_MAX_RESULTS, "===========",
+              getTestTracingContext(fs, true));
       Assert.assertTrue(false);
     } catch (AbfsRestOperationException ex) {
       Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
@@ -144,7 +138,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       throws IOException {
     return getFileSystem().getAbfsClient()
         .listPath(directory, false, getListMaxResults(), null,
-            getTestTracingContext(getFileSystem(), true)).getResult().getListResultSchema().paths();
+            getTestTracingContext(getFileSystem(), true)).getResult()
+        .getListResultSchema().paths();
   }
 
   private int getListMaxResults() throws IOException {

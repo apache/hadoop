@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -64,7 +63,7 @@ public class ITestAbfsInputStreamStatistics
 
       outputStream = createAbfsOutputStreamWithFlushEnabled(fs, initValuesPath);
       inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics(),
-              getTestTracingContext(fs, false));
+          getTestTracingContext(fs, false));
 
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) inputStream.getStreamStatistics();
@@ -201,7 +200,7 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.hflush();
       in = abfss.openFileForRead(readStatPath, fs.getFsStatistics(),
-              getTestTracingContext(fs, false));
+          getTestTracingContext(fs, false));
 
       /*
        * Doing file read 10 times.
@@ -272,16 +271,15 @@ public class ITestAbfsInputStreamStatistics
       out.hflush();
 
       // AbfsRestOperation Instance required for eTag.
-      AbfsRestOperation abfsRestOperation =
-          fs.getAbfsClient().getPathStatus(nullStatFilePath.toUri().getPath(), false,
-                  getTestTracingContext(fs, false));
+      AbfsRestOperation abfsRestOperation = fs.getAbfsClient()
+          .getPathStatus(nullStatFilePath.toUri().getPath(), false,
+              getTestTracingContext(fs, false));
 
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,
-          nullStatFilePath.toUri().getPath(), ONE_KB,
-          abfsInputStreamContext,
+          nullStatFilePath.toUri().getPath(), ONE_KB, abfsInputStreamContext,
           abfsRestOperation.getResult().getResponseHeader("ETag"),
-             getTestTracingContext(fs, false));
+          getTestTracingContext(fs, false));
 
       // Verifying that AbfsInputStream Operations works with null statistics.
       assertNotEquals("AbfsInputStream read() with null statistics should "

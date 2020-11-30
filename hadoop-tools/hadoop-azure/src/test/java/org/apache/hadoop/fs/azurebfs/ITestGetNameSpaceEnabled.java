@@ -67,7 +67,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assume.assumeTrue("Skip this test because the account being used for test is a non XNS account",
             isUsingXNSAccount);
     assertTrue("Expecting getIsNamespaceEnabled() return true",
-            getIsNamespaceEnabled(getFileSystem()));
+        getIsNamespaceEnabled(getFileSystem()));
   }
 
   @Test
@@ -180,7 +180,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         .setNamespaceEnabled(Trilean.getTrilean(invalidConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
-    verify(mockClient, times(1)).getAclStatus(anyString(), any(TracingContext.class));
+    verify(mockClient, times(1))
+        .getAclStatus(anyString(), any(TracingContext.class));
   }
 
   private void ensureGetAclCallIsNeverMadeForValidConf(String validConf)
@@ -189,14 +190,16 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         .setNamespaceEnabled(Trilean.getTrilean(validConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
-    verify(mockClient, never()).getAclStatus(anyString(), any(TracingContext.class));
+    verify(mockClient, never())
+        .getAclStatus(anyString(), any(TracingContext.class));
   }
 
   private void unsetConfAndEnsureGetAclCallIsMadeOnce() throws IOException {
     this.getFileSystem().getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
-    verify(mockClient, times(1)).getAclStatus(anyString(), any(TracingContext.class));
+    verify(mockClient, times(1))
+        .getAclStatus(anyString(), any(TracingContext.class));
   }
 
   private AbfsClient callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient()

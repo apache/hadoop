@@ -309,15 +309,16 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(FS_AZURE_APPEND_BLOB_KEY, "abfss:/");
     config.set(TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED, "true");
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(config);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
+        .newInstance(config);
 
     byte[] buf = new byte[10];
     new Random().nextBytes(buf);
     FSDataOutputStream out = fs.create(new Path("/testFile"));
-    ((AbfsOutputStream)out.getWrappedStream()).registerListener(new
-        TracingHeaderValidator(fs.getAbfsStore().getAbfsConfiguration()
-        .getClientCorrelationID(), fs.getFileSystemID(),
-        HdfsOperationConstants.CREATE, false, 0));
+    ((AbfsOutputStream) out.getWrappedStream()).registerListener(
+        new TracingHeaderValidator(
+            fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
+            fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0));
     out.write(buf);
     out.hsync();
   }

@@ -77,7 +77,8 @@ public class TestAbfsInputStream extends
     return client;
   }
 
-  private AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient, String fileName) throws IOException {
+  private AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient,
+      String fileName) throws IOException {
     AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
     // Create AbfsInputStream with the client instance
     AbfsInputStream inputStream = new AbfsInputStream(
@@ -100,9 +101,11 @@ public class TestAbfsInputStream extends
     ReadBufferManager.getBufferManager()
         .queueReadAhead(inputStream, 0, ONE_KB, inputStream.tracingContext);
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, ONE_KB, ONE_KB, inputStream.tracingContext);
+        .queueReadAhead(inputStream, ONE_KB, ONE_KB,
+            inputStream.tracingContext);
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, TWO_KB, TWO_KB, inputStream.tracingContext);
+        .queueReadAhead(inputStream, TWO_KB, TWO_KB,
+            inputStream.tracingContext);
   }
 
   private void verifyReadCallCount(AbfsClient client, int count) throws
@@ -216,8 +219,8 @@ public class TestAbfsInputStream extends
     // at java.util.Stack.peek(Stack.java:102)
     // at java.util.Stack.pop(Stack.java:84)
     // at org.apache.hadoop.fs.azurebfs.services.ReadBufferManager.queueReadAhead
-    ReadBufferManager.getBufferManager().queueReadAhead(inputStream, 0,
-        ONE_KB, getTestTracingContext(getFileSystem(), true));
+    ReadBufferManager.getBufferManager().queueReadAhead(inputStream, 0, ONE_KB,
+        getTestTracingContext(getFileSystem(), true));
   }
 
   /**

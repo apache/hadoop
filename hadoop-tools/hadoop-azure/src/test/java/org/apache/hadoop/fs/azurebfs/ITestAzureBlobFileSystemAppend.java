@@ -84,10 +84,9 @@ public class ITestAzureBlobFileSystemAppend extends
   public void testTracingForAppend() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
     fs.create(TEST_FILE_PATH);
-    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
-        .getAbfsConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.APPEND,
-        false, 0));
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), HdfsOperationConstants.APPEND, false, 0));
     fs.append(TEST_FILE_PATH, 10);
   }
 }

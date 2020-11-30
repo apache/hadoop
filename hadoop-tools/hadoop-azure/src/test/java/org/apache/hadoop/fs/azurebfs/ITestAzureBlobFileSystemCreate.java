@@ -92,16 +92,15 @@ public class ITestAzureBlobFileSystemCreate extends
   @SuppressWarnings("deprecation")
   public void testCreateNonRecursive() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
     Path testFile = new Path(TEST_FOLDER_PATH, TEST_CHILD_FILE);
     try {
       fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null);
       fail("Should've thrown");
     } catch (FileNotFoundException expected) {
     }
-    fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.MKDIR,
-        false, 0));
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), HdfsOperationConstants.MKDIR, false, 0));
     fs.mkdirs(TEST_FOLDER_PATH);
     fs.registerListener(null);
 
@@ -250,7 +249,6 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs =
         (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
             config);
-    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
 
     long totalConnectionMadeBeforeTest = fs.getInstrumentationMap()
         .get(CONNECTIONS_MADE.getStatName());
@@ -272,7 +270,8 @@ public class ITestAzureBlobFileSystemCreate extends
         fs.getInstrumentationMap());
 
     // Case 2: Not Overwrite - File pre-exists
-    fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
         fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0));
     intercept(FileAlreadyExistsException.class,
         () -> fs.create(nonOverwriteFile, false));
@@ -302,9 +301,9 @@ public class ITestAzureBlobFileSystemCreate extends
         fs.getInstrumentationMap());
 
     // Case 4: Overwrite - File pre-exists
-    fs.registerListener(new TracingHeaderValidator(conf.getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.CREATE, true,
-        0));
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), HdfsOperationConstants.CREATE, true, 0));
     fs.create(overwriteFilePath, true);
     fs.registerListener(null);
 
@@ -363,8 +362,8 @@ public class ITestAzureBlobFileSystemCreate extends
 
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);
-    boolean isNamespaceEnabled =
-        abfsStore.getIsNamespaceEnabled(getTestTracingContext(fs, false));
+    boolean isNamespaceEnabled = abfsStore
+        .getIsNamespaceEnabled(getTestTracingContext(fs, false));
 
     AbfsRestOperation successOp = mock(
         AbfsRestOperation.class);
@@ -480,7 +479,7 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(
         exceptionClass,
         () -> abfsStore.createFile(testPath, null, true, permission, umask,
-                getTestTracingContext(getFileSystem(), true)));
+            getTestTracingContext(getFileSystem(), true)));
   }
 
   private AbfsRestOperationException getMockAbfsRestOperationException(int status) {

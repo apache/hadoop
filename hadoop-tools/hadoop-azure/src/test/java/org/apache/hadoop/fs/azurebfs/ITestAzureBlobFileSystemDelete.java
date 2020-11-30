@@ -147,9 +147,9 @@ public class ITestAzureBlobFileSystemDelete extends
 
     es.shutdownNow();
     Path dir = new Path("/test");
-    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
-        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
-        HdfsOperationConstants.DELETE, false, 0));
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), HdfsOperationConstants.DELETE, false, 0));
     // first try a non-recursive delete, expect failure
     intercept(FileAlreadyExistsException.class,
         () -> fs.delete(dir, false));
@@ -241,8 +241,8 @@ public class ITestAzureBlobFileSystemDelete extends
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     TracingContext tracingContext = getTestTracingContext(fs, false);
-    when(mockClient.deletePath("/NonExistingPath", false,
-        null, tracingContext)).thenCallRealMethod();
+    when(mockClient.deletePath("/NonExistingPath", false, null, tracingContext))
+        .thenCallRealMethod();
 
     Assertions.assertThat(mockClient.deletePath(
         "/NonExistingPath",

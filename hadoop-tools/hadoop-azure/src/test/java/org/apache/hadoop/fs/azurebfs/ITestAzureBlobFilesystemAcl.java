@@ -1219,9 +1219,9 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     fs.setPermission(filePath, FsPermission.createImmutable((short) RW_R));
     Path renamedFilePath = new Path(dirPath, "file1");
 
-    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
-        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
-        HdfsOperationConstants.RENAME, true, 0));
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), HdfsOperationConstants.RENAME, true, 0));
     fs.rename(filePath, renamedFilePath);
     fs.registerListener(null);
     AclEntry[] expected = new AclEntry[] { };
@@ -1263,8 +1263,8 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
         aclEntry(DEFAULT, GROUP, FOO, ALL),
         aclEntry(ACCESS, GROUP, BAR, ALL));
 
-    fs.registerListener(new TracingHeaderValidator(fs.getAbfsStore()
-        .getAbfsConfiguration().getClientCorrelationID(),
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
         fs.getFileSystemID(), HdfsOperationConstants.SET_ACL, true, 0));
     fs.setAcl(rootPath, aclSpec1);
 

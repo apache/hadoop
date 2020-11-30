@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,7 +42,8 @@ public class TracingContext {
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
   public TracingContext(String clientCorrelationID, String fileSystemID,
-      String hadoopOpName, TracingContextFormat tracingContextFormat, Listener listener) {
+      String hadoopOpName, TracingContextFormat tracingContextFormat,
+      Listener listener) {
     this.fileSystemID = fileSystemID;
     this.hadoopOpName = hadoopOpName;
     this.clientCorrelationID = validateClientCorrelationID(clientCorrelationID);
@@ -56,9 +57,9 @@ public class TracingContext {
   public TracingContext(String clientCorrelationID, String fileSystemID,
       String hadoopOpName, boolean needsPrimaryReqId,
       TracingContextFormat tracingContextFormat, Listener listener) {
-    this(clientCorrelationID, fileSystemID, hadoopOpName,
-        tracingContextFormat, listener);
-    primaryRequestID = needsPrimaryReqId? UUID.randomUUID().toString() : "";
+    this(clientCorrelationID, fileSystemID, hadoopOpName, tracingContextFormat,
+        listener);
+    primaryRequestID = needsPrimaryReqId ? UUID.randomUUID().toString() : "";
     if (listener != null)
       listener.updatePrimaryRequestID(primaryRequestID);
   }
@@ -71,7 +72,7 @@ public class TracingContext {
     this.retryCount = 0;
     this.primaryRequestID = originalTracingContext.primaryRequestID;
     this.format = originalTracingContext.format;
-    if(originalTracingContext.listener != null) {
+    if (originalTracingContext.listener != null) {
       this.listener = originalTracingContext.listener.getClone();
     }
   }
@@ -92,7 +93,7 @@ public class TracingContext {
 
   public void setPrimaryRequestID() {
     primaryRequestID = UUID.randomUUID().toString();
-    if(listener != null)
+    if (listener != null)
       listener.updatePrimaryRequestID(primaryRequestID);
   }
 
@@ -115,11 +116,13 @@ public class TracingContext {
   public String toString() {
     String header = clientRequestID; //case 0, no IDs for correlation
     switch (format) {
-    case ALL_ID_FORMAT: header =
-        clientCorrelationID + ":" + header + ":" + fileSystemID + ":" + primaryRequestID
-          + ":" + streamID + ":" + hadoopOpName + ":" + retryCount;
-        break;
-    case TWO_ID_FORMAT: header = clientCorrelationID + ":" + header;
+    case ALL_ID_FORMAT:
+      header = clientCorrelationID + ":" + header + ":" + fileSystemID + ":"
+          + primaryRequestID + ":" + streamID + ":" + hadoopOpName + ":"
+          + retryCount;
+      break;
+    case TWO_ID_FORMAT:
+      header = clientCorrelationID + ":" + header;
     }
     if (listener != null) {
       listener.callTracingHeaderValidator(header, format);

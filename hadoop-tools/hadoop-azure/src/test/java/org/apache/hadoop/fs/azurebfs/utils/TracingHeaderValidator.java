@@ -25,16 +25,15 @@ public class TracingHeaderValidator implements Listener {
 
   @Override
   public TracingHeaderValidator getClone() {
-    TracingHeaderValidator tracingHeaderValidator =
-        new TracingHeaderValidator(clientCorrelationID, fileSystemID,
-            operation, needsPrimaryRequestID, retryNum, streamID);
+    TracingHeaderValidator tracingHeaderValidator = new TracingHeaderValidator(
+        clientCorrelationID, fileSystemID, operation, needsPrimaryRequestID,
+        retryNum, streamID);
     tracingHeaderValidator.primaryRequestID = primaryRequestID;
     return tracingHeaderValidator;
   }
 
-  public TracingHeaderValidator(String clientCorrelationID,
-      String fileSystemID, String operation,
-      boolean needsPrimaryRequestID, int retryNum) {
+  public TracingHeaderValidator(String clientCorrelationID, String fileSystemID,
+      String operation, boolean needsPrimaryRequestID, int retryNum) {
     this.clientCorrelationID = clientCorrelationID;
     this.fileSystemID = fileSystemID;
     this.operation = operation;
@@ -42,9 +41,9 @@ public class TracingHeaderValidator implements Listener {
     this.needsPrimaryRequestID = needsPrimaryRequestID;
   }
 
-  public TracingHeaderValidator(String clientCorrelationID,
-      String fileSystemID, String operation, boolean needsPrimaryRequestID,
-      int retryNum, String streamID) {
+  public TracingHeaderValidator(String clientCorrelationID, String fileSystemID,
+      String operation, boolean needsPrimaryRequestID, int retryNum,
+      String streamID) {
     this(clientCorrelationID, fileSystemID, operation, needsPrimaryRequestID,
         retryNum);
     this.streamID = streamID;
@@ -55,7 +54,7 @@ public class TracingHeaderValidator implements Listener {
     validateBasicFormat(id_list);
     if (format != TracingContextFormat.ALL_ID_FORMAT)
       return;
-    if (!primaryRequestID.isEmpty() && !id_list[3].isEmpty()){
+    if (!primaryRequestID.isEmpty() && !id_list[3].isEmpty()) {
       Assertions.assertThat(id_list[3])
           .describedAs("PrimaryReqID should be common for these requests")
           .isEqualTo(primaryRequestID);
@@ -75,24 +74,23 @@ public class TracingHeaderValidator implements Listener {
       Assertions.assertThat(id_list)
           .describedAs("header should have 2 elements").hasSize(2);
     } else {
-      Assertions.assertThat(id_list)
-          .describedAs("header should have 1 element").hasSize(1);
+      Assertions.assertThat(id_list).describedAs("header should have 1 element")
+          .hasSize(1);
       Assertions.assertThat(id_list[0])
-          .describedAs("Client request ID is a guid")
-          .matches(GUID_PATTERN);
+          .describedAs("Client request ID is a guid").matches(GUID_PATTERN);
       return;
     }
 
-    if(clientCorrelationID.matches("[a-zA-Z0-9-]*")) {
-      Assertions.assertThat(id_list[0]).describedAs("Correlation ID should match config")
+    if (clientCorrelationID.matches("[a-zA-Z0-9-]*")) {
+      Assertions.assertThat(id_list[0])
+          .describedAs("Correlation ID should match config")
           .isEqualTo(clientCorrelationID);
     } else {
       Assertions.assertThat(id_list[0])
           .describedAs("Invalid config should be replaced with empty string")
           .isEmpty();
     }
-    Assertions.assertThat(id_list[1])
-        .describedAs("Client request ID is a guid")
+    Assertions.assertThat(id_list[1]).describedAs("Client request ID is a guid")
         .matches(GUID_PATTERN);
 
     if (format != TracingContextFormat.ALL_ID_FORMAT)
@@ -100,15 +98,15 @@ public class TracingHeaderValidator implements Listener {
 
     Assertions.assertThat(id_list[2]).describedAs("Filesystem ID incorrect")
         .isEqualTo(fileSystemID);
-    if (needsPrimaryRequestID && !operation.equals(HdfsOperationConstants.READ)) {
+    if (needsPrimaryRequestID && !operation
+        .equals(HdfsOperationConstants.READ)) {
       Assertions.assertThat(id_list[3]).describedAs("should have primaryReqId")
           .isNotEmpty();
     }
     Assertions.assertThat(id_list[5]).describedAs("Operation name incorrect")
         .isEqualTo(operation);
     int retryCount = Integer.parseInt(id_list[6]);
-    Assertions.assertThat(retryCount)
-        .describedAs("Retry count incorrect")
+    Assertions.assertThat(retryCount).describedAs("Retry count incorrect")
         .isEqualTo(retryNum);
   }
 

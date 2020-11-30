@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
-import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.junit.Assume;
@@ -191,8 +189,9 @@ public class ITestAzureBlobFileSystemCheckAccess
     //  acts as noop
     AzureBlobFileSystemStore mockAbfsStore =
         Mockito.mock(AzureBlobFileSystemStore.class);
-    Mockito.when(mockAbfsStore.getIsNamespaceEnabled(getTestTracingContext(getFileSystem(),
-        false))).thenReturn(true);
+    Mockito.when(mockAbfsStore
+        .getIsNamespaceEnabled(getTestTracingContext(getFileSystem(), false)))
+        .thenReturn(true);
     Field abfsStoreField = AzureBlobFileSystem.class.getDeclaredField(
         "abfsStore");
     abfsStoreField.setAccessible(true);
@@ -221,7 +220,6 @@ public class ITestAzureBlobFileSystemCheckAccess
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test3.txt",
         FsAction.EXECUTE);
-    AzureBlobFileSystem fs = (AzureBlobFileSystem)testUserFs;
     assertAccessible(testFilePath, FsAction.EXECUTE);
 
     assertInaccessible(testFilePath, FsAction.READ);
