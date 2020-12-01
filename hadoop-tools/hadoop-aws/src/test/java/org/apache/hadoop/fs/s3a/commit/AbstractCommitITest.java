@@ -359,11 +359,13 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * and that it can be loaded.
    * The contents will be logged and returned.
    * @param dir directory to scan
+   * @param jobId job ID, only verified if non-empty
    * @return the loaded success data
    * @throws IOException IO Failure
    */
-  protected SuccessData verifySuccessMarker(Path dir) throws IOException {
-    return validateSuccessFile(dir, "", getFileSystem(), "query", 0);
+  protected SuccessData verifySuccessMarker(Path dir, String jobId)
+      throws IOException {
+    return validateSuccessFile(dir, "", getFileSystem(), "query", 0, jobId);
   }
 
   /**
@@ -442,6 +444,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @param fs filesystem
    * @param origin origin (e.g. "teragen" for messages)
    * @param minimumFileCount minimum number of files to have been created
+   * @param jobId job ID, only verified if non-empty
    * @return the success data
    * @throws IOException IO failure
    */
@@ -449,7 +452,8 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
       final String committerName,
       final S3AFileSystem fs,
       final String origin,
-      final int minimumFileCount) throws IOException {
+      final int minimumFileCount,
+      final String jobId) throws IOException {
     SuccessData successData = loadSuccessFile(fs, outputPath, origin);
     String commitDetails = successData.toString();
     LOG.info("Committer name " + committerName + "\n{}",
@@ -463,8 +467,13 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
           committerName, successData.getCommitter());
     }
     Assertions.assertThat(successData.getFilenames())
-        .describedAs("Files committed")
+        .describedAs("Files committed in " + commitDetails)
         .hasSizeGreaterThanOrEqualTo(minimumFileCount);
+    if (StringUtils.isNotEmpty(jobId)) {
+      Assertions.assertThat(successData.getJobId())
+          .describedAs("JobID in " + commitDetails)
+          .isEqualTo(jobId);
+    }
     return successData;
   }
 

@@ -19,12 +19,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
@@ -271,10 +270,22 @@ public class FSQueueConverter {
     List<FSQueue> children = queue.getChildQueues();
 
     int totalWeight = getTotalWeight(children);
-    Map<String, BigDecimal> capacities = getCapacities(totalWeight, children);
+    Pair<Map<String, BigDecimal>, Boolean> result =
+        WeightToCapacityConversionUtil.getCapacities(
+            totalWeight, children, ruleHandler);
+
+    Map<String, BigDecimal> capacities = result.getLeft();
+    boolean shouldAllowZeroSumCapacity = result.getRight();
+
     capacities
         .forEach((key, value) -> capacitySchedulerConfig.set(PREFIX + key +
                 ".capacity", value.toString()));
+
+    if (shouldAllowZeroSumCapacity) {
+      String queueName = queue.getName();
+      capacitySchedulerConfig.setBoolean(
+          PREFIX + queueName + ".allow-zero-capacity-sum", true);
+    }
   }
 
   /**
@@ -291,60 +302,6 @@ public class FSQueueConverter {
         // Maximum child resource is defined
         ruleHandler.handleMaxChildCapacity();
       }
-    }
-  }
-
-  private Map<String, BigDecimal> getCapacities(int totalWeight,
-      List<FSQueue> children) {
-    final BigDecimal hundred = new BigDecimal(100).setScale(3);
-
-    if (children.size() == 0) {
-      return new HashMap<>();
-    } else if (children.size() == 1) {
-      Map<String, BigDecimal> capacity = new HashMap<>();
-      String queueName = children.get(0).getName();
-      capacity.put(queueName, hundred);
-
-      return capacity;
-    } else {
-      Map<String, BigDecimal> capacities = new HashMap<>();
-
-      children
-          .stream()
-          .forEach(queue -> {
-            BigDecimal total = new BigDecimal(totalWeight);
-            BigDecimal weight = new BigDecimal(queue.getWeight());
-            BigDecimal pct = weight
-                              .setScale(5)
-                              .divide(total, RoundingMode.HALF_UP)
-                              .multiply(hundred)
-                              .setScale(3);
-
-            if (Resources.none().compareTo(queue.getMinShare()) != 0) {
-              ruleHandler.handleMinResources();
-            }
-
-            capacities.put(queue.getName(), pct);
-          });
-
-      BigDecimal totalPct = new BigDecimal(0);
-      for (Map.Entry<String, BigDecimal> entry : capacities.entrySet()) {
-        totalPct = totalPct.add(entry.getValue());
-      }
-
-      // fix last value if total != 100.000
-      if (!totalPct.equals(hundred)) {
-        BigDecimal tmp = new BigDecimal(0);
-        for (int i = 0; i < children.size() - 1; i++) {
-          tmp = tmp.add(capacities.get(children.get(i).getQueueName()));
-        }
-
-        String lastQueue = children.get(children.size() - 1).getName();
-        BigDecimal corrected = hundred.subtract(tmp);
-        capacities.put(lastQueue, corrected);
-      }
-
-      return capacities;
     }
   }
 

@@ -693,7 +693,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   /**
    * Reserve a spot for {@code container} on this {@code node}. If
    * the container is {@code alreadyReserved} on the node, simply
-   * update relevant bookeeping. This dispatches ro relevant handlers
+   * update relevant bookkeeping. This dispatches ro relevant handlers
    * in {@link FSSchedulerNode}..
    * return whether reservation was possible with the current threshold limits
    */
@@ -1393,12 +1393,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return;
     }
 
-    StringBuilder diagnosticMessageBldr = new StringBuilder();
-    diagnosticMessageBldr.append(" (Resource request: ")
+    StringBuilder diagnosticMessage = new StringBuilder();
+    diagnosticMessage.append(" (Resource request: ")
         .append(resource)
         .append(reason);
     updateAMContainerDiagnostics(AMState.INACTIVATED,
-        diagnosticMessageBldr.toString());
+        diagnosticMessage.toString());
   }
 
   /*

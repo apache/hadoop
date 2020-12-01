@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.s3a.commit.magic;
 import java.io.IOException;
 import java.net.URI;
 
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -34,6 +37,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjectionImpl;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -91,14 +95,14 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
-  protected AbstractS3ACommitter createCommitter(
+  protected MagicS3GuardCommitter createCommitter(
       Path outputPath,
       TaskAttemptContext context)
       throws IOException {
     return new MagicS3GuardCommitter(outputPath, context);
   }
 
-  public AbstractS3ACommitter createFailingCommitter(
+  public MagicS3GuardCommitter createFailingCommitter(
       TaskAttemptContext tContext) throws IOException {
     return new CommitterWithFailedThenSucceed(getOutDir(), tContext);
   }
@@ -134,6 +138,41 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
         "s3a", wd.getScheme());
     assertThat(wd.getPath(),
         containsString('/' + CommitConstants.MAGIC + '/'));
+  }
+
+  /**
+   * Verify that the __magic path for the application/tasks use the
+   * committer UUID to ensure uniqueness in the case of more than
+   * one job writing to the same destination path.
+   */
+  @Test
+  public void testCommittersPathsHaveUUID() throws Throwable {
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(
+        getConfiguration(),
+        getTaskAttempt0());
+    MagicS3GuardCommitter committer = createCommitter(getOutDir(), tContext);
+
+    String ta0 = getTaskAttempt0().toString();
+    // magic path for the task attempt
+    Path taskAttemptPath = committer.getTaskAttemptPath(tContext);
+    Assertions.assertThat(taskAttemptPath.toString())
+        .describedAs("task path of %s", committer)
+        .contains(committer.getUUID())
+        .contains(MAGIC)
+        .doesNotContain(TEMP_DATA)
+        .endsWith(BASE)
+        .contains(ta0);
+
+    // temp path for files which the TA will create with an absolute path
+    // and which need renaming into place.
+    Path tempTaskAttemptPath = committer.getTempTaskAttemptPath(tContext);
+    Assertions.assertThat(tempTaskAttemptPath.toString())
+        .describedAs("Temp task path of %s", committer)
+        .contains(committer.getUUID())
+        .contains(TEMP_DATA)
+        .doesNotContain(MAGIC)
+        .doesNotContain(BASE)
+        .contains(ta0);
   }
 
   /**

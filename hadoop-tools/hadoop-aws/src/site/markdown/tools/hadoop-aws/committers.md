@@ -530,25 +530,32 @@ Amazon S3, that means S3Guard must *always* be enabled.
 
 Conflict management is left to the execution engine itself.
 
-## Committer Configuration Options
+## Common Committer Options
 
 
-| Option | Magic | Directory | Partitioned | Meaning | Default |
-|--------|-------|-----------|-------------|---------|---------|
-| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | X | X | X | Write a `_SUCCESS` file  at the end of each job | `true` |
-| `fs.s3a.committer.threads` | X | X | X | Number of threads in committers for parallel operations on files. | 8 |
-| `fs.s3a.committer.staging.conflict-mode` |  | X | X | Conflict resolution: `fail`, `append` or `replace`| `append` |
-| `fs.s3a.committer.staging.unique-filenames` |  | X | X | Generate unique filenames | `true` |
-| `fs.s3a.committer.magic.enabled` | X |  | | Enable "magic committer" support in the filesystem | `false` |
+| Option | Meaning | Default |
+|--------|---------|---------|
+| `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Write a `_SUCCESS` file on the successful completion of the job. | `true` |
+| `fs.s3a.buffer.dir` | Local filesystem directory for data being written and/or staged. | `${hadoop.tmp.dir}/s3a` |
+| `fs.s3a.committer.magic.enabled` | Enable "magic committer" support in the filesystem. | `false` |
+| `fs.s3a.committer.abort.pending.uploads` | list and abort all pending uploads under the destination path when the job is committed or aborted. | `true` |
+| `fs.s3a.committer.threads` | Number of threads in committers for parallel operations on files. | 8 |
+| `fs.s3a.committer.generate.uuid` | Generate a Job UUID if none is passed down from Spark | `false` |
+| `fs.s3a.committer.require.uuid` |Require the Job UUID to be passed down from Spark | `false` |
 
 
+## Staging committer (Directory and Partitioned) options
 
 
-| Option | Magic | Directory | Partitioned | Meaning | Default |
-|--------|-------|-----------|-------------|---------|---------|
-| `fs.s3a.buffer.dir` | X | X | X | Local filesystem directory for data being written and/or staged. | |
-| `fs.s3a.committer.staging.tmp.path` |  | X | X | Path in the cluster filesystem for temporary data | `tmp/staging` |
+| Option | Meaning | Default |
+|--------|---------|---------|
+| `fs.s3a.committer.staging.conflict-mode` | Conflict resolution: `fail`, `append` or `replace`| `append` |
+| `fs.s3a.committer.staging.tmp.path` | Path in the cluster filesystem for temporary data. | `tmp/staging` |
+| `fs.s3a.committer.staging.unique-filenames` | Generate unique filenames. | `true` |
+| `fs.s3a.committer.staging.abort.pending.uploads` | Deprecated; replaced by `fs.s3a.committer.abort.pending.uploads`. |  `(false)` |
 
+
+### Common Committer Options
 
 ```xml
 <property>
@@ -579,6 +586,60 @@ Conflict management is left to the execution engine itself.
   </description>
 </property>
 
+<property>
+  <name>fs.s3a.committer.abort.pending.uploads</name>
+  <value>true</value>
+  <description>
+    Should the committers abort all pending uploads to the destination
+    directory?
+
+    Set to false if more than one job is writing to the same directory tree.
+    Was:  "fs.s3a.committer.staging.abort.pending.uploads" when only used
+    by the staging committers.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.s3a</name>
+  <value>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</value>
+  <description>
+    The committer factory to use when writing data to S3A filesystems.
+    If mapreduce.outputcommitter.factory.class is set, it will
+    override this property.
+
+    (This property is set in mapred-default.xml)
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.require.uuid</name>
+  <value>false</value>
+  <description>
+    Should the committer fail to initialize if a unique ID isn't set in
+    "spark.sql.sources.writeJobUUID" or fs.s3a.committer.staging.uuid
+    This helps guarantee that unique IDs for jobs are being
+    passed down in spark applications.
+  
+    Setting this option outside of spark will stop the S3A committer
+    in job setup. In MapReduce workloads the job attempt ID is unique
+    and so no unique ID need be passed down.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.committer.generate.uuid</name>
+  <value>false</value>
+  <description>
+    Generate a Job UUID if none is passed down from Spark.
+    This uuid is only generated if the fs.s3a.committer.require.uuid flag
+    is false. 
+  </description>
+</property>
+```
+
+### Staging Committer Options
+
+```xml
 <property>
   <name>fs.s3a.committer.staging.tmp.path</name>
   <value>tmp/staging</value>
@@ -613,38 +674,45 @@ Conflict management is left to the execution engine itself.
   </description>
 </property>
 
-<property>
-  <name>s.s3a.committer.staging.abort.pending.uploads</name>
-  <value>true</value>
-  <description>
-    Should the staging committers abort all pending uploads to the destination
-    directory?
-
-    Changing this if more than one partitioned committer is
-    writing to the same destination tree simultaneously; otherwise
-    the first job to complete will cancel all outstanding uploads from the
-    others. However, it may lead to leaked outstanding uploads from failed
-    tasks. If disabled, configure the bucket lifecycle to remove uploads
-    after a time period, and/or set up a workflow to explicitly delete
-    entries. Otherwise there is a risk that uncommitted uploads may run up
-    bills.
-  </description>
-</property>
-
-<property>
-  <name>mapreduce.outputcommitter.factory.scheme.s3a</name>
-  <value>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</value>
-  <description>
-    The committer factory to use when writing data to S3A filesystems.
-    If mapreduce.outputcommitter.factory.class is set, it will
-    override this property.
-
-    (This property is set in mapred-default.xml)
-  </description>
-</property>
 
 ```
 
+## <a name="concurrent-jobs"></a> Concurrent Jobs writing to the same destination
+
+It is sometimes possible for multiple jobs to simultaneously write to the same destination path.
+
+Before attempting this, the committers must be set to not delete all incomplete uploads on job commit,
+by setting `fs.s3a.committer.abort.pending.uploads` to `false`
+
+```xml
+<property>
+  <name>fs.s3a.committer.abort.pending.uploads</name>
+  <value>false</value>
+</property>
+```
+
+If more than one job is writing to the same destination path then every task MUST
+be creating files with paths/filenames unique to the specific job.
+It is not enough for them to be unique by task `part-00000.snappy.parquet`,
+because each job will have tasks with the same name, so generate files with conflicting operations.
+
+For the staging committers, setting `fs.s3a.committer.staging.unique-filenames` to ensure unique names are
+generated during the upload. Otherwise, use what configuration options are available in the specific `FileOutputFormat`.
+
+Note: by default, the option `mapreduce.output.basename` sets the base name for files;
+changing that from the default `part` value to something unique for each job may achieve this.
+
+For example, for any job executed through Hadoop MapReduce, the Job ID can be used in the filename.
+
+```xml
+<property>
+  <name>mapreduce.output.basename</name>
+  <value>part-${mapreduce.job.id}</value>
+</property>
+```
+
+Even with these settings, the outcome of concurrent jobs to the same destination is
+inherently nondeterministic -use with caution.
 
 ## Troubleshooting
 
@@ -700,7 +768,7 @@ Delegation token support is disabled
  Exiting with status 46: 46: The magic committer is not enabled for s3a://landsat-pds
 ```
 
-## Error message: "File being created has a magic path, but the filesystem has magic file support disabled:
+### Error message: "File being created has a magic path, but the filesystem has magic file support disabled"
 
 A file is being written to a path which is used for "magic" files,
 files which are actually written to a different destination than their stated path
@@ -781,7 +849,7 @@ If you have subclassed `FileOutputCommitter` and want to move to the
 factory model, please get in touch.
 
 
-## Job/Task fails with PathExistsException: Destination path exists and committer conflict resolution mode is "fail"
+### Job/Task fails with PathExistsException: Destination path exists and committer conflict resolution mode is "fail"
 
 This surfaces when either of two conditions are met.
 
@@ -795,7 +863,7 @@ during task commit, which will cause the entire job to fail.
 If you are trying to write data and want write conflicts to be rejected, this is the correct
 behavior: there was data at the destination so the job was aborted.
 
-## Staging committer task fails with IOException: No space left on device
+### Staging committer task fails with IOException: No space left on device
 
 There's not enough space on the local hard disk (real or virtual)
 to store all the uncommitted data of the active tasks on that host.
@@ -821,3 +889,169 @@ generating less data each.
 1. Use the magic committer. This only needs enough disk storage to buffer
 blocks of the currently being written file during their upload process,
 so can use a lot less disk space.
+
+### Jobs run with directory/partitioned committers complete but the output is empty.
+
+Make sure that `fs.s3a.committer.staging.tmp.path` is set to a path on the shared cluster
+filesystem (usually HDFS). It MUST NOT be set to a local directory, as then the job committer,
+running on a different host *will not see the lists of pending uploads to commit*.
+
+### Magic output committer task fails "The specified upload does not exist" "Error Code: NoSuchUpload"
+
+The magic committer is being used and a task writing data to the S3 store fails
+with an error message about the upload not existing.
+
+```
+java.io.FileNotFoundException: upload part #1 upload
+    YWHTRqBaxlsutujKYS3eZHfdp6INCNXbk0JVtydX_qzL5fZcoznxRbbBZRfswOjomddy3ghRyguOqywJTfGG1Eq6wOW2gitP4fqWrBYMroasAygkmXNYF7XmUyFHYzja
+    on test/ITestMagicCommitProtocol-testParallelJobsToSameDestPaths/part-m-00000:
+    com.amazonaws.services.s3.model.AmazonS3Exception: The specified upload does not
+    exist. The upload ID may be invalid, or the upload may have been aborted or
+    completed. (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload;
+    Request ID: EBE6A0C9F8213AC3; S3 Extended Request ID:
+    cQFm2N+666V/1HehZYRPTHX9tFK3ppvHSX2a8Oy3qVDyTpOFlJZQqJpSixMVyMI1D0dZkHHOI+E=),
+    S3 Extended Request ID:
+    cQFm2N+666V/1HehZYRPTHX9tFK3ppvHSX2a8Oy3qVDyTpOFlJZQqJpSixMVyMI1D0dZkHHOI+E=:NoSuchUpload
+
+    at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:259)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:112)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:315)
+    at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:407)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:311)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:286)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.retry(WriteOperationHelper.java:154)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.uploadPart(WriteOperationHelper.java:590)
+    at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.lambda$uploadBlockAsync$0(S3ABlockOutputStream.java:652)
+
+Caused by: com.amazonaws.services.s3.model.AmazonS3Exception:
+    The specified upload does not exist.
+    The upload ID may be invalid, or the upload may have been aborted or completed.
+    (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload; Request ID: EBE6A0C9F8213AC3; S3 Extended Request ID:
+    cQFm2N+666V/1HehZYRPTHX9tFK3ppvHSX2a8Oy3qVDyTpOFlJZQqJpSixMVyMI1D0dZkHHOI+E=),
+    S3 Extended Request ID: cQFm2N+666V/1HehZYRPTHX9tFK3ppvHSX2a8Oy3qVDyTpOFlJZQqJpSixMVyMI1D0dZkHHOI+E=
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1712)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1367)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1113)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.doExecute(AmazonHttpClient.java:770)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeWithTimer(AmazonHttpClient.java:744)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.execute(AmazonHttpClient.java:726)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.access$500(AmazonHttpClient.java:686)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutionBuilderImpl.execute(AmazonHttpClient.java:668)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:532)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:512)
+    at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4920)
+    at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4866)
+    at com.amazonaws.services.s3.AmazonS3Client.doUploadPart(AmazonS3Client.java:3715)
+    at com.amazonaws.services.s3.AmazonS3Client.uploadPart(AmazonS3Client.java:3700)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.uploadPart(S3AFileSystem.java:2343)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$uploadPart$8(WriteOperationHelper.java:594)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:110)
+    ... 15 more
+```
+
+The block write failed because the previously created upload was aborted before the data could be written.
+
+Causes
+
+1. Another job has written to the same directory tree with an S3A committer
+   -and when that job was committed, all incomplete uploads were aborted.
+1. The `hadoop s3guard uploads --abort` command has being called on/above the directory.
+1. Some other program is cancelling uploads to that bucket/path under it.
+1. The job is lasting over 24h and a bucket lifecycle policy is aborting the uploads.
+
+The `_SUCCESS` file from the previous job may provide diagnostics.
+
+If the cause is Concurrent Jobs, see [Concurrent Jobs writing to the same destination](#concurrent-jobs).
+
+### Job commit fails "java.io.FileNotFoundException: Completing multipart upload" "The specified upload does not exist"
+
+The job commit fails with an error about the specified upload not existing.
+
+```
+java.io.FileNotFoundException: Completing multipart upload on
+    test/DELAY_LISTING_ME/ITestDirectoryCommitProtocol-testParallelJobsToSameDestPaths/part-m-00001:
+    com.amazonaws.services.s3.model.AmazonS3Exception:
+    The specified upload does not exist.
+    The upload ID may be invalid, or the upload may have been aborted or completed.
+    (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload;
+    Request ID: 8E6173241D2970CB; S3 Extended Request ID:
+    Pg6x75Q60UrbSJgfShCFX7czFTZAHR1Cy7W0Kh+o1uj60CG9jw7hL40tSa+wa7BRLbaz3rhX8Ds=),
+    S3 Extended Request ID:
+    Pg6x75Q60UrbSJgfShCFX7czFTZAHR1Cy7W0Kh+o1uj60CG9jw7hL40tSa+wa7BRLbaz3rhX8Ds=:NoSuchUpload
+
+    at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:259)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:112)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:315)
+    at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:407)
+    at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:311)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.finalizeMultipartUpload(WriteOperationHelper.java:261)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.commitUpload(WriteOperationHelper.java:549)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations.innerCommit(CommitOperations.java:199)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations.commit(CommitOperations.java:168)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations.commitOrFail(CommitOperations.java:144)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations.access$100(CommitOperations.java:74)
+    at org.apache.hadoop.fs.s3a.commit.CommitOperations$CommitContext.commitOrFail(CommitOperations.java:612)
+    at org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.lambda$loadAndCommit$5(AbstractS3ACommitter.java:535)
+    at org.apache.hadoop.fs.s3a.commit.Tasks$Builder.runSingleThreaded(Tasks.java:164)
+    at org.apache.hadoop.fs.s3a.commit.Tasks$Builder.run(Tasks.java:149)
+    at org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.loadAndCommit(AbstractS3ACommitter.java:534)
+    at org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.lambda$commitPendingUploads$2(AbstractS3ACommitter.java:482)
+    at org.apache.hadoop.fs.s3a.commit.Tasks$Builder$1.run(Tasks.java:253)
+
+Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: The specified upload does not exist.
+    The upload ID may be invalid, or the upload may have been aborted or completed.
+    (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload; Request ID: 8E6173241D2970CB;
+    S3 Extended Request ID: Pg6x75Q60UrbSJgfShCFX7czFTZAHR1Cy7W0Kh+o1uj60CG9jw7hL40tSa+wa7BRLbaz3rhX8Ds=),
+
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1712)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1367)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1113)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.doExecute(AmazonHttpClient.java:770)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeWithTimer(AmazonHttpClient.java:744)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.execute(AmazonHttpClient.java:726)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.access$500(AmazonHttpClient.java:686)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutionBuilderImpl.execute(AmazonHttpClient.java:668)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:532)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:512)
+    at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4920)
+    at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:4866)
+    at com.amazonaws.services.s3.AmazonS3Client.completeMultipartUpload(AmazonS3Client.java:3464)
+    at org.apache.hadoop.fs.s3a.WriteOperationHelper.lambda$finalizeMultipartUpload$1(WriteOperationHelper.java:267)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:110)
+```
+
+The problem is likely to be that of the previous one: concurrent jobs are writing the same output directory,
+or another program has cancelled all pending uploads.
+
+See [Concurrent Jobs writing to the same destination](#concurrent-jobs).
+
+### Job commit fails `java.io.FileNotFoundException` "File hdfs://.../staging-uploads/_temporary/0 does not exist"
+
+The Staging committer will fail in job commit if the intermediate directory on the cluster FS is missing during job commit.
+
+This is possible if another job used the same staging upload directory and,
+ after committing its work, it deleted the directory.
+
+A unique Job ID is required for each spark job run by a specific user.
+Spark generates job IDs for its committers using the current timestamp,
+and if two jobs/stages are started in the same second, they will have the same job ID.
+
+See [SPARK-33230](https://issues.apache.org/jira/browse/SPARK-33230).
+
+This is fixed in all spark releases which have the patch applied.
+
+You can set the property `fs.s3a.committer.staging.require.uuid` to fail
+the staging committers fast if a unique Job ID isn't found in
+`spark.sql.sources.writeJobUUID`.
+
+### Job setup fails `Job/task context does not contain a unique ID in spark.sql.sources.writeJobUUID`
+
+This will surface in job setup if the option `fs.s3a.committer.require.uuid` is `true`, and
+one of the following conditions are met
+
+1. The committer is being used in a Hadoop MapReduce job, whose job attempt ID is unique
+   -there is no need to add this requirement.
+   Fix: unset `fs.s3a.committer.require.uuid`.
+1. The committer is being used in spark, and the version of spark being used does not
+   set the `spark.sql.sources.writeJobUUID` property.
+   Either upgrade to a new spark release, or set `fs.s3a.committer.generate.uuid` to true.

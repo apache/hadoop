@@ -426,6 +426,7 @@ public class TestParentQueue {
   private static final String B1 = "b1";
   private static final String B2 = "b2";
   private static final String B3 = "b3";
+  private static final String B4 = "b4";
   
   private void setupMultiLevelQueues(CapacitySchedulerConfiguration conf) {
     
@@ -676,7 +677,64 @@ public class TestParentQueue {
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
-  
+
+  @Test
+  public void testQueueCapacitySettingParentZeroChildren100pctZeroSumAllowed()
+      throws Exception {
+    // Setup queue configs
+    setupMultiLevelQueues(csConf);
+
+    // set parent capacity to 0 when child is 100
+    // and allow zero capacity sum
+    csConf.setCapacity(Q_B, 0);
+    csConf.setCapacity(Q_A, 60);
+    csConf.setAllowZeroCapacitySum(Q_B, true);
+    CSQueueStore queues = new CSQueueStore();
+    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerConfiguration.ROOT, queues, queues,
+        TestUtils.spyHook);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testQueueCapacitySettingParentZeroChildren50pctZeroSumAllowed()
+      throws Exception {
+    // Setup queue configs
+    setupMultiLevelQueues(csConf);
+
+    // set parent capacity to 0 when sum(children) is 50
+    // and allow zero capacity sum
+    csConf.setCapacity(Q_B, 0);
+    csConf.setCapacity(Q_A, 100);
+    csConf.setCapacity(Q_B + "." + B1, 10);
+    csConf.setCapacity(Q_B + "." + B2, 20);
+    csConf.setCapacity(Q_B + "." + B3, 20);
+    csConf.setAllowZeroCapacitySum(Q_B, true);
+    CSQueueStore queues = new CSQueueStore();
+    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerConfiguration.ROOT, queues, queues,
+        TestUtils.spyHook);
+  }
+
+  @Test
+  public void testQueueCapacitySettingParentNonZeroChildrenZeroSumAllowed()
+      throws Exception {
+    // Setup queue configs
+    setupMultiLevelQueues(csConf);
+
+    // set parent capacity to 10 when sum(children) is 0
+    // and allow zero capacity sum
+    csConf.setCapacity(Q_B, 10);
+    csConf.setCapacity(Q_A, 50);
+    csConf.setCapacity(Q_B + "." + B1, 0);
+    csConf.setCapacity(Q_B + "." + B2, 0);
+    csConf.setCapacity(Q_B + "." + B3, 0);
+    csConf.setAllowZeroCapacitySum(Q_B, true);
+    CSQueueStore queues = new CSQueueStore();
+    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerConfiguration.ROOT, queues, queues,
+        TestUtils.spyHook);
+  }
+
   @Test
   public void testQueueCapacityZero() throws Exception {
     // Setup queue configs

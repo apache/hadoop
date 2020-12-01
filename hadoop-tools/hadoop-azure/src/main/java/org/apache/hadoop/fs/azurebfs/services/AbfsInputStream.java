@@ -51,6 +51,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private boolean firstRead = true;
 
+  private int readAheadBlockSize;
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
@@ -60,6 +61,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
+  private final boolean alwaysReadBufferSize;
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
@@ -95,10 +97,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
     this.readAheadEnabled = true;
+    this.alwaysReadBufferSize
+        = abfsInputStreamContext.shouldReadBufferSizeAlways();
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
     this.context = abfsInputStreamContext;
+    readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
+
+    // Propagate the config values to ReadBufferManager so that the first instance
+    // to initialize can set the readAheadBlockSize
+    ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
   }
 
   public String getPath() {
@@ -199,11 +208,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         buffer = new byte[bufferSize];
       }
 
-      // Enable readAhead when reading sequentially
-      if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+      if (alwaysReadBufferSize) {
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {
-        bytesRead = readInternal(fCursor, buffer, 0, b.length, true);
+        // Enable readAhead when reading sequentially
+        if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+          bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
+        } else {
+          bytesRead = readInternal(fCursor, buffer, 0, b.length, true);
+        }
       }
 
       if (bytesRead == -1) {
@@ -300,16 +313,19 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       // queue read-aheads
       int numReadAheads = this.readAheadQueueDepth;
-      long nextSize;
       long nextOffset = position;
+      // First read to queue needs to be of readBufferSize and later
+      // of readAhead Block size
+      long nextSize = Math.min((long) bufferSize, contentLength - nextOffset);
       LOG.debug("read ahead enabled issuing readheads num = {}", numReadAheads);
       while (numReadAheads > 0 && nextOffset < contentLength) {
-        nextSize = Math.min((long) bufferSize, contentLength - nextOffset);
         LOG.debug("issuing read ahead requestedOffset = {} requested size {}",
             nextOffset, nextSize);
         ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize);
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
+        // From next round onwards should be of readahead block size.
+        nextSize = Math.min((long) readAheadBlockSize, contentLength - nextOffset);
       }
 
       // try reading from buffers first
@@ -602,6 +618,21 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   public long getBytesFromRemoteRead() {
     return bytesFromRemoteRead;
+  }
+
+  @VisibleForTesting
+  public int getBufferSize() {
+    return bufferSize;
+  }
+
+  @VisibleForTesting
+  public int getReadAheadQueueDepth() {
+    return readAheadQueueDepth;
+  }
+
+  @VisibleForTesting
+  public boolean shouldAlwaysReadBufferSize() {
+    return alwaysReadBufferSize;
   }
 
   /**
