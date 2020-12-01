@@ -82,28 +82,16 @@ public class TestFileChecksum {
   private String replicatedFile = "/replicatedFileChecksum";
 
   private String checksumCombineMode;
-  private boolean expectComparableStripedAndReplicatedFiles;
-  private boolean expectComparableDifferentBlockSizeReplicatedFiles;
-  private boolean expectSupportForSingleFileMixedBytesPerChecksum;
 
-  public TestFileChecksum(String checksumCombineMode,
-      boolean expectComparableStripedAndReplicatedFiles,
-      boolean expectComparableDifferentBlockSizeReplicatedFiles,
-      boolean expectSupportForSingleFileMixedBytesPerChecksum) {
+  public TestFileChecksum(String checksumCombineMode) {
     this.checksumCombineMode = checksumCombineMode;
-    this.expectComparableStripedAndReplicatedFiles =
-        expectComparableStripedAndReplicatedFiles;
-    this.expectComparableDifferentBlockSizeReplicatedFiles =
-        expectComparableDifferentBlockSizeReplicatedFiles;
-    this.expectSupportForSingleFileMixedBytesPerChecksum =
-        expectSupportForSingleFileMixedBytesPerChecksum;
   }
 
   @Parameterized.Parameters
-  public static Object[][] getParameters() {
-    return new Object[][] {
-        {ChecksumCombineMode.MD5MD5CRC.name(), false, false, false},
-        {ChecksumCombineMode.COMPOSITE_CRC.name(), true, true, true}};
+  public static Object[] getParameters() {
+    return new Object[] {
+        ChecksumCombineMode.MD5MD5CRC.name(),
+        ChecksumCombineMode.COMPOSITE_CRC.name()};
   }
 
   @Rule
@@ -217,7 +205,7 @@ public class TestFileChecksum {
     FileChecksum replicatedFileChecksum = getFileChecksum(replicatedFile,
         10, false);
 
-    if (expectComparableStripedAndReplicatedFiles) {
+    if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
       Assert.assertEquals(stripedFileChecksum1, replicatedFileChecksum);
     } else {
       Assert.assertNotEquals(stripedFileChecksum1, replicatedFileChecksum);
@@ -236,7 +224,7 @@ public class TestFileChecksum {
     FileChecksum checksum1 = getFileChecksum(replicatedFile1, -1, false);
     FileChecksum checksum2 = getFileChecksum(replicatedFile2, -1, false);
 
-    if (expectComparableDifferentBlockSizeReplicatedFiles) {
+    if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
       Assert.assertEquals(checksum1, checksum2);
     } else {
       Assert.assertNotEquals(checksum1, checksum2);
@@ -551,7 +539,7 @@ public class TestFileChecksum {
         ((DistributedFileSystem) FileSystem.newInstance(conf)),
         new Path(replicatedFile1), fileDataPart2);
 
-    if (expectSupportForSingleFileMixedBytesPerChecksum) {
+    if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
       String replicatedFile2 = "/replicatedFile2";
       DFSTestUtil.writeFile(fs, new Path(replicatedFile2), fileData);
       FileChecksum checksum1 = getFileChecksum(replicatedFile1, -1, false);
