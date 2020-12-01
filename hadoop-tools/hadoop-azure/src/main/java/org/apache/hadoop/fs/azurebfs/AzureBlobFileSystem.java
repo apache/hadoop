@@ -1218,7 +1218,7 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   @VisibleForTesting
-  public AzureBlobFileSystemStore getAbfsStore() {
+  AzureBlobFileSystemStore getAbfsStore() {
     return abfsStore;
   }
 
@@ -1242,7 +1242,7 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   @VisibleForTesting
-  public Map<String, Long> getInstrumentationMap() {
+  Map<String, Long> getInstrumentationMap() {
     return abfsCounters.toMap();
   }
 

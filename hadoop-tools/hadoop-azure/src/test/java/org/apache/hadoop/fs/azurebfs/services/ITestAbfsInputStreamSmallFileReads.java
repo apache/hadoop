@@ -19,9 +19,11 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -64,7 +66,7 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
       try (FSDataInputStream iStream = fs.open(testFilePath)) {
         byte[] buffer = new byte[length];
 
-        Map<String, Long> metricMap = fs.getInstrumentationMap();
+        Map<String, Long> metricMap = getInstrumentationMap(fs);
         long requestsMadeBeforeTest = metricMap
             .get(CONNECTIONS_MADE.getStatName());
 
@@ -77,7 +79,7 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
         iStream.seek(seekPos(SeekTo.BEGIN, fileSize, length));
         iStream.read(buffer, 0, length);
 
-        metricMap = fs.getInstrumentationMap();
+        metricMap = getInstrumentationMap(fs);
         long requestsMadeAfterTest = metricMap
             .get(CONNECTIONS_MADE.getStatName());
 
@@ -179,7 +181,7 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
   private AzureBlobFileSystem getFileSystem(boolean readSmallFilesCompletely)
       throws IOException {
     final AzureBlobFileSystem fs = getFileSystem();
-    fs.getAbfsStore().getAbfsConfiguration()
+    getAbfsStore(fs).getAbfsConfiguration()
         .setReadSmallFilesCompletely(readSmallFilesCompletely);
     return fs;
   }
@@ -195,7 +197,8 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
   }
 
   private void seekReadAndTest(FileSystem fs, Path testFilePath, int seekPos,
-      int length, byte[] fileContent) throws IOException {
+      int length, byte[] fileContent)
+      throws IOException, NoSuchFieldException, IllegalAccessException {
     try (FSDataInputStream iStream = fs.open(testFilePath)) {
       iStream.seek(seekPos);
       byte[] buffer = new byte[length];
@@ -204,8 +207,7 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
           .getWrappedStream();
 
-      AzureBlobFileSystem abfs = (AzureBlobFileSystem) fs;
-      AbfsConfiguration conf = abfs.getAbfsStore().getAbfsConfiguration();
+      AbfsConfiguration conf = getAbfsStore(fs).getAbfsConfiguration();
       final int readBufferSize = conf.getReadBufferSize();
       final int fileContentLength = fileContent.length;
       final boolean smallFile = fileContentLength <= readBufferSize;
@@ -235,6 +237,25 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
       assertEquals(expectedBCursor, abfsInputStream.getBCursor());
       assertEquals(expectedLimit, abfsInputStream.getLimit());
     }
+  }
+
+  private AzureBlobFileSystemStore getAbfsStore(FileSystem fs)
+      throws NoSuchFieldException, IllegalAccessException {
+    AzureBlobFileSystem abfs = (AzureBlobFileSystem) fs;
+    Field abfsStoreField = AzureBlobFileSystem.class
+        .getDeclaredField("abfsStore");
+    abfsStoreField.setAccessible(true);
+    return (AzureBlobFileSystemStore) abfsStoreField.get(abfs);
+  }
+
+  private Map<String, Long> getInstrumentationMap(FileSystem fs)
+      throws NoSuchFieldException, IllegalAccessException {
+    AzureBlobFileSystem abfs = (AzureBlobFileSystem) fs;
+    Field abfsCountersField = AzureBlobFileSystem.class
+        .getDeclaredField("abfsCounters");
+    abfsCountersField.setAccessible(true);
+    AbfsCounters abfsCounters = (AbfsCounters) abfsCountersField.get(abfs);
+    return abfsCounters.toMap();
   }
 
   private void assertContentReadCorrectly(byte[] actualFileContent, int from,

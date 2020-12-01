@@ -46,10 +46,7 @@ import static org.apache.hadoop.util.StringUtils.toLowerCase;
 public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
-
   public static final int FOOTER_SIZE = 8;
-
-  private boolean firstRead = true;
 
   private int readAheadBlockSize;
   private final AbfsClient client;
@@ -63,6 +60,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final boolean readAheadEnabled; // whether enable readAhead;
   private final boolean alwaysReadBufferSize;
 
+  private boolean firstRead = true;
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
   private byte[] buffer = null;            // will be initialized on first use
