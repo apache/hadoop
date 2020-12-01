@@ -2283,7 +2283,7 @@ public class TestBalancer {
 
     // Set max-size-to-move to small number
     // so only top two nodes will be chosen in one iteration.
-    conf.setLong(DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY, 100L);
+    conf.setLong(DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY, 99L);
 
     final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
 
