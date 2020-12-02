@@ -2253,9 +2253,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       final boolean needEmptyDirectoryFlag) throws IOException {
     LOG.debug("S3GetFileStatus {}", path);
     Preconditions.checkArgument(!needEmptyDirectoryFlag
-        || probes.contains(StatusProbeEnum.List),
-        "s3GetFileStatus(%s) wants to know if a directory is empty but"
-            + " does not request a list probe", path);
+        || probes.contains(StatusProbeEnum.List), String.format(
+            "s3GetFileStatus(%s) wants to know if a directory is empty but"
+              + " does not request a list probe", path));
 
     if (!key.isEmpty() && !key.endsWith("/")
         && probes.contains(StatusProbeEnum.Head)) {

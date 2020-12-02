@@ -156,7 +156,7 @@ public class FailureInjectionPolicy {
    */
   private static float validProbability(float p) {
     Preconditions.checkArgument(p >= 0.0f && p <= 1.0f,
-        "Probability out of range 0 to 1 %s", p);
+        String.format("Probability out of range 0 to 1 %s", p));
     return p;
   }
 

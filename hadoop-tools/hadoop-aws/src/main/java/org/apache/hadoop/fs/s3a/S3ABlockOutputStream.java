@@ -157,7 +157,7 @@ class S3ABlockOutputStream extends OutputStream implements
     this.writeOperationHelper = writeOperationHelper;
     this.putTracker = putTracker;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
-        "Block size is too small: %d", blockSize);
+        String.format("Block size is too small: %d", blockSize));
     this.executorService = MoreExecutors.listeningDecorator(executorService);
     this.multiPartUpload = null;
     this.progressListener = (progress instanceof ProgressListener) ?
