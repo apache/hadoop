@@ -96,7 +96,6 @@ public class TestKMSAudit {
   }
 
   @Test
-  @SuppressWarnings("checkstyle:linelength")
   public void testAggregation() throws Exception {
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
     kmsAudit.ok(luser, KMSOp.DECRYPT_EEK, "k1", "testmsg");
@@ -142,7 +141,6 @@ public class TestKMSAudit {
   }
 
   @Test
-  @SuppressWarnings("checkstyle:linelength")
   public void testAggregationUnauth() throws Exception {
     kmsAudit.unauthorized(luser, KMSOp.GENERATE_EEK, "k2");
     kmsAudit.evictCacheForTesting();
@@ -184,7 +182,6 @@ public class TestKMSAudit {
   }
 
   @Test
-  @SuppressWarnings("checkstyle:linelength")
   public void testAuditLogFormat() throws Exception {
     kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "k4", "testmsg");
     kmsAudit.ok(luser, KMSOp.GENERATE_EEK, "testmsg");
