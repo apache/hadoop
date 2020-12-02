@@ -309,8 +309,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         S3_METADATA_STORE_IMPL);
     LOG.debug("updated bucket store option {}", updatedBucketOption);
     Preconditions.checkState(S3GUARD_METASTORE_NULL.equals(updatedBucketOption),
-        "Expected bucket option to be %s but was %s",
-        S3GUARD_METASTORE_NULL, updatedBucketOption);
+        String.format("Expected bucket option to be %s but was %s",
+          S3GUARD_METASTORE_NULL, updatedBucketOption));
 
     FileSystem fs = FileSystem.newInstance(uri, conf);
     if (!(fs instanceof S3AFileSystem)) {

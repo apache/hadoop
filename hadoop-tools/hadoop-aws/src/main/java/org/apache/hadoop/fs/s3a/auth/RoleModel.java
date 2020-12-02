@@ -312,7 +312,7 @@ public class RoleModel {
     @Override
     public void validate() {
       checkNotNull(statement, "Statement");
-      checkState(VERSION.equals(version), "Invalid Version: %s", version);
+      checkState(VERSION.equals(version), String.format("Invalid Version: %s", version));
       statement.stream().forEach((a) -> a.validate());
     }
 

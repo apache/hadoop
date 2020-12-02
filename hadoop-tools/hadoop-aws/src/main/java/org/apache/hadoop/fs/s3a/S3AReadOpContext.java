@@ -82,7 +82,7 @@ public class S3AReadOpContext extends S3AOpContext {
         dstFileStatus);
     this.path = checkNotNull(path);
     Preconditions.checkArgument(readahead >= 0,
-        "invalid readahead %d", readahead);
+        String.format("invalid readahead %d", readahead));
     this.inputPolicy = checkNotNull(inputPolicy);
     this.changeDetectionPolicy = checkNotNull(changeDetectionPolicy);
     this.readahead = readahead;

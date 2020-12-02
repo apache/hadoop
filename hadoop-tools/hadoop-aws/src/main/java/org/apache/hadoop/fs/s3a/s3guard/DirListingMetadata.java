@@ -266,8 +266,8 @@ public class DirListingMetadata {
     URI parentUri = path.toUri();
     if (parentUri.getHost() != null) {
       URI childUri = childPath.toUri();
-      Preconditions.checkNotNull(childUri.getHost(), "Expected non-null URI " +
-          "host: %s", childUri);
+      Preconditions.checkNotNull(childUri.getHost(),
+          String.format("Expected non-null URI host: %s", childUri));
       Preconditions.checkArgument(
           childUri.getHost().equals(parentUri.getHost()),
           String.format("childUri %s and parentUri %s must have the same host",

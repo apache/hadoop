@@ -1420,14 +1420,15 @@ public class DynamoDBMetadataStore implements MetadataStore {
    */
   private Path checkPath(Path path) {
     Preconditions.checkNotNull(path);
-    Preconditions.checkArgument(path.isAbsolute(), "Path %s is not absolute",
-        path);
+    Preconditions.checkArgument(path.isAbsolute(),
+        String.format("Path %s is not absolute", path));
     URI uri = path.toUri();
-    Preconditions.checkNotNull(uri.getScheme(), "Path %s missing scheme", path);
+    Preconditions.checkNotNull(uri.getScheme(),
+        String.format("Path %s missing scheme", path));
     Preconditions.checkArgument(uri.getScheme().equals(Constants.FS_S3A),
-        "Path %s scheme must be %s", path, Constants.FS_S3A);
-    Preconditions.checkArgument(!StringUtils.isEmpty(uri.getHost()), "Path %s" +
-        " is missing bucket.", path);
+        String.format("Path %s scheme must be %s", path, Constants.FS_S3A));
+    Preconditions.checkArgument(!StringUtils.isEmpty(uri.getHost()),
+        String.format("Path %s is missing bucket.", path));
     return path;
   }
 
