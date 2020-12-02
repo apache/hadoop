@@ -21,13 +21,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.Semaphore;
 
 import org.apache.hadoop.fs.Options;
@@ -54,7 +52,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.Node;
@@ -67,7 +64,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -387,6 +384,10 @@ public class TestDeleteRace {
     // Disable permissions so that another user can recover the lease.
     config.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
     config.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    long leaseRecheck = 1000;
+    conf.setLong(DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY, leaseRecheck);
+    conf.setLong(DFS_LEASE_HARDLIMIT_KEY, leaseRecheck/1000);
+
     FSDataOutputStream stm = null;
     try {
       cluster = new MiniDFSCluster.Builder(config).numDataNodes(3).build();
@@ -411,30 +412,8 @@ public class TestDeleteRace {
       // the streamer.
       AppendTestUtil.write(stm, 0, BLOCK_SIZE);
 
-      // Mock a scenario that the lease reached hard limit.
-      final LeaseManager lm = (LeaseManager) Whitebox
-          .getInternalState(cluster.getNameNode().getNamesystem(),
-              "leaseManager");
-      final TreeSet<Lease> leases =
-          (TreeSet<Lease>) Whitebox.getInternalState(lm, "sortedLeases");
-      final TreeSet<Lease> spyLeases = new TreeSet<>(new Comparator<Lease>() {
-        @Override
-        public int compare(Lease o1, Lease o2) {
-          return Long.signum(o1.getLastUpdate() - o2.getLastUpdate());
-        }
-      });
-      while (!leases.isEmpty()) {
-        final Lease lease = leases.first();
-        final Lease spyLease = Mockito.spy(lease);
-        Mockito.doReturn(true).when(spyLease).expiredHardLimit();
-        spyLeases.add(spyLease);
-        leases.remove(lease);
-      }
-      Whitebox.setInternalState(lm, "sortedLeases", spyLeases);
-
       // wait for lease manager's background 'Monitor' class to check leases.
-      Thread.sleep(2 * conf.getLong(DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
-          DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT));
+      Thread.sleep(2 * leaseRecheck);
 
       LOG.info("Now check we can restart");
       cluster.restartNameNodes();

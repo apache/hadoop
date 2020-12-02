@@ -23,15 +23,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -92,21 +89,15 @@ public class LeaseManager {
   private long lastHolderUpdateTime;
   private String internalLeaseHolder;
 
+  //
   // Used for handling lock-leases
   // Mapping: leaseHolder -> Lease
+  //TODO: TreeMap has O(log(n)) complexity but it is more space efficient
+  //             compared to HashMap. Therefore, replacing TreeMap with a
+  //             HashMap can be considered to get faster O(1) time complexity
+  //             on the expense of 30% memory waste.
+  //
   private final SortedMap<String, Lease> leases = new TreeMap<>();
-  // Set of: Lease
-  private final NavigableSet<Lease> sortedLeases = new TreeSet<>(
-      new Comparator<Lease>() {
-        @Override
-        public int compare(Lease o1, Lease o2) {
-          if (o1.getLastUpdate() != o2.getLastUpdate()) {
-            return Long.signum(o1.getLastUpdate() - o2.getLastUpdate());
-          } else {
-            return o1.holder.compareTo(o2.holder);
-          }
-        }
-  });
   // INodeID -> Lease
   private final TreeMap<Long, Lease> leasesById = new TreeMap<>();
 
@@ -344,7 +335,7 @@ public class LeaseManager {
   /** @return the number of leases currently in the system */
   @VisibleForTesting
   public synchronized int countLease() {
-    return sortedLeases.size();
+    return leases.size();
   }
 
   /** @return the number of paths contained in all leases */
@@ -360,7 +351,6 @@ public class LeaseManager {
     if (lease == null) {
       lease = new Lease(holder);
       leases.put(holder, lease);
-      sortedLeases.add(lease);
     } else {
       renewLease(lease);
     }
@@ -386,9 +376,8 @@ public class LeaseManager {
     }
 
     if (!lease.hasFiles()) {
-      leases.remove(lease.holder);
-      if (!sortedLeases.remove(lease)) {
-        LOG.error("{} not found in sortedLeases", lease);
+      if (leases.remove(lease.holder) == null) {
+        LOG.error("{} not found", lease);
       }
     }
   }
@@ -407,7 +396,6 @@ public class LeaseManager {
   }
 
   synchronized void removeAllLeases() {
-    sortedLeases.clear();
     leasesById.clear();
     leases.clear();
   }
@@ -430,11 +418,10 @@ public class LeaseManager {
   synchronized void renewLease(String holder) {
     renewLease(getLease(holder));
   }
+
   synchronized void renewLease(Lease lease) {
     if (lease != null) {
-      sortedLeases.remove(lease);
       lease.renew();
-      sortedLeases.add(lease);
     }
   }
 
@@ -458,10 +445,10 @@ public class LeaseManager {
     private final String holder;
     private long lastUpdate;
     private final HashSet<Long> files = new HashSet<>();
-  
+
     /** Only LeaseManager object can create a lease */
-    private Lease(String holder) {
-      this.holder = holder;
+    private Lease(String h) {
+      this.holder = h;
       renew();
     }
     /** Only LeaseManager object can renew a lease */
@@ -472,6 +459,10 @@ public class LeaseManager {
     /** @return true if the Hard Limit Timer has expired */
     public boolean expiredHardLimit() {
       return monotonicNow() - lastUpdate > hardLimit;
+    }
+
+    public boolean expiredHardLimit(long now) {
+      return now - lastUpdate > hardLimit;
     }
 
     /** @return true if the Soft Limit Timer has expired */
@@ -496,7 +487,7 @@ public class LeaseManager {
     public int hashCode() {
       return holder.hashCode();
     }
-    
+
     private Collection<Long> getFiles() {
       return Collections.unmodifiableCollection(files);
     }
@@ -515,6 +506,17 @@ public class LeaseManager {
     this.softLimit = softLimit;
     this.hardLimit = hardLimit; 
   }
+
+  private synchronized Collection<Lease> getExpiredCandidateLeases() {
+    long now = Time.monotonicNow();
+    Collection<Lease> expired = new HashSet<>();
+    for (Lease lease : leases.values()) {
+      if (lease.expiredHardLimit(now)) {
+        expired.add(lease);
+      }
+    }
+    return expired;
+  }
   
   /******************************************************
    * Monitor checks for leases that have expired,
@@ -529,10 +531,19 @@ public class LeaseManager {
       for(; shouldRunMonitor && fsnamesystem.isRunning(); ) {
         boolean needSync = false;
         try {
+          // sleep now to avoid infinite loop if an exception was thrown.
+          Thread.sleep(fsnamesystem.getLeaseRecheckIntervalMs());
+
+          // pre-filter the leases w/o the fsn lock.
+          Collection<Lease> candidates = getExpiredCandidateLeases();
+          if (candidates.isEmpty()) {
+            continue;
+          }
+
           fsnamesystem.writeLockInterruptibly();
           try {
             if (!fsnamesystem.isInSafeMode()) {
-              needSync = checkLeases();
+              needSync = checkLeases(candidates);
             }
           } finally {
             fsnamesystem.writeUnlock("leaseManager");
@@ -541,10 +552,10 @@ public class LeaseManager {
               fsnamesystem.getEditLog().logSync();
             }
           }
-  
-          Thread.sleep(fsnamesystem.getLeaseRecheckIntervalMs());
         } catch(InterruptedException ie) {
-          LOG.debug("{} is interrupted", name, ie);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("{} is interrupted", name, ie);
+          }
         } catch(Throwable e) {
           LOG.warn("Unexpected throwable: ", e);
         }
@@ -557,17 +568,22 @@ public class LeaseManager {
    */
   @VisibleForTesting
   synchronized boolean checkLeases() {
+    return checkLeases(getExpiredCandidateLeases());
+  }
+
+  private synchronized boolean checkLeases(Collection<Lease> leasesToCheck) {
     boolean needSync = false;
     assert fsnamesystem.hasWriteLock();
 
     long start = monotonicNow();
-
-    while(!sortedLeases.isEmpty() &&
-        sortedLeases.first().expiredHardLimit()
-        && !isMaxLockHoldToReleaseLease(start)) {
-      Lease leaseToCheck = sortedLeases.first();
+    for (Lease leaseToCheck : leasesToCheck) {
+      if (isMaxLockHoldToReleaseLease(start)) {
+        break;
+      }
+      if (!leaseToCheck.expiredHardLimit(Time.monotonicNow())) {
+        continue;
+      }
       LOG.info("{} has expired hard limit", leaseToCheck);
-
       final List<Long> removing = new ArrayList<>();
       // need to create a copy of the oldest lease files, because
       // internalReleaseLease() removes files corresponding to empty files,
@@ -629,7 +645,6 @@ public class LeaseManager {
         removeLease(leaseToCheck, id);
       }
     }
-
     return needSync;
   }
 
@@ -644,7 +659,6 @@ public class LeaseManager {
   public synchronized String toString() {
     return getClass().getSimpleName() + "= {"
         + "\n leases=" + leases
-        + "\n sortedLeases=" + sortedLeases
         + "\n leasesById=" + leasesById
         + "\n}";
   }
