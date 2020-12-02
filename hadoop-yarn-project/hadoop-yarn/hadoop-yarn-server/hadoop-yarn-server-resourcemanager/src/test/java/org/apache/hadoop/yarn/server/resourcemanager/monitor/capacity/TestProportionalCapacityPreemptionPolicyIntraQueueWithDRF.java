@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.junit.Before;
@@ -35,14 +36,14 @@ import static org.mockito.Mockito.when;
  */
 public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
     extends
-      ProportionalCapacityPreemptionPolicyMockFramework {
+    ProportionalCapacityPreemptionPolicyMockFramework {
   @Before
   public void setup() {
     super.setup();
     conf.setBoolean(
         CapacitySchedulerConfiguration.INTRAQUEUE_PREEMPTION_ENABLED, true);
-    rc = new DominantResourceCalculator();
-    when(cs.getResourceCalculator()).thenReturn(rc);
+    resourceCalculator = new DominantResourceCalculator();
+    when(cs.getResourceCalculator()).thenReturn(resourceCalculator);
     policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs, mClock);
   }
 
@@ -102,10 +103,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
 
     // For queue B, app3 and app4 were of lower priority. Hence take 8
     // containers from them by hitting the intraQueuePreemptionDemand of 20%.
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
-    verify(mDisp, times(3)).handle(argThat(
+    verify(eventHandler, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -165,13 +166,13 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
 
     // For queue B, app3 and app4 were of lower priority. Hence take 4
     // containers.
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, times(4)).handle(argThat(
+    verify(eventHandler, times(4)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
-    verify(mDisp, times(4)).handle(argThat(
+    verify(eventHandler, times(4)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(5))));
   }

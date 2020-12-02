@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,7 +34,7 @@ import static org.mockito.Mockito.verify;
  */
 public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     extends
-      ProportionalCapacityPreemptionPolicyMockFramework {
+    ProportionalCapacityPreemptionPolicyMockFramework {
   @Before
   public void setup() {
     super.setup();
@@ -94,7 +95,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // resources from app1.
-    verify(mDisp, times(30)).handle(argThat(
+    verify(eventHandler, times(30)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -149,7 +150,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource. Since app1,2 are from same user, there wont be
     // any preemption.
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -206,7 +207,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource. Since app1,2 are from same user, there wont be
     // any preemption.
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -262,7 +263,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // resources from app1 even though its priority is more than app2.
-    verify(mDisp, times(30)).handle(argThat(
+    verify(eventHandler, times(30)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -323,7 +324,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app3 (compare to app1, app3 has low priority).
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -384,16 +385,16 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app3 (compare to app1, app3 has low priority).
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
   }
@@ -451,7 +452,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -508,10 +509,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(4)).handle(argThat(
+    verify(eventHandler, times(4)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(4)).handle(argThat(
+    verify(eventHandler, times(4)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(5))));
   }
@@ -566,10 +567,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // resources from app1.
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -626,10 +627,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -686,10 +687,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -746,10 +747,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2/app4 needs more resource and its well under its user-limit. Hence
     // preempt resources from app1 (compare to app3, app1 has low priority).
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -806,10 +807,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // 3 resources (9GB) from app1. We will not preempt last container as it may
     // pull user's usage under its user-limit.
-    verify(mDisp, times(3)).handle(argThat(
+    verify(eventHandler, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -868,10 +869,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     // app2 needs more resource and its well under its user-limit. Hence preempt
     // 3 resources (9GB) from app1. We will not preempt last container as it may
     // pull user's usage under its user-limit.
-    verify(mDisp, times(3)).handle(argThat(
+    verify(eventHandler, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
 
@@ -892,7 +893,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     // app2 has priority demand within same user 'user1'. However user1's used
     // is alredy under UL. Hence no preemption. We will still get 3 container
     // while asserting as it was aleady selected in earlier round.
-    verify(mDisp, times(3)).handle(argThat(
+    verify(eventHandler, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -927,7 +928,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
 
     // app2 is right at its user limit and app1 needs one resource. Should
     // preempt 1 container.
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
