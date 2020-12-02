@@ -57,15 +57,18 @@ public class FSDirAttrOp {
       throw new InvalidPathException(src);
     }
     INodesInPath iip;
+    boolean changed;
     fsd.writeLock();
     try {
       iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       fsd.checkOwner(pc, iip);
-      unprotectedSetPermission(fsd, iip, permission);
+      changed = unprotectedSetPermission(fsd, iip, permission);
     } finally {
       fsd.writeUnlock();
     }
-    fsd.getEditLog().logSetPermissions(iip.getPath(), permission);
+    if (changed) {
+      fsd.getEditLog().logSetPermissions(iip.getPath(), permission);
+    }
     return fsd.getAuditFileInfo(iip);
   }
 
@@ -76,6 +79,7 @@ public class FSDirAttrOp {
       throw new InvalidPathException(src);
     }
     INodesInPath iip;
+    boolean changed;
     fsd.writeLock();
     try {
       iip = fsd.resolvePath(pc, src, DirOp.WRITE);
@@ -90,11 +94,13 @@ public class FSDirAttrOp {
               "User " + username + " does not belong to " + group);
         }
       }
-      unprotectedSetOwner(fsd, iip, username, group);
+      changed = unprotectedSetOwner(fsd, iip, username, group);
     } finally {
       fsd.writeUnlock();
     }
-    fsd.getEditLog().logSetOwner(iip.getPath(), username, group);
+    if (changed) {
+      fsd.getEditLog().logSetOwner(iip.getPath(), username, group);
+    }
     return fsd.getAuditFileInfo(iip);
   }
 
@@ -256,28 +262,32 @@ public class FSDirAttrOp {
     }
   }
 
-  static void unprotectedSetPermission(
+  static boolean unprotectedSetPermission(
       FSDirectory fsd, INodesInPath iip, FsPermission permissions)
       throws FileNotFoundException, UnresolvedLinkException,
              QuotaExceededException, SnapshotAccessControlException {
     assert fsd.hasWriteLock();
     final INode inode = FSDirectory.resolveLastINode(iip);
     int snapshotId = iip.getLatestSnapshotId();
+    long oldPerm = inode.getPermissionLong();
     inode.setPermission(permissions, snapshotId);
+    return oldPerm != inode.getPermissionLong();
   }
 
-  static void unprotectedSetOwner(
+  static boolean unprotectedSetOwner(
       FSDirectory fsd, INodesInPath iip, String username, String groupname)
       throws FileNotFoundException, UnresolvedLinkException,
       QuotaExceededException, SnapshotAccessControlException {
     assert fsd.hasWriteLock();
     final INode inode = FSDirectory.resolveLastINode(iip);
+    long oldPerm = inode.getPermissionLong();
     if (username != null) {
       inode.setUser(username, iip.getLatestSnapshotId());
     }
     if (groupname != null) {
       inode.setGroup(groupname, iip.getLatestSnapshotId());
     }
+    return oldPerm != inode.getPermissionLong();
   }
 
   static boolean setTimes(
