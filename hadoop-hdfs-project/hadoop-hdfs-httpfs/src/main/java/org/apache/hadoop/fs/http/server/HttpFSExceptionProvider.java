@@ -100,8 +100,6 @@ public class HttpFSExceptionProvider extends ExceptionProvider {
   }
 
   private void logErrorFully(Response.Status status, Throwable throwable) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Failed with " + status, throwable);
-    }
+    LOG.debug("Failed with {}", status, throwable);
   }
 }
