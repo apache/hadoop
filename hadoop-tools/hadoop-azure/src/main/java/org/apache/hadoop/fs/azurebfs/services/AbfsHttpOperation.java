@@ -26,11 +26,11 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.List;
-import java.util.UUID;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
@@ -155,7 +155,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return connection.getHeaderField(httpHeader);
   }
 
-  @org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting
+  @VisibleForTesting
   public String getRequestHeader(String httpHeader) {
     return connection.getRequestProperties().get(httpHeader).toString();
   }
