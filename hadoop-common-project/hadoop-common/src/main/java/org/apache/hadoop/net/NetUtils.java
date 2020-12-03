@@ -45,6 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.SocketFactory;
 
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -806,6 +807,11 @@ public class NetUtils {
                 + " failed on socket exception: " + exception
                 + ";"
                 + see("SocketException"));
+      } else if (exception instanceof AccessControlException) {
+        return wrapWithMessage(exception,
+            "Call From "
+                + localHost + " to " + destHost + ":" + destPort
+                + " failed: " + exception.getMessage());
       } else {
         // 1. Return instance of same type with exception msg if Exception has a
         // String constructor.
