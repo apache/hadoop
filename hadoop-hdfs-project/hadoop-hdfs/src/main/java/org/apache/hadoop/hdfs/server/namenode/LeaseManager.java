@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -33,6 +34,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
@@ -92,12 +94,12 @@ public class LeaseManager {
   //
   // Used for handling lock-leases
   // Mapping: leaseHolder -> Lease
-  //TODO: TreeMap has O(log(n)) complexity but it is more space efficient
+  // TreeMap has O(log(n)) complexity but it is more space efficient
   //             compared to HashMap. Therefore, replacing TreeMap with a
   //             HashMap can be considered to get faster O(1) time complexity
   //             on the expense of 30% memory waste.
   //
-  private final SortedMap<String, Lease> leases = new TreeMap<>();
+  private final HashMap<String, Lease> leases = new HashMap<>();
   // INodeID -> Lease
   private final TreeMap<Long, Lease> leasesById = new TreeMap<>();
 
@@ -508,14 +510,10 @@ public class LeaseManager {
   }
 
   private synchronized Collection<Lease> getExpiredCandidateLeases() {
-    long now = Time.monotonicNow();
-    Collection<Lease> expired = new HashSet<>();
-    for (Lease lease : leases.values()) {
-      if (lease.expiredHardLimit(now)) {
-        expired.add(lease);
-      }
-    }
-    return expired;
+    final long now = Time.monotonicNow();
+    return leases.values().stream()
+        .filter(lease -> lease.expiredHardLimit(now))
+        .collect(Collectors.toCollection(HashSet::new));
   }
   
   /******************************************************
