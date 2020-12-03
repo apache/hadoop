@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
@@ -217,10 +218,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_USER_AGENT_PREFIX)
   private String userAgentId;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
-      DefaultValue = AbfsHttpConstants.EMPTY_STRING)
-  private String clientCorrelationID;
-
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_NAME,
       DefaultValue = DEFAULT_VALUE_UNKNOWN)
   private String clusterName;
@@ -228,6 +225,14 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_TYPE,
       DefaultValue = DEFAULT_VALUE_UNKNOWN)
   private String clusterType;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
+      DefaultValue = AbfsHttpConstants.EMPTY_STRING)
+  private String clientCorrelationID;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_CORRELATIONID, DefaultValue = true)
+  private boolean enableCorrelationId;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
@@ -306,7 +311,9 @@ public class AbfsConfiguration{
    * @return Client Correlation ID config value
    */
   public String getClientCorrelationID() {
-    return clientCorrelationID;
+    if (enableCorrelationId)
+      return clientCorrelationID;
+    return null;
   }
 
   /**

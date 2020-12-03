@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -103,6 +104,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     checkRequest(CLIENT_CORRELATIONID_LIST[0], true);
     checkRequest(CLIENT_CORRELATIONID_LIST[1], false);
     checkRequest(CLIENT_CORRELATIONID_LIST[2], false);
+    checkDisabledCorrelation(CLIENT_CORRELATIONID_LIST[0]);
   }
 
   private String getOctalNotation(FsPermission fsPermission) {
@@ -117,21 +119,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   public void checkRequest(String clientCorrelationId, boolean includeInHeader)
       throws IOException {
-    Configuration config = new Configuration(this.getRawConfiguration());
-    config.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
-
-    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
-        .newInstance(this.getFileSystem().getUri(), config);
-    AbfsClient client = fs.getAbfsClient();
-    String path = getRelativePath(new Path("/testDir"));
-    boolean isNamespaceEnabled = fs.getIsNamespaceEnabled();
-    String permission = isNamespaceEnabled ? getOctalNotation(FsPermission.getDirDefault()) : null;
-    String umask = isNamespaceEnabled ? getOctalNotation(FsPermission.getUMask(fs.getConf())) : null;
-    AbfsRestOperation op = client.createPath(path, false, true,
-        permission, umask, false, null);
-
-    int responseCode = op.getResult().getStatusCode();
-    Assertions.assertThat(responseCode).describedAs("Status code").isEqualTo(HTTP_CREATED);
+    AbfsRestOperation op = sendRequest(clientCorrelationId, "true");
+    Assertions.assertThat(op.getResult().getStatusCode())
+        .describedAs("Status code").isEqualTo(HTTP_CREATED);
 
     String requestHeader = op.getResult().getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     List<String> clientRequestIds = java.util.Arrays.asList(
@@ -153,6 +143,46 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
           .describedAs("Invalid or empty correlationId value should not be included in header")
           .doesNotContain(clientCorrelationId);
     }
+  }
+
+  private AbfsRestOperation sendRequest(String clientCorrelationId,
+      String enableCorrelationId) throws IOException {
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
+    config.set(FS_AZURE_ENABLE_CORRELATIONID, enableCorrelationId);
+
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
+        .newInstance(this.getFileSystem().getUri(), config);
+    AbfsClient client = fs.getAbfsClient();
+
+    String path = getRelativePath(new Path("/testDir"));
+    boolean isNamespaceEnabled = fs.getIsNamespaceEnabled();
+    String permission = isNamespaceEnabled ?
+        getOctalNotation(FsPermission.getDirDefault()) :
+        null;
+    String umask = isNamespaceEnabled ?
+        getOctalNotation(FsPermission.getUMask(fs.getConf())) :
+        null;
+    return client.createPath(path, false, true, permission, umask, false, null);
+  }
+
+  void checkDisabledCorrelation(String clientCorrelationId) throws IOException {
+
+    AbfsRestOperation op = sendRequest(clientCorrelationId, "false");
+    int responseCode = op.getResult().getStatusCode();
+    Assertions.assertThat(responseCode).describedAs("Status code").isEqualTo(HTTP_CREATED);
+
+    String requestHeader = op.getResult().getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+    List<String> clientRequestIds = java.util.Arrays.asList(
+        requestHeader.replace("[", "")
+            .replace("]", "")
+            .split(":"));
+    Assertions.assertThat(clientRequestIds)
+        .describedAs("There should be 1 item in the header")
+        .hasSize(1);
+    Assertions.assertThat(clientRequestIds)
+        .describedAs("Should not contain correlation id when disabled")
+        .doesNotContain(clientCorrelationId);
   }
 
   @Test

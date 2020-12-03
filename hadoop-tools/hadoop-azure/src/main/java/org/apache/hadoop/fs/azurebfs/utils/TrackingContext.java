@@ -33,6 +33,10 @@ public class TrackingContext {
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
   public TrackingContext(String clientCorrelationID) {
+    //correlation tracking disabled
+    if (clientCorrelationID == null)
+      clientCorrelationID = EMPTY_STRING;
+
     //validation
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
         || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
