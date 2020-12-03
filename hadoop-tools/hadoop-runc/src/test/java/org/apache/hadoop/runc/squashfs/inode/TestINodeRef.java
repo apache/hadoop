@@ -25,8 +25,8 @@ import static org.junit.Assert.assertEquals;
 
 public class TestINodeRef {
 
-  INodeRef ref1;
-  INodeRef ref2;
+  private INodeRef ref1;
+  private INodeRef ref2;
 
   @Before
   public void setUp() {

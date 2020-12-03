@@ -31,7 +31,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestDirectoryBuilder {
 
-  DirectoryBuilder db;
+  private DirectoryBuilder db;
 
   @Before
   public void setUp() {
@@ -41,14 +41,14 @@ public class TestDirectoryBuilder {
   @Test
   public void addShouldCreateEntry() {
     db.add("test", 1, 2, (short) 3, INodeType.EXTENDED_FILE);
-    assertEquals("wrong entry count", 1, db.entries.size());
-    DirectoryBuilder.Entry entry = db.entries.get(0);
-    assertEquals("wrong start block", 1, entry.startBlock);
-    assertEquals("wrong inode number", 2, entry.inodeNumber);
-    assertEquals("wrong offset", (short) 3, entry.offset);
-    assertEquals("wrong type", INodeType.BASIC_FILE.value(), entry.type);
+    assertEquals("wrong entry count", 1, db.getEntries().size());
+    DirectoryBuilder.Entry entry = db.getEntries().get(0);
+    assertEquals("wrong start block", 1, entry.getStartBlock());
+    assertEquals("wrong inode number", 2, entry.getInodeNumber());
+    assertEquals("wrong offset", (short) 3, entry.getOffset());
+    assertEquals("wrong type", INodeType.BASIC_FILE.value(), entry.getType());
     assertEquals("wrong name", "test",
-        new String(entry.name, StandardCharsets.ISO_8859_1));
+        new String(entry.getName(), StandardCharsets.ISO_8859_1));
     assertEquals(24, db.getStructureSize());
   }
 
@@ -57,61 +57,65 @@ public class TestDirectoryBuilder {
     db.add("test", 1, 2, (short) 3, INodeType.EXTENDED_FILE);
     db.add("test2", 1, 4, (short) 3, INodeType.EXTENDED_FILE);
     db.build();
-    assertEquals("wrong element count", 3, db.elements.size());
+    List<DirectoryElement> elements = db.getElements();
+    assertEquals("wrong element count", 3, elements.size());
     assertSame("wrong class for entry 0", DirectoryHeader.class,
-        db.elements.get(0).getClass());
+        elements.get(0).getClass());
     assertSame("wrong class for entry 1", DirectoryEntry.class,
-        db.elements.get(1).getClass());
+        elements.get(1).getClass());
     assertSame("wrong class for entry 2", DirectoryEntry.class,
-        db.elements.get(2).getClass());
+        elements.get(2).getClass());
   }
 
   @Test
-  public void addMultipleShouldCreateMultipleDirectoryHeadersIfStartBlockChanges() {
+  public void addWithDifferentStartBlockShouldCreateMultipleHeaders() {
     db.add("test", 1, 2, (short) 3, INodeType.EXTENDED_FILE);
     db.add("test2", 4, 5, (short) 3, INodeType.EXTENDED_FILE);
     db.build();
-    assertEquals("wrong element count", 4, db.elements.size());
+    List<DirectoryElement> elements = db.getElements();
+    assertEquals("wrong element count", 4, elements.size());
     assertSame("wrong class for entry 0", DirectoryHeader.class,
-        db.elements.get(0).getClass());
+        elements.get(0).getClass());
     assertSame("wrong class for entry 1", DirectoryEntry.class,
-        db.elements.get(1).getClass());
+        elements.get(1).getClass());
     assertSame("wrong class for entry 2", DirectoryHeader.class,
-        db.elements.get(2).getClass());
+        elements.get(2).getClass());
     assertSame("wrong class for entry 3", DirectoryEntry.class,
-        db.elements.get(3).getClass());
+        elements.get(3).getClass());
   }
 
   @Test
-  public void addMultipleShouldCreateMultipleDirectoryHeadersIfInodeNumberGoesBackwards() {
+  public void addWithDecreasingInodeShouldCreateMultipleHeaders() {
     db.add("test", 1, 2, (short) 3, INodeType.EXTENDED_FILE);
     db.add("test2", 1, 1, (short) 3, INodeType.EXTENDED_FILE);
     db.build();
-    assertEquals("wrong element count", 4, db.elements.size());
+    List<DirectoryElement> elements = db.getElements();
+    assertEquals("wrong element count", 4, elements.size());
     assertSame("wrong class for entry 0", DirectoryHeader.class,
-        db.elements.get(0).getClass());
+        elements.get(0).getClass());
     assertSame("wrong class for entry 1", DirectoryEntry.class,
-        db.elements.get(1).getClass());
+        elements.get(1).getClass());
     assertSame("wrong class for entry 2", DirectoryHeader.class,
-        db.elements.get(2).getClass());
+        elements.get(2).getClass());
     assertSame("wrong class for entry 3", DirectoryEntry.class,
-        db.elements.get(3).getClass());
+        elements.get(3).getClass());
   }
 
   @Test
-  public void addMultipleShouldCreateMultipleDirectoryHeadersIfInodeNumberIsTooLarge() {
+  public void addWithLargeInodeShouldCreateMultipleHeaders() {
     db.add("test", 1, 2, (short) 3, INodeType.EXTENDED_FILE);
     db.add("test2", 1, 32770, (short) 3, INodeType.EXTENDED_FILE);
     db.build();
-    assertEquals("wrong element count", 4, db.elements.size());
+    List<DirectoryElement> elements = db.getElements();
+    assertEquals("wrong element count", 4, elements.size());
     assertSame("wrong class for entry 0", DirectoryHeader.class,
-        db.elements.get(0).getClass());
+        elements.get(0).getClass());
     assertSame("wrong class for entry 1", DirectoryEntry.class,
-        db.elements.get(1).getClass());
+        elements.get(1).getClass());
     assertSame("wrong class for entry 2", DirectoryHeader.class,
-        db.elements.get(2).getClass());
+        elements.get(2).getClass());
     assertSame("wrong class for entry 3", DirectoryEntry.class,
-        db.elements.get(3).getClass());
+        elements.get(3).getClass());
   }
 
   @Test
@@ -120,12 +124,13 @@ public class TestDirectoryBuilder {
       db.add("test" + i, 1, i, (short) 3, INodeType.EXTENDED_FILE);
     }
     db.build();
-    assertEquals("wrong element count", 257, db.elements.size());
+    List<DirectoryElement> elements = db.getElements();
+    assertEquals("wrong element count", 257, elements.size());
     assertSame("wrong class for entry 0", DirectoryHeader.class,
-        db.elements.get(0).getClass());
+        elements.get(0).getClass());
     for (int i = 1; i <= 256; i++) {
       assertSame("wrong class for entry " + i, DirectoryEntry.class,
-          db.elements.get(i).getClass());
+          elements.get(i).getClass());
     }
   }
 
@@ -135,17 +140,18 @@ public class TestDirectoryBuilder {
       db.add("test" + i, 1, i, (short) 3, INodeType.EXTENDED_FILE);
     }
     db.build();
-    assertEquals("wrong element count", 259, db.elements.size());
+    List<DirectoryElement> elements = db.getElements();
+    assertEquals("wrong element count", 259, elements.size());
     assertSame("wrong class for entry 0", DirectoryHeader.class,
-        db.elements.get(0).getClass());
+        elements.get(0).getClass());
     for (int i = 1; i <= 256; i++) {
       assertSame("wrong class for entry " + i, DirectoryEntry.class,
-          db.elements.get(i).getClass());
+          elements.get(i).getClass());
     }
     assertSame("wrong class for entry 257", DirectoryHeader.class,
-        db.elements.get(257).getClass());
+        elements.get(257).getClass());
     assertSame("wrong class for entry 258", DirectoryEntry.class,
-        db.elements.get(258).getClass());
+        elements.get(258).getClass());
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -189,14 +195,15 @@ public class TestDirectoryBuilder {
     DirectoryHeader hdr = (DirectoryHeader) elements.get(0);
     DirectoryEntry entry = (DirectoryEntry) elements.get(1);
 
-    assertEquals("wrong size", 0, hdr.count);
-    assertEquals("wrong start block", 1, hdr.startBlock);
-    assertEquals("wrong inode number", 2, hdr.inodeNumber);
-    assertSame("wrong header", hdr, entry.header);
-    assertEquals("wrong offset", (short) 3, entry.offset);
-    assertEquals("wrong inode number delta", (short) 0, entry.inodeNumberDelta);
-    assertEquals("wrong type", INodeType.BASIC_FILE.value(), entry.type);
-    assertEquals("wrong size", (short) 3, entry.size);
+    assertEquals("wrong size", 0, hdr.getCount());
+    assertEquals("wrong start block", 1, hdr.getStartBlock());
+    assertEquals("wrong inode number", 2, hdr.getInodeNumber());
+    assertSame("wrong header", hdr, entry.getHeader());
+    assertEquals("wrong offset", (short) 3, entry.getOffset());
+    assertEquals("wrong inode number delta",
+        (short) 0, entry.getInodeNumberDelta());
+    assertEquals("wrong type", INodeType.BASIC_FILE.value(), entry.getType());
+    assertEquals("wrong size", (short) 3, entry.getSize());
     assertEquals("wrong name", "test",
         new String(entry.getName(), StandardCharsets.ISO_8859_1));
   }

@@ -20,6 +20,7 @@ package org.apache.hadoop.runc.squashfs.metadata;
 
 import org.apache.hadoop.runc.squashfs.directory.DirectoryEntry;
 import org.apache.hadoop.runc.squashfs.directory.DirectoryHeader;
+import org.apache.hadoop.runc.squashfs.directory.DirectoryTestAccessor;
 import org.apache.hadoop.runc.squashfs.inode.BasicDirectoryINode;
 import org.apache.hadoop.runc.squashfs.inode.INodeRef;
 import org.apache.hadoop.runc.squashfs.superblock.SuperBlock;
@@ -96,21 +97,14 @@ public class TestMetadataBlockReader {
     byte[] buf = new byte[8192];
     buf[1234] = (byte) 0xff;
 
-    DirectoryHeader dh = new DirectoryHeader() {
-      {
-        this.startBlock = 54321;
-      }
-    };
-    DirectoryEntry de = new DirectoryEntry() {
-      {
-        this.header = dh;
-        this.offset = (short) 1234;
-      }
-    };
+    DirectoryHeader dh = DirectoryTestAccessor.createDirectoryHeader(
+        0, 54321, 0);
+    DirectoryEntry de = DirectoryTestAccessor.createDirectoryEntry(
+        (short) 1234, (short) 0, (short) 0, (short) 0, new byte[0], dh);
 
     MetadataBlock block = MetadataTestUtils.block(buf);
-    try (MetadataBlockReaderMock br = new MetadataBlockReaderMock(10101, sb,
-        66666L, block)) {
+    try (MetadataBlockReaderMock br = new MetadataBlockReaderMock(
+        10101, sb, 66666L, block)) {
       MetadataReader mr = br.inodeReader(10101, de);
       byte result = mr.readByte();
       assertEquals((byte) 0xff, result);

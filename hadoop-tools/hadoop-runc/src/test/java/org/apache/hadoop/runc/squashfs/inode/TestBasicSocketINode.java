@@ -26,7 +26,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestBasicSocketINode {
 
-  BasicSocketINode inode;
+  private BasicSocketINode inode;
 
   @Before
   public void setUp() {
@@ -55,7 +55,7 @@ public class TestBasicSocketINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnOriginalIfExtendedAttributesPresent() {
+  public void staticSimplifyMethodReturnsOriginalWhentendedAttributes() {
     SocketINode inode2 = new ExtendedSocketINode();
     inode2.setNlink(2);
     inode2.setXattrIndex(3);
@@ -63,7 +63,7 @@ public class TestBasicSocketINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnBasicIfExtendedAttributesNotPresent() {
+  public void staticSimplifyMethodReturnsBasicWhenNoExtendedAttributes() {
     SocketINode inode2 = new ExtendedSocketINode();
     inode2.setNlink(2);
     inode2.setXattrIndex(-1);

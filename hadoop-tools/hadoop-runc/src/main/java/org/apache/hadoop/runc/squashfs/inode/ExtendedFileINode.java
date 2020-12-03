@@ -31,14 +31,14 @@ import static org.apache.hadoop.runc.squashfs.util.BinUtils.dumpBin;
 
 public class ExtendedFileINode extends AbstractINode implements FileINode {
 
-  long blocksStart;
-  long fileSize;
-  long sparse;
-  int nlink = 1;
-  int fragmentBlockIndex = FRAGMENT_BLOCK_INDEX_NONE;
-  int fragmentOffset = 0;
-  int xattrIndex = XATTR_NOT_PRESENT;
-  int[] blockSizes;
+  private long blocksStart;
+  private long fileSize;
+  private long sparse;
+  private int nlink = 1;
+  private int fragmentBlockIndex = FRAGMENT_BLOCK_INDEX_NONE;
+  private int fragmentOffset = 0;
+  private int xattrIndex = XATTR_NOT_PRESENT;
+  private int[] blockSizes;
 
   @Override
   public long getBlocksStart() {

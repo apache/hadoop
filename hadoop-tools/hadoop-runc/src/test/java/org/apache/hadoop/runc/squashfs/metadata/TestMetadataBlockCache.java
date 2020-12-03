@@ -36,11 +36,11 @@ import static org.junit.Assert.assertTrue;
 
 public class TestMetadataBlockCache {
 
-  SuperBlock sb;
-  MetadataBlockReaderMock mbr;
-  TaggedMetadataBlockReader tmbr;
-  MetadataBlockCache cache;
-  SortedMap<Long, MetadataBlock> blockMap;
+  private SuperBlock sb;
+  private MetadataBlockReaderMock mbr;
+  private TaggedMetadataBlockReader tmbr;
+  private MetadataBlockCache cache;
+  private SortedMap<Long, MetadataBlock> blockMap;
 
   @Before
   public void setUp() {
@@ -49,7 +49,7 @@ public class TestMetadataBlockCache {
     for (int i = 0; i < 10000; i++) {
       blockMap.put(
           Long.valueOf(i * 1000L),
-          MetadataTestUtils.block(new byte[] { (byte) (i % 100) }));
+          MetadataTestUtils.block(new byte[] {(byte) (i % 100)}));
     }
     mbr = new MetadataBlockReaderMock(10101, sb, blockMap);
     tmbr = new TaggedMetadataBlockReader(true);
@@ -222,14 +222,14 @@ public class TestMetadataBlockCache {
   }
 
   @Test
-  public void closeShouldCloseUnderlyingBlockReaderByDefault()
+  public void closeShouldCloseBlockReaderByDefault()
       throws Exception {
     cache.close();
     assertTrue("not closed", mbr.isClosed());
   }
 
   @Test
-  public void closeShouldCloseUnderlyingBlockReaderIfExplicitlySet()
+  public void closeShouldCloseBlockReaderIfExplicitlySet()
       throws Exception {
     cache = new MetadataBlockCache(tmbr, true);
     cache.close();
@@ -237,7 +237,7 @@ public class TestMetadataBlockCache {
   }
 
   @Test
-  public void closeShouldNotCloseUnderlyingBlockReaderIfExplicitlyUnset()
+  public void closeShouldNotCloseBlockReaderIfExplicitlyUnset()
       throws Exception {
     cache = new MetadataBlockCache(tmbr, false);
     cache.close();
@@ -245,7 +245,7 @@ public class TestMetadataBlockCache {
   }
 
   @Test
-  public void closeShouldCloseUnderlyingBlockReaderIfExplicitlySetAndSizeSpecified()
+  public void closeShouldCloseBlockReaderIfExplicitlySetAndSizeSpecified()
       throws Exception {
     cache = new MetadataBlockCache(tmbr, 1, true);
     cache.close();
@@ -253,7 +253,7 @@ public class TestMetadataBlockCache {
   }
 
   @Test
-  public void closeShouldNotCloseUnderlyingBlockReaderIfExplicitlyUnsetAndSizeSpecified()
+  public void closeShouldNotCloseBlockReaderIfExplicitlyUnsetAndSizeSpecified()
       throws Exception {
     cache = new MetadataBlockCache(tmbr, 1, false);
     cache.close();

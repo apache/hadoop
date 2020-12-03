@@ -20,7 +20,7 @@ package org.apache.hadoop.runc.squashfs.data;
 
 public class FragmentRef {
 
-  private int fragmentIndex = -1;
+  private int currentFragmentIndex = -1;
   private final int offset;
 
   public FragmentRef(int offset) {
@@ -28,7 +28,7 @@ public class FragmentRef {
   }
 
   public int getFragmentIndex() {
-    return fragmentIndex;
+    return currentFragmentIndex;
   }
 
   public int getOffset() {
@@ -36,18 +36,18 @@ public class FragmentRef {
   }
 
   public boolean isValid() {
-    return fragmentIndex >= 0;
+    return currentFragmentIndex >= 0;
   }
 
   void commit(int fragmentIndex) {
-    this.fragmentIndex = fragmentIndex;
+    this.currentFragmentIndex = fragmentIndex;
   }
 
   @Override
   public String toString() {
     return String.format(
         "fragment-ref { fragmentIndex=%d, offset=%d }",
-        fragmentIndex, offset);
+        currentFragmentIndex, offset);
   }
 
 }

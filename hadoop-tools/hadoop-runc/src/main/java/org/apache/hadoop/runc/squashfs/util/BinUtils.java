@@ -21,9 +21,12 @@ package org.apache.hadoop.runc.squashfs.util;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class BinUtils {
+public final class BinUtils {
 
   private static final String NL = String.format("%n");
+
+  private BinUtils() {
+  }
 
   public enum DumpOptions {
     UNSIGNED,

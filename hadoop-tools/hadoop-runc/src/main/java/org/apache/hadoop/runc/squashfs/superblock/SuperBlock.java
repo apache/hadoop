@@ -49,24 +49,24 @@ public class SuperBlock {
 
   public static final long TABLE_NOT_PRESENT = 0xffff_ffff_ffff_ffffL;
 
-  int inodeCount;
-  int modificationTime = (int) (System.currentTimeMillis() / 1000);
-  int blockSize = DEFAULT_BLOCK_SIZE;
-  int fragmentEntryCount;
-  CompressionId compressionId = CompressionId.ZLIB;
-  short blockLog = DEFAULT_BLOCK_LOG;
-  short flags = DEFAULT_FLAGS;
-  short idCount;
-  short versionMajor = DEFAULT_VERSION_MAJOR;
-  short versionMinor = DEFUALT_VERSION_MINOR;
-  long rootInodeRef;
-  long bytesUsed;
-  long idTableStart;
-  long xattrIdTableStart = TABLE_NOT_PRESENT;
-  long inodeTableStart;
-  long directoryTableStart;
-  long fragmentTableStart;
-  long exportTableStart;
+  private int inodeCount;
+  private int modificationTime = (int) (System.currentTimeMillis() / 1000);
+  private int blockSize = DEFAULT_BLOCK_SIZE;
+  private int fragmentEntryCount;
+  private CompressionId compressionId = CompressionId.ZLIB;
+  private short blockLog = DEFAULT_BLOCK_LOG;
+  private short flags = DEFAULT_FLAGS;
+  private short idCount;
+  private short versionMajor = DEFAULT_VERSION_MAJOR;
+  private short versionMinor = DEFUALT_VERSION_MINOR;
+  private long rootInodeRef;
+  private long bytesUsed;
+  private long idTableStart;
+  private long xattrIdTableStart = TABLE_NOT_PRESENT;
+  private long inodeTableStart;
+  private long directoryTableStart;
+  private long fragmentTableStart;
+  private long exportTableStart;
 
   public static SuperBlock read(DataInput in)
       throws IOException, SquashFsException {

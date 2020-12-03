@@ -43,9 +43,9 @@ public class MetadataBlock {
 
   private static final byte[] EMPTY = new byte[0];
 
-  protected short header;
-  protected byte[] data = EMPTY;
-  protected short fileLength = 0;
+  private short header;
+  private byte[] data = EMPTY;
+  private short fileLength = 0;
 
   public static MetadataReader reader(MetadataBlockReader metaReader,
       MetadataReference metaRef) throws IOException {
@@ -128,8 +128,8 @@ public class MetadataBlock {
       throws IOException, SquashFsException {
     // see if there are compression flags
     if (sb.hasFlag(SuperBlockFlag.COMPRESSOR_OPTIONS)) {
-      throw new UnsupportedOperationException(
-          "Reading ZLIB compressed data with non-standard options not yet supported");
+      throw new UnsupportedOperationException("Reading ZLIB compressed data "
+          + "with non-standard options not yet supported");
     }
 
     int dataSize = getDataSize();

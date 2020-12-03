@@ -58,11 +58,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -154,20 +151,15 @@ public class ImportDockerImage extends Configured implements Tool {
       throw new IllegalArgumentException("Invalid image tag: " + tag);
     }
 
-    return new String[] { namespace, name, tag };
+    return new String[] {namespace, name, tag};
   }
 
   private void importDockerImage(String source, String destCoordinates)
       throws IOException, URISyntaxException, DockerException {
 
-    String imageCoordinates[] = imageParts(destCoordinates);
-
-    byte[] buf = new byte[32768];
-
+    String[] imageCoordinates = imageParts(destCoordinates);
     DockerCoordinates coord = new DockerCoordinates(defaultRegistry, source);
-
     LOG.debug("Using Docker coordinates {}", coord);
-
     Instant importTime = Instant.now();
 
     try (DockerClient client = new DockerClient()) {
@@ -175,30 +167,23 @@ public class ImportDockerImage extends Configured implements Tool {
           coord.getImage(), coord.getBaseUrl());
 
       DockerContext context = client.createContext(coord.getBaseUrl());
-
       ManifestListV2 manifests = client.listManifests(
           context, coord.getImageName(), coord.getImageRef());
-
-      for (ManifestRefV2 manifest : manifests.getManifests()) {
-        LOG.debug("Found manifest ref: {}", manifest);
-      }
-
       ManifestRefV2 mref =
           client.getManifestChooser().chooseManifest(manifests);
-
       if (mref == null) {
         throw new DockerException("No matching manifest found");
       }
-
-      LOG.debug("Choosing manifest: {}", mref);
 
       byte[] manifestData = client.readManifest(
           context, coord.getImageName(), mref.getDigest());
 
       // write manifest
       String manifestHash = mref.getDigest().replaceAll("^sha256:", "");
-      File manifestDir = new File(tmpDir, "manifests");
-      manifestDir.mkdirs();
+      File manifestDir = new File(tmpDir, "manifest");
+      if (!manifestDir.mkdirs()) {
+        throw new IOException("Unable to create manifest directory");
+      }
       File manifestFile = new File(manifestDir, manifestHash);
       try (FileOutputStream fos = new FileOutputStream(manifestFile)) {
         fos.write(manifestData);
@@ -213,142 +198,183 @@ public class ImportDockerImage extends Configured implements Tool {
 
       // write config
       String configHash = configDigest.replaceAll("^sha256:", "");
-
       File configDir = new File(tmpDir, "config");
-      configDir.mkdirs();
+      if (!configDir.mkdirs()) {
+        throw new IOException("Unable to create config directory");
+      }
       File configFile = new File(configDir, configHash);
       try (FileOutputStream fos = new FileOutputStream(configFile)) {
         fos.write(config);
       }
 
+      // create layer dir
+      File layerDir = new File(tmpDir, "layer");
+      if (!layerDir.mkdirs()) {
+        throw new IOException("Unable to create layer directory");
+      }
+
       // download layers
-      File layerDir = new File(tmpDir, "layers");
-      layerDir.mkdirs();
+      List<String> layersDownloaded = downloadLayers(
+          client, context, coord, manifest, layerDir);
 
-      List<String> layersDownloaded = new ArrayList<>();
+      // convert layers
+      convertLayers(layersDownloaded, layerDir);
 
-      int count = manifest.getLayers().size();
-      int current = 0;
-      for (BlobV2 blob : manifest.getLayers()) {
-        current++;
-        String digest = blob.getDigest();
-        String hash = digest.replaceAll("^sha256:", "");
-        String hashDir = hash.substring(0, 2);
+      // upload layers
+      uploadLayers(layersDownloaded, layerDir);
 
-        // check for sqsh and tar.gz files
-        Path tgzPath = new Path(layerPath, hashDir + "/" + hash + ".tar.gz");
-        Path sqshPath = new Path(layerPath, hashDir + "/" + hash + ".sqsh");
-        if (fs.exists(tgzPath) && fs.exists(sqshPath)) {
-          LOG.info("Skipping up-to-date layer {} ({} of {})", digest, current,
-              count);
-          continue;
-        }
+      // upload config if needed
+      uploadConfig(configFile, configHash, configDigest);
 
-        layersDownloaded.add(digest);
+      // upload manifest if needed
+      uploadManifest(manifestFile, mref, manifestHash, configDigest);
 
-        LOG.info("Downloading layer {} ({} of {})", digest, current, count);
-        try (InputStream is = client
-            .download(context, coord.getImageName(), digest)) {
-          File outputFile = new File(layerDir, hash + ".tar.gz");
-          try (FileOutputStream os = new FileOutputStream(outputFile)) {
-            int c;
-            while ((c = is.read(buf, 0, buf.length)) >= 0) {
-              if (c > 0) {
-                os.write(buf, 0, c);
-              }
+      // create/update metadata properties file
+      uploadMetadata(source, mref, imageCoordinates, importTime);
+    }
+  }
+
+  private List<String> downloadLayers(DockerClient client,
+      DockerContext context, DockerCoordinates coord, ManifestV2 manifest,
+      File layerDir) throws IOException, URISyntaxException, DockerException {
+    List<String> layersDownloaded = new ArrayList<>();
+
+    byte[] buf = new byte[32768];
+    int count = manifest.getLayers().size();
+    int current = 0;
+    for (BlobV2 blob : manifest.getLayers()) {
+      current++;
+      String digest = blob.getDigest();
+      String hash = digest.replaceAll("^sha256:", "");
+      String hashDir = hash.substring(0, 2);
+
+      // check for sqsh and tar.gz files
+      Path tgzPath = new Path(layerPath, hashDir + "/" + hash + ".tar.gz");
+      Path sqshPath = new Path(layerPath, hashDir + "/" + hash + ".sqsh");
+      if (fs.exists(tgzPath) && fs.exists(sqshPath)) {
+        LOG.info("Skipping up-to-date layer {} ({} of {})", digest, current,
+            count);
+        continue;
+      }
+
+      layersDownloaded.add(digest);
+
+      LOG.info("Downloading layer {} ({} of {})", digest, current, count);
+      try (InputStream is = client
+          .download(context, coord.getImageName(), digest)) {
+        File outputFile = new File(layerDir, hash + ".tar.gz");
+        try (FileOutputStream os = new FileOutputStream(outputFile)) {
+          int c;
+          while ((c = is.read(buf, 0, buf.length)) >= 0) {
+            if (c > 0) {
+              os.write(buf, 0, c);
             }
           }
         }
       }
 
-      // convert layers
-      count = layersDownloaded.size();
-      current = 0;
-      for (String digest : layersDownloaded) {
-        current++;
-        LOG.info("Converting layer {} ({} of {})", digest, current, count);
-        String hash = digest.replaceAll("^sha256:", "");
-
-        File inputFile = new File(layerDir, hash + ".tar.gz");
-        File outputFile = new File(layerDir, hash + ".sqsh");
-        SquashFsConverter.convertToSquashFs(inputFile, outputFile);
-      }
-
-      // upload layers
-      current = 0;
-      for (String digest : layersDownloaded) {
-        current++;
-        LOG.info("Uploading layer {} ({} of {})", digest, current, count);
-        String hash = digest.replaceAll("^sha256:", "");
-
-        File tgzFile = new File(layerDir, hash + ".tar.gz");
-        File sqshFile = new File(layerDir, hash + ".sqsh");
-
-        Path layerHashPath = new Path(layerPath, hash.substring(0, 2));
-
-        Path tmpTgz = new Path(layerHashPath, "._TMP." + hash + ".tar.gz");
-        Path tmpSqsh = new Path(layerHashPath, "._TMP." + hash + ".sqsh");
-
-        Path tgz = new Path(layerHashPath, hash + ".tar.gz");
-        Path sqsh = new Path(layerHashPath, hash + ".sqsh");
-
-        uploadFile(tgzFile, tgz, tmpTgz);
-        uploadFile(sqshFile, sqsh, tmpSqsh);
-      }
-
-      // upload config if needed
-      Path configHashPath = new Path(configPath, configHash.substring(0, 2));
-      Path remoteConfigFile = new Path(configHashPath, configHash);
-      if (fs.exists(remoteConfigFile)) {
-        LOG.info("Skipping up-to-date config {}", configDigest);
-      } else {
-        LOG.info("Uploading config {}", configDigest);
-        Path remoteTmp = new Path(configHashPath, "._TMP." + configHash);
-        uploadFile(configFile, remoteConfigFile, remoteTmp);
-      }
-
-      // upload manifest if needed
-      Path manifestHashPath = new Path(
-          manifestPath, manifestHash.substring(0, 2));
-      Path remoteManifestFile = new Path(manifestHashPath, manifestHash);
-      if (fs.exists(remoteManifestFile)) {
-        LOG.info("Skipping up-to-date manifest {}", configDigest);
-      } else {
-        LOG.info("Uploading manifest {}", mref.getDigest());
-        Path remoteTmp = new Path(manifestHashPath, "._TMP." + manifestHash);
-        uploadFile(manifestFile, remoteManifestFile, remoteTmp);
-      }
-
-      // create/update metadata properties file
-      File metaFile = new File(tmpDir, "meta.properties");
-      File metaFileUpdated = new File(tmpDir, "meta.properties.new");
-      Path nsPath = new Path(metaPath, imageCoordinates[0]);
-      Path metadataPath = new Path(
-          nsPath, imageCoordinates[1] + "@" + imageCoordinates[2] + ".properties");
-      Path metadataPathTmp = new Path(
-          nsPath, "._TMP." + imageCoordinates[1] + "@" +
-          imageCoordinates[2] + ".properties");
-
-      Properties metadata = new Properties();
-      if (fs.exists(metadataPath)) {
-        downloadFile(metadataPath, metaFile);
-        try (FileInputStream fis = new FileInputStream(metaFile)) {
-          metadata.load(fis);
-        }
-      }
-
-      metadata.setProperty(MK_RUNC_IMPORT_TYPE, IT_DOCKER);
-      metadata.setProperty(MK_RUNC_IMPORT_SOURCE, source);
-      metadata.setProperty(MK_RUNC_MANIFEST,  mref.getDigest());
-      metadata.setProperty(MK_RUNC_IMPORT_TIME, importTime.toString());
-
-      try (FileOutputStream fos = new FileOutputStream(metaFileUpdated)) {
-        metadata.store(fos, null);
-      }
-
-      LOG.info("Writing metadata properties");
-      uploadFile(metaFileUpdated, metadataPath, metadataPathTmp);
     }
+    return layersDownloaded;
+  }
+
+  private void convertLayers(List<String> layersDownloaded, File layerDir)
+      throws IOException {
+    int count = layersDownloaded.size();
+    int current = 0;
+    for (String digest : layersDownloaded) {
+      current++;
+      LOG.info("Converting layer {} ({} of {})", digest, current, count);
+      String hash = digest.replaceAll("^sha256:", "");
+
+      File inputFile = new File(layerDir, hash + ".tar.gz");
+      File outputFile = new File(layerDir, hash + ".sqsh");
+      SquashFsConverter.convertToSquashFs(inputFile, outputFile);
+    }
+  }
+
+  private void uploadLayers(List<String> layersDownloaded, File layerDir)
+      throws IOException {
+    int count = layersDownloaded.size();
+    int current = 0;
+    for (String digest : layersDownloaded) {
+      current++;
+      LOG.info("Uploading layer {} ({} of {})", digest, current, count);
+      String hash = digest.replaceAll("^sha256:", "");
+
+      File tgzFile = new File(layerDir, hash + ".tar.gz");
+      File sqshFile = new File(layerDir, hash + ".sqsh");
+
+      Path layerHashPath = new Path(layerPath, hash.substring(0, 2));
+
+      Path tmpTgz = new Path(layerHashPath, "._TMP." + hash + ".tar.gz");
+      Path tmpSqsh = new Path(layerHashPath, "._TMP." + hash + ".sqsh");
+
+      Path tgz = new Path(layerHashPath, hash + ".tar.gz");
+      Path sqsh = new Path(layerHashPath, hash + ".sqsh");
+
+      uploadFile(tgzFile, tgz, tmpTgz);
+      uploadFile(sqshFile, sqsh, tmpSqsh);
+    }
+  }
+
+  private void uploadConfig(File configFile, String configHash,
+      String configDigest) throws IOException {
+    Path configHashPath = new Path(configPath, configHash.substring(0, 2));
+    Path remoteConfigFile = new Path(configHashPath, configHash);
+    if (fs.exists(remoteConfigFile)) {
+      LOG.info("Skipping up-to-date config {}", configDigest);
+    } else {
+      LOG.info("Uploading config {}", configDigest);
+      Path remoteTmp = new Path(configHashPath, "._TMP." + configHash);
+      uploadFile(configFile, remoteConfigFile, remoteTmp);
+    }
+  }
+
+  private void uploadManifest(File manifestFile, ManifestRefV2 mref,
+      String manifestHash, String configDigest) throws IOException {
+    Path manifestHashPath = new Path(
+        manifestPath, manifestHash.substring(0, 2));
+    Path remoteManifestFile = new Path(manifestHashPath, manifestHash);
+    if (fs.exists(remoteManifestFile)) {
+      LOG.info("Skipping up-to-date manifest {}", configDigest);
+    } else {
+      LOG.info("Uploading manifest {}", mref.getDigest());
+      Path remoteTmp = new Path(manifestHashPath, "._TMP." + manifestHash);
+      uploadFile(manifestFile, remoteManifestFile, remoteTmp);
+    }
+  }
+
+  private void uploadMetadata(String source, ManifestRefV2 mref,
+      String[] imageCoordinates, Instant importTime) throws IOException {
+    File metaFile = new File(tmpDir, "meta.properties");
+    File metaFileUpdated = new File(tmpDir, "meta.properties.new");
+    Path nsPath = new Path(metaPath, imageCoordinates[0]);
+    Path metadataPath = new Path(
+        nsPath,
+        imageCoordinates[1] + "@" + imageCoordinates[2] + ".properties");
+    Path metadataPathTmp = new Path(
+        nsPath, "._TMP." + imageCoordinates[1] + "@" +
+        imageCoordinates[2] + ".properties");
+
+    Properties metadata = new Properties();
+    if (fs.exists(metadataPath)) {
+      downloadFile(metadataPath, metaFile);
+      try (FileInputStream fis = new FileInputStream(metaFile)) {
+        metadata.load(fis);
+      }
+    }
+
+    metadata.setProperty(MK_RUNC_IMPORT_TYPE, IT_DOCKER);
+    metadata.setProperty(MK_RUNC_IMPORT_SOURCE, source);
+    metadata.setProperty(MK_RUNC_MANIFEST,  mref.getDigest());
+    metadata.setProperty(MK_RUNC_IMPORT_TIME, importTime.toString());
+
+    try (FileOutputStream fos = new FileOutputStream(metaFileUpdated)) {
+      metadata.store(fos, null);
+    }
+
+    LOG.info("Writing metadata properties");
+    uploadFile(metaFileUpdated, metadataPath, metadataPathTmp);
   }
 
   private void downloadFile(Path remoteFile, File localFile)
@@ -364,8 +390,14 @@ public class ImportDockerImage extends Configured implements Tool {
   private void uploadFile(File localFile, Path remoteFile, Path remoteTmp)
       throws IOException {
     boolean success = false;
-    fs.mkdirs(remoteTmp.getParent());
-    fs.mkdirs(remoteFile.getParent());
+    Path tmpParent = remoteTmp.getParent();
+    if (!fs.mkdirs(tmpParent)) {
+      throw new IOException("Unable to make directory " + tmpParent);
+    }
+    Path remoteParent = remoteFile.getParent();
+    if (!fs.mkdirs(remoteParent)) {
+      throw new IOException("Unable to make directory " + remoteParent);
+    }
 
     try (InputStream in = new FileInputStream(localFile)) {
       try (FSDataOutputStream out = fs.create(remoteTmp, (short) 10)) {
@@ -375,7 +407,9 @@ public class ImportDockerImage extends Configured implements Tool {
       success = true;
     } finally {
       if (!success) {
-        fs.delete(remoteTmp, false);
+        if (!fs.delete(remoteTmp, false)) {
+          throw new IOException("Unable to delete " + remoteTmp);
+        }
       }
     }
   }
@@ -383,7 +417,9 @@ public class ImportDockerImage extends Configured implements Tool {
   private FSDataOutputStream createLockFile(int attempts, int sleepTimeMs)
       throws IOException {
     try {
-      fs.mkdirs(repoPath);
+      if (!fs.mkdirs(repoPath)) {
+        throw new IOException("Unable to create directory " + repoPath);
+      }
       FSDataOutputStream out = createLockFileWithRetries(
           FsPermission.getFileDefault(), attempts, sleepTimeMs);
       fs.deleteOnExit(lockPath);
@@ -406,7 +442,9 @@ public class ImportDockerImage extends Configured implements Tool {
     do {
       try {
         IOUtils.closeStream(lockStream);
-        fs.delete(lockPath, false);
+        if (!fs.delete(lockPath, false)) {
+          throw new IOException("Unable to delete " + lockPath);
+        }
         return;
       } catch (IOException ioe) {
         LOG.info("Failed to delete " + lockPath + ", try="
@@ -469,11 +507,16 @@ public class ImportDockerImage extends Configured implements Tool {
 
   private void deleteRecursive(File file) {
     if (file.isDirectory()) {
-      for (File sub : file.listFiles()) {
-        deleteRecursive(sub);
+      File[] children = file.listFiles();
+      if (children != null) {
+        for (File sub : children) {
+          deleteRecursive(sub);
+        }
       }
     }
-    file.delete();
+    if (!file.delete()) {
+      LOG.trace("Unable to delete " + file);
+    }
   }
 
   @Override
@@ -543,10 +586,15 @@ public class ImportDockerImage extends Configured implements Tool {
 
     FSDataOutputStream lockStream = createLockFile(10, 30000);
     try {
-      fs.mkdirs(manifestPath);
-      fs.mkdirs(configPath);
-      fs.mkdirs(layerPath);
-
+      if (!fs.mkdirs(manifestPath)) {
+        throw new IOException("Unable to create " + manifestPath);
+      }
+      if (!fs.mkdirs(configPath)) {
+        throw new IOException("Unable to create " + configPath);
+      }
+      if (!fs.mkdirs(layerPath)) {
+        throw new IOException("Unable to create " + layerPath);
+      }
       importDockerImage(source, dest);
     } finally {
       unlock(lockStream, 10, 30000);

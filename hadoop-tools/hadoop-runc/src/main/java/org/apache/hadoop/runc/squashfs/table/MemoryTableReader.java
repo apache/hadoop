@@ -30,7 +30,7 @@ public class MemoryTableReader implements TableReader {
   private final SuperBlock sb;
   private final byte[] data;
   private final int offset;
-  private final int length;
+  private final int leh;
 
   public MemoryTableReader(SuperBlock sb, byte[] data) {
     this(sb, data, 0, data.length);
@@ -40,7 +40,7 @@ public class MemoryTableReader implements TableReader {
     this.sb = sb;
     this.data = data;
     this.offset = offset;
-    this.length = length;
+    this.leh = length;
   }
 
   @Override
@@ -50,10 +50,10 @@ public class MemoryTableReader implements TableReader {
 
   @Override
   public ByteBuffer read(long fileOffset, int length) throws IOException {
-    if ((fileOffset + length) > (long) this.length) {
+    if ((fileOffset + length) > (long) this.leh) {
       throw new EOFException(String.format(
           "Read past end of table (offset = %d, length = %d, available = %d)",
-          fileOffset, length, this.length - fileOffset));
+          fileOffset, length, this.leh - fileOffset));
     }
     int localOffset = ((int) fileOffset) + offset;
     return ByteBuffer.wrap(data, localOffset, length)

@@ -30,7 +30,7 @@ import java.util.Map;
 
 public class MetadataBlockReaderMock implements MetadataBlockReader {
 
-  private final int tag;
+  private final int ourTag;
   private final SuperBlock sb;
   private final Map<Long, MetadataBlock> blockMap;
   private volatile boolean closed = false;
@@ -43,7 +43,7 @@ public class MetadataBlockReaderMock implements MetadataBlockReader {
 
   public MetadataBlockReaderMock(int tag, SuperBlock sb,
       Map<Long, MetadataBlock> blockMap) {
-    this.tag = tag;
+    this.ourTag = tag;
     this.sb = sb;
     this.blockMap = blockMap;
   }
@@ -60,7 +60,7 @@ public class MetadataBlockReaderMock implements MetadataBlockReader {
   @Override
   public MetadataBlock read(int tag, long fileOffset)
       throws IOException, SquashFsException {
-    if (this.tag != tag) {
+    if (ourTag != tag) {
       throw new IllegalArgumentException(String.format("Invalid tag: %d", tag));
     }
     MetadataBlock block = blockMap.get(Long.valueOf(fileOffset));
@@ -72,7 +72,7 @@ public class MetadataBlockReaderMock implements MetadataBlockReader {
 
   @Override
   public SuperBlock getSuperBlock(int tag) {
-    if (this.tag != tag) {
+    if (ourTag != tag) {
       throw new IllegalArgumentException(String.format("Invalid tag: %d", tag));
     }
     return sb;

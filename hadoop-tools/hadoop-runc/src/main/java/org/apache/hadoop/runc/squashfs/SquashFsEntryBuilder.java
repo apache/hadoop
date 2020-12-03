@@ -75,51 +75,51 @@ public class SquashFsEntryBuilder {
     this.name = name;
   }
 
-  public SquashFsEntryBuilder uid(int uid) {
-    this.uid = writer.getIdGenerator().addUidGid(uid);
+  public SquashFsEntryBuilder uid(int value) {
+    this.uid = writer.getIdGenerator().addUidGid(value);
     return this;
   }
 
-  public SquashFsEntryBuilder gid(int gid) {
-    this.gid = writer.getIdGenerator().addUidGid(gid);
+  public SquashFsEntryBuilder gid(int value) {
+    this.gid = writer.getIdGenerator().addUidGid(value);
     return this;
   }
 
-  public SquashFsEntryBuilder dataBlock(DataBlockRef block) {
+  public SquashFsEntryBuilder dataBlock(DataBlockRef value) {
     if (dataBlocks == null) {
       dataBlocks = new ArrayList<>();
     }
-    LOG.debug("Wrote datablock {}", block);
-    dataBlocks.add(block);
+    LOG.debug("Wrote datablock {}", value);
+    dataBlocks.add(value);
     return this;
   }
 
-  public SquashFsEntryBuilder fragment(FragmentRef fragment) {
-    this.fragment = fragment;
-    LOG.debug("Wrote fragment {}", fragment);
+  public SquashFsEntryBuilder fragment(FragmentRef value) {
+    this.fragment = value;
+    LOG.debug("Wrote fragment {}", value);
     return this;
   }
 
-  public SquashFsEntryBuilder permissions(short permissions) {
-    this.permissions = permissions;
+  public SquashFsEntryBuilder permissions(short value) {
+    this.permissions = value;
     return this;
   }
 
-  public SquashFsEntryBuilder lastModified(Date lastModified) {
-    return lastModified(lastModified.getTime());
+  public SquashFsEntryBuilder lastModified(Date value) {
+    return lastModified(value.getTime());
   }
 
-  public SquashFsEntryBuilder lastModified(Instant lastModified) {
-    return lastModified(lastModified.toEpochMilli());
+  public SquashFsEntryBuilder lastModified(Instant value) {
+    return lastModified(value.toEpochMilli());
   }
 
-  public SquashFsEntryBuilder lastModified(long lastModified) {
-    this.lastModified = (int) (lastModified / 1000);
+  public SquashFsEntryBuilder lastModified(long value) {
+    this.lastModified = (int) (value / 1000);
     return this;
   }
 
-  public SquashFsEntryBuilder fileSize(long fileSize) {
-    this.fileSize = fileSize;
+  public SquashFsEntryBuilder fileSize(long value) {
+    this.fileSize = value;
     return this;
   }
 
@@ -133,17 +133,17 @@ public class SquashFsEntryBuilder {
     return this;
   }
 
-  public SquashFsEntryBuilder blockDev(int major, int minor) {
+  public SquashFsEntryBuilder blockDev(int majorNum, int minorNum) {
     this.type = INodeType.BASIC_BLOCK_DEVICE;
-    this.major = major;
-    this.minor = minor;
+    this.major = majorNum;
+    this.minor = minorNum;
     return this;
   }
 
-  public SquashFsEntryBuilder charDev(int major, int minor) {
+  public SquashFsEntryBuilder charDev(int majorNum, int minorNum) {
     this.type = INodeType.BASIC_CHAR_DEVICE;
-    this.major = major;
-    this.minor = minor;
+    this.major = majorNum;
+    this.minor = minorNum;
     return this;
   }
 
@@ -170,7 +170,7 @@ public class SquashFsEntryBuilder {
 
   public SquashFsEntryBuilder content(byte[] content) throws IOException {
     try (ByteArrayInputStream bis = new ByteArrayInputStream(content)) {
-      return content(bis, (long) content.length);
+      return content(bis, content.length);
     }
   }
 
@@ -221,9 +221,9 @@ public class SquashFsEntryBuilder {
     if (off > 0) {
       // write final block
       LOG.trace("Writing fragment of size {}", off);
-      FragmentRef fragment =
+      FragmentRef fref =
           writer.getFragmentWriter().write(blockBuffer, 0, off);
-      fragment(fragment);
+      fragment(fref);
       progress.accept(written);
       off = 0;
     }

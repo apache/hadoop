@@ -61,8 +61,8 @@ public class DataBlockRef {
 
   @Override
   public String toString() {
-    return String.format(
-        "data-block-ref { location=%d, logicalSize=%d, physicalSize=%d, compressed=%s, sparse=%s }",
+    return String.format("data-block-ref { location=%d, logicalSize=%d, "
+            + "physicalSize=%d, compressed=%s, sparse=%s }",
         location, logicalSize, physicalSize, compressed, sparse);
   }
 

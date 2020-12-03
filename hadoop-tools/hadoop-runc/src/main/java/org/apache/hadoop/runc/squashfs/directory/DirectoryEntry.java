@@ -35,13 +35,26 @@ public class DirectoryEntry implements DirectoryElement {
 
   public static final short MAX_FILENAME_LENGTH = 256;
 
-  protected DirectoryHeader header;
+  private DirectoryHeader header;
 
-  protected short offset; // offset into inode block where data starts
-  protected short inodeNumberDelta; // amount to add to header inodeNumber
-  protected short type; // inode type
-  protected short size; // size of name (1 less than actual size)
-  protected byte[] name = EMPTY; // filename (not null terminated)
+  private short offset; // offset into inode block where data starts
+  private short inodeNumberDelta; // amount to add to header inodeNumber
+  private short type; // inode type
+  private short size; // size of name (1 less than actual size)
+  private byte[] name = EMPTY; // filename (not null terminated)
+
+  DirectoryEntry() {
+  }
+
+  DirectoryEntry(short offset, short inodeNumberDelta, short type, short size,
+      byte[] name, DirectoryHeader header) {
+    this.offset = offset;
+    this.inodeNumberDelta = inodeNumberDelta;
+    this.type = type;
+    this.size = size;
+    this.name = name;
+    this.header = header;
+  }
 
   public DirectoryHeader getHeader() {
     return header;
@@ -82,9 +95,9 @@ public class DirectoryEntry implements DirectoryElement {
     return entry;
   }
 
-  public void readData(DirectoryHeader header, DataInput in)
+  public void readData(DirectoryHeader directoryHeader, DataInput in)
       throws SquashFsException, IOException {
-    this.header = header;
+    this.header = directoryHeader;
     offset = in.readShort();
     inodeNumberDelta = in.readShort();
     type = in.readShort();

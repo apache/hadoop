@@ -21,6 +21,7 @@ package org.apache.hadoop.runc.squashfs.data;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class DataBlockCache {
 
@@ -28,8 +29,8 @@ public class DataBlockCache {
 
   private final LruBlockCache cache;
   private final int cacheSize;
-  private volatile long cacheHits = 0L;
-  private volatile long cacheMisses = 0L;
+  private final AtomicLong cacheHits = new AtomicLong(0L);
+  private final AtomicLong cacheMisses = new AtomicLong(0L);
 
   public DataBlockCache(int cacheSize) {
     this.cache = cacheSize < 1 ? null : new LruBlockCache(cacheSize);
@@ -44,25 +45,25 @@ public class DataBlockCache {
 
   public synchronized DataBlock get(Key key) {
     if (cache == null) {
-      cacheMisses++;
+      cacheMisses.incrementAndGet();
       return null;
     }
 
     DataBlock block = cache.get(key);
     if (block != null) {
-      cacheHits++;
+      cacheHits.incrementAndGet();
     } else {
-      cacheMisses++;
+      cacheMisses.incrementAndGet();
     }
     return block;
   }
 
   public long getCacheHits() {
-    return cacheHits;
+    return cacheHits.get();
   }
 
   public long getCacheMisses() {
-    return cacheMisses;
+    return cacheMisses.get();
   }
 
   public synchronized int getCacheLoad() {
@@ -70,8 +71,8 @@ public class DataBlockCache {
   }
 
   public void resetStatistics() {
-    cacheHits = 0L;
-    cacheMisses = 0L;
+    cacheHits.set(0L);
+    cacheMisses.set(0L);
   }
 
   public synchronized void clearCache() {
@@ -135,7 +136,7 @@ public class DataBlockCache {
 
     private final int cacheSize;
 
-    public LruBlockCache(int cacheSize) {
+    LruBlockCache(int cacheSize) {
       super(16, 0.75f, true);
       this.cacheSize = cacheSize;
     }

@@ -53,13 +53,13 @@ public class SquashFsTree {
   }
 
   void add(SquashFsEntry squashFsEntry) {
-    if (squashFsEntry.name.isEmpty()) {
-      if (squashFsEntry.type != INodeType.BASIC_DIRECTORY) {
+    if (squashFsEntry.getName().isEmpty()) {
+      if (squashFsEntry.getType() != INodeType.BASIC_DIRECTORY) {
         throw new IllegalArgumentException("Root entry must be a directory");
       }
       this.root = squashFsEntry;
     } else {
-      map.put(squashFsEntry.name, squashFsEntry);
+      map.put(squashFsEntry.getName(), squashFsEntry);
     }
   }
 
@@ -79,9 +79,9 @@ public class SquashFsTree {
         if (p == null) {
           // synthesize an entry
           p = new SquashFsEntry();
-          p.name = parent;
+          p.setName(parent);
           map.put(parent, p);
-        } else if (p.type != INodeType.BASIC_DIRECTORY) {
+        } else if (p.getType() != INodeType.BASIC_DIRECTORY) {
           throw new IllegalArgumentException(String.format(
               "Parent '%s' of entry '%s' is not a directory",
               parent, name));
@@ -91,7 +91,7 @@ public class SquashFsTree {
 
     for (Map.Entry<String, SquashFsEntry> squashFsEntry : map.entrySet()) {
       String name = squashFsEntry.getKey();
-      String hardLinkTarget = squashFsEntry.getValue().hardlinkTarget;
+      String hardLinkTarget = squashFsEntry.getValue().getHardlinkTarget();
       if (hardLinkTarget != null && !map.containsKey(hardLinkTarget)) {
         throw new IllegalArgumentException(
             String.format("Hardlink target '%s' not found for entry '%s'",
@@ -101,12 +101,12 @@ public class SquashFsTree {
       // assign parent
       String parent = parentName(name);
       if (parent == null) {
-        root.children.add(squashFsEntry.getValue());
-        squashFsEntry.getValue().parent = root;
+        root.addChild(squashFsEntry.getValue());
+        squashFsEntry.getValue().setParent(root);
       } else {
         SquashFsEntry parentEntry = map.get(parent);
-        parentEntry.children.add(squashFsEntry.getValue());
-        squashFsEntry.getValue().parent = parentEntry;
+        parentEntry.addChild(squashFsEntry.getValue());
+        squashFsEntry.getValue().setParent(parentEntry);
       }
     }
 
@@ -125,25 +125,24 @@ public class SquashFsTree {
     rootInodeRef = root.writeMetadata(inodeWriter, dirWriter, visitedInodes);
 
     // make sure all inodes were visited
-    if (visitedInodes.size() != root.inode.getInodeNumber()) {
+    if (visitedInodes.size() != root.getInode().getInodeNumber()) {
       throw new SquashFsException(
           String.format("BUG: Visited inode count %d != actual inode count %d",
-              visitedInodes.size(), root.inode.getInodeNumber()));
+              visitedInodes.size(), root.getInode().getInodeNumber()));
     }
 
     // make sure all inode numbers exist, from 1 to n
     List<Integer> allInodes =
         visitedInodes.keySet().stream().collect(Collectors.toList());
-    if (allInodes.get(0).intValue() != 1) {
-      throw new SquashFsException(
-          String.format("BUG: First inode number %d != 1",
-              allInodes.get(0).intValue()));
+    int firstInode = allInodes.get(0).intValue();
+    if (firstInode != 1) {
+      throw new SquashFsException(String.format(
+          "BUG: First inode number %d != 1", firstInode));
     }
-    if (allInodes.get(allInodes.size() - 1).intValue() != allInodes.size()) {
-      throw new SquashFsException(
-          String.format("BUG: Last inode number %d != %d",
-              allInodes.get(allInodes.size() - 1).intValue(),
-              allInodes.size()));
+    int lastInode = allInodes.get(allInodes.size() - 1).intValue();
+    if (lastInode != allInodes.size()) {
+      throw new SquashFsException(String.format(
+          "BUG: Last inode number %d != %d", lastInode, allInodes.size()));
     }
   }
 

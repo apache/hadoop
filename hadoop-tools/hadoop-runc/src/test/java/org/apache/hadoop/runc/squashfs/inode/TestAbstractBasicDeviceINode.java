@@ -30,7 +30,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestAbstractBasicDeviceINode {
 
-  AbstractBasicDeviceINode inode;
+  private AbstractBasicDeviceINode inode;
 
   @Before
   public void setUp() {

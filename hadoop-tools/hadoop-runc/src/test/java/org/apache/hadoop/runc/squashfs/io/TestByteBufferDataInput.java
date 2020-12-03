@@ -71,7 +71,7 @@ public class TestByteBufferDataInput {
 
   @Test
   public void skipBytesShouldDoSo() throws Exception {
-    byte[] data = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    byte[] data = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     ByteBufferDataInput r = input(data);
     assertEquals("wrong bytes skipped", 5, r.skipBytes(5));
     assertEquals("wrong next byte", (byte) 5, r.readByte());
@@ -79,14 +79,14 @@ public class TestByteBufferDataInput {
 
   @Test
   public void skipBytesShouldDoPartialSkipIfEof() throws Exception {
-    byte[] data = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    byte[] data = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     ByteBufferDataInput r = input(data);
     assertEquals("wrong bytes skipped", 10, r.skipBytes(15));
   }
 
   @Test
   public void readBooleanShouldWork() throws Exception {
-    byte[] data = new byte[] { 0, 1 };
+    byte[] data = new byte[] {0, 1};
     ByteBufferDataInput r = input(data);
     assertFalse("first value true", r.readBoolean());
     assertTrue("second value false", r.readBoolean());
@@ -94,14 +94,14 @@ public class TestByteBufferDataInput {
 
   @Test
   public void readByteShouldWork() throws Exception {
-    byte[] data = new byte[] { (byte) 0xff };
+    byte[] data = new byte[] {(byte) 0xff};
     ByteBufferDataInput r = input(data);
     assertEquals((byte) 0xff, r.readByte());
   }
 
   @Test(expected = EOFException.class)
   public void readByteShouldThrowEOFExceptionIfEndOfStream() throws Exception {
-    byte[] data = new byte[] { (byte) 0xff };
+    byte[] data = new byte[] {(byte) 0xff};
     ByteBufferDataInput r = input(data);
     assertEquals((byte) 0xff, r.readByte());
     r.readByte();
@@ -109,7 +109,7 @@ public class TestByteBufferDataInput {
 
   @Test
   public void readUnsignedByteShouldWork() throws Exception {
-    byte[] data = new byte[] { (byte) 0xff };
+    byte[] data = new byte[] {(byte) 0xff};
     ByteBufferDataInput r = input(data);
     assertEquals(0xff, r.readUnsignedByte());
   }

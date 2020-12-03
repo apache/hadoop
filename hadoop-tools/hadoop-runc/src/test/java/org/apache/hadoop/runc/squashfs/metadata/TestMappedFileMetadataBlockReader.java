@@ -39,12 +39,12 @@ public class TestMappedFileMetadataBlockReader {
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
 
-  int tag;
-  File tempFile;
-  MappedFileMetadataBlockReader reader;
-  SuperBlock sb;
-  byte[] block;
-  byte[] encoded;
+  private int tag;
+  private File tempFile;
+  private MappedFileMetadataBlockReader reader;
+  private SuperBlock sb;
+  private byte[] block;
+  private byte[] encoded;
 
   @Before
   public void setUp() throws Exception {
@@ -100,8 +100,8 @@ public class TestMappedFileMetadataBlockReader {
   @Test
   public void readFromFileOffsetShouldSucceed() throws Exception {
     MetadataBlock mb = reader.read(tag, SuperBlock.SIZE);
-    assertEquals(1024, mb.data.length);
-    assertArrayEquals(block, mb.data);
+    assertEquals(1024, mb.getData().length);
+    assertArrayEquals(block, mb.getData());
   }
 
   @Test(expected = IllegalArgumentException.class)

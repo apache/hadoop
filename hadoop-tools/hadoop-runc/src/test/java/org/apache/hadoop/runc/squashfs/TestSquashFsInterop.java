@@ -65,17 +65,17 @@ public class TestSquashFsInterop {
   @Parameters(name = "{0}")
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] {
-        { "file", (ReaderCreator) (a -> createFileReader(a)) },
-        { "file-with-cache",
-            (ReaderCreator) (a -> createFileReaderWithCache(a)) },
-        { "mapped", (ReaderCreator) (a -> createMappedReader(a)) },
-        { "mapped-with-cache",
-            (ReaderCreator) (a -> createMappedReaderWithCache(a)) } });
+        {"file", (ReaderCreator) (a -> createFileReader(a))},
+        {"file-with-cache",
+            (ReaderCreator) (a -> createFileReaderWithCache(a))},
+        {"mapped", (ReaderCreator) (a -> createMappedReader(a))},
+        {"mapped-with-cache",
+            (ReaderCreator) (a -> createMappedReaderWithCache(a))}});
   }
 
   @FunctionalInterface
   public interface ReaderCreator {
-    public SquashFsReader create(File archive)
+    SquashFsReader create(File archive)
         throws SquashFsException, IOException;
   }
 
@@ -448,41 +448,37 @@ public class TestSquashFsInterop {
       assertEquals("wrong size", 131072L, ((FileINode) file).getFileSize());
 
       // test writing entire file
-      {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-          reader.writeFileStream(file, bos);
-          assertArrayEquals(content, bos.toByteArray());
-        }
-
-        INodeRef ref =
-            reader.getExportTable().getInodeRef(file.getInodeNumber());
-        INode file2 = reader.findInodeByInodeRef(ref);
-        assertEquals("wrong inode number using write()", file.getInodeNumber(),
-            file2.getInodeNumber());
+      try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        reader.writeFileStream(file, bos);
+        assertArrayEquals(content, bos.toByteArray());
       }
+
+      INodeRef ref =
+          reader.getExportTable().getInodeRef(file.getInodeNumber());
+      INode file2 = reader.findInodeByInodeRef(ref);
+      assertEquals("wrong inode number using write()", file.getInodeNumber(),
+          file2.getInodeNumber());
 
       // test reading data
-      {
-        byte[] xfer = new byte[1024];
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-          int c;
-          long fileOffset = 0L;
-          while ((c = reader.read(file, fileOffset, xfer, 0, xfer.length))
-              >= 0) {
-            if (c >= 0) {
-              bos.write(xfer, 0, c);
-              fileOffset += c;
-            }
+      byte[] xfer = new byte[1024];
+      try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        int c;
+        long fileOffset = 0L;
+        while ((c = reader.read(file, fileOffset, xfer, 0, xfer.length))
+            >= 0) {
+          if (c >= 0) {
+            bos.write(xfer, 0, c);
+            fileOffset += c;
           }
-          assertArrayEquals(content, bos.toByteArray());
         }
-
-        INodeRef ref =
-            reader.getExportTable().getInodeRef(file.getInodeNumber());
-        INode file2 = reader.findInodeByInodeRef(ref);
-        assertEquals("wrong inode number using read()", file.getInodeNumber(),
-            file2.getInodeNumber());
+        assertArrayEquals(content, bos.toByteArray());
       }
+
+      INodeRef refRead =
+          reader.getExportTable().getInodeRef(file.getInodeNumber());
+      INode inode = reader.findInodeByInodeRef(refRead);
+      assertEquals("wrong inode number using read()", inode.getInodeNumber(),
+          inode.getInodeNumber());
     }
   }
 
@@ -520,28 +516,24 @@ public class TestSquashFsInterop {
       assertEquals("wrong size", 262144L, ((FileINode) file).getFileSize());
 
       // test writing data
-      {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-          reader.writeFileStream(file, bos);
-          assertArrayEquals(content, bos.toByteArray());
-        }
+      try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        reader.writeFileStream(file, bos);
+        assertArrayEquals(content, bos.toByteArray());
       }
 
       // test reading data
-      {
-        byte[] xfer = new byte[1024];
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-          int c;
-          long fileOffset = 0L;
-          while ((c = reader.read(file, fileOffset, xfer, 0, xfer.length))
-              >= 0) {
-            if (c >= 0) {
-              bos.write(xfer, 0, c);
-              fileOffset += c;
-            }
+      byte[] xfer = new byte[1024];
+      try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        int c;
+        long fileOffset = 0L;
+        while ((c = reader.read(file, fileOffset, xfer, 0, xfer.length))
+            >= 0) {
+          if (c >= 0) {
+            bos.write(xfer, 0, c);
+            fileOffset += c;
           }
-          assertArrayEquals(content, bos.toByteArray());
         }
+        assertArrayEquals(content, bos.toByteArray());
       }
     }
   }
@@ -579,29 +571,24 @@ public class TestSquashFsInterop {
       assertEquals("wrong size", 262144L, ((FileINode) file).getFileSize());
 
       // test writing data
-      {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-          reader.writeFileStream(file, bos);
-          assertArrayEquals(content, bos.toByteArray());
-        }
+      try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        reader.writeFileStream(file, bos);
+        assertArrayEquals(content, bos.toByteArray());
       }
       // test reading data
-      {
-        byte[] xfer = new byte[1024];
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-          int c;
-          long fileOffset = 0L;
-          while ((c = reader.read(file, fileOffset, xfer, 0, xfer.length))
-              >= 0) {
-            if (c >= 0) {
-              bos.write(xfer, 0, c);
-              fileOffset += c;
-            }
+      byte[] xfer = new byte[1024];
+      try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        int c;
+        long fileOffset = 0L;
+        while ((c = reader.read(file, fileOffset, xfer, 0, xfer.length))
+            >= 0) {
+          if (c >= 0) {
+            bos.write(xfer, 0, c);
+            fileOffset += c;
           }
-          assertArrayEquals(content, bos.toByteArray());
         }
+        assertArrayEquals(content, bos.toByteArray());
       }
-
     }
   }
 
@@ -698,30 +685,25 @@ public class TestSquashFsInterop {
       assertEquals("wrong size", 275000L, ((FileINode) file).getFileSize());
 
       // test writing data
-      {
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-          reader.writeFileStream(file, bos);
-          assertArrayEquals(content, bos.toByteArray());
-        }
+      try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        reader.writeFileStream(file, bos);
+        assertArrayEquals(content, bos.toByteArray());
       }
 
       // test reading data
-      {
-        byte[] xfer = new byte[1024];
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-          int c;
-          long fileOffset = 0L;
-          while ((c = reader.read(file, fileOffset, xfer, 0, xfer.length))
-              >= 0) {
-            if (c >= 0) {
-              bos.write(xfer, 0, c);
-              fileOffset += c;
-            }
+      byte[] xfer = new byte[1024];
+      try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        int c;
+        long fileOffset = 0L;
+        while ((c = reader.read(file, fileOffset, xfer, 0, xfer.length))
+            >= 0) {
+          if (c >= 0) {
+            bos.write(xfer, 0, c);
+            fileOffset += c;
           }
-          assertArrayEquals(content, bos.toByteArray());
         }
+        assertArrayEquals(content, bos.toByteArray());
       }
-
     }
   }
 
@@ -1030,7 +1012,7 @@ public class TestSquashFsInterop {
           .build();
 
       assertEquals("wrong timestamp", System.currentTimeMillis(),
-          entry.lastModified * 1000L, 10000L);
+          entry.getLastModified() * 1000L, 10000L);
     }
   }
 

@@ -31,7 +31,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestAbstractExtendedIpcINode {
 
-  AbstractExtendedIpcINode inode;
+  private AbstractExtendedIpcINode inode;
 
   @Before
   public void setUp() {

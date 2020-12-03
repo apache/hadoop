@@ -38,11 +38,11 @@ public class TestFileTableReader {
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
 
-  File tempFile;
+  private File tempFile;
 
-  SuperBlock sb;
-  byte[] data;
-  FileTableReader reader;
+  private SuperBlock sb;
+  private byte[] data;
+  private FileTableReader reader;
 
   @Before
   public void setUp() throws Exception {

@@ -26,7 +26,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestBasicCharDeviceINode {
 
-  BasicCharDeviceINode inode;
+  private BasicCharDeviceINode inode;
 
   @Before
   public void setUp() {
@@ -56,7 +56,7 @@ public class TestBasicCharDeviceINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnOriginalIfExtendedAttributesPresent() {
+  public void staticSimplifyMethodReturnsOriginalWhenExtendedAttributes() {
     CharDeviceINode inode2 = new ExtendedCharDeviceINode();
     inode2.setDevice(1);
     inode2.setNlink(2);
@@ -65,7 +65,7 @@ public class TestBasicCharDeviceINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnBasicIfExtendedAttributesNotPresent() {
+  public void staticSimplifyMethodReturnsBasicWhenNoExtendedAttributes() {
     CharDeviceINode inode2 = new ExtendedCharDeviceINode();
     inode2.setDevice(1);
     inode2.setNlink(2);

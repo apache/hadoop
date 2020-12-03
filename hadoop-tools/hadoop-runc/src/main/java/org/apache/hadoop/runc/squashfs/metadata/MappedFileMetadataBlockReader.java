@@ -27,21 +27,20 @@ import java.io.IOException;
 
 public class MappedFileMetadataBlockReader implements MetadataBlockReader {
 
-  private final int tag;
+  private final int ourTag;
   private final SuperBlock sb;
   private final MappedFile mmap;
 
   public MappedFileMetadataBlockReader(int tag, SuperBlock sb, MappedFile mmap)
       throws IOException, SquashFsException {
-
-    this.tag = tag;
+    this.ourTag = tag;
     this.sb = sb;
     this.mmap = mmap;
   }
 
   @Override
   public SuperBlock getSuperBlock(int tag) {
-    if (this.tag != tag) {
+    if (ourTag != tag) {
       throw new IllegalArgumentException(String.format("Invalid tag: %d", tag));
     }
     return sb;
@@ -50,7 +49,7 @@ public class MappedFileMetadataBlockReader implements MetadataBlockReader {
   @Override
   public MetadataBlock read(int tag, long fileOffset)
       throws IOException, SquashFsException {
-    if (this.tag != tag) {
+    if (ourTag != tag) {
       throw new IllegalArgumentException(String.format("Invalid tag: %d", tag));
     }
 
@@ -60,7 +59,7 @@ public class MappedFileMetadataBlockReader implements MetadataBlockReader {
 
   @Override
   public void close() {
-
+    // nothing to do
   }
 
 }

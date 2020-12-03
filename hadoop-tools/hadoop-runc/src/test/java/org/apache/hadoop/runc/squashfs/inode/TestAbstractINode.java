@@ -29,8 +29,8 @@ import static org.junit.Assert.assertSame;
 
 public class TestAbstractINode {
 
-  AbstractINode inode;
-  int modifiedTime;
+  private AbstractINode inode;
+  private int modifiedTime;
 
   @Before
   public void setUp() {

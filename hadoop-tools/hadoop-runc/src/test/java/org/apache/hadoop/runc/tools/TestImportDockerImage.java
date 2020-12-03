@@ -78,24 +78,24 @@ public class TestImportDockerImage {
   private static final String LAYER_MEDIA_TYPE =
       "application/vnd.docker.image.rootfs.diff.tar.gzip";
 
-  Server jetty;
-  ServletContextHandler context;
-  String registryLocation;
+  private Server jetty;
+  private ServletContextHandler context;
+  private String registryLocation;
 
-  MessageDigest sha256;
+  private MessageDigest sha256;
 
-  File workDir;
-  File dfsDir;
+  private File workDir;
+  private File dfsDir;
 
-  ObjectMapper mapper;
+  private ObjectMapper mapper;
 
-  Map<String, byte[]> repoBlobs = new HashMap<>();
-  Map<String, String> repoHashes = new HashMap<>();
-  Map<String, String> repoTypes = new HashMap<>();
+  private Map<String, byte[]> repoBlobs = new HashMap<>();
+  private Map<String, String> repoHashes = new HashMap<>();
+  private Map<String, String> repoTypes = new HashMap<>();
 
-  byte[] config;
-  byte[] layer;
-  byte[] manifest;
+  private byte[] config;
+  private byte[] layer;
+  private byte[] manifest;
 
   @Rule
   public TemporaryFolder tmp = new TemporaryFolder();
@@ -180,19 +180,19 @@ public class TestImportDockerImage {
     root.put("schemaVersion", 2);
     root.put("mediaType", MANIFEST_MEDIA_TYPE);
 
-    ObjectNode config = mapper.createObjectNode();
-    config.put("mediaType", IMAGE_MEDIA_TYPE);
-    config.put("size", configData.length);
-    config.put("digest", "sha256:" + sha256(configData));
-    root.set("config", config);
+    ObjectNode cfg = mapper.createObjectNode();
+    cfg.put("mediaType", IMAGE_MEDIA_TYPE);
+    cfg.put("size", configData.length);
+    cfg.put("digest", "sha256:" + sha256(configData));
+    root.set("config", cfg);
 
     ArrayNode layers = mapper.createArrayNode();
-    ObjectNode layer = mapper.createObjectNode();
-    layer.put("mediaType", LAYER_MEDIA_TYPE);
-    layer.put("size", layerData.length);
-    layer.put("digest", "sha256:" + sha256(layerData));
+    ObjectNode layer0 = mapper.createObjectNode();
+    layer0.put("mediaType", LAYER_MEDIA_TYPE);
+    layer0.put("size", layerData.length);
+    layer0.put("digest", "sha256:" + sha256(layerData));
 
-    layers.add(layer);
+    layers.add(layer0);
     root.set("layers", layers);
 
     return mapper.writer().writeValueAsBytes(root);
@@ -305,7 +305,7 @@ public class TestImportDockerImage {
     String dest = "test/image";
 
     ImportDockerImage tool = new ImportDockerImage();
-    int result = ToolRunner.run(conf, tool, new String[] { src, dest });
+    int result = ToolRunner.run(conf, tool, new String[] {src, dest});
     assertEquals("Tool failed", 0, result);
 
     // validate metadata file

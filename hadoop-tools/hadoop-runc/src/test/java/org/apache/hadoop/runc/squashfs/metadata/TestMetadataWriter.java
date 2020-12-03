@@ -41,7 +41,7 @@ import static org.junit.Assert.assertEquals;
 
 public class TestMetadataWriter {
 
-  MetadataWriter writer;
+  private MetadataWriter writer;
 
   @Before
   public void setUp() {
@@ -66,7 +66,7 @@ public class TestMetadataWriter {
 
   @Test
   public void writeByteArrayShouldWriteAsIs() throws Exception {
-    byte[] buf = new byte[] { 0, 1, 2, 3, 4 };
+    byte[] buf = new byte[] {0, 1, 2, 3, 4};
     writer.write(buf);
     byte[] out = MetadataTestUtils.saveMetadataBlock(writer);
     byte[] buf2 = MetadataTestUtils.decodeMetadataBlock(out);
@@ -102,8 +102,8 @@ public class TestMetadataWriter {
 
   @Test
   public void flushShouldWriteMultipleBlocksIfNecessary() throws Exception {
-    byte[] buf0 = new byte[] { 0, 1, 2, 3, 4 };
-    byte[] buf1 = new byte[] { 5, 6, 7, 8, 9 };
+    byte[] buf0 = new byte[] {0, 1, 2, 3, 4};
+    byte[] buf1 = new byte[] {5, 6, 7, 8, 9};
 
     MetadataBlockRef ref1 = writer.getCurrentReference();
     System.out.println(ref1);

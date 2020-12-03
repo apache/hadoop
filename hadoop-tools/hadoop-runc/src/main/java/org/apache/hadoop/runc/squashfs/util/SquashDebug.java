@@ -191,8 +191,8 @@ public class SquashDebug extends Configured implements Tool {
         printUsage();
         return -1;
       }
-      metaFileOffset = Long.valueOf(rem[1]);
-      metaBlockOffset = Integer.valueOf(rem[2]);
+      metaFileOffset = Long.parseLong(rem[1]);
+      metaBlockOffset = Integer.parseInt(rem[2]);
     } else {
       if (rem.length != 1) {
         printUsage();

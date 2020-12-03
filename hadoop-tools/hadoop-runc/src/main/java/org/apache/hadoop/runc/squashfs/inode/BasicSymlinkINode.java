@@ -33,8 +33,8 @@ public class BasicSymlinkINode extends AbstractINode implements SymlinkINode {
 
   private static final byte[] EMPTY = new byte[0];
 
-  int nlink = 1;
-  byte[] targetPath = EMPTY;
+  private int nlink = 1;
+  private byte[] targetPath = EMPTY;
 
   static SymlinkINode simplify(SymlinkINode src) {
     if (src instanceof BasicSymlinkINode) {

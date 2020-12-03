@@ -30,8 +30,12 @@ import org.apache.hadoop.runc.squashfs.util.BinUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 
-public class MetadataTestUtils {
+public final class MetadataTestUtils {
+
+  private MetadataTestUtils() {
+  }
 
   public static byte[] saveMetadataBlock(byte[] data) throws IOException {
     MetadataWriter writer = new MetadataWriter();
@@ -58,15 +62,23 @@ public class MetadataTestUtils {
   }
 
   public static MetadataBlock block(byte[] content) {
-    MetadataBlock block = new MetadataBlock() {
-      {
-        this.data = content;
-        this.header = (short) ((content.length & 0x7fff) | 0x8000);
-        this.fileLength = (short) (2 + (content.length & 0x7ffff));
-      }
-    };
-
+    MetadataBlock block = new MetadataBlock();
+    reflectiveSet(block, "data", content);
+    reflectiveSet(block, "header",
+        (short) ((content.length & 0x7fff) | 0x8000));
+    reflectiveSet(block, "fileLength",
+        (short) (2 + (content.length & 0x7ffff)));
     return block;
+  }
+
+  private static void reflectiveSet(Object obj, String field, Object value) {
+    try {
+      Field fieldRef = obj.getClass().getDeclaredField(field);
+      fieldRef.setAccessible(true);
+      fieldRef.set(obj, value);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new RuntimeException("Unable to set " + field, e);
+    }
   }
 
   public static byte[] decodeMetadataBlock(byte[] data) throws IOException {

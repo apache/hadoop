@@ -26,7 +26,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestExtendedCharDeviceINode {
 
-  ExtendedCharDeviceINode inode;
+  private ExtendedCharDeviceINode inode;
 
   @Before
   public void setUp() {

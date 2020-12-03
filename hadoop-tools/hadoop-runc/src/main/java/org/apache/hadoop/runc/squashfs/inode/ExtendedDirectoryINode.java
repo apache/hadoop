@@ -32,13 +32,13 @@ import static org.apache.hadoop.runc.squashfs.util.BinUtils.dumpBin;
 public class ExtendedDirectoryINode extends AbstractINode
     implements DirectoryINode {
 
-  int nlink = 1;
-  int fileSize; // 3 + # of uncompressed bytes in directory table
-  int startBlock;
-  int parentInodeNumber;
-  short indexCount;
-  short offset;
-  int xattrIndex = XATTR_NOT_PRESENT;
+  private int nlink = 1;
+  private int fileSize; // 3 + # of uncompressed bytes in directory table
+  private int startBlock;
+  private int parentInodeNumber;
+  private short indexCount;
+  private short offset;
+  private int xattrIndex = XATTR_NOT_PRESENT;
 
   @Override
   public int getStartBlock() {

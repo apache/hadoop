@@ -34,7 +34,7 @@ abstract public class AbstractBasicIpcINode extends AbstractINode
 
   public static final int XATTR_NOT_PRESENT = 0xffff_ffff;
 
-  int nlink = 1;
+  private int nlink = 1;
 
   @Override
   public final int getNlink() {

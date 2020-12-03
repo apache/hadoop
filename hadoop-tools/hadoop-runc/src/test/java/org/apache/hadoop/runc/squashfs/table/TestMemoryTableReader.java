@@ -30,9 +30,9 @@ import static org.junit.Assert.assertSame;
 
 public class TestMemoryTableReader {
 
-  SuperBlock sb;
-  byte[] data;
-  MemoryTableReader reader;
+  private SuperBlock sb;
+  private byte[] data;
+  private MemoryTableReader reader;
 
   @Before
   public void setUp() throws Exception {

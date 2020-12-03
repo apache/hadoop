@@ -38,12 +38,12 @@ public class TestMappedFileTableReader {
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
 
-  File tempFile;
+  private File tempFile;
 
-  SuperBlock sb;
-  byte[] data;
-  MappedFile mmap;
-  MappedFileTableReader reader;
+  private SuperBlock sb;
+  private byte[] data;
+  private MappedFile mmap;
+  private MappedFileTableReader reader;
 
   @Before
   public void setUp() throws Exception {

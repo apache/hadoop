@@ -32,9 +32,9 @@ import static org.apache.hadoop.runc.squashfs.util.BinUtils.dumpBin;
 abstract public class AbstractExtendedDeviceINode extends AbstractINode
     implements ExtendedDeviceINode {
 
-  int nlink = 1;
-  int device;
-  int xattrIndex = XATTR_NOT_PRESENT;
+  private int nlink = 1;
+  private int device;
+  private int xattrIndex = XATTR_NOT_PRESENT;
 
   @Override
   public final int getNlink() {

@@ -32,8 +32,8 @@ import static org.apache.hadoop.runc.squashfs.util.BinUtils.dumpBin;
 abstract public class AbstractExtendedIpcINode extends AbstractINode
     implements ExtendedIpcINode {
 
-  int nlink = 1;
-  int xattrIndex = XATTR_NOT_PRESENT;
+  private int nlink = 1;
+  private int xattrIndex = XATTR_NOT_PRESENT;
 
   @Override
   public final int getNlink() {

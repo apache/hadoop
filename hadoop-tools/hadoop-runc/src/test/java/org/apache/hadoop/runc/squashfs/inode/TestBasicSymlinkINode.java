@@ -31,7 +31,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestBasicSymlinkINode {
 
-  BasicSymlinkINode inode;
+  private BasicSymlinkINode inode;
 
   @Before
   public void setUp() {
@@ -125,7 +125,7 @@ public class TestBasicSymlinkINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnOriginalIfExtendedAttributesPresent() {
+  public void staticSimplifyMethodReturnsOriginalWhenExtendedAttributes() {
     SymlinkINode inode2 = new ExtendedSymlinkINode();
     inode2.setNlink(2);
     inode2.setXattrIndex(3);
@@ -133,7 +133,7 @@ public class TestBasicSymlinkINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnBasicIfExtendedAttributesNotPresent() {
+  public void staticSimplifyMethodReturnsBasicWhenNoExtendedAttributes() {
     SymlinkINode inode2 = new ExtendedSymlinkINode();
     inode2.setNlink(2);
     inode2.setXattrIndex(-1);

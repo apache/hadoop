@@ -69,7 +69,7 @@ public class TestMetadataBlock {
   }
 
   @Test(expected = SquashFsException.class)
-  public void readingCompressedBlockShouldFailIfSuperblockHasCompressionDisabled()
+  public void readingCompressedBlockShouldFailIfCompressionNotInUse()
       throws Exception {
 
     byte[] buf = new byte[8192];
@@ -88,7 +88,7 @@ public class TestMetadataBlock {
   }
 
   @Test(expected = UnsupportedOperationException.class)
-  public void readingCompressedBlockShouldFailIfSuperblockHasUnsupportedCompressionAlgorithm()
+  public void readingCompressedBlockShouldFailIfUnsupportedAlgorithm()
       throws Exception {
 
     byte[] buf = new byte[8192];
@@ -107,7 +107,7 @@ public class TestMetadataBlock {
   }
 
   @Test(expected = UnsupportedOperationException.class)
-  public void readingCompressedBlockShouldFailIfSuperblockHasCompressionOptionFlag()
+  public void readingCompressedBlockShouldFailIfCompressionFlagsPresent()
       throws Exception {
 
     byte[] buf = new byte[8192];

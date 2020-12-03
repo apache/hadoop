@@ -35,9 +35,12 @@ import java.io.IOException;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
-public class MappedDataBlockReader {
+public final class MappedDataBlockReader {
 
   private static final byte[] EMPTY = new byte[0];
+
+  private MappedDataBlockReader() {
+  }
 
   public static DataBlock readBlock(
       int tag,
@@ -136,10 +139,9 @@ public class MappedDataBlockReader {
 
     int offset = inode.getFragmentOffset();
     if (offset + length > fragment.getPhysicalSize()) {
-      throw new SquashFsException(
-          String.format(
-              "Attempted to read %d bytes from a fragment with only %d bytes remaining",
-              length, fragment.getLogicalSize() - offset));
+      throw new SquashFsException(String.format("Attempted to read %d bytes "
+              + "from a fragment with only %d bytes remaining",
+          length, fragment.getLogicalSize() - offset));
     }
 
     byte[] data = new byte[length];
@@ -199,8 +201,8 @@ public class MappedDataBlockReader {
       int expectedSize) throws IOException, SquashFsException {
     // see if there are compression flags
     if (sb.hasFlag(SuperBlockFlag.COMPRESSOR_OPTIONS)) {
-      throw new UnsupportedOperationException(
-          "Reading ZLIB compressed data with non-standard options not yet supported");
+      throw new UnsupportedOperationException("Reading ZLIB compressed data "
+          + "with non-standard options not yet supported");
     }
 
     byte[] buf = new byte[dataSize];

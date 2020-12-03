@@ -57,11 +57,11 @@ public class BearerCredentials implements Credentials {
     return (token != null) && (!token.isExpired());
   }
 
-  public AuthToken getToken() {
+  public synchronized AuthToken getToken() {
     return token;
   }
 
-  public void setToken(AuthToken token) {
+  public synchronized void setToken(AuthToken token) {
     this.token = token;
   }
 

@@ -30,86 +30,18 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 
 public class TestDirectoryEntry {
 
-  DirectoryEntry entry;
+  private DirectoryEntry entry;
 
   @Before
   public void setUp() {
-    DirectoryHeader hdr = new DirectoryHeader();
-    hdr.count = 0;
-    hdr.startBlock = 1;
-    hdr.inodeNumber = 2;
-
-    entry = new DirectoryEntry();
-    entry.header = hdr;
-    entry.offset = (short) 3;
-    entry.inodeNumberDelta = (short) 4;
-    entry.type = (short) 5;
-    entry.name = "test".getBytes(StandardCharsets.ISO_8859_1);
-    entry.size = (short) (entry.name.length - 1);
-  }
-
-  @Test
-  public void headerPropertyWorksAsExpected() {
-    assertNotNull(entry.getHeader());
-    DirectoryHeader hdr2 = new DirectoryHeader();
-    entry.header = hdr2;
-    assertSame(hdr2, entry.getHeader());
-  }
-
-  @Test
-  public void offsetPropertyWorksAsExpected() {
-    assertEquals((short) 3, entry.getOffset());
-    entry.offset = (short) 4;
-    assertEquals((short) 4, entry.getOffset());
-  }
-
-  @Test
-  public void inodeNumberDeltaPropertyWorksAsExpected() {
-    assertEquals(4, entry.getInodeNumberDelta());
-    entry.inodeNumberDelta = 5;
-    assertEquals(5, entry.getInodeNumberDelta());
-  }
-
-  @Test
-  public void typePropertyWorksAsExpected() {
-    assertEquals((short) 5, entry.getType());
-    entry.type = (short) 6;
-    assertEquals((short) 6, entry.getType());
-  }
-
-  @Test
-  public void sizePropertyWorksAsExpected() {
-    assertEquals((short) 3, entry.getSize());
-    entry.size = (short) 4;
-    assertEquals((short) 4, entry.getSize());
-  }
-
-  @Test
-  public void namePropertyWorksAsExpected() {
-    assertEquals("test",
-        new String(entry.getName(), StandardCharsets.ISO_8859_1));
-    entry.name = "test2".getBytes(StandardCharsets.ISO_8859_1);
-    assertEquals("test2",
-        new String(entry.getName(), StandardCharsets.ISO_8859_1));
-  }
-
-  @Test
-  public void nameAsStringPropertyWorksAsExpected() {
-    assertEquals("test", entry.getNameAsString());
-    entry.name = "test2".getBytes(StandardCharsets.ISO_8859_1);
-    assertEquals("test2", entry.getNameAsString());
-  }
-
-  @Test
-  public void getStructureSizeReturnsCorrectValue() {
-    assertEquals(12, entry.getStructureSize());
-    entry.name = "test2".getBytes(StandardCharsets.ISO_8859_1);
-    assertEquals(13, entry.getStructureSize());
+    DirectoryHeader hdr = new DirectoryHeader(0, 1, 2);
+    byte[] name = "test".getBytes(StandardCharsets.ISO_8859_1);
+    entry = new DirectoryEntry((short) 3, (short) 4, (short) 5,
+        (short) (name.length - 1), name, hdr);
   }
 
   @Test
@@ -124,8 +56,8 @@ public class TestDirectoryEntry {
 
     try (ByteArrayInputStream bis = new ByteArrayInputStream(buf)) {
       try (DataInputStream dis = new DataInputStream(bis)) {
-        DirectoryEntry dest = DirectoryEntry.read(entry.header, dis);
-        assertSame("wrong header", entry.header, dest.header);
+        DirectoryEntry dest = DirectoryEntry.read(entry.getHeader(), dis);
+        assertSame("wrong header", entry.getHeader(), dest.getHeader());
         assertEquals("wrong offset", (short) 3, dest.getOffset());
         assertEquals("wrong inode number delta", (short) 4,
             dest.getInodeNumberDelta());
@@ -149,7 +81,7 @@ public class TestDirectoryEntry {
 
     try (ByteArrayInputStream bis = new ByteArrayInputStream(buf)) {
       try (DataInputStream dis = new DataInputStream(bis)) {
-        DirectoryEntry.read(entry.header, dis);
+        DirectoryEntry.read(entry.getHeader(), dis);
       }
     }
   }
@@ -158,9 +90,9 @@ public class TestDirectoryEntry {
   public void writeDataAndReadDataShouldBeReflexive() throws IOException {
     byte[] data = DirectoryTestUtils.serializeDirectoryElement(entry);
     DirectoryEntry dest =
-        DirectoryTestUtils.deserializeDirectoryEntry(entry.header, data);
+        DirectoryTestUtils.deserializeDirectoryEntry(entry.getHeader(), data);
 
-    assertSame("wrong header", entry.header, dest.header);
+    assertSame("wrong header", entry.getHeader(), dest.getHeader());
     assertEquals("wrong offset", (short) 3, dest.getOffset());
     assertEquals("wrong inode number delta", (short) 4,
         dest.getInodeNumberDelta());

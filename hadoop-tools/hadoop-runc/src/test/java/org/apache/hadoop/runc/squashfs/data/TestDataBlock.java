@@ -27,10 +27,10 @@ import static org.junit.Assert.assertTrue;
 
 public class TestDataBlock {
 
-  DataBlock full;
-  DataBlock sparse;
-  DataBlock partial;
-  DataBlock empty;
+  private DataBlock full;
+  private DataBlock sparse;
+  private DataBlock partial;
+  private DataBlock empty;
 
   @Before
   public void setUp() {

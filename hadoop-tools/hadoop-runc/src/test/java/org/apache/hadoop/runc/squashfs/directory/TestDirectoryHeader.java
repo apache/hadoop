@@ -32,35 +32,11 @@ import static org.junit.Assert.assertEquals;
 
 public class TestDirectoryHeader {
 
-  DirectoryHeader hdr;
+  private DirectoryHeader hdr;
 
   @Before
   public void setUp() {
-    hdr = new DirectoryHeader();
-    hdr.count = 0;
-    hdr.startBlock = 1;
-    hdr.inodeNumber = 2;
-  }
-
-  @Test
-  public void countPropertyWorksAsExpected() {
-    assertEquals(0, hdr.getCount());
-    hdr.count = 1;
-    assertEquals(1, hdr.getCount());
-  }
-
-  @Test
-  public void startBlockPropertyWorksAsExpected() {
-    assertEquals(1, hdr.getStartBlock());
-    hdr.startBlock = 2;
-    assertEquals(2, hdr.getStartBlock());
-  }
-
-  @Test
-  public void inodeNumberPropertyWorksAsExpected() {
-    assertEquals(2, hdr.getInodeNumber());
-    hdr.inodeNumber = 3;
-    assertEquals(3, hdr.getInodeNumber());
+    hdr = new DirectoryHeader(0, 1, 2);
   }
 
   @Test

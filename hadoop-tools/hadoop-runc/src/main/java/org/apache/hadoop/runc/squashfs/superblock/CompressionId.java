@@ -31,7 +31,7 @@ public enum CompressionId {
 
   private final short value;
 
-  private CompressionId(int value) {
+  CompressionId(int value) {
     this.value = (short) value;
   }
 

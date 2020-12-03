@@ -39,8 +39,6 @@ import static org.junit.Assert.assertEquals;
 
 public class TestIdTable {
 
-  List<MetadataBlockRef> entries;
-
   @Test
   public void readShouldHandleReadingEmptyTable() throws Exception {
     verify(0);

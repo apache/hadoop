@@ -26,7 +26,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestExtendedSocketINode {
 
-  ExtendedSocketINode inode;
+  private ExtendedSocketINode inode;
 
   @Before
   public void setUp() {

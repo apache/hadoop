@@ -34,9 +34,9 @@ public class ExtendedSymlinkINode extends AbstractINode
 
   private static final byte[] EMPTY = new byte[0];
 
-  int nlink = 1;
-  byte[] targetPath = EMPTY;
-  int xattrIndex = XATTR_NOT_PRESENT;
+  private int nlink = 1;
+  private byte[] targetPath = EMPTY;
+  private int xattrIndex = XATTR_NOT_PRESENT;
 
   @Override
   public int getNlink() {

@@ -40,8 +40,8 @@ public class IdTable {
   public static final int ENTRIES_PER_BLOCK =
       MetadataBlock.MAX_SIZE / BYTES_PER_TABLE_ENTRY;
   private static final int[] EMPTY = new int[0];
-  final SortedMap<Long, Short> reverseMappings = new TreeMap<>();
-  int[] mappings = EMPTY;
+  private final SortedMap<Long, Short> reverseMappings = new TreeMap<>();
+  private int[] mappings = EMPTY;
 
   private static int numTables(int idCount) {
     return (idCount / ENTRIES_PER_BLOCK) + (

@@ -26,7 +26,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestExtendedBlockDeviceINode {
 
-  ExtendedBlockDeviceINode inode;
+  private ExtendedBlockDeviceINode inode;
 
   @Before
   public void setUp() {

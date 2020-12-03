@@ -71,11 +71,11 @@ public class TestDockerClient {
   static final String LAYER1_DIGEST =
       "sha256:0ce545d269b61f0f79bc6ba0c088309e474f4753970c66bb91be3cf55c5b392d";
 
-  Server jetty;
-  ServletContextHandler context;
-  String baseUrl;
+  private Server jetty;
+  private ServletContextHandler context;
+  private String baseUrl;
 
-  MessageDigest sha256;
+  private MessageDigest sha256;
 
   @Before
   public void setUp() throws Exception {

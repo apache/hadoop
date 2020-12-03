@@ -25,7 +25,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.EOFException;
-import java.io.File;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -33,14 +32,13 @@ import static org.junit.Assert.assertSame;
 
 public class TestTaggedMetadataBlock {
 
-  File tempFile;
-  TaggedMetadataBlockReader taggedReader;
-  MemoryMetadataBlockReader reader;
-  SuperBlock sb;
-  byte[] block;
-  byte[] block2;
-  byte[] encoded;
-  int offset2;
+  private TaggedMetadataBlockReader taggedReader;
+  private MemoryMetadataBlockReader reader;
+  private SuperBlock sb;
+  private byte[] block;
+  private byte[] block2;
+  private byte[] encoded;
+  private int offset2;
 
   @Before
   public void setUp() throws Exception {
@@ -100,15 +98,15 @@ public class TestTaggedMetadataBlock {
   @Test
   public void readFirstBlockShouldSucceed() throws Exception {
     MetadataBlock mb = taggedReader.read(10101, 0L);
-    assertEquals(1024, mb.data.length);
-    assertArrayEquals(block, mb.data);
+    assertEquals(1024, mb.getData().length);
+    assertArrayEquals(block, mb.getData());
   }
 
   @Test
   public void readSecondBlockShouldSucceed() throws Exception {
     MetadataBlock mb = taggedReader.read(10101, offset2);
-    assertEquals(1024, mb.data.length);
-    assertArrayEquals(block2, mb.data);
+    assertEquals(1024, mb.getData().length);
+    assertArrayEquals(block2, mb.getData());
   }
 
   @Test(expected = EOFException.class)

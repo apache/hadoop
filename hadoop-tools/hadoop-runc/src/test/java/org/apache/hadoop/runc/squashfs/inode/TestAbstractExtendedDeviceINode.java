@@ -31,7 +31,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestAbstractExtendedDeviceINode {
 
-  AbstractExtendedDeviceINode inode;
+  private AbstractExtendedDeviceINode inode;
 
   @Before
   public void setUp() {

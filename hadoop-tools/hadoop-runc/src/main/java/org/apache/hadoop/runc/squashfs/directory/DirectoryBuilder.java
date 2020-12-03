@@ -18,19 +18,21 @@
 
 package org.apache.hadoop.runc.squashfs.directory;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.runc.squashfs.inode.INodeType;
 import org.apache.hadoop.runc.squashfs.metadata.MetadataWriter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class DirectoryBuilder {
 
-  boolean dirty = false;
-  final List<Entry> entries = new ArrayList<>();
-  final List<DirectoryElement> elements = new ArrayList<>();
+  private boolean dirty = false;
+  private final List<Entry> entries = new ArrayList<>();
+  private final List<DirectoryElement> elements = new ArrayList<>();
 
   public void add(
       String name,
@@ -52,6 +54,16 @@ public class DirectoryBuilder {
         startBlock, inodeNumber, offset, type.dirValue(), nameBytes));
   }
 
+  @VisibleForTesting
+  List<Entry> getEntries() {
+    return Collections.unmodifiableList(entries);
+  }
+
+  @VisibleForTesting
+  List<DirectoryElement> getElements() {
+    return Collections.unmodifiableList(elements);
+  }
+
   public int getStructureSize() {
     build();
     int size = 0;
@@ -70,15 +82,15 @@ public class DirectoryBuilder {
     DirectoryHeader header = null;
     for (Entry entry : entries) {
       header = advance(header, entry);
-      header.count++;
+      header.incrementCount();
 
-      DirectoryEntry dent = new DirectoryEntry();
-      dent.header = header;
-      dent.offset = entry.offset;
-      dent.inodeNumberDelta = (short) (entry.inodeNumber - header.inodeNumber);
-      dent.name = entry.name;
-      dent.type = entry.type;
-      dent.size = (short) (entry.name.length - 1);
+      DirectoryEntry dent = new DirectoryEntry(
+          entry.offset,
+          (short) (entry.inodeNumber - header.getInodeNumber()),
+          entry.getType(),
+          (short) (entry.getName().length - 1),
+          entry.getName(),
+          null);
 
       elements.add(dent);
     }
@@ -94,35 +106,52 @@ public class DirectoryBuilder {
 
   private DirectoryHeader advance(DirectoryHeader header, Entry entry) {
     if ((header != null) &&
-        (header.startBlock == entry.startBlock) &&
-        (entry.inodeNumber >= header.inodeNumber) &&
-        (entry.inodeNumber <= (header.inodeNumber + 0x7fff)) &&
-        (header.count < (DirectoryHeader.MAX_DIR_ENTRIES - 1))) {
+        (header.getStartBlock() == entry.startBlock) &&
+        (entry.inodeNumber >= header.getInodeNumber()) &&
+        (entry.inodeNumber <= (header.getInodeNumber() + 0x7fff)) &&
+        (header.getCount() < (DirectoryHeader.MAX_DIR_ENTRIES - 1))) {
       return header;
     }
 
-    header = new DirectoryHeader();
-    header.count = -1;
-    header.startBlock = entry.startBlock;
-    header.inodeNumber = entry.inodeNumber;
+    header = new DirectoryHeader(-1, entry.startBlock, entry.inodeNumber);
     elements.add(header);
     return header;
   }
 
-  static class Entry {
-    int startBlock;
-    int inodeNumber;
-    byte[] name;
-    short offset;
-    short type;
+  public static class Entry {
+    private final int startBlock;
+    private final int inodeNumber;
+    private final byte[] name;
+    private final short offset;
+    private final short type;
 
-    Entry(int startBlock, int inodeNumber, short offset, short type,
+    public Entry(int startBlock, int inodeNumber, short offset, short type,
         byte[] name) {
       this.startBlock = startBlock;
       this.inodeNumber = inodeNumber;
       this.offset = offset;
       this.type = type;
       this.name = name;
+    }
+
+    public int getStartBlock() {
+      return startBlock;
+    }
+
+    public int getInodeNumber() {
+      return inodeNumber;
+    }
+
+    public byte[] getName() {
+      return name;
+    }
+
+    public short getOffset() {
+      return offset;
+    }
+
+    public short getType() {
+      return type;
     }
   }
 

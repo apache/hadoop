@@ -32,7 +32,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestBasicFileINode {
 
-  BasicFileINode inode;
+  private BasicFileINode inode;
 
   @Before
   public void setUp() {
@@ -41,7 +41,7 @@ public class TestBasicFileINode {
     inode.setFragmentBlockIndex(2);
     inode.setFragmentOffset(3);
     inode.setFileSize(131073L);
-    inode.setBlockSizes(new int[] { 5 });
+    inode.setBlockSizes(new int[] {5});
   }
 
   @Test
@@ -157,7 +157,7 @@ public class TestBasicFileINode {
   @Test
   public void getChildSerializedSizeShouldReturnCorrectValue() {
     assertEquals(20, inode.getChildSerializedSize());
-    inode.setBlockSizes(new int[] { 1, 2, 3 });
+    inode.setBlockSizes(new int[] {1, 2, 3});
     assertEquals(28, inode.getChildSerializedSize());
   }
 
@@ -180,7 +180,7 @@ public class TestBasicFileINode {
         bDest.getFragmentBlockIndex());
     assertEquals("wrong fragment offset", 3, bDest.getFragmentOffset());
     assertEquals("wrong file size", 131073L, bDest.getFileSize());
-    assertArrayEquals("wrong block sizes", new int[] { 5 },
+    assertArrayEquals("wrong block sizes", new int[] {5},
         bDest.getBlockSizes());
   }
 
@@ -202,7 +202,7 @@ public class TestBasicFileINode {
         bDest.getFragmentBlockIndex());
     assertEquals("wrong fragment offset", 0, bDest.getFragmentOffset());
     assertEquals("wrong file size", 131072L, bDest.getFileSize());
-    assertArrayEquals("wrong block sizes", new int[] { 5 },
+    assertArrayEquals("wrong block sizes", new int[] {5},
         bDest.getBlockSizes());
   }
 
@@ -224,7 +224,7 @@ public class TestBasicFileINode {
         bDest.getFragmentBlockIndex());
     assertEquals("wrong fragment offset", 0, bDest.getFragmentOffset());
     assertEquals("wrong file size", 131071L, bDest.getFileSize());
-    assertArrayEquals("wrong block sizes", new int[] { 5 },
+    assertArrayEquals("wrong block sizes", new int[] {5},
         bDest.getBlockSizes());
   }
 
@@ -234,14 +234,14 @@ public class TestBasicFileINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnBasicIfExtendedAttributesNotNeeded() {
+  public void staticSimplifyMethodReturnsBasicWhenNoExtendedAttributes() {
     FileINode inode2 = new ExtendedFileINode();
     inode2.setBlocksStart(1L);
     inode2.setNlink(1);
     inode2.setFragmentBlockIndex(2);
     inode2.setFragmentOffset(3);
     inode2.setFileSize(131073L);
-    inode2.setBlockSizes(new int[] { 5 });
+    inode2.setBlockSizes(new int[] {5});
 
     FileINode result = BasicFileINode.simplify(inode2);
     assertSame("wrong class", BasicFileINode.class, result.getClass());
@@ -258,14 +258,14 @@ public class TestBasicFileINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnOriginalIfLinkCountGreaterThanOne() {
+  public void staticSimplifyMethodReturnsOriginalIfLinkCountGreaterThanOne() {
     FileINode inode2 = new ExtendedFileINode();
     inode2.setBlocksStart(1L);
     inode2.setNlink(2);
     inode2.setFragmentBlockIndex(2);
     inode2.setFragmentOffset(3);
     inode2.setFileSize(131073L);
-    inode2.setBlockSizes(new int[] { 5 });
+    inode2.setBlockSizes(new int[] {5});
     assertSame(inode2, BasicFileINode.simplify(inode2));
   }
 
@@ -278,7 +278,7 @@ public class TestBasicFileINode {
     inode2.setFragmentBlockIndex(2);
     inode2.setFragmentOffset(3);
     inode2.setFileSize(131073L);
-    inode2.setBlockSizes(new int[] { 5 });
+    inode2.setBlockSizes(new int[] {5});
     assertSame(inode2, BasicFileINode.simplify(inode2));
   }
 
@@ -291,7 +291,7 @@ public class TestBasicFileINode {
     inode2.setFragmentBlockIndex(2);
     inode2.setFragmentOffset(3);
     inode2.setFileSize(131073L);
-    inode2.setBlockSizes(new int[] { 5 });
+    inode2.setBlockSizes(new int[] {5});
     assertSame(inode2, BasicFileINode.simplify(inode2));
   }
 
@@ -303,7 +303,7 @@ public class TestBasicFileINode {
     inode2.setFragmentBlockIndex(2);
     inode2.setFragmentOffset(3);
     inode2.setFileSize(131073L);
-    inode2.setBlockSizes(new int[] { 5 });
+    inode2.setBlockSizes(new int[] {5});
     assertSame(inode2, BasicFileINode.simplify(inode2));
   }
 
@@ -315,7 +315,7 @@ public class TestBasicFileINode {
     inode2.setFragmentBlockIndex(2);
     inode2.setFragmentOffset(3);
     inode2.setFileSize(0x1_0000_0000L);
-    inode2.setBlockSizes(new int[] { 5 });
+    inode2.setBlockSizes(new int[] {5});
     assertSame(inode2, BasicFileINode.simplify(inode2));
   }
 

@@ -41,12 +41,12 @@ public class ExportTable {
 
   private static final long[] EMPTY = new long[0];
 
-  MetadataBlockReader metaBlockReader;
+  private MetadataBlockReader mbReader;
 
-  boolean available = false;
-  int tag = -1;
-  int inodeCount = 0;
-  long[] tableRef = EMPTY;
+  private boolean available = false;
+  private int ourTag = -1;
+  private int inodeCount = 0;
+  private long[] tableRef = EMPTY;
 
   private static int numTables(int inodeCount) {
     return (inodeCount / ENTRIES_PER_BLOCK) + (
@@ -84,7 +84,7 @@ public class ExportTable {
     short offset = (short) (BYTES_PER_TABLE_ENTRY * (nInode - (blockNum
         * ENTRIES_PER_BLOCK)));
 
-    return metaBlockReader.rawReader(tag, tableRef[blockNum], offset)
+    return mbReader.rawReader(ourTag, tableRef[blockNum], offset)
         .readLong();
   }
 
@@ -92,14 +92,14 @@ public class ExportTable {
       MetadataBlockReader metaBlockReader)
       throws IOException, SquashFsException {
 
-    this.tag = tag;
+    this.ourTag = tag;
 
     SuperBlock sb = tableReader.getSuperBlock();
     if (!sb.hasFlag(SuperBlockFlag.EXPORTABLE)) {
       available = false;
       inodeCount = 0;
       tableRef = EMPTY;
-      this.metaBlockReader = null;
+      this.mbReader = null;
       return;
     }
 
@@ -112,7 +112,7 @@ public class ExportTable {
     for (int i = 0; i < tableCount; i++) {
       tableRef[i] = tableData.getLong();
     }
-    this.metaBlockReader = metaBlockReader;
+    this.mbReader = metaBlockReader;
     available = true;
   }
 

@@ -26,7 +26,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-public class SuperBlockTestUtils {
+public final class SuperBlockTestUtils {
+
+  private SuperBlockTestUtils() {
+  }
 
   public static byte[] serializeSuperBlock(SuperBlock sb) throws IOException {
     try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {

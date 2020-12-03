@@ -32,7 +32,7 @@ public class MetadataBlockCache implements MetadataBlockReader {
   private static final int DEFAULT_CACHE_SIZE = 32; // 256 KB
 
   private final int cacheSize;
-  private final TaggedMetadataBlockReader reader;
+  private final TaggedMetadataBlockReader taggedReader;
   private final boolean shouldClose;
   private final LruBlockCache cache;
   private final AtomicLong cacheHits = new AtomicLong(0L);
@@ -54,18 +54,18 @@ public class MetadataBlockCache implements MetadataBlockReader {
   public MetadataBlockCache(TaggedMetadataBlockReader reader, int cacheSize,
       boolean shouldClose) {
     this.cacheSize = cacheSize;
-    this.reader = reader;
+    this.taggedReader = reader;
     this.cache = new LruBlockCache(cacheSize < 1 ? 1 : cacheSize);
     this.shouldClose = shouldClose;
   }
 
   public synchronized void add(int tag, MetadataBlockReader reader) {
-    this.reader.add(tag, reader);
+    this.taggedReader.add(tag, reader);
   }
 
   @Override
   public SuperBlock getSuperBlock(int tag) {
-    return reader.getSuperBlock(tag);
+    return taggedReader.getSuperBlock(tag);
   }
 
   @Override
@@ -83,7 +83,7 @@ public class MetadataBlockCache implements MetadataBlockReader {
       cacheHits.incrementAndGet();
     } else {
       cacheMisses.incrementAndGet();
-      block = reader.read(tag, fileOffset);
+      block = taggedReader.read(tag, fileOffset);
       synchronized (this) {
         cache.put(key, block);
       }
@@ -95,7 +95,7 @@ public class MetadataBlockCache implements MetadataBlockReader {
   @Override
   public void close() throws IOException {
     if (shouldClose) {
-      reader.close();
+      taggedReader.close();
     }
   }
 
@@ -165,7 +165,7 @@ public class MetadataBlockCache implements MetadataBlockReader {
 
     private final int cacheSize;
 
-    public LruBlockCache(int cacheSize) {
+    LruBlockCache(int cacheSize) {
       super(16, 0.75f, true);
       this.cacheSize = cacheSize;
     }

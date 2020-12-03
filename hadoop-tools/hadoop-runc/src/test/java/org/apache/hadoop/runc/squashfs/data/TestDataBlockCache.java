@@ -28,11 +28,11 @@ import static org.junit.Assert.assertSame;
 
 public class TestDataBlockCache {
 
-  DataBlockCache cache;
-  DataBlockCache.Key[] keys;
-  DataBlock[] blocks;
-  DataBlockCache.Key extraKey;
-  DataBlock extraBlock;
+  private DataBlockCache cache;
+  private DataBlockCache.Key[] keys;
+  private DataBlock[] blocks;
+  private DataBlockCache.Key extraKey;
+  private DataBlock extraBlock;
 
   @Before
   public void setUp() throws Exception {

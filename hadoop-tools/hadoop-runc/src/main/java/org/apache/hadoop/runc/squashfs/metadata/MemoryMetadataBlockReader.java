@@ -28,7 +28,7 @@ import java.io.IOException;
 
 public class MemoryMetadataBlockReader implements MetadataBlockReader {
 
-  private final int tag;
+  private final int ourTag;
   private final SuperBlock sb;
   private final byte[] data;
   private final int offset;
@@ -40,7 +40,7 @@ public class MemoryMetadataBlockReader implements MetadataBlockReader {
 
   public MemoryMetadataBlockReader(int tag, SuperBlock sb, byte[] data,
       int offset, int length) {
-    this.tag = tag;
+    this.ourTag = tag;
     this.sb = sb;
     this.data = data;
     this.offset = offset;
@@ -49,7 +49,7 @@ public class MemoryMetadataBlockReader implements MetadataBlockReader {
 
   @Override
   public SuperBlock getSuperBlock(int tag) {
-    if (this.tag != tag) {
+    if (ourTag != tag) {
       throw new IllegalArgumentException(String.format("Invalid tag: %d", tag));
     }
     return sb;
@@ -58,7 +58,7 @@ public class MemoryMetadataBlockReader implements MetadataBlockReader {
   @Override
   public MetadataBlock read(int tag, long fileOffset)
       throws IOException, SquashFsException {
-    if (this.tag != tag) {
+    if (ourTag != tag) {
       throw new IllegalArgumentException(String.format("Invalid tag: %d", tag));
     }
     if (fileOffset >= length) {
@@ -76,6 +76,7 @@ public class MemoryMetadataBlockReader implements MetadataBlockReader {
 
   @Override
   public void close() {
+    // nothing to do
   }
 
 }

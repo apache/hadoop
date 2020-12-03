@@ -40,12 +40,12 @@ public class TestFileMetadataBlockReader {
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
 
-  int tag;
-  File tempFile;
-  FileMetadataBlockReader reader;
-  SuperBlock sb;
-  byte[] block;
-  byte[] encoded;
+  private int tag;
+  private File tempFile;
+  private FileMetadataBlockReader reader;
+  private SuperBlock sb;
+  private byte[] block;
+  private byte[] encoded;
 
   @Before
   public void setUp() throws Exception {
@@ -94,8 +94,8 @@ public class TestFileMetadataBlockReader {
   @Test
   public void readFromFileOffsetShouldSucceed() throws Exception {
     MetadataBlock mb = reader.read(tag, SuperBlock.SIZE);
-    assertEquals(1024, mb.data.length);
-    assertArrayEquals(block, mb.data);
+    assertEquals(1024, mb.getData().length);
+    assertArrayEquals(block, mb.getData());
   }
 
   @Test
@@ -104,8 +104,8 @@ public class TestFileMetadataBlockReader {
     try (RandomAccessFile raf = new RandomAccessFile(tempFile, "r")) {
       reader = new FileMetadataBlockReader(tag, raf, sb, true);
       MetadataBlock mb = reader.read(tag, SuperBlock.SIZE);
-      assertEquals(1024, mb.data.length);
-      assertArrayEquals(block, mb.data);
+      assertEquals(1024, mb.getData().length);
+      assertArrayEquals(block, mb.getData());
     }
   }
 

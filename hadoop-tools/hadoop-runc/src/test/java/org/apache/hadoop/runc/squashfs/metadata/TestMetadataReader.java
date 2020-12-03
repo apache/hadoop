@@ -145,7 +145,7 @@ public class TestMetadataReader {
 
   @Test
   public void skipBytesShouldDoSo() throws Exception {
-    byte[] data = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    byte[] data = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     MetadataReader r = reader(data, ref(10101, 0L, (short) 0));
     assertEquals("wrong bytes skipped", 5, r.skipBytes(5));
     assertEquals("wrong next byte", (byte) 5, r.readByte());
@@ -153,14 +153,14 @@ public class TestMetadataReader {
 
   @Test
   public void skipBytesShouldDoPartialSkipIfEof() throws Exception {
-    byte[] data = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    byte[] data = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     MetadataReader r = reader(data, ref(10101, 0L, (short) 0, 10));
     assertEquals("wrong bytes skipped", 10, r.skipBytes(15));
   }
 
   @Test
   public void readBooleanShouldWork() throws Exception {
-    byte[] data = new byte[] { 0, 1 };
+    byte[] data = new byte[] {0, 1};
     MetadataReader r = reader(data, ref(10101, 0L, (short) 0, 2));
     assertFalse("first value true", r.readBoolean());
     assertTrue("second value false", r.readBoolean());
@@ -168,14 +168,14 @@ public class TestMetadataReader {
 
   @Test
   public void readByteShouldWork() throws Exception {
-    byte[] data = new byte[] { (byte) 0xff };
+    byte[] data = new byte[] {(byte) 0xff};
     MetadataReader r = reader(data, ref(10101, 0L, (short) 0, 1));
     assertEquals((byte) 0xff, r.readByte());
   }
 
   @Test(expected = EOFException.class)
   public void readByteShouldThrowEOFExceptionIfEndOfStream() throws Exception {
-    byte[] data = new byte[] { (byte) 0xff };
+    byte[] data = new byte[] {(byte) 0xff};
     MetadataReader r = reader(data, ref(10101, 0L, (short) 0, 1));
     assertEquals((byte) 0xff, r.readByte());
     r.readByte();
@@ -183,7 +183,7 @@ public class TestMetadataReader {
 
   @Test
   public void readUnsignedByteShouldWork() throws Exception {
-    byte[] data = new byte[] { (byte) 0xff };
+    byte[] data = new byte[] {(byte) 0xff};
     MetadataReader r = reader(data, ref(10101, 0L, (short) 0, 1));
     assertEquals(0xff, r.readUnsignedByte());
   }

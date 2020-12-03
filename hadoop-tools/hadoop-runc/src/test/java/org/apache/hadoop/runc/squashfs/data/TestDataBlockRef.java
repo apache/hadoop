@@ -27,7 +27,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestDataBlockRef {
 
-  DataBlockRef ref;
+  private DataBlockRef ref;
 
   @Before
   public void setUp() {

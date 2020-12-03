@@ -27,7 +27,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestFragmentRef {
 
-  FragmentRef ref;
+  private FragmentRef ref;
 
   @Before
   public void setUp() {

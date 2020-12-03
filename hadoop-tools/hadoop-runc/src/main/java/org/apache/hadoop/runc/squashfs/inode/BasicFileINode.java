@@ -36,14 +36,13 @@ public class BasicFileINode extends AbstractINode implements FileINode {
 
   private static final int[] EMPTY = new int[0];
 
-  int blocksStart;
-  int fragmentBlockIndex = FRAGMENT_BLOCK_INDEX_NONE;
-  int fragmentOffset = 0;
-  int fileSize;
-  int[] blockSizes = EMPTY;
+  private int blocksStart;
+  private int fragmentBlockIndex = FRAGMENT_BLOCK_INDEX_NONE;
+  private int fragmentOffset = 0;
+  private int fileSize;
+  private int[] blockSizes = EMPTY;
 
   static FileINode simplify(FileINode src) {
-
     if (src instanceof BasicFileINode) {
       return src;
     }
@@ -113,8 +112,6 @@ public class BasicFileINode extends AbstractINode implements FileINode {
   public void setFragmentOffset(int fragmentOffset) {
     this.fragmentOffset = fragmentOffset;
   }
-
-  ;
 
   @Override
   public long getFileSize() {

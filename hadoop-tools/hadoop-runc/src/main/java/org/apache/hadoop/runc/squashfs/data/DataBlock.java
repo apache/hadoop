@@ -20,9 +20,9 @@ package org.apache.hadoop.runc.squashfs.data;
 
 public class DataBlock {
 
-  byte[] data;
-  int logicalSize;
-  int physicalSize;
+  private final byte[] data;
+  private final int logicalSize;
+  private final int physicalSize;
 
   public byte[] getData() {
     return data;

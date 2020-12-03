@@ -36,7 +36,10 @@ import java.util.zip.DeflaterOutputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
-public class DataTestUtils {
+public final class DataTestUtils {
+
+  private DataTestUtils() {
+  }
 
   public static byte[] decompress(byte[] data) throws IOException {
     byte[] xfer = new byte[1024];

@@ -21,6 +21,7 @@ package org.apache.hadoop.runc.squashfs.test;
 import org.apache.hadoop.runc.squashfs.directory.DirectoryBuilder;
 import org.apache.hadoop.runc.squashfs.directory.DirectoryElement;
 import org.apache.hadoop.runc.squashfs.directory.DirectoryEntry;
+import org.apache.hadoop.runc.squashfs.directory.DirectoryTestAccessor;
 import org.apache.hadoop.runc.squashfs.directory.DirectoryHeader;
 import org.apache.hadoop.runc.squashfs.metadata.MemoryMetadataBlockReader;
 import org.apache.hadoop.runc.squashfs.metadata.MetadataBlockReader;
@@ -36,7 +37,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DirectoryTestUtils {
+public final class DirectoryTestUtils {
+
+  private DirectoryTestUtils() {
+  }
 
   public static byte[] serializeDirectoryBuilder(DirectoryBuilder db)
       throws IOException {
@@ -93,7 +97,7 @@ public class DirectoryTestUtils {
     try (MetadataBlockReader mbr = new MemoryMetadataBlockReader(tag, sb,
         data)) {
       MetadataReader reader = mbr.rawReader(tag, 0L, (short) 0);
-      DirectoryHeader hdr = new DirectoryHeader();
+      DirectoryHeader hdr = DirectoryTestAccessor.createDirectoryHeader();
       hdr.readData(reader);
       return hdr;
     }
@@ -112,7 +116,8 @@ public class DirectoryTestUtils {
     try (MetadataBlockReader mbr = new MemoryMetadataBlockReader(tag, sb,
         data)) {
       MetadataReader reader = mbr.rawReader(tag, 0L, (short) 0);
-      DirectoryEntry entry = new DirectoryEntry();
+      DirectoryEntry entry = DirectoryTestAccessor
+          .createDirectoryEntry();
       entry.readData(header, reader);
       return entry;
     }

@@ -91,7 +91,7 @@ public class DockerClient implements Closeable {
   }
 
   public void setManifestChooser(ManifestChooser chooser) {
-    this.manifestChooser = manifestChooser;
+    this.manifestChooser = chooser;
   }
 
   public ManifestChooser getManifestChooser() {

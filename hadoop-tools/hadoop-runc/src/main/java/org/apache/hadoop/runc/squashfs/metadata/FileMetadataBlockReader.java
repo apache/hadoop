@@ -27,14 +27,14 @@ import java.io.RandomAccessFile;
 
 public class FileMetadataBlockReader implements MetadataBlockReader {
 
-  private final int tag;
+  private final int ourTag;
   private final RandomAccessFile raf;
   private final SuperBlock sb;
   private final boolean shouldClose;
 
   public FileMetadataBlockReader(int tag, File file)
       throws IOException, SquashFsException {
-    this.tag = tag;
+    this.ourTag = tag;
     this.raf = new RandomAccessFile(file, "r");
     this.sb = SuperBlock.read(raf);
     this.shouldClose = true;
@@ -45,7 +45,7 @@ public class FileMetadataBlockReader implements MetadataBlockReader {
       RandomAccessFile raf,
       SuperBlock sb,
       boolean shouldClose) throws SquashFsException, IOException {
-    this.tag = tag;
+    this.ourTag = tag;
     this.raf = raf;
     this.sb = sb;
     this.shouldClose = shouldClose;
@@ -53,7 +53,7 @@ public class FileMetadataBlockReader implements MetadataBlockReader {
 
   @Override
   public SuperBlock getSuperBlock(int tag) {
-    if (this.tag != tag) {
+    if (ourTag != tag) {
       throw new IllegalArgumentException(String.format("Invalid tag: %d", tag));
     }
     return sb;
@@ -62,7 +62,7 @@ public class FileMetadataBlockReader implements MetadataBlockReader {
   @Override
   public MetadataBlock read(int tag, long fileOffset)
       throws IOException, SquashFsException {
-    if (this.tag != tag) {
+    if (ourTag != tag) {
       throw new IllegalArgumentException(String.format("Invalid tag: %d", tag));
     }
     long prevOffset = raf.getFilePointer();

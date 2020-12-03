@@ -32,11 +32,11 @@ import static org.apache.hadoop.runc.squashfs.util.BinUtils.dumpBin;
 public class BasicDirectoryINode extends AbstractINode
     implements DirectoryINode {
 
-  int startBlock;
-  int nlink = 1;
-  short fileSize; // 3 + # of uncompressed bytes in directory table
-  short offset;
-  int parentInodeNumber;
+  private int startBlock;
+  private int nlink = 1;
+  private short fileSize; // 3 + # of uncompressed bytes in directory table
+  private short offset;
+  private int parentInodeNumber;
 
   static DirectoryINode simplify(DirectoryINode src) {
     if (src instanceof BasicDirectoryINode) {

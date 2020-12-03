@@ -26,7 +26,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestBasicFifoINode {
 
-  BasicFifoINode inode;
+  private BasicFifoINode inode;
 
   @Before
   public void setUp() {
@@ -55,7 +55,7 @@ public class TestBasicFifoINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnOriginalIfExtendedAttributesPresent() {
+  public void staticSimplifyMethodReturnsOriginalWhenExtendedAttributes() {
     FifoINode inode2 = new ExtendedFifoINode();
     inode2.setNlink(2);
     inode2.setXattrIndex(3);
@@ -63,7 +63,7 @@ public class TestBasicFifoINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnBasicIfExtendedAttributesNotPresent() {
+  public void staticSimplifyMethodReturnsBasicWhenNoExtendedAttributes() {
     FifoINode inode2 = new ExtendedFifoINode();
     inode2.setNlink(2);
     inode2.setXattrIndex(-1);

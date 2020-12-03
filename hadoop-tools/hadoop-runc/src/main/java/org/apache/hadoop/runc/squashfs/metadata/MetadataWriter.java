@@ -31,21 +31,23 @@ public class MetadataWriter implements DataOutput {
   private final byte[] xfer = new byte[1];
   private final byte[] currentBlock = new byte[8192];
   private final List<byte[]> blocks = new ArrayList<>();
-  private long location = 0L;
-  private int offset = 0;
+  private long currentLocation = 0L;
+  private int currentOffset = 0;
 
   public void save(DataOutput out) throws IOException {
     flush();
     for (byte[] block : blocks) {
       out.write(block);
     }
-    location = 0L;
-    offset = 0;
+    currentLocation = 0L;
+    currentOffset = 0;
     blocks.clear();
   }
 
   public MetadataBlockRef getCurrentReference() {
-    return new MetadataBlockRef((int) (location & 0xffffffff), (short) offset);
+    return new MetadataBlockRef(
+        (int) (currentLocation & 0xffffffff),
+        (short) currentOffset);
   }
 
   @Override
@@ -54,11 +56,11 @@ public class MetadataWriter implements DataOutput {
   }
 
   public void flush() throws IOException {
-    if (offset == 0) {
+    if (currentOffset == 0) {
       return;
     }
 
-    byte[] compressed = compress(currentBlock, 0, offset);
+    byte[] compressed = compress(currentBlock, 0, currentOffset);
     byte[] encoded;
     int size;
 
@@ -67,17 +69,17 @@ public class MetadataWriter implements DataOutput {
       encoded = new byte[compressed.length + 2];
       System.arraycopy(compressed, 0, encoded, 2, compressed.length);
     } else {
-      size = (offset & 0x7fff) | 0x8000;
-      encoded = new byte[offset + 2];
-      System.arraycopy(currentBlock, 0, encoded, 2, offset);
+      size = (currentOffset & 0x7fff) | 0x8000;
+      encoded = new byte[currentOffset + 2];
+      System.arraycopy(currentBlock, 0, encoded, 2, currentOffset);
     }
 
     encoded[0] = (byte) (size & 0xff);
     encoded[1] = (byte) ((size >> 8) & 0xff);
 
     blocks.add(encoded);
-    location += encoded.length;
-    offset = 0;
+    currentLocation += encoded.length;
+    currentOffset = 0;
   }
 
   private byte[] compress(byte[] data, int offset, int length)
@@ -101,14 +103,14 @@ public class MetadataWriter implements DataOutput {
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
     while (len > 0) {
-      int capacity = currentBlock.length - offset;
+      int capacity = currentBlock.length - currentOffset;
       int bytesToWrite = Math.min(len, capacity);
 
-      System.arraycopy(b, off, currentBlock, offset, bytesToWrite);
-      offset += bytesToWrite;
+      System.arraycopy(b, off, currentBlock, currentOffset, bytesToWrite);
+      currentOffset += bytesToWrite;
       off += bytesToWrite;
       len -= bytesToWrite;
-      if (currentBlock.length == offset) {
+      if (currentBlock.length == currentOffset) {
         flush();
       }
     }

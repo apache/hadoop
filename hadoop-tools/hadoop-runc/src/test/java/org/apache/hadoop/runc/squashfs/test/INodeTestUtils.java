@@ -31,7 +31,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-public class INodeTestUtils {
+public final class INodeTestUtils {
+
+  private INodeTestUtils() {
+  }
 
   public static byte[] serializeINode(INode inode) throws IOException {
     MetadataWriter writer = new MetadataWriter();

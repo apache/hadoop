@@ -30,7 +30,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestBasicDirectoryINode {
 
-  BasicDirectoryINode inode;
+  private BasicDirectoryINode inode;
 
   @Before
   public void setUp() {
@@ -163,7 +163,7 @@ public class TestBasicDirectoryINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnBasicIfExtendedAttributesNotNeeded() {
+  public void staticSimplifyMethodReturnsBasicWhenNoExtendedAttributes() {
     DirectoryINode inode2 = new ExtendedDirectoryINode();
     inode2.setStartBlock(1);
     inode2.setNlink(2);
@@ -186,7 +186,7 @@ public class TestBasicDirectoryINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnOriginalIfFileSizeTooLarge() {
+  public void staticSimplifyMethodReturnsOriginalWhenFileSizeTooLarge() {
     DirectoryINode inode2 = new ExtendedDirectoryINode();
     inode2.setStartBlock(1);
     inode2.setNlink(2);
@@ -212,7 +212,7 @@ public class TestBasicDirectoryINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnOriginalIfExtendedAttributesPresent() {
+  public void staticSimplifyMethodReturnsOriginalWhenExtendedAttributes() {
     DirectoryINode inode2 = new ExtendedDirectoryINode();
     inode2.setStartBlock(1);
     inode2.setNlink(2);

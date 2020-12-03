@@ -32,8 +32,8 @@ import static org.apache.hadoop.runc.squashfs.util.BinUtils.dumpBin;
 abstract public class AbstractBasicDeviceINode extends AbstractINode
     implements DeviceINode {
 
-  int nlink = 1;
-  int device;
+  private int nlink = 1;
+  private int device;
 
   @Override
   public final int getNlink() {

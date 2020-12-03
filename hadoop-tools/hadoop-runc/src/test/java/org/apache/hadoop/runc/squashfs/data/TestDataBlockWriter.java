@@ -40,9 +40,9 @@ public class TestDataBlockWriter {
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
 
-  File tempFile;
-  RandomAccessFile raf;
-  DataBlockWriter writer;
+  private File tempFile;
+  private RandomAccessFile raf;
+  private DataBlockWriter writer;
 
   @Before
   public void setUp() throws Exception {

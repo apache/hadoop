@@ -44,10 +44,10 @@ public class TestDataBlockReader {
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
 
-  File tempFile;
-  RandomAccessFile raf;
-  SuperBlock sb;
-  int tag;
+  private File tempFile;
+  private RandomAccessFile raf;
+  private SuperBlock sb;
+  private int tag;
 
   @Before
   public void setUp() throws Exception {
@@ -140,7 +140,7 @@ public class TestDataBlockReader {
     BasicFileINode inode = new BasicFileINode();
     inode.setFileSize(data.length);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize()});
     DataBlock block = DataBlockReader.readBlock(tag, raf, sb, inode, 0);
     assertEquals("wrong logical size", data.length, block.getLogicalSize());
     assertEquals("wrong physical size", data.length, block.getPhysicalSize());
@@ -161,7 +161,7 @@ public class TestDataBlockReader {
     BasicFileINode inode = new BasicFileINode();
     inode.setFileSize(data.length);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize()});
 
     DataBlockReader.readBlock(tag, raf, sb, inode, 0);
   }
@@ -181,7 +181,7 @@ public class TestDataBlockReader {
     BasicFileINode inode = new BasicFileINode();
     inode.setFileSize(data.length);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize()});
 
     DataBlockReader.readBlock(tag, raf, sb, inode, 0);
   }
@@ -200,13 +200,13 @@ public class TestDataBlockReader {
     BasicFileINode inode = new BasicFileINode();
     inode.setFileSize(data.length / 2);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize()});
 
     DataBlockReader.readBlock(tag, raf, sb, inode, 0);
   }
 
   @Test(expected = UnsupportedOperationException.class)
-  public void readOfCompressedBlockShouldFailIfCompressionIdIsSetToAnUnsupportedAlgorithm()
+  public void readOfCompressedBlockWithUnsupportedAlgShouldFail()
       throws Exception {
     sb.setCompressionId(CompressionId.XZ);
     byte[] data = new byte[SuperBlock.DEFAULT_BLOCK_SIZE];
@@ -219,7 +219,7 @@ public class TestDataBlockReader {
     BasicFileINode inode = new BasicFileINode();
     inode.setFileSize(data.length);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize()});
 
     DataBlockReader.readBlock(tag, raf, sb, inode, 0);
   }
@@ -238,7 +238,7 @@ public class TestDataBlockReader {
     BasicFileINode inode = new BasicFileINode();
     inode.setFileSize(data.length * 2);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize(), ref2.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize(), ref2.getInodeSize()});
     DataBlock block = DataBlockReader.readBlock(tag, raf, sb, inode, 0);
     assertEquals("wrong logical size", data.length, block.getLogicalSize());
     assertEquals("wrong physical size", data.length, block.getPhysicalSize());
@@ -265,7 +265,7 @@ public class TestDataBlockReader {
     inode.setFragmentBlockIndex(1);
     inode.setFragmentOffset(1);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize()});
     DataBlock block = DataBlockReader.readBlock(tag, raf, sb, inode, 0);
     assertEquals("wrong logical size", data.length, block.getLogicalSize());
     assertEquals("wrong physical size", data.length, block.getPhysicalSize());
@@ -284,7 +284,7 @@ public class TestDataBlockReader {
     BasicFileINode inode = new BasicFileINode();
     inode.setFileSize(data.length - 1);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize()});
 
     DataBlock block = DataBlockReader.readBlock(tag, raf, sb, inode, 0);
     assertEquals("wrong logical size", data.length - 1, block.getLogicalSize());
@@ -301,7 +301,7 @@ public class TestDataBlockReader {
     BasicFileINode inode = new BasicFileINode();
     inode.setFileSize(data.length);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize()});
 
     DataBlock block = DataBlockReader.readBlock(tag, raf, sb, inode, 0);
     assertEquals("wrong logical size", data.length, block.getLogicalSize());
@@ -321,7 +321,7 @@ public class TestDataBlockReader {
     BasicFileINode inode = new BasicFileINode();
     inode.setFileSize(data.length);
     inode.setBlocksStart(ref.getLocation());
-    inode.setBlockSizes(new int[] { ref.getInodeSize() });
+    inode.setBlockSizes(new int[] {ref.getInodeSize()});
 
     DataBlock block = DataBlockReader.readBlock(tag, raf, sb, inode, 0);
     assertEquals("wrong logical size", data.length, block.getLogicalSize());

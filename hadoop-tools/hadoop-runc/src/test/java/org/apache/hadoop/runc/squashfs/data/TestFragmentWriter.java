@@ -43,9 +43,9 @@ public class TestFragmentWriter {
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
 
-  File tempFile;
-  RandomAccessFile raf;
-  FragmentWriter writer;
+  private File tempFile;
+  private RandomAccessFile raf;
+  private FragmentWriter writer;
 
   @Before
   public void setUp() throws Exception {

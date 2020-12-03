@@ -33,11 +33,11 @@ import static org.apache.hadoop.runc.squashfs.util.BinUtils.dumpBin;
 
 abstract public class AbstractINode implements INode {
 
-  short permissions;
-  short uidIdx;
-  short gidIdx;
-  int modifiedTime;
-  int inodeNumber;
+  private short permissions;
+  private short uidIdx;
+  private short gidIdx;
+  private int modifiedTime;
+  private int inodeNumber;
 
   @Override
   public final void copyTo(INode dest) {

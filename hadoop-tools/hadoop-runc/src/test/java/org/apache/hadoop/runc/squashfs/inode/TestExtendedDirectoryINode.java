@@ -31,7 +31,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestExtendedDirectoryINode {
 
-  ExtendedDirectoryINode inode;
+  private ExtendedDirectoryINode inode;
 
   @Before
   public void setUp() {

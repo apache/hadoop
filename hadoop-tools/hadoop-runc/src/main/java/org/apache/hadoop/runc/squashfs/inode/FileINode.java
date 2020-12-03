@@ -20,7 +20,7 @@ package org.apache.hadoop.runc.squashfs.inode;
 
 public interface FileINode extends INode {
 
-  static final int FRAGMENT_BLOCK_INDEX_NONE = 0xffff_ffff;
+  int FRAGMENT_BLOCK_INDEX_NONE = 0xffff_ffff;
 
   long getBlocksStart();
 

@@ -44,8 +44,7 @@ public enum INodeType {
   private final char mode;
   private final Supplier<INode> creator;
 
-  private INodeType(
-      int value, int dirValue, char mode, Supplier<INode> creator) {
+  INodeType(int value, int dirValue, char mode, Supplier<INode> creator) {
     this.value = (short) value;
     this.dirValue = (short) dirValue;
     this.mode = mode;

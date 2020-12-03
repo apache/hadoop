@@ -26,7 +26,7 @@ import static org.junit.Assert.assertEquals;
 
 public class TestMetadataBlockRef {
 
-  MetadataBlockRef ref;
+  private MetadataBlockRef ref;
 
   @Before
   public void setUp() {

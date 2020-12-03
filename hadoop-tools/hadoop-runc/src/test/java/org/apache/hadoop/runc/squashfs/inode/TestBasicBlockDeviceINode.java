@@ -26,7 +26,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestBasicBlockDeviceINode {
 
-  BasicBlockDeviceINode inode;
+  private BasicBlockDeviceINode inode;
 
   @Before
   public void setUp() {
@@ -56,7 +56,8 @@ public class TestBasicBlockDeviceINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnOriginalIfExtendedAttributesPresent() {
+  public void staticSimplifyMethodReturnsOriginalWhenExtendedAttributes() {
+  } {
     BlockDeviceINode inode2 = new ExtendedBlockDeviceINode();
     inode2.setDevice(1);
     inode2.setNlink(2);
@@ -65,7 +66,7 @@ public class TestBasicBlockDeviceINode {
   }
 
   @Test
-  public void staticSimplifyMethodShouldReturnBasicIfExtendedAttributesNotPresent() {
+  public void staticSimplifyMethodReturnsBasiWhenNoExtendedAttributes() {
     BlockDeviceINode inode2 = new ExtendedBlockDeviceINode();
     inode2.setDevice(1);
     inode2.setNlink(2);

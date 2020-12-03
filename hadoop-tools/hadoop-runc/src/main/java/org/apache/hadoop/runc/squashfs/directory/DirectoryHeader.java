@@ -32,12 +32,16 @@ public class DirectoryHeader implements DirectoryElement {
 
   public static final short MAX_DIR_ENTRIES = 256;
 
-  protected int count; // number of entries (1 less than actual length)
-  protected int startBlock; // starting inode block
-  protected int inodeNumber; // starting inode number
+  private int count; // number of entries (1 less than actual length)
+  private int startBlock; // starting inode block
+  private int inodeNumber; // starting inode number
 
   public int getCount() {
     return count;
+  }
+
+  void incrementCount() {
+    count++;
   }
 
   public int getStartBlock() {
@@ -50,6 +54,15 @@ public class DirectoryHeader implements DirectoryElement {
 
   public int getStructureSize() {
     return 12;
+  }
+
+  DirectoryHeader() {
+  }
+
+  DirectoryHeader(int count, int startBlock, int inodeNumber) {
+    this.count = count;
+    this.startBlock = startBlock;
+    this.inodeNumber = inodeNumber;
   }
 
   public static DirectoryHeader read(DataInput in)

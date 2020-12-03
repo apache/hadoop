@@ -51,26 +51,26 @@ import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SquashFsEntry {
-  final List<SquashFsEntry> children = new ArrayList<>();
-  int inodeNumber;
-  SquashFsEntry parent;
-  INodeType type;
-  INode inode;
-  String name;
-  boolean synthetic;
-  short uid;
-  short gid;
-  short permissions;
-  int major;
-  int minor;
-  int nlink;
-  long fileSize;
-  int lastModified;
-  String symlinkTarget;
-  String hardlinkTarget;
-  SquashFsEntry hardlinkEntry;
-  List<DataBlockRef> dataBlocks;
-  FragmentRef fragment;
+  private final List<SquashFsEntry> children = new ArrayList<>();
+  private int inodeNumber;
+  private SquashFsEntry parent;
+  private INodeType type;
+  private INode inode;
+  private String name;
+  private boolean synthetic;
+  private short uid;
+  private short gid;
+  private short permissions;
+  private int major;
+  private int minor;
+  private int nlink;
+  private long fileSize;
+  private int lastModified;
+  private String symlinkTarget;
+  private String hardlinkTarget;
+  private SquashFsEntry hardlinkEntry;
+  private List<DataBlockRef> dataBlocks;
+  private FragmentRef fragment;
 
   SquashFsEntry() {
     this.type = INodeType.BASIC_DIRECTORY;
@@ -139,12 +139,24 @@ public class SquashFsEntry {
     return parent;
   }
 
+  void setParent(SquashFsEntry parent) {
+    this.parent = parent;
+  }
+
+  public INodeType getType() {
+    return type;
+  }
+
   public INode getInode() {
     return inode;
   }
 
   public String getName() {
     return name;
+  }
+
+  void setName(String name) {
+    this.name = name;
   }
 
   public boolean isSynthetic() {
@@ -205,6 +217,10 @@ public class SquashFsEntry {
 
   public List<SquashFsEntry> getChildren() {
     return Collections.unmodifiableList(children);
+  }
+
+  void addChild(SquashFsEntry entry) {
+    children.add(entry);
   }
 
   void sortChildren() {
@@ -377,13 +393,13 @@ public class SquashFsEntry {
     }
   }
 
-  private <T extends INode> T fill(T inode) {
-    inode.setInodeNumber(inodeNumber);
-    inode.setUidIdx(uid);
-    inode.setGidIdx(gid);
-    inode.setPermissions(permissions);
-    inode.setModifiedTime(lastModified);
-    return inode;
+  private <T extends INode> T fill(T otherInode) {
+    otherInode.setInodeNumber(inodeNumber);
+    otherInode.setUidIdx(uid);
+    otherInode.setGidIdx(gid);
+    otherInode.setPermissions(permissions);
+    otherInode.setModifiedTime(lastModified);
+    return otherInode;
   }
 
   private DirectoryINode createDirectoryINode() {

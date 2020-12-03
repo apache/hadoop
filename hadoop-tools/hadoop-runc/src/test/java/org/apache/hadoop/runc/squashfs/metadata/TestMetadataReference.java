@@ -20,6 +20,7 @@ package org.apache.hadoop.runc.squashfs.metadata;
 
 import org.apache.hadoop.runc.squashfs.SquashFsException;
 import org.apache.hadoop.runc.squashfs.directory.DirectoryEntry;
+import org.apache.hadoop.runc.squashfs.directory.DirectoryTestAccessor;
 import org.apache.hadoop.runc.squashfs.directory.DirectoryHeader;
 import org.apache.hadoop.runc.squashfs.inode.BasicDirectoryINode;
 import org.apache.hadoop.runc.squashfs.inode.INodeRef;
@@ -60,17 +61,10 @@ public class TestMetadataReference {
     SuperBlock sb = new SuperBlock();
     sb.setInodeTableStart(12345L);
 
-    DirectoryHeader dh = new DirectoryHeader() {
-      {
-        this.startBlock = 54321;
-      }
-    };
-    DirectoryEntry de = new DirectoryEntry() {
-      {
-        this.header = dh;
-        this.offset = (short) 1234;
-      }
-    };
+    DirectoryHeader dh = DirectoryTestAccessor.createDirectoryHeader(
+        0, 54321, 0);
+    DirectoryEntry de = DirectoryTestAccessor.createDirectoryEntry(
+        (short) 1234, (short) 0, (short) 0, (short) 0, new byte[0], dh);
 
     MetadataReference ref = MetadataReference.inode(10101, sb, de);
     System.out.println(ref);
@@ -86,18 +80,10 @@ public class TestMetadataReference {
     SuperBlock sb = new SuperBlock();
     sb.setInodeTableStart(12345L);
 
-    DirectoryHeader dh = new DirectoryHeader() {
-      {
-        this.startBlock = 54321;
-      }
-    };
-    DirectoryEntry de = new DirectoryEntry() {
-      {
-        this.header = dh;
-        this.offset = (short) 8192;
-      }
-    };
-
+    DirectoryHeader dh = DirectoryTestAccessor.createDirectoryHeader(
+        0, 54321, 0);
+    DirectoryEntry de = DirectoryTestAccessor.createDirectoryEntry(
+        (short) 8192, (short) 0, (short) 0, (short) 0, new byte[0], dh);
     MetadataReference.inode(10101, sb, de);
   }
 

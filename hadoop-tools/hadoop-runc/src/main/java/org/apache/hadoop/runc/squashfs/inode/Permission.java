@@ -38,7 +38,7 @@ public enum Permission {
   private final int mask;
   private final int bit;
 
-  private Permission(int bit, String description) {
+  Permission(int bit, String description) {
     this.bit = bit;
     this.mask = (1 << bit);
     this.description = description;

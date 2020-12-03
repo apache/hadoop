@@ -30,10 +30,13 @@ import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 
-public class SquashFsConverter {
+public final class SquashFsConverter {
 
   private static final Logger LOG
       = LoggerFactory.getLogger(SquashFsConverter.class);
+
+  private SquashFsConverter() {
+  }
 
   public static void convertToSquashFs(File inputFile, File outputFile)
       throws IOException {

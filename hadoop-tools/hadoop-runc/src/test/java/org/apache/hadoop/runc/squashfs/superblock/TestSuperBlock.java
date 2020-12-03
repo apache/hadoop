@@ -34,7 +34,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestSuperBlock {
 
-  SuperBlock sb;
+  private SuperBlock sb;
 
   @Before
   public void setUp() {

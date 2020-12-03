@@ -58,7 +58,7 @@ public class MetadataReader implements DataInput {
     if (bytesRead >= maxLength) {
       return true;
     }
-    if (position >= 0 && position < block.data.length) {
+    if (position >= 0 && position < block.getData().length) {
       return false;
     }
 
@@ -78,11 +78,11 @@ public class MetadataReader implements DataInput {
     if (block == null || bytesRead >= maxLength) {
       return 0;
     }
-    if (position < 0 || position >= block.data.length) {
+    int len = block.getData().length;
+    if (position < 0 || position >= len) {
       return 0;
     }
-    return Math
-        .max(0, Math.min(block.data.length - position, maxLength - bytesRead));
+    return Math.max(0, Math.min(len - position, maxLength - bytesRead));
   }
 
   private int bytesAvailable() throws IOException {
@@ -92,12 +92,12 @@ public class MetadataReader implements DataInput {
       return -1; // EOF
     }
 
-    if (position < 0 || position >= block.data.length) {
+    int len = block.getData().length;
+    if (position < 0 || position >= len) {
       return 0;
     }
 
-    return Math
-        .max(-1, Math.min(block.data.length - position, maxLength - bytesRead));
+    return Math.max(-1, Math.min(len - position, maxLength - bytesRead));
   }
 
   private void ensureDataReady() throws SquashFsException, IOException {
@@ -106,7 +106,7 @@ public class MetadataReader implements DataInput {
       return; // EOF
     }
 
-    if (position >= 0 && position < block.data.length) {
+    if (position >= 0 && position < block.getData().length) {
       return;
     }
 
@@ -127,13 +127,13 @@ public class MetadataReader implements DataInput {
     while (len > 0) {
       int av = bytesAvailable();
       if (av <= 0) {
-        throw new EOFException(String
-            .format(
-                "Read past end of block list. Read %d bytes, caller wanted %d more",
-                totalRead, len));
+        throw new EOFException(String.format(
+            "Read past end of block list. " +
+                "Read %d bytes, caller wanted %d more",
+            totalRead, len));
       }
       int read = Math.min(len, av);
-      System.arraycopy(block.data, position, b, off, read);
+      System.arraycopy(block.getData(), position, b, off, read);
       off += read;
       len -= read;
       position += read;
@@ -173,7 +173,7 @@ public class MetadataReader implements DataInput {
       throw new EOFException("Read past end of blocks");
     }
     try {
-      return block.data[position];
+      return block.getData()[position];
     } finally {
       position++;
       bytesRead++;
@@ -253,7 +253,8 @@ public class MetadataReader implements DataInput {
         eol = true;
         break;
       }
-      switch (c = readByte()) {
+      c = readByte();
+      switch (c) {
       case '\n':
         eol = true;
         break;
@@ -262,7 +263,7 @@ public class MetadataReader implements DataInput {
         if (bytesAvailable() <= 0) {
           break;
         }
-        if (((char) block.data[position]) == '\n') {
+        if (((char) block.getData()[position]) == '\n') {
           position++;
           bytesRead++;
         }

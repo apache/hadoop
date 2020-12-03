@@ -37,7 +37,7 @@ public enum SuperBlockFlag {
 
   private final short mask;
 
-  private SuperBlockFlag(int bit) {
+  SuperBlockFlag(int bit) {
     mask = (short) (1 << bit);
   }
 

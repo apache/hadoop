@@ -26,7 +26,7 @@ import static org.junit.Assert.assertSame;
 
 public class TestExtendedFifoINode {
 
-  ExtendedFifoINode inode;
+  private ExtendedFifoINode inode;
 
   @Before
   public void setUp() {

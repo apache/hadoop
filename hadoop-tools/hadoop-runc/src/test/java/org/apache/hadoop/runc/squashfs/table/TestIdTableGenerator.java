@@ -33,7 +33,7 @@ import static org.junit.Assert.assertEquals;
 
 public class TestIdTableGenerator {
 
-  IdTableGenerator gen;
+  private IdTableGenerator gen;
 
   @Before
   public void setUp() {
