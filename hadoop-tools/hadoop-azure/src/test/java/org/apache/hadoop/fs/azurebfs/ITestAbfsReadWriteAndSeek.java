@@ -78,7 +78,9 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
       ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-              fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0));
+              fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0,
+              ((AbfsOutputStream) stream.getWrappedStream())
+                  .getStreamID()));
       stream.write(b);
     }
 
@@ -90,7 +92,9 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-              fs.getFileSystemID(), HdfsOperationConstants.READ, false, 0));
+              fs.getFileSystemID(), HdfsOperationConstants.READ, false, 0,
+              ((AbfsInputStream) inputStream.getWrappedStream())
+                  .getStreamID()));
       result = inputStream.read(readBuffer, 0, bufferSize*4);
     }
     fs.registerListener(null);

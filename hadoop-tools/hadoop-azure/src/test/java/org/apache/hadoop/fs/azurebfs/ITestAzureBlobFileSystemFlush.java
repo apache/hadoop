@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.hamcrest.core.IsEqual;
@@ -318,7 +319,8 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     ((AbfsOutputStream) out.getWrappedStream()).registerListener(
         new TracingHeaderValidator(
             fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
-            fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0));
+            fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0,
+            ((AbfsOutputStream) out.getWrappedStream()).getStreamID()));
     out.write(buf);
     out.hsync();
   }
