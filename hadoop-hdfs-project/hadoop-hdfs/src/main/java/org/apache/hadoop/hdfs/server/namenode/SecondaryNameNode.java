@@ -276,7 +276,7 @@ public class SecondaryNameNode implements Runnable,
   }
 
   /**
-   * Shut down this instance of the datanode.
+   * Shut down this instance of the secondary namenode.
    * Returns only after shutdown is complete.
    */
   public void shutdown() {
