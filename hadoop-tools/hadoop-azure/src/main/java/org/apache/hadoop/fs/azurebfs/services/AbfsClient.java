@@ -409,13 +409,20 @@ public class AbfsClient implements Closeable {
       op = appendImpl(path, position, buffer, offset, length, cachedSasToken,
           false, false);
     } catch (AzureBlobFileSystemException e) {
-      if (appendSuccessCheckOp(op, path, (position + length))) {
+      if ((op != null)
+          && (op.getUrl() != null)
+          && (op.getRequestHeaders() != null)
+          && appendSuccessCheckOp(op, path, (position + length))) {
         final AbfsRestOperation successOp = new AbfsRestOperation(
             AbfsRestOperationType.Append,
             this,
             HTTP_METHOD_PUT,
             op.getUrl(),
-            op.getRequestHeaders(), buffer, offset, length, op.getSasToken());
+            op.getRequestHeaders(),
+            buffer,
+            offset,
+            length,
+            op.getSasToken());
         successOp.hardSetResult(HttpURLConnection.HTTP_OK);
         return successOp;
       }
@@ -488,7 +495,7 @@ public class AbfsClient implements Closeable {
   // in case we are doing a retry after checking the length of the file
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
                                        final long length) throws AzureBlobFileSystemException {
-    if ((op != null) && (op.isARetriedRequest())
+    if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
       final AbfsRestOperation destStatusOp = getPathStatus(path, false);
       if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
