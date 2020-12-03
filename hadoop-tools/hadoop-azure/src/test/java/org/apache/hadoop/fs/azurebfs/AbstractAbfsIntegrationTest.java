@@ -147,10 +147,10 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   public TracingContext getTestTracingContext(AzureBlobFileSystem fs,
-      boolean isCont) {
+      boolean needsPrimaryReqId) {
     AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
     return new TracingContext(abfsConf.getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.TEST_OP, isCont,
+        fs.getFileSystemID(), HdfsOperationConstants.TEST_OP, needsPrimaryReqId,
         abfsConf.getTracingContextFormat(), null);
   }
 
