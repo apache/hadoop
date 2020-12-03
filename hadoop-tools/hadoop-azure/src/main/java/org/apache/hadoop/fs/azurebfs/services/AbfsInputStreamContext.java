@@ -18,16 +18,25 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Class to hold extra input stream configs.
  */
 public class AbfsInputStreamContext extends AbfsStreamContext {
+  // Retaining logger of AbfsInputStream
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
   private int readBufferSize;
 
   private int readAheadQueueDepth;
 
   private boolean tolerateOobAppends;
+
+  private boolean alwaysReadBufferSize;
+
+  private int readAheadBlockSize;
 
   private AbfsInputStreamStatistics streamStatistics;
 
@@ -60,7 +69,27 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withShouldReadBufferSizeAlways(
+      final boolean alwaysReadBufferSize) {
+    this.alwaysReadBufferSize = alwaysReadBufferSize;
+    return this;
+  }
+
+  public AbfsInputStreamContext withReadAheadBlockSize(
+      final int readAheadBlockSize) {
+    this.readAheadBlockSize = readAheadBlockSize;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
+    if (readBufferSize > readAheadBlockSize) {
+      LOG.debug(
+          "fs.azure.read.request.size[={}] is configured for higher size than "
+              + "fs.azure.read.readahead.blocksize[={}]. Auto-align "
+              + "readAhead block size to be same as readRequestSize.",
+          readBufferSize, readAheadBlockSize);
+      readAheadBlockSize = readBufferSize;
+    }
     // Validation of parameters to be done here.
     return this;
   }
@@ -80,4 +109,13 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
   }
+
+  public boolean shouldReadBufferSizeAlways() {
+    return alwaysReadBufferSize;
+  }
+
+  public int getReadAheadBlockSize() {
+    return readAheadBlockSize;
+  }
+
 }

@@ -233,9 +233,13 @@ public class TestRouterRpc {
 
     // We decrease the DN heartbeat expire interval to make them dead faster
     cluster.getCluster().getNamesystem(0).getBlockManager()
-        .getDatanodeManager().setHeartbeatExpireInterval(5000);
+        .getDatanodeManager().setHeartbeatInterval(1);
     cluster.getCluster().getNamesystem(1).getBlockManager()
-        .getDatanodeManager().setHeartbeatExpireInterval(5000);
+        .getDatanodeManager().setHeartbeatInterval(1);
+    cluster.getCluster().getNamesystem(0).getBlockManager()
+        .getDatanodeManager().setHeartbeatExpireInterval(3000);
+    cluster.getCluster().getNamesystem(1).getBlockManager()
+        .getDatanodeManager().setHeartbeatExpireInterval(3000);
   }
 
   @AfterClass
@@ -1859,7 +1863,7 @@ public class TestRouterRpc {
         }
         return datanodeReport.length == dn.length;
       }
-    }, 500, 5 * 1000);
+    }, 100, 10 * 1000);
 
     // The cache should be updated now
     final DatanodeInfo[] datanodeReport3 =
