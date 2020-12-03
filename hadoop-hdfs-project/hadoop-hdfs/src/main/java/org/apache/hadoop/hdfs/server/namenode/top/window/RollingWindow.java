@@ -113,8 +113,8 @@ public class RollingWindow {
    * as well as atomic fields.
    */
   private class Bucket {
-    AtomicLong value = new AtomicLong(0);
-    AtomicLong updateTime = new AtomicLong(0);
+    private AtomicLong value = new AtomicLong(0);
+    private AtomicLong updateTime = new AtomicLong(-1); // -1 = never updated.
 
     /**
      * Check whether the last time that the bucket was updated is no longer
@@ -125,7 +125,7 @@ public class RollingWindow {
      */
     boolean isStaleNow(long time) {
       long utime = updateTime.get();
-      return time - utime >= windowLenMs;
+      return (utime == -1) || (time - utime >= windowLenMs);
     }
 
     /**
