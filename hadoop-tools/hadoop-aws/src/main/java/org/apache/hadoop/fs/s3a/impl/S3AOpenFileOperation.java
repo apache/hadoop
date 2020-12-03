@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
@@ -62,6 +64,12 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AOpenFileOperation.class);
+
+
+  /**
+   * For use when a value of an split/file length is unknown.
+   */
+  private static final int LENGTH_UNKNOWN = -1;
 
   /**  Default change detection policy. */
   private final ChangeDetectionPolicy changePolicy;
@@ -95,101 +103,16 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
   }
 
   /**
-   * The information on a file needed to open it.
-   */
-  public static final class OpenFileInformation {
-
-    /** Is this SQL? */
-    private final boolean isSql;
-
-    /** File status; may be null. */
-    private final S3AFileStatus status;
-
-    /** SQL string if this is a SQL select file. */
-    private final String sql;
-
-    /** Active input policy. */
-    private final S3AInputPolicy inputPolicy;
-
-    /** Change detection policy. */
-    private final ChangeDetectionPolicy changePolicy;
-
-    /** read ahead range. */
-    private final long readAheadRange;
-
-    /** Buffer size. Currently ignored. */
-    private final int bufferSize;
-
-    /**
-     * Constructor.
-     */
-    private OpenFileInformation(final boolean isSql,
-        final S3AFileStatus status,
-        final String sql,
-        final S3AInputPolicy inputPolicy,
-        final ChangeDetectionPolicy changePolicy,
-        final long readAheadRange,
-        final int bufferSize) {
-      this.isSql = isSql;
-      this.status = status;
-      this.sql = sql;
-      this.inputPolicy = inputPolicy;
-      this.changePolicy = changePolicy;
-      this.readAheadRange = readAheadRange;
-      this.bufferSize = bufferSize;
-    }
-
-    public boolean isSql() {
-      return isSql;
-    }
-
-    public S3AFileStatus getStatus() {
-      return status;
-    }
-
-    public String getSql() {
-      return sql;
-    }
-
-    public S3AInputPolicy getInputPolicy() {
-      return inputPolicy;
-    }
-
-    public ChangeDetectionPolicy getChangePolicy() {
-      return changePolicy;
-    }
-
-    public long getReadAheadRange() {
-      return readAheadRange;
-    }
-
-    public int getBufferSize() {
-      return bufferSize;
-    }
-
-    @Override
-    public String toString() {
-      return "OpenFileInformation{" +
-          "isSql=" + isSql +
-          ", status=" + status +
-          ", sql='" + sql + '\'' +
-          ", inputPolicy=" + inputPolicy +
-          ", changePolicy=" + changePolicy +
-          ", readAheadRange=" + readAheadRange +
-          ", bufferSize=" + bufferSize +
-          '}';
-    }
-  }
-
-  /**
    * Prepare to open a file from the openFile parameters.
    * @param path path to the file
    * @param parameters open file parameters from the builder.
    * @param blockSize for fileStatus
+   * @param inputPolicy default input policy.
    * @return open file options
    * @throws IOException failure to resolve the link.
    * @throws IllegalArgumentException unknown mandatory key
    */
+  @SuppressWarnings("ChainOfInstanceofChecks")
   public OpenFileInformation prepareToOpenFile(
       final Path path,
       final OpenFileParameters parameters,
@@ -213,10 +136,13 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
           "for " + path + " in non-select file I/O");
     }
 
+    // where does a read end?
+    long fileLength = LENGTH_UNKNOWN;
+
     // was a status passed in via a withStatus() invocation in
     // the builder API?
     FileStatus providedStatus = parameters.getStatus();
-    S3AFileStatus fileStatus;
+    S3AFileStatus fileStatus = null;
     if (providedStatus != null) {
       // there's a file status
 
@@ -271,23 +197,29 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
           username,
           eTag,
           versionId);
-    } else if (options.get(FS_OPTION_OPENFILE_LENGTH) != null) {
-      // build a minimal S3A FileStatus From the input length alone.
-      // this is all we actually need.
-      long length = options.getLong(FS_OPTION_OPENFILE_LENGTH, 0);
-      LOG.debug("Fixing length of file to read {} as {}", path, length);
-      fileStatus = new S3AFileStatus(
-          length,
-          0,
-          path,
-          blockSize,
-          username,
-          null,
-          null);
-    } else {
-      // neither a file status nor a file length
-      fileStatus = null;
+      // set the end of the read to the file length
+      fileLength = fileStatus.getLen();
     }
+    // determine start and end of file.
+    long splitStart = options.getLong(FS_OPTION_OPENFILE_SPLIT_START, 0);
+
+    // split end
+    long splitEnd = options.getLong(FS_OPTION_OPENFILE_SPLIT_END,
+        LENGTH_UNKNOWN);
+    if (splitStart > splitEnd) {
+      LOG.warn("Split start {} is greater than split end {}, resetting",
+          splitStart, splitEnd);
+      splitStart = 0;
+    }
+
+    // read end is the open file value
+    fileLength = options.getLong(FS_OPTION_OPENFILE_LENGTH, fileLength);
+
+    // if the read end has come from options, use that
+    // in creating a file status
+    if (fileLength >= 0 && fileStatus == null) {
+        fileStatus = createStatus(path, fileLength, blockSize);
+      }
 
     // Build up the input policy.
     // seek policy from default, s3a opt or standard option
@@ -307,19 +239,165 @@ public class S3AOpenFileOperation extends AbstractStoreOperation {
     int bufferSize = options.getInt(FS_OPTION_OPENFILE_BUFFER_SIZE,
         defaultBufferSize);
     return new OpenFileInformation(isSelect, fileStatus, sql, seekPolicy,
-        changePolicy, readAhead, bufferSize);
+        changePolicy, readAhead, bufferSize, splitStart, splitEnd, fileLength);
   }
 
   /**
-   * Open a simple file.
-   * @return the parameters needed to open a file through
-   * {@code open(path, bufferSize)}.
-   * @param bufferSize  buffer size
+   * Create a minimal file status.
+   * @param path path
+   * @param length file length/read end
+   * @param blockSize block size
+   * @return a new status
    */
+  private S3AFileStatus createStatus(Path path, long length, long blockSize) {
+    return new S3AFileStatus(
+        length,
+        0,
+        path,
+        blockSize,
+        username,
+        null,
+        null);
+  }
+
+
+    /**
+     * Open a simple file.
+     * @return the parameters needed to open a file through
+     * {@code open(path, bufferSize)}.
+     * @param bufferSize  buffer size
+     * @param inputPolicy input policy.
+     */
   public OpenFileInformation openSimpleFile(final int bufferSize,
       final S3AInputPolicy inputPolicy) {
     return new OpenFileInformation(false, null, null,
-        inputPolicy, changePolicy, defaultReadAhead, bufferSize);
+        inputPolicy, changePolicy, defaultReadAhead, bufferSize,
+        0, LENGTH_UNKNOWN, LENGTH_UNKNOWN);
+  }
+
+  /**
+   * The information on a file needed to open it.
+   */
+  public static final class OpenFileInformation {
+
+    /** Is this SQL? */
+    private final boolean isSql;
+
+    /** File status; may be null. */
+    private final S3AFileStatus status;
+
+    /** SQL string if this is a SQL select file. */
+    private final String sql;
+
+    /** Active input policy. */
+    private final S3AInputPolicy inputPolicy;
+
+    /** Change detection policy. */
+    private final ChangeDetectionPolicy changePolicy;
+
+    /** Read ahead range. */
+    private final long readAheadRange;
+
+    /** Buffer size. Currently ignored. */
+    private final int bufferSize;
+
+    /**
+     * Where does the read start from. 0 unless known.
+     */
+    private final long splitStart;
+
+    /**
+     * What is the split end?
+     * Negative if not known.
+     */
+    private final long splitEnd;
+
+    /**
+     * What is the file length?
+     * Negative if not known.
+     */
+    private final long fileLength;
+
+    /**
+     * Constructor.
+     */
+    private OpenFileInformation(
+        final boolean isSql,
+        final S3AFileStatus status,
+        final String sql,
+        final S3AInputPolicy inputPolicy,
+        final ChangeDetectionPolicy changePolicy,
+        final long readAheadRange,
+        final int bufferSize,
+        final long splitStart,
+        final long splitEnd,
+        final long fileLength) {
+      this.isSql = isSql;
+      this.status = status;
+      this.sql = sql;
+      this.inputPolicy = inputPolicy;
+      this.changePolicy = changePolicy;
+      this.readAheadRange = readAheadRange;
+      this.bufferSize = bufferSize;
+      this.splitStart = splitStart;
+      this.splitEnd = splitEnd;
+      this.fileLength = fileLength;
+    }
+
+    public boolean isSql() {
+      return isSql;
+    }
+
+    public S3AFileStatus getStatus() {
+      return status;
+    }
+
+    public String getSql() {
+      return sql;
+    }
+
+    public S3AInputPolicy getInputPolicy() {
+      return inputPolicy;
+    }
+
+    public ChangeDetectionPolicy getChangePolicy() {
+      return changePolicy;
+    }
+
+    public long getReadAheadRange() {
+      return readAheadRange;
+    }
+
+    public int getBufferSize() {
+      return bufferSize;
+    }
+
+    public long getSplitStart() {
+      return splitStart;
+    }
+
+    public long getSplitEnd() {
+      return splitEnd;
+    }
+
+    @Override
+    public String toString() {
+      return "OpenFileInformation{" +
+          "isSql=" + isSql +
+          ", status=" + status +
+          ", sql='" + sql + '\'' +
+          ", inputPolicy=" + inputPolicy +
+          ", changePolicy=" + changePolicy +
+          ", readAheadRange=" + readAheadRange +
+          ", splitStart=" + splitStart +
+          ", splitEnd=" + splitEnd +
+          ", bufferSize=" + bufferSize +
+          '}';
+    }
+
+    public long getFileLength() {
+      return fileLength;
+    }
   }
 
 }

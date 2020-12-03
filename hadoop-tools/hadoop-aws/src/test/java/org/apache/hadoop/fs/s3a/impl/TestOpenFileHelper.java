@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ObjectAssert;
@@ -43,6 +46,8 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FA
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_RANDOM;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -205,7 +210,7 @@ public class TestOpenFileHelper extends HadoopTestBase {
    * Test the mapping of the standard option names.
    */
   @Test
-  public void testWellKnownPolicyMapping() throws Throwable {
+  public void testInputPolicyMapping() throws Throwable {
     Object[][] policyMapping = {
         {"normal", S3AInputPolicy.Normal},
         {FS_OPTION_OPENFILE_FADVISE_NORMAL, S3AInputPolicy.Normal},
@@ -335,6 +340,47 @@ public class TestOpenFileHelper extends HadoopTestBase {
         .isEqualTo(8192L);
   }
 
+
+  /**
+   * Verify that setting the split end sets the length.
+   * By passing in a value greater than the size of an int,
+   * the test verifies that the long is passed everywhere.
+   */
+  @Test
+  public void testSplitEndSetsLength() throws Throwable {
+    long bigFile = 2L ^ 34;
+    assertOpenFile(FS_OPTION_OPENFILE_SPLIT_END, Long.toString(bigFile))
+        .matches(p -> p.getSplitEnd() == bigFile, "split end")
+        .matches(p -> p.getFileLength() == -1, "file length")
+        .matches(p -> p.getStatus() == null, "status");
+  }
+
+  /**
+   * Semantics of split and length. Split end can only be safely treated
+   * as a hint unless the codec is known (how?) that it will never
+   * read past it.
+   */
+  @Test
+  public void testSplitEndAndLength() throws Throwable {
+    long splitEnd = 256;
+    long len = 8192;
+    Configuration conf = conf(FS_OPTION_OPENFILE_LENGTH,
+        Long.toString(len));
+    conf.setLong(FS_OPTION_OPENFILE_SPLIT_END, splitEnd);
+    conf.setLong(FS_OPTION_OPENFILE_SPLIT_START, 1024);
+    Set<String> s = new HashSet<>();
+    Collections.addAll(s,
+        FS_OPTION_OPENFILE_SPLIT_START,
+        FS_OPTION_OPENFILE_SPLIT_END,
+        FS_OPTION_OPENFILE_LENGTH);
+    assertFI(prepareToOpenFile(
+        new OpenFileParameters()
+            .withMandatoryKeys(s)
+            .withOptions(conf)))
+        .matches(p -> p.getSplitStart() == 0, "split start")
+        .matches(p -> p.getSplitEnd() == splitEnd, "split end")
+        .matches(p -> p.getStatus().getLen() == len, "file length");
+  }
 
   /**
    * Create an S3A status entry with stub etag and versions, timestamp of 0.

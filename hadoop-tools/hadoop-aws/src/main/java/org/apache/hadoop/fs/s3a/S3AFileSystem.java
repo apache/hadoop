@@ -1124,9 +1124,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Opens an FSDataInputStream at the indicated Path.
-   * if fileInformation contains an FileStatus reference,
-   * then that is used to avoid a check for the file length/existence
-   *
+   * The {@code fileInformation} parameter controls how the file
+   * is opened, whether it is normal vs. an S3 select call,
+   * can a HEAD be skipped, etc.
    * @param path the file to open
    * @param fileInformation information about the file to open
    * @throws IOException IO failure.
@@ -1197,6 +1197,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         encryptionSecrets.getEncryptionKey(),
         eTag,
         versionId,
+        len,
+        0,
         len);
   }
 
@@ -1560,7 +1562,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public S3AReadOpContext createReadContext(final FileStatus fileStatus) {
       return S3AFileSystem.this.createReadContext(fileStatus,
           inputPolicy,
-          changeDetectionPolicy, readAhead);
+          changeDetectionPolicy,
+          readAhead);
     }
 
     @Override
@@ -4828,7 +4831,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Initiate the open or select operation.
+   * Initiate the open() or select() operation.
    * This is invoked from both the FileSystem and FileContext APIs
    * @param rawPath path to the file
    * @param parameters open file parameters from the builder.

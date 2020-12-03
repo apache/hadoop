@@ -180,7 +180,6 @@ performed efficiently or not.
 Declare the length of a file. This MAY be used to skip a probe for the file
 length.
 
-
 If supported by a filesystem connector, this option MUST be interpreted as declaring
 the minimum length of the file: 
 
@@ -188,6 +187,22 @@ the minimum length of the file:
 1. `read()`, `seek()` and positioned read calls MAY use a position across/beyond this length
    but below the actual length of the file.
    Implementations MAY raise `EOFExceptions` in such cases, or they MAY return data.
+
+#### `fs.option.openfile.split.start` and `fs.option.openfile.split.end`
+
+Declare the start and end of the split when a file has been split for processing in pieces.
+
+1. Filesystems MAY assume that the length of the file is greater than or equal to
+the value of `fs.option.openfile.split.end`.
+1. And that they MAY raise an exception if the client application
+   reads past the value set in `fs.option.openfile.split.end`.
+1. The pair of options MAY be used to optimise the read plan, such as setting the content
+range for GET requests, or using the split end as an implicit declaration of the guaranteed
+minimum length of the file.
+1. If both options are set, and the split start is declared as greater than the split end, then the split start SHOULD just be reset to zero, rather than rejecting the operation.
+
+The split end value is the most useful as it can delinate the end of the input stream.
+The split start can be used to optimize any initial read offset for filesystem clients.
 
 
 ## Example
@@ -206,10 +221,8 @@ protected SeekableInputStream newStream(Path path, FileStatus stat,
       .opt("fs.option.openfile.fadvise", "random")
       .withFileStatus(stat);
 
-    // fall back to leng
-    if (stat == null && splitEnd > 0) {
-      builder.opt("fs.option.openfile.length", splitEnd);
-    }
+    builder.opt("fs.option.openfile.split.start", splitStart);
+    builder.opt("fs.option.openfile.split.end", splitEnd);
     CompletableFuture<FSDataInputStream> streamF = builder.build();
     return HadoopStreams.wrap(awaitFuture(streamF));
   }
@@ -221,10 +234,31 @@ there is no need to probe the remote store for the length of the file.
 When working with remote object stores, this can save tens to hundreds
 of milliseconds, even if such a probe is done asynchronously.
 
+If both the file length and the split end is set, then the file length should be considered "more" authoritative, that is it really SHOULD be defining the file length.
+However, if the split is set, the caller SHOULD not read past it.
+
+There's two issues which surface here:
+
+* What if both length and split end are set: which defines the length of the read?
+* Do applications ever read past the end of the split?
+
+The `CompressedSplitLineReader` can read past the end of a split if it is partway through processing a compressed record.
+That is: it assumes an incomplete record read means that the file length is greater than the split length, and that it MUST read the entirety of the partially read record.
+Other readers may behave similarly.
+
+Therefore
+
+1. File length as supplied in a `FileStatus` or in `fs.option.openfile.length` SHALL set the strict upper limit on the length of a file
+2. The split end as set in `fs.option.openfile.split.end` MUST be viewed as a hint, rather than the strict end of the file.
+
+This reduces the value of the split start/end settings.
+They cannot be treated as normative declarations of the maximum read of a stream.
+
+
 
 ## S3A Non-standard options
 
-The S3A Connector supports custom options 
+The S3A Connector supports custom options
 
 
 |  Name | Type | Meaning |

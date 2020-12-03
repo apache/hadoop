@@ -27,7 +27,9 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -41,6 +43,11 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.QuickSort;
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
 
 /**
  * An input format that reads the first 10 characters of each line as the key
@@ -224,12 +231,17 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
         throws IOException, InterruptedException {
       Path p = ((FileSplit)split).getPath();
       FileSystem fs = p.getFileSystem(context.getConfiguration());
-      in = fs.open(p);
       long start = ((FileSplit)split).getStart();
       // find the offset to start at a record boundary
       offset = (RECORD_LENGTH - (start % RECORD_LENGTH)) % RECORD_LENGTH;
-      in.seek(start + offset);
       length = ((FileSplit)split).getLength();
+      final FutureDataInputStreamBuilder builder = fs.openFile(p)
+          .opt(FS_OPTION_OPENFILE_SPLIT_START, start)
+          .opt(FS_OPTION_OPENFILE_SPLIT_END, start+ length)
+          .opt(FS_OPTION_OPENFILE_FADVISE,
+              FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL);
+      in = FutureIOSupport.awaitFuture(builder.build());
+      in.seek(start + offset);
     }
 
     public void close() throws IOException {

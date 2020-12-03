@@ -44,6 +44,9 @@ import org.apache.hadoop.mapreduce.lib.input.UncompressedSplitLineReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
+
 /**
  * Treats keys as offset in file and value as line. 
  */
@@ -109,6 +112,10 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
     // open the file and seek to the start of the split
     final FutureDataInputStreamBuilder builder =
         file.getFileSystem(job).openFile(file);
+    // the start and end of the split may be used to build
+    // an input strategy.
+    builder.opt(FS_OPTION_OPENFILE_SPLIT_START, start)
+        .opt(FS_OPTION_OPENFILE_SPLIT_END, end);
     FutureIOSupport.propagateOptions(builder, job,
         MRJobConfig.INPUT_FILE_OPTION_PREFIX,
         MRJobConfig.INPUT_FILE_MANDATORY_PREFIX);

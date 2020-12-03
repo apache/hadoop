@@ -545,10 +545,22 @@ public final class Options {
         FILESYSTEM_OPTION + "openfile.";
 
     /**
-     * OpenFile option for seek policies: {@value}.
+     * OpenFile option for file length: {@value}.
      */
     public static final String FS_OPTION_OPENFILE_LENGTH =
         FS_OPTION_OPENFILE + "length";
+
+    /**
+     * OpenFile option for split start: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_SPLIT_START =
+        FS_OPTION_OPENFILE + "split.start";
+
+    /**
+     * OpenFile option for split end: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_SPLIT_END =
+        FS_OPTION_OPENFILE + "split.end";
 
     /**
      * OpenFile option for buffer size: {@value}.
@@ -587,14 +599,16 @@ public final class Options {
         "adaptive";
 
     /**
-     * Set of standard options which openfile implementations
+     * Set of standard options which openFile implementations
      * MUST recognize, even if they ignore the actual values.
      */
     public static final Set<String> FS_OPTION_OPENFILE_STANDARD_OPTIONS =
         Collections.unmodifiableSet(Stream.of(
             FS_OPTION_OPENFILE_BUFFER_SIZE,
             FS_OPTION_OPENFILE_FADVISE,
-            FS_OPTION_OPENFILE_LENGTH)
+            FS_OPTION_OPENFILE_LENGTH,
+            FS_OPTION_OPENFILE_SPLIT_START,
+            FS_OPTION_OPENFILE_SPLIT_END)
             .collect(Collectors.toSet()));
 
   }
