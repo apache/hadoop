@@ -533,13 +533,16 @@ public class TestSaslRPC extends TestRpcBase {
   }
   
   private static Pattern BadToken =
-      Pattern.compile(".*DIGEST-MD5: digest response format violation.*");
+      Pattern.compile("^" + RemoteException.class.getName() +
+          "\\("+ SaslException.class.getName() + "\\): " +
+          "DIGEST-MD5: digest response format violation.*");
   private static Pattern KrbFailed =
       Pattern.compile(".*Failed on local exception:.* " +
                       "Failed to specify server's Kerberos principal name.*");
   private static Pattern Denied(AuthMethod method) {
-      return Pattern.compile(".*RemoteException.*AccessControlException.*: "
-          + method + " authentication is not enabled.*");
+    return Pattern.compile("^" + RemoteException.class.getName() +
+        "\\(" + AccessControlException.class.getName() + "\\): "
+        + method + " authentication is not enabled.*");
   }
   private static Pattern No(AuthMethod ... method) {
     String methods = StringUtils.join(method, ",\\s*");
@@ -547,10 +550,10 @@ public class TestSaslRPC extends TestRpcBase {
         "Client cannot authenticate via:\\[" + methods + "\\].*");
   }
   private static Pattern NoTokenAuth =
-      Pattern.compile(".*IllegalArgumentException: " +
+      Pattern.compile("^" + IllegalArgumentException.class.getName() + ": " +
                       "TOKEN authentication requires a secret manager");
   private static Pattern NoFallback = 
-      Pattern.compile(".*Failed on local exception:.* " +
+      Pattern.compile("^" + AccessControlException.class.getName() + ":.* " +
           "Server asks us to fall back to SIMPLE auth, " +
           "but this client is configured to only allow secure connections.*");
 
