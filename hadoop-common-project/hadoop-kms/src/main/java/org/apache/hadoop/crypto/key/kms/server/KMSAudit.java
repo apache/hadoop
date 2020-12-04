@@ -191,7 +191,7 @@ public class KMSAudit {
   private void op(final OpStatus opStatus, final Object op,
       final UserGroupInformation ugi, final String key, final String remoteHost,
       final String extraMsg) {
-    final String user = ugi == null ? null: ugi.getShortUserName();
+    final String user = ugi == null ? null: ugi.getUserName();
     if (!Strings.isNullOrEmpty(user) && !Strings.isNullOrEmpty(key)
         && (op != null)
         && AGGREGATE_OPS_WHITELIST.contains(op)) {
