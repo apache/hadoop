@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.util;
 
-import com.google.common.util.concurrent.ForwardingListeningExecutorService;
+import com.google.common.util.concurrent.ForwardingExecutorService;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -29,6 +27,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -49,10 +48,10 @@ import java.util.concurrent.TimeoutException;
 @SuppressWarnings("NullableProblems")
 @InterfaceAudience.Private
 public class SemaphoredDelegatingExecutor extends
-    ForwardingListeningExecutorService {
+    ForwardingExecutorService {
 
   private final Semaphore queueingPermits;
-  private final ListeningExecutorService executorDelegatee;
+  private final ExecutorService executorDelegatee;
   private final int permitCount;
 
   /**
@@ -62,7 +61,7 @@ public class SemaphoredDelegatingExecutor extends
    * @param fair should the semaphore be "fair"
    */
   public SemaphoredDelegatingExecutor(
-      ListeningExecutorService executorDelegatee,
+      ExecutorService executorDelegatee,
       int permitCount,
       boolean fair) {
     this.permitCount = permitCount;
@@ -71,7 +70,7 @@ public class SemaphoredDelegatingExecutor extends
   }
 
   @Override
-  protected ListeningExecutorService delegate() {
+  protected ExecutorService delegate() {
     return executorDelegatee;
   }
 
@@ -102,7 +101,7 @@ public class SemaphoredDelegatingExecutor extends
   }
 
   @Override
-  public <T> ListenableFuture<T> submit(Callable<T> task) {
+  public <T> Future<T> submit(Callable<T> task) {
     try {
       queueingPermits.acquire();
     } catch (InterruptedException e) {
@@ -113,7 +112,7 @@ public class SemaphoredDelegatingExecutor extends
   }
 
   @Override
-  public <T> ListenableFuture<T> submit(Runnable task, T result) {
+  public <T> Future<T> submit(Runnable task, T result) {
     try {
       queueingPermits.acquire();
     } catch (InterruptedException e) {
@@ -124,7 +123,7 @@ public class SemaphoredDelegatingExecutor extends
   }
 
   @Override
-  public ListenableFuture<?> submit(Runnable task) {
+  public Future<?> submit(Runnable task) {
     try {
       queueingPermits.acquire();
     } catch (InterruptedException e) {

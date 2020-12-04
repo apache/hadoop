@@ -814,7 +814,7 @@ public final class S3AUtils {
       throws IOException {
     String initialVal;
     Preconditions.checkArgument(baseKey.startsWith(FS_S3A_PREFIX),
-        "%s does not start with $%s", baseKey, FS_S3A_PREFIX);
+        String.format("%s does not start with $%s", baseKey, FS_S3A_PREFIX));
     // if there's a bucket, work with it
     if (StringUtils.isNotEmpty(bucket)) {
       String subkey = baseKey.substring(FS_S3A_PREFIX.length());

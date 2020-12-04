@@ -294,8 +294,8 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
       String child) {
     Path prefixCandidate = new Path(child).getParent();
     Path ancestorPath = new Path(ancestor);
-    Preconditions.checkArgument(child.startsWith(ancestor), "%s does not " +
-        "start with %s", child, ancestor);
+    Preconditions.checkArgument(child.startsWith(ancestor),
+        String.format("%s does not start with %s", child, ancestor));
     while (!prefixCandidate.isRoot()) {
       Path nextParent = prefixCandidate.getParent();
       if (nextParent.equals(ancestorPath)) {

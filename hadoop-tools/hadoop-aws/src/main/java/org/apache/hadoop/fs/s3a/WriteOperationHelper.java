@@ -373,10 +373,10 @@ public class WriteOperationHelper {
     // exactly one source must be set; xor verifies this
     checkArgument((uploadStream != null) ^ (sourceFile != null),
         "Data source");
-    checkArgument(size >= 0, "Invalid partition size %s", size);
+    checkArgument(size >= 0, String.format("Invalid partition size %s", size));
     checkArgument(partNumber > 0 && partNumber <= 10000,
-        "partNumber must be between 1 and 10000 inclusive, but is %s",
-        partNumber);
+        String.format("partNumber must be between 1 and 10000 inclusive,"
+            + " but is %s", partNumber));
 
     LOG.debug("Creating part upload request for {} #{} size {}",
         uploadId, partNumber, size);
@@ -391,11 +391,11 @@ public class WriteOperationHelper {
       request.setInputStream(uploadStream);
     } else {
       checkArgument(sourceFile.exists(),
-          "Source file does not exist: %s", sourceFile);
-      checkArgument(offset >= 0, "Invalid offset %s", offset);
+          String.format("Source file does not exist: %s", sourceFile));
+      checkArgument(offset >= 0, String.format("Invalid offset %s", offset));
       long length = sourceFile.length();
       checkArgument(offset == 0 || offset < length,
-          "Offset %s beyond length of file %s", offset, length);
+          String.format("Offset %s beyond length of file %s", offset, length));
       request.setFile(sourceFile);
       request.setFileOffset(offset);
     }
