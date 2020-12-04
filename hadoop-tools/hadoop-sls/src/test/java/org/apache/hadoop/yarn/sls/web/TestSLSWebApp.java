@@ -30,11 +30,12 @@ import java.util.Set;
 import java.util.HashMap;
 
 public class TestSLSWebApp {
+  private static final Charset UTF8 = Charset.forName("UTF-8");
 
   @Test
   public void testSimulateInfoPageHtmlTemplate() throws Exception {
     String simulateInfoTemplate = FileUtils.readFileToString(
-            new File("src/main/html/simulate.info.html.template"));
+            new File("src/main/html/simulate.info.html.template"), UTF8);
 
     Map<String, Object> simulateInfoMap = new HashMap<>();
     simulateInfoMap.put("Number of racks", 10);
@@ -72,7 +73,7 @@ public class TestSLSWebApp {
   @Test
   public void testSimulatePageHtmlTemplate() throws Exception {
     String simulateTemplate = FileUtils.readFileToString(
-            new File("src/main/html/simulate.html.template"));
+            new File("src/main/html/simulate.html.template"), UTF8);
 
     Set<String> queues = new HashSet<String>();
     queues.add("sls_queue_1");
@@ -96,7 +97,7 @@ public class TestSLSWebApp {
   @Test
   public void testTrackPageHtmlTemplate() throws Exception {
     String trackTemplate = FileUtils.readFileToString(
-            new File("src/main/html/track.html.template"));
+            new File("src/main/html/track.html.template"), UTF8);
     String trackedQueueInfo = "";
     Set<String> trackedQueues = new HashSet<String>();
     trackedQueues.add("sls_queue_1");

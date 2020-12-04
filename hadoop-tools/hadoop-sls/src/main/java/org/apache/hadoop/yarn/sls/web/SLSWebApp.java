@@ -54,6 +54,7 @@ import com.codahale.metrics.MetricRegistry;
 @Unstable
 public class SLSWebApp extends HttpServlet {
   private static final long serialVersionUID = 1905162041950251407L;
+  private static final Charset UTF8 = Charset.forName("UTF-8");
   private transient Server server;
   private transient SchedulerWrapper wrapper;
   private transient MetricRegistry metrics;
@@ -94,11 +95,11 @@ public class SLSWebApp extends HttpServlet {
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     try {
       simulateInfoTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/simulate.info.html.template"));
+          cl.getResourceAsStream("html/simulate.info.html.template"), UTF8);
       simulateTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/simulate.html.template"));
+          cl.getResourceAsStream("html/simulate.html.template"), UTF8);
       trackTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/track.html.template"));
+          cl.getResourceAsStream("html/track.html.template"), UTF8);
     } catch (IOException e) {
       e.printStackTrace();
     }
