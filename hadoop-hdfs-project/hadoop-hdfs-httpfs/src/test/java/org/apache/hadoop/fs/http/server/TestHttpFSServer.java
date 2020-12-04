@@ -61,6 +61,7 @@ import java.nio.charset.Charset;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -108,6 +109,7 @@ import org.eclipse.jetty.webapp.WebAppContext;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import java.util.Properties;
+import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
 import javax.ws.rs.HttpMethod;
@@ -119,6 +121,25 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
  * Main test class for HttpFSServer.
  */
 public class TestHttpFSServer extends HFSTestCase {
+
+  /**
+   * define metric getters for unit tests.
+   */
+  private static Callable<Long> defaultEntryMetricGetter = () -> 0L;
+  private static Callable<Long> defaultExitMetricGetter = () -> 1L;
+  private static HashMap<String, Callable<Long>> metricsGetter =
+      new HashMap<String, Callable<Long>>() {
+        {
+          put("LISTSTATUS",
+              () -> HttpFSServerWebApp.get().getMetrics().getOpsListing());
+          put("MKDIRS",
+              () -> HttpFSServerWebApp.get().getMetrics().getOpsMkdir());
+          put("GETFILESTATUS",
+              () -> HttpFSServerWebApp.get().getMetrics().getOpsStat());
+        }
+      };
+
+
 
   @Test
   @TestDir
@@ -419,6 +440,8 @@ public class TestHttpFSServer extends HFSTestCase {
         new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
+    Assert.assertEquals(1,
+        HttpFSServerWebApp.get().getMetrics().getOpsListing());
   }
 
   @Test
@@ -427,7 +450,8 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestHdfs
   public void testMkdirs() throws Exception {
     createHttpFSServer(false, false);
-
+    long oldMkdirOpsStat =
+        metricsGetter.getOrDefault("MKDIRS", defaultEntryMetricGetter).call();
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
         "/webhdfs/v1/tmp/sub-tmp?user.name={0}&op=MKDIRS", user));
@@ -435,8 +459,10 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
-
     getStatus("/tmp/sub-tmp", "LISTSTATUS");
+    long opsStat =
+        metricsGetter.getOrDefault("MKDIRS", defaultExitMetricGetter).call();
+    Assert.assertEquals(1 + oldMkdirOpsStat, opsStat);
   }
 
   @Test
@@ -460,6 +486,8 @@ public class TestHttpFSServer extends HFSTestCase {
         new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
+    Assert.assertEquals(1,
+        HttpFSServerWebApp.get().getMetrics().getOpsListing());
   }
 
   /**
@@ -519,6 +547,8 @@ public class TestHttpFSServer extends HFSTestCase {
    */
   private void createDirWithHttp(String dirname, String perms,
       String unmaskedPerms) throws Exception {
+    // get the createDirMetrics
+    long oldOpsMkdir = HttpFSServerWebApp.get().getMetrics().getOpsMkdir();
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
     if (dirname.charAt(0) == '/') {
@@ -542,7 +572,11 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setRequestMethod("PUT");
     conn.connect();
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    Assert.assertEquals(1 + oldOpsMkdir,
+        HttpFSServerWebApp.get().getMetrics().getOpsMkdir());
   }
+
+
 
   /**
    * Talks to the http interface to get the json output of a *STATUS command
@@ -555,6 +589,8 @@ public class TestHttpFSServer extends HFSTestCase {
    */
   private String getStatus(String filename, String command)
           throws Exception {
+    long oldOpsStat =
+        metricsGetter.getOrDefault(command, defaultEntryMetricGetter).call();
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
     if (filename.charAt(0) == '/') {
@@ -570,7 +606,9 @@ public class TestHttpFSServer extends HFSTestCase {
 
     BufferedReader reader =
             new BufferedReader(new InputStreamReader(conn.getInputStream()));
-
+    long opsStat =
+        metricsGetter.getOrDefault(command, defaultExitMetricGetter).call();
+    Assert.assertEquals(oldOpsStat + 1L, opsStat);
     return reader.readLine();
   }
 
