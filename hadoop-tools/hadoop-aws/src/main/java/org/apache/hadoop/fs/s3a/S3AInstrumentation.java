@@ -659,6 +659,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private static final int DISTANCE = 5;
 
+    /**
+     * FS statistics for the thread creating the stream
+     */
     private final FileSystem.Statistics filesystemStatistics;
 
     /**
@@ -675,6 +678,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong backwardSeekOperations;
     private final AtomicLong bytesBackwardsOnSeek;
     private final AtomicLong bytesDiscardedInAbort;
+    /** Bytes read by the application. */
     private final AtomicLong bytesRead;
     private final AtomicLong bytesReadInClose;
     private final AtomicLong bytesReadOnSeek;
@@ -687,6 +691,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong readOperations;
     private final AtomicLong readFullyOperations;
     private final AtomicLong seekOperations;
+
+    /** Bytes read by the application and any when draining streams . */
     private final AtomicLong totalBytesRead;
 
     private InputStreamStatistics(
@@ -758,14 +764,24 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       mergedStats = snapshotIOStatistics(st);
     }
 
+
     private long increment(String name) {
       return incCounter(name);
     }
 
+    /**
+     * Increment a named counter by a given value.
+     * @param name counter name
+     * @param value value to increment by.
+     * @return the new value
+     */
     private long increment(String name, long value) {
       return incCounter(name, value);
     }
 
+    /**
+     * {@inheritDoc}.
+     */
     @Override
     public void seekBackwards(long negativeOffset) {
       seekOperations.incrementAndGet();
@@ -773,6 +789,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       bytesBackwardsOnSeek.addAndGet(-negativeOffset);
     }
 
+    /**
+     * {@inheritDoc}.
+     * Increment the number of seek and forward seek
+     * operations, as well as counters of bytes skipped
+     * and bytes read in seek, where appropriate.
+     * Bytes read in seek are also added to the totalBytesRead
+     * counter.
+     */
     @Override
     public void seekForwards(final long skipped,
         long bytesReadInSeek) {
@@ -787,11 +811,22 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       }
     }
 
+    /**
+     * {@inheritDoc}.
+     */
     @Override
     public long streamOpened() {
-      return openOperations.incrementAndGet();
+      return openOperations.getAndIncrement();
     }
 
+    /**
+     * {@inheritDoc}.
+     * If the connection was aborted, increment {@link #aborted}
+     * and add the byte's remaining count to {@link #bytesDiscardedInAbort}.
+     * If not aborted, increment {@link #closed} and
+     * then {@link #bytesReadInClose} and {@link #totalBytesRead}
+     * with the bytes remaining value.
+     */
     @Override
     public void streamClose(boolean abortedConnection,
         long remainingInCurrentRequest) {
@@ -809,11 +844,18 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       }
     }
 
+    /**
+     * {@inheritDoc}.
+     */
     @Override
     public void readException() {
       readExceptions.incrementAndGet();
     }
 
+    /**
+     * {@inheritDoc}.
+     * If the byte counter is positive, increment bytesRead and totalBytesRead.
+     */
     @Override
     public void bytesRead(long bytes) {
       if (bytes > 0) {
@@ -850,8 +892,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     /**
-     * The input policy has been switched.
-     * @param updatedPolicy enum value of new policy.
+     * {@inheritDoc}.
+     * The STREAM_READ_GAUGE_INPUT_POLICY gauge is set to the new value.
+     *
      */
     @Override
     public void inputPolicySet(int updatedPolicy) {
