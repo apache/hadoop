@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Manage striped readers that performs reading of block data from remote to
@@ -328,14 +329,14 @@ class StripedReader {
             // cancel remaining reads if we read successfully from minimum
             // number of source DNs required by reconstruction.
             cancelReads(futures.keySet());
-            futures.clear();
+            clearFuturesAndService();
             break;
           }
         }
       } catch (InterruptedException e) {
         LOG.info("Read data interrupted.", e);
         cancelReads(futures.keySet());
-        futures.clear();
+        clearFuturesAndService();
         break;
       }
     }
@@ -429,6 +430,20 @@ class StripedReader {
     }
   }
 
+  // remove all stale futures from readService, and clear futures.
+  private void clearFuturesAndService() {
+    while (!futures.isEmpty()) {
+      try {
+        Future<BlockReadStats> future = readService.poll(
+            stripedReadTimeoutInMills, TimeUnit.MILLISECONDS
+        );
+        futures.remove(future);
+      } catch (InterruptedException e) {
+        LOG.info("Clear stale futures from service is interrupted.", e);
+      }
+    }
+  }
+
   void close() {
     if (zeroStripeBuffers != null) {
       for (ByteBuffer zeroStripeBuffer : zeroStripeBuffers) {
@@ -438,9 +453,9 @@ class StripedReader {
     zeroStripeBuffers = null;
 
     for (StripedBlockReader reader : readers) {
+      reader.closeBlockReader();
       reconstructor.freeBuffer(reader.getReadBuffer());
       reader.freeReadBuffer();
-      reader.closeBlockReader();
     }
   }
 
