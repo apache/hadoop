@@ -183,8 +183,9 @@ public class KerberosAuthenticator implements Authenticator {
     if (!token.isSet()) {
       this.url = url;
       base64 = new Base64(0);
+      HttpURLConnection conn = null;
       try {
-        HttpURLConnection conn = token.openConnection(url, connConfigurator);
+        conn = token.openConnection(url, connConfigurator);
         conn.setRequestMethod(AUTH_HTTP_METHOD);
         conn.connect();
 
@@ -218,6 +219,10 @@ public class KerberosAuthenticator implements Authenticator {
       } catch (AuthenticationException ex){
         throw wrapExceptionWithMessage(ex,
             "Error while authenticating with endpoint: " + url);
+      } finally {
+        if (conn != null) {
+          conn.disconnect();
+        }
       }
     }
   }
