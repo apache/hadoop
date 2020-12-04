@@ -28,9 +28,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public class TestSLSWebApp {
-  private static final Charset UTF8 = Charset.forName("UTF-8");
+  private static final Charset UTF8 = StandardCharsets.UTF_8;
 
   @Test
   public void testSimulateInfoPageHtmlTemplate() throws Exception {

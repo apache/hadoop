@@ -24,6 +24,8 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -54,7 +56,7 @@ import com.codahale.metrics.MetricRegistry;
 @Unstable
 public class SLSWebApp extends HttpServlet {
   private static final long serialVersionUID = 1905162041950251407L;
-  private static final Charset UTF8 = Charset.forName("UTF-8");
+  private static final Charset UTF8 = StandardCharsets.UTF_8;
   private transient Server server;
   private transient SchedulerWrapper wrapper;
   private transient MetricRegistry metrics;
