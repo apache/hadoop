@@ -378,7 +378,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
     // get files on the local FS in the attempt path
     Path attemptPath = getTaskAttemptPath(context);
     Preconditions.checkNotNull(attemptPath,
-        "No attemptPath path in {}", this);
+        "No attemptPath path in " + this);
 
     LOG.debug("Scanning {} for files to commit", attemptPath);
 

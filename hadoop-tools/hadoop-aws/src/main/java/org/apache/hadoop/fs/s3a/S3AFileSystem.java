@@ -75,7 +75,6 @@ import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -181,7 +180,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   private long partSize;
   private boolean enableMultiObjectsDelete;
   private TransferManager transfers;
-  private ListeningExecutorService boundedThreadPool;
+  private ExecutorService boundedThreadPool;
   private ExecutorService unboundedThreadPool;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
@@ -2254,9 +2253,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       final boolean needEmptyDirectoryFlag) throws IOException {
     LOG.debug("S3GetFileStatus {}", path);
     Preconditions.checkArgument(!needEmptyDirectoryFlag
-        || probes.contains(StatusProbeEnum.List),
-        "s3GetFileStatus(%s) wants to know if a directory is empty but"
-            + " does not request a list probe", path);
+        || probes.contains(StatusProbeEnum.List), String.format(
+            "s3GetFileStatus(%s) wants to know if a directory is empty but"
+              + " does not request a list probe", path));
 
     if (!key.isEmpty() && !key.endsWith("/")
         && probes.contains(StatusProbeEnum.Head)) {

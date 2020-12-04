@@ -129,9 +129,11 @@ final class PathMetadataDynamoDBTranslation {
     }
 
     String parentStr = item.getString(PARENT);
-    Preconditions.checkNotNull(parentStr, "No parent entry in item %s", item);
+    Preconditions.checkNotNull(parentStr,
+        String.format("No parent entry in item %s", item));
     String childStr = item.getString(CHILD);
-    Preconditions.checkNotNull(childStr, "No child entry in item %s", item);
+    Preconditions.checkNotNull(childStr,
+        String.format("No child entry in item %s", item));
 
     // Skip table version markers, which are only non-absolute paths stored.
     Path rawPath = new Path(parentStr, childStr);

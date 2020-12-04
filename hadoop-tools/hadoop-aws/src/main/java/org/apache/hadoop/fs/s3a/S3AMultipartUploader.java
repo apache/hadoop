@@ -71,7 +71,7 @@ public class S3AMultipartUploader extends MultipartUploader {
 
   public S3AMultipartUploader(FileSystem fs, Configuration conf) {
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
-        "Wrong filesystem: expected S3A but got %s", fs);
+        String.format("Wrong filesystem: expected S3A but got %s", fs));
     s3a = (S3AFileSystem) fs;
   }
 

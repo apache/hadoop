@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -78,8 +77,8 @@ public class AliyunOSSFileSystem extends FileSystem {
   private int maxKeys;
   private int maxReadAheadPartNumber;
   private int maxConcurrentCopyTasksPerDir;
-  private ListeningExecutorService boundedThreadPool;
-  private ListeningExecutorService boundedCopyThreadPool;
+  private ExecutorService boundedThreadPool;
+  private ExecutorService boundedCopyThreadPool;
 
   private static final PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
