@@ -406,9 +406,11 @@ public class TestSquashFsInterop {
     Random r = new Random(0L);
     r.nextBytes(content);
 
+    long modified = System.currentTimeMillis();
+
     try (SquashFsWriter writer = new SquashFsWriter(archive)) {
       SquashFsEntry entry = writer.entry("/full.dat")
-          .lastModified(Instant.now())
+          .lastModified(Instant.ofEpochMilli(modified))
           .uid(1000)
           .gid(2000)
           .content(new ByteArrayInputStream(content))
@@ -428,8 +430,8 @@ public class TestSquashFsInterop {
       assertEquals("wrong gid", (short) 2, entry.getGid());
       assertEquals("wrong nlink count", 1, entry.getNlink());
       assertEquals("wrong file size", 131072L, entry.getFileSize());
-      assertEquals("wrong last modified", System.currentTimeMillis(),
-          entry.getLastModified() * 1000L, 10000L);
+      assertEquals("wrong last modified",
+          modified, entry.getLastModified() * 1000L, 10000L);
       assertEquals("wrong data block count", 1, entry.getDataBlocks().size());
       assertNull("fragment found", entry.getFragment());
     }
@@ -1003,6 +1005,8 @@ public class TestSquashFsInterop {
   public void fileWithNoTimestampShouldUseDefault() throws Exception {
     File archive = temp.newFile();
 
+    long timestamp = System.currentTimeMillis();
+
     try (SquashFsWriter writer = new SquashFsWriter(archive)) {
       SquashFsEntry entry = writer.entry("/no-timestamp.dat")
           .uid(0)
@@ -1011,8 +1015,10 @@ public class TestSquashFsInterop {
           .permissions((short) 0644)
           .build();
 
-      assertEquals("wrong timestamp", System.currentTimeMillis(),
-          entry.getLastModified() * 1000L, 10000L);
+      long actualTimestamp = entry.getLastModified() * 1000L;
+
+      assertEquals("wrong timestamp", (double) timestamp,
+          (double) (entry.getLastModified() * 1000d), 60_000d);
     }
   }
 

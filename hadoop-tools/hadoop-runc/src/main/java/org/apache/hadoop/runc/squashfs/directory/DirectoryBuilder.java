@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.runc.squashfs.directory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.runc.squashfs.inode.INodeType;
 import org.apache.hadoop.runc.squashfs.metadata.MetadataWriter;
 
