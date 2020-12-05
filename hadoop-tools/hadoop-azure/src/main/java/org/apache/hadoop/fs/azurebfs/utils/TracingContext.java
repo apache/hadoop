@@ -60,8 +60,9 @@ public class TracingContext {
     this(clientCorrelationID, fileSystemID, hadoopOpName, tracingContextFormat,
         listener);
     primaryRequestID = needsPrimaryReqId ? UUID.randomUUID().toString() : "";
-    if (listener != null)
+    if (listener != null) {
       listener.updatePrimaryRequestID(primaryRequestID);
+    }
   }
 
   public TracingContext(TracingContext originalTracingContext) {
@@ -93,8 +94,9 @@ public class TracingContext {
 
   public void setPrimaryRequestID() {
     primaryRequestID = UUID.randomUUID().toString();
-    if (listener != null)
+    if (listener != null) {
       listener.updatePrimaryRequestID(primaryRequestID);
+    }
   }
 
   public void setStreamID(String stream) {
@@ -114,15 +116,19 @@ public class TracingContext {
   }
 
   public String toString() {
-    String header = clientRequestID; //case 0, no IDs for correlation
+    String header;
     switch (format) {
     case ALL_ID_FORMAT:
-      header = clientCorrelationID + ":" + header + ":" + fileSystemID + ":"
-          + primaryRequestID + ":" + streamID + ":" + hadoopOpName + ":"
-          + retryCount;
+      header =
+          clientCorrelationID + ":" + clientRequestID + ":" + fileSystemID + ":"
+              + primaryRequestID + ":" + streamID + ":" + hadoopOpName + ":"
+              + retryCount;
       break;
     case TWO_ID_FORMAT:
-      header = clientCorrelationID + ":" + header;
+      header = clientCorrelationID + ":" + clientRequestID;
+      break;
+    default:
+      header = clientRequestID; //case SINGLE_ID_FORMAT
     }
     if (listener != null) {
       listener.callTracingHeaderValidator(header, format);

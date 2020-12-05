@@ -66,40 +66,6 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     testReadWriteAndSeek(size);
   }
 
-  @Test
-  public void testReadAheadRequestID() throws java.io.IOException {
-    final AzureBlobFileSystem fs = getFileSystem();
-    final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
-    int bufferSize = 32;
-    abfsConfiguration.setReadBufferSize(bufferSize);
-
-    final byte[] b = new byte[bufferSize * 10];
-    new Random().nextBytes(b);
-    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
-      ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
-          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-              fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0,
-              ((AbfsOutputStream) stream.getWrappedStream())
-                  .getStreamID()));
-      stream.write(b);
-    }
-
-    final byte[] readBuffer = new byte[4 * bufferSize];
-    int result;
-    fs.registerListener(
-        new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-            fs.getFileSystemID(), HdfsOperationConstants.OPEN, false, 0));
-    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
-      ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
-          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-              fs.getFileSystemID(), HdfsOperationConstants.READ, false, 0,
-              ((AbfsInputStream) inputStream.getWrappedStream())
-                  .getStreamID()));
-      result = inputStream.read(readBuffer, 0, bufferSize*4);
-    }
-    fs.registerListener(null);
-  }
-
   private void testReadWriteAndSeek(int bufferSize) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
@@ -135,5 +101,39 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     }
     assertNotEquals("data read in final read()", -1, result);
     assertArrayEquals(readBuffer, b);
+  }
+
+  @Test
+  public void testReadAheadRequestID() throws java.io.IOException {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
+    int bufferSize = MIN_BUFFER_SIZE;
+    abfsConfiguration.setReadBufferSize(bufferSize);
+
+    final byte[] b = new byte[bufferSize * 10];
+    new Random().nextBytes(b);
+    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+      ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
+              fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0,
+              ((AbfsOutputStream) stream.getWrappedStream())
+                  .getStreamID()));
+      stream.write(b);
+    }
+
+    final byte[] readBuffer = new byte[4 * bufferSize];
+    int result;
+    fs.registerListener(
+        new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
+            fs.getFileSystemID(), HdfsOperationConstants.OPEN, false, 0));
+    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+      ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
+              fs.getFileSystemID(), HdfsOperationConstants.READ, false, 0,
+              ((AbfsInputStream) inputStream.getWrappedStream())
+                  .getStreamID()));
+      result = inputStream.read(readBuffer, 0, bufferSize*4);
+    }
+    fs.registerListener(null);
   }
 }

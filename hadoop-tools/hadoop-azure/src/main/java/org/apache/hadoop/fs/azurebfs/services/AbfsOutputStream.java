@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.io.IOUtils.wrapException;
 
 /**
@@ -148,7 +149,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   private String getOutputStreamID() {
-    return StringUtils.right(UUID.randomUUID().toString(), 12);
+    return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
   }
 
   /**
@@ -282,7 +283,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       flushInternal(false);
     }
   }
-  
+
   public String getStreamID() {
     return outputStreamID;
   }

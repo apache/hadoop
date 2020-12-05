@@ -179,7 +179,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public URI getUri() {
     return this.uri;
   }
-  
+
   public void registerListener(Listener listener1) {
     listener = listener1;
   }

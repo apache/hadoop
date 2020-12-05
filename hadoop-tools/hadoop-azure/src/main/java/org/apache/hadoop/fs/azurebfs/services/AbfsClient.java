@@ -365,6 +365,7 @@ public class AbfsClient implements Closeable {
    * @param renameRequestStartTime startTime for the rename request
    * @param op Rename request REST operation response
    * @param destination rename destination path
+   * @param tracingContext Tracks identifiers for request header
    * @return REST operation response post idempotency check
    * @throws AzureBlobFileSystemException if GetFileStatus hits any exception
    */
@@ -381,7 +382,7 @@ public class AbfsClient implements Closeable {
 
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
-            false , tracingContext);
+            false, tracingContext);
         if (destStatusOp.getResult().getStatusCode()
             == HttpURLConnection.HTTP_OK) {
           String lmt = destStatusOp.getResult().getResponseHeader(
@@ -766,6 +767,7 @@ public class AbfsClient implements Closeable {
    *
    * @param path  Path for which access check needs to be performed
    * @param rwx   The permission to be checked on the path
+   * @param tracingContext Tracks identifiers for request header
    * @return      The {@link AbfsRestOperation} object for the operation
    * @throws AzureBlobFileSystemException in case of bad requests
    */

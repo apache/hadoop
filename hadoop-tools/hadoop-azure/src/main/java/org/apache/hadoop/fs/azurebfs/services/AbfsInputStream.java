@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -75,7 +76,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
-  public TracingContext tracingContext;
+  private TracingContext tracingContext;
 
   /** Stream statistics. */
   private final AbfsInputStreamStatistics streamStatistics;
@@ -122,7 +123,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private String getInputStreamID() {
-    return StringUtils.right(UUID.randomUUID().toString(), 12);
+    return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
   }
 
   public void registerListener(Listener listener1) {
@@ -471,6 +472,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
     return fCursor - limit + bCursor;
+  }
+
+  public TracingContext getTracingContext() {
+    return tracingContext;
   }
 
   /**

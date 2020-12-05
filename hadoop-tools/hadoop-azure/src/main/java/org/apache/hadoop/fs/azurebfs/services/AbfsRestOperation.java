@@ -23,7 +23,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.UUID;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -170,6 +169,7 @@ public class AbfsRestOperation {
   }
 
   /**
+   * @param tracingContext Tracks identifiers for request header
    * Executes the REST operation with retry, by issuing one or more
    * HTTP operations.
    */
