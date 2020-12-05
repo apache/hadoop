@@ -138,7 +138,7 @@
     <jdom.version>1.1</jdom.version>
     <jna.version>5.2.0</jna.version>
     <grizzly.version>2.2.21</grizzly.version>
-    <gson.version>2.2.4</gson.version>
+    <gson.version>2.8.9</gson.version>
     <metrics.version>3.2.4</metrics.version>
     <netty3.version>3.10.6.Final</netty3.version>
     <netty4.version>4.1.68.Final</netty4.version>
