@@ -1,6 +1,3 @@
-# Copyright 2008, Google Inc.
-# All rights reserved.
-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
