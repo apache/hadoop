@@ -197,7 +197,7 @@ message StorageTypeQuotaInfosProto {
 }
 
 message StorageTypeQuotaInfoProto {
-  required StorageTypeProto type = 1;
+  optional StorageTypeProto type = 1 [default = DISK];
   required uint64 quota = 2;
   required uint64 consumed = 3;
 }
