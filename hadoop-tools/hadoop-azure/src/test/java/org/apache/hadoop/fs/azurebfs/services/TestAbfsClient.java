@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.junit.Test;
@@ -350,5 +351,29 @@ public final class TestAbfsClient {
         field.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
     field.set(client, fieldObject);
     return client;
+  }
+
+  public static URL getTestUrl(AbfsClient client, String path) throws
+      AzureBlobFileSystemException {
+    final AbfsUriQueryBuilder abfsUriQueryBuilder
+        = client.createDefaultUriQueryBuilder();
+    return client.createRequestUrl(path, abfsUriQueryBuilder.toString());
+  }
+
+  public static List<AbfsHttpHeader> getTestRequestHeaders(AbfsClient client) {
+    return client.createDefaultHeaders();
+  }
+
+  public static AbfsRestOperation getRestOp(AbfsRestOperationType type,
+      AbfsClient client,
+      String method,
+      URL url,
+      List<AbfsHttpHeader> requestHeaders) {
+    return new AbfsRestOperation(
+        type,
+        client,
+        method,
+        url,
+        requestHeaders);
   }
 }
