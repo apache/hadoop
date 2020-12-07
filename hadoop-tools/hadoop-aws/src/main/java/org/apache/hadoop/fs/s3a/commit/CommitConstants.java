@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.commit;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static org.apache.hadoop.fs.s3a.Constants.XA_HEADER_PREFIX;
 import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.COMMITTER_FACTORY_SCHEME_PATTERN;
 
 /**
@@ -315,5 +316,18 @@ public final class CommitConstants {
    */
   public static final boolean DEFAULT_S3A_COMMITTER_GENERATE_UUID =
       false;
+
+  /**
+   * Magic Marker header to declare final file length on magic uploads
+   * marker objects: {@value}.
+   */
+  public static final String X_HEADER_MAGIC_MARKER =
+      "x-hadoop-s3a-magic-data-length";
+
+  /**
+   * XAttr name of magic marker, with "header." prefix: {@value}.
+   */
+  public static final String XA_MAGIC_MARKER = XA_HEADER_PREFIX
+      + X_HEADER_MAGIC_MARKER;
 
 }

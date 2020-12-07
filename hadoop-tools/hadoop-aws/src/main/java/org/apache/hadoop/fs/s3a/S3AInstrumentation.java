@@ -120,7 +120,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AInstrumentation implements Closeable, MetricsSource,
-    CountersAndGauges, IOStatisticsSource, DurationTrackerFactory {
+    CountersAndGauges, IOStatisticsSource {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3AInstrumentation.class);
 

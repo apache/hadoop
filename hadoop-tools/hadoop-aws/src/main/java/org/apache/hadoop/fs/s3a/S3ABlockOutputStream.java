@@ -447,7 +447,7 @@ class S3ABlockOutputStream extends OutputStream implements
     final PutObjectRequest putObjectRequest = uploadData.hasFile() ?
         writeOperationHelper.createPutObjectRequest(key, uploadData.getFile())
         : writeOperationHelper.createPutObjectRequest(key,
-            uploadData.getUploadStream(), size);
+            uploadData.getUploadStream(), size, null);
     BlockUploadProgress callback =
         new BlockUploadProgress(
             block, progressListener,  now());
