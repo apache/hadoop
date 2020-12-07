@@ -97,9 +97,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   /**
    * Constructor for FixedResult instance, avoiding connection init.
-   * @param url
-   * @param method
-   * @param httpStatus
+   * @param url request url
+   * @param method Http method
+   * @param httpStatus HttpStatus
    */
   protected AbfsHttpOperation(final URL url,
       final String method,
@@ -566,7 +566,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
      * @param url The full URL including query string parameters.
      * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
      * @param httpStatus StatusCode to hard set
-     * @throws IOException if an error occurs.
      */
     public AbfsHttpOperationWithFixedResult(final URL url,
         final String method,

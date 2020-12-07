@@ -51,4 +51,7 @@ public final class TestMockHelpers {
     return obj;
   }
 
+  private TestMockHelpers() {
+    // Not called. - For checkstyle: HideUtilityClassConstructor
+  }
 }
