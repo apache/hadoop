@@ -231,7 +231,6 @@ public class ITestAzureBlobFileSystemDelete extends
         null));
 
     // mock idempotency check to mimic retried case
-
     AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(
         fs.getAbfsStore().getClient(),
         this.getConfiguration());

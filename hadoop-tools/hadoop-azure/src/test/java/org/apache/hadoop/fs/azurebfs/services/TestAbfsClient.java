@@ -353,6 +353,13 @@ public final class TestAbfsClient {
     return client;
   }
 
+  /**
+   * Test helper method to access private createRequestUrl method.
+   * @param client
+   * @param path
+   * @return
+   * @throws AzureBlobFileSystemException
+   */
   public static URL getTestUrl(AbfsClient client, String path) throws
       AzureBlobFileSystemException {
     final AbfsUriQueryBuilder abfsUriQueryBuilder
@@ -360,10 +367,24 @@ public final class TestAbfsClient {
     return client.createRequestUrl(path, abfsUriQueryBuilder.toString());
   }
 
+  /**
+   * Test helper method to access private createDefaultHeaders method.
+   * @param client
+   * @return
+   */
   public static List<AbfsHttpHeader> getTestRequestHeaders(AbfsClient client) {
     return client.createDefaultHeaders();
   }
 
+  /**
+   * Test helper method to create an AbfsRestOperation instance.
+   * @param type
+   * @param client
+   * @param method
+   * @param url
+   * @param requestHeaders
+   * @return
+   */
   public static AbfsRestOperation getRestOp(AbfsRestOperationType type,
       AbfsClient client,
       String method,

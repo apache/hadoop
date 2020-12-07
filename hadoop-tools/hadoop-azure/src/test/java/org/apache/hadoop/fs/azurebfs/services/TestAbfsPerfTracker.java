@@ -408,6 +408,11 @@ public final class TestAbfsPerfTracker {
     }
   }
 
+  /**
+   * Test helper method to create an AbfsPerfTracker instance.
+   * @param abfsConfig
+   * @return
+   */
   public static AbfsPerfTracker getAPerfTrackerInstance(AbfsConfiguration abfsConfig) {
     AbfsPerfTracker tracker = new AbfsPerfTracker("test",
         abfsConfig.getAccountName(), abfsConfig);

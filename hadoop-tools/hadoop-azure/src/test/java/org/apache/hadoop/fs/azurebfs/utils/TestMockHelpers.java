@@ -23,6 +23,16 @@ package org.apache.hadoop.fs.azurebfs.utils;
  */
 public final class TestMockHelpers {
 
+  /**
+   * Sets a class field by reflection.
+   * @param type
+   * @param obj
+   * @param fieldName
+   * @param fieldObject
+   * @param <T>
+   * @return
+   * @throws Exception
+   */
   public static <T> T setClassField(
       Class<T> type,
       final T obj,
