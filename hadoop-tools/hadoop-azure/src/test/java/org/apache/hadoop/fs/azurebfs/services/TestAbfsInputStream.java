@@ -103,7 +103,7 @@ public class TestAbfsInputStream extends
         THREE_KB,
         inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10).withReadAheadBlockSize(ONE_KB),
         "eTag",
-        getTestTracingContext(getFileSystem(), false));
+        getTestTracingContext(null, false));
 
     inputStream.setCachedSasToken(
         TestCachedSASToken.getTestCachedSASTokenInstance());
