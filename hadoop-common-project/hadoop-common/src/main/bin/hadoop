@@ -39,7 +39,7 @@ function print_usage(){
   echo "  checknative [-a|-h]  check native hadoop and compression libraries availability"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
-  echo "  classpath            prints the class path needed to get the"
+  echo "  classpath            prints the class path needed to get the Hadoop jar and the required libraries"
   echo "                       Hadoop jar and the required libraries"
   echo "  credential           interact with credential providers"
   echo "  daemonlog            get/set the log level for each daemon"
