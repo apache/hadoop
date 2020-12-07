@@ -24,7 +24,6 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import javax.servlet.ServletException;
@@ -56,7 +55,6 @@ import com.codahale.metrics.MetricRegistry;
 @Unstable
 public class SLSWebApp extends HttpServlet {
   private static final long serialVersionUID = 1905162041950251407L;
-  private static final Charset UTF8 = StandardCharsets.UTF_8;
   private transient Server server;
   private transient SchedulerWrapper wrapper;
   private transient MetricRegistry metrics;
@@ -97,11 +95,11 @@ public class SLSWebApp extends HttpServlet {
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     try {
       simulateInfoTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/simulate.info.html.template"), UTF8);
+          cl.getResourceAsStream("html/simulate.info.html.template"), StandardCharsets.UTF_8);
       simulateTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/simulate.html.template"), UTF8);
+          cl.getResourceAsStream("html/simulate.html.template"), StandardCharsets.UTF_8);
       trackTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/track.html.template"), UTF8);
+          cl.getResourceAsStream("html/track.html.template"), StandardCharsets.UTF_8);
     } catch (IOException e) {
       e.printStackTrace();
     }
