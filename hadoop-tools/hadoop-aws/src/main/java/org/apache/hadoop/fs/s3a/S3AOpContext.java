@@ -25,7 +25,7 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3a.impl.ActiveOperationContext;
-import org.apache.hadoop.fs.s3a.impl.statistics.S3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 
 /**
  * Class for operation context struct passed through codepaths for main

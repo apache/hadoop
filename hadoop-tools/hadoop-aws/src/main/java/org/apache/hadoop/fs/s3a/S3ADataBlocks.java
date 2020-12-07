@@ -37,7 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.util.DirectBufferPool;
 
 import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.*;

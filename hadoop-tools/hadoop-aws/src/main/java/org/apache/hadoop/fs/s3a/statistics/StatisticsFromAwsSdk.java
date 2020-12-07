@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics;
 
 import java.time.Duration;
+
+import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 
 /**
  * interface to receive statistics events from the AWS SDK

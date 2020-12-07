@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics.impl;
 
 import java.time.Duration;
 import java.util.function.Consumer;
@@ -26,6 +26,8 @@ import com.amazonaws.Request;
 import com.amazonaws.Response;
 import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.util.TimingInfo;
+
+import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 import static com.amazonaws.util.AWSRequestMetrics.Field.ClientExecuteTime;
 import static com.amazonaws.util.AWSRequestMetrics.Field.HttpClientRetryCount;

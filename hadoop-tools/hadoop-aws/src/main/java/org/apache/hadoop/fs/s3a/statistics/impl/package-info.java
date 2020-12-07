@@ -17,11 +17,13 @@
  */
 
 /**
- * Statistics collection for the S3A connector.
+ * Statistics collection for the S3A connector: implementation.
+ * Not for use by anything outside the hadoop-aws source tree.
  */
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics.impl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

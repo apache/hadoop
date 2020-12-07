@@ -16,9 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics.impl;
 
 import java.time.Duration;
+
+import org.apache.hadoop.fs.s3a.statistics.CountersAndGauges;
+import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_RETRY;
@@ -27,7 +30,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLE_RATE;
 
 /**
  * Hook up AWS SDK Statistics to the S3 counters.
- * <p></p>
+ * <p>
  * Durations are not currently being used; that could be
  * changed in future once an effective strategy for reporting
  * them is determined.

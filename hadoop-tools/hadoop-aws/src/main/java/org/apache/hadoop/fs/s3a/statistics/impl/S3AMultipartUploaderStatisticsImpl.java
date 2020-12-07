@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics.impl;
 
 
 import java.io.IOException;
@@ -24,6 +24,8 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
+import org.apache.hadoop.fs.s3a.statistics.impl.AbstractS3AStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED;

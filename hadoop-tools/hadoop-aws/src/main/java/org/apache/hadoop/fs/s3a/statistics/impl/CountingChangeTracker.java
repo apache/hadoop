@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics.impl;
 
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 
 /**
  * A change tracker which increments an atomic long.

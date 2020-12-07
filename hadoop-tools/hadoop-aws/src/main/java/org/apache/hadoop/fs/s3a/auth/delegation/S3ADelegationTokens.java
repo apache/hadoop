@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
-import org.apache.hadoop.fs.s3a.impl.statistics.DelegationTokenStatistics;
+import org.apache.hadoop.fs.s3a.statistics.DelegationTokenStatistics;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;

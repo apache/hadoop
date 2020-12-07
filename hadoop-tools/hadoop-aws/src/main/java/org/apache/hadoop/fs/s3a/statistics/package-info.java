@@ -16,20 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
-
 /**
- * Interface for change tracking statistics.
+ * Statistics collection for the S3A connector: interfaces.
+ * This is private, though there's a risk that some extension
+ * points (delegation tokens?) may need access to the internal
+ * API. Hence the split packaging...with a java 9 module, the
+ * implementation classes would be declared internal.
  */
-public interface ChangeTrackerStatistics {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+package org.apache.hadoop.fs.s3a.statistics;
 
-  /**
-   * A version mismatch was detected.
-   */
-  void versionMismatchError();
-
-  /**
-   * How many version mismatches have occurred.
-   */
-  long getVersionMismatches();
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

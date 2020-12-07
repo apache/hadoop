@@ -1358,10 +1358,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         ioStatisticsSourceToString(committer));
 
     // validate output
-<<<<<<< HEAD
-    verifySuccessMarker(outDir, committer.getUUID());
-=======
-    SuccessData successData = verifySuccessMarker(outDir);
+    SuccessData successData = verifySuccessMarker(outDir, committer.getUUID());
 
     // the task commit count should get through the job commit
     IOStatisticsSnapshot successStats = successData.getIOStatistics();
@@ -1369,7 +1366,6 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     assertThatStatisticCounter(successStats, commitsCompleted)
         .describedAs("task commit count")
         .isEqualTo(1L);
->>>>>>> HADOOP-17271. S3A statistics to support IOStatistics
   }
 
   /**

@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.impl.statistics.S3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
 import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;

@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics;
 
 import java.util.Arrays;
 import java.util.List;

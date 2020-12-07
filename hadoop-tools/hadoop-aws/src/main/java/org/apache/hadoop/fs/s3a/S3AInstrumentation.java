@@ -27,15 +27,16 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3a.impl.statistics.AbstractS3AStatisticsSource;
-import org.apache.hadoop.fs.s3a.impl.statistics.ChangeTrackerStatistics;
-import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
-import org.apache.hadoop.fs.s3a.impl.statistics.CountersAndGauges;
-import org.apache.hadoop.fs.s3a.impl.statistics.CountingChangeTracker;
-import org.apache.hadoop.fs.s3a.impl.statistics.DelegationTokenStatistics;
-import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
+import org.apache.hadoop.fs.s3a.statistics.impl.AbstractS3AStatisticsSource;
+import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
+import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.s3a.statistics.CountersAndGauges;
+import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
+import org.apache.hadoop.fs.s3a.statistics.DelegationTokenStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
@@ -213,10 +214,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     List<Statistic> gauges = Arrays.asList(GAUGES_TO_CREATE);
     List<Statistic> quantiles = Arrays.asList(QUANTILES_TO_CREATE);
     gauges.forEach(this::gauge);
-    // every metric which is not a gauge is a counter
+    // declare all counter statistics
     EnumSet.allOf(Statistic.class).stream()
-        .filter(statistic -> !gauges.contains(statistic))
-        .filter(statistic -> !quantiles.contains(statistic))
+        .filter(statistic ->
+            statistic.getType() == StatisticTypeEnum.TYPE_COUNTER)
         .forEach(this::counter);
 
     //todo need a config for the quantiles interval?

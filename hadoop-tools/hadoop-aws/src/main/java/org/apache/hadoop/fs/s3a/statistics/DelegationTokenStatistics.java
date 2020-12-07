@@ -16,17 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
-
-import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+package org.apache.hadoop.fs.s3a.statistics;
 
 /**
- * Base Interface for S3A Statistics, as a way of managing
- * them.
+ * Instrumentation exported to for S3A Delegation Token support.
  */
-public interface S3AStatisticInterface extends IOStatisticsSource,
-    DurationTrackerFactory {
+public interface DelegationTokenStatistics extends S3AStatisticInterface {
 
-
+  /** A token has been issued. */
+  void tokenIssued();
 }

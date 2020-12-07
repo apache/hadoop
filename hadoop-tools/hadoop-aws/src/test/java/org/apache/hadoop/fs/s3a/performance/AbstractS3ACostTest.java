@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
+import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -149,11 +150,12 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
         .isEqualTo(isKeepingMarkers()
             ? DirectoryPolicy.MarkerPolicy.Keep
             : DirectoryPolicy.MarkerPolicy.Delete);
-    // Add statistics of the filesystem are added as metrics,
+    // All counter statistics of the filesystem are added as metrics.
     OperationCostValidator.Builder builder = OperationCostValidator.builder(
         getFileSystem());
-    // TODO: need to fix this to exclude gauges and things
-    EnumSet.allOf(Statistic.class).forEach(s -> builder.withMetric(s));
+    EnumSet.allOf(Statistic.class).stream()
+        .filter(s -> s.getType() == StatisticTypeEnum.TYPE_COUNTER)
+        .forEach(s -> builder.withMetric(s));
     costValidator = builder.build();
   }
 
@@ -358,8 +360,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * Execute a closure expecting an exception.
    * @param clazz type of exception
    * @param text text to look for in exception (optional)
-   * @param head expected head request count.
-   * @param list expected list request count.
+   * @param cost expected cost declaration.
    * @param eval closure to evaluate
    * @param <T> return type of closure
    * @param <E> exception type

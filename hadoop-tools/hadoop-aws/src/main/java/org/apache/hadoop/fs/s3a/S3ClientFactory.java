@@ -26,7 +26,7 @@ import com.amazonaws.services.s3.AmazonS3;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
+import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 /**
  * Factory for creation of {@link AmazonS3} client instances.

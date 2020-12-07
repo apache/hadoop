@@ -16,13 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics;
+
+import java.io.Closeable;
 
 /**
- * Instrumentation exported to for S3A Delegation Token support.
+ * Statistics for the S3A multipart uploader.
+ * It is expected to act as the statistics source for
+ * the uploader.
  */
-public interface DelegationTokenStatistics extends S3AStatisticInterface {
+public interface S3AMultipartUploaderStatistics extends Closeable,
+    S3AStatisticInterface {
 
-  /** A token has been issued. */
-  void tokenIssued();
+  void instantiated();
+
+  void uploadStarted();
+
+  void partPut(long lengthInBytes);
+
+  void uploadCompleted();
+
+  void uploadAborted();
+
+  void abortUploadsUnderPathInvoked();
 }

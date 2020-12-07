@@ -16,51 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics;
 
 /**
- * Statistics for S3A committers.
+ * Enum of statistic types.
  */
-public interface CommitterStatistics
-    extends S3AStatisticInterface {
-
-  /** A commit has been created. */
-  void commitCreated();
+public enum StatisticTypeEnum {
 
   /**
-   * Data has been uploaded to be committed in a subsequent operation.
-   * @param size size in bytes
+   * Counter.
    */
-  void commitUploaded(long size);
+  TYPE_COUNTER,
 
   /**
-   * A commit has been completed.
-   * @param size size in bytes
+   * Duration.
    */
-  void commitCompleted(long size);
-
-  /** A commit has been aborted. */
-  void commitAborted();
+  TYPE_DURATION,
 
   /**
-   * A commit was reverted.
+   * Gauge.
    */
-  void commitReverted();
+  TYPE_GAUGE,
 
   /**
-   * A commit failed.
+   * Quantile.
    */
-  void commitFailed();
+  TYPE_QUANTILE,
 
-  /**
-   * Note that a task has completed.
-   * @param success success flag
-   */
-  void taskCompleted(boolean success);
-
-  /**
-   * Note that a job has completed.
-   * @param success success flag
-   */
-  void jobCompleted(boolean success);
 }

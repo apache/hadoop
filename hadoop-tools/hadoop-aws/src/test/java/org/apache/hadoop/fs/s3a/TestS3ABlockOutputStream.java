@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
-import org.apache.hadoop.fs.s3a.impl.statistics.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;

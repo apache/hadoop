@@ -54,7 +54,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.UploadHandle;
 import org.apache.hadoop.fs.impl.AbstractMultipartUploader;
 import org.apache.hadoop.fs.s3a.WriteOperations;
-import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 

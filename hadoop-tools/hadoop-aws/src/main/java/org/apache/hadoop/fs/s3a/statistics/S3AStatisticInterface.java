@@ -16,27 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics;
 
-import java.io.Closeable;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
- * Statistics for the S3A multipart uploader.
- * It is expected to act as the statistics source for
- * the uploader.
+ * Base Interface for S3A Statistics, as a way of managing
+ * them.
  */
-public interface S3AMultipartUploaderStatistics extends Closeable,
-    S3AStatisticInterface {
+public interface S3AStatisticInterface extends IOStatisticsSource,
+    DurationTrackerFactory {
 
-  void instantiated();
 
-  void uploadStarted();
-
-  void partPut(long lengthInBytes);
-
-  void uploadCompleted();
-
-  void uploadAborted();
-
-  void abortUploadsUnderPathInvoked();
 }

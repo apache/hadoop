@@ -39,12 +39,11 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
-import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
-import org.apache.hadoop.fs.s3a.impl.statistics.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.util.Progressable;
 
-import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**

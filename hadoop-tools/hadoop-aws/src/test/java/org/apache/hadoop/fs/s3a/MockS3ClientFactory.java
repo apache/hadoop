@@ -28,7 +28,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.Region;
 
-import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
+import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 /**
  * An {@link S3ClientFactory} that returns Mockito mocks of the {@link AmazonS3}

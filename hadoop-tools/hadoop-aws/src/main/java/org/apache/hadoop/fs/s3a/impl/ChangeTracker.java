@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.NoVersionAttributeException;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
-import org.apache.hadoop.fs.s3a.impl.statistics.ChangeTrackerStatistics;
+import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 

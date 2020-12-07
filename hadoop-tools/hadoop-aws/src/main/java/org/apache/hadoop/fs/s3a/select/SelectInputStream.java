@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
-import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;

@@ -41,8 +41,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.s3a.impl.statistics.AwsStatisticsCollector;
-import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
+import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
+import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;

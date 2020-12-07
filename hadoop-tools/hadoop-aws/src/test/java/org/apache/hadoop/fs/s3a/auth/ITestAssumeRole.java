@@ -50,8 +50,8 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
-import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
+import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;

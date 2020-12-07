@@ -23,8 +23,8 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.fs.s3a.impl.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 
 /**
  * Context for any active operation.
