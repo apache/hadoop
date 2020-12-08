@@ -21,7 +21,6 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.crypto.OpensslCipher;
-import org.apache.hadoop.io.compress.Lz4Codec;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.slf4j.Logger;
@@ -54,7 +53,6 @@ public class TestNativeCodeLoader {
     if (NativeCodeLoader.buildSupportsOpenssl()) {
       assertFalse(OpensslCipher.getLibraryName().isEmpty());
     }
-    assertFalse(Lz4Codec.getLibraryName().isEmpty());
     LOG.info("TestNativeCodeLoader: libhadoop.so is loaded.");
   }
 }

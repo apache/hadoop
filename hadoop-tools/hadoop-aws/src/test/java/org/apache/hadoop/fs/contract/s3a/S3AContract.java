@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.contract.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 /**
@@ -53,6 +54,9 @@ public class S3AContract extends AbstractBondedFSContract {
    */
   public S3AContract(Configuration conf, boolean addContractResource) {
     super(conf);
+    // Force deprecated key load through the
+    // static initializers. See: HADOOP-17385
+    S3AFileSystem.initializeClass();
     //insert the base features
     if (addContractResource) {
       addConfResource(CONTRACT_XML);

@@ -60,6 +60,9 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     // filesystems which add default configuration resources to do it before
     // our tests start adding/removing options. See HADOOP-16626.
     FileSystem.getLocal(new Configuration());
+    // Force deprecated key load through the
+    // static initializers. See: HADOOP-17385
+    S3AFileSystem.initializeClass();
     super.setup();
   }
 

@@ -158,6 +158,7 @@ message StorageReportProto {
   optional uint64 blockPoolUsed = 6 [ default = 0 ];
   optional DatanodeStorageProto storage = 7; // supersedes StorageUuid
   optional uint64 nonDfsUsed = 8;
+  optional string mount = 9;
 }
 
 /**
@@ -197,7 +198,7 @@ message StorageTypeQuotaInfosProto {
 }
 
 message StorageTypeQuotaInfoProto {
-  required StorageTypeProto type = 1;
+  optional StorageTypeProto type = 1 [default = DISK];
   required uint64 quota = 2;
   required uint64 consumed = 3;
 }

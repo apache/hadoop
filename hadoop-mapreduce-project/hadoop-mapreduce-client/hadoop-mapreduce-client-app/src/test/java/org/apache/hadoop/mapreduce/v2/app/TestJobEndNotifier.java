@@ -31,6 +31,7 @@ import java.io.PrintStream;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.channels.ClosedChannelException;
 
 import javax.servlet.ServletException;
@@ -42,7 +43,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContext;
+import org.apache.hadoop.mapreduce.CustomJobEndNotifier;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
@@ -297,6 +300,45 @@ public class TestJobEndNotifier extends JobEndNotifier {
     Assert.assertNull(JobEndServlet.requestUri);
     Assert.assertNull(JobEndServlet.foundJobState);
     server.stop();
+  }
+
+  @Test
+  public void testCustomNotifierClass() throws InterruptedException {
+    JobConf conf = new JobConf();
+    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_URL,
+             "http://example.com?jobId=$jobId&jobStatus=$jobStatus");
+    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_CUSTOM_NOTIFIER_CLASS,
+             CustomNotifier.class.getName());
+    this.setConf(conf);
+
+    JobReport jobReport = mock(JobReport.class);
+    JobId jobId = mock(JobId.class);
+    when(jobId.toString()).thenReturn("mock-Id");
+    when(jobReport.getJobId()).thenReturn(jobId);
+    when(jobReport.getJobState()).thenReturn(JobState.SUCCEEDED);
+
+    CustomNotifier.urlToNotify = null;
+    this.notify(jobReport);
+    final URL urlToNotify = CustomNotifier.urlToNotify;
+
+    Assert.assertEquals("http://example.com?jobId=mock-Id&jobStatus=SUCCEEDED",
+                        urlToNotify.toString());
+  }
+
+  public static final class CustomNotifier implements CustomJobEndNotifier {
+
+    /**
+     * Once notifyOnce was invoked we'll store the URL in this variable
+     * so we can assert on it.
+     */
+    private static URL urlToNotify = null;
+
+    @Override
+    public boolean notifyOnce(final URL url, final Configuration jobConf) {
+      urlToNotify = url;
+      return true;
+    }
+
   }
 
   private static HttpServer2 startHttpServer() throws Exception {

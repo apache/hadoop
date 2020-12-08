@@ -77,6 +77,11 @@ public final class OperationCost {
   public static final OperationCost FILE_STATUS_FILE_PROBE = HEAD_OPERATION;
 
   /**
+   * Cost of getFileStatus on root directory.
+   */
+  public static final OperationCost ROOT_FILE_STATUS_PROBE = NO_IO;
+
+  /**
    * Cost of {@link org.apache.hadoop.fs.s3a.impl.StatusProbeEnum#ALL}.
    */
   public static final OperationCost FILE_STATUS_ALL_PROBES =

@@ -548,8 +548,8 @@ RouterRPCMetrics shows the statistics of the Router component in Router-based fe
 |:---- |:---- |
 | `ProcessingOp` | Number of operations the Router processed internally |
 | `ProxyOp` | Number of operations the Router proxied to a Namenode |
-| `ProxyOpFailureStandby` | Number of operations to fail to reach NN |
-| `ProxyOpFailureCommunicate` | Number of operations to hit a standby NN |
+| `ProxyOpFailureStandby` | Number of operations to hit a standby NN |
+| `ProxyOpFailureCommunicate` | Number of operations to fail to reach NN |
 | `ProxyOpNotImplemented` | Number of operations not implemented |
 | `RouterFailureStateStore` | Number of failed requests due to State Store unavailable |
 | `RouterFailureReadOnly` | Number of failed requests due to read only mount point |

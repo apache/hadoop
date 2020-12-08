@@ -24,6 +24,7 @@ import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditLogDirec
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditLogHiveTableParser;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditReplayMapper;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
@@ -115,7 +116,7 @@ public class TestWorkloadGenerator {
       // Do nothing
     }
 
-    public void authorize(UserGroupInformation user, String remoteAddress)
+    public void authorize(UserGroupInformation user, InetAddress remoteAddress)
         throws AuthorizationException {
       try {
         if (!user.getRealUser().getShortUserName()

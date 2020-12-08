@@ -77,7 +77,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_TMP_PATH;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants._SUCCESS;
-import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
 import static org.apache.hadoop.fs.s3a.commit.staging.Paths.getMultipartUploadCommitsDirectory;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.STAGING_UPLOADS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -254,7 +254,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     jobConf.set("mock-results-file", committerPath);
 
     // setting up staging options is harmless for other committers
-    jobConf.set(FS_S3A_COMMITTER_STAGING_UUID, commitUUID);
+    jobConf.set(FS_S3A_COMMITTER_UUID, commitUUID);
 
     mrJob.setInputFormatClass(TextInputFormat.class);
     FileInputFormat.addInputPath(mrJob,
@@ -310,7 +310,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
         committerName(),
         fs,
         "MR job " + jobID,
-        1);
+        1,
+        "");
     String commitData = successData.toString();
 
     FileStatus[] results = fs.listStatus(outputPath,
