@@ -161,7 +161,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
   }
 
-  private int validate(byte[] b, int off, int len) throws IOException {
+  private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
     if (closed) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
@@ -181,15 +181,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (off < 0 || len < 0 || len > b.length - off) {
       throw new IndexOutOfBoundsException();
     }
-    return 1; // 1 indicate success
-  }
-
-  private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
-    int validation = validate(b, off, len);
-    if (validation < 1) {
-      return validation;
-    }
-
     //If buffer is empty, then fill the buffer.
     if (bCursor == limit) {
       //If EOF, then return -1
@@ -257,46 +248,110 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         && this.fCursor == this.contentLength - FOOTER_SIZE;
   }
 
-  private int readFileCompletely(final byte[] b, final int off, final int len) throws IOException {
-    int validation = validate(b, off, len);
-    if (validation < 1) {
-      return validation;
+  private int readFileCompletely(final byte[] b, final int off, final int len)
+      throws IOException {
+    if (closed) {
+      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+
+    Preconditions.checkNotNull(b);
+    LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
+        off, len);
+
+    if (len == 0) {
+      return 0;
+    }
+
+    if (this.available() == 0) {
+      return -1;
+    }
+
+    if (off < 0 || len < 0 || len > b.length - off) {
+      throw new IndexOutOfBoundsException();
     }
 
     buffer = new byte[bufferSize];
+    // data need to be copied to user buffer from index bCursor, bCursor has
+    // to be the current fCusor
     bCursor = (int) fCursor;
-    int bytesRead = readInternal(0, buffer, 0, (int) contentLength, true);
+    fCursorAfterLastRead = fCursor;
+    int totalBytesRead = 0;
+    int loopCount = 0;
+    // Read from begining
+    fCursor = 0;
+    while (fCursor < contentLength) {
+      int bytesRead = readInternal(fCursor, buffer, limit,
+          (int) contentLength - limit, true);
+      if (bytesRead > 0) {
+        totalBytesRead += bytesRead;
+        limit += bytesRead;
+        fCursor += bytesRead;
+      }
+      if (loopCount++ >= 10) {
+        throw new IOException(
+            "Too many attempts in reading whole file " + path);
+      }
+    }
     firstRead = false;
-    if (bytesRead == -1) {
+    if (totalBytesRead == -1) {
       return -1;
     }
-    fCursorAfterLastRead = fCursor;
-    limit = bytesRead;
-    fCursor = bytesRead;
     return copyToUserBuffer(b, off, len);
   }
 
-  private int readLastBlock(final byte[] b, final int off, final int len) throws IOException {
-    int validation = validate(b, off, len);
-    if (validation < 1) {
-      return validation;
+  private int readLastBlock(final byte[] b, final int off, final int len)
+      throws IOException {
+    if (closed) {
+      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+
+    Preconditions.checkNotNull(b);
+    LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
+        off, len);
+
+    if (len == 0) {
+      return 0;
+    }
+
+    if (this.available() == 0) {
+      return -1;
+    }
+
+    if (off < 0 || len < 0 || len > b.length - off) {
+      throw new IndexOutOfBoundsException();
     }
 
     buffer = new byte[bufferSize];
-    bCursor = (int) (((contentLength < bufferSize) ? contentLength : bufferSize)
-        - FOOTER_SIZE);
-    long lastBlockStartPos = (contentLength < bufferSize)
-        ? 0
-        : contentLength - bufferSize;
-    int bytesRead = readInternal(lastBlockStartPos, buffer, 0, bufferSize,
-        true);
+    // data need to be copied to user buffer from index bCursor, for small
+    // files the bCursor will be contentlength - footer size,
+    // otherwise buffersize - footer size
+    bCursor = (int) (Math.min(contentLength, bufferSize) - FOOTER_SIZE);
+    // read API call is considered 1 single operation in reality server could
+    // return partial data and client has to retry untill the last full block
+    // is read. So setting the fCursorAfterLastRead before the possible
+    // multiple server calls
+    fCursorAfterLastRead = fCursor;
+    // 0 if contentlength is < buffersize
+    fCursor = Math.max(0, contentLength - bufferSize);
+    int totalBytesRead = 0;
+    int loopCount = 0;
+    while (fCursor < contentLength) {
+      int bytesRead = readInternal(fCursor, buffer, limit, bufferSize - limit,
+          true);
+      if (bytesRead > 0) {
+        totalBytesRead += bytesRead;
+        limit += bytesRead;
+        fCursor += bytesRead;
+      }
+      if (loopCount++ >= 10) {
+        throw new IOException(
+            "Too many attempts in reading whole file " + path);
+      }
+    }
     firstRead = false;
-    if (bytesRead == -1) {
+    if (totalBytesRead == -1) {
       return -1;
     }
-    fCursorAfterLastRead = fCursor;
-    limit = bytesRead;
-    fCursor = lastBlockStartPos + bytesRead;
     return copyToUserBuffer(b, off, len);
   }
 
