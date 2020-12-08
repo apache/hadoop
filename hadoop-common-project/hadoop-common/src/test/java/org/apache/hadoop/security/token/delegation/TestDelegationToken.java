@@ -65,7 +65,8 @@ public class TestDelegationToken {
     public TestDelegationTokenIdentifier() {
     }
 
-    public TestDelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
+    public TestDelegationTokenIdentifier(Text owner, Text renewer,
+        Text realUser) {
       super(owner, renewer, realUser);
     }
 
