@@ -6103,7 +6103,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String tokenId = null;
     Token<DelegationTokenIdentifier> token;
     checkOperation(OperationCategory.WRITE);
-    writeLock();
+    readLock(); // not mutating namesystem.
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot issue delegation token");
@@ -6131,7 +6131,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       getEditLog().logGetDelegationToken(dtId, expiryTime);
       tokenId = dtId.toStringStable();
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(tokenId));
+      readUnlock(operationName, getLockReportInfoSupplier(tokenId));
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, tokenId);
@@ -6152,7 +6152,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     long expiryTime;
     checkOperation(OperationCategory.WRITE);
     try {
-      writeLock();
+      readLock(); // not mutating namesystem.
       try {
         checkOperation(OperationCategory.WRITE);
 
@@ -6169,7 +6169,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         getEditLog().logRenewDelegationToken(id, expiryTime);
         tokenId = id.toStringStable();
       } finally {
-        writeUnlock(operationName, getLockReportInfoSupplier(tokenId));
+        readUnlock(operationName, getLockReportInfoSupplier(tokenId));
       }
     } catch (AccessControlException ace) {
       final DelegationTokenIdentifier id = DFSUtil.decodeDelegationToken(token);
@@ -6190,24 +6190,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
     final String operationName = "cancelDelegationToken";
-    String tokenId = null;
+    final DelegationTokenIdentifier id = DFSUtil.decodeDelegationToken(token);
+    String tokenId = id.toStringStable();
     checkOperation(OperationCategory.WRITE);
     try {
-      writeLock();
+      readLock(); // not mutating namesystem.
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot cancel delegation token");
         String canceller = getRemoteUser().getUserName();
-        DelegationTokenIdentifier id = dtSecretManager
-            .cancelToken(token, canceller);
+        dtSecretManager.cancelToken(token, canceller);
         getEditLog().logCancelDelegationToken(id);
-        tokenId = id.toStringStable();
       } finally {
-        writeUnlock(operationName, getLockReportInfoSupplier(tokenId));
+        readUnlock(operationName, getLockReportInfoSupplier(tokenId));
       }
     } catch (AccessControlException ace) {
-      final DelegationTokenIdentifier id = DFSUtil.decodeDelegationToken(token);
-      tokenId = id.toStringStable();
       logAuditEvent(false, operationName, tokenId);
       throw ace;
     }

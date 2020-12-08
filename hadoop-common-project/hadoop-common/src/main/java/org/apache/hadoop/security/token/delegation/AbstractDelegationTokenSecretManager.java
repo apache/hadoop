@@ -571,9 +571,14 @@ extends AbstractDelegationTokenIdentifier>
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
-    LOG.info("Token cancellation requested for identifier: "
-        + formatTokenId(id));
-    
+    return cancelToken(id, canceller);
+  }
+
+  public synchronized TokenIdent cancelToken(TokenIdent id, String canceller)
+      throws IOException {
+    LOG.info("Token cancellation requested for identifier: {}",
+        formatTokenId(id));
+
     if (id.getUser() == null) {
       throw new InvalidToken("Token with no owner " + formatTokenId(id));
     }
@@ -582,8 +587,8 @@ extends AbstractDelegationTokenIdentifier>
     HadoopKerberosName cancelerKrbName = new HadoopKerberosName(canceller);
     String cancelerShortName = cancelerKrbName.getShortName();
     if (!canceller.equals(owner)
-        && (renewer == null || renewer.toString().isEmpty() || !cancelerShortName
-            .equals(renewer.toString()))) {
+        && (renewer == null || renewer.toString().isEmpty()
+            || !cancelerShortName.equals(renewer.toString()))) {
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token " + formatTokenId(id));
     }
@@ -595,7 +600,7 @@ extends AbstractDelegationTokenIdentifier>
     removeStoredToken(id);
     return id;
   }
-  
+
   /**
    * Convert the byte[] to a secret key
    * @param key the byte[] to create the secret key from
