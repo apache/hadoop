@@ -676,8 +676,8 @@ public class CapacityScheduler extends
 
   static class ResourceCommitterService extends Thread {
     private final CapacityScheduler cs;
-    private BlockingQueue<ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode>>
-        backlogs = new LinkedBlockingQueue<>();
+    private final BlockingQueue<ResourceCommitRequest<FiCaSchedulerApp,
+        FiCaSchedulerNode>> backlogs = new LinkedBlockingQueue<>();
 
     public ResourceCommitterService(CapacityScheduler cs) {
       this.cs = cs;
@@ -690,6 +690,7 @@ public class CapacityScheduler extends
         try {
           ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request =
               backlogs.take();
+          CapacitySchedulerMetrics.getMetrics().decrBacklogs();
           cs.writeLock.lock();
           try {
             cs.tryCommit(cs.getClusterResource(), request, true);
@@ -708,6 +709,7 @@ public class CapacityScheduler extends
     public void addNewCommitRequest(
         ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> proposal) {
       backlogs.add(proposal);
+      CapacitySchedulerMetrics.getMetrics().incrBacklogs();
     }
 
     public int getPendingBacklogs() {

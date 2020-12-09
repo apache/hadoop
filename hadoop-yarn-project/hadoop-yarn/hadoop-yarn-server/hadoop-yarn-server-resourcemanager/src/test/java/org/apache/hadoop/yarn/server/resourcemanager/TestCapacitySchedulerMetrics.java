@@ -79,6 +79,7 @@ public class TestCapacitySchedulerMetrics {
     }
 
     Assert.assertEquals(0, csMetrics.getNumOfAllocates());
+    Assert.assertEquals(0, csMetrics.getSizeOfBacklogs());
     Assert.assertEquals(0, csMetrics.getNumOfCommitSuccess());
 
     RMApp rmApp = MockRMAppSubmitter.submit(rm,

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -47,6 +48,7 @@ public class CapacitySchedulerMetrics {
           "Metrics for the Yarn Capacity Scheduler");
 
   @Metric("Scheduler allocate containers") MutableRate allocate;
+  @Metric("Scheduler commit backlogs") MutableGaugeLong backlogs;
   @Metric("Scheduler commit success") MutableRate commitSuccess;
   @Metric("Scheduler commit failure") MutableRate commitFailure;
   @Metric("Scheduler node update") MutableRate nodeUpdate;
@@ -93,6 +95,14 @@ public class CapacitySchedulerMetrics {
     this.allocate.add(latency);
   }
 
+  public void incrBacklogs() {
+    this.backlogs.incr();
+  }
+
+  public void decrBacklogs() {
+    this.backlogs.decr();
+  }
+
   public void addCommitSuccess(long latency) {
     this.commitSuccess.add(latency);
   }
@@ -127,5 +137,10 @@ public class CapacitySchedulerMetrics {
   @VisibleForTesting
   public long getNumOfSchedulerNodeHBInterval() {
     return this.schedulerNodeHBInterval.getEstimator().getCount();
+  }
+
+  @VisibleForTesting
+  public long getSizeOfBacklogs() {
+    return backlogs.value();
   }
 }
