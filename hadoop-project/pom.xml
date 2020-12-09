@@ -881,7 +881,7 @@
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.containers</groupId>
-        <artifactId>jersey-container-servlet</artifactId>
+        <artifactId>jersey-container-servlet-core</artifactId>
         <version>${jersey2.version}</version>
       </dependency>
       <dependency>
