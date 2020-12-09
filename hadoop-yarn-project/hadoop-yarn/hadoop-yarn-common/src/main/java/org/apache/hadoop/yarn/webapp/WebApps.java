@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.glassfish.jersey.servlet.ServletProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -404,8 +405,11 @@ public class WebApps {
               new String[] {"/*"});
         }
 
+        final Map<String, String> guiceFilterParams = new HashMap<>();
+        guiceFilterParams.put(ServletProperties.FILTER_FORWARD_ON_404, "true");
         HttpServer2.defineFilter(server.getWebAppContext(), "guice",
-          GuiceFilter.class.getName(), null, new String[] { "/*" });
+            GuiceFilter.class.getName(), guiceFilterParams,
+            new String[] { "/*" });
 
         webapp.setConf(conf);
         webapp.setHttpServer(server);
