@@ -63,6 +63,7 @@ public class HttpFSServerMetrics {
   private @Metric MutableCounterLong opsOpen;
   private @Metric MutableCounterLong opsListing;
   private @Metric MutableCounterLong opsStat;
+  private @Metric MutableCounterLong opsCheckAccess;
 
   private final MetricsRegistry registry = new MetricsRegistry("httpfsserver");
   private final String name;
@@ -138,6 +139,10 @@ public class HttpFSServerMetrics {
 
   public void incrOpsStat() {
     opsStat.incr();
+  }
+
+  public void incrOpsCheckAccess() {
+    opsCheckAccess.incr();
   }
 
   public void shutdown() {

@@ -139,8 +139,6 @@ public class TestHttpFSServer extends HFSTestCase {
         }
       };
 
-
-
   @Test
   @TestDir
   @TestJetty
@@ -575,8 +573,6 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertEquals(1 + oldOpsMkdir,
         HttpFSServerWebApp.get().getMetrics().getOpsMkdir());
   }
-
-
 
   /**
    * Talks to the http interface to get the json output of a *STATUS command

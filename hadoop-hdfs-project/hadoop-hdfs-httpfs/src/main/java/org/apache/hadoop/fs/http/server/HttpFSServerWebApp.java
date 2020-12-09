@@ -122,14 +122,13 @@ public class HttpFSServerWebApp extends ServerWebApp {
     super.destroy();
   }
 
-  public static void setMetrics(Configuration config) {
+  private static void setMetrics(Configuration config) {
     LOG.info("Initializing HttpFSServerMetrics");
-    HttpFSServerWebApp.metrics =
-        HttpFSServerMetrics.create(config, "HttpFSServer");
+    metrics = HttpFSServerMetrics.create(config, "HttpFSServer");
     JvmPauseMonitor pauseMonitor = new JvmPauseMonitor();
     pauseMonitor.init(config);
     pauseMonitor.start();
-    HttpFSServerWebApp.metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
+    metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
     FSOperations.setBufferSize(config);
     DefaultMetricsSystem.initialize("HttpFSServer");
   }

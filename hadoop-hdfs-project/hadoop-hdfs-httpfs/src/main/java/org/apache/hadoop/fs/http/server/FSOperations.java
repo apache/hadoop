@@ -2012,6 +2012,7 @@ public final class FSOperations {
       if (fs instanceof DistributedFileSystem) {
         DistributedFileSystem dfs = (DistributedFileSystem) fs;
         dfs.access(path, mode);
+        HttpFSServerWebApp.get().getMetrics().incrOpsCheckAccess();
       } else {
         throw new UnsupportedOperationException("checkaccess is "
             + "not supported for HttpFs on " + fs.getClass()
