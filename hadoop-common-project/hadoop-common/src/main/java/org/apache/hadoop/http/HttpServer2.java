@@ -582,9 +582,9 @@ public final class HttpServer2 implements FilterContainer {
           conf.getLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
               FileBasedKeyStoresFactory.DEFAULT_SSL_STORES_RELOAD_INTERVAL);
 
-      this.configurationChangeMonitor = storesReloadInterval > 0
-          ? Optional.of(this.makeConfigurationChangeMonitor(storesReloadInterval, sslContextFactory))
-          : Optional.empty();
+      if (storesReloadInterval > 0)
+        this.configurationChangeMonitor = Optional.of(
+            this.makeConfigurationChangeMonitor(storesReloadInterval, sslContextFactory));
 
       conn.addFirstConnectionFactory(new SslConnectionFactory(sslContextFactory,
           HttpVersion.HTTP_1_1.asString()));
@@ -593,8 +593,8 @@ public final class HttpServer2 implements FilterContainer {
     }
 
     private java.util.Timer makeConfigurationChangeMonitor(long reloadInterval,
-                                                           SslContextFactory.Server sslContextFactory) {
-      java.util.Timer timer = new java.util.Timer("SSL Certificates Store Monitor", true);
+        SslContextFactory.Server sslContextFactory) {
+      Timer timer = new Timer("SSL Certificates Store Monitor", true);
       //
       // The Jetty SSLContextFactory provides a 'reload' method which will reload both
       // truststore and keystore certificates.
@@ -605,8 +605,7 @@ public final class HttpServer2 implements FilterContainer {
                 LOG.info("Reloading certificates from store keystore " + keyStore);
                 try {
                   sslContextFactory.reload(factory -> { });
-                }
-                catch (Exception ex) {
+                } catch (Exception ex) {
                   LOG.error("Failed to reload SSL keystore certificates", ex);
                 }
               },null),

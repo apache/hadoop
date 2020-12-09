@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.security.ssl;
 
-import com.google.common.base.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.base.Supplier;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.BeforeClass;

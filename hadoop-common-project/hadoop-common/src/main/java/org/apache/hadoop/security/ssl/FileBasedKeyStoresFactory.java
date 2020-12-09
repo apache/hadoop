@@ -39,9 +39,9 @@ import java.util.Timer;
  * {@link KeyStoresFactory} implementation that reads the certificates from
  * keystore files.
  * <p>
- * If either the truststore or the keystore certificates file changes, it would be refreshed
- * under the corresponding wrapper implementation - {@link ReloadingX509KeystoreManager} or
- * {@link ReloadingX509TrustManager}.
+ * If either the truststore or the keystore certificates file changes, it
+ * would be refreshed under the corresponding wrapper implementation -
+ * {@link ReloadingX509KeystoreManager} or {@link ReloadingX509TrustManager}.
  * </p>
  */
 @InterfaceAudience.Private
@@ -118,7 +118,8 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
             storesReloadInterval);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation);
+      LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation +
+          ", reloading at " + truststoreReloadInterval + " millis.");
     }
 
     trustManager = new ReloadingX509TrustManager(

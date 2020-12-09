@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.security.ssl;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,61 +28,58 @@ import java.util.TimerTask;
 import java.util.function.Consumer;
 
 /**
- * <p>
  * Implements basic logic to track when a file changes on disk and call the action
  * passed to the constructor when it does. An exception handler can optionally also be specified
  * in the constructor, otherwise any exception occurring during process will be logged
  * using this class' logger.
- * </p>
  */
 @InterfaceAudience.Private
 public class FileMonitoringTimerTask extends TimerTask {
 
-    static final Logger LOG = LoggerFactory.getLogger(FileMonitoringTimerTask.class);
+  static final Logger LOG = LoggerFactory.getLogger(FileMonitoringTimerTask.class);
 
-    @VisibleForTesting
-    static final String PROCESS_ERROR_MESSAGE =
-            "Could not process file change : ";
+  @VisibleForTesting
+  static final String PROCESS_ERROR_MESSAGE =
+      "Could not process file change : ";
 
-    final private Path filePath;
-    final private Consumer<Path> onFileChange;
-    final Consumer<Throwable> onChangeFailure;
-    private long lastProcessed;
+  final private Path filePath;
+  final private Consumer<Path> onFileChange;
+  final Consumer<Throwable> onChangeFailure;
+  private long lastProcessed;
 
-    /**
-     * Create file monitoring task to be scheduled using a standard Java {@link java.util.Timer}
-     * instance.
-     *
-     * @param filePath The path to the file to monitor.
-     * @param onFileChange The function to call when the file has changed.
-     * @param onChangeFailure The function to call when an exception is thrown during the
-     *                       file change processing.
-     */
-    public FileMonitoringTimerTask(Path filePath,
-                                   Consumer<Path> onFileChange,
-                                   Consumer<Throwable> onChangeFailure) {
-        Preconditions.checkNotNull(filePath, "path to monitor disk file is not set");
-        Preconditions.checkNotNull(onFileChange, "action to monitor disk file is not set");
+  /**
+   * Create file monitoring task to be scheduled using a standard Java {@link java.util.Timer}
+   * instance.
+   *
+   * @param filePath The path to the file to monitor.
+   * @param onFileChange The function to call when the file has changed.
+   * @param onChangeFailure The function to call when an exception is thrown during the
+   *                       file change processing.
+   */
+  public FileMonitoringTimerTask(Path filePath, Consumer<Path> onFileChange,
+      Consumer<Throwable> onChangeFailure) {
+    Preconditions.checkNotNull(filePath, "path to monitor disk file is not set");
+    Preconditions.checkNotNull(onFileChange, "action to monitor disk file is not set");
 
-        this.filePath = filePath;
-        this.lastProcessed = filePath.toFile().lastModified();
-        this.onFileChange = onFileChange;
-        this.onChangeFailure = onChangeFailure;
-    }
+    this.filePath = filePath;
+    this.lastProcessed = filePath.toFile().lastModified();
+    this.onFileChange = onFileChange;
+    this.onChangeFailure = onChangeFailure;
+  }
 
-    @Override
-    public void run() {
-        if (lastProcessed != filePath.toFile().lastModified()) {
-            try {
-                onFileChange.accept(filePath);
-            } catch (Throwable t) {
-                if (onChangeFailure  != null) {
-                    onChangeFailure.accept(t);
-                } else {
-                    LOG.error(PROCESS_ERROR_MESSAGE + filePath.toString(), t);
-                }
-            }
-            lastProcessed = filePath.toFile().lastModified();
+  @Override
+  public void run() {
+    if (lastProcessed != filePath.toFile().lastModified()) {
+      try {
+        onFileChange.accept(filePath);
+      } catch (Throwable t) {
+        if (onChangeFailure  != null) {
+          onChangeFailure.accept(t);
+        } else {
+          LOG.error(PROCESS_ERROR_MESSAGE + filePath.toString(), t);
         }
+      }
+      lastProcessed = filePath.toFile().lastModified();
     }
+  }
 }
