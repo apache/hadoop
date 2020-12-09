@@ -35,6 +35,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CancellationException;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
@@ -316,41 +317,29 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     } catch (InterruptedException ie) {
       throw (IOException) new InterruptedIOException().initCause(ie);
     }
-<<<<<<< HEAD
 
     //Close ClientResponse's input stream as we are done posting objects.
     //ClientResponse#getEntity closes the input stream upon failure in
     //processing HTTP response.
     if (resp == null) {
       String msg = "Error getting HTTP response from the timeline server.";
-=======
-    if (resp == null || resp.getStatusInfo()
-        .getStatusCode() != Response.Status.OK.getStatusCode()) {
-      String msg =
-          "Response from the timeline server is " + ((resp == null) ? "null"
-              : "not successful," + " HTTP error code: " + resp.getStatus()
-                  + ", Server response:\n" + resp.readEntity(String.class));
->>>>>>> d476e7b010a... WIP. Migrating yarn-common.
       LOG.error(msg);
       throw new YarnException(msg);
     } else if (resp.getStatusInfo().getStatusCode()
-            == ClientResponse.Status.OK.getStatusCode()) {
+            == Response.Status.OK.getStatusCode()) {
       try {
         resp.close();
-      } catch(ClientHandlerException che) {
-        LOG.warn("Error closing the HTTP response's inputstream. ", che);
+      } catch(ProcessingException e) {
+        LOG.warn("Error closing the HTTP response's inputstream. ", e);
       }
     } else {
       String msg = "";
       try {
-        String stringType = resp.getEntity(String.class);
+        String stringType = resp.readEntity(String.class);
         msg = "Server response:\n" + stringType;
-      } catch (ClientHandlerException | UniformInterfaceException chuie) {
+      } catch (ProcessingException | IllegalStateException e) {
         msg = "Error getting entity from the HTTP response."
-                + chuie.getLocalizedMessage();
-      } catch (Throwable t) {
-        msg = "Error getting entity from the HTTP response."
-                + t.getLocalizedMessage();
+                + e.getLocalizedMessage();
       } finally {
         msg = "Response from the timeline server is not successful"
                   + ", HTTP error code: " + resp.getStatus()

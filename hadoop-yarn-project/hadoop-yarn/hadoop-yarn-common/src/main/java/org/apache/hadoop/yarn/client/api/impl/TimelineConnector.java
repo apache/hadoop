@@ -19,18 +19,22 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
+import java.time.Duration;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 
@@ -198,7 +202,7 @@ public class TimelineConnector extends AbstractService {
 
   protected void serviceStop() {
     if (this.client != null) {
-      this.client.destroy();
+      this.client.close();
     }
     if (this.sslFactory != null) {
       this.sslFactory.destroy();
@@ -283,64 +287,24 @@ public class TimelineConnector extends AbstractService {
                 DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS) > 0,
           "%s property value should be greater than zero",
           YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
-      maxRetries =
-          conf.getInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
-              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
-      retryInterval = conf.getLong(
-          YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
+    int maxRetries = 0;
+    if (requireConnectionRetry) {
+      // maxRetries < 0 means keep trying
+      maxRetries = conf.getInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
     }
-
-    public Object retryOn(TimelineClientRetryOp op)
-        throws RuntimeException, IOException {
-      int leftRetries = maxRetries;
-      retried = false;
-
-      // keep trying
-      while (true) {
-        try {
-          // try perform the op, if fail, keep retrying
-          return op.run();
-        } catch (IOException | RuntimeException e) {
-          // break if there's no retries left
-          if (leftRetries == 0) {
-            break;
-          }
-          if (op.shouldRetryOn(e)) {
-            logException(e, leftRetries);
-          } else {
-            throw e;
-          }
-        }
-        if (leftRetries > 0) {
-          leftRetries--;
-        }
-        retried = true;
-        try {
-          // sleep for the given time interval
-          Thread.sleep(retryInterval);
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          throw new InterruptedIOException("Client retry sleep interrupted!");
-        }
-      }
-      throw new RuntimeException("Failed to connect to timeline server. "
-          + "Connection retries limit exceeded. "
-          + "The posted timeline event may be missing");
-    };
-
-    private void logException(Exception e, int leftRetries) {
-      if (leftRetries > 0) {
-        LOG.info(
-            "Exception caught by TimelineClientConnectionRetry," + " will try "
-                + leftRetries + " more time(s).\nMessage: " + e.getMessage());
-      } else {
-        // note that maxRetries may be -1 at the very beginning
-        LOG.info("ConnectionException caught by TimelineClientConnectionRetry,"
-            + " will keep retrying.\nMessage: " + e.getMessage());
-      }
+    long retryInterval = conf.getLong(
+        YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
+    return retryPolicy = new RetryPolicy<>()
+        .handle(IOException.class, RuntimeException.class)
+        .handleIf(e -> e instanceof ProcessingException
+          && (e.getCause() instanceof ConnectException
+          || e.getCause() instanceof SocketTimeoutException
+          || e.getCause() instanceof SocketException))
+        .withDelay(Duration.ofMillis(retryInterval))
+        .withMaxRetries(maxRetries);
     }
-  }
 
   @Private
   @VisibleForTesting
