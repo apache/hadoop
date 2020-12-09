@@ -582,9 +582,10 @@ public final class HttpServer2 implements FilterContainer {
           conf.getLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
               FileBasedKeyStoresFactory.DEFAULT_SSL_STORES_RELOAD_INTERVAL);
 
-      if (storesReloadInterval > 0)
+      if (storesReloadInterval > 0) {
         this.configurationChangeMonitor = Optional.of(
             this.makeConfigurationChangeMonitor(storesReloadInterval, sslContextFactory));
+      }
 
       conn.addFirstConnectionFactory(new SslConnectionFactory(sslContextFactory,
           HttpVersion.HTTP_1_1.asString()));
@@ -592,7 +593,7 @@ public final class HttpServer2 implements FilterContainer {
       return conn;
     }
 
-    private java.util.Timer makeConfigurationChangeMonitor(long reloadInterval,
+    private Timer makeConfigurationChangeMonitor(long reloadInterval,
         SslContextFactory.Server sslContextFactory) {
       Timer timer = new Timer("SSL Certificates Store Monitor", true);
       //
