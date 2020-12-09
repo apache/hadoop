@@ -487,7 +487,7 @@ public class TestTimelineClient {
     Client mockJerseyClient = mock(Client.class);
     client.connector.client = mockJerseyClient;
     client.stop();
-    verify(mockJerseyClient, times(1)).destroy();
+    verify(mockJerseyClient, times(1)).close();
   }
 
   private void setupSSLConfig(YarnConfiguration conf) throws Exception {
