@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.webapp.util;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.core.MediaType;
@@ -45,9 +46,15 @@ public final class YarnWebServiceUtils {
    * @return a JSONObject which contains the NodeInfo
    */
   public static JSONObject getNodeInfoFromRMWebService(Configuration conf,
-      String nodeId) throws Exception {
-    return WebAppUtils.execOnActiveRM(conf,
+      String nodeId) throws ProcessingException, IllegalStateException {
+    try {
+      return WebAppUtils.execOnActiveRM(conf,
           YarnWebServiceUtils::getNodeInfoFromRM, nodeId);
+    } catch (ProcessingException | IllegalStateException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static JSONObject getNodeInfoFromRM(String webAppAddress,
