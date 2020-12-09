@@ -584,7 +584,7 @@ public class HttpFSServer {
    * @param is the inputstream for the request payload.
    * @param uriInfo the of the request.
    * @param op the HttpFS operation of the request.
-   * @param params the HttpFS parameters of the request.
+   * @param request the HttpFS request.
    *
    * @return the request response.
    *
@@ -598,9 +598,9 @@ public class HttpFSServer {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8 })
   public Response postRoot(InputStream is, @Context UriInfo uriInfo,
       @QueryParam(OperationParam.NAME) OperationParam op,
-      @Context Parameters params, @Context HttpServletRequest request)
+      @Context HttpServletRequest request)
       throws IOException, FileSystemAccessException {
-    return post(is, uriInfo, "/", op, params, request);
+    return post(is, uriInfo, "/", op, request);
   }
 
   /**
@@ -728,7 +728,7 @@ public class HttpFSServer {
    * @param is the inputstream for the request payload.
    * @param uriInfo the of the request.
    * @param op the HttpFS operation of the request.
-   * @param params the HttpFS parameters of the request.
+   * @param request the HttpFS request.
    *
    * @return the request response.
    *
@@ -742,9 +742,9 @@ public class HttpFSServer {
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8 })
   public Response putRoot(InputStream is, @Context UriInfo uriInfo,
       @QueryParam(OperationParam.NAME) OperationParam op,
-      @Context Parameters params, @Context HttpServletRequest request)
+      @Context HttpServletRequest request)
       throws IOException, FileSystemAccessException {
-    return put(is, uriInfo, "/", op, params, request);
+    return put(is, uriInfo, "/", op, request);
   }
 
   /**
