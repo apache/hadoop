@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import java.io.IOException;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.container.ContainerRequestContext;
-import javax.ws.rs.container.ContainerResponseContext;
-import javax.ws.rs.container.ContainerResponseFilter;
-import javax.ws.rs.core.MultivaluedMap;
 
 import com.google.inject.Injector;
 import org.apache.hadoop.conf.Configuration;
@@ -40,7 +44,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.NameValuePair;
 
 @Singleton
-public class NMWebAppFilter implements ContainerResponseFilter {
+public class NMWebAppFilter implements Filter {
 
   private Injector injector;
   private Context nmContext;
@@ -54,21 +58,25 @@ public class NMWebAppFilter implements ContainerResponseFilter {
   }
 
   @Override
-  public void filter(ContainerRequestContext requestContext,
-                     ContainerResponseContext responseContext) {
-    String redirectPath = containerLogPageRedirectPath(requestContext);
-    if (redirectPath != null) {
-      String redirectMsg =
-          "Redirecting to log server" + " : " + redirectPath;
-      responseContext.setEntity(redirectMsg);
-      MultivaluedMap<String, Object> headers = responseContext.getHeaders();
-      headers.add("Location", redirectPath);
-      responseContext.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
-    }
+  public void init(FilterConfig filterConfig) throws ServletException {
   }
 
-  private String containerLogPageRedirectPath(ContainerRequestContext request) {
-    String uri = HtmlQuoting.quoteHtmlChars(request.getUriInfo().getPath());
+  @Override
+  public void doFilter(ServletRequest servletRequest,
+                       ServletResponse servletResponse,
+                       FilterChain chain) throws IOException, ServletException {
+    HttpServletRequest request = (HttpServletRequest) servletRequest;
+    HttpServletResponse response = (HttpServletResponse) servletResponse;
+
+    String redirectPath = containerLogPageRedirectPath(request);
+    if (redirectPath != null) {
+      response.sendRedirect(redirectPath);
+    }
+    chain.doFilter(request, response);
+  }
+
+  private String containerLogPageRedirectPath(HttpServletRequest request) {
+    String uri = HtmlQuoting.quoteHtmlChars(request.getRequestURI());
     String redirectPath = null;
     if (!uri.contains("/ws/v1/node") && uri.contains("/containerlogs")) {
       String[] parts = uri.split("/");
@@ -135,5 +143,9 @@ public class NMWebAppFilter implements ContainerResponseFilter {
       }
     }
     return redirectPath;
+  }
+
+  @Override
+  public void destroy() {
   }
 }

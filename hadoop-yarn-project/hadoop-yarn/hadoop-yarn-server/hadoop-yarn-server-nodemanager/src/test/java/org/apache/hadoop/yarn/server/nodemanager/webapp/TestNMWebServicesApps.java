@@ -37,6 +37,8 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.http.JettyUtils;
@@ -60,12 +62,12 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -77,14 +79,8 @@ import org.xml.sax.InputSource;
 
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
-public class TestNMWebServicesApps extends JerseyTestBase {
+public class TestNMWebServicesApps extends JerseyTest {
 
   private static Context nmContext;
   private static ResourceView resourceView;
@@ -151,8 +147,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
       bind(ResourceView.class).toInstance(resourceView);
       bind(ApplicationACLsManager.class).toInstance(aclsManager);
       bind(LocalDirsHandlerService.class).toInstance(dirsHandler);
-
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
     }
   }
 
@@ -178,11 +173,13 @@ public class TestNMWebServicesApps extends JerseyTestBase {
   }
 
   public TestNMWebServicesApps() {
+    /* TODO: Remove or fix this
     super(new WebAppDescriptor.Builder(
         "org.apache.hadoop.yarn.server.nodemanager.webapp")
         .contextListenerClass(GuiceServletConfig.class)
         .filterClass(com.google.inject.servlet.GuiceFilter.class)
         .contextPath("jersey-guice-filter").servletPath("/").build());
+     */
   }
 
   @Test
