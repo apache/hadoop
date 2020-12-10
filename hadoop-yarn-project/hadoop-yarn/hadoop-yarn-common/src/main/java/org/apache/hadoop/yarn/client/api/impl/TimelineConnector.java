@@ -103,7 +103,7 @@ public class TimelineConnector extends AbstractService {
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
     ClientConfig cc = new ClientConfig();
-    cc.getClasses().add(YarnJacksonJaxbJsonProvider.class);
+    cc.register(YarnJacksonJaxbJsonProvider.class);
 
     if (YarnConfiguration.useHttps(conf)) {
       // If https is chosen, configures SSL client.
