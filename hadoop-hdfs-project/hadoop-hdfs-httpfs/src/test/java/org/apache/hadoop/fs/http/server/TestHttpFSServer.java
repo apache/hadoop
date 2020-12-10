@@ -427,7 +427,8 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestHdfs
   public void testHdfsAccess() throws Exception {
     createHttpFSServer(false, false);
-
+    long oldOpsListStatus =
+        metricsGetter.get("LISTSTATUS").call();
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(),
         MessageFormat.format("/webhdfs/v1/?user.name={0}&op=liststatus",
@@ -438,8 +439,8 @@ public class TestHttpFSServer extends HFSTestCase {
         new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
-    Assert.assertEquals(1,
-        HttpFSServerWebApp.get().getMetrics().getOpsListing());
+    Assert.assertEquals(1 + oldOpsListStatus,
+        (long) metricsGetter.get("LISTSTATUS").call());
   }
 
   @Test
@@ -449,7 +450,7 @@ public class TestHttpFSServer extends HFSTestCase {
   public void testMkdirs() throws Exception {
     createHttpFSServer(false, false);
     long oldMkdirOpsStat =
-        metricsGetter.getOrDefault("MKDIRS", defaultEntryMetricGetter).call();
+        metricsGetter.get("MKDIRS").call();
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
         "/webhdfs/v1/tmp/sub-tmp?user.name={0}&op=MKDIRS", user));
@@ -459,7 +460,7 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     getStatus("/tmp/sub-tmp", "LISTSTATUS");
     long opsStat =
-        metricsGetter.getOrDefault("MKDIRS", defaultExitMetricGetter).call();
+        metricsGetter.get("MKDIRS").call();
     Assert.assertEquals(1 + oldMkdirOpsStat, opsStat);
   }
 
@@ -469,7 +470,8 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestHdfs
   public void testGlobFilter() throws Exception {
     createHttpFSServer(false, false);
-
+    long oldOpsListStatus =
+        metricsGetter.get("LISTSTATUS").call();
     FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
     fs.mkdirs(new Path("/tmp"));
     fs.create(new Path("/tmp/foo.txt")).close();
@@ -484,8 +486,8 @@ public class TestHttpFSServer extends HFSTestCase {
         new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
-    Assert.assertEquals(1,
-        HttpFSServerWebApp.get().getMetrics().getOpsListing());
+    Assert.assertEquals(1 + oldOpsListStatus,
+        (long) metricsGetter.get("LISTSTATUS").call());
   }
 
   /**
@@ -546,7 +548,8 @@ public class TestHttpFSServer extends HFSTestCase {
   private void createDirWithHttp(String dirname, String perms,
       String unmaskedPerms) throws Exception {
     // get the createDirMetrics
-    long oldOpsMkdir = HttpFSServerWebApp.get().getMetrics().getOpsMkdir();
+    long oldOpsMkdir =
+        metricsGetter.get("MKDIRS").call();
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     // Remove leading / from filename
     if (dirname.charAt(0) == '/') {
@@ -571,7 +574,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.connect();
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     Assert.assertEquals(1 + oldOpsMkdir,
-        HttpFSServerWebApp.get().getMetrics().getOpsMkdir());
+        (long) metricsGetter.get("MKDIRS").call());
   }
 
   /**
