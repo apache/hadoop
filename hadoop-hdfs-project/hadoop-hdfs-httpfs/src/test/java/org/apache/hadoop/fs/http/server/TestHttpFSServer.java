@@ -100,7 +100,7 @@ import org.junit.Test;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import java.util.Properties;
 import java.util.regex.Pattern;
 

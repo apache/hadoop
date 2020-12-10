@@ -73,7 +73,7 @@ import org.junit.runners.Parameterized;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import java.io.File;
 import java.io.FileOutputStream;

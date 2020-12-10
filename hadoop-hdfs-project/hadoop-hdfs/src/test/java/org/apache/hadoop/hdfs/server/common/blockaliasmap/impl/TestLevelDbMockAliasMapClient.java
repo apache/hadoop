@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.common.blockaliasmap.impl;
 
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;

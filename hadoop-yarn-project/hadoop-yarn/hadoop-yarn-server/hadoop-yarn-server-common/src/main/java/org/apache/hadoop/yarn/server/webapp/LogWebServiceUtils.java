@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webapp;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import org.apache.hadoop.classification.InterfaceAudience;

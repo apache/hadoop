@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.volume.csi;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.NodePublishVolumeRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeRequest;

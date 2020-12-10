@@ -52,7 +52,7 @@ import org.apache.hadoop.util.Shell;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 /**
  * Startup and checkpoint tests
  * 

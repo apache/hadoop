@@ -26,9 +26,9 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttr.NameSpace;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 @InterfaceAudience.Private
 public class XAttrHelper {

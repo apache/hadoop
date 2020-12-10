@@ -59,8 +59,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 public class TestRMNodeLabelsManager extends NodeLabelTestBase {
   private final Resource EMPTY_RESOURCE = Resource.newInstance(0, 0);

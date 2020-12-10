@@ -28,7 +28,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.google.common.net.InetAddresses;;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;;
 import org.junit.Test;
 
 public class TestMachineList {

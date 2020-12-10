@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.amazonaws.services.s3.model.PartETag;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
