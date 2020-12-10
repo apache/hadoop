@@ -112,6 +112,9 @@ public final class TestAbfsOutputStream {
         eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
         eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any());
   }
 
   /**
@@ -151,6 +154,9 @@ public final class TestAbfsOutputStream {
         eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
         eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any());
 
     ArgumentCaptor<String> acFlushPath = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Long> acFlushPosition = ArgumentCaptor.forClass(Long.class);
@@ -206,6 +212,9 @@ public final class TestAbfsOutputStream {
         eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
         eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any());
 
     ArgumentCaptor<String> acFlushPath = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Long> acFlushPosition = ArgumentCaptor.forClass(Long.class);
@@ -261,6 +270,9 @@ public final class TestAbfsOutputStream {
         eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
         eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any());
   }
 
   /**
@@ -300,6 +312,9 @@ public final class TestAbfsOutputStream {
         eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
         eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any());
   }
 
   /**
@@ -340,6 +355,9 @@ public final class TestAbfsOutputStream {
         eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
         eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any());
 
     ArgumentCaptor<String> acFlushPath = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Long> acFlushPosition = ArgumentCaptor.forClass(Long.class);
@@ -393,5 +411,8 @@ public final class TestAbfsOutputStream {
         eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
         eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+    // confirm there were only 2 invocations in all
+    verify(client, times(2)).append(
+        eq(PATH), any(byte[].class), any(), any());
   }
 }
