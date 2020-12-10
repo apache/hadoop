@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 import java.io.IOException;
 import java.net.URI;
 
+import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -46,8 +47,8 @@ public class DirectTimelineWriter extends TimelineWriter{
       .getLogger(DirectTimelineWriter.class);
 
   public DirectTimelineWriter(UserGroupInformation authUgi,
-                              Client client, URI resURI) {
-    super(authUgi, client, resURI);
+                              Client client, URI resURI, RetryPolicy<Object> retryPolicy) {
+    super(authUgi, client, resURI, retryPolicy);
   }
 
   @Override

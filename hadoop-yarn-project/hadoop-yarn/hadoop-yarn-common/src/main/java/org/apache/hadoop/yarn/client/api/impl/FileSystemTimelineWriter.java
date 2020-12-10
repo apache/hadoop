@@ -38,6 +38,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -103,9 +104,10 @@ public class FileSystemTimelineWriter extends TimelineWriter{
   private final AttemptDirCache attemptDirCache;
 
   public FileSystemTimelineWriter(Configuration conf,
-      UserGroupInformation authUgi, Client client, URI resURI)
+      UserGroupInformation authUgi, Client client, URI resURI,
+      RetryPolicy<Object> retryPolicy)
       throws IOException {
-    super(authUgi, client, resURI);
+    super(authUgi, client, resURI, retryPolicy);
 
     Configuration fsConf = new Configuration(conf);
 

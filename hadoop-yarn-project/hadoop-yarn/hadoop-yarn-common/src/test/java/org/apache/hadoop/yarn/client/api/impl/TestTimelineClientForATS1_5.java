@@ -30,7 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import org.glassfish.jersey.client.ClientResponse;
+import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -252,12 +252,13 @@ public class TestTimelineClientForATS1_5 {
     TimelineClientImpl client = new TimelineClientImpl() {
       @Override
       protected TimelineWriter createTimelineWriter(Configuration conf,
-          UserGroupInformation authUgi, Client client, URI resURI)
+          UserGroupInformation authUgi, Client client, URI resURI,
+          RetryPolicy<Object> retryPolicy)
           throws IOException {
         TimelineWriter timelineWriter =
-            new FileSystemTimelineWriter(conf, authUgi, client, resURI) {
-              public ClientResponse doPostingObject(Object object, String path) {
-                ClientResponse response = mock(ClientResponse.class);
+            new FileSystemTimelineWriter(conf, authUgi, client, resURI, retryPolicy) {
+              public Response doPostingObject(Object object, String path) {
+                Response response = mock(Response.class);
                 when(response.getStatusInfo()).thenReturn(
                     Response.Status.OK);
                 return response;

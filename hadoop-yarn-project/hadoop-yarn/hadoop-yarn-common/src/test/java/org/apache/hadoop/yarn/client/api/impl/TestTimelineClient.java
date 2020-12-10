@@ -33,6 +33,7 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 
+import net.jodah.failsafe.RetryPolicy;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.HttpConfig.Policy;
@@ -222,6 +223,7 @@ public class TestTimelineClient {
       Assert.fail("Exception expected! "
           + "Timeline server should be off to run this test. ");
     } catch (RuntimeException ce) {
+      ce.printStackTrace();
       Assert.assertTrue(
           "Handler exception for reason other than retry: " + ce.getMessage(),
           ce.getMessage().contains("Connection retries limit exceeded"));
@@ -396,9 +398,10 @@ public class TestTimelineClient {
     TimelineClientImpl client = new TimelineClientImpl() {
       @Override
       protected TimelineWriter createTimelineWriter(Configuration conf,
-          UserGroupInformation authUgi, Client client, URI resURI) {
+          UserGroupInformation authUgi, Client client, URI resURI,
+          RetryPolicy<Object> retryPolicy) {
         TimelineWriter timelineWriter =
-            new DirectTimelineWriter(authUgi, client, resURI);
+            new DirectTimelineWriter(authUgi, client, resURI, retryPolicy);
         spyTimelineWriter = spy(timelineWriter);
         return spyTimelineWriter;
       }

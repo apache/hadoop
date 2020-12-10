@@ -30,7 +30,8 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.glassfish.jersey.client.ClientResponse;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -60,12 +61,14 @@ public abstract class TimelineWriter implements Flushable {
   private UserGroupInformation authUgi;
   private Client client;
   private URI resURI;
+  private final RetryPolicy<Object> retryPolicy;
 
   public TimelineWriter(UserGroupInformation authUgi, Client client,
-      URI resURI) {
+      URI resURI, RetryPolicy<Object> retryPolicy) {
     this.authUgi = authUgi;
     this.client = client;
     this.resURI = resURI;
+    this.retryPolicy = retryPolicy;
   }
 
   public void close() throws Exception {
@@ -91,7 +94,7 @@ public abstract class TimelineWriter implements Flushable {
       }
       entitiesContainer.addEntity(entity);
     }
-    ClientResponse resp = doPosting(entitiesContainer, null);
+    Response resp = doPosting(entitiesContainer, null);
     return resp.readEntity(TimelinePutResponse.class);
   }
 
@@ -107,16 +110,12 @@ public abstract class TimelineWriter implements Flushable {
   public abstract void putDomain(ApplicationAttemptId appAttemptId,
       TimelineDomain domain) throws IOException, YarnException;
 
-  private ClientResponse doPosting(final Object obj, final String path)
+  private Response doPosting(final Object obj, final String path)
       throws IOException, YarnException {
-    ClientResponse resp;
+    Response resp;
     try {
-      resp = authUgi.doAs(new PrivilegedExceptionAction<ClientResponse>() {
-        @Override
-        public ClientResponse run() throws Exception {
-          return doPostingObject(obj, path);
-        }
-      });
+      resp = authUgi.doAs((PrivilegedExceptionAction<Response>)
+          () -> doPostingObject(obj, path));
     } catch (UndeclaredThrowableException e) {
       Throwable cause = e.getCause();
       if (cause instanceof IOException) {
@@ -145,18 +144,20 @@ public abstract class TimelineWriter implements Flushable {
 
   @Private
   @VisibleForTesting
-  public ClientResponse doPostingObject(Object object, String path) {
-    WebTarget webTarget = client.target(resURI);
+  public Response doPostingObject(Object object, String path) {
+    final WebTarget webTarget = client.target(resURI);
     if (path == null) {
       LOG.debug("POST to {}", resURI);
-      ClientResponse r = webTarget.request(MediaType.APPLICATION_JSON)
-          .post(Entity.json(object), ClientResponse.class);
+      Response r = Failsafe.with(retryPolicy).get(
+          () -> webTarget.request(MediaType.APPLICATION_JSON)
+              .post(Entity.json(object), Response.class));
       r.bufferEntity();
       return r;
     } else if (path.equals("domain")) {
       LOG.debug("PUT to {}/{}", resURI, path);
-      ClientResponse r = webTarget.path(path).request(MediaType.APPLICATION_JSON)
-          .post(Entity.json(object), ClientResponse.class);
+      Response r = Failsafe.with(retryPolicy).get(
+          () -> webTarget.path(path).request(MediaType.APPLICATION_JSON)
+            .post(Entity.json(object), Response.class));
       r.bufferEntity();
       return r;
     } else {
