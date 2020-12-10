@@ -207,6 +207,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           bytesRead = readInternal(fCursor, buffer, 0, b.length, true);
         }
       }
+      if (firstRead) {
+        firstRead = false;
+      }
 
       if (bytesRead == -1) {
         return -1;
