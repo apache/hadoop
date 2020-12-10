@@ -162,24 +162,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
-    if (closed) {
-      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-    }
-
-    Preconditions.checkNotNull(b);
-    LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
-        off, len);
-
     if (len == 0) {
       return 0;
     }
-
-    if (this.available() == 0) {
+    if (!validate(b, off, len)) {
       return -1;
-    }
-
-    if (off < 0 || len < 0 || len > b.length - off) {
-      throw new IndexOutOfBoundsException();
     }
     //If buffer is empty, then fill the buffer.
     if (bCursor == limit) {
@@ -222,6 +209,26 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return copyToUserBuffer(b, off, len);
   }
 
+  private boolean validate(final byte[] b, final int off, final int len)
+      throws IOException {
+    if (closed) {
+      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+
+    Preconditions.checkNotNull(b);
+    LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
+        off, len);
+
+    if (this.available() == 0) {
+      return false;
+    }
+
+    if (off < 0 || len < 0 || len > b.length - off) {
+      throw new IndexOutOfBoundsException();
+    }
+    return true;
+  }
+
   private int copyToUserBuffer(byte[] b, int off, int len){
     //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
     //(bytes returned may be less than requested)
@@ -253,26 +260,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readFileCompletely(final byte[] b, final int off, final int len)
       throws IOException {
-    if (closed) {
-      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-    }
-
-    Preconditions.checkNotNull(b);
-    LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
-        off, len);
-
     if (len == 0) {
       return 0;
     }
-
-    if (this.available() == 0) {
+    if (!validate(b, off, len)) {
       return -1;
     }
-
-    if (off < 0 || len < 0 || len > b.length - off) {
-      throw new IndexOutOfBoundsException();
-    }
-
     buffer = new byte[bufferSize];
     // data need to be copied to user buffer from index bCursor, bCursor has
     // to be the current fCusor
@@ -304,26 +297,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readLastBlock(final byte[] b, final int off, final int len)
       throws IOException {
-    if (closed) {
-      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-    }
-
-    Preconditions.checkNotNull(b);
-    LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
-        off, len);
-
     if (len == 0) {
       return 0;
     }
-
-    if (this.available() == 0) {
+    if (!validate(b, off, len)) {
       return -1;
     }
-
-    if (off < 0 || len < 0 || len > b.length - off) {
-      throw new IndexOutOfBoundsException();
-    }
-
     buffer = new byte[bufferSize];
     // data need to be copied to user buffer from index bCursor, for small
     // files the bCursor will be contentlength - footer size,
