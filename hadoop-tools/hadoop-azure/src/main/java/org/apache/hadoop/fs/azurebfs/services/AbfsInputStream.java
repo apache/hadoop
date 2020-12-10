@@ -72,6 +72,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
 
+  //  Optimisations modify the pointer fields.
+  //  For better resilience the following fields are used to save the
+  //  existing state before optimization flows.
+  private int bCursorBkp;
+  private long fCursorBkp;
+  private long fCursorAfterLastReadBkp;
+
   /** Stream statistics. */
   private final AbfsInputStreamStatistics streamStatistics;
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
@@ -161,6 +168,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
   }
 
+  private boolean shouldReadFully() {
+    return this.firstRead && this.context.readSmallFilesCompletely()
+        && this.contentLength <= this.bufferSize;
+  }
+
+  private boolean shouldReadLastBlock(int len) {
+    return this.firstRead && this.context.optimizeFooterRead()
+        && len == FOOTER_SIZE
+        && this.fCursor == this.contentLength - FOOTER_SIZE;
+  }
+
   private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
     if (len == 0) {
       return 0;
@@ -209,6 +227,90 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return copyToUserBuffer(b, off, len);
   }
 
+  private int readFileCompletely(final byte[] b, final int off, final int len)
+      throws IOException {
+    if (len == 0) {
+      return 0;
+    }
+    if (!validate(b, off, len)) {
+      return -1;
+    }
+    savePointerState();
+
+    buffer = new byte[bufferSize];
+    // data need to be copied to user buffer from index bCursor, bCursor has
+    // to be the current fCusor
+    bCursor = (int) fCursor;
+    return optimisedRead(b, off, len, 0, contentLength);
+  }
+
+  private int readLastBlock(final byte[] b, final int off, final int len)
+      throws IOException {
+    if (len == 0) {
+      return 0;
+    }
+    if (!validate(b, off, len)) {
+      return -1;
+    }
+    savePointerState();
+
+    buffer = new byte[bufferSize];
+    // data need to be copied to user buffer from index bCursor, for small
+    // files the bCursor will be contentlength - footer size,
+    // otherwise buffersize - footer size
+    bCursor = (int) (Math.min(contentLength, bufferSize) - FOOTER_SIZE);
+    // read API call is considered 1 single operation in reality server could
+    // return partial data and client has to retry untill the last full block
+    // is read. So setting the fCursorAfterLastRead before the possible
+    // multiple server calls
+    fCursorAfterLastRead = fCursor;
+    // 0 if contentlength is < buffersize
+    long readFrom = Math.max(0, contentLength - bufferSize);
+    long actualLenToRead = Math.min(bufferSize, contentLength);
+    return optimisedRead(b, off, len, readFrom, actualLenToRead);
+  }
+
+  private int optimisedRead(final byte[] b, final int off, final int len,
+      final long readFrom, final long actualLen) throws IOException {
+    int totalBytesRead = 0;
+    fCursor = readFrom;
+    for (int i = 0; i < 2 && fCursor < contentLength; i++) {
+      int bytesRead = readInternal(fCursor, buffer, limit,
+          (int) actualLen - limit, true);
+      if (bytesRead > 0) {
+        totalBytesRead += bytesRead;
+        limit += bytesRead;
+        fCursor += bytesRead;
+      }
+    }
+    //  if the read was not success and the user requested part of data has
+    //  not read then fallback to readoneblock. When limit is smaller than
+    //  bCursor that means the user requested data has not been read
+    if (fCursor < contentLength && bCursor > limit) {
+      restorePointerState();
+      return readOneBlock(b, off, len);
+    }
+    firstRead = false;
+    if (totalBytesRead == -1) {
+      return -1;
+    }
+    return copyToUserBuffer(b, off, len);
+  }
+
+  private void savePointerState() {
+    //  Saving the current state for fall back ifn case optimization fails
+    this.fCursorBkp = this.fCursor;
+    this.fCursorAfterLastReadBkp = this.fCursorAfterLastRead;
+    this.bCursorBkp = this.bCursor;
+  }
+
+  private void restorePointerState() {
+    //  Saving the current state for fall back ifn case optimization fails
+    this.fCursor = this.fCursorBkp;
+    this.fCursorAfterLastRead = this.fCursorAfterLastReadBkp;
+    this.bCursor = this.bCursorBkp;
+  }
+
   private boolean validate(final byte[] b, final int off, final int len)
       throws IOException {
     if (closed) {
@@ -245,85 +347,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       streamStatistics.bytesRead(bytesToRead);
     }
     return bytesToRead;
-  }
-
-  private boolean shouldReadFully() {
-    return this.firstRead && this.context.readSmallFilesCompletely()
-        && this.contentLength <= this.bufferSize;
-  }
-
-  private boolean shouldReadLastBlock(int len) {
-    return this.firstRead && this.context.optimizeFooterRead()
-        && len == FOOTER_SIZE
-        && this.fCursor == this.contentLength - FOOTER_SIZE;
-  }
-
-  private int readFileCompletely(final byte[] b, final int off, final int len)
-      throws IOException {
-    if (len == 0) {
-      return 0;
-    }
-    if (!validate(b, off, len)) {
-      return -1;
-    }
-    buffer = new byte[bufferSize];
-    // data need to be copied to user buffer from index bCursor, bCursor has
-    // to be the current fCusor
-    bCursor = (int) fCursor;
-    return optimisedRead(b,off,len,0, contentLength);
-  }
-
-  private int readLastBlock(final byte[] b, final int off, final int len)
-      throws IOException {
-    if (len == 0) {
-      return 0;
-    }
-    if (!validate(b, off, len)) {
-      return -1;
-    }
-    buffer = new byte[bufferSize];
-    // data need to be copied to user buffer from index bCursor, for small
-    // files the bCursor will be contentlength - footer size,
-    // otherwise buffersize - footer size
-    bCursor = (int) (Math.min(contentLength, bufferSize) - FOOTER_SIZE);
-    // read API call is considered 1 single operation in reality server could
-    // return partial data and client has to retry untill the last full block
-    // is read. So setting the fCursorAfterLastRead before the possible
-    // multiple server calls
-    fCursorAfterLastRead = fCursor;
-    // 0 if contentlength is < buffersize
-    long readFrom = Math.max(0, contentLength - bufferSize);
-    long actualLenToRead = Math.min(bufferSize, contentLength);
-    return optimisedRead(b,off,len,readFrom, actualLenToRead);
-  }
-
-  private int optimisedRead(final byte[] b, final int off, final int len,
-      final long readFrom, final long actualLen) throws IOException {
-    //  Backing up in case optimization failed and fallback to normal flow
-    long fCursorBkp = fCursor;
-    long fCursorAfterLastReadBkp = fCursorAfterLastRead;
-    int totalBytesRead = 0;
-    fCursor =readFrom;
-    for (int i = 0; i < 2 && fCursor < contentLength; i++) {
-      int bytesRead = readInternal(fCursor, buffer, limit,
-          (int) actualLen - limit, true);
-      if (bytesRead > 0) {
-        totalBytesRead += bytesRead;
-        limit += bytesRead;
-        fCursor += bytesRead;
-      }
-    }
-    //  if the read was not success
-    if(fCursor < contentLength){
-      fCursor = fCursorBkp;
-      fCursorAfterLastRead = fCursorAfterLastReadBkp;
-      return readOneBlock(b, off, len);
-    }
-    firstRead = false;
-    if (totalBytesRead == -1) {
-      return -1;
-    }
-    return copyToUserBuffer(b, off, len);
   }
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
