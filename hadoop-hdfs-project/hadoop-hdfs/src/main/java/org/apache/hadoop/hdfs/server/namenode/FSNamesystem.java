@@ -815,7 +815,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
                         DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
       LOG.info("Enabling async auditlog");
-      enableAsyncAuditLog();
+      enableAsyncAuditLog(conf);
     }
     fsLock = new FSNamesystemLock(conf, detailedLockHoldTimeMetrics);
     cond = fsLock.newWriteLockCondition();
@@ -8484,7 +8484,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  private static void enableAsyncAuditLog() {
+  private static void enableAsyncAuditLog(Configuration conf) {
     if (!(auditLog instanceof Log4JLogger)) {
       LOG.warn("Log4j is required to enable async auditlog");
       return;
@@ -8495,6 +8495,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // failsafe against trying to async it more than once
     if (!appenders.isEmpty() && !(appenders.get(0) instanceof AsyncAppender)) {
       AsyncAppender asyncAppender = new AsyncAppender();
+      asyncAppender.setBlocking(conf.getBoolean(
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY,
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_DEFAULT
+      ));
+      asyncAppender.setBufferSize(conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT
+      ));
       // change logger to have an async appender containing all the
       // previously configured appenders
       for (Appender appender : appenders) {
