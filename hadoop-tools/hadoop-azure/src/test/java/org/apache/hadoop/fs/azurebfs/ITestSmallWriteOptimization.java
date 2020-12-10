@@ -45,6 +45,24 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 
 /**
  * Test combination for small writes with flush and close operations.
+ * This test class formulates an append test flow to assert on various scenarios.
+ * Test stages:
+ * 1. Pre-create test file of required size. This is determined by
+ * startingFileSize parameter. If it is 0, then pre-creation is skipped.
+ *
+ * 2. Formulate an append loop or iteration. An iteration, will do N writes
+ * (determined by numOfClientWrites parameter) with each writing X bytes
+ * (determined by recurringClientWriteSize parameter).
+ *
+ * 3. Determine total number of append iterations needed by a test.
+ * If intention is to close the outputStream right after append, setting
+ * directCloseTest parameter will determine 1 append test iteration with an
+ * ending close.
+ * Else, it will execute TEST_FLUSH_ITERATION number of test iterations, with
+ * each doing appends, hflush/hsync and then close.
+ *
+ * 4. Execute test iterations with asserts on number of store requests made and
+ * validating file content.
  */
 @RunWith(Parameterized.class)
 public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
@@ -61,473 +79,219 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
   @Parameterized.Parameter(1)
   public boolean enableSmallWriteOptimization;
 
+  /**
+   * If true, will initiate close after appends. (That is, no explicit hflush or
+   * hsync calls will be made from client app.)
+   */
   @Parameterized.Parameter(2)
   public boolean directCloseTest;
 
+  /**
+   * If non-zero, test file should be created as pre-requisite with this size.
+   */
   @Parameterized.Parameter(3)
   public Integer startingFileSize;
 
+  /**
+   * Determines the write sizes to be issued by client app.
+   */
   @Parameterized.Parameter(4)
   public Integer recurringClientWriteSize;
 
+  /**
+   * Determines the number of Client writes to make.
+   */
   @Parameterized.Parameter(5)
   public Integer numOfClientWrites;
 
+  /**
+   * True, if the small write optimization is supposed to be effective in
+   * the scenario.
+   */
   @Parameterized.Parameter(6)
   public boolean flushExpectedToBeMergedWithAppend;
 
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(
+        // Parameter Order :
+        // testScenario,
+        // enableSmallWriteOptimization, directCloseTest, startingFileSize,
+        // recurringClientWriteSize, numOfClientWrites, flushExpectedToBeMergedWithAppend
         new Object[][]{
             // Buffer Size Write tests
-            {
-                "OptmON_FlushCloseTest_EmptyFile_BufferSizeWrite",
-                true,
-                false,
-                0,
-                TEST_BUFFER_SIZE,
-                1,
-                false
+            { "OptmON_FlushCloseTest_EmptyFile_BufferSizeWrite",
+                true, false, 0, TEST_BUFFER_SIZE, 1, false
             },
-            {
-                "OptmON_FlushCloseTest_NonEmptyFile_BufferSizeWrite",
-                true,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                TEST_BUFFER_SIZE,
-                1,
-                false
+            {   "OptmON_FlushCloseTest_NonEmptyFile_BufferSizeWrite",
+                true, false, 2 * TEST_BUFFER_SIZE, TEST_BUFFER_SIZE, 1, false
             },
-            {
-                "OptmON_CloseTest_EmptyFile_BufferSizeWrite",
-                true,
-                true,
-                0,
-                TEST_BUFFER_SIZE,
-                1,
-                false
+            {   "OptmON_CloseTest_EmptyFile_BufferSizeWrite",
+                true, true, 0, TEST_BUFFER_SIZE, 1, false
             },
-            {
-                "OptmON_CloseTest_NonEmptyFile_BufferSizeWrite",
-                true,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                TEST_BUFFER_SIZE,
-                1,
-                false
+            {   "OptmON_CloseTest_NonEmptyFile_BufferSizeWrite",
+                true, true, 2 * TEST_BUFFER_SIZE, TEST_BUFFER_SIZE, 1, false
             },
-
-            {
-                "OptmOFF_FlushCloseTest_EmptyFile_BufferSizeWrite",
-                false,
-                false,
-                0,
-                TEST_BUFFER_SIZE,
-                1,
-                false
+            {   "OptmOFF_FlushCloseTest_EmptyFile_BufferSizeWrite",
+                false, false, 0, TEST_BUFFER_SIZE, 1, false
             },
-            {
-                "OptmOFF_FlushCloseTest_NonEmptyFile_BufferSizeWrite",
-                false,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                TEST_BUFFER_SIZE,
-                1,
-                false
+            {   "OptmOFF_FlushCloseTest_NonEmptyFile_BufferSizeWrite",
+                false, false, 2 * TEST_BUFFER_SIZE, TEST_BUFFER_SIZE, 1, false
             },
-            {
-                "OptmOFF_CloseTest_EmptyFile_BufferSizeWrite",
-                false,
-                true,
-                0,
-                TEST_BUFFER_SIZE,
-                1,
-                false
+            {   "OptmOFF_CloseTest_EmptyFile_BufferSizeWrite",
+                false, true, 0, TEST_BUFFER_SIZE, 1, false
             },
-            {
-                "OptmOFF_CloseTest_NonEmptyFile_BufferSizeWrite",
-                false,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                TEST_BUFFER_SIZE,
-                1,
-                false
+            {   "OptmOFF_CloseTest_NonEmptyFile_BufferSizeWrite",
+                false, true, 2 * TEST_BUFFER_SIZE, TEST_BUFFER_SIZE, 1, false
             },
-
             // Less than buffer size write tests
-            {
-                "OptmON_FlushCloseTest_EmptyFile_LessThanBufferSizeWrite",
-                true,
-                false,
-                0,
-                Math.abs(HALF_TEST_BUFFER_SIZE),
-                1,
-                true
+            {   "OptmON_FlushCloseTest_EmptyFile_LessThanBufferSizeWrite",
+                true, false, 0, Math.abs(HALF_TEST_BUFFER_SIZE), 1, true
             },
-            {
-                "OptmON_FlushCloseTest_NonEmptyFile_LessThanBufferSizeWrite",
-                true,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                Math.abs(HALF_TEST_BUFFER_SIZE),
-                1,
-                true
+            {   "OptmON_FlushCloseTest_NonEmptyFile_LessThanBufferSizeWrite",
+                true, false, 2 * TEST_BUFFER_SIZE,
+                Math.abs(HALF_TEST_BUFFER_SIZE), 1, true
             },
-            {
-                "OptmON_CloseTest_EmptyFile_LessThanBufferSizeWrite",
-                true,
-                true,
-                0,
-                Math.abs(HALF_TEST_BUFFER_SIZE),
-                1,
-                true
+            {   "OptmON_CloseTest_EmptyFile_LessThanBufferSizeWrite",
+                true, true, 0, Math.abs(HALF_TEST_BUFFER_SIZE), 1, true
             },
-            {
-                "OptmON_CloseTest_NonEmptyFile_LessThanBufferSizeWrite",
-                true,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                Math.abs(HALF_TEST_BUFFER_SIZE),
-                1,
-                true
+            {   "OptmON_CloseTest_NonEmptyFile_LessThanBufferSizeWrite",
+                true, true, 2 * TEST_BUFFER_SIZE,
+                Math.abs(HALF_TEST_BUFFER_SIZE), 1, true
             },
-
-            {
-                "OptmOFF_FlushCloseTest_EmptyFile_LessThanBufferSizeWrite",
-                false,
-                false,
-                0,
-                Math.abs(HALF_TEST_BUFFER_SIZE),
-                1,
-                false
+            {   "OptmOFF_FlushCloseTest_EmptyFile_LessThanBufferSizeWrite",
+                false, false, 0, Math.abs(HALF_TEST_BUFFER_SIZE), 1, false
             },
-            {
-                "OptmOFF_FlushCloseTest_NonEmptyFile_LessThanBufferSizeWrite",
-                false,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                Math.abs(HALF_TEST_BUFFER_SIZE),
-                1,
-                false
+            {   "OptmOFF_FlushCloseTest_NonEmptyFile_LessThanBufferSizeWrite",
+                false, false, 2 * TEST_BUFFER_SIZE,
+                Math.abs(HALF_TEST_BUFFER_SIZE), 1, false
             },
-            {
-                "OptmOFF_CloseTest_EmptyFile_LessThanBufferSizeWrite",
-                false,
-                true,
-                0,
-                Math.abs(HALF_TEST_BUFFER_SIZE),
-                1,
-                false
+            {   "OptmOFF_CloseTest_EmptyFile_LessThanBufferSizeWrite",
+                false, true, 0, Math.abs(HALF_TEST_BUFFER_SIZE), 1, false
             },
-            {
-                "OptmOFF_CloseTest_NonEmptyFile_LessThanBufferSizeWrite",
-                false,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                Math.abs(HALF_TEST_BUFFER_SIZE),
-                1,
-                false
+            {   "OptmOFF_CloseTest_NonEmptyFile_LessThanBufferSizeWrite",
+                false, true, 2 * TEST_BUFFER_SIZE,
+                Math.abs(HALF_TEST_BUFFER_SIZE), 1, false
             },
-
             // Multiple small writes still less than buffer size
-            {
-                "OptmON_FlushCloseTest_EmptyFile_MultiSmallWritesStillLessThanBufferSize",
-                true,
-                false,
-                0,
-                Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                true
+            {   "OptmON_FlushCloseTest_EmptyFile_MultiSmallWritesStillLessThanBufferSize",
+                true, false, 0, Math.abs(QUARTER_TEST_BUFFER_SIZE), 3, true
             },
-            {
-                "OptmON_FlushCloseTest_NonEmptyFile_MultiSmallWritesStillLessThanBufferSize",
-                true,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                true
+            {   "OptmON_FlushCloseTest_NonEmptyFile_MultiSmallWritesStillLessThanBufferSize",
+                true, false, 2 * TEST_BUFFER_SIZE,
+                Math.abs(QUARTER_TEST_BUFFER_SIZE), 3, true
             },
-            {
-                "OptmON_CloseTest_EmptyFile_MultiSmallWritesStillLessThanBufferSize",
-                true,
-                true,
-                0,
-                Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                true
+            {   "OptmON_CloseTest_EmptyFile_MultiSmallWritesStillLessThanBufferSize",
+                true, true, 0, Math.abs(QUARTER_TEST_BUFFER_SIZE), 3, true
             },
-            {
-                "OptmON_CloseTest_NonEmptyFile_MultiSmallWritesStillLessThanBufferSize",
-                true,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                true
+            {   "OptmON_CloseTest_NonEmptyFile_MultiSmallWritesStillLessThanBufferSize",
+                true, true, 2 * TEST_BUFFER_SIZE,
+                Math.abs(QUARTER_TEST_BUFFER_SIZE), 3, true
             },
-
-            {
-                "OptmOFF_FlushCloseTest_EmptyFile_MultiSmallWritesStillLessThanBufferSize",
-                false,
-                false,
-                0,
-                Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+            {   "OptmOFF_FlushCloseTest_EmptyFile_MultiSmallWritesStillLessThanBufferSize",
+                false, false, 0, Math.abs(QUARTER_TEST_BUFFER_SIZE), 3, false
             },
-            {
-                "OptmOFF_FlushCloseTest_NonEmptyFile_MultiSmallWritesStillLessThanBufferSize",
-                false,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+            {   "OptmOFF_FlushCloseTest_NonEmptyFile_MultiSmallWritesStillLessThanBufferSize",
+                false, false, 2 * TEST_BUFFER_SIZE,
+                Math.abs(QUARTER_TEST_BUFFER_SIZE), 3, false
             },
-            {
-                "OptmOFF_CloseTest_EmptyFile_MultiSmallWritesStillLessThanBufferSize",
-                false,
-                true,
-                0,
-                Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+            {   "OptmOFF_CloseTest_EmptyFile_MultiSmallWritesStillLessThanBufferSize",
+                false, true, 0, Math.abs(QUARTER_TEST_BUFFER_SIZE), 3, false
             },
-            {
-                "OptmOFF_CloseTest_NonEmptyFile_MultiSmallWritesStillLessThanBufferSize",
-                false,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+            {   "OptmOFF_CloseTest_NonEmptyFile_MultiSmallWritesStillLessThanBufferSize",
+                false, true, 2 * TEST_BUFFER_SIZE,
+                Math.abs(QUARTER_TEST_BUFFER_SIZE), 3, false
             },
-
             // Multiple full buffer writes
-            {
-                "OptmON_FlushCloseTest_EmptyFile_MultiBufferSizeWrite",
-                true,
-                false,
-                0,
-                TEST_BUFFER_SIZE,
-                3,
-                false
+            {   "OptmON_FlushCloseTest_EmptyFile_MultiBufferSizeWrite",
+                true, false, 0, TEST_BUFFER_SIZE, 3, false
             },
-            {
-                "OptmON_FlushCloseTest_NonEmptyFile_MultiBufferSizeWrite",
-                true,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                TEST_BUFFER_SIZE,
-                3,
-                false
+            {   "OptmON_FlushCloseTest_NonEmptyFile_MultiBufferSizeWrite",
+                true, false, 2 * TEST_BUFFER_SIZE, TEST_BUFFER_SIZE, 3, false
             },
-            {
-                "OptmON_CloseTest_EmptyFile_MultiBufferSizeWrite",
-                true,
-                true,
-                0,
-                TEST_BUFFER_SIZE,
-                3,
-                false
+            {   "OptmON_CloseTest_EmptyFile_MultiBufferSizeWrite",
+                true, true, 0, TEST_BUFFER_SIZE, 3, false
             },
-            {
-                "OptmON_CloseTest_NonEmptyFile_MultiBufferSizeWrite",
-                true,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                TEST_BUFFER_SIZE,
-                3,
-                false
+            {   "OptmON_CloseTest_NonEmptyFile_MultiBufferSizeWrite",
+                true, true, 2 * TEST_BUFFER_SIZE, TEST_BUFFER_SIZE, 3, false
             },
-
-            {
-                "OptmOFF_FlushCloseTest_EmptyFile_MultiBufferSizeWrite",
-                false,
-                false,
-                0,
-                TEST_BUFFER_SIZE,
-                3,
-                false
+            {   "OptmOFF_FlushCloseTest_EmptyFile_MultiBufferSizeWrite",
+                false, false, 0, TEST_BUFFER_SIZE, 3, false
             },
-            {
-                "OptmOFF_FlushCloseTest_NonEmptyFile_MultiBufferSizeWrite",
-                false,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                TEST_BUFFER_SIZE,
-                3,
-                false
+            {   "OptmOFF_FlushCloseTest_NonEmptyFile_MultiBufferSizeWrite",
+                false, false, 2 * TEST_BUFFER_SIZE, TEST_BUFFER_SIZE, 3, false
             },
-            {
-                "OptmOFF_CloseTest_EmptyFile_MultiBufferSizeWrite",
-                false,
-                true,
-                0,
-                TEST_BUFFER_SIZE,
-                3,
-                false
+            {   "OptmOFF_CloseTest_EmptyFile_MultiBufferSizeWrite",
+                false, true, 0, TEST_BUFFER_SIZE, 3, false
             },
-            {
-                "OptmOFF_CloseTest_NonEmptyFile_MultiBufferSizeWrite",
-                false,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                TEST_BUFFER_SIZE,
-                3,
-                false
+            {   "OptmOFF_CloseTest_NonEmptyFile_MultiBufferSizeWrite",
+                false, true, 2 * TEST_BUFFER_SIZE, TEST_BUFFER_SIZE, 3, false
             },
-
             // Multiple full buffers triggered and data less than buffer size pending
-            {
-                "OptmON_FlushCloseTest_EmptyFile_BufferAndExtraWrite",
-                true,
-                false,
-                0,
+            {   "OptmON_FlushCloseTest_EmptyFile_BufferAndExtraWrite",
+                true, false, 0,
                 TEST_BUFFER_SIZE + Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+                3, false
             },
-            {
-                "OptmON_FlushCloseTest_NonEmptyFile_BufferAndExtraWrite",
-                true,
-                false,
-                2 * TEST_BUFFER_SIZE,
+            {   "OptmON_FlushCloseTest_NonEmptyFile_BufferAndExtraWrite",
+                true, false, 2 * TEST_BUFFER_SIZE,
                 TEST_BUFFER_SIZE + Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+                3, false
             },
-            {
-                "OptmON_CloseTest_EmptyFile__BufferAndExtraWrite",
-                true,
-                true,
-                0,
+            {   "OptmON_CloseTest_EmptyFile__BufferAndExtraWrite",
+                true, true, 0,
                 TEST_BUFFER_SIZE + Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+                3, false
             },
-            {
-                "OptmON_CloseTest_NonEmptyFile_BufferAndExtraWrite",
-                true,
-                true,
-                2 * TEST_BUFFER_SIZE,
+            {   "OptmON_CloseTest_NonEmptyFile_BufferAndExtraWrite",
+                true, true, 2 * TEST_BUFFER_SIZE,
                 TEST_BUFFER_SIZE + Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+                3, false
             },
-
-            {
-                "OptmOFF_FlushCloseTest_EmptyFile_BufferAndExtraWrite",
-                false,
-                false,
-                0,
+            {   "OptmOFF_FlushCloseTest_EmptyFile_BufferAndExtraWrite",
+                false, false, 0,
                 TEST_BUFFER_SIZE + Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+                3, false
             },
-            {
-                "OptmOFF_FlushCloseTest_NonEmptyFile_BufferAndExtraWrite",
-                false,
-                false,
-                2 * TEST_BUFFER_SIZE,
+            {   "OptmOFF_FlushCloseTest_NonEmptyFile_BufferAndExtraWrite",
+                false, false, 2 * TEST_BUFFER_SIZE,
                 TEST_BUFFER_SIZE + Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+                3, false
             },
-            {
-                "OptmOFF_CloseTest_EmptyFile_BufferAndExtraWrite",
-                false,
-                true,
-                0,
+            {   "OptmOFF_CloseTest_EmptyFile_BufferAndExtraWrite",
+                false, true, 0,
                 TEST_BUFFER_SIZE + Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+                3, false
             },
-            {
-                "OptmOFF_CloseTest_NonEmptyFile_BufferAndExtraWrite",
-                false,
-                true,
-                2 * TEST_BUFFER_SIZE,
+            {   "OptmOFF_CloseTest_NonEmptyFile_BufferAndExtraWrite",
+                false, true, 2 * TEST_BUFFER_SIZE,
                 TEST_BUFFER_SIZE + Math.abs(QUARTER_TEST_BUFFER_SIZE),
-                3,
-                false
+                3, false
             },
-
             // 0 byte tests
-            {
-                "OptmON_FlushCloseTest_EmptyFile_0ByteWrite",
-                true,
-                false,
-                0,
-                0,
-                1,
-                false
+            {   "OptmON_FlushCloseTest_EmptyFile_0ByteWrite",
+                true, false, 0, 0, 1, false
             },
-            {
-                "OptmON_FlushCloseTest_NonEmptyFile_0ByteWrite",
-                true,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                0,
-                1,
-                false
+            {   "OptmON_FlushCloseTest_NonEmptyFile_0ByteWrite",
+                true, false, 2 * TEST_BUFFER_SIZE, 0, 1, false
             },
-            {
-                "OptmON_CloseTest_EmptyFile_0ByteWrite",
-                true,
-                true,
-                0,
-                0,
-                1,
-                false
+            {   "OptmON_CloseTest_EmptyFile_0ByteWrite",
+                true, true, 0, 0, 1, false
             },
-            {
-                "OptmON_CloseTest_NonEmptyFile_0ByteWrite",
-                true,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                0,
-                1,
-                false
+            {   "OptmON_CloseTest_NonEmptyFile_0ByteWrite",
+                true, true, 2 * TEST_BUFFER_SIZE, 0, 1, false
             },
-
-            {
-                "OptmOFF_FlushCloseTest_EmptyFile_0ByteWrite",
-                false,
-                false,
-                0,
-                0,
-                1,
-                false
+            {   "OptmOFF_FlushCloseTest_EmptyFile_0ByteWrite",
+                false, false, 0, 0, 1, false
             },
-            {
-                "OptmOFF_FlushCloseTest_NonEmptyFile_0ByteWrite",
-                false,
-                false,
-                2 * TEST_BUFFER_SIZE,
-                0,
-                1,
-                false
+            {   "OptmOFF_FlushCloseTest_NonEmptyFile_0ByteWrite",
+                false, false, 2 * TEST_BUFFER_SIZE, 0, 1, false
             },
-            {
-                "OptmOFF_CloseTest_EmptyFile_0ByteWrite",
-                false,
-                true,
-                0,
-                0,
-                1,
-                false
+            {   "OptmOFF_CloseTest_EmptyFile_0ByteWrite",
+                false, true, 0, 0, 1, false
             },
-            {
-                "OptmOFF_CloseTest_NonEmptyFile_0ByteWrite",
-                false,
-                true,
-                2 * TEST_BUFFER_SIZE,
-                0,
-                1,
-                false
+            {   "OptmOFF_CloseTest_NonEmptyFile_0ByteWrite",
+                false, true, 2 * TEST_BUFFER_SIZE, 0, 1, false
             },
         });
   }

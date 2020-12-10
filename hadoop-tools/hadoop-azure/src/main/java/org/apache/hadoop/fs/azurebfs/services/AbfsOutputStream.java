@@ -35,11 +35,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.fs.FileSystem.Statistics;
@@ -48,6 +50,9 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
 import static org.apache.hadoop.io.IOUtils.wrapException;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_CLOSE_MODE;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_MODE;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
@@ -360,8 +365,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "writeCurrentBufferToService", "append")) {
-      AbfsRestOperation op = client.appendBlobAppend(path, offset, bytes, 0,
-          bytesLength, cachedSasToken.get());
+      AppendRequestParameters reqParams = new AppendRequestParameters(offset, 0,
+          bytesLength, APPEND_MODE, true);
+      AbfsRestOperation op = client.append(path, bytes, reqParams, cachedSasToken.get());
       cachedSasToken.update(op.getSasToken());
       outputStreamStatistics.uploadSuccessful(bytesLength);
       perfInfo.registerResult(op.getResult());
@@ -418,8 +424,19 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         AbfsPerfTracker tracker = client.getAbfsPerfTracker();
         try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
                 "writeCurrentBufferToService", "append")) {
-          AbfsRestOperation op = client.append(path, offset, bytes, 0,
-              bytesLength, cachedSasToken.get(), isFlush, isClose);
+          AppendRequestParameters.Mode
+              mode = APPEND_MODE;
+          if (isFlush & isClose) {
+            mode = FLUSH_CLOSE_MODE;
+          } else if (isFlush) {
+            mode = FLUSH_MODE;
+          }
+
+          AppendRequestParameters reqParams = new AppendRequestParameters(
+              offset, 0, bytesLength, mode, false);
+          AbfsRestOperation op = client.append(path, bytes, reqParams,
+              cachedSasToken.get());
+
           cachedSasToken.update(op.getSasToken());
           perfInfo.registerResult(op.getResult());
           byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
@@ -593,7 +610,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   @VisibleForTesting
-  Boolean isAppendBlobStream() { return isAppendBlob; }
+  Boolean isAppendBlobStream() {
+    return isAppendBlob;
+  }
 
   /**
    * Appending AbfsOutputStream statistics to base toString().

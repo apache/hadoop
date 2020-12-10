@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderExcept
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.io.IOUtils;
@@ -395,85 +396,29 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation appendBlobAppend(final String path,
-      final long position,
-      final byte[] buffer,
-      final int offset,
-      final int length,
-      final String cachedSasToken) throws AzureBlobFileSystemException {
-
-    AbfsRestOperation op = null;
-
-    try {
-
-      op = appendImpl(path, position, buffer, offset, length, cachedSasToken,
-          false, false);
-    } catch (AzureBlobFileSystemException e) {
-      if ((op != null)
-          && (op.getUrl() != null)
-          && (op.getRequestHeaders() != null)
-          && appendSuccessCheckOp(op, path, (position + length))) {
-        final AbfsRestOperation successOp = new AbfsRestOperation(
-            AbfsRestOperationType.Append,
-            this,
-            HTTP_METHOD_PUT,
-            op.getUrl(),
-            op.getRequestHeaders(),
-            buffer,
-            offset,
-            length,
-            op.getSasToken());
-        successOp.hardSetResult(HttpURLConnection.HTTP_OK);
-        return successOp;
-      }
-      throw e;
-    }
-
-    return op;
-  }
-
-  public AbfsRestOperation append(final String path,
-      final long position,
-      final byte[] buffer,
-      final int offset,
-      final int length,
-      final String cachedSasToken,
-      final boolean isFlush,
-      final boolean isClose) throws AzureBlobFileSystemException {
-
-    return appendImpl(path, position, buffer, offset, length, cachedSasToken,
-        isFlush, isClose);
-  }
-
-  protected AbfsRestOperation appendImpl(final String path,
-      final long position,
-      final byte[] buffer,
-      final int offset,
-      final int length,
-      final String cachedSasToken,
-      final boolean isFlush,
-      final boolean isClose) throws AzureBlobFileSystemException {
+  public AbfsRestOperation append(final String path, final byte[] buffer,
+      AppendRequestParameters reqParams, final String cachedSasToken)
+      throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
         HTTP_METHOD_PATCH));
 
-    final AbfsUriQueryBuilder abfsUriQueryBuilder
-        = createDefaultUriQueryBuilder();
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, APPEND_ACTION);
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(position));
-    if (isFlush) {
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_FLUSH, String.valueOf(isFlush));
-    }
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(reqParams.getPosition()));
 
-    if (isClose) {
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
+    if ((reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_MODE) || (
+        reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_CLOSE_MODE)) {
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_FLUSH, TRUE);
+      if (reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_CLOSE_MODE) {
+        abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, TRUE);
+      }
     }
 
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
-    String sasTokenForReuse = appendSASTokenToQuery(path,
-        SASTokenProvider.WRITE_OPERATION,
+    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
@@ -482,8 +427,32 @@ public class AbfsClient implements Closeable {
         this,
         HTTP_METHOD_PUT,
         url,
-        requestHeaders, buffer, offset, length, sasTokenForReuse);
-    op.execute();
+        requestHeaders,
+        buffer,
+        reqParams.getoffset(),
+        reqParams.getLength(),
+        sasTokenForReuse);
+    try {
+      op.execute();
+    } catch (AzureBlobFileSystemException e) {
+      if (reqParams.isAppendBlob()
+          && appendSuccessCheckOp(op, path,
+          (reqParams.getPosition() + reqParams.getLength()))) {
+        final AbfsRestOperation successOp = new AbfsRestOperation(
+            AbfsRestOperationType.Append,
+            this,
+            HTTP_METHOD_PUT,
+            url,
+            requestHeaders,
+            buffer,
+            reqParams.getoffset(),
+            reqParams.getLength(),
+            sasTokenForReuse);
+        successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+        return successOp;
+      }
+      throw e;
+    }
 
     return op;
   }
