@@ -270,29 +270,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor, bCursor has
     // to be the current fCusor
     bCursor = (int) fCursor;
-    fCursorAfterLastRead = fCursor;
-    int totalBytesRead = 0;
-    int loopCount = 0;
-    // Read from begining
-    fCursor = 0;
-    while (fCursor < contentLength) {
-      int bytesRead = readInternal(fCursor, buffer, limit,
-          (int) contentLength - limit, true);
-      if (bytesRead > 0) {
-        totalBytesRead += bytesRead;
-        limit += bytesRead;
-        fCursor += bytesRead;
-      }
-      if (loopCount++ >= 10) {
-        throw new IOException(
-            "Too many attempts in reading whole file " + path);
-      }
-    }
-    firstRead = false;
-    if (totalBytesRead == -1) {
-      return -1;
-    }
-    return copyToUserBuffer(b, off, len);
+    return optimisedRead(b,off,len,0, contentLength);
   }
 
   private int readLastBlock(final byte[] b, final int off, final int len)
@@ -314,21 +292,32 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // multiple server calls
     fCursorAfterLastRead = fCursor;
     // 0 if contentlength is < buffersize
-    fCursor = Math.max(0, contentLength - bufferSize);
+    long readFrom = Math.max(0, contentLength - bufferSize);
+    long actualLenToRead = Math.min(bufferSize, contentLength);
+    return optimisedRead(b,off,len,readFrom, actualLenToRead);
+  }
+
+  private int optimisedRead(final byte[] b, final int off, final int len,
+      final long readFrom, final long actualLen) throws IOException {
+    //  Backing up in case optimization failed and fallback to normal flow
+    long fCursorBkp = fCursor;
+    long fCursorAfterLastReadBkp = fCursorAfterLastRead;
     int totalBytesRead = 0;
-    int loopCount = 0;
-    while (fCursor < contentLength) {
-      int bytesRead = readInternal(fCursor, buffer, limit, bufferSize - limit,
-          true);
+    fCursor =readFrom;
+    for (int i = 0; i < 2 && fCursor < contentLength; i++) {
+      int bytesRead = readInternal(fCursor, buffer, limit,
+          (int) actualLen - limit, true);
       if (bytesRead > 0) {
         totalBytesRead += bytesRead;
         limit += bytesRead;
         fCursor += bytesRead;
       }
-      if (loopCount++ >= 10) {
-        throw new IOException(
-            "Too many attempts in reading whole file " + path);
-      }
+    }
+    //  if the read was not success
+    if(fCursor < contentLength){
+      fCursor = fCursorBkp;
+      fCursorAfterLastRead = fCursorAfterLastReadBkp;
+      return readOneBlock(b, off, len);
     }
     firstRead = false;
     if (totalBytesRead == -1) {
