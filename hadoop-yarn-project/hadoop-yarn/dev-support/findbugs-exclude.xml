@@ -705,4 +705,10 @@
     <Method name="getDevices" />
     <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
   </Match>
+
+  <!-- Suppress warning about anonymous class for mocking. -->
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.timelineservice\.reader\.TestTimelineReaderWebServicesHBaseStorage.*" />
+    <Bug pattern="UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS" />
+  </Match>
 </FindBugsFilter>
