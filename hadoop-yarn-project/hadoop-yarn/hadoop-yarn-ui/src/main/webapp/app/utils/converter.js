@@ -24,7 +24,7 @@ export default {
     if (containerId) {
       var arr = containerId.split('_');
       var attemptId = ["appattempt", arr[1],
-        arr[2], this.padding(arr[3], 6)];
+        arr[2], this.padding(arr[4], 6)];
       return attemptId.join('_');
     }
   },
