@@ -88,7 +88,7 @@ public class DelegationSASGenerator extends SASGenerator {
         break;
       case SASTokenProvider.SET_ACL_OPERATION:
       case SASTokenProvider.SET_PERMISSION_OPERATION:
-        sp = "op";
+        sp = "p";
         break;
       case SASTokenProvider.SET_OWNER_OPERATION:
         sp = "o";

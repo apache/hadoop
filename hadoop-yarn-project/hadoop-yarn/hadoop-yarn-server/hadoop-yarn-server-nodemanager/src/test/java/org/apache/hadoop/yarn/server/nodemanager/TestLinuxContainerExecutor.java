@@ -725,6 +725,7 @@ public class TestLinuxContainerExecutor {
     verify(lce, times(1)).getLocalResources(container);
   }
 
+  @Deprecated
   private static class TestResourceHandler implements LCEResourcesHandler {
     static Set<ContainerId> postExecContainers = new HashSet<ContainerId>();
 
