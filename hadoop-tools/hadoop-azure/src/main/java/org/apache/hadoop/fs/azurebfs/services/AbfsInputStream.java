@@ -75,6 +75,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   //  Optimisations modify the pointer fields.
   //  For better resilience the following fields are used to save the
   //  existing state before optimization flows.
+  private int limitBkp;
   private int bCursorBkp;
   private long fCursorBkp;
   private long fCursorAfterLastReadBkp;
@@ -299,6 +300,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private void savePointerState() {
     //  Saving the current state for fall back ifn case optimization fails
+    this.limitBkp = this.limit;
     this.fCursorBkp = this.fCursor;
     this.fCursorAfterLastReadBkp = this.fCursorAfterLastRead;
     this.bCursorBkp = this.bCursor;
@@ -306,6 +308,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private void restorePointerState() {
     //  Saving the current state for fall back ifn case optimization fails
+    this.limit = this.limitBkp;
     this.fCursor = this.fCursorBkp;
     this.fCursorAfterLastRead = this.fCursorAfterLastReadBkp;
     this.bCursor = this.bCursorBkp;

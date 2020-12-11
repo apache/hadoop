@@ -33,10 +33,19 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.mockito.Mockito;
 
+import static java.lang.Math.min;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class ITestAbfsInputStreamReadFooter
     extends AbstractAbfsIntegrationTest {
@@ -162,7 +171,7 @@ public class ITestAbfsInputStreamReadFooter
       iStream.seek(seekPos);
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
-      int expectedBytesRead = Math.min(fileContent.length - seekPos,
+      int expectedBytesRead = min(fileContent.length - seekPos,
           conf.getReadBufferSize());
       assertEquals(expectedBytesRead, bytesRead);
       assertSuccessfulRead(fileContent, seekPos, length, buffer);
@@ -183,6 +192,13 @@ public class ITestAbfsInputStreamReadFooter
         .getDeclaredField("abfsStore");
     abfsStoreField.setAccessible(true);
     return (AzureBlobFileSystemStore) abfsStoreField.get(abfs);
+  }
+
+  private AbfsClient getAbfsClient(AbfsInputStream abfsInputStream)
+      throws NoSuchFieldException, IllegalAccessException {
+    Field abfsClientField = AbfsInputStream.class.getDeclaredField("client");
+    abfsClientField.setAccessible(true);
+    return (AbfsClient) abfsClientField.get(abfsInputStream);
   }
 
   private int getEexpectedBCursor(final AbfsConfiguration conf,
@@ -235,5 +251,101 @@ public class ITestAbfsInputStreamReadFooter
     final byte[] b = new byte[length];
     new Random().nextBytes(b);
     return b;
+  }
+
+  @Test
+  public void testPartialReadWithNoDataSeekToEndAndReadWithConf() throws Exception {
+    for (int i = 2; i <= 6; i++) {
+      int fileSize = i * ONE_MB;
+      final AzureBlobFileSystem fs = getFileSystem(true, fileSize);
+      String fileName = methodName.getMethodName() + i;
+      byte[] fileContent = getRandomBytesArray(fileSize);
+      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+      partialReadWithNoDataSeekReadAndTest(fs, testFilePath,
+          fileSize - AbfsInputStream.FOOTER_SIZE, AbfsInputStream.FOOTER_SIZE,
+          fileContent);
+    }
+  }
+
+  private void partialReadWithNoDataSeekReadAndTest(final FileSystem fs,
+      final Path testFilePath,
+      final int seekPos, final int length, final byte[] fileContent)
+      throws IOException, NoSuchFieldException, IllegalAccessException {
+    FSDataInputStream iStream = fs.open(testFilePath);
+    try {
+      AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
+          .getWrappedStream();
+      abfsInputStream = spy(abfsInputStream);
+      doReturn(10)
+          .doReturn(10)
+          .doCallRealMethod()
+          .when(abfsInputStream)
+          .readRemote(anyLong(), any(), anyInt(), anyInt());
+
+      iStream = new FSDataInputStream(abfsInputStream);
+      iStream.seek(seekPos);
+
+      byte[] buffer = new byte[length];
+      int bytesRead = iStream.read(buffer, 0, length);
+      assertEquals(length, bytesRead);
+      assertSuccessfulRead(fileContent, seekPos, length, buffer);
+      assertEquals(fileContent.length, abfsInputStream.getFCursor());
+      assertEquals(length, abfsInputStream.getBCursor());
+      assertTrue(abfsInputStream.getLimit() >= length);
+    } finally {
+      iStream.close();
+    }
+  }
+
+  @Test
+  public void testPartialReadWithSomeDataSeekToEndAndReadWithConf() throws Exception {
+    for (int i = 3; i <= 6; i++) {
+      int fileSize = i * ONE_MB;
+      final AzureBlobFileSystem fs = getFileSystem(true, fileSize);
+      String fileName = methodName.getMethodName() + i;
+      byte[] fileContent = getRandomBytesArray(fileSize);
+      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+      partialReadWithSomeDataSeekReadAndTest(fs, testFilePath,
+          fileSize - AbfsInputStream.FOOTER_SIZE,
+          AbfsInputStream.FOOTER_SIZE, fileContent);
+    }
+  }
+
+  private void partialReadWithSomeDataSeekReadAndTest(final FileSystem fs,
+      final Path testFilePath,
+      final int seekPos, final int length, final byte[] fileContent)
+      throws IOException, NoSuchFieldException, IllegalAccessException {
+    FSDataInputStream iStream = fs.open(testFilePath);
+    try {
+      AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
+          .getWrappedStream();
+      abfsInputStream = spy(abfsInputStream);
+      //  first readRemote, will return first 10 bytes
+      //  second readRemote returns data till the last 2 bytes
+      int someDataLength = 2;
+      int secondReturnSize = min(fileContent.length,
+          abfsInputStream.getBufferSize()) - 10 - someDataLength;
+      doReturn(10)
+          .doReturn(secondReturnSize)
+          .doCallRealMethod()
+          .when(abfsInputStream)
+          .readRemote(anyLong(), any(), anyInt(), anyInt());
+
+      iStream = new FSDataInputStream(abfsInputStream);
+      iStream.seek(seekPos);
+
+      byte[] buffer = new byte[length];
+      int bytesRead = iStream.read(buffer, 0, length);
+      assertEquals(length, bytesRead);
+      assertEquals(fileContent.length, abfsInputStream.getFCursor());
+      //  someDataLength(2), because in the do-while loop in read, the 2nd loop
+      //  will go to readoneblock and that resets the bCursor to 0 as
+      //  bCursor == limit finally when the 2 bytes are read bCursor and limit
+      //  will be at someDataLength(2)
+      assertEquals(someDataLength, abfsInputStream.getBCursor());
+      assertEquals(someDataLength, abfsInputStream.getLimit());
+    } finally {
+      iStream.close();
+    }
   }
 }
