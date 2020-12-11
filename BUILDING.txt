@@ -27,8 +27,8 @@ of the provided Docker config.
 This requires a recent version of docker (1.4.1 and higher are known to work).
 
 On Linux / Mac:
-    Install Docker and run this command:
-
+    Install Docker and run the following commands to set executable permissions and run the shell script:
+    $ sudo chmod +x start-build-env.sh
     $ ./start-build-env.sh
 
 The prompt which is then presented is located at a mounted version of the source tree
