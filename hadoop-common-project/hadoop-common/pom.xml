@@ -37,7 +37,6 @@
     <wsce.config.file>wsce-site.xml</wsce.config.file>
   </properties>
 
-
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
@@ -371,6 +370,11 @@
       <artifactId>snappy-java</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.lz4</groupId>
+      <artifactId>lz4-java</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -577,11 +581,6 @@
             <exclude>src/main/native/m4/*</exclude>
             <exclude>src/test/empty-file</exclude>
             <exclude>src/test/all-tests</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.h</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.c</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.h</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.c</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc_encoder.h</exclude>
             <exclude>src/main/native/gtest/**/*</exclude>
             <exclude>src/test/resources/test-untar.tgz</exclude>
             <exclude>src/test/resources/test.har/_SUCCESS</exclude>

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,12 +26,16 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicyController;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -247,5 +253,52 @@ public final class FederationUtil {
         .perm(dirStatus.getPermission()).replication(dirStatus.getReplication())
         .storagePolicy(dirStatus.getStoragePolicy())
         .symlink(dirStatus.getSymlinkInBytes()).flags(flags).build();
+  }
+
+  /**
+   * Creates an instance of an RouterRpcFairnessPolicyController
+   * from the configuration.
+   *
+   * @param conf Configuration that defines the fairness controller class.
+   * @return Fairness policy controller.
+   */
+  public static RouterRpcFairnessPolicyController newFairnessPolicyController(
+      Configuration conf) {
+    Class<? extends RouterRpcFairnessPolicyController> clazz = conf.getClass(
+        RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS,
+        RBFConfigKeys.DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS_DEFAULT,
+        RouterRpcFairnessPolicyController.class);
+    return newInstance(conf, null, null, clazz);
+  }
+
+  /**
+   * Collect all configured nameservices.
+   *
+   * @param conf
+   * @return Set of name services in config
+   * @throws IllegalArgumentException
+   */
+  public static Set<String> getAllConfiguredNS(Configuration conf)
+      throws IllegalArgumentException {
+    // Get all name services configured
+    Collection<String> namenodes = conf.getTrimmedStringCollection(
+        DFS_ROUTER_MONITOR_NAMENODE);
+
+    Set<String> nameservices = new HashSet();
+    for (String namenode : namenodes) {
+      String[] namenodeSplit = namenode.split("\\.");
+      String nsId;
+      if (namenodeSplit.length == 2) {
+        nsId = namenodeSplit[0];
+      } else if (namenodeSplit.length == 1) {
+        nsId = namenode;
+      } else {
+        String errorMsg = "Wrong name service specified : " + namenode;
+        throw new IllegalArgumentException(
+            errorMsg);
+      }
+      nameservices.add(nsId);
+    }
+    return nameservices;
   }
 }

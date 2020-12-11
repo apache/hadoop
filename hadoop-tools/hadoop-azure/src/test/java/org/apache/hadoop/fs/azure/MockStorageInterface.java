@@ -37,6 +37,7 @@ import java.util.List;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.hadoop.fs.Path;
 import org.apache.http.client.utils.URIBuilder;
 
 import com.microsoft.azure.storage.AccessCondition;
@@ -137,9 +138,20 @@ public class MockStorageInterface extends StorageInterface {
 
   private static URI convertKeyToEncodedUri(String key) {
     try {
-      return new URIBuilder().setPath(key).build();
+     Path p = new Path(key);
+     URI unEncodedURI = p.toUri();
+     return new URIBuilder().setPath(unEncodedURI.getPath())
+         .setScheme(unEncodedURI.getScheme()).build();
     } catch (URISyntaxException e) {
-      throw new AssertionError("Failed to encode key: " + key);
+      int i = e.getIndex();
+      String details;
+      if (i >= 0) {
+        details = " -- \"" + e.getInput().charAt(i) + "\"";
+      } else {
+        details = "";
+      }
+      throw new AssertionError("Failed to encode key: " + key
+          + ":  " + e + details);
     }
   }
 
@@ -148,8 +160,8 @@ public class MockStorageInterface extends StorageInterface {
       throws URISyntaxException, StorageException {
     String fullUri;
     URIBuilder builder = new URIBuilder(baseUriString);
-    fullUri = builder.setPath(builder.getPath() + "/" + name).toString();
-
+    String path = builder.getPath() == null ? "" : builder.getPath() + "/";
+    fullUri = builder.setPath(path + name).toString();
     MockCloudBlobContainerWrapper container = new MockCloudBlobContainerWrapper(
         fullUri, name);
     // Check if we have a pre-existing container with that name, and prime
