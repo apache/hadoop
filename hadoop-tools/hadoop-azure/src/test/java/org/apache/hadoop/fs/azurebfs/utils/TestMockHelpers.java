@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
 /**
  * Test Mock Helpers.
  */
@@ -39,13 +42,12 @@ public final class TestMockHelpers {
       final String fieldName,
       Object fieldObject) throws Exception {
 
-    java.lang.reflect.Field
-        field = type.getDeclaredField(fieldName);
+    Field field = type.getDeclaredField(fieldName);
     field.setAccessible(true);
-    java.lang.reflect.Field modifiersField = java.lang.reflect.Field.class.getDeclaredField("modifiers");
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
     modifiersField.setAccessible(true);
     modifiersField.setInt(field,
-        field.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
+        field.getModifiers() & ~Modifier.FINAL);
     field.set(obj, fieldObject);
 
     return obj;
