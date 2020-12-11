@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.google.inject.Scopes;
 import com.google.inject.servlet.GuiceFilter;
+import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 
 import org.apache.commons.io.FileUtils;
@@ -70,18 +74,29 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.hk2.api.ServiceLocator;
+import org.glassfish.hk2.api.ServiceLocatorFactory;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.test.DeploymentContext;
 import org.glassfish.jersey.test.JerseyTest;
+import org.glassfish.jersey.test.ServletDeploymentContext;
+import org.glassfish.jersey.test.grizzly.GrizzlyWebTestContainerFactory;
+import org.glassfish.jersey.test.spi.TestContainerFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
+import org.jvnet.hk2.guice.bridge.api.GuiceBridge;
+import org.jvnet.hk2.guice.bridge.api.GuiceIntoHK2Bridge;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -95,6 +110,7 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -128,6 +144,47 @@ public class TestNMWebServices extends JerseyTest {
       TestNMWebServices.class.getSimpleName() + "LogDir");
   private static File testRemoteLogDir = new File("target",
       TestNMWebServices.class.getSimpleName() + "remote-log-dir");
+
+  @Override
+  protected TestContainerFactory getTestContainerFactory() {
+    return new GrizzlyWebTestContainerFactory();
+  }
+
+  @Override
+  protected DeploymentContext configureDeployment() {
+    return ServletDeploymentContext
+        .forPackages("org.apache.hadoop.yarn.server.nodemanager.webapp")
+        .addListener(GuiceServletContextListener.class)
+        .filterClass(GuiceFilter.class)
+        .contextPath("jersey-guice-filter")
+        .servletPath("/")
+        .build();
+
+  }
+
+  /*
+  @Override
+  protected Application configure() {
+    return new MyApplication(ServiceLocatorFactory.getInstance()
+        .create("test")).packages();
+  }*/
+
+  static {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
+  }
+
+  @ApplicationPath("/")
+  private class MyApplication extends ResourceConfig {
+    @Inject
+    public MyApplication(ServiceLocator serviceLocator) {
+      GuiceBridge.getGuiceBridge().initializeGuiceBridge(serviceLocator);
+      GuiceIntoHK2Bridge guiceBridge = serviceLocator
+          .getService(GuiceIntoHK2Bridge.class);
+      guiceBridge.bridgeGuiceInjector(Guice.createInjector(
+          new WebServletModule()));
+    }
+  }
 
   private static class WebServletModule extends ServletModule {
 
@@ -186,11 +243,6 @@ public class TestNMWebServices extends JerseyTest {
       bind(LocalDirsHandlerService.class).toInstance(dirsHandler);
       bind(GuiceFilter.class).in(Scopes.SINGLETON);
     }
-  }
-
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
   private void setupMockPluginsWithNmResourceInfo() throws YarnException {
@@ -275,16 +327,18 @@ public class TestNMWebServices extends JerseyTest {
         .get(Response.class);
   }
 
-
-  @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
+  }
+
+  @Before
+  public void createTesetDir() throws Exception {
     testRemoteLogDir.mkdir();
     testRootDir.mkdirs();
     testLogDir.mkdir();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
   }
 
   @AfterClass
@@ -292,16 +346,6 @@ public class TestNMWebServices extends JerseyTest {
     FileUtil.fullyDelete(testRootDir);
     FileUtil.fullyDelete(testLogDir);
     FileUtil.fullyDelete(testRemoteLogDir);
-  }
-
-  public TestNMWebServices() {
-    /* TODO: remove or fix this
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.nodemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
-     */
   }
 
   @Test
