@@ -37,6 +37,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.ContentSummary.Builder;
+import org.apache.hadoop.fs.azurebfs.services.ContentSummaryProcessor;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -361,6 +364,15 @@ public class AzureBlobFileSystem extends FileSystem {
       return false;
     }
 
+  }
+
+  @Override
+  public ContentSummary getContentSummary(Path f) throws IOException {
+    org.apache.hadoop.fs.azurebfs.utils.ContentSummary contentSummary =
+        (new ContentSummaryProcessor()).getContentSummary(abfsStore, f);
+    return new Builder().length(contentSummary.length)
+        .directoryCount(contentSummary.directoryCount).fileCount(contentSummary.fileCount)
+        .spaceConsumed(contentSummary.spaceConsumed).build();
   }
 
   @Override
