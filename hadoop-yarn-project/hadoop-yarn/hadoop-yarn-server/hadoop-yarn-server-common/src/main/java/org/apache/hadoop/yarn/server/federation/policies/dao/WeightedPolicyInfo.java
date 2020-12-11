@@ -36,11 +36,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * This is a DAO class for the configuration of parameteres for federation
+ * This is a DAO class for the configuration of parameters for federation
  * policies. This generalizes several possible configurations as two lists of
  * {@link SubClusterIdInfo} and corresponding weights as a {@link Float}. The
  * interpretation of the weight is left to the logic in the policy.
@@ -52,19 +50,16 @@ import org.slf4j.LoggerFactory;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class WeightedPolicyInfo {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(WeightedPolicyInfo.class);
-  private static ObjectWriter writer;
-  private static ObjectReader reader;
+  private static final ObjectWriter writer = new ObjectMapper()
+      .writerFor(WeightedPolicyInfo.class).withDefaultPrettyPrinter();
+  private static final ObjectReader reader =
+      new ObjectMapper().readerFor(WeightedPolicyInfo.class);
   private Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();
   private Map<SubClusterIdInfo, Float> amrmPolicyWeights = new HashMap<>();
   private float headroomAlpha;
 
   public WeightedPolicyInfo() {
-    final ObjectMapper mapper = new ObjectMapper();
-    writer = mapper.writerFor(WeightedPolicyInfo.class);
-    writer.withDefaultPrettyPrinter();
-    reader = mapper.readerFor(WeightedPolicyInfo.class);
+    // Jackson requires this
   }
 
   /**
@@ -90,8 +85,7 @@ public class WeightedPolicyInfo {
       final byte[] bytes = new byte[bb.remaining()];
       bb.get(bytes);
       String params = new String(bytes, StandardCharsets.UTF_8);
-      WeightedPolicyInfo ret = reader.readValue(params);
-      return ret;
+      return reader.readValue(params);
     } catch (IOException e) {
       throw new FederationPolicyInitializationException(e);
     }
