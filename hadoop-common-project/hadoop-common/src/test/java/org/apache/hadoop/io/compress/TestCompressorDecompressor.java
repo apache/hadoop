@@ -46,7 +46,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
  */
 public class TestCompressorDecompressor {
   
-  private static final Random rnd = new Random(123456789L);
+  private static final Random rnd = new Random(12345678L);
   
   @Test
   public void testCompressorDecompressor() {
