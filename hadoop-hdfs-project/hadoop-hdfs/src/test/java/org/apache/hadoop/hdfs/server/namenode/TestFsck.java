@@ -254,6 +254,7 @@ public class TestFsck {
       file.delete();
     }
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    logger.removeAllAppenders();
     logger.setLevel(Level.INFO);
     PatternLayout layout = new PatternLayout("%m%n");
     RollingFileAppender appender =

@@ -5868,13 +5868,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private static UserGroupInformation getRemoteUser() throws IOException {
     return NameNode.getRemoteUser();
   }
-  
+
   /**
-   * Log fsck event in the audit log 
+   * Log fsck event in the audit log.
+   *
+   * @param succeeded Whether authorization succeeded.
+   * @param src Path of affected source file.
+   * @param remoteAddress Remote address of the request.
+   * @throws IOException if {@link #getRemoteUser()} fails.
    */
-  void logFsckEvent(String src, InetAddress remoteAddress) throws IOException {
+  void logFsckEvent(boolean succeeded, String src, InetAddress remoteAddress)
+      throws IOException {
     if (isAuditEnabled()) {
-      logAuditEvent(true, getRemoteUser(),
+      logAuditEvent(succeeded, getRemoteUser(),
                     remoteAddress,
                     "fsck", src, null, null);
     }
