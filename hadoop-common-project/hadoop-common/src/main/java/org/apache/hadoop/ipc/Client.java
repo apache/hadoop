@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -857,7 +858,8 @@ public class Client implements AutoCloseable {
               }
             } else if (UserGroupInformation.isSecurityEnabled()) {
               if (!fallbackAllowed) {
-                throw new IOException("Server asks us to fall back to SIMPLE " +
+                throw new AccessControlException(
+                    "Server asks us to fall back to SIMPLE " +
                     "auth, but this client is configured to only allow secure " +
                     "connections.");
               }

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -63,16 +64,16 @@ public class TestDatanodeDescriptor {
     DatanodeStorageInfo[] storages = dd.getStorageInfos();
     assertTrue(storages.length > 0);
     // add first block
-    assertTrue(storages[0].addBlock(blk) == AddBlockResult.ADDED);
+    assertEquals(AddBlockResult.ADDED, storages[0].addBlock(blk));
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
     assertFalse(BlocksMap.removeBlock(dd, blk1));
     assertEquals(1, dd.numBlocks());
     // add an existent block
-    assertFalse(storages[0].addBlock(blk) == AddBlockResult.ADDED);
+    assertNotEquals(AddBlockResult.ADDED, storages[0].addBlock(blk));
     assertEquals(1, dd.numBlocks());
     // add second block
-    assertTrue(storages[0].addBlock(blk1) == AddBlockResult.ADDED);
+    assertEquals(AddBlockResult.ADDED, storages[0].addBlock(blk1));
     assertEquals(2, dd.numBlocks());
     // remove first block
     assertTrue(BlocksMap.removeBlock(dd, blk));

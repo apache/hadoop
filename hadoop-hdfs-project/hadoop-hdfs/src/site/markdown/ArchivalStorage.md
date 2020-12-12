@@ -103,6 +103,9 @@ The effective storage policy can be retrieved by the "[`storagepolicies -getStor
 
     The default storage type of a datanode storage location will be DISK if it does not have a storage type tagged explicitly.
 
+    Sometimes, users can setup the DataNode data directory to point to multiple volumes with different storage types. It is important to check if the volume is mounted correctly before initializing the storage locations. The user has the option to enforce the filesystem for a storage key with the following key:
+    **dfs.datanode.storagetype.*.filesystem** - replace the '*' to any storage type, for example, dfs.datanode.storagetype.ARCHIVE.filesystem=fuse_filesystem
+
 Storage Policy Based Data Movement
 ----------------------------------
 
