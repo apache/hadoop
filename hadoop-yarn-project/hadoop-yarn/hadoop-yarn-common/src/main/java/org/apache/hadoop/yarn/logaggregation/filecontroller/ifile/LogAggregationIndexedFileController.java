@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
@@ -74,12 +75,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
+import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.util.Clock;
@@ -611,6 +614,45 @@ public class LogAggregationIndexedFileController
   }
 
   @Override
+  public Map<String, List<ContainerLogFileInfo>> getLogMetaFilesOfNode(
+      ExtendedLogMetaRequest logRequest, FileStatus currentNodeFile,
+      ApplicationId appId) throws IOException {
+    Map<String, List<ContainerLogFileInfo>> logMetaFiles = new HashMap<>();
+
+    Long checkSumIndex = parseChecksum(currentNodeFile);
+    long endIndex = -1;
+    if (checkSumIndex != null) {
+      endIndex = checkSumIndex;
+    }
+    IndexedLogsMeta current = loadIndexedLogsMeta(
+        currentNodeFile.getPath(), endIndex, appId);
+    if (current != null) {
+      for (IndexedPerAggregationLogMeta logMeta :
+          current.getLogMetas()) {
+        for (Entry<String, List<IndexedFileLogMeta>> log : logMeta
+            .getLogMetas().entrySet()) {
+          String currentContainerId = log.getKey();
+          if (!(logRequest.getContainerId() == null ||
+              logRequest.getContainerId().equals(currentContainerId))) {
+            continue;
+          }
+          logMetaFiles.put(currentContainerId, new ArrayList<>());
+          for (IndexedFileLogMeta aMeta : log.getValue()) {
+            ContainerLogFileInfo file = new ContainerLogFileInfo();
+            file.setFileName(aMeta.getFileName());
+            file.setFileSize(Long.toString(aMeta.getFileSize()));
+            file.setLastModifiedTime(
+                Long.toString(aMeta.getLastModifiedTime()));
+            logMetaFiles.get(currentContainerId).add(file);
+          }
+        }
+      }
+    }
+
+    return logMetaFiles;
+  }
+
+  @Override
   public List<ContainerLogMeta> readAggregatedLogsMeta(
       ContainerLogsRequest logRequest) throws IOException {
     List<IndexedLogsMeta> listOfLogsMeta = new ArrayList<>();
@@ -741,6 +783,40 @@ public class LogAggregationIndexedFileController
       }
     }
     return checkSumFiles;
+  }
+
+  private Long parseChecksum(FileStatus file) {
+    if (!file.getPath().getName().endsWith(CHECK_SUM_FILE_SUFFIX)) {
+      return null;
+    }
+
+    FSDataInputStream checksumFileInputStream = null;
+    try {
+      FileContext fileContext = FileContext
+          .getFileContext(file.getPath().toUri(), conf);
+      String nodeName = null;
+      long index = 0L;
+      checksumFileInputStream = fileContext.open(file.getPath());
+      int nameLength = checksumFileInputStream.readInt();
+      byte[] b = new byte[nameLength];
+      int actualLength = checksumFileInputStream.read(b);
+      if (actualLength == nameLength) {
+        nodeName = new String(b, StandardCharsets.UTF_8);
+        index = checksumFileInputStream.readLong();
+      } else {
+        return null;
+      }
+      if (!nodeName.isEmpty()) {
+        return index;
+      }
+    } catch (IOException ex) {
+      LOG.warn(ex.getMessage());
+      return null;
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, checksumFileInputStream);
+    }
+
+    return null;
   }
 
   @Private
