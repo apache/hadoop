@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.StopWatch;
@@ -33,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -70,7 +70,7 @@ public class ITestBlockingThreadPoolExecutorService {
   @Test
   public void testSubmitCallable() throws Exception {
     ensureCreated();
-    ListenableFuture<Integer> f = tpe.submit(callableSleeper);
+    Future<Integer> f = tpe.submit(callableSleeper);
     Integer v = f.get();
     assertEquals(SOME_VALUE, v);
   }

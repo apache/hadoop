@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.util;
 
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ForwardingListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ForwardingExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -31,6 +29,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -55,10 +54,10 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_EXECUTO
 @SuppressWarnings("NullableProblems")
 @InterfaceAudience.Private
 public class SemaphoredDelegatingExecutor extends
-    ForwardingListeningExecutorService {
+    ForwardingExecutorService {
 
   private final Semaphore queueingPermits;
-  private final ListeningExecutorService executorDelegatee;
+  private final ExecutorService executorDelegatee;
   private final int permitCount;
   private final DurationTrackerFactory trackerFactory;
 
@@ -70,7 +69,7 @@ public class SemaphoredDelegatingExecutor extends
    * @param trackerFactory duration tracker factory.
    */
   public SemaphoredDelegatingExecutor(
-      ListeningExecutorService executorDelegatee,
+      ExecutorService executorDelegatee,
       int permitCount,
       boolean fair,
       DurationTrackerFactory trackerFactory) {
@@ -89,14 +88,14 @@ public class SemaphoredDelegatingExecutor extends
    * @param fair should the semaphore be "fair"
    */
   public SemaphoredDelegatingExecutor(
-      ListeningExecutorService executorDelegatee,
+      ExecutorService executorDelegatee,
       int permitCount,
       boolean fair) {
     this(executorDelegatee, permitCount, fair, null);
   }
 
   @Override
-  protected ListeningExecutorService delegate() {
+  protected ExecutorService delegate() {
     return executorDelegatee;
   }
 
@@ -127,7 +126,7 @@ public class SemaphoredDelegatingExecutor extends
   }
 
   @Override
-  public <T> ListenableFuture<T> submit(Callable<T> task) {
+  public <T> Future<T> submit(Callable<T> task) {
     try (DurationTracker ignored =
              trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
@@ -139,7 +138,7 @@ public class SemaphoredDelegatingExecutor extends
   }
 
   @Override
-  public <T> ListenableFuture<T> submit(Runnable task, T result) {
+  public <T> Future<T> submit(Runnable task, T result) {
     try (DurationTracker ignored =
              trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
@@ -151,7 +150,7 @@ public class SemaphoredDelegatingExecutor extends
   }
 
   @Override
-  public ListenableFuture<?> submit(Runnable task) {
+  public Future<?> submit(Runnable task) {
     try (DurationTracker ignored =
              trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
