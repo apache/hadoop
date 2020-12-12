@@ -459,4 +459,16 @@ public class TestText {
             2, Text.utf8Length(new String(new char[]{(char)254})));
   }
 
+  @Test
+  public void testSetBytes(){
+    Text a = new Text(new byte[100]);
+    assertEquals("testSetBytes100 getLength error !", 100, a.getLength());
+    assertEquals("testSetBytes100 getBytes.length error !", 100, a.getBytes().length);
+    assertEquals("testSetBytes100 getTextLength error !", -1, a.getTextLength());
+
+    a.set(new byte[0]);
+    assertEquals("testSetBytes0 getLength error !", 0, a.getLength());
+    assertEquals("testSetBytes0 getBytes.length error !", 0, a.getBytes().length);
+    assertEquals("testSetBytes0 getTextLength error !", -1, a.getTextLength());
+  }
 }
