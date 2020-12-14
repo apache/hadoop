@@ -85,15 +85,15 @@ public class KerberosUtil {
   public static Oid getOidInstance(String oidName)
       throws NoSuchFieldException {
     switch (oidName) {
-      case "GSS_SPNEGO_MECH_OID":
-        return GSS_SPNEGO_MECH_OID;
-      case "GSS_KRB5_MECH_OID":
-        return GSS_KRB5_MECH_OID;
-      case "NT_GSS_KRB5_PRINCIPAL":
-        return NT_GSS_KRB5_PRINCIPAL_OID;
-      default:
-        throw new NoSuchFieldException(
-            "oidName: " + oidName + " is not supported.");
+    case "GSS_SPNEGO_MECH_OID":
+      return GSS_SPNEGO_MECH_OID;
+    case "GSS_KRB5_MECH_OID":
+      return GSS_KRB5_MECH_OID;
+    case "NT_GSS_KRB5_PRINCIPAL":
+      return NT_GSS_KRB5_PRINCIPAL_OID;
+    default:
+      throw new NoSuchFieldException(
+          "oidName: " + oidName + " is not supported.");
     }
   }
 
