@@ -38,6 +38,10 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -46,7 +50,7 @@ import static org.apache.hadoop.util.StringUtils.toLowerCase;
 public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
-  public static final int FOOTER_SIZE = 8;
+  public static final int FOOTER_SIZE = 16 * ONE_KB;
 
   private int readAheadBlockSize;
   private final AbfsClient client;
@@ -152,7 +156,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     do {
       if (shouldReadFully()) {
         lastReadBytes = readFileCompletely(b, currentOff, currentLen);
-      } else if (shouldReadLastBlock(len)) {
+      } else if (shouldReadLastBlock()) {
         lastReadBytes = readLastBlock(b, currentOff, currentLen);
       } else {
         lastReadBytes = readOneBlock(b, currentOff, currentLen);
@@ -174,10 +178,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         && this.contentLength <= this.bufferSize;
   }
 
-  private boolean shouldReadLastBlock(int len) {
+  private boolean shouldReadLastBlock() {
+    long footerStart = max(0, this.contentLength - FOOTER_SIZE);
     return this.firstRead && this.context.optimizeFooterRead()
-        && len == FOOTER_SIZE
-        && this.fCursor == this.contentLength - FOOTER_SIZE;
+        && this.fCursor >= footerStart;
   }
 
   private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
@@ -259,15 +263,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor, for small
     // files the bCursor will be contentlength - footer size,
     // otherwise buffersize - footer size
-    bCursor = (int) (Math.min(contentLength, bufferSize) - FOOTER_SIZE);
+    bCursor = (int) (min(contentLength, bufferSize) - FOOTER_SIZE);
     // read API call is considered 1 single operation in reality server could
     // return partial data and client has to retry untill the last full block
     // is read. So setting the fCursorAfterLastRead before the possible
     // multiple server calls
     fCursorAfterLastRead = fCursor;
     // 0 if contentlength is < buffersize
-    long readFrom = Math.max(0, contentLength - bufferSize);
-    long actualLenToRead = Math.min(bufferSize, contentLength);
+    long readFrom = max(0, contentLength - bufferSize);
+    long actualLenToRead = min(bufferSize, contentLength);
     return optimisedRead(b, off, len, readFrom, actualLenToRead);
   }
 
@@ -338,7 +342,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
     //(bytes returned may be less than requested)
     int bytesRemaining = limit - bCursor;
-    int bytesToRead = Math.min(len, bytesRemaining);
+    int bytesToRead = min(len, bytesRemaining);
     System.arraycopy(buffer, bCursor, b, off, bytesToRead);
     bCursor += bytesToRead;
     if (statistics != null) {
@@ -366,7 +370,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       long nextOffset = position;
       // First read to queue needs to be of readBufferSize and later
       // of readAhead Block size
-      long nextSize = Math.min((long) bufferSize, contentLength - nextOffset);
+      long nextSize = min((long) bufferSize, contentLength - nextOffset);
       LOG.debug("read ahead enabled issuing readheads num = {}", numReadAheads);
       while (numReadAheads > 0 && nextOffset < contentLength) {
         LOG.debug("issuing read ahead requestedOffset = {} requested size {}",
@@ -375,7 +379,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
         // From next round onwards should be of readahead block size.
-        nextSize = Math.min((long) readAheadBlockSize, contentLength - nextOffset);
+        nextSize = min((long) readAheadBlockSize, contentLength - nextOffset);
       }
 
       // try reading from buffers first
