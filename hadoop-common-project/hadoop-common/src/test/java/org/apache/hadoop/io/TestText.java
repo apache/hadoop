@@ -469,6 +469,6 @@ public class TestText {
     a.set(new byte[0]);
     assertEquals("testSetBytes0 getLength error !", 0, a.getLength());
     assertEquals("testSetBytes0 getBytes.length error !", 0, a.getBytes().length);
-    assertEquals("testSetBytes0 getTextLength error !", -1, a.getTextLength());
+    assertEquals("testSetBytes0 getTextLength error !", 0, a.getTextLength());
   }
 }
