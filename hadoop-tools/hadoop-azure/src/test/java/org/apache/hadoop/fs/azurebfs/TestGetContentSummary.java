@@ -15,19 +15,28 @@ import java.util.concurrent.Future;
 
 public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   private final String[] directories = {"testFolder", "testFolder/testFolder1",
-      "testFolder/testFolder2", "testFolder/testFolder3", "testFolder"
-      + "/testFolder2/testFolder4", "testFolder/testFolder2/testFolder5",
+      "testFolder/testFolder2", "testFolder/testFolder3", "testFolderII",
+      "testFolder/testFolder2/testFolder4", "testFolder/testFolder2/testFolder5",
       "testFolder/testFolder3/testFolder6", "testFolder/testFolder3/testFolder7"};
-  private final int filesPerDirectory = 10;
+  private final int filesPerDirectory = 2;
+  private final AzureBlobFileSystem fs = createFileSystem();
 
   public TestGetContentSummary() throws Exception {
+    createDirectoryStructure();
   }
 
   @Test
+  public void testFileContentSummary() throws IOException {
+    ContentSummary contentSummary = fs.getContentSummary(
+        new Path("/"+directories[2] + "/test0"));
+    Assertions.assertThat(contentSummary.getFileCount())
+        .isEqualTo(1);
+  }
+
+
+  @Test
   public void testFileFolderCount()
-      throws IOException, ExecutionException, InterruptedException {
-    AzureBlobFileSystem fs = getFileSystem();
-    createDirectoryStructure();
+      throws IOException {
     ContentSummary contentSummary = fs.getContentSummary(new Path("/"));
     System.out.println(contentSummary.toString());
     Assertions.assertThat(contentSummary.getDirectoryCount())
@@ -38,9 +47,21 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
         .isEqualTo(directories.length * filesPerDirectory);
   }
 
+  @Test
+  public void testEmptyDir() throws IOException {
+    Path pathToEmptyDir = new Path("/emptyDir");
+    fs.mkdirs(pathToEmptyDir);
+    ContentSummary contentSummary =
+        fs.getContentSummary(pathToEmptyDir);
+    Assertions.assertThat(contentSummary.getFileCount())
+        .isEqualTo(0);
+    Assertions.assertThat(contentSummary.getDirectoryCount())
+        .isEqualTo(0);
+  }
+
   void createDirectoryStructure()
       throws IOException, ExecutionException, InterruptedException {
-    AzureBlobFileSystem fs = getFileSystem();
+//    AzureBlobFileSystem fs = getFileSystem();
     for (String directory : directories) {
       fs.mkdirs(new Path("/" + directory));
     }

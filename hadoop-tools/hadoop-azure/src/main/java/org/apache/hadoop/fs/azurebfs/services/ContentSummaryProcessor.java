@@ -9,54 +9,42 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ContentSummaryProcessor {
-  private AtomicLong fileCount = new AtomicLong(0L);
-  private AtomicLong directoryCount = new AtomicLong(0L);
-  private AtomicLong totalBytes = new AtomicLong(0L);
-  private ProcessingQueue<FileStatus> queue = new ProcessingQueue();
-  private AzureBlobFileSystemStore abfsStore;
+  private final AtomicLong fileCount = new AtomicLong(0L);
+  private final AtomicLong directoryCount = new AtomicLong(0L);
+  private final AtomicLong totalBytes = new AtomicLong(0L);
+  private final ProcessingQueue<FileStatus> queue = new ProcessingQueue<>();
+  private final AzureBlobFileSystemStore abfsStore;
   private static final int NUM_THREADS = 16;
 
-  public ContentSummaryProcessor() {
+  public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
+    this.abfsStore = abfsStore;
   }
 
-  public ContentSummary getContentSummary(AzureBlobFileSystemStore abfsStore,
-      Path path) throws IOException {
-    this.abfsStore = abfsStore;
-    FileStatus fileStatus = abfsStore.getFileStatus(path);
-    if (!fileStatus.isDirectory()) {
-      processFile(fileStatus);
-    } else {
-      this.queue.add(fileStatus);
-      Thread[] threads = new Thread[16];
+  public ContentSummary getContentSummary(Path path) throws IOException {
+    processDirectoryTree(path);
+    Thread[] threads = new Thread[16];
 
-      for(int i = 0; i < NUM_THREADS; ++i) {
-        threads[i] = new Thread(new ContentSummaryProcessor.ThreadProcessor());
-        threads[i].start();
-      }
-
-      for (Thread t : threads) {
-        try {
-          t.join();
-        } catch (InterruptedException var10) {
-          Thread.currentThread().interrupt();
-        }
-      }
+    for(int i = 0; i < NUM_THREADS; ++i) {
+      threads[i] = new Thread(new ContentSummaryProcessor.ThreadProcessor());
+      threads[i].start();
     }
 
+    for (Thread t : threads) {
+      try {
+        t.join();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
     return new ContentSummary(totalBytes.get(), directoryCount.get(), fileCount.get(), totalBytes.get());
   }
 
   private void processDirectoryTree(Path path) throws IOException {
-    FileStatus[] fileStatuses = enumerateDirectoryInternal(path.toString());
-    if (fileStatuses == null || fileStatuses.length == 0) {
-      return;
-    }
+    FileStatus[] fileStatuses = abfsStore.listStatus(path);
     for (FileStatus fileStatus : fileStatuses) {
-      System.out.println(fileStatus.getPath().toString());
       if (fileStatus.isDirectory()) {
-        this.queue.add(fileStatus);
         this.processDirectory();
-        System.out.println("===== incrementing dir count!!!");
+        this.queue.add(fileStatus);
       } else {
         this.processFile(fileStatus);
       }
@@ -65,16 +53,11 @@ public class ContentSummaryProcessor {
 
   private void processDirectory() {
     this.directoryCount.incrementAndGet();
-    System.out.println("----- dir count is " + directoryCount);
   }
 
   private void processFile(FileStatus fileStatus) {
     this.fileCount.incrementAndGet();
     this.totalBytes.addAndGet(fileStatus.getLen());
-  }
-
-  private FileStatus[] enumerateDirectoryInternal(String path) throws IOException {
-    return abfsStore.listStatus(new Path(path)); //try catch if needed
   }
 
   private class ThreadProcessor implements Runnable {
@@ -90,9 +73,8 @@ public class ContentSummaryProcessor {
           }
           ContentSummaryProcessor.this.queue.unregister();
         }
-
-      } catch (IOException var9) {
-        throw new RuntimeException("IOException processing Directory tree", var9);
+      } catch (IOException e) {
+        throw new RuntimeException("IOException processing Directory tree", e);
       }
     }
   }
