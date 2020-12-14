@@ -260,19 +260,19 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     savePointerState();
 
     buffer = new byte[bufferSize];
-    // data need to be copied to user buffer from index bCursor, for small
-    // files the bCursor will be contentlength - footer size,
-    // otherwise buffersize - footer size
-    bCursor = (int) (min(contentLength, bufferSize) - FOOTER_SIZE);
+    // data need to be copied to user buffer from index bCursor,
+    // AbfsInutStream buffer is going p contain dta from footer start. In
+    // that case bCursor will be set to footerStart - fCursor
+    long lastBlockStart = max(0, contentLength - bufferSize);
+    bCursor = (int) (fCursor - lastBlockStart);
     // read API call is considered 1 single operation in reality server could
     // return partial data and client has to retry untill the last full block
     // is read. So setting the fCursorAfterLastRead before the possible
     // multiple server calls
     fCursorAfterLastRead = fCursor;
     // 0 if contentlength is < buffersize
-    long readFrom = max(0, contentLength - bufferSize);
     long actualLenToRead = min(bufferSize, contentLength);
-    return optimisedRead(b, off, len, readFrom, actualLenToRead);
+    return optimisedRead(b, off, len, lastBlockStart, actualLenToRead);
   }
 
   private int optimisedRead(final byte[] b, final int off, final int len,
