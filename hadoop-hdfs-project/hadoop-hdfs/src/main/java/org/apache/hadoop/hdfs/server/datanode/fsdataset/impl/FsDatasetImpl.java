@@ -953,7 +953,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  static File[] moveBlockFiles(Block b, ReplicaInfo replicaInfo, File destdir)
+  static File moveBlockFiles(Block b, ReplicaInfo replicaInfo, File destdir)
       throws IOException {
     final File dstfile = new File(destdir, b.getBlockName());
     final File dstmeta = FsDatasetUtil.getMetaFile(dstfile, b.getGenerationStamp());
@@ -975,7 +975,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + " to " + dstmeta + " and " + replicaInfo.getBlockURI()
           + " to " + dstfile);
     }
-    return new File[]{dstfile, dstmeta};
+    return dstfile;
   }
 
   /**
@@ -1058,28 +1058,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     FsVolumeReference volumeRef = null;
-    boolean shouldConsiderSameMountVolume =
-        shouldConsiderSameMountVolume(replicaInfo.getVolume(), targetStorageType);
-    boolean useSameMountVolume = false;
-
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
-      // TODO: consider storage ID.
-      // TODO: make it a configuration
-      if (shouldConsiderSameMountVolume) {
-        volumeRef = volumes.getVolumeByMount(targetStorageType,
-            ((FsVolumeImpl) replicaInfo.getVolume()).getMount(),
-            block.getNumBytes());
-        if (volumeRef != null) {
-          useSameMountVolume = true;
-        }
-      }
-      if (!useSameMountVolume) {
-        volumeRef = volumes.getNextVolume(targetStorageType, targetStorageId,
-            block.getNumBytes());
-      }
+      volumeRef = volumes.getNextVolume(targetStorageType, targetStorageId,
+          block.getNumBytes());
     }
     try {
-      moveBlock(block, replicaInfo, volumeRef, useSameMountVolume);
+      moveBlock(block, replicaInfo, volumeRef);
     } finally {
       if (volumeRef != null) {
         volumeRef.close();
@@ -1088,30 +1072,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     // Replace the old block if any to reschedule the scanning.
     return replicaInfo;
-  }
-
-  /**
-   * When configuring DISK/ARCHIVE on same volume,
-   * check if we should find the counterpart on the same disk mount.
-   */
-  private boolean shouldConsiderSameMountVolume(FsVolumeSpi fsVolume,
-      StorageType targetStorageType) {
-    // Source should be a FsVolumeImpl with mount available.
-    if (!(fsVolume instanceof FsVolumeImpl)
-        || !((FsVolumeImpl) fsVolume).getMount().isEmpty()) {
-      return false;
-    }
-    StorageType sourceStorageType = fsVolume.getStorageType();
-    // Source/dest storage types are different
-    if (sourceStorageType == targetStorageType) {
-      return false;
-    }
-    // Source/dest storage types are either DISK or ARCHIVE.
-    if (!StorageType.allowSameDiskTiering(sourceStorageType)
-        || !StorageType.allowSameDiskTiering(targetStorageType)) {
-      return false;
-    }
-    return true;
   }
 
   /**
@@ -1126,20 +1086,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @VisibleForTesting
   ReplicaInfo moveBlock(ExtendedBlock block, ReplicaInfo replicaInfo,
       FsVolumeReference volumeRef) throws IOException {
-    return moveBlock(block, replicaInfo, volumeRef, false);
-  }
-
-  @VisibleForTesting
-  ReplicaInfo moveBlock(ExtendedBlock block, ReplicaInfo replicaInfo,
-      FsVolumeReference volumeRef, boolean useMove) throws IOException {
-    ReplicaInfo newReplicaInfo;
-    if (useMove) {
-      newReplicaInfo = moveReplicaToVolume(block, replicaInfo,
-          volumeRef);
-    } else {
-      newReplicaInfo = copyReplicaToVolume(block, replicaInfo,
-          volumeRef);
-    }
+    ReplicaInfo newReplicaInfo = copyReplicaToVolume(block, replicaInfo,
+        volumeRef);
     finalizeNewReplica(newReplicaInfo, block);
     removeOldReplica(replicaInfo, newReplicaInfo, block.getBlockPoolId());
     return newReplicaInfo;
@@ -1175,28 +1123,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       FsVolumeReference volumeRef) throws IOException {
     FsVolumeImpl targetVolume = (FsVolumeImpl) volumeRef.getVolume();
     // Copy files to temp dir first
-    ReplicaInfo newReplicaInfo = targetVolume.copyBlockToTmpLocation(block,
-        replicaInfo, smallBufferSize, conf);
-    return newReplicaInfo;
-  }
-
-  /**
-   * For two volumes on the same disk mount,
-   * use move instead of copy to reduce IO
-   *
-   * @param block       - Extended Block
-   * @param replicaInfo - ReplicaInfo
-   * @param volumeRef   - Volume Ref - Closed by caller.
-   * @return newReplicaInfo new replica object created in specified volume.
-   * @throws IOException
-   */
-  @VisibleForTesting
-  ReplicaInfo moveReplicaToVolume(ExtendedBlock block, ReplicaInfo replicaInfo,
-      FsVolumeReference volumeRef) throws IOException {
-    FsVolumeImpl targetVolume = (FsVolumeImpl) volumeRef.getVolume();
-    // Copy files to temp dir first
     ReplicaInfo newReplicaInfo = targetVolume.moveBlockToTmpLocation(block,
-        replicaInfo);
+        replicaInfo, smallBufferSize, conf);
     return newReplicaInfo;
   }
 

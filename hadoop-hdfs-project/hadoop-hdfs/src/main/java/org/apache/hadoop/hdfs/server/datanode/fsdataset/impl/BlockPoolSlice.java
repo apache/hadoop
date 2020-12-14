@@ -384,7 +384,7 @@ class BlockPoolSlice {
   File addFinalizedBlock(Block b, ReplicaInfo replicaInfo) throws IOException {
     File blockDir = DatanodeUtil.idToBlockDir(finalizedDir, b.getBlockId());
     fileIoProvider.mkdirsWithExistsCheck(volume, blockDir);
-    File blockFile = FsDatasetImpl.moveBlockFiles(b, replicaInfo, blockDir)[0];
+    File blockFile = FsDatasetImpl.moveBlockFiles(b, replicaInfo, blockDir);
     File metaFile = FsDatasetUtil.getMetaFile(blockFile, b.getGenerationStamp());
     if (dfsUsage instanceof CachingGetSpaceUsed) {
       ((CachingGetSpaceUsed) dfsUsage).incDfsUsed(

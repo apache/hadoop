@@ -91,10 +91,6 @@ public enum StorageType {
     return StorageType.valueOf(StringUtils.toUpperCase(s));
   }
 
-  public static boolean allowSameDiskTiering(StorageType storageType) {
-    return storageType == StorageType.DISK || storageType == StorageType.ARCHIVE;
-  }
-
   private static List<StorageType> getNonTransientTypes() {
     List<StorageType> nonTransientTypes = new ArrayList<>();
     for (StorageType t : VALUES) {
