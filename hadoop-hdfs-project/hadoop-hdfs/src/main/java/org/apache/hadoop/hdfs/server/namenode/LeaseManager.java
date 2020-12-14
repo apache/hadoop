@@ -34,7 +34,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
@@ -94,10 +93,6 @@ public class LeaseManager {
   //
   // Used for handling lock-leases
   // Mapping: leaseHolder -> Lease
-  // TreeMap has O(log(n)) complexity but it is more space efficient
-  //             compared to HashMap. Therefore, replacing TreeMap with a
-  //             HashMap can be considered to get faster O(1) time complexity
-  //             on the expense of 30% memory waste.
   //
   private final HashMap<String, Lease> leases = new HashMap<>();
   // INodeID -> Lease
@@ -511,9 +506,13 @@ public class LeaseManager {
 
   private synchronized Collection<Lease> getExpiredCandidateLeases() {
     final long now = Time.monotonicNow();
-    return leases.values().stream()
-        .filter(lease -> lease.expiredHardLimit(now))
-        .collect(Collectors.toCollection(HashSet::new));
+    Collection<Lease> expired = new HashSet<>();
+    for (Lease lease : leases.values()) {
+      if (lease.expiredHardLimit(now)) {
+        expired.add(lease);
+      }
+    }
+    return expired;
   }
   
   /******************************************************
@@ -551,9 +550,7 @@ public class LeaseManager {
             }
           }
         } catch(InterruptedException ie) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("{} is interrupted", name, ie);
-          }
+          LOG.debug("{} is interrupted", name, ie);
         } catch(Throwable e) {
           LOG.warn("Unexpected throwable: ", e);
         }
