@@ -451,7 +451,7 @@ public class HistoryFileManager extends AbstractService {
         if (historyFile != null &&
             intermediateDoneDirFc.util().exists(historyFile)) {
           Path toPath = doneDirFc.makeQualified(new Path(targetDir, historyFile
-                  .getName()));
+              .getName()));
           if (!toPath.equals(historyFile)) {
             moveToDoneNow(historyFile, toPath);
             historyFile = toPath;
