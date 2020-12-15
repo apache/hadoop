@@ -209,10 +209,21 @@ runtests=0
         threadcount=$OPTARG
         ;;
       *|?|h)
+        if [[ -z "$combinations" ]]; then
+          combinations=( $( ls $combconfsdir/*.xml ))
+        fi
+      combstr=""
+        for combconffile in "${combinations[@]}"; do
+          combname=$(basename "$combconffile" .xml)
+          combstr="${combname}, ${combstr}"
+        done
+        combstr=${combstr:0:-2}
+
         echo "Usage: $0 [-n] [-a COMBINATION_NAME] [-c COMBINATION_NAME] [-t THREAD_COUNT]"
         echo ""
         echo "Where:"
         echo "  -a COMBINATION_NAME   Specify the combination name which needs to be activated."
+        echo "                        Configured combinations: ${combstr}"
         echo "  -c COMBINATION_NAME   Specify the combination name for test runs"
         echo "  -t THREAD_COUNT       Specify the thread count"
         exit 1
