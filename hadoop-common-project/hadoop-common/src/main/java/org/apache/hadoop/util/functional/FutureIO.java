@@ -32,11 +32,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Future IO Helper methods.
- * <p></p>
+ * <p>
  * Contains methods promoted from
  * {@link org.apache.hadoop.fs.impl.FutureIOSupport} because they
  * are a key part of integrating async IO in application code.
- * <p></p>
+ * </p>
+ * <p>
  * One key feature is that the {@link #awaitFuture(Future)} and
  * {@link #awaitFuture(Future, long, TimeUnit)} calls will
  * extract and rethrow exceptions raised in the future's execution,
@@ -44,6 +45,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * {@code UncheckedIOException} raised in the future.
  * This makes it somewhat easier to execute IOException-raising
  * code inside futures.
+ * </p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -54,9 +56,10 @@ public final class FutureIO {
 
   /**
    * Given a future, evaluate it.
-   * <p></p>
+   * <p>
    * Any exception generated in the future is
    * extracted and rethrown.
+   * </p>
    * @param future future to evaluate
    * @param <T> type of the result.
    * @return the result, if all went well.
@@ -78,9 +81,10 @@ public final class FutureIO {
 
   /**
    * Given a future, evaluate it.
-   * <p></p>
+   * <p>
    * Any exception generated in the future is
    * extracted and rethrown.
+   * </p>
    * @param future future to evaluate
    * @param <T> type of the result.
    * @return the result, if all went well.

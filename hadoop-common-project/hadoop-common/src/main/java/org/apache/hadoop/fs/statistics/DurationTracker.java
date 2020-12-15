@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import java.time.Duration;
+
 /**
  * Interface to be implemented by objects which can track duration.
  * It extends AutoCloseable to fit into a try-with-resources statement,
@@ -38,4 +40,15 @@ public interface DurationTracker extends AutoCloseable {
    * Finish tracking: update the statistics with the timings.
    */
   void close();
+
+  /**
+   * Get the duration of an operation as a java Duration
+   * instance. If the duration tracker hasn't completed,
+   * or its duration tracking doesn't actually measure duration,
+   * returns Duration.ZERO.
+   * @return a duration, value of ZERO until close().
+   */
+  default Duration asDuration() {
+    return Duration.ZERO;
+  }
 }

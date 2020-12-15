@@ -203,6 +203,18 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
   }
 
   /**
+   * Duration of the successful execution of a InvocationRaisingIOE.
+   */
+  @Test
+  public void testInvocationDuration() throws Throwable {
+    // call the operation
+    trackDurationOfInvocation(stats, REQUESTS, () -> sleepf(100));
+    DurationStatisticSummary summary = fetchSuccessSummary(stats, REQUESTS);
+    assertSummaryValues(summary, 1, 0, 0);
+    assertSummaryMean(summary, 1, 0);
+  }
+
+  /**
    * Duration of the successful execution of a CallableRaisingIOE.
    */
   @Test

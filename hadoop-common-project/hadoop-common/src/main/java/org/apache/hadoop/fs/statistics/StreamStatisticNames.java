@@ -40,130 +40,227 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public final class StreamStatisticNames {
 
-  /** {@value}. */
+  /**
+   * Count of times the TCP stream was aborted.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_ABORTED = "stream_aborted";
 
-  /** {@value}. */
-  public static final String STREAM_READ_BYTES_DISCARDED_ABORT
-      = "stream_read_bytes_discarded_in_abort";
-
-  /** {@value}. */
-  public static final String STREAM_READ_BYTES_DISCARDED_SEEK
-      = "stream_read_bytes_discarded_in_seek";
-
-  /** {@value}. */
-  public static final String STREAM_READ_CLOSED = "stream_read_closed";
-
-  /** {@value}. */
-  public static final String STREAM_READ_CLOSE_BYTES_READ
-      = "stream_read_bytes_read_in_close";
-
-  /** {@value}. */
-  public static final String STREAM_READ_CLOSE_OPERATIONS
-      = "stream_read_close_operations";
-
-  /** {@value}. */
-  public static final String STREAM_READ_OPENED = "stream_read_opened";
-
-  /** {@value}. */
+  /**
+   * Bytes read from an input stream in read() calls.
+   * Does not include bytes read and then discarded in seek/close etc.
+   * These are the bytes returned to the caller.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_BYTES
       = "stream_read_bytes";
 
-  /** {@value}. */
+  /**
+   * Count of bytes discarded by aborting an input stream .
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_BYTES_DISCARDED_ABORT
+      = "stream_read_bytes_discarded_in_abort";
+
+  /**
+   * Count of bytes read and discarded when closing an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_BYTES_DISCARDED_CLOSE
+      = "stream_read_bytes_discarded_in_close";
+
+  /**
+   * Count of times the TCP stream was closed.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_CLOSED = "stream_read_closed";
+
+  /**
+   * Total count of times an attempt to close an input stream was made
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_CLOSE_OPERATIONS
+      = "stream_read_close_operations";
+
+  /**
+   * Total count of times an input stream to was opened.
+   * For object stores, that means the count a GET request was initiated.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_OPENED = "stream_read_opened";
+
+  /**
+   * Count of exceptions raised during input stream reads.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_EXCEPTIONS =
       "stream_read_exceptions";
 
-  /** {@value}. */
+  /**
+   * Count of readFully() operations in an input stream.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_FULLY_OPERATIONS
       = "stream_read_fully_operations";
 
-  /** {@value}. */
+  /**
+   * Count of read() operations in an input stream.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_OPERATIONS =
       "stream_read_operations";
 
-  /** {@value}. */
+  /**
+   * Count of incomplete read() operations in an input stream,
+   * that is, when the bytes returned were less than that requested.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_OPERATIONS_INCOMPLETE
       = "stream_read_operations_incomplete";
 
-  /** {@value}. */
+  /**
+   * Count of version mismatches encountered while reading an input stream.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_VERSION_MISMATCHES
       = "stream_read_version_mismatches";
 
-  /** {@value}. */
-  public static final String STREAM_READ_SEEK_BYTES_BACKWARDS
-      = "stream_read_bytes_backwards_on_seek";
-
-  /** {@value}. */
-  public static final String STREAM_READ_SEEK_FORWARD_OPERATIONS
-      = "stream_read_seek_forward_operations";
-
-  /** {@value}. */
-  public static final String STREAM_READ_SEEK_POLICY_CHANGED =
-      "stream_read_seek_policy_changed";
-
-  /** {@value}. */
-  public static final String STREAM_READ_SEEK_OPERATIONS =
-      "stream_read_seek_operations";
-
-  /** {@value}. */
+  /**
+   * Count of executed seek operations which went backwards in a stream.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_SEEK_BACKWARD_OPERATIONS =
       "stream_read_seek_backward_operations";
 
-  /** {@value}. */
-  public static final String STREAM_READ_SEEK_BYTES_READ =
-      "stream_read_seek_bytes_read";
+  /**
+   * Count of bytes moved backwards during seek operations
+   * in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_SEEK_BYTES_BACKWARDS
+      = "stream_read_bytes_backwards_on_seek";
 
-  /** {@value}. */
+  /**
+   * Count of bytes read and discarded during seek() in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_SEEK_BYTES_DISCARDED =
+      "stream_read_seek_bytes_discarded";
+
+  /**
+   * Count of bytes skipped during forward seek operations.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_SEEK_BYTES_SKIPPED
-      = "stream_read_bytes_skipped_on_seek";
+      = "stream_read_seek_bytes_skipped";
 
-  /** {@value}. */
+  /**
+   * Count of executed seek operations which went forward in
+   * an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_SEEK_FORWARD_OPERATIONS
+      = "stream_read_seek_forward_operations";
+
+  /**
+   * Count of times the seek policy was dynamically changed
+   * in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_SEEK_POLICY_CHANGED =
+      "stream_read_seek_policy_changed";
+
+  /**
+   * Count of seek operations in an input stream.
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_SEEK_OPERATIONS =
+      "stream_read_seek_operations";
+
+  /**
+   * Count of {@code InputStream.skip()} calls.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_SKIP_OPERATIONS =
       "stream_read_skip_operations";
 
-  /** {@value}. */
+  /**
+   * Count bytes skipped in {@code InputStream.skip()} calls.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_SKIP_BYTES =
       "stream_read_skip_bytes";
 
-  /** {@value}. */
+  /**
+   * Total count of bytes read from an input stream.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_TOTAL_BYTES
       = "stream_read_total_bytes";
 
-  /** {@value}. */
+  /**
+   * Count of calls of {@code CanUnbuffer.unbuffer()}.
+   * Value: {@value}.
+   */
   public static final String STREAM_READ_UNBUFFERED
       = "stream_read_unbuffered";
 
-  /** {@value}. */
+  /**
+   * "Count of stream write failures reported.
+   * Value: {@value}.
+   */
   public static final String STREAM_WRITE_EXCEPTIONS =
       "stream_write_exceptions";
 
-  /** Failures when finalizing a multipart upload: {@value}. */
+  /**
+   * Count of failures when finalizing a multipart upload:
+   * {@value}.
+   */
   public static final String STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS =
       "stream_write_exceptions_completing_upload";
 
-  /** {@value}. */
+  /**
+   * Count of block/partition uploads complete.
+   * Value: {@value}.
+   */
   public static final String STREAM_WRITE_BLOCK_UPLOADS
       = "stream_write_block_uploads";
 
-  /** {@value}. */
+  /**
+   * Count of number of block uploads aborted.
+   * Value: {@value}.
+   */
   public static final String STREAM_WRITE_BLOCK_UPLOADS_ABORTED
       = "stream_write_block_uploads_aborted";
 
-  /** {@value}. */
+  /**
+   * Count of block/partition uploads active.
+   * Value: {@value}.
+   */
   public static final String STREAM_WRITE_BLOCK_UPLOADS_ACTIVE
       = "stream_write_block_uploads_active";
 
-  /** {@value}. */
+  /**
+   * Gauge of data queued to be written.
+   * Value: {@value}.
+   */
+  public static final String STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING =
+      "stream_write_block_uploads_data_pending";
+
+  /**
+   * Count of number of block uploads committed.
+   * Value: {@value}.
+   */
   public static final String STREAM_WRITE_BLOCK_UPLOADS_COMMITTED
       = "stream_write_block_uploads_committed";
 
-  /** {@value}. */
+  /**
+   * Gauge of block/partitions uploads queued to be written.
+   * Value: {@value}.
+   */
   public static final String STREAM_WRITE_BLOCK_UPLOADS_PENDING
       = "stream_write_block_uploads_pending";
 
-  /** {@value}. */
-  public static final String STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING =
-      "stream_write_block_uploads_data_pending";
 
   /**
    * "Count of bytes written to output stream including all not yet uploaded.

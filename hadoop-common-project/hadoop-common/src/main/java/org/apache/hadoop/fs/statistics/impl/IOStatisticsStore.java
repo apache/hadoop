@@ -76,11 +76,12 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Increment a gauge.
-   * <p></p>
+   * <p>
    * No-op if the gauge is unknown.
+   * </p>
    * @param key statistics key
    * @param value value to increment
-   * @return old value or 0
+   * @return new value or 0 if the key is unknown
    */
   long incrementGauge(String key, long value);
 
@@ -94,18 +95,20 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Increment a maximum.
-   * <p></p>
+   * <p>
    * No-op if the maximum is unknown.
+   * </p>
    * @param key statistics key
    * @param value value to increment
-   * @return old value or 0
+   * @return new value or 0 if the key is unknown
    */
   long incrementMaximum(String key, long value);
 
   /**
    * Set a minimum.
-   * <p></p>
+   * <p>
    * No-op if the minimum is unknown.
+   * </p>
    * @param key statistics key
    * @param value value to set
    */
@@ -113,19 +116,21 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Increment a minimum.
-   * <p></p>
+   * <p>
    * No-op if the minimum is unknown.
+   * </p>
    * @param key statistics key
    * @param value value to increment
-   * @return old value or 0
+   * @return new value or 0 if the key is unknown
    */
   long incrementMinimum(String key, long value);
 
   /**
    * Add a minimum sample: if less than the current value,
    * updates the value.
-   * <p></p>
+   * <p>
    * No-op if the minimum is unknown.
+   * </p>
    * @param key statistics key
    * @param value sample value
    */
@@ -134,8 +139,9 @@ public interface IOStatisticsStore extends IOStatistics,
   /**
    * Add a maximum sample: if greater than the current value,
    * updates the value.
-   * <p></p>
-   * No-op if the maximum is unknown.
+   * <p>
+   * No-op if the key is unknown.
+   * </p>
    * @param key statistics key
    * @param value sample value
    */
@@ -143,8 +149,9 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Set a mean statistic to a given value.
-   * <p></p>
-   * No-op if the maximum is unknown.
+   * <p>
+   * No-op if the key is unknown.
+   * </p>
    * @param key statistic key
    * @param value new value.
    */
@@ -152,8 +159,9 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Add a sample to the mean statistics.
-   * <p></p>
-   * No-op if the maximum is unknown.
+   * <p>
+   * No-op if the key is unknown.
+   * </p>
    * @param key key
    * @param value sample value.
    */

@@ -63,7 +63,7 @@ public class StatisticDurationTracker extends OperationDuration
 
   /**
    * Constructor.
-   * If the supplied count is greater than xero, the counter
+   * If the supplied count is greater than zero, the counter
    * of the key name is updated.
    * @param iostats statistics to update
    * @param key Key to use as prefix of values.
@@ -72,7 +72,7 @@ public class StatisticDurationTracker extends OperationDuration
   public StatisticDurationTracker(
       final IOStatisticsStore iostats,
       final String key,
-      final int count) {
+      final long count) {
     this.iostats = iostats;
     this.key = key;
     if (count > 0) {

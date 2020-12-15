@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import java.time.Duration;
+
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 
@@ -46,7 +48,7 @@ final class PairedDurationTrackerFactory implements DurationTrackerFactory {
   }
 
   @Override
-  public DurationTracker trackDuration(final String key, final int count) {
+  public DurationTracker trackDuration(final String key, final long count) {
     return new PairedDurationTracker(
         global.trackDuration(key, count),
         local.trackDuration(key, count));
@@ -57,26 +59,34 @@ final class PairedDurationTrackerFactory implements DurationTrackerFactory {
    */
   private static final class PairedDurationTracker
       implements DurationTracker {
-    private final DurationTracker globalDuration;
-    private final DurationTracker localDuration;
+    private final DurationTracker firstDuration;
+    private final DurationTracker secondDuration;
 
     private PairedDurationTracker(
-        final DurationTracker globalDuration,
-        final DurationTracker localDuration) {
-      this.globalDuration = globalDuration;
-      this.localDuration = localDuration;
+        final DurationTracker firstDuration,
+        final DurationTracker secondDuration) {
+      this.firstDuration = firstDuration;
+      this.secondDuration = secondDuration;
     }
 
     @Override
     public void failed() {
-      globalDuration.failed();
-      localDuration.failed();
+      firstDuration.failed();
+      secondDuration.failed();
     }
 
     @Override
     public void close() {
-      globalDuration.close();
-      localDuration.close();
+      firstDuration.close();
+      secondDuration.close();
+    }
+
+    /**
+     * @return the global duration
+     */
+    @Override
+    public Duration asDuration() {
+      return firstDuration.asDuration();
     }
   }
 

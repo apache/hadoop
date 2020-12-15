@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import java.time.Duration;
+
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 /**
@@ -40,5 +42,10 @@ public final class StubDurationTracker implements DurationTracker {
   @Override
   public void close() {
 
+  }
+
+  @Override
+  public Duration asDuration() {
+    return Duration.ZERO;
   }
 }

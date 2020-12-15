@@ -38,7 +38,7 @@ public final class StubDurationTrackerFactory
   }
 
   @Override
-  public DurationTracker trackDuration(final String key, final int count) {
+  public DurationTracker trackDuration(final String key, final long count) {
     return StubDurationTracker.STUB_DURATION_TRACKER;
   }
 }

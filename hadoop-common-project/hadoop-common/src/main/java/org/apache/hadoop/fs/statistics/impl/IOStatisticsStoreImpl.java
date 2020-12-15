@@ -45,6 +45,12 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.maybeUpda
 
 /**
  * Implementation of {@link IOStatisticsStore}.
+ * <p>
+ *   A ConcurrentHashMap of each set of statistics is created;
+ *   the AtomicLong/MeanStatistic entries are fetched as required.
+ *   When the statistics are updated, the referenced objects
+ *   are updated rather than new values set in the map.
+ * </p>
  */
 final class IOStatisticsStoreImpl extends WrappedIOStatistics
     implements IOStatisticsStore {
@@ -56,14 +62,22 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
   private static final Logger LOG =
       LoggerFactory.getLogger(IOStatisticsStoreImpl.class);
 
+  /** All the counters are atomic longs. */
   private final Map<String, AtomicLong> counterMap = new ConcurrentHashMap<>();
 
+  /** All the gauges are atomic longs. */
   private final Map<String, AtomicLong> gaugeMap = new ConcurrentHashMap<>();
 
+  /** All the minimum values are atomic longs. */
   private final Map<String, AtomicLong> minimumMap = new ConcurrentHashMap<>();
 
+  /** All the maximum values are atomic longs. */
   private final Map<String, AtomicLong> maximumMap = new ConcurrentHashMap<>();
 
+  /**
+   * The mean statistics.
+   * Relies on the MeanStatistic operations being synchronized.
+   */
   private final Map<String, MeanStatistic> meanStatisticMap
       = new ConcurrentHashMap<>();
 
@@ -141,7 +155,7 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
    * null long is no-op returning 0.
    * @param aLong atomic long; may be null
    * @param increment amount to increment; -ve for a decrement
-   * @return final value or 0
+   * @return final value or 0 if the long is null
    */
   private long incAtomicLong(final AtomicLong aLong,
       final long increment) {
@@ -410,12 +424,13 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
   /**
    * Add a duration to the min/mean/max statistics, using the
    * given prefix and adding a suffix for each specific value.
-   * <p></p>
-   * The update is not-atomic, even though each individual statistic
+   * <p>
+   * The update is non -atomic, even though each individual statistic
    * is updated thread-safely. If two threads update the values
    * simultaneously, at the end of each operation the state will
    * be correct. It is only during the sequence that the statistics
    * may be observably inconsistent.
+   * </p>
    * @param prefix statistic prefix
    * @param durationMillis duration in milliseconds.
    */
@@ -441,7 +456,7 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
    * @return a tracker.
    */
   @Override
-  public DurationTracker trackDuration(final String key, final int count) {
+  public DurationTracker trackDuration(final String key, final long count) {
     if (counterMap.containsKey(key)) {
       return new StatisticDurationTracker(this, key, count);
     } else {

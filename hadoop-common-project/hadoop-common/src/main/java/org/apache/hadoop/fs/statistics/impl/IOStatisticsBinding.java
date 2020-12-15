@@ -38,7 +38,9 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.ConsumerRaisingIOE;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
+import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 
 import static org.apache.hadoop.fs.statistics.IOStatistics.MIN_UNSET_VALUE;
 import static org.apache.hadoop.fs.statistics.impl.StubDurationTracker.STUB_DURATION_TRACKER;
@@ -434,6 +436,21 @@ public final class IOStatisticsBinding {
 
   /**
    * Given an IOException raising callable/lambda expression,
+   * execute it and update the relevant statistic.
+   * @param factory factory of duration trackers
+   * @param statistic statistic key
+   * @param input input callable.
+   */
+  public static void trackDurationOfInvocation(
+      DurationTrackerFactory factory,
+      String statistic,
+      InvocationRaisingIOE input) throws IOException {
+    trackDurationOfOperation(factory, statistic,
+        input.asCallable()).apply();
+  }
+
+  /**
+   * Given an IOException raising callable/lambda expression,
    * return a new one which wraps the inner and tracks
    * the duration of the operation, including whether
    * it passes/fails.
@@ -454,6 +471,42 @@ public final class IOStatisticsBinding {
       try {
         // exec the input function and return its value
         return input.apply();
+      } catch (IOException | RuntimeException e) {
+        // input function failed: note it
+        tracker.failed();
+        // and rethrow
+        throw e;
+      } finally {
+        // update the tracker.
+        // this is called after the catch() call would have
+        // set the failed flag.
+        tracker.close();
+      }
+    };
+  }
+
+  /**
+   * Given an IOException raising Consumer,
+   * return a new one which wraps the inner and tracks
+   * the duration of the operation, including whether
+   * it passes/fails.
+   * @param factory factory of duration trackers
+   * @param statistic statistic key
+   * @param input input callable.
+   * @param <B> return type.
+   * @return a new consumer which tracks duration and failure.
+   */
+  public static <B> ConsumerRaisingIOE<B> trackDurationConsumer(
+      @Nullable DurationTrackerFactory factory,
+      String statistic,
+      ConsumerRaisingIOE<B> input) {
+    return (B t) -> {
+      // create the tracker outside try-with-resources so
+      // that failures can be set in the catcher.
+      DurationTracker tracker = createTracker(factory, statistic);
+      try {
+        // exec the input function and return its value
+        input.accept(t);
       } catch (IOException | RuntimeException e) {
         // input function failed: note it
         tracker.failed();
@@ -522,13 +575,26 @@ public final class IOStatisticsBinding {
   /**
    * Create a DurationTrackerFactory which aggregates the tracking
    * of two other factories.
-   * @param local local tracker factory
-   * @param global global tracker factory
+   * @param first first tracker factory
+   * @param second second tracker factory
    * @return a factory
    */
   public static DurationTrackerFactory pairedTrackerFactory(
-      final DurationTrackerFactory local,
-      final DurationTrackerFactory global) {
-    return new PairedDurationTrackerFactory(local, global);
-}
+      final DurationTrackerFactory first,
+      final DurationTrackerFactory second) {
+    return new PairedDurationTrackerFactory(first, second);
+  }
+
+  /**
+   * Publish the IOStatistics as a set of storage statistics.
+   * This is dynamic.
+   * @param name storage statistics name.
+   * @param scheme FS scheme; may be null.
+   * @param source IOStatistics source.
+   * @return a dynamic storage statistics object.
+   */
+  public static StorageStatistics publishAsStorageStatistics(
+      String name, String scheme, IOStatistics source) {
+    return new StorageStatisticsFromIOStatistics(name, scheme, source);
+  }
 }

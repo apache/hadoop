@@ -41,7 +41,7 @@ public interface DurationTrackerFactory {
    * operation.
    * @return an object to close after an operation completes.
    */
-  DurationTracker trackDuration(String key, int count);
+  DurationTracker trackDuration(String key, long count);
 
   /**
    * Initiate a duration tracking operation by creating/returning

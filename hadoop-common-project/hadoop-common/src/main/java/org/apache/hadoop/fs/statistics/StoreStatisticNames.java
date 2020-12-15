@@ -279,6 +279,11 @@ public final class StoreStatisticNames {
   public static final String ACTION_HTTP_GET_REQUEST
       = "action_http_get_request";
 
+  /**
+   * An HTTP HEAD request was made: {@value}.
+   */
+  public static final String OBJECT_METADATA_REQUESTS
+      = "object_metadata_request";
 
   private StoreStatisticNames() {
   }
