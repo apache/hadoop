@@ -1856,6 +1856,16 @@ public class BlockManager implements BlockStatsMXBean {
     // In case of 3, rbw block will be deleted and valid block can be replicated
     if (hasEnoughLiveReplicas || hasMoreCorruptReplicas
         || corruptedDuringWrite) {
+      if (b.getStored().isStriped()) {
+        // If the block is an EC block, the whole block group is marked
+        // corrupted, so if this block is getting deleted, remove the block
+        // from corrupt replica map explicitly, since removal of the
+        // block from corrupt replicas may be delayed if the blocks are on
+        // stale storage due to failover or any other reason.
+        corruptReplicas.removeFromCorruptReplicasMap(b.getStored(), node);
+        BlockInfoStriped blk = (BlockInfoStriped) getStoredBlock(b.getStored());
+        blk.removeStorage(storageInfo);
+      }
       // the block is over-replicated so invalidate the replicas immediately
       invalidateBlock(b, node, numberOfReplicas);
     } else if (isPopulatingReplQueues()) {
