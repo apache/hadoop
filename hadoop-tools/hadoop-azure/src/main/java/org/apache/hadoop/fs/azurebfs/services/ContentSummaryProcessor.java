@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -24,7 +42,7 @@ public class ContentSummaryProcessor {
     processDirectoryTree(path);
     Thread[] threads = new Thread[16];
 
-    for(int i = 0; i < NUM_THREADS; ++i) {
+    for (int i = 0; i < NUM_THREADS; ++i) {
       threads[i] = new Thread(new ContentSummaryProcessor.ThreadProcessor());
       threads[i].start();
     }
@@ -36,7 +54,8 @@ public class ContentSummaryProcessor {
         Thread.currentThread().interrupt();
       }
     }
-    return new ContentSummary(totalBytes.get(), directoryCount.get(), fileCount.get(), totalBytes.get());
+    return new ContentSummary(totalBytes.get(), directoryCount.get(),
+        fileCount.get(), totalBytes.get());
   }
 
   private void processDirectoryTree(Path path) throws IOException {
@@ -67,9 +86,11 @@ public class ContentSummaryProcessor {
     public void run() {
       try {
         FileStatus fileStatus;
-        while((fileStatus = ContentSummaryProcessor.this.queue.poll()) != null) {
+        while ((fileStatus = ContentSummaryProcessor.this.queue.poll())
+            != null) {
           if (fileStatus.isDirectory()) {
-            ContentSummaryProcessor.this.processDirectoryTree(fileStatus.getPath());
+            ContentSummaryProcessor.this
+                .processDirectoryTree(fileStatus.getPath());
           }
           ContentSummaryProcessor.this.queue.unregister();
         }
