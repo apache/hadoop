@@ -50,7 +50,9 @@ import static org.apache.hadoop.util.StringUtils.toLowerCase;
 public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
+  //  Footer size is set to qualify for both ORC and parquet files
   public static final int FOOTER_SIZE = 16 * ONE_KB;
+  public static final int OPTIMIZATION_ATTEMPTS = 2;
 
   private int readAheadBlockSize;
   private final AbfsClient client;
@@ -279,18 +281,25 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       final long readFrom, final long actualLen) throws IOException {
     int totalBytesRead = 0;
     fCursor = readFrom;
-    for (int i = 0; i < 2 && fCursor < contentLength; i++) {
-      int bytesRead = readInternal(fCursor, buffer, limit,
-          (int) actualLen - limit, true);
-      if (bytesRead > 0) {
-        totalBytesRead += bytesRead;
-        limit += bytesRead;
-        fCursor += bytesRead;
+    try {
+      for (int i = 0;
+           i < OPTIMIZATION_ATTEMPTS && fCursor < contentLength; i++) {
+        int bytesRead = readInternal(fCursor, buffer, limit,
+            (int) actualLen - limit, true);
+        if (bytesRead > 0) {
+          totalBytesRead += bytesRead;
+          limit += bytesRead;
+          fCursor += bytesRead;
+        }
       }
+    } catch (IOException e) {
+      LOG.debug("Optimized read failed. alling back to readOneBlock {}", e);
+      restorePointerState();
+      return readOneBlock(b, off, len);
     }
-    //  if the read was not success and the user requested part of data has
+    //  If the read was partial and the user requested part of data has
     //  not read then fallback to readoneblock. When limit is smaller than
-    //  bCursor that means the user requested data has not been read
+    //  bCursor that means the user requested data has not been read.
     if (fCursor < contentLength && bCursor > limit) {
       restorePointerState();
       return readOneBlock(b, off, len);
