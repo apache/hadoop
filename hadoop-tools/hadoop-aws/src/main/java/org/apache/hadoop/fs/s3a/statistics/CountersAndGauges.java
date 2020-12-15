@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.statistics;
 
+import java.time.Duration;
+
 import org.apache.hadoop.fs.s3a.Statistic;
 
 /**
@@ -59,4 +61,12 @@ public interface CountersAndGauges {
    * @throws ClassCastException if the metric is not a Quantiles.
    */
   void addValueToQuantiles(Statistic op, long value);
+
+  /**
+   * Record a duration.
+   * @param op operation
+   * @param success was the operation a success?
+   * @param duration how long did it take
+   */
+  void recordDuration(Statistic op, boolean success, Duration duration);
 }

@@ -84,7 +84,6 @@ public class BulkDeleteRetryHandler extends AbstractStoreOperation {
    */
   protected void incrementStatistic(Statistic statistic, long count) {
     instrumentation.incrementCounter(statistic, count);
-    storageStatistics.incrementCounter(statistic, count);
   }
 
   /**

@@ -64,6 +64,7 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import static org.apache.hadoop.fs.s3a.Constants.THREAD_POOL_SHUTDOWN_DELAY_SECONDS;
 import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
@@ -71,6 +72,7 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_NO_SP
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 
 /**
  * Abstract base class for S3A committers; allows for any commonality
@@ -746,8 +748,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   protected void commitJobInternal(JobContext context,
       ActiveCommit pending)
       throws IOException {
-
-    commitPendingUploads(context, pending);
+    trackDurationOfInvocation(committerStatistics,
+        COMMITTER_COMMIT_JOB.getSymbol(),
+        () -> commitPendingUploads(context, pending));
   }
 
   @Override
@@ -1412,7 +1415,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
      * Aggregate statistics of all supplied by
      * committed uploads.
      */
-    private IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
+    private final IOStatisticsSnapshot ioStatistics =
+        new IOStatisticsSnapshot();
 
     /**
      * Construct from a source FS and list of files.

@@ -45,6 +45,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.s3a.Statistic.DELEGATION_TOKEN_ISSUED;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkState;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DEFAULT_DELEGATION_TOKEN_BINDING;
@@ -428,8 +430,10 @@ public class S3ADelegationTokens extends AbstractDTService {
 
     try(DurationInfo ignored = new DurationInfo(LOG, DURATION_LOG_AT_INFO,
         "Creating New Delegation Token", tokenBinding.getKind())) {
-      Token<AbstractS3ATokenIdentifier> token
-          = tokenBinding.createDelegationToken(rolePolicy, encryptionSecrets, renewer);
+      Token<AbstractS3ATokenIdentifier> token = trackDuration(stats,
+          DELEGATION_TOKEN_ISSUED.getSymbol(), () ->
+              tokenBinding.createDelegationToken(rolePolicy,
+                  encryptionSecrets, renewer));
       if (token != null) {
         token.setService(service);
         noteTokenCreated(token);

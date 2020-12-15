@@ -39,14 +39,16 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatist
 
 /**
  * Implementation of the uploader statistics.
- * <p></p>
+ * <p>
  * This takes a function to update some counter and will update
  * this value when things change, so it can be bonded to arbitrary
  * statistic collectors.
- * <p></p>
+ * </p>
+ * <p>
  * Internally it builds a map of the relevant multipart statistics,
  * increments as appropriate and serves this data back through
  * the {@code IOStatisticsSource} API.
+ * </p>
  */
 public final class S3AMultipartUploaderStatisticsImpl
     extends AbstractS3AStatisticsSource

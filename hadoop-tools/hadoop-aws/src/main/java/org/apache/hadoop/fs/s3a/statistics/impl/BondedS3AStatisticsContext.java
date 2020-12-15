@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a.statistics.impl;
 
 import javax.annotation.Nullable;
 
+import java.time.Duration;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Statistic;
@@ -100,6 +102,8 @@ public class BondedS3AStatisticsContext implements S3AStatisticsContext {
 
   /**
    * Create a stream input statistics instance.
+   * The FileSystem.Statistics instance of the {@link #statisticsSource}
+   * is used as the reference to FileSystem statistics to update
    * @return the new instance
    */
   @Override
@@ -175,6 +179,13 @@ public class BondedS3AStatisticsContext implements S3AStatisticsContext {
   @Override
   public void addValueToQuantiles(Statistic op, long value) {
     getInstrumentation().addValueToQuantiles(op, value);
+  }
+
+  @Override
+  public void recordDuration(final Statistic op,
+      final boolean success,
+      final Duration duration) {
+    getInstrumentation().recordDuration(op, success, duration);
   }
 
   /**

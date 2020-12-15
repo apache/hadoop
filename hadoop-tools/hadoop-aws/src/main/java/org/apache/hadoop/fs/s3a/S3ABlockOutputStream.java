@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -446,10 +448,9 @@ class S3ABlockOutputStream extends OutputStream implements
         writeOperationHelper.createPutObjectRequest(key, uploadData.getFile())
         : writeOperationHelper.createPutObjectRequest(key,
             uploadData.getUploadStream(), size);
-    long transferQueueTime = now();
     BlockUploadProgress callback =
         new BlockUploadProgress(
-            block, progressListener, transferQueueTime);
+            block, progressListener,  now());
     putObjectRequest.setGeneralProgressListener(callback);
     statistics.blockUploadQueued(size);
     ListenableFuture<PutObjectResult> putObjectResult =
@@ -501,8 +502,8 @@ class S3ABlockOutputStream extends OutputStream implements
    * Current time in milliseconds.
    * @return time
    */
-  private long now() {
-    return System.currentTimeMillis();
+  private Instant now() {
+    return Instant.now();
   }
 
   /**
@@ -661,10 +662,9 @@ class S3ABlockOutputStream extends OutputStream implements
         noteUploadFailure(e);
         throw e;
       }
-      long transferQueueTime = now();
       BlockUploadProgress callback =
           new BlockUploadProgress(
-              block, progressListener, transferQueueTime);
+              block, progressListener, now());
       request.setGeneralProgressListener(callback);
       statistics.blockUploadQueued(block.dataSize());
       ListenableFuture<PartETag> partETagFuture =
@@ -779,8 +779,8 @@ class S3ABlockOutputStream extends OutputStream implements
   private final class BlockUploadProgress implements ProgressListener {
     private final S3ADataBlocks.DataBlock block;
     private final ProgressListener nextListener;
-    private final long transferQueueTime;
-    private long transferStartTime;
+    private final Instant transferQueueTime;
+    private Instant transferStartTime;
 
     /**
      * Track the progress of a single block upload.
@@ -791,7 +791,7 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private BlockUploadProgress(S3ADataBlocks.DataBlock block,
         ProgressListener nextListener,
-        long transferQueueTime) {
+        Instant transferQueueTime) {
       this.block = block;
       this.transferQueueTime = transferQueueTime;
       this.nextListener = nextListener;
@@ -812,17 +812,22 @@ class S3ABlockOutputStream extends OutputStream implements
 
       case TRANSFER_PART_STARTED_EVENT:
         transferStartTime = now();
-        statistics.blockUploadStarted(transferStartTime - transferQueueTime,
+        statistics.blockUploadStarted(
+            Duration.between(transferQueueTime, transferStartTime),
             size);
         incrementWriteOperations();
         break;
 
       case TRANSFER_PART_COMPLETED_EVENT:
-        statistics.blockUploadCompleted(now() - transferStartTime, size);
+        statistics.blockUploadCompleted(
+            Duration.between(transferStartTime, now()),
+            size);
         break;
 
       case TRANSFER_PART_FAILED_EVENT:
-        statistics.blockUploadFailed(now() - transferStartTime, size);
+        statistics.blockUploadFailed(
+            Duration.between(transferStartTime, now()),
+            size);
         LOG.warn("Transfer failure of block {}", block);
         break;
 

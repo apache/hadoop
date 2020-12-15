@@ -53,6 +53,8 @@ import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
@@ -61,8 +63,14 @@ import org.apache.hadoop.util.Progressable;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMITS_CREATED;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MATERIALIZE_FILE;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_STAGE_FILE_UPLOAD;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackFunctionDuration;
 
 /**
  * The implementation of the various actions a committer needs.
@@ -183,7 +191,8 @@ public class CommitOperations implements IOStatisticsSource {
 
       commit.validate();
       destKey = commit.getDestinationKey();
-      long l = innerCommit(commit, operationState);
+      long l = trackDuration(statistics, COMMITTER_MATERIALIZE_FILE.getSymbol(),
+          () -> innerCommit(commit, operationState));
       LOG.debug("Successful commit of file length {}", l);
       outcome = MaybeIOE.NONE;
       statistics.commitCompleted(commit.getLength());
@@ -466,7 +475,7 @@ public class CommitOperations implements IOStatisticsSource {
    * @return a pending upload entry
    * @throws IOException failure
    */
-  public SinglePendingCommit uploadFileToPendingCommit(File localFile,
+  public SinglePendingCommit  uploadFileToPendingCommit(File localFile,
       Path destPath,
       String partition,
       long uploadPartSize,
@@ -483,7 +492,11 @@ public class CommitOperations implements IOStatisticsSource {
     String destKey = fs.pathToKey(destPath);
     String uploadId = null;
 
+    // flag to indicate to the finally clause that the operation
+    // failed. it is cleared as the last action in the try block.
     boolean threw = true;
+    final DurationTracker tracker = statistics.trackDuration(
+        COMMITTER_STAGE_FILE_UPLOAD.getSymbol());
     try (DurationInfo d = new DurationInfo(LOG,
         "Upload staged file from %s to %s",
         localFile.getAbsolutePath(),
@@ -524,6 +537,7 @@ public class CommitOperations implements IOStatisticsSource {
       LOG.debug("File size is {}, number of parts to upload = {}",
           length, numParts);
       for (int partNumber = 1; partNumber <= numParts; partNumber += 1) {
+        progress.progress();
         long size = Math.min(length - offset, uploadPartSize);
         UploadPartRequest part;
         part = writeOperations.newUploadPartRequest(
@@ -542,17 +556,24 @@ public class CommitOperations implements IOStatisticsSource {
 
       commitData.bindCommitData(parts);
       statistics.commitUploaded(length);
-      progress.progress();
+      // clear the threw flag.
       threw = false;
       return commitData;
     } finally {
-      if (threw && uploadId != null) {
-        try {
-          abortMultipartCommit(destKey, uploadId);
-        } catch (IOException e) {
-          LOG.error("Failed to abort upload {} to {}", uploadId, destKey, e);
+      if (threw) {
+        // try {} clause did not complete. Note the failure
+        tracker.failed();
+        if (uploadId != null) {
+          // an upload had been initiated: abort it.
+          try {
+            abortMultipartCommit(destKey, uploadId);
+          } catch (IOException e) {
+            LOG.error("Failed to abort upload {} to {}", uploadId, destKey, e);
+          }
         }
       }
+      // close tracker and so report statistics of success/failure
+      tracker.close();
     }
   }
 

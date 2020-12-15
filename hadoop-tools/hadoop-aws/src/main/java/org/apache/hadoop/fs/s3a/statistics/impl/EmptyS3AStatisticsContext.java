@@ -118,6 +118,13 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
   }
 
+  @Override
+  public void recordDuration(final Statistic op,
+      final boolean success,
+      final Duration duration) {
+
+  }
+
   /**
    * Base class for all the empty implementations.
    */
@@ -131,7 +138,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
      * operation.
      * @return stub tracker.
      */
-    public DurationTracker trackDuration(String key, int count) {
+    public DurationTracker trackDuration(String key, long count) {
       return stubDurationTracker();
     }
   }
@@ -385,15 +392,18 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void blockUploadStarted(final long duration, final int blockSize) {
+    public void blockUploadStarted(final Duration timeInQueue,
+        final int blockSize) {
     }
 
     @Override
-    public void blockUploadCompleted(final long duration, final int blockSize) {
+    public void blockUploadCompleted(final Duration timeSinceUploadStarted,
+        final int blockSize) {
     }
 
     @Override
-    public void blockUploadFailed(final long duration, final int blockSize) {
+    public void blockUploadFailed(final Duration timeSinceUploadStarted,
+        final int blockSize) {
     }
 
     @Override

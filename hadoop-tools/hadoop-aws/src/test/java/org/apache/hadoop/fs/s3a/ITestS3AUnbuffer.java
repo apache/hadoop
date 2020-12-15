@@ -34,7 +34,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_CLOSE_BYTES_READ;
+import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES_READ_CLOSE;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_TOTAL_BYTES;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatisticsSource;
@@ -125,7 +125,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     S3ATestUtils.MetricDiff totalBytesRead = new S3ATestUtils.MetricDiff(
         fs, STREAM_READ_TOTAL_BYTES);
     S3ATestUtils.MetricDiff bytesReadInClose = new S3ATestUtils.MetricDiff(
-        fs, STREAM_READ_CLOSE_BYTES_READ);
+        fs, STREAM_READ_BYTES_READ_CLOSE);
 
     // Open file, read half the data, and then call unbuffer
     FSDataInputStream inputStream = null;

@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStoreBuilder;
 import org.apache.hadoop.metrics2.AbstractMetric;
@@ -61,13 +62,12 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
 import java.io.Closeable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -75,12 +75,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.apache.hadoop.fs.s3a.Constants.STREAM_READ_GAUGE_INPUT_POLICY;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
-import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_UNBUFFERED;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
@@ -109,6 +106,10 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
  * not have an entry here. To avoid attempts to access such counters failing,
  * the operations to increment/query metric values are designed to handle
  * lookup failures.
+ * <p>
+ *   S3AFileSystem StorageStatistics are dynamically derived from
+ *   the IOStatistics.
+ * </p>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -150,6 +151,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   private static int metricsSourceNameCounter = 0;
   private static int metricsSourceActiveCounter = 0;
 
+  private final DurationTrackerFactory
+      durationTrackerFactory;
+
   private String metricsSourceName;
 
   private final MetricsRegistry registry =
@@ -165,9 +169,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   /**
    * This is the IOStatistics store for the S3AFileSystem
    * instance.
-   * It is not kept in sync with the rest of the S3A instrumentation;
-   * instead it collects its data when the inner statistics classes
-   * push back their data.
+   * It is not kept in sync with the rest of the S3A instrumentation.
+   * Most inner statistics implementation classes only update this
+   * store when it is pushed back, such as as in close().
    */
   private final IOStatisticsStore instanceIOStatistics;
 
@@ -182,43 +186,45 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       OBJECT_PUT_BYTES_PENDING,
       STREAM_WRITE_BLOCK_UPLOADS_ACTIVE,
       STREAM_WRITE_BLOCK_UPLOADS_PENDING,
-      STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING,
+      STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING,
   };
 
   /**
-   * Quantiles to create. This is not completely wired
-   * up, but is need to filter out statistics which
-   * must not be registered as counters.
+   * Construct the instrumentation for a filesystem.
+   * @param name URI of filesystem.
    */
-  private static final Statistic[] QUANTILES_TO_CREATE = {
-      S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-      S3GUARD_METADATASTORE_THROTTLE_RATE,
-      STORE_IO_THROTTLE_RATE
-  };
-
-  public static final String[] DURATIONS_TO_TRACK = {
-      ACTION_HTTP_GET_REQUEST,
-      ACTION_HTTP_HEAD_REQUEST,
-      ACTION_EXECUTOR_ACQUIRED,
-      OBJECT_CONTINUE_LIST_REQUEST,
-      OBJECT_LIST_REQUEST
-  };
-
   public S3AInstrumentation(URI name) {
     UUID fileSystemInstanceId = UUID.randomUUID();
     registry.tag(METRIC_TAG_FILESYSTEM_ID,
         "A unique identifier for the instance",
         fileSystemInstanceId.toString());
     registry.tag(METRIC_TAG_BUCKET, "Hostname from the FS URL", name.getHost());
+
+    // now set up the instance IOStatistics.
+    // create the builder
+    IOStatisticsStoreBuilder storeBuilder = iostatisticsStore();
+
     // add the gauges
     List<Statistic> gauges = Arrays.asList(GAUGES_TO_CREATE);
-    List<Statistic> quantiles = Arrays.asList(QUANTILES_TO_CREATE);
     gauges.forEach(this::gauge);
+
     // declare all counter statistics
     EnumSet.allOf(Statistic.class).stream()
         .filter(statistic ->
             statistic.getType() == StatisticTypeEnum.TYPE_COUNTER)
-        .forEach(this::counter);
+        .forEach(stat -> {
+          counter(stat);
+          storeBuilder.withCounters(stat.getSymbol());
+        });
+
+    // and durations
+    EnumSet.allOf(Statistic.class).stream()
+        .filter(statistic ->
+            statistic.getType() == StatisticTypeEnum.TYPE_DURATION)
+        .forEach(stat -> {
+          duration(stat);
+          storeBuilder.withDurationTracking(stat.getSymbol());
+        });
 
     //todo need a config for the quantiles interval?
     int interval = 1;
@@ -229,28 +235,16 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     throttleRateQuantile = quantiles(STORE_IO_THROTTLE_RATE,
         "events", "frequency (Hz)", interval);
 
+    // register with Hadoop metrics
     registerAsMetricsSource(name);
 
-    // now set up the instance IOStatistics.
-    // create the builder
-    IOStatisticsStoreBuilder builder = iostatisticsStore();
+    // and build the IO Statistics
+    instanceIOStatistics = storeBuilder.build();
 
-    // register the durations and add to a set of durations
-    // being tracked
-    Set<String> durations = new HashSet<>();
-    for (String d : DURATIONS_TO_TRACK) {
-      builder.withDurationTracking(d);
-      durations.add(d);
-    }
-    // then for all the Statistics excluding the gauges, quantiles
-    // *and* those tracked durations, register as a counter.
-    EnumSet.allOf(Statistic.class).stream()
-        .filter(statistic -> !gauges.contains(statistic))
-        .filter(statistic -> !quantiles.contains(statistic))
-        .map(Statistic::getSymbol)
-        .filter(key -> !durations.contains(key))
-        .forEach(builder::withCounters);
-    instanceIOStatistics = builder.build();
+    // duration track metrics (Success/failure) and IOStatistics.
+    durationTrackerFactory = IOStatisticsBinding.pairedTrackerFactory(
+        instanceIOStatistics,
+        new MetricDurationTrackerFactory());
   }
 
   @VisibleForTesting
@@ -298,6 +292,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    */
   protected final MutableCounterLong counter(Statistic op) {
     return counter(op.getSymbol(), op.getDescription());
+  }
+
+  /**
+   * Registering a duration adds the success and failure counters.
+   * @param op statistic to track
+   */
+  protected final void duration(Statistic op) {
+    counter(op.getSymbol(), op.getDescription());
+    counter(op.getSymbol() + SUFFIX_FAILURES, op.getDescription());
   }
 
   /**
@@ -452,8 +455,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * Get the duration tracker factory.
    * @return duration tracking for the instrumentation.
    */
-  public DurationTrackerFactory getDurationTrackerFactory() {
-    return instanceIOStatistics;
+  public DurationTrackerFactory instrumentationDurationTrackerFactory() {
+    return durationTrackerFactory;
   }
 
   /**
@@ -587,12 +590,28 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   /**
+   * Add the duration as a timed statistic, deriving
+   * statistic name from the operation symbol and the outcome.
+   * @param op operation
+   * @param success was the operation a success?
+   * @param duration how long did it take
+   */
+  @Override
+  public void recordDuration(final Statistic op,
+      final boolean success,
+      final Duration duration) {
+    String name = op.getSymbol()
+        + (success ? "" : SUFFIX_FAILURES);
+    instanceIOStatistics.addTimedOperation(name, duration);
+  }
+
+  /**
    * Create a stream input statistics instance.
    * @return the new instance
-   * @param filesystemStatistics FS Stats.
+   * @param filesystemStatistics FS Statistics to update in close().
    */
   public S3AInputStreamStatistics newInputStreamStatistics(
-      final FileSystem.Statistics filesystemStatistics) {
+      @Nullable final FileSystem.Statistics filesystemStatistics) {
     return new InputStreamStatistics(filesystemStatistics);
   }
 
@@ -635,6 +654,47 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         metricsSystem = null;
       }
     }
+  }
+
+  private final class MetricUpdatingDurationTracker
+      implements DurationTracker {
+
+    private final String symbol;
+
+    private final long count;
+    private boolean failed;
+
+    private MetricUpdatingDurationTracker(final String symbol, final long count) {
+      this.symbol = symbol;
+      this.count = count;
+    }
+
+    @Override
+    public void failed() {
+      failed = true;
+    }
+
+    @Override
+    public void close() {
+      String name = symbol;
+      if (failed) {
+        name = name + SUFFIX_FAILURES;
+      }
+      incrementNamedCounter(name, count);
+    }
+  }
+
+  /**
+   * Duration Tracker Factory for updating metrics.
+   */
+  private final class MetricDurationTrackerFactory
+      implements DurationTrackerFactory {
+
+    @Override
+    public DurationTracker trackDuration(final String key, final long count) {
+      return new MetricUpdatingDurationTracker(key, count);
+    }
+
   }
 
   /**
@@ -681,8 +741,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong bytesDiscardedInAbort;
     /** Bytes read by the application. */
     private final AtomicLong bytesRead;
-    private final AtomicLong bytesReadInClose;
-    private final AtomicLong bytesReadOnSeek;
+    private final AtomicLong bytesDiscardedInClose;
+    private final AtomicLong bytesDiscardedOnSeek;
     private final AtomicLong bytesSkippedOnSeek;
     private final AtomicLong closed;
     private final AtomicLong forwardSeekOperations;
@@ -696,15 +756,19 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     /** Bytes read by the application and any when draining streams . */
     private final AtomicLong totalBytesRead;
 
+    /**
+     * Instantiate.
+     * @param filesystemStatistics FS Statistics to update in close().
+     */
     private InputStreamStatistics(
-        FileSystem.Statistics filesystemStatistics) {
+        @Nullable FileSystem.Statistics filesystemStatistics) {
       this.filesystemStatistics = filesystemStatistics;
       IOStatisticsStore st = iostatisticsStore()
           .withCounters(
               StreamStatisticNames.STREAM_READ_ABORTED,
               StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
               StreamStatisticNames.STREAM_READ_CLOSED,
-              StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ,
+              StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_CLOSE,
               StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS,
               StreamStatisticNames.STREAM_READ_OPENED,
               StreamStatisticNames.STREAM_READ_BYTES,
@@ -717,7 +781,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
               StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
               StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS,
-              StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ,
+              StreamStatisticNames.STREAM_READ_SEEK_BYTES_DISCARDED,
               StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
               StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
               StreamStatisticNames.STREAM_READ_UNBUFFERED,
@@ -736,10 +800,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT);
       bytesRead = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_BYTES);
-      bytesReadInClose = st.getCounterReference(
-          StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ);
-      bytesReadOnSeek = st.getCounterReference(
-          StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ);
+      bytesDiscardedInClose = st.getCounterReference(
+          StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_CLOSE);
+      bytesDiscardedOnSeek = st.getCounterReference(
+          StreamStatisticNames.STREAM_READ_SEEK_BYTES_DISCARDED);
       bytesSkippedOnSeek = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED);
       closed = st.getCounterReference(
@@ -765,9 +829,13 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       mergedStats = snapshotIOStatistics(st);
     }
 
-
+    /**
+     * Increment a named counter by one.
+     * @param name counter name
+     * @return the new value
+     */
     private long increment(String name) {
-      return incCounter(name);
+      return increment(name, 1);
     }
 
     /**
@@ -782,6 +850,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     /**
      * {@inheritDoc}.
+     * Increments the number of seek operations,
+     * and backward seek operations.
+     * The offset is inverted and used as the increment
+     * of {@link #bytesBackwardsOnSeek}.
      */
     @Override
     public void seekBackwards(long negativeOffset) {
@@ -807,13 +879,16 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         bytesSkippedOnSeek.addAndGet(skipped);
       }
       if (bytesReadInSeek > 0) {
-        bytesReadOnSeek.addAndGet(bytesReadInSeek);
+        bytesDiscardedOnSeek.addAndGet(bytesReadInSeek);
         totalBytesRead.addAndGet(bytesReadInSeek);
       }
     }
 
     /**
      * {@inheritDoc}.
+     * Use {@code getAnIncrement()} on {@link #openOperations}
+     * so that on invocation 1 it returns 0.
+     * The caller will know that this is the first invocation.
      */
     @Override
     public long streamOpened() {
@@ -825,7 +900,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      * If the connection was aborted, increment {@link #aborted}
      * and add the byte's remaining count to {@link #bytesDiscardedInAbort}.
      * If not aborted, increment {@link #closed} and
-     * then {@link #bytesReadInClose} and {@link #totalBytesRead}
+     * then {@link #bytesDiscardedInClose} and {@link #totalBytesRead}
      * with the bytes remaining value.
      */
     @Override
@@ -840,7 +915,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         // connection closed, possibly draining the stream of surplus
         // bytes.
         closed.incrementAndGet();
-        bytesReadInClose.addAndGet(remainingInCurrentRequest);
+        bytesDiscardedInClose.addAndGet(remainingInCurrentRequest);
         totalBytesRead.addAndGet(remainingInCurrentRequest);
       }
     }
@@ -875,6 +950,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       readFullyOperations.incrementAndGet();
     }
 
+    /**
+     * {@inheritDoc}.
+     * If more data was requested than was actually returned, this
+     * was an incomplete read. Increment {@link #readsIncomplete}.
+     */
     @Override
     public void readOperationCompleted(int requested, int actual) {
       if (requested > actual) {
@@ -883,7 +963,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     /**
-     * Close triggers the merge of statistics into the filesystem's
+     * {@code close()} merges the stream statistics into the filesystem's
      * instrumentation instance.
      */
     @Override
@@ -894,7 +974,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     /**
      * {@inheritDoc}.
-     * The STREAM_READ_GAUGE_INPUT_POLICY gauge is set to the new value.
+     * As well as incrementing the {@code STREAM_READ_SEEK_POLICY_CHANGED}
+     * counter, the
+     * {@code STREAM_READ_GAUGE_INPUT_POLICY} gauge is set to the new value.
      *
      */
     @Override
@@ -932,6 +1014,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return sb.toString();
     }
 
+    /**
+     * {@inheritDoc}
+     * Increment the counter {@code STREAM_READ_UNBUFFERED}
+     * and then merge the current set of statistics into the
+     * FileSystem's statistics through {@link #merge(boolean)}.
+     */
     @Override
     public void unbuffered() {
       increment(STREAM_READ_UNBUFFERED);
@@ -940,9 +1028,23 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     /**
      * Merge the statistics into the filesystem's instrumentation instance.
-     * <p></p>
-     * Resets the IOStatistics of the stream so that subsequent calls
-     * to getIOStatistics() on the stream only get the later values.
+     * <p>
+     *   If the merge is invoked because the stream has been closed,
+     *   then all statistics are merged, and the filesystem
+     *   statistics of {@link #filesystemStatistics} updated
+     *   with the bytes read values.
+     * </p>
+     * <p>
+     *   Whichever thread close()d the stream will have its counters
+     *   updated.
+     * </p>
+     * <p>
+     *   If the merge is due to an unbuffer() call, the change in all
+     *   counters since the last merge will be pushed to the Instrumentation's
+     *   counters.
+     * </p>
+     *
+     * @param isClosed is this merge invoked because the stream is closed?
      */
     private void merge(boolean isClosed) {
 
@@ -969,7 +1071,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     /**
      * Propagate a counter from the instance-level statistics
-     * to the S3A instrumentation, subtracting the previous marged value.
+     * to the S3A instrumentation, subtracting the previous merged value.
      * @param name statistic to promote
      */
     void promoteIOCounter(String name) {
@@ -1043,7 +1145,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public long getBytesReadInClose() {
       return lookupCounterValue(
-          StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ);
+          StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_CLOSE);
     }
 
     @Override
@@ -1131,7 +1233,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     incrementCounter(STREAM_WRITE_TOTAL_DATA, source.bytesUploaded);
     incrementCounter(STREAM_WRITE_BLOCK_UPLOADS,
         source.blockUploadsCompleted);
-    incrementCounter(STREAM_WRITE_FAILURES,
+    incrementCounter(STREAM_WRITE_EXCEPTIONS,
         source.lookupCounterValue(
             StreamStatisticNames.STREAM_WRITE_EXCEPTIONS));
     // merge in all the IOStatistics
@@ -1142,17 +1244,19 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * Statistics updated by an output stream during its actual operation.
    * <p>
    * Some of these stats are propagated to any passed in
-   * {@link FileSystem.Statistics} instance; this is only done
+   * {@link FileSystem.Statistics} instance; this is done
    * in close() for better cross-thread accounting.
+   * </p>
+   * <p>
+   *   Some of the collected statistics are not yet served via IOStatistics.
+   * </p>
    */
   private final class OutputStreamStatistics
       extends AbstractS3AStatisticsSource
       implements BlockOutputStreamStatistics {
 
-    private final AtomicLong blocksInQueue = new AtomicLong(0);
     private final AtomicLong blocksActive = new AtomicLong(0);
     private final AtomicLong blockUploadsCompleted = new AtomicLong(0);
-    private final AtomicLong bytesPendingUpload = new AtomicLong(0);
 
     private final AtomicLong bytesWritten;
     private final AtomicLong bytesUploaded;
@@ -1163,23 +1267,27 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     private final FileSystem.Statistics filesystemStatistics;
 
+    /**
+     * Instantiate.
+     * @param filesystemStatistics FS Statistics to update in close().
+     */
     private OutputStreamStatistics(
         @Nullable FileSystem.Statistics filesystemStatistics) {
       this.filesystemStatistics = filesystemStatistics;
       IOStatisticsStore st = iostatisticsStore()
           .withCounters(
               StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
-              StreamStatisticNames.STREAM_WRITE_BYTES,
-              StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,
-              StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING,
+              STREAM_WRITE_BYTES.getSymbol(),
+              STREAM_WRITE_EXCEPTIONS.getSymbol(),
+              StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING,
               STREAM_WRITE_TOTAL_TIME.getSymbol(),
               STREAM_WRITE_QUEUE_DURATION.getSymbol(),
               STREAM_WRITE_TOTAL_DATA.getSymbol(),
-              STREAM_WRITE_FAILURES.getSymbol(),
+              STREAM_WRITE_EXCEPTIONS.getSymbol(),
               STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol())
           .withGauges(
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
-              STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING.getSymbol())
+              STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
           .withDurationTracking(ACTION_EXECUTOR_ACQUIRED)
           .build();
       setIOStatistics(st);
@@ -1191,7 +1299,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     /**
-     * Increment the Statistic gauge and the local IOStats
+     * Increment the Statistic gauge and the local IOStatistics
      * equivalent.
      * @param statistic statistic
      * @param v value.
@@ -1212,27 +1320,46 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       blocksReleased.incrementAndGet();
     }
 
+    /**
+     * {@inheritDoc}
+     * Increments the counter of block uplaods, and the gauges
+     * of block uploads pending (1) and the bytes pending (blockSize).
+     */
     @Override
     public void blockUploadQueued(int blockSize) {
       incCounter(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS);
-
-      blocksInQueue.incrementAndGet();
-      bytesPendingUpload.addAndGet(blockSize);
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_PENDING, 1);
-      incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING, blockSize);
+      incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING, blockSize);
     }
 
+    /**
+     * {@inheritDoc}
+     * Update {@link #queueDuration} with queue duration, decrement
+     * {@code STREAM_WRITE_BLOCK_UPLOADS_PENDING} gauge and increment
+     * {@code STREAM_WRITE_BLOCK_UPLOADS_ACTIVE}.
+     */
     @Override
-    public void blockUploadStarted(long duration, int blockSize) {
-      queueDuration.addAndGet(duration);
-      blocksInQueue.decrementAndGet();
+    public void blockUploadStarted(Duration timeInQueue, int blockSize) {
+      // the local counter is used in toString reporting.
+      queueDuration.addAndGet(timeInQueue.toMillis());
+      // update the duration fields in the IOStatistics.
+      getIOStatistics().addTimedOperation(
+          ACTION_EXECUTOR_ACQUIRED,
+          timeInQueue);
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_PENDING, -1);
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_ACTIVE, 1);
     }
 
+    /**
+     * {@inheritDoc}
+     * Increment the transfer duration; decrement the
+     * {@code STREAM_WRITE_BLOCK_UPLOADS_ACTIVE} gauge.
+     */
     @Override
-    public void blockUploadCompleted(long duration, int blockSize) {
-      transferDuration.addAndGet(duration);
+    public void blockUploadCompleted(
+        Duration timeSinceUploadStarted,
+        int blockSize) {
+      transferDuration.addAndGet(timeSinceUploadStarted.toMillis());
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_ACTIVE, -1);
       blockUploadsCompleted.incrementAndGet();
     }
@@ -1240,19 +1367,25 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     /**
      *  A block upload has failed.
      *  A final transfer completed event is still expected, so this
-     *  does not decrement the active block counter.
+     *  does not decrement any gauges.
      */
     @Override
-    public void blockUploadFailed(long duration, int blockSize) {
+    public void blockUploadFailed(
+        Duration timeSinceUploadStarted,
+        int blockSize) {
       incCounter(StreamStatisticNames.STREAM_WRITE_EXCEPTIONS);
     }
 
-    /** Intermediate report of bytes uploaded. */
+    /**
+     * Intermediate report of bytes uploaded.
+     * Increment counters of bytes upload, reduce the counter and
+     * gauge of pending bytes.;
+     * @param byteCount bytes uploaded
+     */
     @Override
     public void bytesTransferred(long byteCount) {
       bytesUploaded.addAndGet(byteCount);
-      bytesPendingUpload.addAndGet(-byteCount);
-      incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING, -byteCount);
+      incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING, -byteCount);
     }
 
     @Override
@@ -1272,7 +1405,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public long getBytesPendingUpload() {
-      return bytesPendingUpload.get();
+      return lookupGaugeValue(
+          STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol());
     }
 
     @Override
@@ -1282,7 +1416,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public void close() {
-      if (bytesPendingUpload.get() > 0) {
+      if (getBytesPendingUpload() > 0) {
         LOG.warn("Closing output stream statistics while data is still marked" +
             " as pending upload in {}", this);
       }
@@ -1295,19 +1429,21 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       }
     }
 
-    long averageQueueTime() {
-      long l = getCounterValue(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS);
-      return l > 0 ?
-          (queueDuration.get() / l) : 0;
-    }
-
-    double effectiveBandwidth() {
+    /**
+     * What is the effective bandwidth of this stream's write.
+     * @return the bytes uploaded divided by the total duration.
+     */
+    private double effectiveBandwidth() {
       double duration = totalUploadDuration() / 1000.0;
       return duration > 0 ?
           (bytesUploaded.get() / duration) : 0;
     }
 
-    long totalUploadDuration() {
+    /**
+     * Total of time spend uploading bytes.
+     * @return the transfer duration plus queue duration.
+     */
+    private long totalUploadDuration() {
       return queueDuration.get() + transferDuration.get();
     }
 
@@ -1354,17 +1490,13 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       final StringBuilder sb = new StringBuilder(
           "OutputStreamStatistics{");
       sb.append(getIOStatistics().toString());
-      sb.append(", blocksInQueue=").append(blocksInQueue);
       sb.append(", blocksActive=").append(blocksActive);
       sb.append(", blockUploadsCompleted=").append(blockUploadsCompleted);
-      sb.append(", bytesPendingUpload=").append(bytesPendingUpload);
       sb.append(", blocksAllocated=").append(blocksAllocated);
       sb.append(", blocksReleased=").append(blocksReleased);
       sb.append(", blocksActivelyAllocated=")
           .append(getBlocksActivelyAllocated());
       sb.append(", transferDuration=").append(transferDuration).append(" ms");
-      sb.append(", queueDuration=").append(queueDuration).append(" ms");
-      sb.append(", averageQueueTime=").append(averageQueueTime()).append(" ms");
       sb.append(", totalUploadDuration=").append(totalUploadDuration())
           .append(" ms");
       sb.append(", effectiveBandwidth=").append(effectiveBandwidth())
@@ -1434,6 +1566,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
   /**
    * Instrumentation exported to S3A Committers.
+   * The S3AInstrumentation metrics and
+   * {@link #instanceIOStatistics} are updated continuously.
    */
   private final class CommitterStatisticsImpl
       extends AbstractS3AStatisticsSource
@@ -1453,10 +1587,20 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               COMMITTER_JOBS_SUCCEEDED.getSymbol(),
               COMMITTER_TASKS_FAILED.getSymbol(),
               COMMITTER_TASKS_SUCCEEDED.getSymbol())
+          .withDurationTracking(
+              COMMITTER_COMMIT_JOB.getSymbol(),
+              COMMITTER_MATERIALIZE_FILE.getSymbol(),
+              COMMITTER_STAGE_FILE_UPLOAD.getSymbol())
           .build();
       setIOStatistics(st);
     }
 
+    /**
+     * Increment both the local counter and the S3AInstrumentation counters.
+     * @param stat statistic
+     * @param value value
+     * @return the new value
+     */
     private long increment(Statistic stat, long value) {
       incrementCounter(stat, value);
       return incCounter(stat.getSymbol(), value);
@@ -1496,16 +1640,16 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public void taskCompleted(boolean success) {
-      increment(
-          success ? COMMITTER_TASKS_SUCCEEDED
+      increment(success
+              ? COMMITTER_TASKS_SUCCEEDED
               : COMMITTER_TASKS_FAILED,
           1);
     }
 
     @Override
     public void jobCompleted(boolean success) {
-      increment(
-          success ? COMMITTER_JOBS_SUCCEEDED
+      increment(success
+              ? COMMITTER_JOBS_SUCCEEDED
               : COMMITTER_JOBS_FAILED,
           1);
     }
@@ -1522,6 +1666,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
   /**
    * Instrumentation exported to S3A Delegation Token support.
+   * The {@link #tokenIssued()} call is a no-op;
+   * This statistics class doesn't collect any local statistics.
+   * Instead it directly updates the S3A Instrumentation.
    */
   private final class DelegationTokenStatisticsImpl implements
       DelegationTokenStatistics {
@@ -1531,16 +1678,16 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public void tokenIssued() {
-      incrementCounter(DELEGATION_TOKENS_ISSUED, 1);
     }
 
     @Override
-    public DurationTracker trackDuration(final String key, final int count) {
-      return stubDurationTracker();
+    public DurationTracker trackDuration(final String key, final long count) {
+      return instrumentationDurationTrackerFactory()
+          .trackDuration(key, count);
     }
   }
 
-    /**
+  /**
    * Copy all the metrics to a map of (name, long-value).
    * @return a map of the metrics
    */

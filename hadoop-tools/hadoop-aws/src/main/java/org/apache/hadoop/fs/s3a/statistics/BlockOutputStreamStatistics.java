@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.statistics;
 
 import java.io.Closeable;
+import java.time.Duration;
 
 /**
  * Block output stream statistics.
@@ -31,21 +32,35 @@ public interface BlockOutputStreamStatistics extends Closeable,
    */
   void blockUploadQueued(int blockSize);
 
-  /** Queued block has been scheduled for upload. */
-  void blockUploadStarted(long duration, int blockSize);
-
-  /** A block upload has completed. */
-  void blockUploadCompleted(long duration, int blockSize);
+  /**
+   * Queued block has been scheduled for upload.
+   * @param timeInQueue time in the queue.
+   * @param blockSize block size.
+   */
+  void blockUploadStarted(Duration timeInQueue, int blockSize);
 
   /**
-   *  A block upload has failed.
+   * A block upload has completed. Duration excludes time in the queue.
+   * @param timeSinceUploadStarted time in since the transfer began.
+   * @param blockSize block size
+   */
+  void blockUploadCompleted(Duration timeSinceUploadStarted, int blockSize);
+
+  /**
+   *  A block upload has failed. Duration excludes time in the queue.
    * <p>
    *  A final transfer completed event is still expected, so this
    *  does not decrement the active block counter.
+   * </p>
+   * @param timeSinceUploadStarted time in since the transfer began.
+   * @param blockSize block size
    */
-  void blockUploadFailed(long duration, int blockSize);
+  void blockUploadFailed(Duration timeSinceUploadStarted, int blockSize);
 
-  /** Intermediate report of bytes uploaded. */
+  /**
+   * Intermediate report of bytes uploaded.
+   * @param byteCount bytes uploaded
+   */
   void bytesTransferred(long byteCount);
 
   /**

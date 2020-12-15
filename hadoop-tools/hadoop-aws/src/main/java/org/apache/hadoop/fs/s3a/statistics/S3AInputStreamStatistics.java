@@ -21,7 +21,8 @@ package org.apache.hadoop.fs.s3a.statistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 /**
- * Statistics updated by an input stream during its actual operation.
+ * Statistics updated by a
+ * {@link org.apache.hadoop.fs.s3a.S3AInputStream} during its use.
  * It also contains getters for tests.
  */
 public interface S3AInputStreamStatistics extends AutoCloseable,
@@ -112,7 +113,7 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
   ChangeTrackerStatistics getChangeTrackerStatistics();
 
   /**
-   * A stream unbuffer() call has been made.
+   * A stream {@code unbuffer()} call has been made.
    */
   void unbuffered();
 

@@ -25,10 +25,11 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 /**
  * Base class for implementing IOStatistics sources in the S3 module.
- * <p></p>
+ * <p>
  * A lot of the methods are very terse, because S3AInstrumentation has
  * verbose methods of similar names; the short ones always
  * refer to the inner class and not any superclass method.
+ * </p>
  */
 public abstract class AbstractS3AStatisticsSource implements
     IOStatisticsSource, DurationTrackerFactory {
@@ -53,18 +54,36 @@ public abstract class AbstractS3AStatisticsSource implements
     this.ioStatistics = statistics;
   }
 
+  /**
+   * Increment a named counter by 1.
+   * @param name counter name
+   * @return the updated value or, if the counter is unknown: 0
+   */
   public long incCounter(String name) {
     return incCounter(name, 1);
   }
 
+  /**
+   * Increment a named counter by 1.
+   * @param name counter name
+   * @param value value to increment by
+   * @return the updated value or, if the counter is unknown: 0
+   * @return
+   */
   public long incCounter(String name, long value) {
     return ioStatistics.incrementCounter(name, value);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Long lookupCounterValue(final String name) {
     return ioStatistics.counters().get(name);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Long lookupGaugeValue(final String name) {
     return ioStatistics.gauges().get(name);
   }
@@ -87,7 +106,7 @@ public abstract class AbstractS3AStatisticsSource implements
   }
 
   @Override
-  public DurationTracker trackDuration(final String key, final int count) {
+  public DurationTracker trackDuration(final String key, final long count) {
     return getIOStatistics().trackDuration(key, count);
   }
 }

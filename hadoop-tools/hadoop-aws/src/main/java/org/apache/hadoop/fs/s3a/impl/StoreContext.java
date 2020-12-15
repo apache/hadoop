@@ -274,7 +274,6 @@ public class StoreContext {
    */
   public void incrementStatistic(Statistic statistic, long count) {
     instrumentation.incrementCounter(statistic, count);
-    storageStatistics.incrementCounter(statistic, count);
   }
 
   /**

@@ -151,10 +151,13 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
             ? DirectoryPolicy.MarkerPolicy.Keep
             : DirectoryPolicy.MarkerPolicy.Delete);
     // All counter statistics of the filesystem are added as metrics.
+    // Durations too, as they have counters of success and failure.
     OperationCostValidator.Builder builder = OperationCostValidator.builder(
         getFileSystem());
     EnumSet.allOf(Statistic.class).stream()
-        .filter(s -> s.getType() == StatisticTypeEnum.TYPE_COUNTER)
+        .filter(s ->
+            s.getType() == StatisticTypeEnum.TYPE_COUNTER
+                || s.getType() == StatisticTypeEnum.TYPE_DURATION)
         .forEach(s -> builder.withMetric(s));
     costValidator = builder.build();
   }

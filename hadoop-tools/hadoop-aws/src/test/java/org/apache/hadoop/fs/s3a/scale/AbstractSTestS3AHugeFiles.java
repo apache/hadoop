@@ -50,6 +50,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 
@@ -558,12 +559,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
    */
   @Test
   public void test_900_dumpStats() {
-    StringBuilder sb = new StringBuilder();
-
-    getFileSystem().getStorageStatistics()
-        .forEach(kv -> sb.append(kv.toString()).append("\n"));
-
-    LOG.info("Statistics\n{}", sb);
+    LOG.info("Statistics\n{}", ioStatisticsSourceToString(getFileSystem()));
   }
 
   protected void deleteHugeFile() throws IOException {

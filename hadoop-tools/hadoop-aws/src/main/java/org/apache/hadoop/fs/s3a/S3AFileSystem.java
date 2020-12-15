@@ -178,6 +178,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -277,11 +278,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * is no encryption.
    */
   private EncryptionSecrets encryptionSecrets = new EncryptionSecrets();
+  /** The core instrumentation. */
   private S3AInstrumentation instrumentation;
-  private final S3AStorageStatistics storageStatistics =
-      createStorageStatistics();
-
+  /** Accessors to statistics for this FS. */
   private S3AStatisticsContext statisticsContext;
+  /** Storage Statistics Bonded to the instrumentation. */
+  private S3AStorageStatistics storageStatistics;
 
   private long readAhead;
   private S3AInputPolicy inputPolicy;
@@ -564,6 +566,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * different statistics binding, if desired.
    */
   protected void initializeStatisticsBinding() {
+    storageStatistics = createStorageStatistics(
+        requireNonNull(getIOStatistics()));
     statisticsContext = new BondedS3AStatisticsContext(
         new BondedS3AStatisticsContext.S3AFSStatisticsSource() {
 
@@ -613,13 +617,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Create the storage statistics or bind to an existing one.
-   * @return a storage statistics instance.
+   * @return a storage statistics instance; expected to be that of the FS.
    */
-  protected static S3AStorageStatistics createStorageStatistics() {
+  protected static S3AStorageStatistics createStorageStatistics(
+      final IOStatistics ioStatistics) {
     return (S3AStorageStatistics)
         GlobalStorageStatistics.INSTANCE
             .put(S3AStorageStatistics.NAME,
-                () -> new S3AStorageStatistics());
+                () -> new S3AStorageStatistics(ioStatistics));
   }
 
   /**
@@ -1887,7 +1892,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   protected void incrementStatistic(Statistic statistic, long count) {
     statisticsContext.incrementCounter(statistic, count);
-    storageStatistics.incrementCounter(statistic, count);
   }
 
   /**
@@ -2003,7 +2007,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return a factory from the instrumentation.
    */
   protected DurationTrackerFactory getDurationTrackerFactory() {
-    return instrumentation.getDurationTrackerFactory();
+    return instrumentation.instrumentationDurationTrackerFactory();
   }
 
   /**
@@ -2044,7 +2048,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         () -> {
           incrementStatistic(OBJECT_METADATA_REQUESTS);
           DurationTracker dur = getDurationTrackerFactory()
-              .trackDuration(OBJECT_METADATA_REQUESTS.getSymbol());
+              .trackDuration(ACTION_HTTP_GET_REQUEST.getSymbol());
           try {
             LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
             if (changeTracker != null) {

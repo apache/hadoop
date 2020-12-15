@@ -58,7 +58,7 @@ public class ITestS3AContractStreamIOStatistics extends
         StreamStatisticNames.STREAM_READ_ABORTED,
         StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
         StreamStatisticNames.STREAM_READ_CLOSED,
-        StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ,
+        StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_CLOSE,
         StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS,
         StreamStatisticNames.STREAM_READ_OPENED,
         StreamStatisticNames.STREAM_READ_BYTES,
@@ -71,7 +71,7 @@ public class ITestS3AContractStreamIOStatistics extends
         StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
         StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
         StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS,
-        StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ,
+        StreamStatisticNames.STREAM_READ_SEEK_BYTES_DISCARDED,
         StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED
     );
   }

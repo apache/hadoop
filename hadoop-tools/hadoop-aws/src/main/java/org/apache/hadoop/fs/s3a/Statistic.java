@@ -33,16 +33,29 @@ import static org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum.TYPE_QUANTIL
 
 /**
  * Statistic which are collected in S3A.
- * These statistics are available at a low level in {@link S3AStorageStatistics}
+ * Counter and duration statistics are published in
+ * {@link S3AFileSystem#getStorageStatistics()}.
  * and as metrics in {@link S3AInstrumentation}.
- * <p></p>
+ * <p>
  * Where possible, stream names come from {@link StreamStatisticNames}
  * and {@link StoreStatisticNames}
- *
+ * </p>
  */
 @InterfaceStability.Unstable
 public enum Statistic {
 
+  /* Low-level duration counters */
+  ACTION_EXECUTOR_ACQUIRED(StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED,
+      "Executor acquired.",
+      TYPE_DURATION),
+  ACTION_HTTP_HEAD_REQUEST(StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
+      "HEAD request.",
+      TYPE_DURATION),
+  ACTION_HTTP_GET_REQUEST(StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
+      "GET request.",
+      TYPE_DURATION),
+
+  /* FileSystem Level statistics */
   DIRECTORIES_CREATED("directories_created",
       "Total number of directories created through the object store.",
       TYPE_COUNTER),
@@ -140,6 +153,8 @@ public enum Statistic {
       StoreStatisticNames.OP_RENAME,
       "Calls of rename()",
       TYPE_COUNTER),
+
+  /* Object IO */
   OBJECT_COPY_REQUESTS("object_copy_requests", "Object copy requests",
       TYPE_COUNTER),
   OBJECT_DELETE_REQUESTS("object_delete_requests", "Object delete requests",
@@ -148,15 +163,15 @@ public enum Statistic {
       "Objects deleted in delete requests",
       TYPE_COUNTER),
   OBJECT_LIST_REQUESTS(StoreStatisticNames.OBJECT_LIST_REQUEST,
-      "Number of object listings made",
-      TYPE_COUNTER),
+      "Count of object listings made",
+      TYPE_DURATION),
   OBJECT_CONTINUE_LIST_REQUESTS(
       StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST,
-      "Number of continued object listings made",
-      TYPE_COUNTER),
+      "Count of continued object listings made",
+      TYPE_DURATION),
   OBJECT_METADATA_REQUESTS(
-      StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
-      "Number of requests for object metadata",
+      StoreStatisticNames.OBJECT_METADATA_REQUESTS,
+      "Count of requests for object metadata",
       TYPE_COUNTER),
   OBJECT_MULTIPART_UPLOAD_INITIATED(
       StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_INITIATED,
@@ -194,9 +209,19 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_ABORTED,
       "Count of times the TCP stream was aborted",
       TYPE_COUNTER),
+
+  /* Stream Reads */
   STREAM_READ_BYTES(
       StreamStatisticNames.STREAM_READ_BYTES,
       "Bytes read from an input stream in read() calls",
+      TYPE_COUNTER),
+  STREAM_READ_BYTES_DISCARDED_ABORT(
+      StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
+      "Count of bytes discarded by aborting an input stream",
+      TYPE_COUNTER),
+  STREAM_READ_BYTES_READ_CLOSE(
+      StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_CLOSE,
+      "Count of bytes read and discarded when closing an input stream",
       TYPE_COUNTER),
   STREAM_READ_CLOSED(
       StreamStatisticNames.STREAM_READ_CLOSED,
@@ -208,7 +233,7 @@ public enum Statistic {
       TYPE_COUNTER),
   STREAM_READ_EXCEPTIONS(
       StreamStatisticNames.STREAM_READ_EXCEPTIONS,
-      "Number of exceptions raised during input stream reads",
+      "Count of exceptions raised during input stream reads",
       TYPE_COUNTER),
   STREAM_READ_FULLY_OPERATIONS(
       StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS,
@@ -232,16 +257,16 @@ public enum Statistic {
       TYPE_COUNTER),
   STREAM_READ_SEEK_BACKWARD_OPERATIONS(
       StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
-      "Number of executed seek operations which went backwards in a stream",
+      "Count of executed seek operations which went backwards in a stream",
       TYPE_COUNTER),
   STREAM_READ_SEEK_BYTES_BACKWARDS(
       StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS,
       "Count of bytes moved backwards during seek operations"
           + " in an input stream",
       TYPE_COUNTER),
-  STREAM_READ_SEEK_BYTES_READ(
-      StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ,
-      "Count of bytes read during seek() in an input stream",
+  STREAM_READ_SEEK_BYTES_DISCARDED (
+      StreamStatisticNames.STREAM_READ_SEEK_BYTES_DISCARDED,
+      "Count of bytes read and discarded during seek() in an input stream",
       TYPE_COUNTER),
   STREAM_READ_SEEK_BYTES_SKIPPED(
       StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
@@ -250,38 +275,32 @@ public enum Statistic {
       TYPE_COUNTER),
   STREAM_READ_SEEK_FORWARD_OPERATIONS(
       StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
-      "Number of executed seek operations which went forward in"
+      "Count of executed seek operations which went forward in"
           + " an input stream",
       TYPE_COUNTER),
   STREAM_READ_SEEK_OPERATIONS(
       StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS,
-      "Number of seek operations in an input stream",
+      "Count of seek operations in an input stream",
       TYPE_COUNTER),
   STREAM_READ_SEEK_POLICY_CHANGED(
       StreamStatisticNames.STREAM_READ_SEEK_POLICY_CHANGED,
       "Count of times the seek policy was dynamically changed"
           + " in an input stream",
       TYPE_COUNTER),
-  STREAM_READ_CLOSE_BYTES_READ(
-      StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ,
-      "Count of bytes read when closing an input stream",
-      TYPE_COUNTER),
-  STREAM_READ_BYTES_DISCARDED_ABORT(
-      StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
-      "Count of bytes discarded by aborting in an input stream",
-      TYPE_COUNTER),
   STREAM_READ_TOTAL_BYTES(
       StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
-      "Total count of read from an input stream calls",
+      "Total count of bytes read from an input stream",
       TYPE_COUNTER),
 
-  STREAM_WRITE_FAILURES(
+  /* Stream Write statistics */
+
+  STREAM_WRITE_EXCEPTIONS(
       StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,
       "Count of stream write failures reported",
       TYPE_COUNTER),
   STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS(
       StreamStatisticNames.STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS,
-      "failures when finalizing a multipart upload",
+      "Count of failures when finalizing a multipart upload",
       TYPE_COUNTER),
   STREAM_WRITE_BLOCK_UPLOADS(
       StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
@@ -289,7 +308,7 @@ public enum Statistic {
       TYPE_COUNTER),
   STREAM_WRITE_BLOCK_UPLOADS_ACTIVE(
       StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_ACTIVE,
-      "Count of block/partition uploads completed",
+      "Count of block/partition uploads active",
       TYPE_GAUGE),
   STREAM_WRITE_BLOCK_UPLOADS_COMMITTED(
       StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_COMMITTED,
@@ -304,9 +323,9 @@ public enum Statistic {
       StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_PENDING,
       "Gauge of block/partitions uploads queued to be written",
       TYPE_GAUGE),
-  STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING(
-      StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING,
-      "Gauge of block/partitions data uploads queued to be written",
+  STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING(
+      StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING,
+      "Gauge of data queued to be written",
       TYPE_GAUGE),
   STREAM_WRITE_TOTAL_TIME(
       StreamStatisticNames.STREAM_WRITE_TOTAL_TIME,
@@ -318,37 +337,41 @@ public enum Statistic {
   STREAM_WRITE_BYTES(
       StreamStatisticNames.STREAM_WRITE_BYTES,
       "Count of bytes written to output stream"
-          + " (including all not yet uploaded",
+          + " (including all not yet uploaded)",
       TYPE_COUNTER),
   STREAM_WRITE_QUEUE_DURATION(
       StreamStatisticNames.STREAM_WRITE_QUEUE_DURATION,
       "Total queue duration of all block uploads",
       TYPE_DURATION),
 
-  // S3guard committer stats
+  /* committer stats */
   COMMITTER_COMMITS_CREATED(
       "committer_commits_created",
-      "Number of files to commit created",
+      "Count of files to commit created",
       TYPE_COUNTER),
   COMMITTER_COMMITS_COMPLETED(
       "committer_commits_completed",
-      "Number of files committed",
+      "Count of files committed",
       TYPE_COUNTER),
+  COMMITTER_COMMIT_JOB(
+      "committer_commit_job",
+      "Duration Tracking of time to commit an entire job",
+      TYPE_DURATION),
   COMMITTER_JOBS_SUCCEEDED(
       "committer_jobs_completed",
-      "Number of successful jobs",
+      "Count of successful jobs",
       TYPE_COUNTER),
   COMMITTER_JOBS_FAILED(
       "committer_jobs_failed",
-      "Number of failed jobs",
+      "Count of failed jobs",
       TYPE_COUNTER),
   COMMITTER_TASKS_SUCCEEDED(
       "committer_tasks_completed",
-      "Number of successful tasks",
+      "Count of successful tasks",
       TYPE_COUNTER),
   COMMITTER_TASKS_FAILED(
       "committer_tasks_failed",
-      "Number of failed tasks",
+      "Count of failed tasks",
       TYPE_COUNTER),
   COMMITTER_BYTES_COMMITTED(
       "committer_bytes_committed",
@@ -356,26 +379,34 @@ public enum Statistic {
       TYPE_COUNTER),
   COMMITTER_BYTES_UPLOADED(
       "committer_bytes_uploaded",
-      "Number of bytes uploaded duing commit operations",
+      "Count of bytes uploaded duing commit operations",
       TYPE_COUNTER),
   COMMITTER_COMMITS_FAILED(
-      "committer_commits_failed",
-      "Number of commits failed",
+      "committer_commits"+ StoreStatisticNames.SUFFIX_FAILURES,
+      "Count of commits failed",
       TYPE_COUNTER),
   COMMITTER_COMMITS_ABORTED(
       "committer_commits_aborted",
-      "Number of commits aborted",
+      "Count of commits aborted",
       TYPE_COUNTER),
   COMMITTER_COMMITS_REVERTED(
       "committer_commits_reverted",
-      "Number of commits reverted",
+      "Count of commits reverted",
       TYPE_COUNTER),
   COMMITTER_MAGIC_FILES_CREATED(
       "committer_magic_files_created",
-      "Number of files created under 'magic' paths",
+      "Count of files created under 'magic' paths",
       TYPE_COUNTER),
+  COMMITTER_MATERIALIZE_FILE(
+      "committer_materialize_file",
+      "Duration Tracking of time to materialize a file in job commit",
+      TYPE_DURATION),
+  COMMITTER_STAGE_FILE_UPLOAD(
+      "committer_stage_file_upload",
+      "Duration Tracking of files uploaded from a local staging path",
+      TYPE_DURATION),
 
-  // S3guard stats
+  /* S3guard stats */
   S3GUARD_METADATASTORE_PUT_PATH_REQUEST(
       "s3guard_metadatastore_put_path_request",
       "S3Guard metadata store put one metadata path request",
@@ -421,9 +452,12 @@ public enum Statistic {
       "Rate of S3 request throttling",
       TYPE_QUANTILE),
 
-  DELEGATION_TOKENS_ISSUED("delegation_tokens_issued",
-      "Number of delegation tokens issued",
-      TYPE_COUNTER),
+  /*
+   * Delegation Token Operations.
+   */
+  DELEGATION_TOKEN_ISSUED("delegation_token_issued",
+      "Count of delegation tokens issued",
+      TYPE_DURATION),
 
   MULTIPART_INSTANTIATED(
       "multipart_instantiated",
@@ -462,6 +496,9 @@ public enum Statistic {
       "retried requests made of the remote store",
       TYPE_COUNTER);
 
+  /**
+   * A map used to support the {@link #fromSymbol(String)} call.
+   */
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);
   static {
@@ -471,16 +508,25 @@ public enum Statistic {
   }
 
 
+  /**
+   * Statistic definition.
+   * @param symbol name
+   * @param description description.
+   * @param type type
+   */
   Statistic(String symbol, String description, StatisticTypeEnum type) {
     this.symbol = symbol;
     this.description = description;
     this.type = type;
   }
 
-
-
+  /** Statistic name. */
   private final String symbol;
+
+  /** Statistic description. */
   private final String description;
+
+  /** Statistic type. */
   private final StatisticTypeEnum type;
 
   public String getSymbol() {
