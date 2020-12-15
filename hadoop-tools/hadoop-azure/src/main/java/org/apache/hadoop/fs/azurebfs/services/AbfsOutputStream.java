@@ -85,7 +85,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
    * blocks. After the data is sent to the service, the buffer is returned
    * back to the queue
    */
-  private final ElasticByteBufferPool byteBufferPool
+  private ElasticByteBufferPool byteBufferPool
           = new ElasticByteBufferPool();
 
   private final Statistics statistics;
@@ -297,6 +297,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       bufferIndex = 0;
       closed = true;
       writeOperations.clear();
+      byteBufferPool = null;
       if (!threadExecutor.isShutdown()) {
         threadExecutor.shutdownNow();
       }
