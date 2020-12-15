@@ -2158,9 +2158,9 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.nodemanager.containermanager" +
       ".linux.runtime.runc.HdfsManifestToResourcesPlugin";
 
-  /** The runc container transformer plugin to use.  If empty, no
-   * transformations will be applied. */
-  public static final String NM_RUNC_CONTAINER_TRANSFORMER_PLUGIN = "";
+  /**  The runc container transformer plugin class to use. */
+  public static final String NM_RUNC_CONTAINER_TRANSFORMER_PLUGIN =
+      RUNC_CONTAINER_RUNTIME_PREFIX + "container-transformer-plugin";
 
   /**
    * The HDFS location under which the oci image manifests, layers,
