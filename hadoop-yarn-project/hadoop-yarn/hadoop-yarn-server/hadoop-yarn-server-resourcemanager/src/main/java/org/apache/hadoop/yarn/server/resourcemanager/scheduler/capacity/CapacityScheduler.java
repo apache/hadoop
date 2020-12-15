@@ -1835,6 +1835,40 @@ public class CapacityScheduler extends
     return assignment;
   }
 
+  /**
+   * This method extracts the actual queue name from an app add event.
+   * Currently unfortunately ApplicationPlacementContext and
+   * ApplicationSubmissionContext are used in a quite erratic way, this method
+   * helps to get the proper placement path for the queue if placement context
+   * is provided
+   * @param appAddedEvent The application add event with details about the app
+   * @return The name of the queue the application should be added
+   */
+  private String getAddedAppQueueName(AppAddedSchedulerEvent appAddedEvent) {
+    //appAddedEvent uses the queue from ApplicationSubmissionContext but in
+    //the case of CS it may be only a leaf name due to legacy reasons
+    String ret = appAddedEvent.getQueue();
+    ApplicationPlacementContext placementContext =
+        appAddedEvent.getPlacementContext();
+
+    //If we have a placement context, it means a mapping rule made a decision
+    //about the queue placement, so we use those data, it is supposed to be in
+    //sync with the ApplicationSubmissionContext and appAddedEvent.getQueue, but
+    //because of the aforementioned legacy reasons these two may only contain
+    //the leaf queue name.
+    if (placementContext != null) {
+      String leafName = placementContext.getQueue();
+      String parentName = placementContext.getParentQueue();
+      if (leafName != null) {
+        //building the proper queue path from the parent and leaf queue name
+        ret = placementContext.hasParentQueue() ?
+            (parentName + "." + leafName) : leafName;
+      }
+    }
+
+    return ret;
+  }
+
   @Override
   public void handle(SchedulerEvent event) {
     switch(event.getType()) {
@@ -1886,9 +1920,9 @@ public class CapacityScheduler extends
     case APP_ADDED:
     {
       AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
-      String queueName = resolveReservationQueueName(appAddedEvent.getQueue(),
-          appAddedEvent.getApplicationId(), appAddedEvent.getReservationID(),
-          appAddedEvent.getIsAppRecovering());
+      String queueName = resolveReservationQueueName(
+          getAddedAppQueueName(appAddedEvent), appAddedEvent.getApplicationId(),
+          appAddedEvent.getReservationID(), appAddedEvent.getIsAppRecovering());
       if (queueName != null) {
         if (!appAddedEvent.getIsAppRecovering()) {
           addApplication(appAddedEvent.getApplicationId(), queueName,
