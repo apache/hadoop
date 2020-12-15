@@ -37,6 +37,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.azurebfs.services.ListStatusRemoteIterator;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -980,6 +982,12 @@ public class AzureBlobFileSystem extends FileSystem {
   public boolean exists(Path f) throws IOException {
     statIncrement(CALL_EXIST);
     return super.exists(f);
+  }
+
+  @Override
+  public RemoteIterator<FileStatus> listStatusIterator(Path p)
+      throws IOException {
+    return new ListStatusRemoteIterator(p, abfsStore);
   }
 
   private FileStatus tryGetFileStatus(final Path f) {

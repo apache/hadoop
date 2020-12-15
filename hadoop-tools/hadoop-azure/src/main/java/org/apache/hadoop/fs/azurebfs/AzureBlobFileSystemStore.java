@@ -114,6 +114,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.client.utils.URIBuilder;
 
+import static org.apache.commons.lang3.ArrayUtils.toArray;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
@@ -852,6 +853,14 @@ public class AzureBlobFileSystemStore implements Closeable {
    * */
   @InterfaceStability.Unstable
   public FileStatus[] listStatus(final Path path, final String startFrom) throws IOException {
+    List<FileStatus> fileStatuses = new ArrayList<>();
+    listStatus(path, startFrom, fileStatuses, true, null);
+    return fileStatuses.toArray(new FileStatus[fileStatuses.size()]);
+  }
+
+  public String listStatus(final Path path, final String startFrom,
+      List<FileStatus> fileStatuses, final boolean fetchAll,
+      String continuation) throws IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue = true;
@@ -862,16 +871,16 @@ public class AzureBlobFileSystemStore implements Closeable {
             startFrom);
 
     final String relativePath = getRelativePath(path);
-    String continuation = null;
 
-    // generate continuation token if a valid startFrom is provided.
-    if (startFrom != null && !startFrom.isEmpty()) {
-      continuation = getIsNamespaceEnabled()
-              ? generateContinuationTokenForXns(startFrom)
-              : generateContinuationTokenForNonXns(relativePath, startFrom);
+    if(continuation==null ||continuation.length()<1) {
+      // generate continuation token if a valid startFrom is provided.
+      if (startFrom != null && !startFrom.isEmpty()) {
+        continuation = getIsNamespaceEnabled() ?
+            generateContinuationTokenForXns(startFrom) :
+            generateContinuationTokenForNonXns(relativePath, startFrom);
+      }
     }
 
-    ArrayList<FileStatus> fileStatuses = new ArrayList<>();
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
         AbfsRestOperation op = client.listPath(relativePath, false,
@@ -925,7 +934,8 @@ public class AzureBlobFileSystemStore implements Closeable {
 
         perfInfo.registerSuccess(true);
         countAggregate++;
-        shouldContinue = continuation != null && !continuation.isEmpty();
+        shouldContinue =
+            fetchAll && continuation != null && !continuation.isEmpty();
 
         if (!shouldContinue) {
           perfInfo.registerAggregates(startAggregate, countAggregate);
@@ -933,7 +943,7 @@ public class AzureBlobFileSystemStore implements Closeable {
       }
     } while (shouldContinue);
 
-    return fileStatuses.toArray(new FileStatus[fileStatuses.size()]);
+    return continuation;
   }
 
   // generate continuation token for xns account
