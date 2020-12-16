@@ -52,7 +52,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
   //  Footer size is set to qualify for both ORC and parquet files
   public static final int FOOTER_SIZE = 16 * ONE_KB;
-  public static final int OPTIMIZATION_ATTEMPTS = 2;
+  public static final int MAX_OPTIMIZED_READ_ATTEMPTS = 2;
 
   private int readAheadBlockSize;
   private final AbfsClient client;
@@ -244,7 +244,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
     savePointerState();
 
-    buffer = new byte[bufferSize];
     // data need to be copied to user buffer from index bCursor, bCursor has
     // to be the current fCusor
     bCursor = (int) fCursor;
@@ -260,18 +259,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       return -1;
     }
     savePointerState();
-
-    buffer = new byte[bufferSize];
     // data need to be copied to user buffer from index bCursor,
-    // AbfsInutStream buffer is going p contain dta from footer start. In
-    // that case bCursor will be set to footerStart - fCursor
+    // AbfsInutStream buffer is going to contain data from last block start. In
+    // that case bCursor will be set to fCursor - lastBlockStart
     long lastBlockStart = max(0, contentLength - bufferSize);
     bCursor = (int) (fCursor - lastBlockStart);
-    // read API call is considered 1 single operation in reality server could
-    // return partial data and client has to retry untill the last full block
-    // is read. So setting the fCursorAfterLastRead before the possible
-    // multiple server calls
-    fCursorAfterLastRead = fCursor;
     // 0 if contentlength is < buffersize
     long actualLenToRead = min(bufferSize, contentLength);
     return optimisedRead(b, off, len, lastBlockStart, actualLenToRead);
@@ -282,20 +274,26 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int totalBytesRead = 0;
     fCursor = readFrom;
     try {
+      buffer = new byte[bufferSize];
       for (int i = 0;
-           i < OPTIMIZATION_ATTEMPTS && fCursor < contentLength; i++) {
+           i < MAX_OPTIMIZED_READ_ATTEMPTS && fCursor < contentLength; i++) {
         int bytesRead = readInternal(fCursor, buffer, limit,
             (int) actualLen - limit, true);
         if (bytesRead > 0) {
           totalBytesRead += bytesRead;
           limit += bytesRead;
+          fCursorAfterLastRead = fCursor;
           fCursor += bytesRead;
         }
       }
     } catch (IOException e) {
-      LOG.debug("Optimized read failed. alling back to readOneBlock {}", e);
+      LOG.debug("Optimized read failed. Defaulting to readOneBlock {}", e);
       restorePointerState();
       return readOneBlock(b, off, len);
+    }
+    firstRead = false;
+    if (totalBytesRead == 0) {
+      return -1;
     }
     //  If the read was partial and the user requested part of data has
     //  not read then fallback to readoneblock. When limit is smaller than
@@ -303,10 +301,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (fCursor < contentLength && bCursor > limit) {
       restorePointerState();
       return readOneBlock(b, off, len);
-    }
-    firstRead = false;
-    if (totalBytesRead == -1) {
-      return -1;
     }
     return copyToUserBuffer(b, off, len);
   }
