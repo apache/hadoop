@@ -48,14 +48,16 @@ import static org.apache.hadoop.fs.s3a.commit.ValidationFailure.verify;
  * Persistent format for multiple pending commits.
  * Contains 0 or more {@link SinglePendingCommit} entries; validation logic
  * checks those values on load.
- * <p></p>
+ * <p>
  * The statistics published through the {@link IOStatisticsSource}
  * interface are the static ones marshalled with the commit data;
  * they may be empty.
- * <p></p>
+ * </p>
+ * <p>
  * As single commits are added via {@link #add(SinglePendingCommit)},
  * any statistics from those commits are merged into the aggregate
  * statistics, <i>and those of the single commit cleared.</i>
+ * </p>
  */
 @SuppressWarnings("unused")
 @InterfaceAudience.Private

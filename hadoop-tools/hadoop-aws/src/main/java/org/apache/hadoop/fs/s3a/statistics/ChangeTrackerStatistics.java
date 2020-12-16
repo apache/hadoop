@@ -30,6 +30,7 @@ public interface ChangeTrackerStatistics {
 
   /**
    * How many version mismatches have occurred.
+   * @return counter of mismatches.
    */
   long getVersionMismatches();
 }

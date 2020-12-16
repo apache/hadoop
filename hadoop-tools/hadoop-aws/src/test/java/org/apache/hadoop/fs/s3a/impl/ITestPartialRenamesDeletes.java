@@ -58,7 +58,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.FILES_DELETE_REJECTED;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
@@ -664,7 +664,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);
-    MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUESTS);
+    MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUEST);
     MetricDiff deleteObjectCount = new MetricDiff(roleFS,
         OBJECT_DELETE_OBJECTS);
 

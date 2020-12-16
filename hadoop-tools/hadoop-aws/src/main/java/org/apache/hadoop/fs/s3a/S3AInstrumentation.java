@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -83,9 +84,10 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatist
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
- * Instrumentation of S3a.
- * <p></p>
+ * Instrumentation of S3A.
+ * <p>
  * History
+ * </p>
  * <ol>
  *   <li>
  *    HADOOP-13028. Initial implementation.
@@ -100,21 +102,27 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
  *     design for the different inner classes.
  *   </li>
  * </ol>
- * <p></p>
+ * <p>
  * Counters and metrics are generally addressed in code by their name or
  * {@link Statistic} key. There <i>may</i> be some Statistics which do
  * not have an entry here. To avoid attempts to access such counters failing,
  * the operations to increment/query metric values are designed to handle
  * lookup failures.
+ * </p>
  * <p>
  *   S3AFileSystem StorageStatistics are dynamically derived from
  *   the IOStatistics.
+ * </p>
+ * <p>
+ *   The toString() operation includes the entire IOStatistics when this
+ *   class's log is set to DEBUG. This keeps the logs somewhat manageable
+ *   on normal runs, but allows for more reporting.
  * </p>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AInstrumentation implements Closeable, MetricsSource,
-    CountersAndGauges {
+    CountersAndGauges, IOStatisticsSource, DurationTrackerFactory {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3AInstrumentation.class);
 
@@ -151,8 +159,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   private static int metricsSourceNameCounter = 0;
   private static int metricsSourceActiveCounter = 0;
 
-  private final DurationTrackerFactory
-      durationTrackerFactory;
+  private final DurationTrackerFactory durationTrackerFactory;
 
   private String metricsSourceName;
 
@@ -447,7 +454,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * Get the instance IO Statistics.
    * @return statistics.
    */
-  public IOStatisticsStore getInstanceIOStatistics() {
+  @Override
+  public IOStatisticsStore getIOStatistics() {
     return instanceIOStatistics;
   }
 
@@ -455,8 +463,37 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * Get the duration tracker factory.
    * @return duration tracking for the instrumentation.
    */
-  public DurationTrackerFactory instrumentationDurationTrackerFactory() {
+  public DurationTrackerFactory getDurationTrackerFactory() {
     return durationTrackerFactory;
+  }
+
+  /**
+   * The duration tracker updates the metrics with the count
+   * and IOStatistics will full duration information.
+   * @param key statistic key prefix
+   * @param count  #of times to increment the matching counter in this
+   * operation.
+   * @return a duration tracker.
+   */
+  @Override
+  public DurationTracker trackDuration(final String key, final long count) {
+    return durationTrackerFactory.trackDuration(key, count);
+  }
+
+  /**
+   * String representation. Includes the IOStatistics
+   * when logging is at DEBUG.
+   * @return a string form.
+   */
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "S3AInstrumentation{");
+    if (LOG.isDebugEnabled()) {
+      sb.append("instanceIOStatistics=").append(instanceIOStatistics);
+    }
+    sb.append('}');
+    return sb.toString();
   }
 
   /**
@@ -515,21 +552,32 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   /**
-   * Increment a specific counter.
-   * No-op if not defined.
+   * Increments a mutable counter and the matching
+   * instance IOStatistics counter.
+   * No-op if the counter is not defined, or the count == 0.
    * @param op operation
    * @param count increment value
    */
   public void incrementCounter(Statistic op, long count) {
     String name = op.getSymbol();
-    incrementNamedCounter(name, count);
-    instanceIOStatistics.incrementCounter(name, count);
+    if (count != 0) {
+      incrementMutableCounter(name, count);
+      instanceIOStatistics.incrementCounter(name, count);
+    }
   }
 
-  private void incrementNamedCounter(final String name, final long count) {
-    MutableCounterLong counter = lookupCounter(name);
-    if (counter != null) {
-      counter.incr(count);
+  /**
+   * Increments a Mutable counter.
+   * No-op if not a positive integer.
+   * @param name counter name.
+   * @param count increment value
+   */
+  private void incrementMutableCounter(final String name, final long count) {
+    if (count > 0) {
+      MutableCounterLong counter = lookupCounter(name);
+      if (counter != null) {
+        counter.incr(count);
+      }
     }
   }
 
@@ -548,8 +596,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   /**
-   * Increment a specific counter.
-   * No-op if not defined.
+   * Increments a mutable counter and the matching
+   * instance IOStatistics counter with the value of
+   * the atomic long.
+   * No-op if the counter is not defined, or the count == 0.
    * @param op operation
    * @param count atomic long containing value
    */
@@ -656,17 +706,23 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
   }
 
+  /**
+   * A duration tracker which updates a mutable counter with a metric.
+   * The metric is updated with the count on start; after a failure
+   * the failures count is incremented by one.
+   */
   private final class MetricUpdatingDurationTracker
       implements DurationTracker {
 
     private final String symbol;
 
-    private final long count;
     private boolean failed;
 
-    private MetricUpdatingDurationTracker(final String symbol, final long count) {
+    private MetricUpdatingDurationTracker(
+        final String symbol,
+        final long count) {
       this.symbol = symbol;
-      this.count = count;
+      incrementMutableCounter(symbol, count);
     }
 
     @Override
@@ -674,13 +730,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       failed = true;
     }
 
+    /**
+     * Close: on failure increment any mutable counter of
+     * failures.
+     */
     @Override
     public void close() {
-      String name = symbol;
       if (failed) {
-        name = name + SUFFIX_FAILURES;
+        incrementMutableCounter(symbol + SUFFIX_FAILURES, 1);
       }
-      incrementNamedCounter(name, count);
     }
   }
 
@@ -699,12 +757,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
   /**
    * Statistics updated by an S3AInputStream during its actual operation.
-   * <p></p>
+   * <p>
    * When {@code unbuffer()} is called, the changed numbers are propagated
    * to the S3AFileSystem metrics.
-   * <p></p>
+   * </p>
+   * <p>
    * When {@code close()} is called, the final set of numbers are propagated
    * to the S3AFileSystem metrics.
+   * </p>
    * The {@link FileSystem.Statistics} statistics passed in are also
    * updated. This ensures that whichever thread calls close() gets the
    * total count of bytes read, even if any work is done in other
@@ -721,7 +781,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private static final int DISTANCE = 5;
 
     /**
-     * FS statistics for the thread creating the stream
+     * FS statistics for the thread creating the stream.
      */
     private final FileSystem.Statistics filesystemStatistics;
 
@@ -1058,7 +1118,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       if (isClosed) {
         // stream is being closed.
         // merge in all the IOStatistics
-        getInstanceIOStatistics().aggregate(ioStatistics);
+        S3AInstrumentation.this.getIOStatistics().aggregate(ioStatistics);
 
         // increment the filesystem statistics for this thread.
         if (filesystemStatistics != null) {
@@ -1075,7 +1135,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      * @param name statistic to promote
      */
     void promoteIOCounter(String name) {
-      incrementNamedCounter(name,
+      incrementMutableCounter(name,
           lookupCounterValue(name)
               - mergedStats.counters().get(name));
     }
@@ -1214,6 +1274,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
   /**
    * Create a stream output statistics instance.
+   * @param filesystemStatistics thread-local FS statistics.
    * @return the new instance
    */
   public BlockOutputStreamStatistics newOutputStreamStatistics(
@@ -1237,7 +1298,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         source.lookupCounterValue(
             StreamStatisticNames.STREAM_WRITE_EXCEPTIONS));
     // merge in all the IOStatistics
-    getInstanceIOStatistics().aggregate(source.getIOStatistics());
+    getIOStatistics().aggregate(source.getIOStatistics());
   }
 
   /**
@@ -1248,7 +1309,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * in close() for better cross-thread accounting.
    * </p>
    * <p>
-   *   Some of the collected statistics are not yet served via IOStatistics.
+   *   Some of the collected statistics are not directly served via IOStatistics;
+   *   they are added to the instrumentation IOStatistics and metric counters
+   *   during the {@link #mergeOutputStreamStatistics(OutputStreamStatistics)}
+   *   operation.
    * </p>
    */
   private final class OutputStreamStatistics
@@ -1682,7 +1746,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public DurationTracker trackDuration(final String key, final long count) {
-      return instrumentationDurationTrackerFactory()
+      return getDurationTrackerFactory()
           .trackDuration(key, count);
     }
   }

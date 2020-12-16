@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
@@ -42,6 +43,8 @@ import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.expect;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
@@ -83,6 +86,18 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   private boolean isDeleting;
 
   private OperationCostValidator costValidator;
+
+  /**
+   * Is bulk deletion enabled?
+   */
+  private boolean isBulkDelete;
+
+  /**
+   * Which statistic measures marker deletion?
+   * this is the bulk delete statistic by default;
+   * if that is disabled it becomes the single delete counter.
+   */
+  private Statistic deleteMarkerStatistic;
 
   public AbstractS3ACostTest(
       final boolean s3guard,
@@ -160,6 +175,14 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
                 || s.getType() == StatisticTypeEnum.TYPE_DURATION)
         .forEach(s -> builder.withMetric(s));
     costValidator = builder.build();
+
+    // determine bulk delete settings
+    final Configuration fsConf = getFileSystem().getConf();
+    isBulkDelete = fsConf.getBoolean(Constants.ENABLE_MULTI_DELETE,
+        true);
+    deleteMarkerStatistic = isBulkDelete()
+        ? OBJECT_BULK_DELETE_REQUEST
+        : OBJECT_DELETE_REQUEST;
   }
 
   public void assumeUnguarded() {
@@ -639,5 +662,21 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
                 + "\n" + ContractTestUtils.ls(
                     getFileSystem(), status.getPath())))
         .isEqualTo(expected);
+  }
+
+  /**
+   * Is bulk deletion enabled?
+   */
+  protected boolean isBulkDelete() {
+    return isBulkDelete;
+  }
+
+  /**
+   * Which statistic measures marker deletion?
+   * this is the bulk delete statistic by default;
+   * if that is disabled it becomes the single delete counter.
+   */
+  protected Statistic getDeleteMarkerStatistic() {
+    return deleteMarkerStatistic;
   }
 }

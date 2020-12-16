@@ -29,6 +29,7 @@ public interface BlockOutputStreamStatistics extends Closeable,
 
   /**
    * Block is queued for upload.
+   * @param blockSize block size.
    */
   void blockUploadQueued(int blockSize);
 
@@ -119,7 +120,6 @@ public interface BlockOutputStreamStatistics extends Closeable,
    * A block has been released.
    */
   void blockReleased();
-
 
   /**
    * Get the value of a counter.

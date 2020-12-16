@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 
 /**
  * Base class for scale tests; here is where the common scale configuration

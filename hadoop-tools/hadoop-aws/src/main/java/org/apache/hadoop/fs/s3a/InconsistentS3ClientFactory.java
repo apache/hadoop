@@ -41,9 +41,9 @@ public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
    * Logs a warning that this is being done.
    * @param credentials credentials to use
    * @param awsConf  AWS configuration
-   * @param metrics
-   * @param endpoint
-   * @param pathStyleAccess
+   * @param metrics metric collector
+   * @param endpoint AWS endpoint
+   * @param pathStyleAccess should path style access be supported?
    * @return an inconsistent client.
    */
   @Override

@@ -78,7 +78,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     int depth = scale;
     int files = scale;
     MetricDiff metadataRequests = new MetricDiff(fs, OBJECT_METADATA_REQUESTS);
-    MetricDiff listRequests = new MetricDiff(fs, OBJECT_LIST_REQUESTS);
+    MetricDiff listRequests = new MetricDiff(fs, Statistic.OBJECT_LIST_REQUEST);
     MetricDiff listContinueRequests =
         new MetricDiff(fs, OBJECT_CONTINUE_LIST_REQUESTS);
     MetricDiff listStatusCalls = new MetricDiff(fs, INVOCATION_LIST_FILES);
@@ -328,7 +328,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     MetricDiff metadataRequests =
         new MetricDiff(fs, Statistic.OBJECT_METADATA_REQUESTS);
     MetricDiff listRequests =
-        new MetricDiff(fs, Statistic.OBJECT_LIST_REQUESTS);
+        new MetricDiff(fs, Statistic.OBJECT_LIST_REQUEST);
     long attempts = getOperationCount();
     NanoTimer timer = new NanoTimer();
     for (long l = 0; l < attempts; l++) {

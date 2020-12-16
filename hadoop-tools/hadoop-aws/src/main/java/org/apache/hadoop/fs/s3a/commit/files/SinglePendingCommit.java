@@ -50,17 +50,19 @@ import static org.apache.hadoop.fs.s3a.commit.ValidationFailure.verify;
 import static org.apache.hadoop.util.StringUtils.join;
 
 /**
- * This is the serialization format for uploads yet to be committerd.
- * <p></p>
+ * This is the serialization format for uploads yet to be committed.
+ * <p>
  * It's marked as {@link Serializable} so that it can be passed in RPC
  * calls; for this to work it relies on the fact that java.io ArrayList
  * and LinkedList are serializable. If any other list type is used for etags,
  * it must also be serialized. Jackson expects lists, and it is used
  * to persist to disk.
- * <p></p>
+ * </p>
+ * <p>
  * The statistics published through the {@link IOStatisticsSource}
  * interface are the static ones marshalled with the commit data;
  * they may be empty.
+ * </p>
  */
 @SuppressWarnings("unused")
 @InterfaceAudience.Private

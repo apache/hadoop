@@ -96,7 +96,7 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
       // S3Guard is not enabled
     }
     assertEquals("Expected 2 renames for a non-direct write distcp", 2L,
-        getRenameOperationCount() - renames );
+        getRenameOperationCount() - renames);
   }
 
   private long getRenameOperationCount() {

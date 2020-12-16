@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum.TYPE_COUNTER;
 import static org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum.TYPE_DURATION;
@@ -45,13 +45,16 @@ import static org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum.TYPE_QUANTIL
 public enum Statistic {
 
   /* Low-level duration counters */
-  ACTION_EXECUTOR_ACQUIRED(StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED,
+  ACTION_EXECUTOR_ACQUIRED(
+      StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED,
       "Executor acquired.",
       TYPE_DURATION),
-  ACTION_HTTP_HEAD_REQUEST(StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
+  ACTION_HTTP_HEAD_REQUEST(
+      StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
       "HEAD request.",
       TYPE_DURATION),
-  ACTION_HTTP_GET_REQUEST(StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
+  ACTION_HTTP_GET_REQUEST(
+      StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
       "GET request.",
       TYPE_DURATION),
 
@@ -155,14 +158,19 @@ public enum Statistic {
       TYPE_COUNTER),
 
   /* Object IO */
-  OBJECT_COPY_REQUESTS("object_copy_requests", "Object copy requests",
+  OBJECT_COPY_REQUESTS(StoreStatisticNames.OBJECT_COPY_REQUESTS,
+      "Object copy requests",
       TYPE_COUNTER),
-  OBJECT_DELETE_REQUESTS("object_delete_requests", "Object delete requests",
-      TYPE_COUNTER),
-  OBJECT_DELETE_OBJECTS("object_delete_objects",
+  OBJECT_DELETE_REQUEST(StoreStatisticNames.OBJECT_DELETE_REQUEST,
+      "Object delete requests",
+      TYPE_DURATION),
+  OBJECT_BULK_DELETE_REQUEST(StoreStatisticNames.OBJECT_BULK_DELETE_REQUEST,
+      "Object bulk delete requests",
+      TYPE_DURATION),
+  OBJECT_DELETE_OBJECTS(StoreStatisticNames.OBJECT_DELETE_OBJECTS,
       "Objects deleted in delete requests",
       TYPE_COUNTER),
-  OBJECT_LIST_REQUESTS(StoreStatisticNames.OBJECT_LIST_REQUEST,
+  OBJECT_LIST_REQUEST(StoreStatisticNames.OBJECT_LIST_REQUEST,
       "Count of object listings made",
       TYPE_DURATION),
   OBJECT_CONTINUE_LIST_REQUESTS(
@@ -264,7 +272,7 @@ public enum Statistic {
       "Count of bytes moved backwards during seek operations"
           + " in an input stream",
       TYPE_COUNTER),
-  STREAM_READ_SEEK_BYTES_DISCARDED (
+  STREAM_READ_SEEK_BYTES_DISCARDED(
       StreamStatisticNames.STREAM_READ_SEEK_BYTES_DISCARDED,
       "Count of bytes read and discarded during seek() in an input stream",
       TYPE_COUNTER),
@@ -331,7 +339,7 @@ public enum Statistic {
       StreamStatisticNames.STREAM_WRITE_TOTAL_TIME,
       "Count of total time taken for uploads to complete",
       TYPE_COUNTER),
-  STREAM_WRITE_TOTAL_DATA("stream_write_total_data",
+  STREAM_WRITE_TOTAL_DATA(StreamStatisticNames.STREAM_WRITE_TOTAL_DATA,
       "Count of total data uploaded",
       TYPE_COUNTER),
   STREAM_WRITE_BYTES(
@@ -446,55 +454,64 @@ public enum Statistic {
       "S3Guard metadata store authoritative directories updated from S3",
       TYPE_COUNTER),
 
-  STORE_IO_THROTTLED("store_io_throttled", "Requests throttled and retried",
-      TYPE_COUNTER),
-  STORE_IO_THROTTLE_RATE("store_io_throttle_rate",
-      "Rate of S3 request throttling",
-      TYPE_QUANTILE),
 
-  /*
-   * Delegation Token Operations.
-   */
-  DELEGATION_TOKEN_ISSUED("delegation_token_issued",
-      "Count of delegation tokens issued",
-      TYPE_DURATION),
-
-  MULTIPART_INSTANTIATED(
-      "multipart_instantiated",
-      "Multipart Uploader Instantiated",
-      TYPE_COUNTER),
-  MULTIPART_PART_PUT(
-      "multipart_part_put",
-      "Multipart Part Put Operation",
-      TYPE_COUNTER),
-  MULTIPART_PART_PUT_BYTES(
-      "multipart_part_put_bytes",
-      "Multipart Part Put Bytes",
-      TYPE_COUNTER),
-  MULTIPART_UPLOAD_ABORTED(
-      "multipart_upload_aborted",
-      "Multipart Upload Aborted",
-      TYPE_COUNTER),
-  MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED(
-      "multipart_upload_abort_under_path_invoked",
-      "Multipart Upload Abort Udner Path Invoked",
-      TYPE_COUNTER),
-  MULTIPART_UPLOAD_COMPLETED(
-      "multipart_upload_completed",
-      "Multipart Upload Completed",
-      TYPE_COUNTER),
-  MULTIPART_UPLOAD_STARTED(
-      "multipart_upload_started",
-      "Multipart Upload Started",
-      TYPE_COUNTER),
-
+  /* General Store operations */
   STORE_IO_REQUEST(StoreStatisticNames.STORE_IO_REQUEST,
       "requests made of the remote store",
       TYPE_COUNTER),
 
   STORE_IO_RETRY(StoreStatisticNames.STORE_IO_RETRY,
       "retried requests made of the remote store",
+      TYPE_COUNTER),
+
+  STORE_IO_THROTTLED(
+      StoreStatisticNames.STORE_IO_THROTTLED,
+      "Requests throttled and retried",
+      TYPE_COUNTER),
+  STORE_IO_THROTTLE_RATE(
+      StoreStatisticNames.STORE_IO_THROTTLE_RATE,
+      "Rate of S3 request throttling",
+      TYPE_QUANTILE),
+
+  /*
+   * Delegation Token Operations.
+   */
+  DELEGATION_TOKEN_ISSUED(
+      StoreStatisticNames.DELEGATION_TOKEN_ISSUED,
+      "Count of delegation tokens issued",
+      TYPE_DURATION),
+
+  /* Multipart Upload API */
+
+  MULTIPART_UPLOAD_INSTANTIATED(
+      StoreStatisticNames.MULTIPART_UPLOAD_INSTANTIATED,
+      "Multipart Uploader Instantiated",
+      TYPE_COUNTER),
+  MULTIPART_UPLOAD_PART_PUT(
+      StoreStatisticNames.MULTIPART_UPLOAD_PART_PUT,
+      "Multipart Part Put Operation",
+      TYPE_COUNTER),
+  MULTIPART_UPLOAD_PART_PUT_BYTES(
+      StoreStatisticNames.MULTIPART_UPLOAD_PART_PUT_BYTES,
+      "Multipart Part Put Bytes",
+      TYPE_COUNTER),
+  MULTIPART_UPLOAD_ABORTED(
+      StoreStatisticNames.MULTIPART_UPLOAD_ABORTED,
+      "Multipart Upload Aborted",
+      TYPE_COUNTER),
+  MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED(
+      StoreStatisticNames.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED,
+      "Multipart Upload Abort Unner Path Invoked",
+      TYPE_COUNTER),
+  MULTIPART_UPLOAD_COMPLETED(
+      StoreStatisticNames.MULTIPART_UPLOAD_COMPLETED,
+      "Multipart Upload Completed",
+      TYPE_COUNTER),
+  MULTIPART_UPLOAD_STARTED(
+      StoreStatisticNames.MULTIPART_UPLOAD_STARTED,
+      "Multipart Upload Started",
       TYPE_COUNTER);
+
 
   /**
    * A map used to support the {@link #fromSymbol(String)} call.

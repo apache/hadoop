@@ -25,15 +25,14 @@ import java.util.function.BiConsumer;
 
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
-import org.apache.hadoop.fs.s3a.statistics.impl.AbstractS3AStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
-import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED;
-import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_INSTANTIATED;
-import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_PART_PUT;
-import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_PART_PUT_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORTED;
+import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_COMPLETED;
+import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_INSTANTIATED;
+import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_PART_PUT;
+import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_PART_PUT_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_STARTED;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
@@ -69,9 +68,9 @@ public final class S3AMultipartUploaderStatisticsImpl
     this.incrementCallback = Objects.requireNonNull(incrementCallback);
     IOStatisticsStore st = iostatisticsStore()
         .withCounters(
-            MULTIPART_INSTANTIATED.getSymbol(),
-            MULTIPART_PART_PUT.getSymbol(),
-            MULTIPART_PART_PUT_BYTES.getSymbol(),
+            MULTIPART_UPLOAD_INSTANTIATED.getSymbol(),
+            MULTIPART_UPLOAD_PART_PUT.getSymbol(),
+            MULTIPART_UPLOAD_PART_PUT_BYTES.getSymbol(),
             MULTIPART_UPLOAD_ABORTED.getSymbol(),
             MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED.getSymbol(),
             MULTIPART_UPLOAD_COMPLETED.getSymbol(),
@@ -87,7 +86,7 @@ public final class S3AMultipartUploaderStatisticsImpl
 
   @Override
   public void instantiated() {
-    inc(MULTIPART_INSTANTIATED, 1);
+    inc(MULTIPART_UPLOAD_INSTANTIATED, 1);
   }
 
   @Override
@@ -97,8 +96,8 @@ public final class S3AMultipartUploaderStatisticsImpl
 
   @Override
   public void partPut(final long lengthInBytes) {
-    inc(MULTIPART_PART_PUT, 1);
-    inc(MULTIPART_PART_PUT_BYTES, lengthInBytes);
+    inc(MULTIPART_UPLOAD_PART_PUT, 1);
+    inc(MULTIPART_UPLOAD_PART_PUT_BYTES, lengthInBytes);
   }
 
   @Override

@@ -278,8 +278,8 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   @Override
   public String toString() {
-    return String.format("(sum=%d, samples=%d, mean=%.4f)",
-        sum, samples, mean());
+    return String.format("(samples=%d, sum=%d, mean=%.4f)",
+        samples, sum, mean());
   }
 
 }

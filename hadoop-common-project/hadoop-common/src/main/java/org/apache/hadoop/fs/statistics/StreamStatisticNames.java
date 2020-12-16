@@ -283,6 +283,9 @@ public final class StreamStatisticNames {
   public static final String STREAM_WRITE_QUEUE_DURATION
       = "stream_write_queue_duration";
 
+  public static final String STREAM_WRITE_TOTAL_DATA
+      = "stream_write_total_data";
+
   private StreamStatisticNames() {
   }
 

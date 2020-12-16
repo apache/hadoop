@@ -67,7 +67,7 @@ public class StatisticDurationTracker extends OperationDuration
    * of the key name is updated.
    * @param iostats statistics to update
    * @param key Key to use as prefix of values.
-   * @param count  #of times to increment the matching counter.
+   * @param count #of times to increment the matching counter.
    */
   public StatisticDurationTracker(
       final IOStatisticsStore iostats,
@@ -87,6 +87,10 @@ public class StatisticDurationTracker extends OperationDuration
 
   /**
    * Set the finished time and then update the statistics.
+   * If the operation failed then the key + .failures counter will be
+   * incremented by one.
+   * The operation min/mean/max values will be updated with the duration;
+   * on a failure these will all be the .failures metrics.
    */
   @Override
   public void close() {

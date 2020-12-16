@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.statistics;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,11 +73,35 @@ public final class IOStatisticsLogging {
       @Nullable final IOStatistics statistics) {
     if (statistics != null) {
       StringBuilder sb = new StringBuilder();
-      mapToString(sb, "counters", statistics.counters());
-      mapToString(sb, "gauges", statistics.gauges());
-      mapToString(sb, "minimums", statistics.minimums());
-      mapToString(sb, "maximums", statistics.maximums());
-      mapToString(sb, "means", statistics.meanStatistics());
+      mapToString(sb, "counters", statistics.counters(), " ");
+      mapToString(sb, "gauges", statistics.gauges(), " ");
+      mapToString(sb, "minimums", statistics.minimums(), " ");
+      mapToString(sb, "maximums", statistics.maximums(), " ");
+      mapToString(sb, "means", statistics.meanStatistics(), " ");
+
+      return sb.toString();
+    } else {
+      return "";
+    }
+  }
+
+  /**
+   * Convert IOStatistics to a string form, with all the metrics sorted.
+   * This is more expensive than the simple conversion, so should only
+   * be used for logging/output where it's known/highly likely that the
+   * caller wants to see the values. Not for debug logging.
+   * @param statistics A statistics instance.
+   * @return string value or the empty string if null
+   */
+  public static String ioStatisticsToSortedString(
+      @Nullable final IOStatistics statistics) {
+    if (statistics != null) {
+      StringBuilder sb = new StringBuilder();
+      mapToSortedString(sb, "counters", statistics.counters());
+      mapToSortedString(sb, "\ngauges", statistics.gauges());
+      mapToSortedString(sb, "\nminimums", statistics.minimums());
+      mapToSortedString(sb, "\nmaximums", statistics.maximums());
+      mapToSortedString(sb, "\nmeans", statistics.meanStatistics());
 
       return sb.toString();
     } else {
@@ -86,26 +111,59 @@ public final class IOStatisticsLogging {
 
   /**
    * Given a map, add its entryset to the string.
+   * The entries are only sorted if the source entryset
+   * iterator is sorted, such as from a TreeMap.
    * @param sb string buffer to append to
    * @param type type (for output)
    * @param map map to evaluate
+   * @param separator separator
    * @param <E> type of values of the map
    */
   private static <E> void mapToString(StringBuilder sb,
       final String type,
-      final Map<String, E> map) {
+      final Map<String, E> map,
+      final String separator) {
     int count = 0;
     sb.append(type);
     sb.append("=(");
     for (Map.Entry<String, E> entry : map.entrySet()) {
       if (count > 0) {
-        sb.append(' ');
+        sb.append(separator);
       }
       count++;
       sb.append(IOStatisticsBinding.entryToString(
           entry.getKey(), entry.getValue()));
     }
-    sb.append("); ");
+    sb.append(");\n");
+  }
+
+  /**
+   * Given a map, produce a string with all the values, sorted.
+   * Needs to create a treemap and insert all the entries.
+   * @param sb string buffer to append to
+   * @param type type (for output)
+   * @param map map to evaluate
+   * @param <E> type of values of the map
+   */
+  private static <E> void mapToSortedString(StringBuilder sb,
+      final String type,
+      final Map<String, E> map) {
+    mapToString(sb, type, sortedMap(map), "\n");
+  }
+
+  /**
+   * Create a sorted (tree) map from an unsorted map.
+   * This incurs the cost of creating a map and that
+   * of inserting every object into the tree.
+   * @param source source map
+   * @param <E> value type
+   * @return a treemap with all the entries.
+   */
+  private static <E> Map<String, E> sortedMap(
+      final Map<String, E> source) {
+    Map<String, E> tm = new TreeMap<>();
+    tm.putAll(source);
+    return tm;
   }
 
   /**

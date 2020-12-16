@@ -34,11 +34,12 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.metrics2.lib.MutableCounter;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -95,6 +96,11 @@ public final class OperationCostValidator {
       = new TreeMap<>();
 
   /**
+   * Instrumentation's IO Statistics.
+   */
+  private final IOStatisticsStore ioStatistics;
+
+  /**
    * Build the instance.
    * @param builder builder containing all options.
    */
@@ -112,6 +118,7 @@ public final class OperationCostValidator {
       }
     }
     builder.metrics.clear();
+    ioStatistics = instrumentation.getIOStatistics();
   }
 
   /**
@@ -149,6 +156,7 @@ public final class OperationCostValidator {
       ExpectedProbe... expectedA) throws Exception {
     List<ExpectedProbe> expected = Arrays.asList(expectedA);
     resetMetricDiffs();
+
     // verify that 1+ probe is enabled
     assumeProbesEnabled(expected);
     // if we get here, then yes.
@@ -159,8 +167,9 @@ public final class OperationCostValidator {
         "operation returning "
             + (r != null ? r.toString() : "null");
     LOG.info("{}", text);
-    LOG.info("state {}", this);
+    LOG.info("state {}", this.toString());
     LOG.info("probes {}", expected);
+    LOG.info("IOStatistics {}", ioStatistics);
     for (ExpectedProbe ed : expected) {
       ed.verify(this, text);
     }
@@ -343,7 +352,7 @@ public final class OperationCostValidator {
       boolean enabled, OperationCost cost) {
     return probes(enabled,
         probe(OBJECT_METADATA_REQUESTS, cost.head()),
-        probe(OBJECT_LIST_REQUESTS, cost.list()));
+        probe(OBJECT_LIST_REQUEST, cost.list()));
   }
 
   /**

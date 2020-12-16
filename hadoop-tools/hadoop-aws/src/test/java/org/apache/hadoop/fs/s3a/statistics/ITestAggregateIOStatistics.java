@@ -38,7 +38,7 @@ import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
 
 /**
  * Saves, loads and logs the aggregate IOStatistics as collected in this
- * process.Are
+ * process.
  */
 public class ITestAggregateIOStatistics extends AbstractS3ATestBase {
 

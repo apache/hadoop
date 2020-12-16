@@ -154,13 +154,16 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
    * increment an atomic long and return its value;
    * null long is no-op returning 0.
    * @param aLong atomic long; may be null
-   * @param increment amount to increment; -ve for a decrement
+   * param increment amount to increment; negative for a decrement
    * @return final value or 0 if the long is null
    */
   private long incAtomicLong(final AtomicLong aLong,
       final long increment) {
     if (aLong != null) {
-      return aLong.addAndGet(increment);
+      // optimization: zero is a get rather than addAndGet()
+      return increment != 0
+          ? aLong.addAndGet(increment)
+          : aLong.get();
     } else {
       return 0;
     }

@@ -63,12 +63,11 @@ public abstract class AbstractS3AStatisticsSource implements
     return incCounter(name, 1);
   }
 
-  /**
+  /**DefaultS3ClientFactoryDefaultS3ClientFactory
    * Increment a named counter by 1.
    * @param name counter name
    * @param value value to increment by
    * @return the updated value or, if the counter is unknown: 0
-   * @return
    */
   public long incCounter(String name, long value) {
     return ioStatistics.incrementCounter(name, value);

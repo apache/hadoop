@@ -225,7 +225,7 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
       // if DDB is the metastore, then we expect no FS requests to be made
       // at all.
       S3ATestUtils.MetricDiff listMetric = new S3ATestUtils.MetricDiff(fs,
-          Statistic.OBJECT_LIST_REQUESTS);
+          Statistic.OBJECT_LIST_REQUEST);
       S3ATestUtils.MetricDiff getMetric = new S3ATestUtils.MetricDiff(fs,
           Statistic.OBJECT_METADATA_REQUESTS);
       // do a getFile status with empty dir flag

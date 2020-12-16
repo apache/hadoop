@@ -22,10 +22,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * These are common statistic names.
+ * Common statistic names for object store operations..
  * <p>
  * When adding new common statistic name constants, please make them unique.
- * By convention, they are implicitly unique:
+ * By convention:
+ * </p>
  * <ul>
  *   <li>the name of the constants are uppercase, words separated by
  *   underscores.</li>
@@ -161,12 +162,27 @@ public final class StoreStatisticNames {
       "object_continue_list_request";
 
   /**
+   * A bulk DELETE request was made: {@value}.
+   * A separate statistic from {@link #OBJECT_DELETE_REQUEST}
+   * so that metrics on duration of the operations can
+   * be distinguished.
+   */
+  public static final String OBJECT_BULK_DELETE_REQUEST
+      = "object_bulk_delete_request";
+
+  /**
    * A store's equivalent of a DELETE request was made: {@value}.
    * This may be an HTTP DELETE verb, or it may be some custom
    * operation which takes a list of objects to delete.
    */
-  public static final String OP_HTTP_DELETE_REQUEST
-      = "op_http_delete_request";
+  public static final String OBJECT_DELETE_REQUEST
+      = "object_delete_request";
+
+  /**
+   * The count of objects deleted in delete requests
+   */
+  public static final String OBJECT_DELETE_OBJECTS
+      = "object_delete_objects";
 
   /**
    * Object multipart upload initiated.
@@ -284,6 +300,36 @@ public final class StoreStatisticNames {
    */
   public static final String OBJECT_METADATA_REQUESTS
       = "object_metadata_request";
+
+  public static final String OBJECT_COPY_REQUESTS
+      = "object_copy_requests";
+
+  public static final String STORE_IO_THROTTLE_RATE
+      = "store_io_throttle_rate";
+
+  public static final String DELEGATION_TOKEN_ISSUED
+      = "delegation_token_issued";
+
+  public static final String MULTIPART_UPLOAD_INSTANTIATED
+      = "multipart_instantiated";
+
+  public static final String MULTIPART_UPLOAD_PART_PUT
+      = "multipart_upload_part_put";
+
+  public static final String MULTIPART_UPLOAD_PART_PUT_BYTES
+      = "multipart_upload_part_put_bytes";
+
+  public static final String MULTIPART_UPLOAD_ABORTED
+      = "multipart_upload_aborted";
+
+  public static final String MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED
+      = "multipart_upload_abort_under_path_invoked";
+
+  public static final String MULTIPART_UPLOAD_COMPLETED
+      = "multipart_upload_completed";
+
+  public static final String MULTIPART_UPLOAD_STARTED
+      = "multipart_upload_started";
 
   private StoreStatisticNames() {
   }
