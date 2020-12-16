@@ -243,7 +243,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       return -1;
     }
     savePointerState();
-
     // data need to be copied to user buffer from index bCursor, bCursor has
     // to be the current fCusor
     bCursor = (int) fCursor;
@@ -271,19 +270,20 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int optimisedRead(final byte[] b, final int off, final int len,
       final long readFrom, final long actualLen) throws IOException {
-    int totalBytesRead = 0;
     fCursor = readFrom;
+    int totalBytesRead = 0;
+    int lastBytesRead = 0;
     try {
       buffer = new byte[bufferSize];
       for (int i = 0;
            i < MAX_OPTIMIZED_READ_ATTEMPTS && fCursor < contentLength; i++) {
-        int bytesRead = readInternal(fCursor, buffer, limit,
+        lastBytesRead = readInternal(fCursor, buffer, limit,
             (int) actualLen - limit, true);
-        if (bytesRead > 0) {
-          totalBytesRead += bytesRead;
-          limit += bytesRead;
+        if (lastBytesRead > 0) {
+          totalBytesRead += lastBytesRead;
+          limit += lastBytesRead;
+          fCursor += lastBytesRead;
           fCursorAfterLastRead = fCursor;
-          fCursor += bytesRead;
         }
       }
     } catch (IOException e) {
@@ -292,8 +292,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       return readOneBlock(b, off, len);
     }
     firstRead = false;
-    if (totalBytesRead == 0) {
-      return -1;
+    if (totalBytesRead < 1) {
+      return lastBytesRead;
     }
     //  If the read was partial and the user requested part of data has
     //  not read then fallback to readoneblock. When limit is smaller than
