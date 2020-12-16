@@ -42,9 +42,12 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       "testFolder/testFolder2/testFolder5",
       "testFolder/testFolder3/testFolder6",
       "testFolder/testFolder3/testFolder7"};
-  private final int filesPerDirectory = 2;
   private final AzureBlobFileSystem fs = createFileSystem();
-  private final byte[] b = new byte[20];
+  private final int testBufferSize = 20;
+  private final int filesPerDirectory = 2;
+  private final int numFilesForListMaxTest =
+      DEFAULT_AZURE_LIST_MAX_RESULTS + 100;
+  private final byte[] b = new byte[testBufferSize];
 
   public TestGetContentSummary() throws Exception {
     createDirectoryStructure();
@@ -65,7 +68,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
     out.write(b);
     out.close();
     ContentSummary contentSummary = fs.getContentSummary(filePath);
-    checkContentSummary(contentSummary, 0, 1, 20);
+    checkContentSummary(contentSummary, 0, 1, testBufferSize);
   }
 
   @Test
@@ -87,7 +90,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
     }
     ContentSummary contentSummary = fs.getContentSummary(new Path(dirPath));
     checkContentSummary(contentSummary, 0, filesPerDirectory,
-        20 * filesPerDirectory);
+        testBufferSize * filesPerDirectory);
   }
 
   @Test
@@ -105,7 +108,8 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       out.close();
     }
     ContentSummary contentSummary = fs.getContentSummary(dirPath);
-    checkContentSummary(contentSummary, 2, 3 * filesPerDirectory, 20 * 2 * 2);
+    checkContentSummary(contentSummary, 2, 3 * filesPerDirectory,
+        testBufferSize * 2 * 2);
   }
 
   @Test
@@ -121,13 +125,14 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       throws IOException, ExecutionException, InterruptedException {
     Path pathToDir = new Path("/testFolder/testFolder2/maxListDir");
     fs.mkdirs(pathToDir);
-    populateDirWithFiles(pathToDir, DEFAULT_AZURE_LIST_MAX_RESULTS + 100);
+    populateDirWithFiles(pathToDir, numFilesForListMaxTest);
     FSDataOutputStream out = fs.append(new Path(pathToDir + "/test0"));
     out.write(b);
     out.close();
     checkContentSummary(
         fs.getContentSummary(new Path("/testFolder" + "/testFolder2")), 3,
-        DEFAULT_AZURE_LIST_MAX_RESULTS + 100 + filesPerDirectory * 3, 20);
+        numFilesForListMaxTest + filesPerDirectory * 3,
+        testBufferSize);
   }
 
   private void checkContentSummary(ContentSummary contentSummary,

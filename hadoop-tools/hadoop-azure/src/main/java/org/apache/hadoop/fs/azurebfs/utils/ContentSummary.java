@@ -19,10 +19,10 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 public class ContentSummary {
-  public final long length;
-  public final long directoryCount;
-  public final long fileCount;
-  public final long spaceConsumed;
+  private final long length;
+  private final long directoryCount;
+  private final long fileCount;
+  private final long spaceConsumed;
 
   public ContentSummary(long length, long directoryCount, long fileCount,
       long spaceConsumed) {
@@ -30,5 +30,20 @@ public class ContentSummary {
     this.directoryCount = directoryCount;
     this.fileCount = fileCount;
     this.spaceConsumed = spaceConsumed;
+  }
+
+  public long getLength() {
+    return length;
+  }
+
+  public long getDirectoryCount() {
+    return directoryCount;
+  }
+
+  public long getFileCount() {
+    return fileCount;
+  }
+  public long getSpaceConsumed() {
+    return spaceConsumed;
   }
 }

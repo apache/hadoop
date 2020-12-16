@@ -79,7 +79,7 @@ public class ContentSummaryProcessor {
     this.totalBytes.addAndGet(fileStatus.getLen());
   }
 
-  private class ThreadProcessor implements Runnable {
+  private final class ThreadProcessor implements Runnable {
     private ThreadProcessor() {
     }
 
