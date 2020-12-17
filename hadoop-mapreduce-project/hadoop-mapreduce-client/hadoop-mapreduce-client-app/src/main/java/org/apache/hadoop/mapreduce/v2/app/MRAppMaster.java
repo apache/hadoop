@@ -1109,6 +1109,15 @@ public class MRAppMaster extends CompositeService {
     public String getHost(String ip) {
       return ipHostMaps.get(ip);
     }
+	
+    public String getIp(String host) {
+      for (Map.Entry<String, String> entry : ipHostMaps.entrySet()) {
+        if (entry.getValue().equals(host)) {
+          return entry.getKey();
+        }
+      }
+      return null;
+    }
 
     public void putHost(String ip, String host) {
       ipHostMaps.put(ip, host);

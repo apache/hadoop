@@ -182,7 +182,7 @@ public abstract class TaskAttemptImpl implements
   private final List<String> diagnostics = new ArrayList<String>();
   private final Lock readLock;
   private final Lock writeLock;
-  private final AppContext appContext;
+  private static AppContext appContext;
   private Credentials credentials;
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
@@ -1604,7 +1604,7 @@ public abstract class TaskAttemptImpl implements
 
     locality = Locality.OFF_SWITCH;
     if (dataLocalHosts.size() > 0) {
-      String cHost = resolveHost(containerNodeId.getHost());
+      String cHost = resolveHostByMap(containerNodeId.getHost());
       if (dataLocalHosts.contains(cHost)) {
         locality = Locality.NODE_LOCAL;
       }
@@ -1841,6 +1841,17 @@ public abstract class TaskAttemptImpl implements
     }
   }
 
+  static String resolveHostByMap(String ip) {
+    String host = ((MRAppMaster.RunningAppContext) appContext).getHost(ip);
+    if (host != null) {
+      return host;
+    } else {
+      String resolveHost = resolveHost(ip);
+      ((MRAppMaster.RunningAppContext) appContext).putHost(ip, resolveHost);
+      return resolveHost;
+    }
+  }
+
   protected Set<String> resolveHosts(String[] src) {
     Set<String> result = new HashSet<String>();
     if (src != null) {
@@ -1848,14 +1859,7 @@ public abstract class TaskAttemptImpl implements
         if (src[i] == null) {
           continue;
         } else if (isIP(src[i])) {
-          String host = ((MRAppMaster.RunningAppContext) appContext).getHost(src[i]);
-          if (host == null) {
-            String resolveHost = resolveHost(src[i]);
-            result.add(resolveHost);
-            ((MRAppMaster.RunningAppContext) appContext).putHost(src[i], resolveHost);
-          } else {
-            result.add(host);
-          }
+          result.add(resolveHostByMap(src[i]));
         } else {
           result.add(src[i]);
         }
