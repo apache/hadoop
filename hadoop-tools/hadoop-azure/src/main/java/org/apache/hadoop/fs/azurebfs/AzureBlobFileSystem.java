@@ -368,8 +368,12 @@ public class AzureBlobFileSystem extends FileSystem {
 
   @Override
   public ContentSummary getContentSummary(Path f) throws IOException {
-    org.apache.hadoop.fs.azurebfs.utils.ContentSummary contentSummary =
-        (new ContentSummaryProcessor(abfsStore)).getContentSummary(f);
+    org.apache.hadoop.fs.azurebfs.utils.ContentSummary contentSummary = null;
+    try {
+      contentSummary = (new ContentSummaryProcessor(abfsStore)).getContentSummary(f);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
     return new Builder().length(contentSummary.getLength())
         .directoryCount(contentSummary.getDirectoryCount())
         .fileCount(contentSummary.getFileCount())

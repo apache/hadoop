@@ -36,12 +36,30 @@ import java.util.concurrent.Future;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_LIST_MAX_RESULTS;
 
 public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
-  private final String[] directories = {"testFolder", "testFolder/testFolder1",
-      "testFolder/testFolder2", "testFolder/testFolder3", "testFolderII",
-      "testFolder/testFolder2/testFolder4",
-      "testFolder/testFolder2/testFolder5",
-      "testFolder/testFolder3/testFolder6",
-      "testFolder/testFolder3/testFolder7"};
+
+  private final String[] directories = {"/testFolder",
+      "/testFolder/testFolder1",
+      "/testFolder/testFolder2", "/testFolder/testFolder3", "/testFolderII",
+      "/testFolder/testFolder2/testFolder4",
+      "/testFolder/testFolder2/testFolder5",
+      "/testFolder/testFolder3/testFolder6",
+      "/testFolder/testFolder3/testFolder7",
+      "/testFolder/testFolder3/testFolder6/leafDir",
+      "/testFolderII/listMaxDir",
+      "/testFolderII/listMaxDir/zFolder"};
+  //thread poll should not get interrupted before zFolder is put in queue
+
+  private final Path pathToFile = new Path("/testFolder/test1");;
+  private final Path pathToListMaxDir = new Path("/testFolderII/listMaxDir");
+  private final Path pathToLeafDir =
+      new Path("/testFolder/testFolder3/testFolder6/leafDir");
+  private final Path pathToIntermediateDirWithFilesOnly = new Path(
+        "/testFolder/testFolder2/testFolder5");
+  private final Path pathToIntermediateDirWithFilesAndSubdirs = new Path(
+        "/testFolder/testFolder3");
+  private final String[] dirsWithNonEmptyFiles = {"/testFolder", "/testFolder/testFolder1",
+      "/testFolder/testFolder2/testFolder5", "/testFolder/testFolder3"};
+
   private final AzureBlobFileSystem fs = createFileSystem();
   private final int testBufferSize = 20;
   private final int filesPerDirectory = 2;
@@ -55,84 +73,49 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testFilesystemRoot() throws IOException {
+  public void testFilesystemRoot()
+      throws IOException {
+    int fileCount =
+        (directories.length - 2) * filesPerDirectory + numFilesForListMaxTest;
     ContentSummary contentSummary = fs.getContentSummary(new Path("/"));
-    checkContentSummary(contentSummary, directories.length,
-        directories.length * filesPerDirectory, 0);
+    checkContentSummary(contentSummary, directories.length, fileCount,
+        dirsWithNonEmptyFiles.length * filesPerDirectory * testBufferSize);
   }
 
   @Test
   public void testFileContentSummary() throws IOException {
-    Path filePath = new Path("/testFolderII/testFile");
-    FSDataOutputStream out = fs.create(filePath);
-    out.write(b);
-    out.close();
-    ContentSummary contentSummary = fs.getContentSummary(filePath);
+    ContentSummary contentSummary = fs.getContentSummary(pathToFile);
     checkContentSummary(contentSummary, 0, 1, testBufferSize);
   }
 
   @Test
   public void testLeafDir() throws IOException {
-    Path pathToLeafDir = new Path(
-        "/testFolder/testFolder2/testFolder4" + "/leafDir");
-    fs.mkdirs(pathToLeafDir);
     ContentSummary contentSummary = fs.getContentSummary(pathToLeafDir);
     checkContentSummary(contentSummary, 0, 0, 0);
   }
 
   @Test
   public void testIntermediateDirWithFilesOnly() throws IOException {
-    String dirPath = "/testFolder/testFolder3/testFolder6";
-    for (int i = 0; i < filesPerDirectory; i++) {
-      FSDataOutputStream out = fs.append(new Path(dirPath + "/test" + i));
-      out.write(b);
-      out.close();
-    }
-    ContentSummary contentSummary = fs.getContentSummary(new Path(dirPath));
+    ContentSummary contentSummary =
+        fs.getContentSummary(pathToIntermediateDirWithFilesOnly);
     checkContentSummary(contentSummary, 0, filesPerDirectory,
         testBufferSize * filesPerDirectory);
   }
 
   @Test
   public void testIntermediateDirWithFilesAndSubdirs() throws IOException {
-    Path dirPath = new Path("/testFolder/testFolder3");
-    for (int i = 0; i < filesPerDirectory; i++) {
-      FSDataOutputStream out = fs.append(new Path(dirPath + "/test" + i));
-      out.write(b);
-      out.close();
-    }
-    Path dir2Path = new Path("/testFolder/testFolder3/testFolder6");
-    for (int i = 0; i < filesPerDirectory; i++) {
-      FSDataOutputStream out = fs.append(new Path(dir2Path + "/test" + i));
-      out.write(b);
-      out.close();
-    }
-    ContentSummary contentSummary = fs.getContentSummary(dirPath);
-    checkContentSummary(contentSummary, 2, 3 * filesPerDirectory,
-        testBufferSize * 2 * 2);
-  }
-
-  @Test
-  public void testEmptyDir() throws IOException {
-    Path pathToEmptyDir = new Path("/testFolder/emptyDir");
-    fs.mkdirs(pathToEmptyDir);
-    ContentSummary contentSummary = fs.getContentSummary(pathToEmptyDir);
-    checkContentSummary(contentSummary, 0, 0, 0);
+    ContentSummary contentSummary =
+        fs.getContentSummary(pathToIntermediateDirWithFilesAndSubdirs);
+    checkContentSummary(contentSummary, 3, 3 * filesPerDirectory,
+        testBufferSize * filesPerDirectory);
   }
 
   @Test
   public void testDirOverListMaxResultsItems()
       throws IOException, ExecutionException, InterruptedException {
-    Path pathToDir = new Path("/testFolder/testFolder2/maxListDir");
-    fs.mkdirs(pathToDir);
-    populateDirWithFiles(pathToDir, numFilesForListMaxTest);
-    FSDataOutputStream out = fs.append(new Path(pathToDir + "/test0"));
-    out.write(b);
-    out.close();
     checkContentSummary(
-        fs.getContentSummary(new Path("/testFolder" + "/testFolder2")), 3,
-        numFilesForListMaxTest + filesPerDirectory * 3,
-        testBufferSize);
+        fs.getContentSummary(pathToListMaxDir), 1,
+        numFilesForListMaxTest + filesPerDirectory, 0);
   }
 
   private void checkContentSummary(ContentSummary contentSummary,
@@ -150,10 +133,21 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   private void createDirectoryStructure()
       throws IOException, ExecutionException, InterruptedException {
     for (String directory : directories) {
-      Path dirPath = new Path("/" + directory);
+      Path dirPath = new Path(directory);
       fs.mkdirs(dirPath);
-      populateDirWithFiles(dirPath, filesPerDirectory);
+      if (!(dirPath.equals(pathToLeafDir) || dirPath
+          .equals(pathToListMaxDir))) {
+        populateDirWithFiles(dirPath, filesPerDirectory);
+      }
     }
+    for (String dir : dirsWithNonEmptyFiles) {
+      for (int i = 0; i < filesPerDirectory; i++) {
+        FSDataOutputStream out = fs.append(new Path(dir + "/test" + i));
+        out.write(b);
+        out.close();
+      }
+    }
+    populateDirWithFiles(pathToListMaxDir, numFilesForListMaxTest);
   }
 
   private void populateDirWithFiles(Path directory, int numFiles)
