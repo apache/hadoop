@@ -68,6 +68,16 @@ public class DataNodeFaultInjector {
   }
 
   /**
+   * Used as a hook to delay writing a packet to disk.
+   */
+  public void delayWriteToDisk() {}
+
+  /**
+   * Used as a hook to delay writing a packet to os cache.
+   */
+  public void delayWriteToOsCache() {}
+
+  /**
    * Used as a hook to intercept the latency of sending ack.
    */
   public void logDelaySendingAckToUpstream(

@@ -588,6 +588,7 @@ class BlockReceiver implements Closeable {
       return 0;
     }
 
+    datanode.metrics.incrPacketReceived();
     //First write the packet to the mirror:
     if (mirrorOut != null && !mirrorError) {
       try {
@@ -603,12 +604,15 @@ class BlockReceiver implements Closeable {
             mirrorAddr,
             duration);
         trackSendPacketToLastNodeInPipeline(duration);
-        if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
-          LOG.warn("Slow BlockReceiver write packet to mirror took " + duration
-              + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), "
-              + "downstream DNs=" + Arrays.toString(downstreamDNs)
-              + ", blockId=" + replicaInfo.getBlockId()
-              + ", seqno=" + seqno);
+        if (duration > datanodeSlowLogThresholdMs) {
+          datanode.metrics.incrPacketSlowWriteToMirror();
+          if (LOG.isWarnEnabled()) {
+            LOG.warn("Slow BlockReceiver write packet to mirror took " + duration
+                + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), "
+                + "downstream DNs=" + Arrays.toString(downstreamDNs)
+                + ", blockId=" + replicaInfo.getBlockId()
+                + ", seqno=" + seqno);
+          }
         }
       } catch (IOException e) {
         handleMirrorOutError(e);
@@ -738,13 +742,18 @@ class BlockReceiver implements Closeable {
           long begin = Time.monotonicNow();
           streams.writeDataToDisk(dataBuf.array(),
               startByteToDisk, numBytesToDisk);
+          // no-op in prod
+          DataNodeFaultInjector.get().delayWriteToDisk();
           long duration = Time.monotonicNow() - begin;
-          if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
-            LOG.warn("Slow BlockReceiver write data to disk cost:" + duration
-                + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), "
-                + "volume=" + getVolumeBaseUri()
-                + ", blockId=" + replicaInfo.getBlockId()
-                + ", seqno=" + seqno);
+          if (duration > datanodeSlowLogThresholdMs) {
+            datanode.metrics.incrPacketSlowWriteToDisk();
+            if (LOG.isWarnEnabled()) {
+              LOG.warn("Slow BlockReceiver write data to disk cost:" + duration
+                  + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), "
+                  + "volume=" + getVolumeBaseUri()
+                  + ", blockId=" + replicaInfo.getBlockId()
+                  + ", seqno=" + seqno);
+            }
           }
 
           if (duration > maxWriteToDiskMs) {
@@ -932,13 +941,18 @@ class BlockReceiver implements Closeable {
               POSIX_FADV_DONTNEED);
         }
         lastCacheManagementOffset = offsetInBlock;
+        // For testing. Normally no-op.
+        DataNodeFaultInjector.get().delayWriteToOsCache();
         long duration = Time.monotonicNow() - begin;
-        if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
-          LOG.warn("Slow manageWriterOsCache took " + duration
-              + "ms (threshold=" + datanodeSlowLogThresholdMs
-              + "ms), volume=" + getVolumeBaseUri()
-              + ", blockId=" + replicaInfo.getBlockId()
-              + ", seqno=" + seqno);
+        if (duration > datanodeSlowLogThresholdMs) {
+          datanode.metrics.incrPacketSlowWriteOsCache();
+          if (LOG.isWarnEnabled()) {
+            LOG.warn("Slow manageWriterOsCache took " + duration
+                + "ms (threshold=" + datanodeSlowLogThresholdMs
+                + "ms), volume=" + getVolumeBaseUri()
+                + ", blockId=" + replicaInfo.getBlockId()
+                + ", seqno=" + seqno);
+          }
         }
       }
     } catch (Throwable t) {

@@ -183,6 +183,11 @@ public class DataNodeMetrics {
   @Metric private MutableRate checkAndUpdateOp;
   @Metric private MutableRate updateReplicaUnderRecoveryOp;
 
+  @Metric MutableCounterLong totalPacketsReceived;
+  @Metric MutableCounterLong totalPacketsSlowWriteToMirror;
+  @Metric MutableCounterLong totalPacketsSlowWriteToDisk;
+  @Metric MutableCounterLong totalPacketsSlowWriteOsCache;
+
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   @Metric("Milliseconds spent on calling NN rpc")
   private MutableRatesWithAggregation
@@ -689,5 +694,21 @@ public class DataNodeMetrics {
    */
   public void addUpdateReplicaUnderRecoveryOp(long latency) {
     updateReplicaUnderRecoveryOp.add(latency);
+  }
+
+  public void incrPacketReceived() {
+    totalPacketsReceived.incr();
+  }
+
+  public void incrPacketSlowWriteToMirror() {
+    totalPacketsSlowWriteToMirror.incr();
+  }
+
+  public void incrPacketSlowWriteToDisk() {
+    totalPacketsSlowWriteToDisk.incr();
+  }
+
+  public void incrPacketSlowWriteOsCache() {
+    totalPacketsSlowWriteOsCache.incr();
   }
 }
