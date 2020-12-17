@@ -124,8 +124,8 @@ public class TestDFSStripedOutputStreamWithFailure extends
     }
   }
 
-  private void testCloseWithExceptionsInStreamer(
-      int numFailures, boolean shouldFail) throws Exception {
+  private void testCloseWithExceptionsInStreamer(int numFailures)
+      throws Exception {
     assertTrue(numFailures <=
         ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
     final Path dirFile = new Path(dir, "ecfile-" + numFailures);
@@ -133,7 +133,8 @@ public class TestDFSStripedOutputStreamWithFailure extends
       out.write("idempotent close".getBytes());
 
       // Expect to raise IOE on the first close call, but any following
-      // close() should be no-op.
+      // Close multiple times. All the following close() should have no
+      // side-effect.
       LambdaTestUtils.intercept(IOException.class,
           out::close);
 
@@ -146,13 +147,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
             new IOException("injected failure")
         );
       }
-      if (shouldFail) {
-        LambdaTestUtils.intercept(IOException.class, out::close);
-      }
 
-      // Close multiple times. All the following close() should have no
-      // side-effect.
-      out.close();
     }
   }
 
@@ -171,10 +166,10 @@ public class TestDFSStripedOutputStreamWithFailure extends
       cluster.restartNameNodes();
       cluster.triggerHeartbeats();
 
-      testCloseWithExceptionsInStreamer(1, false);
-      testCloseWithExceptionsInStreamer(ecPolicy.getNumParityUnits(), false);
-      testCloseWithExceptionsInStreamer(ecPolicy.getNumParityUnits() + 1, true);
-      testCloseWithExceptionsInStreamer(ecPolicy.getNumDataUnits(), true);
+      testCloseWithExceptionsInStreamer(1);
+      testCloseWithExceptionsInStreamer(ecPolicy.getNumParityUnits());
+      testCloseWithExceptionsInStreamer(ecPolicy.getNumParityUnits() + 1);
+      testCloseWithExceptionsInStreamer(ecPolicy.getNumDataUnits());
     } finally {
       tearDown();
     }
