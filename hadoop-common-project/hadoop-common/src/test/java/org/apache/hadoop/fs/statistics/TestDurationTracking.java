@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.statistics;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import org.junit.After;
@@ -57,6 +58,8 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
 
   private IOStatisticsStore stats;
 
+  private final AtomicInteger invocationCounter = new AtomicInteger(0);
+
   @Before
   public void setup() {
     stats = iostatisticsStore()
@@ -91,6 +94,8 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
 
   /**
    * A little sleep method; exceptions are swallowed.
+   * Increments {@link #invocationCounter}.
+   * Increments {@inheritDoc #atomicCounter}.
    */
   public void sleep() {
     sleepf(10);
@@ -98,13 +103,26 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
 
   /**
    * A little sleep function; exceptions are swallowed.
+   * Increments {@link #invocationCounter}.
    */
   protected int sleepf(final int millis) {
+    invocationCounter.incrementAndGet();
     try {
       Thread.sleep(millis);
     } catch (InterruptedException ignored) {
     }
     return millis;
+  }
+
+  /**
+   * Assert that the sleep counter has been invoked
+   * the expected number of times.
+   * @param expected expected value
+   */
+  private void assertCounterValue(final int expected) {
+    assertThat(invocationCounter.get())
+        .describedAs("Sleep invocation Counter")
+        .isEqualTo(expected);
   }
 
   /**
@@ -114,8 +132,9 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
   public void testDurationFunctionIOE() throws Throwable {
     FunctionRaisingIOE<Integer, Integer> fn =
         trackFunctionDuration(stats, REQUESTS,
-            (Integer x) -> x);
-    assertThat(fn.apply(1)).isEqualTo(1);
+            (Integer x) -> invocationCounter.getAndSet(x));
+    assertThat(fn.apply(1)).isEqualTo(0);
+    assertCounterValue(1);
     assertSummaryValues(
         fetchSuccessSummary(stats, REQUESTS),
         1, 0, 0);
@@ -194,6 +213,7 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
           sleepf(100);
           throw new RuntimeException("oops");
         }));
+    assertCounterValue(1);
     assertSummaryValues(
         fetchSuccessSummary(stats, REQUESTS),
         1, -1, -1);
@@ -208,7 +228,10 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
   @Test
   public void testInvocationDuration() throws Throwable {
     // call the operation
-    trackDurationOfInvocation(stats, REQUESTS, () -> sleepf(100));
+    trackDurationOfInvocation(stats, REQUESTS, () -> {
+      sleepf(100);
+    });
+    assertCounterValue(1);
     DurationStatisticSummary summary = fetchSuccessSummary(stats, REQUESTS);
     assertSummaryValues(summary, 1, 0, 0);
     assertSummaryMean(summary, 1, 0);

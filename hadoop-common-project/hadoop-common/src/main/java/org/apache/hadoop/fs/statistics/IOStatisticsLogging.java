@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.statistics;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,22 +87,28 @@ public final class IOStatisticsLogging {
   }
 
   /**
-   * Convert IOStatistics to a string form, with all the metrics sorted.
+   * Convert IOStatistics to a string form, with all the metrics sorted
+   * and empty value stripped.
    * This is more expensive than the simple conversion, so should only
    * be used for logging/output where it's known/highly likely that the
    * caller wants to see the values. Not for debug logging.
    * @param statistics A statistics instance.
    * @return string value or the empty string if null
    */
-  public static String ioStatisticsToSortedString(
+  public static String ioStatisticsToPrettyString(
       @Nullable final IOStatistics statistics) {
     if (statistics != null) {
       StringBuilder sb = new StringBuilder();
-      mapToSortedString(sb, "counters", statistics.counters());
-      mapToSortedString(sb, "\ngauges", statistics.gauges());
-      mapToSortedString(sb, "\nminimums", statistics.minimums());
-      mapToSortedString(sb, "\nmaximums", statistics.maximums());
-      mapToSortedString(sb, "\nmeans", statistics.meanStatistics());
+      mapToSortedString(sb, "counters", statistics.counters(),
+          p -> p == 0);
+      mapToSortedString(sb, "\ngauges", statistics.gauges(),
+          p -> p == 0);
+      mapToSortedString(sb, "\nminimums", statistics.minimums(),
+          p -> p  < 0);
+      mapToSortedString(sb, "\nmaximums", statistics.maximums(),
+          p -> p < 0);
+      mapToSortedString(sb, "\nmeans", statistics.meanStatistics(),
+          MeanStatistic::isEmpty);
 
       return sb.toString();
     } else {
@@ -147,8 +154,9 @@ public final class IOStatisticsLogging {
    */
   private static <E> void mapToSortedString(StringBuilder sb,
       final String type,
-      final Map<String, E> map) {
-    mapToString(sb, type, sortedMap(map), "\n");
+      final Map<String, E> map,
+      final Predicate<E> isEmpty) {
+    mapToString(sb, type, sortedMap(map, isEmpty), "\n");
   }
 
   /**
@@ -160,9 +168,14 @@ public final class IOStatisticsLogging {
    * @return a treemap with all the entries.
    */
   private static <E> Map<String, E> sortedMap(
-      final Map<String, E> source) {
+      final Map<String, E> source,
+      final Predicate<E> isEmpty) {
     Map<String, E> tm = new TreeMap<>();
-    tm.putAll(source);
+    for (Map.Entry<String, E> entry : source.entrySet()) {
+      if (!isEmpty.test(entry.getValue())) {
+        tm.put(entry.getKey(), entry.getValue());
+      }
+    }
     return tm;
   }
 

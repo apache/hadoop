@@ -179,7 +179,7 @@ public final class StoreStatisticNames {
       = "object_delete_request";
 
   /**
-   * The count of objects deleted in delete requests
+   * The count of objects deleted in delete requests.
    */
   public static final String OBJECT_DELETE_OBJECTS
       = "object_delete_objects";

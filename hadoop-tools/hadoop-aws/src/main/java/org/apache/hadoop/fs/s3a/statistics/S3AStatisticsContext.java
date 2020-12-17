@@ -61,4 +61,9 @@ public interface S3AStatisticsContext extends CountersAndGauges {
    */
   StatisticsFromAwsSdk newStatisticsFromAwsSdk();
 
+  /**
+   * Creaet a multipart statistics collector.
+   * @return an instance
+   */
+  S3AMultipartUploaderStatistics createMultipartUploaderStatistics();
 }

@@ -118,12 +118,6 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
-import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
-import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
-import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
-import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
-import org.apache.hadoop.fs.s3a.statistics.impl.BondedS3AStatisticsContext;
-import org.apache.hadoop.fs.s3a.statistics.impl.S3AMultipartUploaderStatisticsImpl;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -167,6 +161,11 @@ import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
+import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
+import org.apache.hadoop.fs.s3a.statistics.impl.BondedS3AStatisticsContext;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.fs.store.EtagChecksum;
@@ -205,7 +204,6 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfCallable;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -742,8 +740,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-    .createS3Client(getUri(), bucket, credentials, uaSuffix,
-        awsStats);
+        .createS3Client(getUri(), bucket, credentials, uaSuffix, awsStats);
   }
 
   /**
@@ -2009,7 +2006,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return a factory from the instrumentation.
    */
   protected DurationTrackerFactory getDurationTrackerFactory() {
-    return instrumentation.getDurationTrackerFactory();
+    return instrumentation != null ?
+        instrumentation.getDurationTrackerFactory()
+        : null;
   }
 
   /**
@@ -2108,8 +2107,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 } else {
                   return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
                 }
-              })
-      );
+              }));
     }
   }
 
@@ -2130,7 +2128,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Retry policy: retry untranslated.
    * @param request last list objects request to continue
    * @param prevResult last paged result to continue from
-   * @param trackerFactory
+   * @param trackerFactory duration tracking
    * @return the next result object
    * @throws IOException none, just there for retryUntranslated.
    */
@@ -2295,7 +2293,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 //incrementStatistic(OBJECT_DELETE_REQUEST, 1);
                 incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
                 return s3.deleteObjects(deleteRequest);
-          }));
+            }));
     } catch (MultiObjectDeleteException e) {
       // one or more of the keys could not be deleted.
       // log and rethrow
@@ -5010,7 +5008,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         getWriteOperationHelper(),
         ctx,
         basePath,
-        new S3AMultipartUploaderStatisticsImpl(ctx::incrementStatistic));
+        statisticsContext.createMultipartUploaderStatistics());
   }
 
   /**

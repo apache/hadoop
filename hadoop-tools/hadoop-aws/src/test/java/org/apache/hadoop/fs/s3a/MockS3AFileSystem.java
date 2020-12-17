@@ -42,8 +42,10 @@ import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTrackerFactory;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -367,4 +369,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
     /** no-op */
   }
 
+  @Override
+  protected DurationTrackerFactory getDurationTrackerFactory() {
+    return stubDurationTrackerFactory();
+  }
 }

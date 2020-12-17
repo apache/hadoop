@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.DelegationTokenStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
@@ -202,6 +203,11 @@ public class BondedS3AStatisticsContext implements S3AStatisticsContext {
   @Override
   public StatisticsFromAwsSdk newStatisticsFromAwsSdk() {
     return new StatisticsFromAwsSdkImpl(getInstrumentation());
+  }
+
+  @Override
+  public S3AMultipartUploaderStatistics createMultipartUploaderStatistics() {
+    return new S3AMultipartUploaderStatisticsImpl(this::incrementCounter);
   }
 
   /**

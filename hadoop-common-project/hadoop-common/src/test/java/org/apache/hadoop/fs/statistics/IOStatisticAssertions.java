@@ -21,10 +21,14 @@ package org.apache.hadoop.fs.statistics;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.ObjectStreamClass;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.assertj.core.api.AbstractLongAssert;
 import org.assertj.core.api.ObjectAssert;
@@ -489,10 +493,37 @@ public final class IOStatisticAssertions {
     }
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
     IOStatistics deser;
-    try (ObjectInputStream ois = new ObjectInputStream(bais)) {
+    try (ObjectInputStream ois = new RestrictedInput(bais,
+        IOStatisticsSnapshot.requiredSerializationClasses())) {
       deser = (IOStatistics) ois.readObject();
     }
     return deser;
+  }
+
+  private static final class RestrictedInput extends ObjectInputStream {
+
+    private final List<String> allowedClasses;
+
+    private RestrictedInput(final InputStream in,
+        final List<Class> allowedClasses) throws IOException {
+
+      super(in);
+      this.allowedClasses = allowedClasses.stream()
+          .map(Class::getName)
+          .collect(Collectors.toList());
+    }
+
+    @Override
+    protected Class<?> resolveClass(final ObjectStreamClass desc)
+        throws IOException, ClassNotFoundException {
+      final String classname = desc.getName();
+      if (!allowedClasses.contains(classname)) {
+        throw new ClassNotFoundException("Class " + classname
+            + " Not in list of allowed classes");
+      }
+
+      return super.resolveClass(desc);
+    }
   }
 
 }

@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,11 +32,15 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatisticsSource;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
 
@@ -53,6 +58,33 @@ public abstract class AbstractContractStreamIOStatisticsTest
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractContractStreamIOStatisticsTest.class);
+
+  /**
+   * FileSystem statistics are collected across every test case.
+   */
+  protected static final IOStatisticsSnapshot FILESYSTEM_IOSTATS =
+      snapshotIOStatistics();
+
+  @Override
+  public void teardown() throws Exception {
+    final FileSystem fs = getFileSystem();
+    if (fs instanceof IOStatisticsSource) {
+      FILESYSTEM_IOSTATS.aggregate(((IOStatisticsSource)fs).getIOStatistics());
+    }
+    super.teardown();
+  }
+
+  /**
+   * Dump the filesystem statistics after the class if contains any values
+   */
+  @AfterClass
+  public static void dumpFileSystemIOStatistics() {
+    if (!FILESYSTEM_IOSTATS.counters().isEmpty()) {
+      // if there is at least one counter
+      LOG.info("Aggregate FileSystem Statistics {}",
+          ioStatisticsToPrettyString(FILESYSTEM_IOSTATS));
+    }
+  }
 
   @Test
   public void testOutputStreamStatisticKeys() throws Throwable {

@@ -278,7 +278,8 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         withWhenKeeping(getDeleteMarkerStatistic(), 0),
         withWhenKeeping(FAKE_DIRECTORIES_DELETED, 0),
         // delete all possible fake dirs above the file
-        withWhenDeleting(getDeleteMarkerStatistic(), isBulkDelete() ? 1: directories),
+        withWhenDeleting(getDeleteMarkerStatistic(),
+            isBulkDelete() ? 1: directories),
         withWhenDeleting(FAKE_DIRECTORIES_DELETED,
             directories));
   }

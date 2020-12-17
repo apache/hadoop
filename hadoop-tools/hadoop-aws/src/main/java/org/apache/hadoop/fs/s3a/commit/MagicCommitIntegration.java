@@ -62,7 +62,7 @@ public class MagicCommitIntegration {
       boolean magicCommitEnabled) {
     this.owner = owner;
     this.magicCommitEnabled = magicCommitEnabled;
-    storeContext = owner.createStoreContext();
+    this.storeContext = owner.createStoreContext();
   }
 
   /**

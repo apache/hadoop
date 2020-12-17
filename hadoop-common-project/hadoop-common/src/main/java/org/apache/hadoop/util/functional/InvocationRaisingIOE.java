@@ -39,14 +39,4 @@ public interface InvocationRaisingIOE {
    */
   void apply() throws IOException;
 
-  /**
-   * Convert to a callable for ease of passing around.
-   * @return the callable.
-   */
-  default CallableRaisingIOE<Void> asCallable() {
-    return () -> {
-      apply();
-      return null;
-    };
-  }
 }

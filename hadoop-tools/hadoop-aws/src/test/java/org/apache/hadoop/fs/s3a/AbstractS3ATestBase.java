@@ -42,7 +42,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToSortedString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 
 /**
@@ -97,7 +97,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   @AfterClass
   public static void dumpFileSystemIOStatistics() {
     LOG.info("Aggregate FileSystem Statistics {}",
-        ioStatisticsToSortedString(FILESYSTEM_IOSTATS));
+        ioStatisticsToPrettyString(FILESYSTEM_IOSTATS));
   }
 
   /**

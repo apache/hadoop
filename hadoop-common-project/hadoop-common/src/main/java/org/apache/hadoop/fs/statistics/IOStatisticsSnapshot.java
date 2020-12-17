@@ -23,9 +23,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -41,13 +44,19 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotM
 
 /**
  * Snapshot of statistics from a different source.
- * <p></p>
+ * <p>
  * It is serializable so that frameworks which can use java serialization
  * to propagate data (Spark, Flink...) can send the statistics
  * back. For this reason, TreeMaps are explicitly used as field types,
  * even though IDEs can recommend use of Map instead.
- * <p></p>
+ * For security reasons, untrusted java object streams should never be
+ * deserialized. If for some reason this is required, use
+ * {@link #requiredSerializationClasses()} to get the list of classes
+ * used when deserializing instances of this object.
+ * <p>
+ * <p>
  * It is annotated for correct serializations with jackson2.
+ * </p>
  */
 @SuppressWarnings("CollectionDeclaredAsConcreteClass")
 @InterfaceAudience.Public
@@ -56,6 +65,16 @@ public final class IOStatisticsSnapshot
     implements IOStatistics, Serializable, IOStatisticsAggregator {
 
   private static final long serialVersionUID = -1762522703841538084L;
+
+  /**
+   * List of chasses needed to deserialize.
+   */
+  private static final Class[] DESERIALIZATION_CLASSES = {
+      IOStatisticsSnapshot.class,
+      TreeMap.class,
+      Long.class,
+      MeanStatistic.class,
+  };
 
   /**
    * Counters.
@@ -251,6 +270,16 @@ public final class IOStatisticsSnapshot
         (TreeMap<String, Long>) s.readObject());
     meanStatistics = new ConcurrentHashMap<>(
         (TreeMap<String, MeanStatistic>) s.readObject());
+  }
+
+  /**
+   * What classes are needed to deserialize this class?
+   * Needed to securely unmarshall this from untrusted sources.
+   * @return a list of required classes to deserialize the data.
+   */
+  public static List<Class> requiredSerializationClasses() {
+    return Arrays.stream(DESERIALIZATION_CLASSES)
+        .collect(Collectors.toList());
   }
 
 }

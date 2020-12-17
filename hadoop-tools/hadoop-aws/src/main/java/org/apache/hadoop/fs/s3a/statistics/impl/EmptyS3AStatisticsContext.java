@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.DelegationTokenStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticInterface;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
@@ -96,6 +97,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
   @Override
   public StatisticsFromAwsSdk newStatisticsFromAwsSdk() {
     return EMPTY_STATISTICS_FROM_AWS_SDK;
+  }
+
+  @Override
+  public S3AMultipartUploaderStatistics createMultipartUploaderStatistics() {
+    return new EmptyMultipartUploaderStatistics();
   }
 
   @Override
@@ -542,4 +548,50 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
   }
 
+  /**
+   * Multipart Uploader.
+   */
+  public static final class EmptyMultipartUploaderStatistics
+      implements S3AMultipartUploaderStatistics {
+
+    @Override
+    public void instantiated() {
+
+    }
+
+    @Override
+    public void uploadStarted() {
+
+    }
+
+    @Override
+    public void partPut(final long lengthInBytes) {
+
+    }
+
+    @Override
+    public void uploadCompleted() {
+
+    }
+
+    @Override
+    public void uploadAborted() {
+
+    }
+
+    @Override
+    public void abortUploadsUnderPathInvoked() {
+
+    }
+
+    @Override
+    public void close() throws IOException {
+
+    }
+
+    @Override
+    public DurationTracker trackDuration(final String key, final long count) {
+      return stubDurationTracker();
+    }
+  }
 }

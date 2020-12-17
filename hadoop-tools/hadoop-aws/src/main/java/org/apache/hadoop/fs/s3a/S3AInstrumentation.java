@@ -1042,7 +1042,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void inputPolicySet(int updatedPolicy) {
       increment(StreamStatisticNames.STREAM_READ_SEEK_POLICY_CHANGED);
-      getIOStatistics().setGauge(STREAM_READ_GAUGE_INPUT_POLICY, updatedPolicy);
+      this.getIOStatistics().setGauge(STREAM_READ_GAUGE_INPUT_POLICY, updatedPolicy);
     }
 
     /**
@@ -1053,7 +1053,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public ChangeTrackerStatistics getChangeTrackerStatistics() {
       return new CountingChangeTracker(
-          getIOStatistics().getCounterReference(
+          this.getIOStatistics().getCounterReference(
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES));
     }
 
@@ -1069,7 +1069,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       final StringBuilder sb = new StringBuilder(
           "StreamStatistics{");
       sb.append(IOStatisticsLogging.ioStatisticsToString(
-          getIOStatistics()));
+          this.getIOStatistics()));
       sb.append('}');
       return sb.toString();
     }
@@ -1108,12 +1108,13 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private void merge(boolean isClosed) {
 
-      IOStatisticsStore ioStatistics = getIOStatistics();
+      final IOStatisticsStore localIOStats = this.getIOStatistics();
+      IOStatisticsStore ioStatistics = localIOStats;
       LOG.debug("Merging statistics into FS statistics in {}: {}",
           (isClosed ? "close()" : "unbuffer()"),
           demandStringifyIOStatistics(ioStatistics));
       promoteInputStreamCountersToMetrics();
-      mergedStats = snapshotIOStatistics(getIOStatistics());
+      mergedStats = snapshotIOStatistics(localIOStats);
 
       if (isClosed) {
         // stream is being closed.
@@ -1147,7 +1148,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private void promoteInputStreamCountersToMetrics() {
       // iterate through all the counters
-      getIOStatistics().counters()
+      this.getIOStatistics().counters()
           .keySet().stream()
           .forEach(e -> promoteIOCounter(e));
     }
@@ -1262,7 +1263,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public long getInputPolicy() {
-      return getIOStatistics().gauges().get(STREAM_READ_GAUGE_INPUT_POLICY);
+      return this.getIOStatistics().gauges().get(STREAM_READ_GAUGE_INPUT_POLICY);
     }
 
     @Override
@@ -1298,7 +1299,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         source.lookupCounterValue(
             StreamStatisticNames.STREAM_WRITE_EXCEPTIONS));
     // merge in all the IOStatistics
-    getIOStatistics().aggregate(source.getIOStatistics());
+    this.getIOStatistics().aggregate(source.getIOStatistics());
   }
 
   /**
@@ -1407,7 +1408,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       // the local counter is used in toString reporting.
       queueDuration.addAndGet(timeInQueue.toMillis());
       // update the duration fields in the IOStatistics.
-      getIOStatistics().addTimedOperation(
+      this.getIOStatistics().addTimedOperation(
           ACTION_EXECUTOR_ACQUIRED,
           timeInQueue);
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_PENDING, -1);
@@ -1553,7 +1554,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "OutputStreamStatistics{");
-      sb.append(getIOStatistics().toString());
+      sb.append(this.getIOStatistics().toString());
       sb.append(", blocksActive=").append(blocksActive);
       sb.append(", blockUploadsCompleted=").append(blockUploadsCompleted);
       sb.append(", blocksAllocated=").append(blocksAllocated);

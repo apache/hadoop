@@ -556,17 +556,15 @@ public class CommitOperations implements IOStatisticsSource {
       threw = false;
       return commitData;
     } finally {
-      if (threw) {
-        // try {} clause did not complete. Note the failure
-        tracker.failed();
-        if (uploadId != null) {
-          // an upload had been initiated: abort it.
-          try {
-            abortMultipartCommit(destKey, uploadId);
-          } catch (IOException e) {
-            LOG.error("Failed to abort upload {} to {}", uploadId, destKey, e);
-          }
+      if (threw && uploadId != null) {
+        try {
+          abortMultipartCommit(destKey, uploadId);
+        } catch (IOException e) {
+          LOG.error("Failed to abort upload {} to {}", uploadId, destKey, e);
         }
+      }
+      if (threw) {
+        tracker.failed();
       }
       // close tracker and so report statistics of success/failure
       tracker.close();
