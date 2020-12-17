@@ -346,8 +346,8 @@ public class DatanodeHttpServer implements Closeable {
 
   @Override
   public void close() throws IOException {
-    bossGroup.shutdownGracefully();
     workerGroup.shutdownGracefully();
+    bossGroup.shutdownGracefully();
     if (sslFactory != null) {
       sslFactory.destroy();
     }
