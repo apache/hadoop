@@ -107,6 +107,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,6 +139,13 @@ public class TestDistributedShell {
   public Timeout globalTimeout = new Timeout(90000);
   @Rule
   public TemporaryFolder tmpFolder = new TemporaryFolder();
+
+  @Rule
+  public TestName name = new TestName();
+
+  private String generateAppName() {
+    return name.getMethodName().replaceFirst("test", "");
+  }
 
   @Before
   public void setup() throws Exception {
@@ -737,6 +745,8 @@ public class TestDistributedShell {
   @Test
   public void testDSRestartWithPreviousRunningContainers() throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -772,6 +782,8 @@ public class TestDistributedShell {
   @Test
   public void testDSAttemptFailuresValidityIntervalSucess() throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -810,6 +822,8 @@ public class TestDistributedShell {
   @Test
   public void testDSAttemptFailuresValidityIntervalFailed() throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -857,6 +871,8 @@ public class TestDistributedShell {
     fileWriter.write("log4j.rootLogger=debug,stdout");
     fileWriter.close();
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -906,6 +922,8 @@ public class TestDistributedShell {
   public void testSpecifyingLogAggregationContext() throws Exception {
     String regex = ".*(foo|bar)\\d";
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--shell_command",
@@ -928,6 +946,8 @@ public class TestDistributedShell {
   public void testDSShellWithCommands() throws Exception {
 
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -960,6 +980,8 @@ public class TestDistributedShell {
   @Test
   public void testDSShellWithMultipleArgs() throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1010,6 +1032,8 @@ public class TestDistributedShell {
     fileWriter.close();
     System.out.println(customShellScript.getAbsolutePath());
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1055,6 +1079,8 @@ public class TestDistributedShell {
     LOG.info("Initializing DS Client with no jar file");
     try {
       String[] args = {
+          "--appname",
+          generateAppName(),
           "--num_containers",
           "2",
           "--shell_command",
@@ -1263,6 +1289,8 @@ public class TestDistributedShell {
   @Test
   public void testContainerLaunchFailureHandling() throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
       "--jar",
       APPMASTER_JAR,
       "--num_containers",
@@ -1291,6 +1319,8 @@ public class TestDistributedShell {
   @Test
   public void testDebugFlag() throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1388,14 +1418,18 @@ public class TestDistributedShell {
 
   @Test
   public void testDistributedShellResourceProfiles() throws Exception {
+    String appName = generateAppName();
     String[][] args = {
-        {"--jar", APPMASTER_JAR, "--num_containers", "1", "--shell_command",
+        {"--appname", appName + "-0", "--jar", APPMASTER_JAR,
+            "--num_containers", "1", "--shell_command",
             Shell.WINDOWS ? "dir" : "ls", "--container_resource_profile",
             "maximum" },
-        {"--jar", APPMASTER_JAR, "--num_containers", "1", "--shell_command",
+        {"--appname", appName + "-1", "--jar", APPMASTER_JAR,
+            "--num_containers", "1", "--shell_command",
             Shell.WINDOWS ? "dir" : "ls", "--master_resource_profile",
             "default" },
-        {"--jar", APPMASTER_JAR, "--num_containers", "1", "--shell_command",
+        {"--appname", appName + "-2", "--jar", APPMASTER_JAR,
+            "--num_containers", "1", "--shell_command",
             Shell.WINDOWS ? "dir" : "ls", "--master_resource_profile",
             "default", "--container_resource_profile", "maximum" }
         };
@@ -1419,6 +1453,8 @@ public class TestDistributedShell {
     Client client = new Client(new Configuration(yarnCluster.getConfig()));
     try {
       String[] args = {
+          "--appname",
+          generateAppName(),
           "--jar",
           APPMASTER_JAR,
           "--num_containers",
@@ -1449,6 +1485,8 @@ public class TestDistributedShell {
     Client client = new Client(new Configuration(yarnCluster.getConfig()));
     try {
       String[] args = {
+          "--appname",
+          generateAppName(),
           "--jar",
           APPMASTER_JAR,
           "--num_containers",
@@ -1569,6 +1607,8 @@ public class TestDistributedShell {
     }
 
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1650,6 +1690,8 @@ public class TestDistributedShell {
   public void testDistributedShellAMResourcesWithIllegalArguments()
       throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1667,6 +1709,8 @@ public class TestDistributedShell {
   public void testDistributedShellAMResourcesWithMissingArgumentValue()
       throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1683,6 +1727,8 @@ public class TestDistributedShell {
   public void testDistributedShellAMResourcesWithUnknownResource()
       throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1701,6 +1747,8 @@ public class TestDistributedShell {
   public void testDistributedShellNonExistentQueue()
       throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1719,6 +1767,8 @@ public class TestDistributedShell {
   public void testDistributedShellWithSingleFileLocalization()
       throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1740,6 +1790,8 @@ public class TestDistributedShell {
   public void testDistributedShellWithMultiFileLocalization()
       throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1761,6 +1813,8 @@ public class TestDistributedShell {
   public void testDistributedShellWithNonExistentFileLocalization()
       throws Exception {
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
@@ -1784,14 +1838,14 @@ public class TestDistributedShell {
       throws Exception {
     String appName = "DistributedShellCleanup";
     String[] args = {
+        "--appname",
+        generateAppName(),
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
         "1",
         "--shell_command",
-        Shell.WINDOWS ? "dir" : "ls",
-        "--appname",
-        appName
+        Shell.WINDOWS ? "dir" : "ls"
     };
     Configuration config = new Configuration(yarnCluster.getConfig());
     Client client = new Client(config);
