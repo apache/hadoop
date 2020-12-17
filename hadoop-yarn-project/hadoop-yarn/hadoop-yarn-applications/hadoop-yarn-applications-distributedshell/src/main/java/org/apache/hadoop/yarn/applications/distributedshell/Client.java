@@ -1153,14 +1153,13 @@ public class Client {
         } else {
           LOG.info("Application did finished unsuccessfully. "
                   + "YarnState={}, DSFinalStatus={}. Breaking monitoring loop",
-              state.toString(), dsStatus.toString());
+              state, dsStatus);
         }
         break;
       } else if (YarnApplicationState.KILLED == state
           || YarnApplicationState.FAILED == state) {
         LOG.info("Application did not finish. YarnState={}, DSFinalStatus={}. "
-                + "Breaking monitoring loop",
-            state.toString(), dsStatus.toString());
+                + "Breaking monitoring loop", state, dsStatus);
         break;
       }
 
