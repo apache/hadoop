@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.net;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -196,10 +196,8 @@ public class NetworkTopology {
         loc = loc.substring(1);
       }
       InnerNode rack = (InnerNode) clusterMap.getLoc(loc);
-      if (rack == null) {
-        return null;
-      }
-      return new ArrayList<Node>(rack.getChildren());
+      return (rack == null) ? new ArrayList<>(0)
+          : new ArrayList<>(rack.getChildren());
     } finally {
       netlock.readLock().unlock();
     }
@@ -949,6 +947,7 @@ public class NetworkTopology {
    * <p>
    * As an additional twist, we also randomize the nodes at each network
    * distance. This helps with load balancing when there is data skew.
+   * And it helps choose node with more fast storage type.
    *
    * @param reader    Node where data will be read
    * @param nodes     Available replicas with the requested data
@@ -983,7 +982,10 @@ public class NetworkTopology {
     int idx = 0;
     for (List<T> list: tree.values()) {
       if (list != null) {
-        secondarySort.accept(list);
+        Collections.shuffle(list, r);
+        if (secondarySort != null) {
+          secondarySort.accept(list);
+        }
         for (T n: list) {
           nodes[idx] = n;
           idx++;

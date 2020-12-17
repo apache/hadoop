@@ -953,6 +953,124 @@
 </property>
 
 <property>
+  <name>fs.viewfs.overload.scheme.target.hdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
+  <description>The DistributedFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's schemes are hdfs.
+   </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.s3a.impl</name>
+  <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+  <description>The S3AFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's schemes are s3a.</description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.ofs.impl</name>
+  <value>org.apache.hadoop.fs.ozone.RootedOzoneFileSystem</value>
+  <description>The RootedOzoneFileSystem for view file system overload scheme
+    when child file system and ViewFSOverloadScheme's schemes are ofs.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.o3fs.impl</name>
+  <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
+  <description>The OzoneFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's schemes are o3fs.</description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.ftp.impl</name>
+  <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
+  <description>The FTPFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's schemes are ftp.
+   </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.webhdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.web.WebHdfsFileSystem</value>
+  <description>The WebHdfsFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's schemes are webhdfs.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.swebhdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.web.SWebHdfsFileSystem</value>
+  <description>The SWebHdfsFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's schemes are swebhdfs.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.file.impl</name>
+  <value>org.apache.hadoop.fs.LocalFileSystem</value>
+  <description>The LocalFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's schemes are file.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.abfs.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem</value>
+  <description>The AzureBlobFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's schemes are abfs.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.abfss.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.SecureAzureBlobFileSystem</value>
+  <description>The SecureAzureBlobFileSystem for view file system overload
+   scheme when child file system and ViewFSOverloadScheme's schemes are abfss.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.wasb.impl</name>
+  <value>org.apache.hadoop.fs.azure.NativeAzureFileSystem</value>
+  <description>The NativeAzureFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's schemes are wasb.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.swift.impl</name>
+  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
+  <description>The SwiftNativeFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's schemes are swift.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.oss.impl</name>
+  <value>org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem</value>
+  <description>The AliyunOSSFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's schemes are oss.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.http.impl</name>
+  <value>org.apache.hadoop.fs.http.HttpFileSystem</value>
+  <description>The HttpFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's schemes are http.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.https.impl</name>
+  <value>org.apache.hadoop.fs.http.HttpsFileSystem</value>
+  <description>The HttpsFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's schemes are https.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.ftp.impl</name>
   <value>org.apache.hadoop.fs.ftp.FtpFs</value>
   <description>The FileSystem for Ftp: uris.</description>
@@ -1807,20 +1925,13 @@
 </property>
 
 <property>
-  <name>fs.s3a.committer.staging.abort.pending.uploads</name>
+  <name>fs.s3a.committer.abort.pending.uploads</name>
   <value>true</value>
   <description>
-    Should the staging committers abort all pending uploads to the destination
+    Should the committers abort all pending uploads to the destination
     directory?
 
-    Changing this if more than one partitioned committer is
-    writing to the same destination tree simultaneously; otherwise
-    the first job to complete will cancel all outstanding uploads from the
-    others. However, it may lead to leaked outstanding uploads from failed
-    tasks. If disabled, configure the bucket lifecycle to remove uploads
-    after a time period, and/or set up a workflow to explicitly delete
-    entries. Otherwise there is a risk that uncommitted uploads may run up
-    bills.
+    Set to false if more than one job is writing to the same directory tree.
   </description>
 </property>
 
@@ -2463,6 +2574,15 @@
   <value>10</value>
   <description>The number of top (i.e., heaviest) users to emit metric
     information about. This property applies to DecayRpcScheduler.
+  </description>
+</property>
+
+<property>
+  <name>ipc.[port_number].decay-scheduler.service-users</name>
+  <value></value>
+  <description>Service users will always be scheduled into the highest-priority
+    queue and won't be included in the priority computation of normal user
+    calls. They are specified as a comma-separated list.
   </description>
 </property>
 
@@ -3183,6 +3303,26 @@
 </property>
 
 <property>
+  <name>hadoop.security.crypto.codec.classes.sm4.ctr.nopadding</name>
+  <value>org.apache.hadoop.crypto.OpensslSm4CtrCryptoCodec, org.apache.hadoop.crypto.JceSm4CtrCryptoCodec</value>
+  <description>
+    Comma-separated list of crypto codec implementations for SM4/CTR/NoPadding.
+    The first implementation will be used if available, others are fallbacks.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.openssl.engine.id</name>
+  <value></value>
+  <description>
+    The Openssl provided an engine mechanism that allow to specify third-party software
+    encryption library or hardware encryption device for encryption. The engine ID could
+    be vendor defined and will be passed to openssl, more info please see:
+    https://github.com/openssl/openssl/blob/master/README.ENGINE
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.crypto.cipher.suite</name>
   <value>AES/CTR/NoPadding</value>
   <description>
@@ -3700,6 +3840,16 @@
       in audit logs.
     </description>
   </property>
+  <property>
+    <name>hadoop.caller.context.separator</name>
+    <value>,</value>
+    <description>
+      The separator is for context which maybe contain many fields. For example,
+      if the separator is ',',  and there are two key/value fields in context,
+      in which case the context string is "key1:value1,key2:value2". The
+      separator should not contain '\t', '\n', '='.
+    </description>
+  </property>
 <!-- SequenceFile's Sorter properties -->
   <property>
     <name>seq.io.sort.mb</name>
@@ -3861,4 +4011,18 @@
       ThreadGroup approach is preferred for better performance.
     </description>
   </property>
+
+  <property>
+    <name>fs.AbstractFileSystem.ofs.impl</name>
+    <value>org.apache.hadoop.fs.ozone.RootedOzFs</value>
+    <description>The AbstractFileSystem for Rooted Ozone
+      FileSystem ofs uri</description>
+  </property>
+
+  <property>
+    <name>fs.AbstractFileSystem.o3fs.impl</name>
+    <value>org.apache.hadoop.fs.ozone.OzFs</value>
+    <description>The AbstractFileSystem for Ozone FileSystem o3fs uri</description>
+  </property>
+
 </configuration>

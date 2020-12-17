@@ -30,10 +30,10 @@ import java.util.Timer;
 import java.util.TimerTask;
 import javax.management.ObjectName;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.annotations.VisibleForTesting;
-import static com.google.common.base.Preconditions.*;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
 
 import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.math3.util.ArithmeticUtils;
@@ -273,7 +273,11 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   T register(final String name, final String description, final T sink) {
     LOG.debug(name +", "+ description);
     if (allSinks.containsKey(name)) {
-      LOG.warn("Sink "+ name +" already exists!");
+      if(sinks.get(name) == null) {
+        registerSink(name, description, sink);
+      } else {
+        LOG.warn("Sink "+ name +" already exists!");
+      }
       return sink;
     }
     allSinks.put(name, sink);

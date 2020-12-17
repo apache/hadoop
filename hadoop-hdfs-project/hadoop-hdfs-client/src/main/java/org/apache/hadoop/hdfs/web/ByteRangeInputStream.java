@@ -31,8 +31,8 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.net.HttpHeaders;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 
 import javax.annotation.Nonnull;
 

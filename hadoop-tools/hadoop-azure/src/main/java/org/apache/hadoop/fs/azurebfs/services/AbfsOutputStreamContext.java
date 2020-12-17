@@ -31,7 +31,14 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private AbfsOutputStreamStatistics streamStatistics;
 
-  public AbfsOutputStreamContext() {
+  private boolean isAppendBlob;
+
+  private int writeMaxConcurrentRequestCount;
+
+  private int maxWriteRequestsToQueue;
+
+  public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
+    super(sasTokenRenewPeriodForStreamsInSeconds);
   }
 
   public AbfsOutputStreamContext withWriteBufferSize(
@@ -57,8 +64,26 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withAppendBlob(
+          final boolean isAppendBlob) {
+    this.isAppendBlob = isAppendBlob;
+    return this;
+  }
+
   public AbfsOutputStreamContext build() {
     // Validation of parameters to be done here.
+    return this;
+  }
+
+  public AbfsOutputStreamContext withWriteMaxConcurrentRequestCount(
+      final int writeMaxConcurrentRequestCount) {
+    this.writeMaxConcurrentRequestCount = writeMaxConcurrentRequestCount;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withMaxWriteRequestsToQueue(
+      final int maxWriteRequestsToQueue) {
+    this.maxWriteRequestsToQueue = maxWriteRequestsToQueue;
     return this;
   }
 
@@ -76,5 +101,17 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public AbfsOutputStreamStatistics getStreamStatistics() {
     return streamStatistics;
+  }
+
+  public boolean isAppendBlob() {
+    return isAppendBlob;
+  }
+
+  public int getWriteMaxConcurrentRequestCount() {
+    return this.writeMaxConcurrentRequestCount;
+  }
+
+  public int getMaxWriteRequestsToQueue() {
+    return this.maxWriteRequestsToQueue;
   }
 }

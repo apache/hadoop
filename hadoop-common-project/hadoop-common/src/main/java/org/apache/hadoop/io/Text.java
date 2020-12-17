@@ -77,6 +77,7 @@ public class Text extends BinaryComparable
 
   private byte[] bytes = EMPTY_BYTES;
   private int length = 0;
+  private int textLength = -1;
 
   /**
    * Construct an empty text string.
@@ -129,6 +130,17 @@ public class Text extends BinaryComparable
   @Override
   public int getLength() {
     return length;
+  }
+
+  /**
+   * Returns the length of this text. The length is equal to the number of
+   * Unicode code units in the text.
+   */
+  public int getTextLength() {
+    if (textLength < 0) {
+      textLength = toString().length();
+    }
+    return textLength;
   }
 
   /**
@@ -204,6 +216,7 @@ public class Text extends BinaryComparable
       ByteBuffer bb = encode(string, true);
       bytes = bb.array();
       length = bb.limit();
+      textLength = string.length();
     } catch (CharacterCodingException e) {
       throw new RuntimeException("Should not have happened", e);
     }
@@ -221,6 +234,7 @@ public class Text extends BinaryComparable
    */
   public void set(Text other) {
     set(other.getBytes(), 0, other.getLength());
+    this.textLength = other.textLength;
   }
 
   /**
@@ -234,6 +248,7 @@ public class Text extends BinaryComparable
     ensureCapacity(len);
     System.arraycopy(utf8, start, bytes, 0, len);
     this.length = len;
+    this.textLength = -1;
   }
 
   /**
@@ -251,6 +266,7 @@ public class Text extends BinaryComparable
     }
     System.arraycopy(utf8, start, bytes, length, len);
     length += len;
+    textLength = -1;
   }
 
   /**
@@ -263,6 +279,7 @@ public class Text extends BinaryComparable
    */
   public void clear() {
     length = 0;
+    textLength = -1;
   }
 
   /**
@@ -327,6 +344,7 @@ public class Text extends BinaryComparable
     ensureCapacity(len);
     in.readFully(bytes, 0, len);
     length = len;
+    textLength = -1;
   }
 
   /**

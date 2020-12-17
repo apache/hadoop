@@ -111,9 +111,6 @@ for i in "$@"; do
     --openssllibbundle=*)
       OPENSSLLIBBUNDLE=${i#*=}
     ;;
-    --snappybinbundle=*)
-      SNAPPYBINBUNDLE=${i#*=}
-    ;;
     --snappylib=*)
       SNAPPYLIB=${i#*=}
     ;;
@@ -175,8 +172,6 @@ if [[ -d "${BIN_DIR}" ]] ; then
     echo "Bundling bin files failed"
     exit 1
   fi
-
-  bundle_native_bin "${SNAPPYBINBUNDLE}" "${SNAPPYLIBBUNDLE}" "snappy.lib" "snappy" "${SNAPPYLIB}"
 
   bundle_native_bin "${ZSTDBINBUNDLE}" "${ZSTDLIBBUNDLE}" "zstd.lib" "zstd" "${ZSTDLIB}"
 

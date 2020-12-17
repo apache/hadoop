@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -154,6 +155,22 @@ class FSDirSnapshotOp {
     }
   }
 
+  static SnapshotStatus[] getSnapshotListing(
+      FSDirectory fsd, FSPermissionChecker pc, SnapshotManager snapshotManager,
+      String path)
+      throws IOException {
+    fsd.readLock();
+    try {
+      INodesInPath iip = fsd.getINodesInPath(path, DirOp.READ);
+      if (fsd.isPermissionEnabled()) {
+        fsd.checkPathAccess(pc, iip, FsAction.READ);
+      }
+      return snapshotManager.getSnapshotListing(iip);
+    } finally {
+      fsd.readUnlock();
+    }
+  }
+
   static SnapshotDiffReport getSnapshotDiffReport(FSDirectory fsd,
       FSPermissionChecker pc, SnapshotManager snapshotManager, String path,
       String fromSnapshot, String toSnapshot) throws IOException {
@@ -249,12 +266,22 @@ class FSDirSnapshotOp {
       fsd.checkOwner(pc, iip);
     }
 
+    // time of snapshot deletion
+    final long now = Time.now();
+    final INode.BlocksMapUpdateInfo collectedBlocks = deleteSnapshot(
+        fsd, snapshotManager, iip, snapshotName, now, snapshotRoot,
+        logRetryCache);
+    return collectedBlocks;
+  }
+
+  static INode.BlocksMapUpdateInfo deleteSnapshot(
+      FSDirectory fsd, SnapshotManager snapshotManager, INodesInPath iip,
+      String snapshotName, long now, String snapshotRoot, boolean logRetryCache)
+      throws IOException {
     INode.BlocksMapUpdateInfo collectedBlocks = new INode.BlocksMapUpdateInfo();
     ChunkedArrayList<INode> removedINodes = new ChunkedArrayList<>();
     INode.ReclaimContext context = new INode.ReclaimContext(
         fsd.getBlockStoragePolicySuite(), collectedBlocks, removedINodes, null);
-    // time of snapshot deletion
-    final long now = Time.now();
     fsd.writeLock();
     try {
       snapshotManager.deleteSnapshot(iip, snapshotName, context, now);
@@ -268,7 +295,6 @@ class FSDirSnapshotOp {
     removedINodes.clear();
     fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
         logRetryCache, now);
-
     return collectedBlocks;
   }
 

@@ -23,7 +23,7 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.util.Shell;
@@ -160,6 +160,37 @@ public class TestShellCommandFencer {
       fencer.tryFence(TEST_TARGET, "echo %target_host% %target_port%");
       Mockito.verify(ShellCommandFencer.LOG).info(
           Mockito.endsWith("echo %ta...get_port%: dummyhost 1234"));
+    }
+  }
+
+  /**
+   * Test if fencing target has peer set, the failover can trigger different
+   * commands on source and destination respectively.
+   */
+  @Test
+  public void testEnvironmentWithPeer() {
+    HAServiceTarget target = new DummyHAService(HAServiceState.ACTIVE,
+        new InetSocketAddress("dummytarget", 1111));
+    HAServiceTarget source = new DummyHAService(HAServiceState.STANDBY,
+        new InetSocketAddress("dummysource", 2222));
+    target.setTransitionTargetHAStatus(HAServiceState.ACTIVE);
+    source.setTransitionTargetHAStatus(HAServiceState.STANDBY);
+    String cmd = "echo $target_host $target_port,"
+        + "echo $source_host $source_port";
+    if (!Shell.WINDOWS) {
+      fencer.tryFence(target, cmd);
+      Mockito.verify(ShellCommandFencer.LOG).info(
+          Mockito.contains("echo $ta...rget_port: dummytarget 1111"));
+      fencer.tryFence(source, cmd);
+      Mockito.verify(ShellCommandFencer.LOG).info(
+          Mockito.contains("echo $so...urce_port: dummysource 2222"));
+    } else {
+      fencer.tryFence(target, cmd);
+      Mockito.verify(ShellCommandFencer.LOG).info(
+          Mockito.contains("echo %ta...get_port%: dummytarget 1111"));
+      fencer.tryFence(source, cmd);
+      Mockito.verify(ShellCommandFencer.LOG).info(
+          Mockito.contains("echo %so...urce_port%: dummysource 2222"));
     }
   }
 

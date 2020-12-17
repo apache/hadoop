@@ -31,15 +31,12 @@ import java.util.StringTokenizer;
 import java.util.TreeSet;
 import java.util.Vector;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
-import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,8 +50,7 @@ import org.slf4j.LoggerFactory;
  * Optionally displays statistics on read performance.
  * 
  */
-@Ignore
-public class DistributedFSCheck extends TestCase {
+public class DistributedFSCheck {
   // Constants
   private static final Logger LOG =
       LoggerFactory.getLogger(DistributedFSCheck.class);

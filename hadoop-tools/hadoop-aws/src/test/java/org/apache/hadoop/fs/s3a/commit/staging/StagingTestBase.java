@@ -44,8 +44,8 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -341,7 +341,7 @@ public class StagingTestBase {
 
     protected JobConf createJobConf() {
       JobConf conf = new JobConf();
-      conf.set(InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID,
+      conf.set(InternalCommitterConstants.FS_S3A_COMMITTER_UUID,
           UUID.randomUUID().toString());
       conf.setBoolean(
           CommitConstants.CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
@@ -401,7 +401,7 @@ public class StagingTestBase {
 
       // get the task's configuration copy so modifications take effect
       String tmp = System.getProperty(
-          StagingCommitterConstants.JAVA_IO_TMPDIR);
+          InternalCommitterConstants.JAVA_IO_TMPDIR);
       tempDir = new File(tmp);
       tac.getConfiguration().set(Constants.BUFFER_DIR, tmp + "/buffer");
       tac.getConfiguration().set(

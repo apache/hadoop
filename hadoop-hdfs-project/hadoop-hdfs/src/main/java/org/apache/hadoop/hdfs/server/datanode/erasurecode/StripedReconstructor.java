@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.erasurecode;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -274,5 +275,14 @@ abstract class StripedReconstructor {
 
   DataNode getDatanode() {
     return datanode;
+  }
+
+  public ErasureCodingWorker getErasureCodingWorker() {
+    return erasureCodingWorker;
+  }
+
+  @VisibleForTesting
+  static ByteBufferPool getBufferPool() {
+    return BUFFER_POOL;
   }
 }

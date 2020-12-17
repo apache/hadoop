@@ -21,23 +21,31 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The Read Buffer Manager for Rest AbfsClient.
  */
 final class ReadBufferManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReadBufferManager.class);
+  private static final int ONE_KB = 1024;
+  private static final int ONE_MB = ONE_KB * ONE_KB;
 
   private static final int NUM_BUFFERS = 16;
-  private static final int BLOCK_SIZE = 4 * 1024 * 1024;
   private static final int NUM_THREADS = 8;
-  private static final int THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
+  private static final int DEFAULT_THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
 
+  private static int blockSize = 4 * ONE_MB;
+  private static int thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;    // array of byte[] buffers, to hold the data that is read
   private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
@@ -45,21 +53,37 @@ final class ReadBufferManager {
   private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
   private LinkedList<ReadBuffer> inProgressList = new LinkedList<>(); // requests being processed by worker threads
   private LinkedList<ReadBuffer> completedReadList = new LinkedList<>(); // buffers available for reading
-  private static final ReadBufferManager BUFFER_MANAGER; // singleton, initialized in static initialization block
-
-  static {
-    BUFFER_MANAGER = new ReadBufferManager();
-    BUFFER_MANAGER.init();
-  }
+  private static ReadBufferManager bufferManager; // singleton, initialized in static initialization block
+  private static final ReentrantLock LOCK = new ReentrantLock();
 
   static ReadBufferManager getBufferManager() {
-    return BUFFER_MANAGER;
+    if (bufferManager == null) {
+      LOCK.lock();
+      try {
+        if (bufferManager == null) {
+          bufferManager = new ReadBufferManager();
+          bufferManager.init();
+        }
+      } finally {
+        LOCK.unlock();
+      }
+    }
+    return bufferManager;
+  }
+
+  static void setReadBufferManagerConfigs(int readAheadBlockSize) {
+    if (bufferManager == null) {
+      LOGGER.debug(
+          "ReadBufferManager not initialized yet. Overriding readAheadBlockSize as {}",
+          readAheadBlockSize);
+      blockSize = readAheadBlockSize;
+    }
   }
 
   private void init() {
     buffers = new byte[NUM_BUFFERS][];
     for (int i = 0; i < NUM_BUFFERS; i++) {
-      buffers[i] = new byte[BLOCK_SIZE];  // same buffers are reused. The byte array never goes back to GC
+      buffers[i] = new byte[blockSize];  // same buffers are reused. The byte array never goes back to GC
       freeList.add(i);
     }
     for (int i = 0; i < NUM_THREADS; i++) {
@@ -119,10 +143,10 @@ final class ReadBufferManager {
       buffer.setBufferindex(bufferIndex);
       readAheadQueue.add(buffer);
       notifyAll();
-    }
-    if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("Done q-ing readAhead for file {} offset {} buffer idx {}",
-          stream.getPath(), requestedOffset, buffer.getBufferindex());
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("Done q-ing readAhead for file {} offset {} buffer idx {}",
+            stream.getPath(), requestedOffset, buffer.getBufferindex());
+      }
     }
   }
 
@@ -141,7 +165,8 @@ final class ReadBufferManager {
    * @param buffer   the buffer to read data into. Note that the buffer will be written into from offset 0.
    * @return the number of bytes read
    */
-  int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer) {
+  int getBlock(final AbfsInputStream stream, final long position, final int length, final byte[] buffer)
+      throws IOException {
     // not synchronized, so have to be careful with locking
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("getBlock for file {}  position {}  thread {}",
@@ -213,6 +238,8 @@ final class ReadBufferManager {
       return false;  // there are no evict-able buffers
     }
 
+    long currentTimeInMs = currentTimeMillis();
+
     // first, try buffers where all bytes have been consumed (approximated as first and last bytes consumed)
     for (ReadBuffer buf : completedReadList) {
       if (buf.isFirstByteConsumed() && buf.isLastByteConsumed()) {
@@ -237,23 +264,45 @@ final class ReadBufferManager {
     }
 
     // next, try any old nodes that have not been consumed
+    // Failed read buffers (with buffer index=-1) that are older than
+    // thresholdAge should be cleaned up, but at the same time should not
+    // report successful eviction.
+    // Queue logic expects that a buffer is freed up for read ahead when
+    // eviction is successful, whereas a failed ReadBuffer would have released
+    // its buffer when its status was set to READ_FAILED.
     long earliestBirthday = Long.MAX_VALUE;
+    ArrayList<ReadBuffer> oldFailedBuffers = new ArrayList<>();
     for (ReadBuffer buf : completedReadList) {
-      if (buf.getTimeStamp() < earliestBirthday) {
+      if ((buf.getBufferindex() != -1)
+          && (buf.getTimeStamp() < earliestBirthday)) {
         nodeToEvict = buf;
         earliestBirthday = buf.getTimeStamp();
+      } else if ((buf.getBufferindex() == -1)
+          && (currentTimeInMs - buf.getTimeStamp()) > thresholdAgeMilliseconds) {
+        oldFailedBuffers.add(buf);
       }
     }
-    if ((currentTimeMillis() - earliestBirthday > THRESHOLD_AGE_MILLISECONDS) && (nodeToEvict != null)) {
+
+    for (ReadBuffer buf : oldFailedBuffers) {
+      evict(buf);
+    }
+
+    if ((currentTimeInMs - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
       return evict(nodeToEvict);
     }
 
+    LOGGER.trace("No buffer eligible for eviction");
     // nothing can be evicted
     return false;
   }
 
   private boolean evict(final ReadBuffer buf) {
-    freeList.push(buf.getBufferindex());
+    // As failed ReadBuffers (bufferIndx = -1) are saved in completedReadList,
+    // avoid adding it to freeList.
+    if (buf.getBufferindex() != -1) {
+      freeList.push(buf.getBufferindex());
+    }
+
     completedReadList.remove(buf);
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Evicting buffer idx {}; was used for file {} offset {} length {}",
@@ -289,6 +338,27 @@ final class ReadBufferManager {
     return null;
   }
 
+  /**
+   * Returns buffers that failed or passed from completed queue.
+   * @param stream
+   * @param requestedOffset
+   * @return
+   */
+  private ReadBuffer getBufferFromCompletedQueue(final AbfsInputStream stream, final long requestedOffset) {
+    for (ReadBuffer buffer : completedReadList) {
+      // Buffer is returned if the requestedOffset is at or above buffer's
+      // offset but less than buffer's length or the actual requestedLength
+      if ((buffer.getStream() == stream)
+          && (requestedOffset >= buffer.getOffset())
+          && ((requestedOffset < buffer.getOffset() + buffer.getLength())
+          || (requestedOffset < buffer.getOffset() + buffer.getRequestedLength()))) {
+          return buffer;
+        }
+      }
+
+    return null;
+  }
+
   private void clearFromReadAheadQueue(final AbfsInputStream stream, final long requestedOffset) {
     ReadBuffer buffer = getFromList(readAheadQueue, stream, requestedOffset);
     if (buffer != null) {
@@ -299,11 +369,28 @@ final class ReadBufferManager {
   }
 
   private int getBlockFromCompletedQueue(final AbfsInputStream stream, final long position, final int length,
-                                         final byte[] buffer) {
-    ReadBuffer buf = getFromList(completedReadList, stream, position);
-    if (buf == null || position >= buf.getOffset() + buf.getLength()) {
+                                         final byte[] buffer) throws IOException {
+    ReadBuffer buf = getBufferFromCompletedQueue(stream, position);
+
+    if (buf == null) {
       return 0;
     }
+
+    if (buf.getStatus() == ReadBufferStatus.READ_FAILED) {
+      // To prevent new read requests to fail due to old read-ahead attempts,
+      // return exception only from buffers that failed within last thresholdAgeMilliseconds
+      if ((currentTimeMillis() - (buf.getTimeStamp()) < thresholdAgeMilliseconds)) {
+        throw buf.getErrException();
+      } else {
+        return 0;
+      }
+    }
+
+    if ((buf.getStatus() != ReadBufferStatus.AVAILABLE)
+        || (position >= buf.getOffset() + buf.getLength())) {
+      return 0;
+    }
+
     int cursor = (int) (position - buf.getOffset());
     int availableLengthInBuffer = buf.getLength() - cursor;
     int lengthToCopy = Math.min(length, availableLengthInBuffer);
@@ -368,14 +455,17 @@ final class ReadBufferManager {
       inProgressList.remove(buffer);
       if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
         buffer.setStatus(ReadBufferStatus.AVAILABLE);
-        buffer.setTimeStamp(currentTimeMillis());
         buffer.setLength(bytesActuallyRead);
-        completedReadList.add(buffer);
       } else {
         freeList.push(buffer.getBufferindex());
-        // buffer should go out of scope after the end of the calling method in ReadBufferWorker, and eligible for GC
+        // buffer will be deleted as per the eviction policy.
       }
+
+      buffer.setStatus(result);
+      buffer.setTimeStamp(currentTimeMillis());
+      completedReadList.add(buffer);
     }
+
     //outside the synchronized, since anyone receiving a wake-up from the latch must see safe-published results
     buffer.getLatch().countDown(); // wake up waiting threads (if any)
   }
@@ -391,5 +481,98 @@ final class ReadBufferManager {
    */
   private long currentTimeMillis() {
     return System.nanoTime() / 1000 / 1000;
+  }
+
+  @VisibleForTesting
+  int getThresholdAgeMilliseconds() {
+    return thresholdAgeMilliseconds;
+  }
+
+  @VisibleForTesting
+  static void setThresholdAgeMilliseconds(int thresholdAgeMs) {
+    thresholdAgeMilliseconds = thresholdAgeMs;
+  }
+
+  @VisibleForTesting
+  int getCompletedReadListSize() {
+    return completedReadList.size();
+  }
+
+  @VisibleForTesting
+  void callTryEvict() {
+    tryEvict();
+  }
+
+  /**
+   * Test method that can clean up the current state of readAhead buffers and
+   * the lists. Will also trigger a fresh init.
+   */
+  @VisibleForTesting
+  void testResetReadBufferManager() {
+    synchronized (this) {
+      ArrayList<ReadBuffer> completedBuffers = new ArrayList<>();
+      for (ReadBuffer buf : completedReadList) {
+        if (buf != null) {
+          completedBuffers.add(buf);
+        }
+      }
+
+      for (ReadBuffer buf : completedBuffers) {
+        evict(buf);
+      }
+
+      readAheadQueue.clear();
+      inProgressList.clear();
+      completedReadList.clear();
+      freeList.clear();
+      for (int i = 0; i < NUM_BUFFERS; i++) {
+        buffers[i] = null;
+      }
+      buffers = null;
+      resetBufferManager();
+    }
+  }
+
+  /**
+   * Reset buffer manager to null.
+   */
+  @VisibleForTesting
+  static void resetBufferManager() {
+    bufferManager = null;
+  }
+
+  /**
+   * Reset readAhead buffer to needed readAhead block size and
+   * thresholdAgeMilliseconds.
+   * @param readAheadBlockSize
+   * @param thresholdAgeMilliseconds
+   */
+  @VisibleForTesting
+  void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds) {
+    setBlockSize(readAheadBlockSize);
+    setThresholdAgeMilliseconds(thresholdAgeMilliseconds);
+    testResetReadBufferManager();
+  }
+
+  @VisibleForTesting
+  static void setBlockSize(int readAheadBlockSize) {
+    blockSize = readAheadBlockSize;
+  }
+
+  @VisibleForTesting
+  int getReadAheadBlockSize() {
+    return blockSize;
+  }
+
+  /**
+   * Test method that can mimic no free buffers scenario and also add a ReadBuffer
+   * into completedReadList. This readBuffer will get picked up by TryEvict()
+   * next time a new queue request comes in.
+   * @param buf that needs to be added to completedReadlist
+   */
+  @VisibleForTesting
+  void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
+    freeList.clear();
+    completedReadList.add(buf);
   }
 }

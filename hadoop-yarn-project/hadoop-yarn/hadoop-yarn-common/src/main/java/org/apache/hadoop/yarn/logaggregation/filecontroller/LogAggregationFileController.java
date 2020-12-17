@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -35,7 +33,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -43,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -55,7 +54,9 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.webapp.View.ViewContext;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 import org.slf4j.Logger;
@@ -160,6 +161,14 @@ public abstract class LogAggregationFileController {
   }
 
   /**
+   * Get the name of the file controller.
+   * @return name of the file controller.
+   */
+  public String getFileControllerName() {
+    return this.fileControllerName;
+  }
+
+  /**
    * Initialize the writer.
    * @param context the {@link LogAggregationFileControllerContext}
    * @throws IOException if fails to initialize the writer
@@ -217,6 +226,49 @@ public abstract class LogAggregationFileController {
    */
   public abstract List<ContainerLogMeta> readAggregatedLogsMeta(
       ContainerLogsRequest logRequest) throws IOException;
+
+  /**
+   * Returns log file metadata for a node grouped by containers.
+   *
+   * @param logRequest extended query information holder
+   * @param currentNodeFile file status of a node in an application directory
+   * @param appId id of the application, which is the same as in node path
+   * @return log file metadata
+   * @throws IOException if there is no node file
+   */
+  public Map<String, List<ContainerLogFileInfo>> getLogMetaFilesOfNode(
+      ExtendedLogMetaRequest logRequest, FileStatus currentNodeFile,
+      ApplicationId appId) throws IOException {
+    LOG.info("User aggregated complex log queries " +
+        "are not implemented for this file controller");
+    return Collections.emptyMap();
+  }
+
+  /**
+   * Gets all application directories of a user.
+   *
+   * @param user name of the user
+   * @return a lazy iterator of directories
+   * @throws IOException if user directory does not exist
+   */
+  public RemoteIterator<FileStatus> getApplicationDirectoriesOfUser(
+      String user) throws IOException {
+    return LogAggregationUtils.getUserRemoteLogDir(
+        conf, user, getRemoteRootLogDir(), getRemoteRootLogDirSuffix());
+  }
+
+  /**
+   * Gets all node files in an application directory.
+   *
+   * @param appDir application directory
+   * @return a lazy iterator of files
+   * @throws IOException if file context is not reachable
+   */
+  public RemoteIterator<FileStatus> getNodeFilesOfApplicationDirectory(
+      FileStatus appDir) throws IOException {
+    return LogAggregationUtils
+        .getRemoteFiles(conf, appDir.getPath());
+  }
 
   /**
    * Render Aggregated Logs block.
@@ -532,17 +584,12 @@ public abstract class LogAggregationFileController {
       Set<FileStatus> status =
           new HashSet<FileStatus>(Arrays.asList(remoteFS.listStatus(appDir)));
 
-      Iterable<FileStatus> mask =
-          Iterables.filter(status, new Predicate<FileStatus>() {
-            @Override
-            public boolean apply(FileStatus next) {
-              return next.getPath().getName()
-                .contains(LogAggregationUtils.getNodeString(nodeId))
-                && !next.getPath().getName().endsWith(
-                    LogAggregationUtils.TMP_FILE_SUFFIX);
-            }
-          });
-      status = Sets.newHashSet(mask);
+      status = status.stream().filter(
+          next -> next.getPath().getName()
+              .contains(LogAggregationUtils.getNodeString(nodeId))
+              && !next.getPath().getName().endsWith(
+              LogAggregationUtils.TMP_FILE_SUFFIX)).collect(
+          Collectors.toSet());
       // Normally, we just need to delete one oldest log
       // before we upload a new log.
       // If we can not delete the older logs in this cycle,

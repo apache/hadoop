@@ -89,7 +89,7 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Represents an application attempt from the viewpoint of the FIFO or Capacity
@@ -111,6 +111,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   private ResourceScheduler scheduler;
 
   private AbstractContainerAllocator containerAllocator;
+
+  private boolean runnable;
 
   /**
    * to hold the message if its app doesn't not get container from a node
@@ -139,6 +141,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       RMContext rmContext, Priority appPriority, boolean isAttemptRecovering,
       ActivitiesManager activitiesManager) {
     super(applicationAttemptId, user, queue, abstractUsersManager, rmContext);
+    this.runnable = true;
 
     RMApp rmApp = rmContext.getRMApps().get(getApplicationId());
 
@@ -609,7 +612,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
                 allocation.getAllocationLocalityType(),
                 schedulerContainer.getSchedulerNode(),
                 schedulerContainer.getSchedulerRequestKey(),
-                schedulerContainer.getRmContainer().getContainer());
+                  schedulerContainer.getRmContainer());
             ((RMContainerImpl) rmContainer).setContainerRequest(
                 containerRequest);
 
@@ -623,7 +626,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
             AppSchedulingInfo.updateMetrics(getApplicationId(),
                 allocation.getAllocationLocalityType(),
                 schedulerContainer.getSchedulerNode(),
-                schedulerContainer.getRmContainer().getContainer(), getUser(),
+                schedulerContainer.getRmContainer(), getUser(),
                 getQueue());
           }
 
@@ -733,7 +736,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
             + " on node " + node + ", currently has "
             + reservedContainers.size()
             + " at priority " + schedulerKey.getPriority()
-            + "; currentReservation " + this.attemptResourceUsage.getReserved()
+            + "; currentReservation "
+            + this.attemptResourceUsage.getReserved(node.getPartition())
             + " on node-label=" + node.getPartition());
         return true;
       }
@@ -1217,6 +1221,24 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       }
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  public void setRunnable(boolean runnable) {
+    writeLock.lock();
+    try {
+      this.runnable = runnable;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public boolean isRunnable() {
+    readLock.lock();
+    try {
+      return runnable;
+    } finally {
+      readLock.unlock();
     }
   }
 }

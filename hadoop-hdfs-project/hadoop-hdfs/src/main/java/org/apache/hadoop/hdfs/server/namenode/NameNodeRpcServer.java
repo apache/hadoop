@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -132,6 +132,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
@@ -184,7 +185,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RetryCache;
@@ -226,7 +227,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 import org.slf4j.Logger;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 import javax.annotation.Nonnull;
@@ -281,7 +282,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
                   DFS_NAMENODE_HANDLER_COUNT_DEFAULT);
 
     RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     ClientNamenodeProtocolServerSideTranslatorPB 
        clientProtocolServerTranslator = 
@@ -405,7 +406,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     InetSocketAddress lifelineRpcAddr = nn.getLifelineRpcServerAddress(conf);
     if (lifelineRpcAddr != null) {
       RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
-          ProtobufRpcEngine.class);
+          ProtobufRpcEngine2.class);
       String bindHost = nn.getLifelineRpcServerBindHost(conf);
       if (bindHost == null) {
         bindHost = lifelineRpcAddr.getHostName();
@@ -662,6 +663,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
+    namesystem.checkNameNodeSafeMode("Cannot execute getBlocks");
     return namesystem.getBlocks(datanode, size, minBlockSize);
   }
 
@@ -1099,10 +1101,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public boolean truncate(String src, long newLength, String clientName)
       throws IOException {
     checkNNStartup();
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.truncate: " + src + " to " +
-          newLength);
-    }
+    stateChangeLog
+        .debug("*DIR* NameNode.truncate: " + src + " to " + newLength);
     String clientMachine = getClientMachine();
     try {
       return namesystem.truncate(
@@ -2001,6 +2001,16 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     SnapshottableDirectoryStatus[] status = namesystem
         .getSnapshottableDirListing();
     metrics.incrListSnapshottableDirOps();
+    return status;
+  }
+
+  @Override // Client Protocol
+  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException {
+    checkNNStartup();
+    SnapshotStatus[] status = namesystem
+        .getSnapshotListing(snapshotRoot);
+    metrics.incrListSnapshotsOps();
     return status;
   }
 

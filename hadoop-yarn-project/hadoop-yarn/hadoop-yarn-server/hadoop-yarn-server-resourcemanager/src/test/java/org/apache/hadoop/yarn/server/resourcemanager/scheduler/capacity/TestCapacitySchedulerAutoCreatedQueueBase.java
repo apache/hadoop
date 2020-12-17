@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.security.Groups;
 import org.slf4j.Logger;
@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels
     .NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -113,9 +114,9 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final String C = CapacitySchedulerConfiguration.ROOT + ".c";
   public static final String D = CapacitySchedulerConfiguration.ROOT + ".d";
   public static final String E = CapacitySchedulerConfiguration.ROOT + ".e";
-  public static final String ASUBGROUP1 =
+  public static final String ESUBGROUP1 =
       CapacitySchedulerConfiguration.ROOT + ".esubgroup1";
-  public static final String AGROUP =
+  public static final String FGROUP =
       CapacitySchedulerConfiguration.ROOT + ".fgroup";
   public static final String A1 = A + ".a1";
   public static final String A2 = A + ".a2";
@@ -123,14 +124,14 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final String B2 = B + ".b2";
   public static final String B3 = B + ".b3";
   public static final String B4 = B + ".b4subgroup1";
-  public static final String ASUBGROUP1_A = ASUBGROUP1 + ".e";
-  public static final String AGROUP_A = AGROUP + ".f";
+  public static final String ESUBGROUP1_A = ESUBGROUP1 + ".e";
+  public static final String FGROUP_F = FGROUP + ".f";
   public static final float A_CAPACITY = 20f;
   public static final float B_CAPACITY = 20f;
   public static final float C_CAPACITY = 20f;
   public static final float D_CAPACITY = 20f;
-  public static final float ASUBGROUP1_CAPACITY = 10f;
-  public static final float AGROUP_CAPACITY = 10f;
+  public static final float ESUBGROUP1_CAPACITY = 10f;
+  public static final float FGROUP_CAPACITY = 10f;
 
   public static final float A1_CAPACITY = 30;
   public static final float A2_CAPACITY = 70;
@@ -370,8 +371,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setCapacity(B, B_CAPACITY);
     conf.setCapacity(C, C_CAPACITY);
     conf.setCapacity(D, D_CAPACITY);
-    conf.setCapacity(ASUBGROUP1, ASUBGROUP1_CAPACITY);
-    conf.setCapacity(AGROUP, AGROUP_CAPACITY);
+    conf.setCapacity(ESUBGROUP1, ESUBGROUP1_CAPACITY);
+    conf.setCapacity(FGROUP, FGROUP_CAPACITY);
 
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1", "a2" });
@@ -390,12 +391,12 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setCapacity(B4, B4_CAPACITY);
     conf.setUserLimitFactor(B4, 100.0f);
 
-    conf.setQueues(ASUBGROUP1, new String[] {"e"});
-    conf.setCapacity(ASUBGROUP1_A, 100f);
-    conf.setUserLimitFactor(ASUBGROUP1_A, 100.0f);
-    conf.setQueues(AGROUP, new String[] {"f"});
-    conf.setCapacity(AGROUP_A, 100f);
-    conf.setUserLimitFactor(AGROUP_A, 100.0f);
+    conf.setQueues(ESUBGROUP1, new String[] {"e"});
+    conf.setCapacity(ESUBGROUP1_A, 100f);
+    conf.setUserLimitFactor(ESUBGROUP1_A, 100.0f);
+    conf.setQueues(FGROUP, new String[] {"f"});
+    conf.setCapacity(FGROUP_F, 100f);
+    conf.setUserLimitFactor(FGROUP_F, 100.0f);
 
     conf.setUserLimitFactor(C, 1.0f);
     conf.setAutoCreateChildQueueEnabled(C, true);
@@ -419,7 +420,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
         (C, NODEL_LABEL_SSD);
 
 
-    LOG.info("Setup " + C + " as an auto leaf creation enabled parent queue");
+    LOG.info("Setup " + D + " as an auto leaf creation enabled parent queue");
 
     conf.setUserLimitFactor(D, 1.0f);
     conf.setAutoCreateChildQueueEnabled(D, true);
@@ -564,6 +565,11 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   }
 
   protected MockRM setupSchedulerInstance() throws Exception {
+
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+
     CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -662,16 +668,26 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
         autoCreatedLeafQueue.getMaximumAllocation().getMemorySize());
   }
 
-  protected void validateInitialQueueEntitlement(CSQueue parentQueue, String
-      leafQueueName, Map<String, Float>
-      expectedTotalChildQueueAbsCapacityByLabel,
+  protected void validateInitialQueueEntitlement(CSQueue parentQueue,
+      String leafQueueName,
+      Map<String, Float> expectedTotalChildQueueAbsCapacityByLabel,
       Set<String> nodeLabels)
       throws SchedulerDynamicEditException, InterruptedException {
-    validateInitialQueueEntitlement(cs, parentQueue, leafQueueName,
+    validateInitialQueueEntitlement(mockRM, cs, parentQueue, leafQueueName,
         expectedTotalChildQueueAbsCapacityByLabel, nodeLabels);
   }
 
-  protected void validateInitialQueueEntitlement(
+  protected void validateInitialQueueEntitlement(ResourceManager rm,
+      CSQueue parentQueue, String leafQueueName,
+      Map<String, Float> expectedTotalChildQueueAbsCapacityByLabel,
+      Set<String> nodeLabels)
+      throws SchedulerDynamicEditException, InterruptedException {
+    validateInitialQueueEntitlement(rm,
+        (CapacityScheduler) rm.getResourceScheduler(), parentQueue,
+        leafQueueName, expectedTotalChildQueueAbsCapacityByLabel, nodeLabels);
+  }
+
+  protected void validateInitialQueueEntitlement(ResourceManager rm,
       CapacityScheduler capacityScheduler, CSQueue parentQueue,
       String leafQueueName,
       Map<String, Float> expectedTotalChildQueueAbsCapacityByLabel,
@@ -684,7 +700,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
         (GuaranteedOrZeroCapacityOverTimePolicy) autoCreateEnabledParentQueue
             .getAutoCreatedQueueManagementPolicy();
 
-    AutoCreatedLeafQueue leafQueue = (AutoCreatedLeafQueue) capacityScheduler.getQueue(leafQueueName);
+    AutoCreatedLeafQueue leafQueue =
+        (AutoCreatedLeafQueue) capacityScheduler.getQueue(leafQueueName);
 
     Map<String, QueueEntitlement> expectedEntitlements = new HashMap<>();
     QueueCapacities cap = autoCreateEnabledParentQueue.getLeafQueueTemplate()
@@ -702,7 +719,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
       expectedEntitlements.put(label, expectedEntitlement);
 
-      validateEffectiveMinResource(leafQueue, label, expectedEntitlements);
+      validateEffectiveMinResource(rm, capacityScheduler, leafQueue, label,
+          expectedEntitlements);
     }
   }
 
@@ -719,24 +737,24 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
             .getMaximumCapacity(label), EPSILON);
   }
 
-  protected void validateEffectiveMinResource(CSQueue leafQueue,
-      String label, Map<String, QueueEntitlement> expectedQueueEntitlements) {
+  protected void validateEffectiveMinResource(ResourceManager rm,
+      CapacityScheduler cs, CSQueue leafQueue, String label,
+      Map<String, QueueEntitlement> expectedQueueEntitlements) {
     ManagedParentQueue parentQueue = (ManagedParentQueue) leafQueue.getParent();
 
-    Resource resourceByLabel = mockRM.getRMContext().getNodeLabelManager().
-        getResourceByLabel(label, cs.getClusterResource());
+    Resource resourceByLabel = rm.getRMContext().getNodeLabelManager()
+        .getResourceByLabel(label, cs.getClusterResource());
     Resource effMinCapacity = Resources.multiply(resourceByLabel,
-        expectedQueueEntitlements.get(label).getCapacity() * parentQueue
-            .getQueueCapacities().getAbsoluteCapacity(label));
+        expectedQueueEntitlements.get(label).getCapacity()
+            * parentQueue.getQueueCapacities().getAbsoluteCapacity(label));
     assertEquals(effMinCapacity, Resources.multiply(resourceByLabel,
         leafQueue.getQueueCapacities().getAbsoluteCapacity(label)));
     assertEquals(effMinCapacity, leafQueue.getEffectiveCapacity(label));
 
     if (leafQueue.getQueueCapacities().getAbsoluteCapacity(label) > 0) {
-      assertTrue(Resources
-          .greaterThan(cs.getResourceCalculator(), cs.getClusterResource(),
-              effMinCapacity, Resources.none()));
-    } else{
+      assertTrue(Resources.greaterThan(cs.getResourceCalculator(),
+          cs.getClusterResource(), effMinCapacity, Resources.none()));
+    } else {
       assertTrue(Resources.equals(effMinCapacity, Resources.none()));
     }
   }
@@ -847,7 +865,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
               updatedQueueTemplate.getQueueCapacities().getMaximumCapacity
                   (label));
           assertEquals(expectedQueueEntitlements.get(label), newEntitlement);
-          validateEffectiveMinResource(leafQueue, label,
+          validateEffectiveMinResource(mockRM, cs, leafQueue, label,
               expectedQueueEntitlements);
         }
         found = true;

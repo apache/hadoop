@@ -90,9 +90,9 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ConcurrentHashMultiset;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ConcurrentHashMultiset;
 
 /**
  * Represents an application attempt from the viewpoint of the scheduler.
@@ -1126,8 +1126,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           getRunningAggregateAppResourceUsage();
       Resource usedResourceClone = Resources.clone(
           attemptResourceUsage.getAllUsed());
-      Resource reservedResourceClone = Resources.clone(
-          attemptResourceUsage.getReserved());
+      Resource reservedResourceClone =
+          Resources.clone(attemptResourceUsage.getAllReserved());
       Resource cluster = rmContext.getScheduler().getClusterResource();
       ResourceCalculator calc =
           rmContext.getScheduler().getResourceCalculator();

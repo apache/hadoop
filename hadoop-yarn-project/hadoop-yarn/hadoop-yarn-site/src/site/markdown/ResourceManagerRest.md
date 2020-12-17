@@ -338,6 +338,9 @@ The capacity scheduler supports hierarchical queues. This one request will print
 | numActiveApplications | int | The number of active applications in this queue |
 | numPendingApplications | int | The number of pending applications in this queue |
 | numContainers | int | The number of containers being used |
+| allocatedContainers | int | The number of allocated containers in this queue |
+| reservedContainers | int | The number of reserved containers in this queue |
+| pendingContainers | int | The number of pending containers in this queue |
 | maxApplications | int | The maximum number of applications this queue can have |
 | maxApplicationsPerUser | int | The maximum number of applications per user this queue can have |
 | maxActiveApplications | int | The maximum number of active applications this queue can have |
@@ -2262,6 +2265,7 @@ appAttempts:
 | logsLink | string | The http link to the app attempt logs |
 | containerId | string | The id of the container for the app attempt |
 | startTime | long | The start time of the attempt (in ms since epoch) |
+| appAttemptState | string | The state of the application attempt - valid values are members of the RMAppAttemptState enum: NEW, SUBMITTED, SCHEDULED, ALLOCATED, LAUNCHED, FAILED, RUNNING, FINISHING, FINISHED, KILLED, ALLOCATED_SAVING, LAUNCHED_UNMANAGED_SAVING, FINAL_SAVING |
 
 ### Response Examples
 
@@ -2290,7 +2294,8 @@ Response Body:
             "startTime" : 1326381444693,
             "id" : 1,
             "logsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1",
-            "containerId" : "container_1326821518301_0005_01_000001"
+            "containerId" : "container_1326821518301_0005_01_000001",
+            "appAttemptState" : "RUNNING"
          }
       ]
    }
@@ -2323,6 +2328,7 @@ Response Body:
     <startTime>1326381444693</startTime>
     <containerId>container_1326821518301_0005_01_000001</containerId>
     <logsLink>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1</logsLink>
+    <appAttemptState>RUNNING</appAttemptState>
   </appAttempt>
 </appAttempts>
 ```
@@ -5740,6 +5746,140 @@ Response Body:
     </root>
   </allocations>
 </activities>
+```
+
+
+Scheduler Bulk Activities API
+--------------------------------
+
+  The scheduler bulk activities RESTful API can fetch scheduler activities info recorded for multiple scheduling cycle. This may take time
+to return as it internally waits until a certain amount of records are generated specified by activitiesCount.
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/scheduler/bulk-activities
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+Multiple parameters can be specified for GET operations.
+
+      * activitiesCount - number of schecduling cycle to record with maximum of 500.
+      * groupBy - aggregation type of application activities, currently only support "diagnostic" with which
+        user can query aggregated activities grouped by allocation state and diagnostic.
+
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      Accept: application/json
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/bulk-activities?activitiesCount=2
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+Following is an output example with query parameter activitiesCount set to 2. This fetches scheduler activities info
+recorded in last two scheduling cycle.
+
+```json
+{
+  "bulkActivities": {
+    "activities": [
+      {
+        "nodeId": "127.0.0.1:1234",
+        "timestamp": 1593684431432,
+        "dateTime": "Thu Jul 02 10:07:11 UTC 2020",
+        "allocations": [
+          {
+            "partition": "",
+            "finalAllocationState": "SKIPPED",
+            "root": {
+              "name": "root",
+              "allocationState": "SKIPPED",
+              "diagnostic": "Queue does not need more resource"
+            }
+          }
+        ]
+      },
+      {
+        "nodeId": "127.0.0.2:1234",
+        "timestamp": 1593684431432,
+        "dateTime": "Thu Jul 02 10:07:11 UTC 2020",
+        "allocations": [
+          {
+            "partition": "",
+            "finalAllocationState": "SKIPPED",
+            "root": {
+              "name": "root",
+              "allocationState": "SKIPPED",
+              "diagnostic": "Queue does not need more resource"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/bulk-activities?activitiesCount=2
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+```xml
+<bulkActivities>
+  <activities>
+    <nodeId>127.0.0.1:1234</nodeId>
+    <timestamp>1593683816380</timestamp>
+    <dateTime>Thu Jul 02 09:56:56 UTC 2020</dateTime>
+    <allocations>
+      <partition/>
+      <finalAllocationState>SKIPPED</finalAllocationState>
+      <root>
+        <name>root</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Queue does not need more resource</diagnostic>
+      </root>
+    </allocations>
+  </activities>
+  <activities>
+    <nodeId>127.0.0.2:1234</nodeId>
+    <timestamp>1593683816385</timestamp>
+    <dateTime>Thu Jul 02 09:56:56 UTC 2020</dateTime>
+    <allocations>
+      <partition/>
+      <finalAllocationState>SKIPPED</finalAllocationState>
+      <root>
+        <name>root</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Queue does not need more resource</diagnostic>
+      </root>
+    </allocations>
+  </activities>
+</bulkActivities>
 ```
 
 

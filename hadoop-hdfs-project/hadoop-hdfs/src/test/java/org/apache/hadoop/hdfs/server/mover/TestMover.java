@@ -95,8 +95,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Maps;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 public class TestMover {
   private static final Logger LOG = LoggerFactory.getLogger(TestMover.class);

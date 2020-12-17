@@ -43,6 +43,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -89,10 +90,10 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 
 /**
  * The Cache Manager handles caching on DataNodes.
@@ -935,6 +936,11 @@ public class CacheManager {
     }
   }
 
+  @SuppressFBWarnings(
+      value="EC_UNRELATED_TYPES",
+      justification="HDFS-15255 Asked Wei-Chiu and Pifta to review this" +
+          " warning and we all agree the code is OK and the warning is not " +
+          "needed")
   private void setCachedLocations(LocatedBlock block) {
     CachedBlock cachedBlock =
         new CachedBlock(block.getBlock().getBlockId(),

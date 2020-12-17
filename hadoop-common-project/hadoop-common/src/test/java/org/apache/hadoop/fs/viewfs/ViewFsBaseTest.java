@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.FileContextTestHelper.fileType;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -69,6 +70,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -95,6 +97,8 @@ import org.junit.Test;
  * </p>
  */
 abstract public class ViewFsBaseTest {
+  protected static final String MOUNT_TABLE_NAME = "mycluster";
+
   FileContext fcView; // the view file system - the mounts are here
   FileContext fcTarget; // the target file system - the mount will point here
   Path targetTestRoot;
@@ -128,6 +132,9 @@ abstract public class ViewFsBaseTest {
     
     // Set up the defaultMT in the config with our mount point links
     conf = new Configuration();
+    conf.set(
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
+        MOUNT_TABLE_NAME);
     ConfigUtil.addLink(conf, "/targetRoot", targetTestRoot.toUri());
     ConfigUtil.addLink(conf, "/user",
         new Path(targetTestRoot,"user").toUri());
@@ -540,8 +547,8 @@ abstract public class ViewFsBaseTest {
       UnresolvedLinkException, IOException, URISyntaxException {
     AbstractFileSystem mockAFS = mock(AbstractFileSystem.class);
     InodeTree.ResolveResult<AbstractFileSystem> res =
-      new InodeTree.ResolveResult<AbstractFileSystem>(null, mockAFS , null,
-        new Path("someFile"));
+        new InodeTree.ResolveResult<AbstractFileSystem>(null, mockAFS, null,
+            new Path("someFile"), true);
     @SuppressWarnings("unchecked")
     InodeTree<AbstractFileSystem> fsState = mock(InodeTree.class);
     when(fsState.resolve(anyString(), anyBoolean())).thenReturn(res);
@@ -1001,4 +1008,23 @@ abstract public class ViewFsBaseTest {
       return mockFs;
     }
   }
+
+  @Test
+  public void testListStatusWithNoGroups() throws Exception {
+    final UserGroupInformation userUgi = UserGroupInformation
+        .createUserForTesting("user@HADOOP.COM", new String[] {});
+    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        URI viewFsUri = new URI(
+            FsConstants.VIEWFS_SCHEME, MOUNT_TABLE_NAME, "/", null, null);
+        FileSystem vfs = FileSystem.get(viewFsUri, conf);
+        LambdaTestUtils.intercept(IOException.class,
+            "There is no primary group for UGI", () -> vfs
+                .listStatus(new Path(viewFsUri.toString() + "internalDir")));
+        return null;
+      }
+    });
+  }
+
 }

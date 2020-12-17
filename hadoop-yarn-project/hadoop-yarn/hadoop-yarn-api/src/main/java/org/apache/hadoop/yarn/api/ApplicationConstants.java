@@ -225,6 +225,15 @@ public interface ApplicationConstants {
     CLASSPATH_PREPEND_DISTCACHE("CLASSPATH_PREPEND_DISTCACHE"),
 
     /**
+     * $LOCALIZATION_COUNTERS
+     *
+     * Since NM does not RPC Container JVM's we pass Localization counter
+     * vector as an environment variable
+     *
+     */
+    LOCALIZATION_COUNTERS("LOCALIZATION_COUNTERS"),
+
+    /**
      * $CONTAINER_ID
      * Final, exported by NodeManager and non-modifiable by users.
      */

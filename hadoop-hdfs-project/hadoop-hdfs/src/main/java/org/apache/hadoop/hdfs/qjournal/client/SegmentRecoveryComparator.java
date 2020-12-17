@@ -23,9 +23,9 @@ import java.util.Map.Entry;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ComparisonChain;
-import com.google.common.primitives.Booleans;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Booleans;
 
 /**
  * Compares responses to the prepareRecovery RPC. This is responsible for

@@ -51,9 +51,9 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 
-import com.google.common.base.Preconditions;
-import com.google.common.io.Files;
-import com.google.common.primitives.Bytes;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
 
 /**
  * This class defines a number of static helper methods used by the

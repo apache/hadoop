@@ -35,7 +35,7 @@ import java.util.Deque;
 import java.util.List;
 
 import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +59,7 @@ import org.apache.hadoop.service.launcher.ServiceLauncher;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
 
 /**
@@ -348,8 +348,8 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
       final CsvFile csv) throws IOException {
     S3AFileSystem fs = getFilesystem();
     Path rootPath = fs.qualify(new Path("/"));
-    Listing listing = new Listing(fs);
-    S3ListRequest request = fs.createListObjectsRequest("", null);
+    Listing listing = fs.getListing();
+    S3ListRequest request = listing.createListObjectsRequest("", null);
     long count = 0;
     RemoteIterator<S3AFileStatus> st =
         listing.createFileStatusListingIterator(rootPath, request,

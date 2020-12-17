@@ -119,11 +119,23 @@ Usage: `yarn logs -applicationId <application ID> [options] `
 
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
+| -am \<AM Containers\> | Prints the AM Container logs, specify comma-separated value to get logs for related AM Container |
 | -applicationId \<application ID\> | Specifies an application id |
 | -appOwner \<AppOwner\> | AppOwner (assumed to be current user if not specified) |
 | -containerId \<ContainerId\> | ContainerId (must be specified if node address is specified) |
+| -client_max_retries \<Max Retries\> | Max number of retry for a client to get the container logs for the running applications |
+| -client_retry_interval_ms \<Retry Interval\> | Retry Interval (work with client_max_retries) |
+| -clusterId \<Cluster ID\> | ClusterId |
 | -help | Help |
+| -list_nodes | Show the list of nodes that successfully aggregated logs (can only be used with finished applications) |
+| -log_files \<Log File Name\> | View a specific log type |
+| -log_files_pattern \<Log File Pattern\> | Get matched log files by using java regex |
 | -nodeAddress \<NodeAddress\> | NodeAddress in the format nodename:port (must be specified if container id is specified) |
+| -out \<Local Directory\> | Download logs to specified local folder |
+| -show_application_log_info | List all container IDs (combine this with --nodeAddress to get containerIds for all the containers on the specific NodeManager) |
+| -show_container_log_info | Show the container log metadata |
+| -size \<size\> | Prints the log file's first 'n' bytes or the last 'n' bytes (use negative values as bytes to read from the end) |
+| -size_limit_mb \<Size Limit\> | Limit the size(in megabytes) of the total logs which could be fetched (specify -1 to ignore the size limit) |
 
 Dump the container logs
 
@@ -214,7 +226,7 @@ Usage:
      -getGroups [username]
      -addToClusterNodeLabels <"label1(exclusive=true),label2(exclusive=false),label3">
      -removeFromClusterNodeLabels <label1,label2,label3> (label splitted by ",")
-     -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2"> [-failOnUnknownNodes]
+     -replaceLabelsOnNode <"node1[:port]=label1 node2[:port]=label2"> [-failOnUnknownNodes]
      -directlyAccessNodeLabelStore
      -refreshClusterMaxPriority
      -updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout]) or -updateNodeResource [NodeID] [ResourceTypes] ([OvercommitTimeout])
@@ -238,7 +250,7 @@ Usage:
 | -getGroups [username] | Get groups the specified user belongs to. |
 | -addToClusterNodeLabels <"label1(exclusive=true),label2(exclusive=false),label3"> | Add to cluster node labels. Default exclusivity is true. |
 | -removeFromClusterNodeLabels <label1,label2,label3> (label splitted by ",") | Remove from cluster node labels. |
-| -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2"> [-failOnUnknownNodes]| Replace labels on nodes (please note that we do not support specifying multiple labels on a single host for now.) -failOnUnknownNodes is optional, when we set this option, it will fail if specified nodes are unknown.|
+| -replaceLabelsOnNode <"node1[:port]=label1 node2[:port]=label2"> [-failOnUnknownNodes]| Replace labels on nodes (please note that we do not support specifying multiple labels on a single host for now.) -failOnUnknownNodes is optional, when we set this option, it will fail if specified nodes are unknown.|
 | -directlyAccessNodeLabelStore | This is DEPRECATED, will be removed in future releases. Directly access node label store, with this option, all node label related operations will not connect RM. Instead, they will access/modify stored node labels directly. By default, it is false (access via RM). AND PLEASE NOTE: if you configured yarn.node-labels.fs-store.root-dir to a local directory (instead of NFS or HDFS), this option will only work when the command run on the machine where RM is running. |
 | -refreshClusterMaxPriority | Refresh cluster max priority |
 | -updateNodeResource [NodeID] [MemSize] [vCores] \([OvercommitTimeout]\) | Update resource on specific node. |

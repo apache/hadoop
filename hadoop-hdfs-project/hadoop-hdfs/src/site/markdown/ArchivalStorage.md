@@ -27,7 +27,7 @@ The frameworks provided by Heterogeneous Storage and Archival Storage generalize
 Storage Types and Storage Policies
 ----------------------------------
 
-### Storage Types: ARCHIVE, DISK, SSD and RAM\_DISK
+### Storage Types: ARCHIVE, DISK, SSD, RAM\_DISK and NVDIMM
 
 The first phase of [Heterogeneous Storage (HDFS-2832)](https://issues.apache.org/jira/browse/HDFS-2832) changed datanode storage model from a single storage, which may correspond to multiple physical storage medias, to a collection of storages with each storage corresponding to a physical storage media. It also added the notion of storage types, DISK and SSD, where DISK is the default storage type.
 
@@ -35,7 +35,9 @@ A new storage type *ARCHIVE*, which has high storage density (petabyte of storag
 
 Another new storage type *RAM\_DISK* is added for supporting writing single replica files in memory.
 
-### Storage Policies: Hot, Warm, Cold, All\_SSD, One\_SSD, Lazy\_Persist and Provided
+From Hadoop 3.4, a new storage type *NVDIMM* is added for supporting writing replica files in non-volatile memory that has the capability to hold saved data even if the power is turned off.
+
+### Storage Policies: Hot, Warm, Cold, All\_SSD, One\_SSD, Lazy\_Persist, Provided and All\_NVDIMM
 
 A new concept of storage policies is introduced in order to allow files to be stored in different storage types according to the storage policy.
 
@@ -48,6 +50,7 @@ We have the following storage policies:
 * **One\_SSD** - for storing one of the replicas in SSD. The remaining replicas are stored in DISK.
 * **Lazy\_Persist** - for writing blocks with single replica in memory. The replica is first written in RAM\_DISK and then it is lazily persisted in DISK.
 * **Provided** - for storing data outside HDFS. See also [HDFS Provided Storage](./HdfsProvidedStorage.html).
+* **All\_NVDIMM** - for storing all replicas in NVDIMM.
 
 More formally, a storage policy consists of the following fields:
 
@@ -64,6 +67,7 @@ The following is a typical storage policy table.
 | **Policy** **ID** | **Policy** **Name** | **Block Placement** **(n  replicas)** | **Fallback storages** **for creation** | **Fallback storages** **for replication** |
 |:---- |:---- |:---- |:---- |:---- |
 | 15 | Lazy\_Persist | RAM\_DISK: 1, DISK: *n*-1 | DISK | DISK |
+| 14 | All\_NVDIMM | NVDIMM: *n* | DISK | DISK |
 | 12 | All\_SSD | SSD: *n* | DISK | DISK |
 | 10 | One\_SSD | SSD: 1, DISK: *n*-1 | SSD, DISK | SSD, DISK |
 | 7 | Hot (default) | DISK: *n* | \<none\> | ARCHIVE |
@@ -73,7 +77,7 @@ The following is a typical storage policy table.
 
 Note 1: The Lazy\_Persist policy is useful only for single replica blocks. For blocks with more than one replicas, all the replicas will be written to DISK since writing only one of the replicas to RAM\_DISK does not improve the overall performance.
 
-Note 2: For the erasure coded files with striping layout, the suitable storage policies are All\_SSD, Hot, Cold. So, if user sets the policy for striped EC files other than the mentioned policies, it will not follow that policy while creating or moving block.
+Note 2: For the erasure coded files with striping layout, the suitable storage policies are All\_SSD, Hot, Cold and All\_NVDIMM. So, if user sets the policy for striped EC files other than the mentioned policies, it will not follow that policy while creating or moving block.
 
 ### Storage Policy Resolution
 
@@ -88,14 +92,19 @@ The effective storage policy can be retrieved by the "[`storagepolicies -getStor
 ### Configuration
 
 * **dfs.storage.policy.enabled** - for enabling/disabling the storage policy feature. The default value is `true`.
+* **dfs.storage.default.policy** - Set the default storage policy with the policy name. The default value is `HOT`.  All possible policies are defined in enum StoragePolicy, including `LAZY_PERSIST` `ALL_SSD` `ONE_SSD` `HOT` `WARM` `COLD` `PROVIDED` and `ALL_NVDIMM`.
 * **dfs.datanode.data.dir** - on each data node, the comma-separated storage locations should be tagged with their storage types. This allows storage policies to place the blocks on different storage types according to policy. For example:
 
     1.  A datanode storage location /grid/dn/disk0 on DISK should be configured with `[DISK]file:///grid/dn/disk0`
     2.  A datanode storage location /grid/dn/ssd0 on SSD can should configured with `[SSD]file:///grid/dn/ssd0`
     3.  A datanode storage location /grid/dn/archive0 on ARCHIVE should be configured with `[ARCHIVE]file:///grid/dn/archive0`
     4.  A datanode storage location /grid/dn/ram0 on RAM_DISK should be configured with `[RAM_DISK]file:///grid/dn/ram0`
+    5.  A datanode storage location /grid/dn/nvdimm0 on NVDIMM should be configured with `[NVDIMM]file:///grid/dn/nvdimm0`
 
     The default storage type of a datanode storage location will be DISK if it does not have a storage type tagged explicitly.
+
+    Sometimes, users can setup the DataNode data directory to point to multiple volumes with different storage types. It is important to check if the volume is mounted correctly before initializing the storage locations. The user has the option to enforce the filesystem for a storage key with the following key:
+    **dfs.datanode.storagetype.*.filesystem** - replace the '*' to any storage type, for example, dfs.datanode.storagetype.ARCHIVE.filesystem=fuse_filesystem
 
 Storage Policy Based Data Movement
 ----------------------------------

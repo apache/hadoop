@@ -62,8 +62,10 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
 
     Path root = new Path(uri);
 
-    expectUnknownStore(
-        () -> fs.getFileStatus(root));
+    //See HADOOP-17323.
+    assertTrue("root path should always exist", fs.exists(root));
+    assertTrue("getFileStatus on root should always return a directory",
+            fs.getFileStatus(root).isDirectory());
 
     expectUnknownStore(
         () -> fs.listStatus(root));
@@ -75,7 +77,11 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
 
     // the exception must not be caught and marked down to an FNFE
     expectUnknownStore(() -> fs.exists(src));
-    expectUnknownStore(() -> fs.isFile(src));
+    // now that isFile() only does a HEAD, it will get a 404 without
+    // the no-such-bucket error.
+    assertFalse("isFile(" + src + ")"
+            + " was expected to complete by returning false",
+        fs.isFile(src));
     expectUnknownStore(() -> fs.isDirectory(src));
     expectUnknownStore(() -> fs.mkdirs(src));
     expectUnknownStore(() -> fs.delete(src));

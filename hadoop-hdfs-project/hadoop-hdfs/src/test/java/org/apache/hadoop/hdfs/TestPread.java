@@ -58,7 +58,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 

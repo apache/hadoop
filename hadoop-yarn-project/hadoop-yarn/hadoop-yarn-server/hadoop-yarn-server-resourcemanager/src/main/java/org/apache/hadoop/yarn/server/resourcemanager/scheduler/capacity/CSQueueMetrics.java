@@ -229,7 +229,7 @@ public class CSQueueMetrics extends QueueMetrics {
   public synchronized static CSQueueMetrics forQueue(String queueName,
       Queue parent, boolean enableUserMetrics, Configuration conf) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    QueueMetrics metrics = QueueMetrics.getQueueMetrics().get(queueName);
+    QueueMetrics metrics = getQueueMetrics().get(queueName);
     if (metrics == null) {
       metrics =
           new CSQueueMetrics(ms, queueName, parent, enableUserMetrics, conf)
@@ -241,7 +241,7 @@ public class CSQueueMetrics extends QueueMetrics {
             ms.register(sourceName(queueName).toString(), "Metrics for queue: "
                 + queueName, metrics);
       }
-      QueueMetrics.getQueueMetrics().put(queueName, metrics);
+      getQueueMetrics().put(queueName, metrics);
     }
 
     return (CSQueueMetrics) metrics;
@@ -254,7 +254,8 @@ public class CSQueueMetrics extends QueueMetrics {
     }
     CSQueueMetrics metrics = (CSQueueMetrics) users.get(userName);
     if (metrics == null) {
-      metrics = new CSQueueMetrics(metricsSystem, queueName, null, false, conf);
+      metrics =
+        new CSQueueMetrics(metricsSystem, queueName, null, false, conf);
       users.put(userName, metrics);
       metricsSystem.register(
           sourceName(queueName).append(",user=").append(userName).toString(),

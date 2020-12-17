@@ -114,7 +114,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * unit test - 
@@ -217,6 +217,8 @@ public class TestDelegationTokenRenewer {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     conf.set("override_token_expire_time", "3000");
+    conf.setBoolean(YarnConfiguration.RM_DELEGATION_TOKEN_ALWAYS_CANCEL,
+        false);
     UserGroupInformation.setConfiguration(conf);
     eventQueue = new LinkedBlockingQueue<Event>();
     dispatcher = new AsyncDispatcher(eventQueue);
@@ -608,6 +610,77 @@ public class TestDelegationTokenRenewer {
     token1.renew(conf);
   }
   
+  /**
+   * Basic idea of the test:
+   * 1. Verify that YarnConfiguration.RM_DELEGATION_TOKEN_ALWAYS_CANCEL = true
+   * overrides shouldCancelAtEnd
+   * 2. register a token for 2 seconds with shouldCancelAtEnd = false
+   * 3. cancel it immediately
+   * 4. check that token was canceled
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test(timeout=60000)
+  public void testDTRenewalWithNoCancelAlwaysCancel() throws Exception {
+    Configuration lconf = new Configuration(conf);
+    lconf.setBoolean(YarnConfiguration.RM_DELEGATION_TOKEN_ALWAYS_CANCEL,
+        true);
+
+    DelegationTokenRenewer localDtr =
+        createNewDelegationTokenRenewer(lconf, counter);
+    RMContext mockContext = mock(RMContext.class);
+    when(mockContext.getSystemCredentialsForApps()).thenReturn(
+        new ConcurrentHashMap<ApplicationId, SystemCredentialsForAppsProto>());
+    ClientRMService mockClientRMService = mock(ClientRMService.class);
+    when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
+    when(mockContext.getDelegationTokenRenewer()).thenReturn(
+        localDtr);
+    when(mockContext.getDispatcher()).thenReturn(dispatcher);
+    InetSocketAddress sockAddr =
+        InetSocketAddress.createUnresolved("localhost", 1234);
+    when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
+    localDtr.setDelegationTokenRenewerPoolTracker(false);
+    localDtr.setRMContext(mockContext);
+    localDtr.init(lconf);
+    localDtr.start();
+
+    MyFS dfs = (MyFS)FileSystem.get(lconf);
+    LOG.info("dfs="+(Object)dfs.hashCode() + ";conf="+lconf.hashCode());
+
+    Credentials ts = new Credentials();
+    MyToken token1 = dfs.getDelegationToken("user1");
+
+    //to cause this one to be set for renew in 2 secs
+    Renewer.tokenToRenewIn2Sec = token1;
+    LOG.info("token="+token1+" should be renewed for 2 secs");
+
+    String nn1 = DelegationTokenRenewer.SCHEME + "://host1:0";
+    ts.addToken(new Text(nn1), token1);
+
+    ApplicationId applicationId = BuilderUtils.newApplicationId(0, 1);
+    localDtr.addApplicationAsync(applicationId, ts, false, "user",
+        new Configuration());
+    waitForEventsToGetProcessed(localDtr);
+    localDtr.applicationFinished(applicationId);
+    waitForEventsToGetProcessed(localDtr);
+
+    int numberOfExpectedRenewals = Renewer.counter; // number of renewals so far
+    try {
+      Thread.sleep(6*1000); // sleep 6 seconds, so it has time to renew
+    } catch (InterruptedException e) {}
+    LOG.info("Counter = " + Renewer.counter + ";t="+ Renewer.lastRenewed);
+
+    // counter and the token should still be the old ones
+    assertEquals("renew wasn't called as many times as expected",
+        numberOfExpectedRenewals, Renewer.counter);
+
+    // The token should have been cancelled at this point. Renewal will fail.
+    try {
+      token1.renew(lconf);
+      fail("Renewal of cancelled token should have failed");
+    } catch (InvalidToken ite) {}
+  }
+
   /**
    * Basic idea of the test:
    * 0. Setup token KEEP_ALIVE
@@ -1616,7 +1689,7 @@ public class TestDelegationTokenRenewer {
     // Ensure incrTokenSequenceNo has been called for new token request
     Mockito.verify(mockContext, Mockito.times(1)).incrTokenSequenceNo();
 
-    DelegationTokenToRenew dttr = new DelegationTokenToRenew(appIds,
+    DelegationTokenToRenew dttr = dtr.new DelegationTokenToRenew(appIds,
         expectedToken, conf, 1000, false, "user1");
 
     dtr.requestNewHdfsDelegationTokenIfNeeded(dttr);

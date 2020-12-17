@@ -26,6 +26,8 @@ import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -77,8 +79,8 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Times;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.yarn.util.StringHelper;
 
 /**
@@ -190,7 +192,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       RMAppAttempt attempt = app.getCurrentAppAttempt();
       if (attempt != null) {
         trackingUrl = attempt.getTrackingUrl();
-        host = attempt.getHost();
+        Container masterContainer = attempt.getMasterContainer();
+        if (masterContainer != null) {
+          NodeId nodeId = masterContainer.getNodeId();
+          if (nodeId != null) {
+            String amHost = nodeId.getHost();
+            if (amHost != null) {
+              host = amHost;
+            }
+          }
+        }
       }
       RMAppMetrics metrics = app.getRMAppMetrics();
       SummaryBuilder summary = new SummaryBuilder()
@@ -489,11 +500,25 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       }
     }
 
+    //In the case of capacity scheduler the queue name only means the name of
+    // the leaf queue, but since YARN-9879, internal queue references should
+    // use full path, so we get the queue and parent name from the placement
+    // context instead of the submissionContext.
+    String placementQueueName = submissionContext.getQueue();
+    if (placementContext != null && scheduler instanceof CapacityScheduler) {
+      if (placementContext.hasParentQueue()) {
+        placementQueueName = placementContext.getParentQueue() + "." +
+            placementContext.getQueue();
+      } else {
+        placementQueueName = placementContext.getQueue();
+      }
+    }
+
     // Create RMApp
     RMAppImpl application =
         new RMAppImpl(applicationId, rmContext, this.conf,
             submissionContext.getApplicationName(), user,
-            submissionContext.getQueue(),
+            placementQueueName,
             submissionContext, this.scheduler, this.masterService,
             submitTime, submissionContext.getApplicationType(),
             submissionContext.getApplicationTags(), amReqs, placementContext,
@@ -853,9 +878,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     if (placementManager != null) {
       try {
         String usernameUsedForPlacement =
-                getUserNameForPlacement(user, context, placementManager);
+            getUserNameForPlacement(user, context, placementManager);
         placementContext = placementManager
-                .placeApplication(context, usernameUsedForPlacement);
+            .placeApplication(context, usernameUsedForPlacement, isRecovery);
       } catch (YarnException e) {
         // Placement could also fail if the user doesn't exist in system
         // skip if the user is not found during recovery.
@@ -916,6 +941,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         return usernameUsedForPlacement;
       }
       String queue = appPlacementContext.getQueue();
+      String parent = appPlacementContext.getParentQueue();
+      if (scheduler instanceof CapacityScheduler && parent != null) {
+        queue = parent + "." + queue;
+      }
       if (callerUGI != null && scheduler
               .checkAccess(callerUGI, QueueACL.SUBMIT_APPLICATIONS, queue)) {
         usernameUsedForPlacement = userNameFromAppTag;

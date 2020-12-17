@@ -136,8 +136,7 @@ public class AppsBlock extends HtmlBlock {
 
     try {
       fetchData();
-    }
-    catch( Exception e) {
+    } catch (YarnException | IOException | InterruptedException e) {
       String message = "Failed to read the applications.";
       LOG.error(message, e);
       html.p().__(message).__();
@@ -150,7 +149,8 @@ public class AppsBlock extends HtmlBlock {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
           .th(".name", "Name").th(".type", "Application Type")
-          .th(".queue", "Queue").th(".priority", "Application Priority")
+          .th(".apptag", "Application Tags").th(".queue", "Queue")
+          .th(".priority", "Application Priority")
           .th(".starttime", "StartTime")
           .th(".launchtime", "LaunchTime")
           .th(".finishtime", "FinishTime")
@@ -185,6 +185,10 @@ public class AppsBlock extends HtmlBlock {
         .append(
           StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
             .getType())))
+          .append("\",\"")
+          .append(
+              StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
+                  app.getApplicationTags() == null ? "" : app.getApplicationTags())))
         .append("\",\"")
         .append(
           StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app

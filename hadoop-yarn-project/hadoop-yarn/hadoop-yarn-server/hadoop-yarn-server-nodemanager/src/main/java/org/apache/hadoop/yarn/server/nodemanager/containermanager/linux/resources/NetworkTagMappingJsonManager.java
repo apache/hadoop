@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
@@ -86,7 +86,7 @@ public class NetworkTagMappingJsonManager implements NetworkTagMappingManager {
         container.getUser());
     List<Group> groups = this.networkTagMapping.getGroups();
     for(Group group : groups) {
-      if (userUGI.getGroups().contains(group.getGroupName())) {
+      if (userUGI.getGroupsSet().contains(group.getGroupName())) {
         return group.getNetworkTagID();
       }
     }

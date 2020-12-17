@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -85,6 +85,10 @@ public class TestCapacitySchedulerAsyncScheduling {
 
   private NMHeartbeatThread nmHeartbeatThread = null;
 
+  private static final String POLICY_CLASS_NAME =
+          "org.apache.hadoop.yarn.server.resourcemanager.scheduler" +
+                  ".placement.ResourceUsageMultiNodeLookupPolicy";
+
   @Before
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
@@ -109,6 +113,21 @@ public class TestCapacitySchedulerAsyncScheduling {
   @Test(timeout = 300000)
   public void testThreeThreadsAsyncContainerAllocation() throws Exception {
     testAsyncContainerAllocation(3);
+  }
+
+  @Test(timeout = 300000)
+  public void testAsyncContainerAllocationWithMultiNode() throws Exception {
+    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICIES,
+            "resource-based");
+    conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME,
+            "resource-based");
+    String policyName =
+            CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+                    + ".resource-based" + ".class";
+    conf.set(policyName, POLICY_CLASS_NAME);
+    conf.setBoolean(CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED,
+            true);
+    testAsyncContainerAllocation(2);
   }
 
   public void testAsyncContainerAllocation(int numThreads) throws Exception {

@@ -113,7 +113,19 @@ Currently the only Metadata Store-independent setting, besides the
 implementation class above, are the *allow authoritative* and *fail-on-error*
 flags.
 
-#### Allow Authoritative
+#### <a name="authoritative"></a>  Authoritative S3Guard
+
+Authoritative S3Guard is a complicated configuration which delivers performance
+at the expense of being unsafe for other applications to use the same directory
+tree/bucket unless configured consistently.
+
+It can also be used to support [directory marker retention](directory_markers.html)
+in higher-performance but non-backwards-compatible modes.
+
+Most deployments do not use this setting -it is ony used in deployments where
+specific parts of a bucket (e.g. Apache Hive managed tables) are known to
+have exclusive access by a single application (Hive) and other tools/applications
+from exactly the same Hadoop release.
 
 The _authoritative_ expression in S3Guard is present in two different layers, for
 two different reasons:
@@ -178,7 +190,7 @@ recommended that you leave the default setting here:
     <value>false</value>
 </property>
 ```
-.
+
 Note that a MetadataStore MAY persist this bit in the directory listings. (Not
 MUST).
 

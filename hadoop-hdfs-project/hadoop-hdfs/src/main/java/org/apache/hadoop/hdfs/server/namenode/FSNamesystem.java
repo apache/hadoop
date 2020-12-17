@@ -99,6 +99,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.ACTIVE;
@@ -107,7 +108,8 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotDeletionGc;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsPartialListing;
@@ -337,12 +339,12 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -380,6 +382,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public static final org.slf4j.Logger LOG = LoggerFactory
       .getLogger(FSNamesystem.class.getName());
+
+  // The following are private configurations
+  public static final String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
+      "dfs.namenode.snapshot.trashroot.enabled";
+  public static final boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT
+      = false;
+  private static final FsPermission SHARED_TRASH_PERMISSION =
+      new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
+
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
@@ -460,6 +471,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final UserGroupInformation fsOwner;
   private final String supergroup;
   private final boolean standbyShouldCheckpoint;
+  private final boolean isSnapshotTrashRootEnabled;
   private final int snapshotDiffReportLimit;
   private final int blockDeletionIncrement;
 
@@ -492,6 +504,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   FSDirectory dir;
   private BlockManager blockManager;
   private final SnapshotManager snapshotManager;
+  private final SnapshotDeletionGc snapshotDeletionGc;
   private final CacheManager cacheManager;
   private final DatanodeStatistics datanodeStatistics;
 
@@ -816,7 +829,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
                         DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
       LOG.info("Enabling async auditlog");
-      enableAsyncAuditLog();
+      enableAsyncAuditLog(conf);
     }
     fsLock = new FSNamesystemLock(conf, detailedLockHoldTimeMetrics);
     cond = fsLock.newWriteLockCondition();
@@ -873,6 +886,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // Get the checksum type from config
       String checksumTypeStr = conf.get(DFS_CHECKSUM_TYPE_KEY,
           DFS_CHECKSUM_TYPE_DEFAULT);
+      this.isSnapshotTrashRootEnabled = conf.getBoolean(
+          DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED,
+          DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT);
       DataChecksum.Type checksumType;
       try {
          checksumType = DataChecksum.Type.valueOf(checksumTypeStr);
@@ -899,7 +915,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           conf.getTrimmed(
               CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
               ""),
-          blockManager.getStoragePolicySuite().getDefaultPolicy().getId());
+          blockManager.getStoragePolicySuite().getDefaultPolicy().getId(),
+          isSnapshotTrashRootEnabled);
 
       this.maxFsObjects = conf.getLong(DFS_NAMENODE_MAX_OBJECTS_KEY, 
                                        DFS_NAMENODE_MAX_OBJECTS_DEFAULT);
@@ -973,6 +990,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(conf, dir);
+      this.snapshotDeletionGc = snapshotManager.isSnapshotDeletionOrdered()?
+          new SnapshotDeletionGc(this, conf): null;
+
       this.cacheManager = new CacheManager(this, conf, blockManager);
       // Init ErasureCodingPolicyManager instance.
       ErasureCodingPolicyManager.getInstance().init(conf);
@@ -1038,6 +1058,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public int getMaxListOpenFilesResponses() {
     return maxListOpenFilesResponses;
+  }
+
+  boolean isSnapshotTrashRootEnabled() {
+    return isSnapshotTrashRootEnabled;
   }
 
   void lockRetryCache() {
@@ -1179,7 +1203,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return Collections.unmodifiableList(auditLoggers);
   }
 
-  private void loadFSImage(StartupOption startOpt) throws IOException {
+  void loadFSImage(StartupOption startOpt) throws IOException {
     final FSImage fsImage = getFSImage();
 
     // format before starting up if requested
@@ -1358,6 +1382,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // Enable quota checks.
       dir.enableQuotaChecks();
       dir.ezManager.startReencryptThreads();
+
+      if (snapshotDeletionGc != null) {
+        snapshotDeletionGc.schedule();
+      }
 
       if (haEnabled) {
         // Renew all of the leases before becoming active.
@@ -1542,6 +1570,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (haContext != null) {
       // null in some unit tests
       haContext.checkOperation(op);
+    }
+
+    boolean assertsEnabled = false;
+    assert assertsEnabled = true; // Intentional side effect!!!
+    if (assertsEnabled && op == OperationCategory.WRITE) {
+      getSnapshotManager().initThreadLocals();
     }
   }
   
@@ -1922,6 +1956,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   BatchedListEntries<OpenFileEntry> listOpenFiles(long prevId,
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
+    INode.checkAbsolutePath(path);
     final String operationName = "listOpenFiles";
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);
@@ -2259,7 +2294,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     requireEffectiveLayoutVersionForFeature(Feature.TRUNCATE);
     FSDirTruncateOp.TruncateResult r = null;
     try {
-      NameNode.stateChangeLog.debug(
+      NameNode.stateChangeLog.info(
           "DIR* NameSystem.truncate: src={} newLength={}", src, newLength);
       if (newLength < 0) {
         throw new HadoopIllegalArgumentException(
@@ -3286,10 +3321,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw e;
     }
     getEditLog().logSync();
+    logAuditEvent(ret, operationName, src);
     if (toRemovedBlocks != null) {
       removeBlocks(toRemovedBlocks); // Incremental deletion of blocks
     }
-    logAuditEvent(true, operationName, src);
     return ret;
   }
 
@@ -3683,10 +3718,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // if there are no valid replicas on data-nodes.
       String message = "DIR* NameSystem.internalReleaseLease: " +
           "Failed to release lease for file " + src +
-          ". Committed blocks are waiting to be minimally replicated." +
-          " Try again later.";
+          ". Committed blocks are waiting to be minimally replicated.";
       NameNode.stateChangeLog.warn(message);
-      throw new AlreadyBeingCreatedException(message);
+      if (!penultimateBlockMinStorage) {
+        throw new AlreadyBeingCreatedException(message);
+      }
+      // Intentionally fall through to UNDER_RECOVERY so BLOCK_RECOVERY is
+      // attempted
     case UNDER_CONSTRUCTION:
     case UNDER_RECOVERY:
       BlockUnderConstructionFeature uc =
@@ -5467,6 +5505,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Shutdown FSNamesystem.
    */
   void shutdown() {
+    if (snapshotDeletionGc != null) {
+      snapshotDeletionGc.cancel();
+    }
     if (snapshotManager != null) {
       snapshotManager.shutdown();
     }
@@ -6274,13 +6315,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private static UserGroupInformation getRemoteUser() throws IOException {
     return NameNode.getRemoteUser();
   }
-  
+
   /**
-   * Log fsck event in the audit log 
+   * Log fsck event in the audit log.
+   *
+   * @param succeeded Whether authorization succeeded.
+   * @param src Path of affected source file.
+   * @param remoteAddress Remote address of the request.
+   * @throws IOException if {@link #getRemoteUser()} fails.
    */
-  void logFsckEvent(String src, InetAddress remoteAddress) throws IOException {
+  void logFsckEvent(boolean succeeded, String src, InetAddress remoteAddress)
+      throws IOException {
     if (isAuditEnabled()) {
-      logAuditEvent(true, getRemoteUser(),
+      logAuditEvent(succeeded, getRemoteUser(),
                     remoteAddress,
                     "fsck", src, null, null);
     }
@@ -6989,7 +7036,38 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, operationName, null, null, null);
     return status;
   }
-  
+
+  /**
+   * Get the list of snapshots for a given snapshottable directory.
+   *
+   * @return The list of all the snapshots for a snapshottable directory
+   * @throws IOException
+   */
+  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException {
+    final String operationName = "ListSnapshot";
+    SnapshotStatus[] status;
+    checkOperation(OperationCategory.READ);
+    boolean success = false;
+    final FSPermissionChecker pc = getPermissionChecker();
+    FSPermissionChecker.setOperationType(operationName);
+    try {
+      readLock();
+      try {
+        checkOperation(OperationCategory.READ);
+        status = FSDirSnapshotOp.getSnapshotListing(dir, pc, snapshotManager,
+            snapshotRoot);
+        success = true;
+      } finally {
+        readUnlock(operationName, getLockReportInfoSupplier(null));
+      }
+    } catch (AccessControlException ace) {
+      logAuditEvent(success, operationName, snapshotRoot);
+      throw ace;
+    }
+    logAuditEvent(success, operationName, snapshotRoot);
+    return status;
+  }
   /**
    * Get the difference between two snapshots (or between a snapshot and the
    * current status) of a snapshottable directory.
@@ -7152,6 +7230,30 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       removeBlocks(blocksToBeDeleted);
     }
     logAuditEvent(true, operationName, rootPath, null, null);
+  }
+
+  public void gcDeletedSnapshot(String snapshotRoot, String snapshotName)
+      throws IOException {
+    final String operationName = "gcDeletedSnapshot";
+    String rootPath = null;
+    final INode.BlocksMapUpdateInfo blocksToBeDeleted;
+
+    checkOperation(OperationCategory.WRITE);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      rootPath = Snapshot.getSnapshotPath(snapshotRoot, snapshotName);
+      checkNameNodeSafeMode("Cannot gcDeletedSnapshot for " + rootPath);
+
+      final long now = Time.now();
+      final INodesInPath iip = dir.resolvePath(null, snapshotRoot, DirOp.WRITE);
+      snapshotManager.assertMarkedAsDeleted(iip, snapshotName);
+      blocksToBeDeleted = FSDirSnapshotOp.deleteSnapshot(
+          dir, snapshotManager, iip, snapshotName, now, snapshotRoot, false);
+    } finally {
+      writeUnlock(operationName, getLockReportInfoSupplier(rootPath));
+    }
+    removeBlocks(blocksToBeDeleted);
   }
 
   /**
@@ -8422,6 +8524,32 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, operationName, src);
   }
 
+  /**
+   * Check if snapshot roots are created for all existing snapshottable
+   * directories. Create them if not.
+   */
+  void checkAndProvisionSnapshotTrashRoots() throws IOException {
+    SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
+    if (dirStatusList == null) {
+      return;
+    }
+    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+      String currDir = dirStatus.getFullPath().toString();
+      if (!currDir.endsWith(Path.SEPARATOR)) {
+        currDir += Path.SEPARATOR;
+      }
+      String trashPath = currDir + FileSystem.TRASH_PREFIX;
+      HdfsFileStatus fileStatus = getFileInfo(trashPath, false, false, false);
+      if (fileStatus == null) {
+        LOG.info("Trash doesn't exist for snapshottable directory {}. "
+            + "Creating trash at {}", currDir, trashPath);
+        PermissionStatus permissionStatus = new PermissionStatus(getRemoteUser()
+            .getShortUserName(), null, SHARED_TRASH_PERMISSION);
+        mkdirs(trashPath, permissionStatus, false);
+      }
+    }
+  }
+
   private Supplier<String> getLockReportInfoSupplier(String src) {
     return getLockReportInfoSupplier(src, null);
   }
@@ -8579,7 +8707,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  private static void enableAsyncAuditLog() {
+  private static void enableAsyncAuditLog(Configuration conf) {
     if (!(auditLog instanceof Log4JLogger)) {
       LOG.warn("Log4j is required to enable async auditlog");
       return;
@@ -8590,6 +8718,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // failsafe against trying to async it more than once
     if (!appenders.isEmpty() && !(appenders.get(0) instanceof AsyncAppender)) {
       AsyncAppender asyncAppender = new AsyncAppender();
+      asyncAppender.setBlocking(conf.getBoolean(
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY,
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_DEFAULT
+      ));
+      asyncAppender.setBufferSize(conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT
+      ));
       // change logger to have an async appender containing all the
       // previously configured appenders
       for (Appender appender : appenders) {

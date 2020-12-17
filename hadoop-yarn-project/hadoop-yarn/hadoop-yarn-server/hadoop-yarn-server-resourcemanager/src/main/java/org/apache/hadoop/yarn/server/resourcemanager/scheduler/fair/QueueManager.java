@@ -29,9 +29,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -403,7 +403,7 @@ public class QueueManager {
     // Ad hoc queues do not exist in the configured queues map
     if (!configuredQueues.get(FSQueueType.LEAF).contains(child.getName()) &&
         !configuredQueues.get(FSQueueType.PARENT).contains(child.getName())) {
-      // For ad hoc queues, set their max reource allocations based on
+      // For ad hoc queues, set their max resource allocations based on
       // their parents' default child settings.
       ConfigurableResource maxChild = parent.getMaxChildQueueResource();
 

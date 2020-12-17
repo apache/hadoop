@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -39,7 +40,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -47,6 +50,8 @@ import org.apache.hadoop.util.ExitUtil;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
+import static org.apache.hadoop.fs.s3a.Listing.toProvidedFileStatusIterator;
+import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -79,7 +84,6 @@ public class TestS3Guard extends Assert {
     ms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
     timeProvider = new S3Guard.TtlTimeProvider(
         DEFAULT_METADATASTORE_METADATA_TTL);
-
   }
 
   @After
@@ -108,9 +112,14 @@ public class TestS3Guard extends Assert {
     List<S3AFileStatus> s3Listing = Arrays.asList(
         s1Status,
         s2Status);
-
-    FileStatus[] result = S3Guard.dirListingUnion(ms, DIR_PATH, s3Listing,
-        dirMeta, false, timeProvider);
+    RemoteIterator<S3AFileStatus> storeItr = toProvidedFileStatusIterator(
+            s3Listing.toArray(new S3AFileStatus[0]));
+    RemoteIterator<S3AFileStatus> resultItr = S3Guard.dirListingUnion(
+            ms, DIR_PATH, storeItr, dirMeta, false,
+            timeProvider, s3AFileStatuses ->
+                    toProvidedFileStatusIterator(dirMetaToStatuses(dirMeta)));
+    S3AFileStatus[] result = S3AUtils.iteratorToStatuses(
+            resultItr, new HashSet<>());
 
     assertEquals("listing length", 4, result.length);
     assertContainsPaths(result, MS_FILE_1, MS_FILE_2, S3_FILE_3, S3_DIR_4);
@@ -124,9 +133,18 @@ public class TestS3Guard extends Assert {
     S3AFileStatus f1Status2 = new S3AFileStatus(
         200, System.currentTimeMillis(), new Path(MS_FILE_1),
         1, null, "tag2", "ver2");
-    FileStatus[] result2 = S3Guard.dirListingUnion(ms, DIR_PATH,
-        Arrays.asList(f1Status2),
-        dirMeta, false, timeProvider);
+    S3AFileStatus[] f1Statuses = new S3AFileStatus[1];
+    f1Statuses[0] = f1Status2;
+    RemoteIterator<S3AFileStatus> itr = toProvidedFileStatusIterator(
+            f1Statuses);
+    FileStatus[] result2 = S3AUtils.iteratorToStatuses(
+            S3Guard.dirListingUnion(
+                    ms, DIR_PATH, itr, dirMeta,
+                    false, timeProvider,
+              s3AFileStatuses ->
+                      toProvidedFileStatusIterator(
+                              dirMetaToStatuses(dirMeta))),
+            new HashSet<>());
     // the listing returns the new status
     Assertions.assertThat(find(result2, MS_FILE_1))
         .describedAs("Entry in listing results for %s", MS_FILE_1)
@@ -159,9 +177,18 @@ public class TestS3Guard extends Assert {
 
     ITtlTimeProvider timeProvider = new S3Guard.TtlTimeProvider(
         DEFAULT_METADATASTORE_METADATA_TTL);
-    FileStatus[] result = S3Guard.dirListingUnion(ms, DIR_PATH, s3Listing,
-        dirMeta, true, timeProvider);
 
+    RemoteIterator<S3AFileStatus> storeItr = toProvidedFileStatusIterator(
+            s3Listing.toArray(new S3AFileStatus[0]));
+    RemoteIterator<S3AFileStatus> resultItr = S3Guard
+            .dirListingUnion(ms, DIR_PATH, storeItr, dirMeta,
+                    true, timeProvider,
+              s3AFileStatuses ->
+                      toProvidedFileStatusIterator(
+                              dirMetaToStatuses(dirMeta)));
+
+    S3AFileStatus[] result = S3AUtils.iteratorToStatuses(
+            resultItr, new HashSet<>());
     assertEquals("listing length", 4, result.length);
     assertContainsPaths(result, MS_FILE_1, MS_FILE_2, S3_FILE_3, S3_DIR_4);
 
@@ -181,13 +208,21 @@ public class TestS3Guard extends Assert {
     S3AFileStatus s1Status2 = new S3AFileStatus(
         200, System.currentTimeMillis(), new Path(S3_FILE_3),
         1, null, "tag2", "ver2");
+    S3AFileStatus[] f1Statuses = new S3AFileStatus[1];
+    f1Statuses[0] = s1Status2;
+    RemoteIterator<S3AFileStatus> itr =
+            toProvidedFileStatusIterator(f1Statuses);
+    FileStatus[] result2 = S3AUtils.iteratorToStatuses(
+            S3Guard.dirListingUnion(ms, DIR_PATH, itr, dirMeta,
+                    true, timeProvider,
+              s3AFileStatuses ->
+                      toProvidedFileStatusIterator(
+                              dirMetaToStatuses(dirMeta))),
+            new HashSet<>());
 
     // but the result of the listing contains the old entry
     // because auth mode doesn't pick up changes in S3 which
     // didn't go through s3guard
-    FileStatus[] result2 = S3Guard.dirListingUnion(ms, DIR_PATH,
-        Arrays.asList(s1Status2),
-        dirMeta2, true, timeProvider);
     Assertions.assertThat(find(result2, S3_FILE_3))
         .describedAs("Entry in listing results for %s", S3_FILE_3)
         .isSameAs(file3Meta.getFileStatus());

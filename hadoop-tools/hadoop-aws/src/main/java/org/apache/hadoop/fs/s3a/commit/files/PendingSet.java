@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
@@ -56,7 +57,7 @@ public class PendingSet extends PersistentCommitData {
    * If this is changed the value of {@link #serialVersionUID} will change,
    * to avoid deserialization problems.
    */
-  public static final int VERSION = 1;
+  public static final int VERSION = 2;
 
   /**
    * Serialization ID: {@value}.
@@ -66,6 +67,9 @@ public class PendingSet extends PersistentCommitData {
 
   /** Version marker. */
   private int version = VERSION;
+
+  /** Job ID, if known. */
+  private String jobId = "";
 
   /**
    * Commit list.
@@ -108,6 +112,19 @@ public class PendingSet extends PersistentCommitData {
     PendingSet instance = serializer().load(fs, path);
     instance.validate();
     return instance;
+  }
+
+  /**
+   * Load an instance from a file, then validate it.
+   * @param fs filesystem
+   * @param status status of file to load
+   * @return the loaded instance
+   * @throws IOException IO failure
+   * @throws ValidationFailure if the data is invalid
+   */
+  public static PendingSet load(FileSystem fs, FileStatus status)
+      throws IOException {
+    return load(fs, status.getPath());
   }
 
   /**
@@ -189,4 +206,23 @@ public class PendingSet extends PersistentCommitData {
   public void setCommits(List<SinglePendingCommit> commits) {
     this.commits = commits;
   }
+
+  /**
+   * Set/Update an extra data entry.
+   * @param key key
+   * @param value value
+   */
+  public void putExtraData(String key, String value) {
+    extraData.put(key, value);
+  }
+
+  /** @return Job ID, if known. */
+  public String getJobId() {
+    return jobId;
+  }
+
+  public void setJobId(String jobId) {
+    this.jobId = jobId;
+  }
+
 }

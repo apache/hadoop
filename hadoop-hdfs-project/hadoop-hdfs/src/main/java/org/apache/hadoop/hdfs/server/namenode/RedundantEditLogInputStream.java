@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Longs;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
@@ -170,6 +170,7 @@ class RedundantEditLogInputStream extends EditLogInputStream {
       }
       return nextOp();
     } catch (IOException e) {
+      LOG.warn("encountered an exception", e);
       return null;
     }
   }
@@ -228,7 +229,8 @@ class RedundantEditLogInputStream extends EditLogInputStream {
               "streams are shorter than the current one!  The best " +
               "remaining edit log ends at transaction " +
               newLast + ", but we thought we could read up to transaction " +
-              oldLast + ".  If you continue, metadata will be lost forever!");
+              oldLast + ".  If you continue, metadata will be lost forever!",
+              prevException);
         }
         LOG.error("Got error reading edit log input stream " +
           streams[curIdx].getName() + "; failing over to edit log " +

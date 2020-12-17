@@ -22,7 +22,9 @@ import org.apache.hadoop.security.GroupMappingServiceProvider;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Group Mapping class used for test cases. Returns only primary group of the
@@ -43,5 +45,10 @@ public class PrimaryGroupMapping implements GroupMappingServiceProvider {
   @Override
   public void cacheGroupsAdd(List<String> groups) throws IOException {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Set<String> getGroupsSet(String user) throws IOException {
+    return Collections.singleton(user + "group");
   }
 }

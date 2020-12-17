@@ -35,15 +35,24 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreCapabilities;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
+import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceOperations;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -67,9 +76,10 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
@@ -618,6 +628,14 @@ public final class S3ATestUtils {
     // add this so that even on tests where the FS is shared,
     // the FS is always "magic"
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
+
+    // directory marker policy
+    String directoryRetention = getTestProperty(
+        conf,
+        DIRECTORY_MARKER_POLICY,
+        DEFAULT_DIRECTORY_MARKER_POLICY);
+    conf.set(DIRECTORY_MARKER_POLICY, directoryRetention);
+
     return conf;
   }
 
@@ -882,7 +900,51 @@ public final class S3ATestUtils {
   public static S3AFileStatus getStatusWithEmptyDirFlag(
       final S3AFileSystem fs,
       final Path dir) throws IOException {
-    return fs.innerGetFileStatus(dir, true, StatusProbeEnum.ALL);
+    return fs.innerGetFileStatus(dir, true,
+        StatusProbeEnum.ALL);
+  }
+
+  /**
+   * Create mock implementation of store context.
+   * @param multiDelete
+   * @param store
+   * @param accessors
+   * @return
+   * @throws URISyntaxException
+   * @throws IOException
+   */
+  public static StoreContext createMockStoreContext(
+          boolean multiDelete,
+          OperationTrackingStore store,
+          ContextAccessors accessors)
+          throws URISyntaxException, IOException {
+    URI name = new URI("s3a://bucket");
+    Configuration conf = new Configuration();
+    return new StoreContextBuilder().setFsURI(name)
+        .setBucket("bucket")
+        .setConfiguration(conf)
+        .setUsername("alice")
+        .setOwner(UserGroupInformation.getCurrentUser())
+        .setExecutor(BlockingThreadPoolExecutorService.newInstance(
+            4,
+            4,
+            10, TimeUnit.SECONDS,
+            "s3a-transfer-shared"))
+        .setExecutorCapacity(DEFAULT_EXECUTOR_CAPACITY)
+        .setInvoker(
+            new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT))
+        .setInstrumentation(new S3AInstrumentation(name))
+        .setStorageStatistics(new S3AStorageStatistics())
+        .setInputPolicy(S3AInputPolicy.Normal)
+        .setChangeDetectionPolicy(
+            ChangeDetectionPolicy.createPolicy(ChangeDetectionPolicy.Mode.None,
+                ChangeDetectionPolicy.Source.ETag, false))
+        .setMultiObjectDeleteEnabled(multiDelete)
+        .setMetadataStore(store)
+        .setUseListV1(false)
+        .setContextAccessors(accessors)
+        .setTimeProvider(new S3Guard.TtlTimeProvider(conf))
+        .build();
   }
 
   /**
@@ -948,8 +1010,14 @@ public final class S3ATestUtils {
      * @param expected expected value.
      */
     public void assertDiffEquals(String message, long expected) {
-      Assert.assertEquals(message + ": " + statistic.getSymbol(),
-          expected, diff());
+      String text = message + ": " + statistic.getSymbol();
+      long diff = diff();
+      if (expected != diff) {
+        // Log in error ensures that the details appear in the test output
+        LOG.error(text + " expected {}, actual {}", expected, diff);
+      }
+      Assert.assertEquals(text,
+          expected, diff);
     }
 
     /**
@@ -1441,4 +1509,27 @@ public final class S3ATestUtils {
         .collect(Collectors.toCollection(TreeSet::new));
     return threads;
   }
+
+  /**
+   * Call the package-private {@code innerGetFileStatus()} method
+   * on the passed in FS.
+   * @param fs filesystem
+   * @param path path
+   * @param needEmptyDirectoryFlag look for empty directory
+   * @param probes file status probes to perform
+   * @return the status
+   * @throws IOException
+   */
+  public static S3AFileStatus innerGetFileStatus(
+      S3AFileSystem fs,
+      Path path,
+      boolean needEmptyDirectoryFlag,
+      Set<StatusProbeEnum> probes) throws IOException {
+
+    return fs.innerGetFileStatus(
+        path,
+        needEmptyDirectoryFlag,
+        probes);
+  }
+
 }

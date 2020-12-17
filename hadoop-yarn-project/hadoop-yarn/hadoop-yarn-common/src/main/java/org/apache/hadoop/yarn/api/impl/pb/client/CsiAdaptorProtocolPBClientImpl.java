@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.api.impl.pb.client;
 
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.CsiAdaptorPB;
 import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
@@ -57,7 +57,7 @@ public class CsiAdaptorProtocolPBClientImpl
 
   public CsiAdaptorProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, CsiAdaptorPB.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, CsiAdaptorPB.class, ProtobufRpcEngine2.class);
     this.proxy = RPC.getProxy(CsiAdaptorPB.class, clientVersion, addr, conf);
   }
 

@@ -62,8 +62,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.event.Level;
 
-import com.google.common.base.Supplier;
-import com.google.common.primitives.Ints;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 /**
  * Tests HDFS persistent memory cache by PmemMappableBlockLoader.

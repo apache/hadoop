@@ -16,8 +16,8 @@
  */
 package org.apache.hadoop.hdfs.server.diskbalancer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import java.util.function.Supplier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
@@ -642,7 +642,7 @@ public class TestDiskBalancer {
 
       node = cluster.getDataNodes().get(dataNodeIndex);
       String planJson = plan.toJson();
-      String planID = DigestUtils.shaHex(planJson);
+      String planID = DigestUtils.sha1Hex(planJson);
 
       // Submit the plan and wait till the execution is done.
       node.submitDiskBalancerPlan(planID, 1, PLAN_FILE, planJson,
@@ -740,7 +740,7 @@ public class TestDiskBalancer {
       reconfigThread.start();
 
       String planJson = plan.toJson();
-      String planID = DigestUtils.shaHex(planJson);
+      String planID = DigestUtils.sha1Hex(planJson);
       diskBalancer.submitPlan(planID, 1, PLAN_FILE, planJson, false);
 
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -757,7 +757,7 @@ public class TestDiskBalancer {
         }
       }, 1000, 100000);
 
-      assertTrue("Disk balancer operation hit max errors!", errorCount.get() <
+      assertTrue("Disk balancer operation hit max errors!", errorCount.get() <=
           DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT);
       createWorkPlanLatch.await();
       removeDiskLatch.await();

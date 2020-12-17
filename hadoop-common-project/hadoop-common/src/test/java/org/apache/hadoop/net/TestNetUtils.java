@@ -95,7 +95,25 @@ public class TestNetUtils {
       assertInException(se, "Invalid argument");
     }
   }
-  
+
+  @Test
+  public void testInvalidAddress() throws Throwable {
+    Configuration conf = new Configuration();
+
+    Socket socket = NetUtils.getDefaultSocketFactory(conf)
+        .createSocket();
+    socket.bind(new InetSocketAddress("127.0.0.1", 0));
+    try {
+      NetUtils.connect(socket,
+          new InetSocketAddress("invalid-test-host",
+              0), 20000);
+      socket.close();
+      fail("Should not have connected");
+    } catch (UnknownHostException uhe) {
+      LOG.info("Got exception: ", uhe);
+    }
+  }
+
   @Test
   public void testSocketReadTimeoutWithChannel() throws Exception {
     doSocketReadTimeoutTest(true);
@@ -334,8 +352,51 @@ public class TestNetUtils {
     assertEquals(1000, addr.getPort());
 
     try {
-      addr = NetUtils.createSocketAddr(
+      NetUtils.createSocketAddr(
           "127.0.0.1:blahblah", 1000, "myconfig");
+      fail("Should have failed to parse bad port");
+    } catch (IllegalArgumentException iae) {
+      assertInException(iae, "myconfig");
+    }
+  }
+
+  @Test
+  public void testCreateSocketAddressWithURICache() throws Throwable {
+    InetSocketAddress addr = NetUtils.createSocketAddr(
+        "127.0.0.1:12345", 1000, "myconfig", true);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(12345, addr.getPort());
+
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1:12345", 1000, "myconfig", true);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(12345, addr.getPort());
+
+    // ----------------------------------------------------
+
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1", 1000, "myconfig", true);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(1000, addr.getPort());
+
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1", 1000, "myconfig", true);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(1000, addr.getPort());
+
+    // ----------------------------------------------------
+
+    try {
+      NetUtils.createSocketAddr(
+          "127.0.0.1:blahblah", 1000, "myconfig", true);
+      fail("Should have failed to parse bad port");
+    } catch (IllegalArgumentException iae) {
+      assertInException(iae, "myconfig");
+    }
+
+    try {
+      NetUtils.createSocketAddr(
+          "127.0.0.1:blahblah", 1000, "myconfig", true);
       fail("Should have failed to parse bad port");
     } catch (IllegalArgumentException iae) {
       assertInException(iae, "myconfig");

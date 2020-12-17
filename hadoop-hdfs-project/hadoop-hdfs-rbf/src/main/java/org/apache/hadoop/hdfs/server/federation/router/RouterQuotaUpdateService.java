@@ -70,8 +70,8 @@ public class RouterQuotaUpdateService extends PeriodicService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.setIntervalMs(conf.getTimeDuration(
-        RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL,
-        RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL_DEFAULT,
+        RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL,
+        RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS));
 
     super.serviceInit(conf);

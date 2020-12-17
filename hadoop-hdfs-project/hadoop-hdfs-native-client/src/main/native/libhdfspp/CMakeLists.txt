@@ -28,6 +28,8 @@ project (libhdfspp)
 
 cmake_minimum_required(VERSION 2.8)
 
+find_package (Boost 1.72.0 REQUIRED)
+
 enable_testing()
 include (CTest)
 
@@ -49,9 +51,35 @@ find_package(Threads)
 
 include(CheckCXXSourceCompiles)
 
+# Download and build gtest
+configure_file(CMakeLists-gtest.txt.in googletest-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
+if(result)
+  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
+if(result)
+  message(FATAL_ERROR "Build step for googletest failed: ${result}")
+endif()
+
+# Prevent overriding the parent project's compiler/linker
+# settings on Windows
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+# Add googletest directly to our build. This defines
+# the gtest and gtest_main targets.
+add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
+                 ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
+                 EXCLUDE_FROM_ALL)
+
 # Check if thread_local is supported
 unset (THREAD_LOCAL_SUPPORTED CACHE)
-set (CMAKE_REQUIRED_DEFINITIONS "-std=c++11")
+set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_REQUIRED_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 check_cxx_source_compiles(
     "#include <thread>
@@ -147,12 +175,13 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
 
 if(UNIX)
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -std=c++11 -g -fPIC -fno-strict-aliasing")
+set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -g -fPIC -fno-strict-aliasing")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fPIC -fno-strict-aliasing")
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    set(CMAKE_CXX_STANDARD 11)
     add_definitions(-DASIO_HAS_STD_ADDRESSOF -DASIO_HAS_STD_ARRAY -DASIO_HAS_STD_ATOMIC -DASIO_HAS_CSTDINT -DASIO_HAS_STD_SHARED_PTR -DASIO_HAS_STD_TYPE_TRAITS -DASIO_HAS_VARIADIC_TEMPLATES -DASIO_HAS_STD_FUNCTION -DASIO_HAS_STD_CHRONO -DASIO_HAS_STD_SYSTEM_ERROR)
 endif ()
 
@@ -220,9 +249,10 @@ include_directories(
 
 include_directories( SYSTEM
   ${PROJECT_BINARY_DIR}/lib/proto
-  third_party/asio-1.10.2/include
+  ${Boost_INCLUDE_DIRS}
   third_party/rapidxml-1.13
-  third_party/gmock-1.7.0
+  ${gtest_SOURCE_DIR}/include
+  ${gmock_SOURCE_DIR}/include
   third_party/tr2
   third_party/protobuf
   third_party/uriparser2
@@ -231,8 +261,6 @@ include_directories( SYSTEM
   ${PROTOBUF_INCLUDE_DIRS}
 )
 
-
-add_subdirectory(third_party/gmock-1.7.0)
 add_subdirectory(third_party/uriparser2)
 add_subdirectory(lib)
 if(NOT HDFSPP_LIBRARY_ONLY)
@@ -263,6 +291,7 @@ if (HADOOP_BUILD)
     ${CMAKE_THREAD_LIBS_INIT}
   )
   set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})
+  hadoop_dual_output_directory(hdfspp ${OUT_DIR})
 else (HADOOP_BUILD)
   add_library(hdfspp_static STATIC ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   target_link_libraries(hdfspp_static

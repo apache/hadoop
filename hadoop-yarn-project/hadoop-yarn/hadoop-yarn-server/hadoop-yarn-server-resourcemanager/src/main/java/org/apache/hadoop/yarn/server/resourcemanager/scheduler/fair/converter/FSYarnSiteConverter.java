@@ -32,17 +32,14 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
  */
 public class FSYarnSiteConverter {
   private boolean preemptionEnabled;
-  private boolean autoCreateChildQueues;
   private boolean sizeBasedWeight;
-  private boolean userAsDefaultQueue;
 
   @SuppressWarnings({"deprecation", "checkstyle:linelength"})
   public void convertSiteProperties(Configuration conf,
-      Configuration yarnSiteConfig, boolean drfUsed) {
+      Configuration yarnSiteConfig, boolean drfUsed, boolean enableAsyncScheduler) {
     yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
 
-    // TODO: deprecated property, check if necessary
     if (conf.getBoolean(
         FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_ENABLED,
         FairSchedulerConfiguration.DEFAULT_CONTINUOUS_SCHEDULING_ENABLED)) {
@@ -53,20 +50,6 @@ public class FSYarnSiteConverter {
           FairSchedulerConfiguration.DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS);
       yarnSiteConfig.setInt(PREFIX +
           "schedule-asynchronously.scheduling-interval-ms", interval);
-    }
-
-    String mbIncrementAllocation =
-        conf.get("yarn.resource-types.memory-mb.increment-allocation");
-    if (mbIncrementAllocation != null) {
-      yarnSiteConfig.set("yarn.scheduler.minimum-allocation-mb",
-          mbIncrementAllocation);
-    }
-
-    String vcoreIncrementAllocation =
-        conf.get("yarn.resource-types.vcores.increment-allocation");
-    if (vcoreIncrementAllocation != null) {
-      yarnSiteConfig.set("yarn.scheduler.minimum-allocation-vcores",
-          vcoreIncrementAllocation);
     }
 
     if (conf.getBoolean(FairSchedulerConfiguration.PREEMPTION,
@@ -126,19 +109,9 @@ public class FSYarnSiteConverter {
           localityThresholdRack);
     }
 
-    if (conf.getBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS,
-        FairSchedulerConfiguration.DEFAULT_ALLOW_UNDECLARED_POOLS)) {
-      autoCreateChildQueues = true;
-    }
-
     if (conf.getBoolean(FairSchedulerConfiguration.SIZE_BASED_WEIGHT,
         FairSchedulerConfiguration.DEFAULT_SIZE_BASED_WEIGHT)) {
       sizeBasedWeight = true;
-    }
-
-    if (conf.getBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
-        FairSchedulerConfiguration.DEFAULT_USER_AS_DEFAULT_QUEUE)) {
-      userAsDefaultQueue = true;
     }
 
     if (drfUsed) {
@@ -146,21 +119,17 @@ public class FSYarnSiteConverter {
           CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
           DominantResourceCalculator.class.getCanonicalName());
     }
+
+    if (enableAsyncScheduler) {
+      yarnSiteConfig.setBoolean(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, true);
+    }
   }
 
   public boolean isPreemptionEnabled() {
     return preemptionEnabled;
   }
 
-  public boolean isAutoCreateChildQueues() {
-    return autoCreateChildQueues;
-  }
-
   public boolean isSizeBasedWeight() {
     return sizeBasedWeight;
-  }
-
-  public boolean isUserAsDefaultQueue() {
-    return userAsDefaultQueue;
   }
 }

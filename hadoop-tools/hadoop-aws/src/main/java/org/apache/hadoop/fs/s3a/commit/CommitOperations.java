@@ -33,7 +33,7 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
@@ -50,6 +51,7 @@ import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
@@ -157,7 +159,11 @@ public class CommitOperations {
     LOG.debug("Committing single commit {}", commit);
     MaybeIOE outcome;
     String destKey = "unknown destination";
-    try {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Committing file %s size %s",
+        commit.getDestinationKey(),
+        commit.getLength())) {
+
       commit.validate();
       destKey = commit.getDestinationKey();
       long l = innerCommit(commit, operationState);
@@ -271,7 +277,7 @@ public class CommitOperations {
                     ? (" defined in " + commit.getFilename())
                     : "";
     String uploadId = commit.getUploadId();
-    LOG.info("Aborting commit to object {}{}", destKey, origin);
+    LOG.info("Aborting commit ID {} to object {}{}", uploadId, destKey, origin);
     abortMultipartCommit(destKey, uploadId);
   }
 
@@ -285,7 +291,8 @@ public class CommitOperations {
    */
   private void abortMultipartCommit(String destKey, String uploadId)
       throws IOException {
-    try {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Aborting commit ID %s to path %s", uploadId, destKey)) {
       writeOperations.abortMultipartCommit(destKey, uploadId);
     } finally {
       statistics.commitAborted();
@@ -460,7 +467,11 @@ public class CommitOperations {
     String uploadId = null;
 
     boolean threw = true;
-    try {
+    try (DurationInfo d = new DurationInfo(LOG,
+        "Upload staged file from %s to %s",
+        localFile.getAbsolutePath(),
+        destPath)) {
+
       statistics.commitCreated();
       uploadId = writeOperations.initiateMultiPartUpload(destKey);
       long length = localFile.length();
@@ -480,6 +491,15 @@ public class CommitOperations {
       // always write one part, even if it is just an empty one
       if (numParts == 0) {
         numParts = 1;
+      }
+      if (numParts > InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT) {
+        // fail if the file is too big.
+        // it would be possible to be clever here and recalculate the part size,
+        // but this is not currently done.
+        throw new PathIOException(destPath.toString(),
+            String.format("File to upload (size %d)"
+                + " is too big to be uploaded in parts of size %d",
+                numParts, length));
       }
 
       List<PartETag> parts = new ArrayList<>((int) numParts);
@@ -510,7 +530,6 @@ public class CommitOperations {
       return commitData;
     } finally {
       if (threw && uploadId != null) {
-        statistics.commitAborted();
         try {
           abortMultipartCommit(destKey, uploadId);
         } catch (IOException e) {

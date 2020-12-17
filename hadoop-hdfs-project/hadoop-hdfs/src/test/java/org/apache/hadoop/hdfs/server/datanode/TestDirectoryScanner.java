@@ -943,6 +943,11 @@ public class TestDirectoryScanner {
     }
 
     @Override
+    public boolean isRAMStorage() {
+      return false;
+    }
+
+    @Override
     public void reserveSpaceForReplica(long bytesToReserve) {
     }
 

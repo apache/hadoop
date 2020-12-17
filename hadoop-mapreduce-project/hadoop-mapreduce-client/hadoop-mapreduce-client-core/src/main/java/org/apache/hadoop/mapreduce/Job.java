@@ -43,7 +43,7 @@ import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1450,26 +1450,21 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
    */
   private static void setSharedCacheUploadPolicies(Configuration conf,
       Map<String, Boolean> policies, boolean areFiles) {
-    if (policies != null) {
-      StringBuilder sb = new StringBuilder();
-      Iterator<Map.Entry<String, Boolean>> it = policies.entrySet().iterator();
-      Map.Entry<String, Boolean> e;
-      if (it.hasNext()) {
-        e = it.next();
-        sb.append(e.getKey() + DELIM + e.getValue());
-      } else {
-        // policies is an empty map, just skip setting the parameter
-        return;
-      }
-      while (it.hasNext()) {
-        e = it.next();
-        sb.append("," + e.getKey() + DELIM + e.getValue());
-      }
-      String confParam =
-          areFiles ? MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES
-              : MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES;
-      conf.set(confParam, sb.toString());
+    String confParam = areFiles ?
+        MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES :
+        MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES;
+    // If no policy is provided, we will reset the config by setting an empty
+    // string value. In other words, cleaning up existing policies. This is
+    // useful when we try to clean up shared cache upload policies for
+    // non-application master tasks. See MAPREDUCE-7294 for details.
+    if (policies == null || policies.size() == 0) {
+      conf.set(confParam, "");
+      return;
     }
+    StringBuilder sb = new StringBuilder();
+    policies.forEach((k,v) -> sb.append(k).append(DELIM).append(v).append(","));
+    sb.deleteCharAt(sb.length() - 1);
+    conf.set(confParam, sb.toString());
   }
 
   /**

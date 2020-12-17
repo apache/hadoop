@@ -243,6 +243,7 @@ public class TestTimelineClient {
     // use kerberos to bypass the issue in HADOOP-11215
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
+    conf.set(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE, "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
     TimelineClientImpl client = createTimelineClient(conf);

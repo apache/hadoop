@@ -34,8 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
@@ -1468,6 +1468,9 @@ public class TestDFSShell {
 
     runCmd(shell, "-chgrp", "hadoop-core@apache.org/100", file);
     confirmOwner(null, "hadoop-core@apache.org/100", fs, path);
+
+    runCmd(shell, "-chown", "MYCOMPANY+user.name:hadoop", file);
+    confirmOwner("MYCOMPANY+user.name", "hadoop", fs, path);
   }
 
   /**

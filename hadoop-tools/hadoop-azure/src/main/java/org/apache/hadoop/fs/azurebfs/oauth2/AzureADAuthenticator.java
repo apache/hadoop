@@ -18,22 +18,25 @@
 
 package org.apache.hadoop.fs.azurebfs.oauth2;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.services.AbfsIoUtils;
@@ -52,11 +55,18 @@ public final class AzureADAuthenticator {
 
   private static final Logger LOG = LoggerFactory.getLogger(AzureADAuthenticator.class);
   private static final String RESOURCE_NAME = "https://storage.azure.com/";
+  private static final String SCOPE = "https://storage.azure.com/.default";
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
 
+  private static ExponentialRetryPolicy tokenFetchRetryPolicy;
+
   private AzureADAuthenticator() {
     // no operation
+  }
+
+  public static void init(AbfsConfiguration abfsConfiguration) {
+    tokenFetchRetryPolicy = abfsConfiguration.getOauthTokenFetchRetryPolicy();
   }
 
   /**
@@ -80,14 +90,18 @@ public final class AzureADAuthenticator {
    * @throws IOException throws IOException if there is a failure in connecting to Azure AD
    */
   public static AzureADToken getTokenUsingClientCreds(String authEndpoint,
-                                                      String clientId, String clientSecret)
-          throws IOException {
+      String clientId, String clientSecret) throws IOException {
     Preconditions.checkNotNull(authEndpoint, "authEndpoint");
     Preconditions.checkNotNull(clientId, "clientId");
     Preconditions.checkNotNull(clientSecret, "clientSecret");
+    boolean isVersion2AuthenticationEndpoint = authEndpoint.contains("/oauth2/v2.0/");
 
     QueryParams qp = new QueryParams();
-    qp.add("resource", RESOURCE_NAME);
+    if (isVersion2AuthenticationEndpoint) {
+      qp.add("scope", SCOPE);
+    } else {
+      qp.add("resource", RESOURCE_NAME);
+    }
     qp.add("grant_type", "client_credentials");
     qp.add("client_id", clientId);
     qp.add("client_secret", clientSecret);
@@ -277,13 +291,14 @@ public final class AzureADAuthenticator {
       Hashtable<String, String> headers, String httpMethod, boolean isMsi)
       throws IOException {
     AzureADToken token = null;
-    ExponentialRetryPolicy retryPolicy
-            = new ExponentialRetryPolicy(3, 0, 1000, 2);
 
     int httperror = 0;
     IOException ex = null;
     boolean succeeded = false;
+    boolean isRecoverableFailure = true;
     int retryCount = 0;
+    boolean shouldRetry;
+    LOG.trace("First execution of REST operation getTokenSingleCall");
     do {
       httperror = 0;
       ex = null;
@@ -293,15 +308,36 @@ public final class AzureADAuthenticator {
         httperror = e.httpErrorCode;
         ex = e;
       } catch (IOException e) {
-        ex = e;
+        httperror = -1;
+        isRecoverableFailure = isRecoverableFailure(e);
+        ex = new HttpException(httperror, "", String
+            .format("AzureADAuthenticator.getTokenCall threw %s : %s",
+                e.getClass().getTypeName(), e.getMessage()), authEndpoint, "",
+            "");
       }
       succeeded = ((httperror == 0) && (ex == null));
+      shouldRetry = !succeeded && isRecoverableFailure
+          && tokenFetchRetryPolicy.shouldRetry(retryCount, httperror);
       retryCount++;
-    } while (!succeeded && retryPolicy.shouldRetry(retryCount, httperror));
+      if (shouldRetry) {
+        LOG.debug("Retrying getTokenSingleCall. RetryCount = {}", retryCount);
+        try {
+          Thread.sleep(tokenFetchRetryPolicy.getRetryInterval(retryCount));
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+
+    } while (shouldRetry);
     if (!succeeded) {
       throw ex;
     }
     return token;
+  }
+
+  private static boolean isRecoverableFailure(IOException e) {
+    return !(e instanceof MalformedURLException
+        || e instanceof FileNotFoundException);
   }
 
   private static AzureADToken getTokenSingleCall(String authEndpoint,

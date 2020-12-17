@@ -34,8 +34,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.collect.Iterators;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,8 +58,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.Time;
 
 
@@ -298,13 +298,23 @@ public class EditLogTailer {
     SecurityUtil.doAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        try {
-          // It is already under the full name system lock and the checkpointer
-          // thread is already stopped. No need to acqure any other lock.
-          doTailEdits();
-        } catch (InterruptedException e) {
-          throw new IOException(e);
-        }
+        long editsTailed = 0;
+        // Fully tail the journal to the end
+        do {
+          long startTime = Time.monotonicNow();
+          try {
+            NameNode.getNameNodeMetrics().addEditLogTailInterval(
+                startTime - lastLoadTimeMs);
+            // It is already under the name system lock and the checkpointer
+            // thread is already stopped. No need to acquire any other lock.
+            editsTailed = doTailEdits();
+          } catch (InterruptedException e) {
+            throw new IOException(e);
+          } finally {
+            NameNode.getNameNodeMetrics().addEditLogTailTime(
+                Time.monotonicNow() - startTime);
+          }
+        } while(editsTailed > 0);
         return null;
       }
     });

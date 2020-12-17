@@ -43,9 +43,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 /**
  * Tests for HAAdmin command with {@link MiniDFSCluster} set up in HA mode.
@@ -189,13 +189,13 @@ public class TestDFSHAAdminMiniCluster {
     tmpFile.deleteOnExit();
     if (Shell.WINDOWS) {
       conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
-          "shell(echo %target_nameserviceid%.%target_namenodeid% " +
-              "%target_port% %dfs_ha_namenode_id% > " +
+          "shell(echo %source_nameserviceid%.%source_namenodeid% " +
+              "%source_port% %dfs_ha_namenode_id% > " +
               tmpFile.getAbsolutePath() + ")");
     } else {
       conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
-          "shell(echo -n $target_nameserviceid.$target_namenodeid " +
-          "$target_port $dfs_ha_namenode_id > " +
+          "shell(echo -n $source_nameserviceid.$source_namenodeid " +
+          "$source_port $dfs_ha_namenode_id > " +
           tmpFile.getAbsolutePath() + ")");
     }
 

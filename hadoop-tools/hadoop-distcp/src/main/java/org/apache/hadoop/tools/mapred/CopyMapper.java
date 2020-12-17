@@ -158,12 +158,14 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     try {
       CopyListingFileStatus sourceCurrStatus;
       FileSystem sourceFS;
+      FileStatus sourceStatus;
       try {
         sourceFS = sourcePath.getFileSystem(conf);
+        sourceStatus = sourceFS.getFileStatus(sourcePath);
         final boolean preserveXAttrs =
             fileAttributes.contains(FileAttribute.XATTR);
         sourceCurrStatus = DistCpUtils.toCopyListingFileStatusHelper(sourceFS,
-            sourceFS.getFileStatus(sourcePath),
+            sourceStatus,
             fileAttributes.contains(FileAttribute.ACL),
             preserveXAttrs, preserveRawXattrs,
             sourceFileStatus.getChunkOffset(),
@@ -188,7 +190,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
       }
 
       if (sourceCurrStatus.isDirectory()) {
-        createTargetDirsWithRetry(description, target, context);
+        createTargetDirsWithRetry(description, target, context, sourceStatus);
         return;
       }
 
@@ -217,7 +219,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
           LOG.debug("copying " + sourceCurrStatus + " " + tmpTarget);
         }
         copyFileWithRetry(description, sourceCurrStatus, tmpTarget,
-            targetStatus, context, action, fileAttributes);
+            targetStatus, context, action, fileAttributes, sourceStatus);
       }
       DistCpUtils.preserve(target.getFileSystem(conf), tmpTarget,
           sourceCurrStatus, fileAttributes, preserveRawXattrs);
@@ -240,23 +242,24 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     return fileStatus.isDirectory() ? "dir" : "file";
   }
 
-  private static EnumSet<DistCpOptions.FileAttribute>
+  static EnumSet<DistCpOptions.FileAttribute>
           getFileAttributeSettings(Mapper.Context context) {
     String attributeString = context.getConfiguration().get(
             DistCpOptionSwitch.PRESERVE_STATUS.getConfigLabel());
     return DistCpUtils.unpackAttributes(attributeString);
   }
 
+  @SuppressWarnings("checkstyle:parameternumber")
   private void copyFileWithRetry(String description,
       CopyListingFileStatus sourceFileStatus, Path target,
       FileStatus targrtFileStatus, Context context, FileAction action,
-      EnumSet<DistCpOptions.FileAttribute> fileAttributes)
+      EnumSet<FileAttribute> fileAttributes, FileStatus sourceStatus)
       throws IOException, InterruptedException {
     long bytesCopied;
     try {
       bytesCopied = (Long) new RetriableFileCopyCommand(skipCrc, description,
           action, directWrite).execute(sourceFileStatus, target, context,
-              fileAttributes);
+              fileAttributes, sourceStatus);
     } catch (Exception e) {
       context.setStatus("Copy Failure: " + sourceFileStatus.getPath());
       throw new IOException("File copy failed: " + sourceFileStatus.getPath() +
@@ -276,10 +279,11 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     }
   }
 
-  private void createTargetDirsWithRetry(String description,
-                   Path target, Context context) throws IOException {
+  private void createTargetDirsWithRetry(String description, Path target,
+      Context context, FileStatus sourceStatus) throws IOException {
     try {
-      new RetriableDirectoryCreateCommand(description).execute(target, context);
+      new RetriableDirectoryCreateCommand(description).execute(target,
+          context, sourceStatus);
     } catch (Exception e) {
       throw new IOException("mkdir failed for " + target, e);
     }

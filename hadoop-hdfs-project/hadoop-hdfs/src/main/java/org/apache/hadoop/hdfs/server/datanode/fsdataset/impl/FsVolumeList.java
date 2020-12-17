@@ -35,6 +35,7 @@ import java.util.concurrent.locks.Condition;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -62,9 +63,13 @@ class FsVolumeList {
   private final VolumeChoosingPolicy<FsVolumeImpl> blockChooser;
   private final BlockScanner blockScanner;
 
+  private final boolean enableSameDiskTiering;
+  private final MountVolumeMap mountVolumeMap;
+
   FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
       BlockScanner blockScanner,
-      VolumeChoosingPolicy<FsVolumeImpl> blockChooser) {
+      VolumeChoosingPolicy<FsVolumeImpl> blockChooser,
+      Configuration config) {
     this.blockChooser = blockChooser;
     this.blockScanner = blockScanner;
     this.checkDirsLock = new AutoCloseableLock();
@@ -73,6 +78,14 @@ class FsVolumeList {
       volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
           volumeFailureInfo);
     }
+    enableSameDiskTiering = config.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
+    mountVolumeMap = new MountVolumeMap(config);
+  }
+
+  MountVolumeMap getMountVolumeMap() {
+    return mountVolumeMap;
   }
 
   /**
@@ -291,6 +304,9 @@ class FsVolumeList {
   void addVolume(FsVolumeReference ref) {
     FsVolumeImpl volume = (FsVolumeImpl) ref.getVolume();
     volumes.add(volume);
+    if (isSameDiskTieringApplied(volume)) {
+      mountVolumeMap.addVolume(volume);
+    }
     if (blockScanner != null) {
       blockScanner.addVolumeScanner(ref);
     } else {
@@ -311,6 +327,9 @@ class FsVolumeList {
    */
   private void removeVolume(FsVolumeImpl target) {
     if (volumes.remove(target)) {
+      if (isSameDiskTieringApplied(target)) {
+        mountVolumeMap.removeVolume(target);
+      }
       if (blockScanner != null) {
         blockScanner.removeVolumeScanner(target);
       }
@@ -329,6 +348,15 @@ class FsVolumeList {
             " does not exist or is removed by others.");
       }
     }
+  }
+
+  /**
+   * Check if same disk tiering is applied to the volume.
+   */
+  private boolean isSameDiskTieringApplied(FsVolumeImpl target) {
+    return enableSameDiskTiering &&
+        (target.getStorageType() == StorageType.DISK
+            || target.getStorageType() == StorageType.ARCHIVE);
   }
 
   /**

@@ -158,6 +158,7 @@ message StorageReportProto {
   optional uint64 blockPoolUsed = 6 [ default = 0 ];
   optional DatanodeStorageProto storage = 7; // supersedes StorageUuid
   optional uint64 nonDfsUsed = 8;
+  optional string mount = 9;
 }
 
 /**
@@ -197,7 +198,7 @@ message StorageTypeQuotaInfosProto {
 }
 
 message StorageTypeQuotaInfoProto {
-  required StorageTypeProto type = 1;
+  optional StorageTypeProto type = 1 [default = DISK];
   required uint64 quota = 2;
   required uint64 consumed = 3;
 }
@@ -221,6 +222,7 @@ enum StorageTypeProto {
   ARCHIVE = 3;
   RAM_DISK = 4;
   PROVIDED = 5;
+  NVDIMM = 6;
 }
 
 /**
@@ -295,6 +297,7 @@ message DataEncryptionKeyProto {
 enum CipherSuiteProto {
     UNKNOWN = 1;
     AES_CTR_NOPADDING = 2;
+    SM4_CTR_NOPADDING = 3;
 }
 
 /**
@@ -526,6 +529,7 @@ message FsServerDefaultsProto {
   optional ChecksumTypeProto checksumType = 8 [default = CHECKSUM_CRC32];
   optional string keyProviderUri = 9;
   optional uint32 policyId = 10 [default = 0];
+  optional bool snapshotTrashRootEnabled = 11 [default = false];
 }
 
 
@@ -564,10 +568,32 @@ message SnapshottableDirectoryStatusProto {
 }
 
 /**
+ * Status of a snapshot directory: besides the normal information for
+ * a directory status, also include snapshot ID, and
+ * the full path of the parent directory.
+ */
+message SnapshotStatusProto {
+  required HdfsFileStatusProto dirStatus = 1;
+
+  // Fields specific for snapshot directory
+  required uint32 snapshotID = 2;
+  required bytes parent_fullpath = 3;
+  required bool isDeleted = 4;
+}
+
+
+/**
  * Snapshottable directory listing
  */
 message SnapshottableDirectoryListingProto {
   repeated SnapshottableDirectoryStatusProto snapshottableDirListing = 1;
+}
+
+/**
+ * Snapshot listing
+ */
+message SnapshotListingProto {
+  repeated SnapshotStatusProto snapshotListing = 1;
 }
 
 /**

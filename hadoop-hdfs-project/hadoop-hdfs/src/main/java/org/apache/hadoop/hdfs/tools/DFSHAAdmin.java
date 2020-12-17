@@ -23,9 +23,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedMap;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSortedMap;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.ha.FailoverController;
@@ -283,6 +283,11 @@ public class DFSHAAdmin extends HAAdmin {
 
     HAServiceTarget fromNode = resolveTarget(args[0]);
     HAServiceTarget toNode = resolveTarget(args[1]);
+
+    fromNode.setTransitionTargetHAStatus(
+        HAServiceProtocol.HAServiceState.STANDBY);
+    toNode.setTransitionTargetHAStatus(
+        HAServiceProtocol.HAServiceState.ACTIVE);
 
     // Check that auto-failover is consistently configured for both nodes.
     Preconditions.checkState(

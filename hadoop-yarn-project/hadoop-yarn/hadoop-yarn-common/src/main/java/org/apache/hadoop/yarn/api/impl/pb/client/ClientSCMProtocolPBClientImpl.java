@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ClientSCMProtocol;
 import org.apache.hadoop.yarn.api.ClientSCMProtocolPB;
@@ -50,7 +50,7 @@ public class ClientSCMProtocolPBClientImpl implements ClientSCMProtocol,
   public ClientSCMProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, ClientSCMProtocolPB.class,
-      ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     proxy = RPC.getProxy(ClientSCMProtocolPB.class, clientVersion, addr, conf);
   }
 

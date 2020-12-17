@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidati
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY;
@@ -155,7 +155,7 @@ public class TestAbfsConfigurationFieldsValidation {
     assertEquals(this.encodedAccountKey, accountKey);
   }
 
-  @Test(expected = ConfigurationPropertyNotFoundException.class)
+  @Test(expected = KeyProviderException.class)
   public void testGetAccountKeyWithNonExistingAccountName() throws Exception {
     Configuration configuration = new Configuration();
     configuration.addResource(TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME);
@@ -182,4 +182,11 @@ public class TestAbfsConfigurationFieldsValidation {
     assertEquals(DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL, localAbfsConfiguration.getPreferredSSLFactoryOption());
   }
 
+  public static AbfsConfiguration updateRetryConfigs(AbfsConfiguration abfsConfig,
+      int retryCount,
+      int backoffTime) {
+    abfsConfig.setMaxIoRetries(retryCount);
+    abfsConfig.setMaxBackoffIntervalMilliseconds(backoffTime);
+    return abfsConfig;
+  }
 }

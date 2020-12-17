@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import java.io.IOException;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -69,6 +70,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.server.webapp.WrappedLogMetaRequest;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.LogServlet;
@@ -77,7 +79,7 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 
 @Path("/ws/v1/history")
@@ -421,6 +423,49 @@ public class HsWebServices extends WebServices {
     TaskAttempt ta = AMWebServices.getTaskAttemptFromTaskAttemptString(attId,
         task);
     return new JobTaskAttemptCounterInfo(ta);
+  }
+
+  /**
+   * Returns the user qualified path name of the remote log directory for
+   * each pre-configured log aggregation file controller.
+   *
+   * @param req                HttpServletRequest
+   * @return Path names grouped by file controller name
+   */
+  @GET
+  @Path("/remote-log-dir")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response getRemoteLogDirPath(@Context HttpServletRequest req,
+      @QueryParam(YarnWebServiceParams.REMOTE_USER) String user,
+      @QueryParam(YarnWebServiceParams.APP_ID) String appIdStr)
+      throws IOException {
+    init();
+    return logServlet.getRemoteLogDirPath(user, appIdStr);
+  }
+
+  @GET
+  @Path("/extended-log-query")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public Response getAggregatedLogsMeta(@Context HttpServletRequest hsr,
+      @QueryParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME) String fileName,
+      @QueryParam(YarnWebServiceParams.FILESIZE) Set<String> fileSize,
+      @QueryParam(YarnWebServiceParams.MODIFICATION_TIME) Set<String>
+                                              modificationTime,
+      @QueryParam(YarnWebServiceParams.APP_ID) String appIdStr,
+      @QueryParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
+      @QueryParam(YarnWebServiceParams.NM_ID) String nmId) throws IOException {
+    init();
+    ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder logsRequest =
+        new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
+    logsRequest.setAppId(appIdStr);
+    logsRequest.setFileName(fileName);
+    logsRequest.setContainerId(containerIdStr);
+    logsRequest.setFileSize(fileSize);
+    logsRequest.setModificationTime(modificationTime);
+    logsRequest.setNodeId(nmId);
+    return logServlet.getContainerLogsInfo(hsr, logsRequest);
   }
 
   @GET

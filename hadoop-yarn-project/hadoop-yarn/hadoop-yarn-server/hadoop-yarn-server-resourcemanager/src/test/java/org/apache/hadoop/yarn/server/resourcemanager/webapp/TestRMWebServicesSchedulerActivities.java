@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
@@ -72,6 +73,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_ACT_NAME;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_ACT_ALLOCATIONS_ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_ACT_ROOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_BULK_ACT_ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.TOTAL_RESOURCE_INSUFFICIENT_DIAGNOSTIC_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.UNMATCHED_PARTITION_OR_PC_DIAGNOSTIC_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.getFirstSubNodeFromJson;
@@ -1585,5 +1587,103 @@ public class TestRMWebServicesSchedulerActivities
     } finally {
       rm.stop();
     }
+  }
+
+  @Test(timeout=30000)
+  public void testSchedulerBulkActivities() throws Exception {
+    rm.start();
+
+    MockNM nm1 = new MockNM("127.0.0.1:1234", 4 * 1024,
+        rm.getResourceTrackerService());
+    MockNM nm2 = new MockNM("127.0.0.2:1234", 4 * 1024,
+        rm.getResourceTrackerService());
+
+    nm1.registerNode();
+    nm2.registerNode();
+
+    MockNM[] nms = new MockNM[] {nm1, nm2};
+
+    try {
+
+      // Validate if response has 5 node activities
+      int expectedCount = 5;
+      RESTClient restClient = new RESTClient(5);
+      restClient.start();
+
+      sendHeartbeat(restClient, nms);
+
+      JSONObject activitiesJson = restClient.getOutput().getJSONObject(
+          FN_SCHEDULER_BULK_ACT_ROOT);
+      Object activities = activitiesJson.get(FN_SCHEDULER_ACT_ROOT);
+      assertEquals("Number of activities is wrong", expectedCount,
+          ((JSONArray) activities).length());
+
+
+      // Validate if response does not exceed max 500
+      expectedCount = 1000;
+      restClient = new RESTClient(expectedCount);
+      restClient.start();
+
+      sendHeartbeat(restClient, nms);
+
+      activitiesJson = restClient.getOutput().getJSONObject(
+          FN_SCHEDULER_BULK_ACT_ROOT);
+      activities = activitiesJson.get(FN_SCHEDULER_ACT_ROOT);
+      assertEquals("Max Activities Limit does not work",
+          RMWebServices.MAX_ACTIVITIES_COUNT,
+          ((JSONArray) activities).length());
+
+    } finally {
+      rm.stop();
+    }
+  }
+
+  private class RESTClient extends Thread {
+
+    private int expectedCount;
+    private boolean done = false;
+    private JSONObject json;
+
+    RESTClient(int expectedCount) {
+      this.expectedCount = expectedCount;
+    }
+
+    boolean isDone() {
+      return done;
+    }
+
+    JSONObject getOutput() {
+      return json;
+    }
+
+    @Override
+    public void run() {
+      WebResource r = resource();
+      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      params.add(RMWSConsts.ACTIVITIES_COUNT, expectedCount);
+
+      ClientResponse response = r.path("ws").path("v1").path("cluster")
+          .path(RMWSConsts.SCHEDULER_BULK_ACTIVITIES).queryParams(params)
+          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; "
+          + JettyUtils.UTF_8, response.getType().toString());
+      json = response.getEntity(JSONObject.class);
+      done = true;
+    }
+  }
+
+  private void sendHeartbeat(RESTClient restClient, MockNM[] nms)
+      throws Exception {
+    GenericTestUtils.waitFor(() -> {
+      try {
+        for (MockNM nm : nms) {
+          nm.nodeHeartbeat(true);
+        }
+      } catch (Exception e) {
+        return false;
+      }
+      return restClient.isDone();
+    }, 10, 20000);
   }
 }

@@ -60,7 +60,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Times;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import static org.apache.hadoop.yarn.util.StringHelper.getResourceSecondsString;
 
@@ -663,6 +663,11 @@ public class ApplicationCLI extends YarnCLI {
         appReportStr.print("\tExpiryTime : " + timeout.getExpiryTime());
         appReportStr.println(
             "\tRemainingTime : " + timeout.getRemainingTime() + "seconds");
+      }
+      String rmClusterId = appReport.getRMClusterId();
+      if (rmClusterId != null) {
+        appReportStr.print("\tRMClusterId : ");
+        appReportStr.println(rmClusterId);
       }
     } else {
       appReportStr.print("Application with id '" + applicationId

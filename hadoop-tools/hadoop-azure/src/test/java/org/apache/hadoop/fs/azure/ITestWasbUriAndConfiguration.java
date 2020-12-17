@@ -655,9 +655,7 @@ public class ITestWasbUriAndConfiguration extends AbstractWasbTestWithTimeout {
       // because the mock container does not exist, this call is expected to fail.
       intercept(IllegalArgumentException.class,
               "java.net.UnknownHostException",
-              () -> {
-                fs0.getCanonicalServiceName();
-              });
+              () -> fs0.getCanonicalServiceName());
 
       conf.setBoolean(RETURN_URI_AS_CANONICAL_SERVICE_NAME_PROPERTY_NAME, true);
       FileSystem fs1 = FileSystem.newInstance(defaultUri, conf);

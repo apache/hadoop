@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.slf4j.Logger;
@@ -438,7 +438,7 @@ public class ResourceManager extends CompositeService
 
   protected QueueACLsManager createQueueACLsManager(ResourceScheduler scheduler,
       Configuration conf) {
-    return new QueueACLsManager(scheduler, conf);
+    return QueueACLsManager.getQueueACLsManager(scheduler, conf);
   }
 
   @VisibleForTesting

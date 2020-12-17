@@ -22,7 +22,7 @@ import static org.junit.Assert.*;
 import java.net.InetSocketAddress;
 import java.security.NoSuchAlgorithmException;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;

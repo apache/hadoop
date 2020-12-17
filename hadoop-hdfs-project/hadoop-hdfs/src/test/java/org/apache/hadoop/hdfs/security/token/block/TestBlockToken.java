@@ -74,7 +74,7 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.TestWritable;
 import org.apache.hadoop.ipc.Client;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -314,7 +314,7 @@ public class TestBlockToken {
         .getReplicaVisibleLength(any(), any());
 
     RPC.setProtocolEngine(conf, ClientDatanodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     BlockingService service = ClientDatanodeProtocolService
         .newReflectiveBlockingService(mockDN);
     return new RPC.Builder(conf).setProtocol(ClientDatanodeProtocolPB.class)
@@ -792,7 +792,7 @@ public class TestBlockToken {
         EnumSet.allOf(BlockTokenIdentifier.AccessMode.class);
     StorageType[] storageTypes =
         new StorageType[]{StorageType.RAM_DISK, StorageType.SSD,
-            StorageType.DISK, StorageType.ARCHIVE};
+            StorageType.DISK, StorageType.ARCHIVE, StorageType.NVDIMM};
     BlockTokenIdentifier ident = new BlockTokenIdentifier("user", "bpool",
         123, accessModes, storageTypes, new String[] {"fake-storage-id"},
         useProto);

@@ -19,8 +19,8 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import java.util.function.Supplier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,7 +126,7 @@ public class TestDiskBalancerWithMockMover {
   private void executeSubmitPlan(NodePlan plan, DiskBalancer balancer,
                                  int version) throws IOException {
     String planJson = plan.toJson();
-    String planID = DigestUtils.shaHex(planJson);
+    String planID = DigestUtils.sha1Hex(planJson);
     balancer.submitPlan(planID, version, PLAN_FILE, planJson, false);
   }
 
@@ -215,7 +215,7 @@ public class TestDiskBalancerWithMockMover {
     NodePlan plan = mockMoverHelper.getPlan();
     DiskBalancer balancer = mockMoverHelper.getBalancer();
     String planJson = plan.toJson();
-    String planID = DigestUtils.shaHex(planJson);
+    String planID = DigestUtils.sha1Hex(planJson);
 
     thrown.expect(DiskBalancerException.class);
     thrown.expect(new DiskBalancerResultVerifier(DiskBalancerException
@@ -232,7 +232,7 @@ public class TestDiskBalancerWithMockMover {
 
 
     String planJson = plan.toJson();
-    String planID = DigestUtils.shaHex(planJson);
+    String planID = DigestUtils.sha1Hex(planJson);
     char repChar = planID.charAt(0);
     repChar++;
 
@@ -262,7 +262,7 @@ public class TestDiskBalancerWithMockMover {
 
 
     String planJson = plan.toJson();
-    String planID = DigestUtils.shaHex(planJson);
+    String planID = DigestUtils.sha1Hex(planJson);
     balancer.cancelPlan(planID);
 
     DiskBalancerWorkStatus status = balancer.queryWorkStatus();

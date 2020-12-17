@@ -215,7 +215,7 @@ com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.4.1
-com.amazonaws:aws-java-sdk-bundle:1.11.563
+com.amazonaws:aws-java-sdk-bundle:1.11.901
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.9.9
@@ -385,7 +385,7 @@ com.google.protobuf:protobuf-java:3.6.1
 com.google.re2j:re2j:1.1
 com.jcraft:jsch:0.1.54
 com.thoughtworks.paranamer:paranamer:2.3
-javax.activation:javax.activation-api:1.2.0
+jakarta.activation:jakarta.activation-api:1.2.1
 org.fusesource.leveldbjni:leveldbjni-all:1.8
 org.jline:jline:3.9.0
 org.hamcrest:hamcrest-core:1.3
@@ -405,7 +405,7 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.css
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-full-2.0.0.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-helpers-1.1.1.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.4.1.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.5.1.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery.dataTables.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/moment.min.js
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/bootstrap.min.js

@@ -56,7 +56,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.toChar;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_NONE;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
@@ -169,12 +170,16 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
         RETRY_LIMIT,
         RETRY_INTERVAL,
         S3GUARD_CONSISTENCY_RETRY_INTERVAL,
-        S3GUARD_CONSISTENCY_RETRY_LIMIT);
+        S3GUARD_CONSISTENCY_RETRY_LIMIT,
+        CHANGE_DETECT_MODE,
+        METADATASTORE_METADATA_TTL);
     conf.setInt(RETRY_LIMIT, 3);
     conf.setInt(S3GUARD_CONSISTENCY_RETRY_LIMIT, 3);
+    conf.set(CHANGE_DETECT_MODE, CHANGE_DETECT_MODE_NONE);
     final String delay = "10ms";
     conf.set(RETRY_INTERVAL, delay);
     conf.set(S3GUARD_CONSISTENCY_RETRY_INTERVAL, delay);
+    conf.set(METADATASTORE_METADATA_TTL, delay);
     return conf;
   }
 
@@ -232,12 +237,13 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     URI uri = testFS.getUri();
 
     removeBaseAndBucketOverrides(uri.getHost(), config,
+        CHANGE_DETECT_MODE,
         METADATASTORE_AUTHORITATIVE,
         METADATASTORE_METADATA_TTL,
         AUTHORITATIVE_PATH);
     config.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMode);
     config.setLong(METADATASTORE_METADATA_TTL,
-        DEFAULT_METADATASTORE_METADATA_TTL);
+        5_000);
     final S3AFileSystem gFs = createFS(uri, config);
     // set back the same metadata store instance
     gFs.setMetadataStore(realMs);
@@ -857,7 +863,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
             expectedLength, guardedLength);
       } else {
         assertEquals(
-            "File length in authoritative table with " + stats,
+            "File length in non-authoritative table with " + stats,
             expectedLength, guardedLength);
       }
     }

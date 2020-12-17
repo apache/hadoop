@@ -108,7 +108,8 @@
    */
   function view_perm_details(e, filename, abs_path, perms) {
     $('.explorer-perm-links').popover('destroy');
-    e.popover({html: true, content: $('#explorer-popover-perm-info').html(), trigger: 'focus'})
+   setTimeout(function() {
+    e.popover({html: true,sanitize: false, content: $('#explorer-popover-perm-info').html(), trigger: 'focus'})
       .on('shown.bs.popover', function(e) {
         var popover = $(this), parent = popover.parent();
         //Convert octal to binary permissions
@@ -122,6 +123,7 @@
         });
       })
       .popover('show');
+      }, 100);
   }
 
   // Use WebHDFS to set permissions on an absolute path
@@ -416,8 +418,37 @@
     $(this).prop('disabled', true);
     $(this).button('complete');
 
+    // Get umask from the configuration
+    var umask, oldUmask, actualUmask;
+
+    $.ajax({'url': '/conf', 'dataType': 'xml', 'async': false}).done(
+      function(d) {
+        var $xml = $(d);
+        $xml.find('property').each(function(idx,v) {
+          // Current umask config
+          if ($(v).find('name').text() === 'fs.permissions.umask-mode') {
+            umask = $(v).find('value').text();
+          }
+
+          // Deprecated umask config
+          if ($(v).find('name').text() === 'dfs.umask') {
+            oldUmask = $(v).find('value').text();
+          }
+        });
+    });
+
     var url = '/webhdfs/v1' + encode_path(append_path(current_directory,
       $('#new_directory').val())) + '?op=MKDIRS';
+
+    if (oldUmask) {
+      actualUmask = 777 - oldUmask;
+    } else if (umask) {
+      actualUmask = 777 - umask;
+    }
+
+    if (actualUmask) {
+      url = url + '&permission=' + actualUmask;
+    }
 
     $.ajax(url, { type: 'PUT' }
     ).done(function(data) {

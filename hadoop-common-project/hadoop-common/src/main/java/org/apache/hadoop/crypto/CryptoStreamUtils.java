@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.util.CleanerUtil;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,10 +58,12 @@ public class CryptoStreamUtils {
         HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_DEFAULT);
   }
   
-  /** AES/CTR/NoPadding is required */
+  /** AES/CTR/NoPadding or SM4/CTR/NoPadding is required. */
   public static void checkCodec(CryptoCodec codec) {
-    if (codec.getCipherSuite() != CipherSuite.AES_CTR_NOPADDING) {
-      throw new UnsupportedCodecException("AES/CTR/NoPadding is required");
+    if (codec.getCipherSuite() != CipherSuite.AES_CTR_NOPADDING &&
+            codec.getCipherSuite() != CipherSuite.SM4_CTR_NOPADDING) {
+      throw new UnsupportedCodecException(
+          "AES/CTR/NoPadding or SM4/CTR/NoPadding is required");
     }
   }
 

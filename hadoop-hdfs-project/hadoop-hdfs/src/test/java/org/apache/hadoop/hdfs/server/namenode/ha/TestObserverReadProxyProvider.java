@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -78,6 +78,7 @@ public class TestObserverReadProxyProvider {
     // transition observer back and forth
     conf.setTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
+    conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
   }
 
   private void setupProxyProvider(int namenodeCount) throws Exception {

@@ -6,6 +6,7 @@ Requirements:
 * Unix System
 * JDK 1.8
 * Maven 3.3 or later
+* Boost 1.72 (if compiling native code)
 * Protocol Buffers 3.7.1 (if compiling native code)
 * CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
@@ -72,10 +73,16 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
         && ./configure\
         && make install \
         && rm -rf /opt/protobuf-3.7-src
+* Boost
+  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
+    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
+    && cd boost_1_72_0 \
+    && ./bootstrap.sh --prefix=/usr/ \
+    && ./b2 --without-python install
 
 Optional packages:
 
-* Snappy compression
+* Snappy compression (only used for hadoop-mapreduce-client-nativetask)
   $ sudo apt-get install snappy libsnappy-dev
 * Intel ISA-L library for erasure coding
   Please refer to https://01.org/intel%C2%AE-storage-acceleration-library-open-source-version
@@ -161,7 +168,8 @@ Maven build goals:
 
    Snappy is a compression library that can be utilized by the native code.
    It is currently an optional component, meaning that Hadoop can be built with
-   or without this dependency.
+   or without this dependency. Snappy library as optional dependency is only
+   used for hadoop-mapreduce-client-nativetask.
 
   * Use -Drequire.snappy to fail the build if libsnappy.so is not found.
     If this option is not specified and the snappy library is missing,
@@ -429,6 +437,9 @@ Building on CentOS 8
   $ sudo dnf group install --with-optional 'Development Tools'
   $ sudo dnf install java-1.8.0-openjdk-devel maven
 
+* Install python2 for building documentation.
+  $ sudo dnf install python2
+
 * Install Protocol Buffers v3.7.1.
   $ git clone https://github.com/protocolbuffers/protobuf
   $ cd protobuf
@@ -442,8 +453,16 @@ Building on CentOS 8
 * Install libraries provided by CentOS 8.
   $ sudo dnf install libtirpc-devel zlib-devel lz4-devel bzip2-devel openssl-devel cyrus-sasl-devel libpmem-devel
 
+* Install boost.
+  $ curl -L -o boost_1_72_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+  $ tar xjf boost_1_72_0.tar.bz2
+  $ cd boost_1_72_0
+  $ ./bootstrap.sh --prefix=/usr/local
+  $ ./b2
+  $ sudo ./b2 install
+
 * Install optional dependencies (snappy-devel).
-  $ sudo dnf --enablerepo=PowerTools snappy-devel
+  $ sudo dnf --enablerepo=PowerTools install snappy-devel
 
 * Install optional dependencies (libzstd-devel).
   $ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -468,6 +487,7 @@ Requirements:
 * Windows System
 * JDK 1.8
 * Maven 3.0 or later
+* Boost 1.72
 * Protocol Buffers 3.7.1
 * CMake 3.1 or newer
 * Visual Studio 2010 Professional or Higher

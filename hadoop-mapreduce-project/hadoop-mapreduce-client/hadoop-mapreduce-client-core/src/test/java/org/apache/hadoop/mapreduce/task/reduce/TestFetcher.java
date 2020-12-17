@@ -46,6 +46,7 @@ import java.util.ArrayList;
 
 import javax.crypto.SecretKey;
 
+import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.IFileInputStream;
@@ -92,6 +93,8 @@ public class TestFetcher {
   @SuppressWarnings("unchecked") // mocked generics
   public void setup() {
     LOG.info(">>>> " + name.getMethodName());
+    // to avoid threading issues with JUnit 4.13+
+    ReadaheadPool.resetInstance();
     job = new JobConf();
     job.setBoolean(MRJobConfig.SHUFFLE_FETCH_RETRY_ENABLED, false);
     jobWithRetry = new JobConf();

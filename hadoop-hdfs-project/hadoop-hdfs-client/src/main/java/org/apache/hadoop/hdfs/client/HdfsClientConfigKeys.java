@@ -108,6 +108,9 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL =
       "dfs.client.use.legacy.blockreader.local";
   boolean DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT = false;
+  String DFS_CLIENT_READ_USE_CACHE_PRIORITY =
+      "dfs.client.read.use.cache.priority";
+  boolean DFS_CLIENT_READ_USE_CACHE_PRIORITY_DEFAULT = false;
   String  DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY =
       "dfs.client.datanode-restart.timeout";
   long    DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT = 30;
@@ -141,6 +144,8 @@ public interface HdfsClientConfigKeys {
       "dfs.short.circuit.shared.memory.watcher.interrupt.check.ms";
   int     DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT =
       60000;
+  String DFS_CLIENT_SHORT_CIRCUIT_NUM = "dfs.client.short.circuit.num";
+  int DFS_CLIENT_SHORT_CIRCUIT_NUM_DEFAULT = 1;
   String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
       "dfs.client.slow.io.warning.threshold.ms";
   long    DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 30000;
@@ -215,6 +220,12 @@ public interface HdfsClientConfigKeys {
   String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY =
       "dfs.encrypt.data.transfer.cipher.key.bitlength";
   int    DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT = 128;
+
+  public static final String
+          DFS_DATA_TRANSFER_MAX_PACKET_SIZE =
+          "dfs.data.transfer.max.packet.size";
+  public static final int DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT =
+          16 * 1024 * 1024;
 
   String DFS_TRUSTEDCHANNEL_RESOLVER_CLASS =
       "dfs.trustedchannel.resolver.class";
@@ -340,7 +351,7 @@ public interface HdfsClientConfigKeys {
         PREFIX + "connection.retries.on.timeouts";
     int     CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT = 0;
     String  RANDOM_ORDER = PREFIX + "random.order";
-    boolean RANDOM_ORDER_DEFAULT = false;
+    boolean RANDOM_ORDER_DEFAULT = true;
     String  RESOLVE_ADDRESS_NEEDED_KEY = PREFIX + "resolve-needed";
     boolean RESOLVE_ADDRESS_NEEDED_DEFAULT = false;
     String RESOLVE_SERVICE_KEY = PREFIX + "resolver.impl";
@@ -357,6 +368,9 @@ public interface HdfsClientConfigKeys {
     String  EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_KEY =
         PREFIX + "exclude.nodes.cache.expiry.interval.millis";
     long    EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT = 10*MINUTE;
+    String RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY =
+        PREFIX + "recover.lease.on.close.exception";
+    boolean RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT = false;
 
     interface ByteArrayManager {
       String PREFIX = Write.PREFIX + "byte-array-manager.";
@@ -408,6 +422,9 @@ public interface HdfsClientConfigKeys {
     String PREFIX = HdfsClientConfigKeys.PREFIX + "read.";
 
     String  PREFETCH_SIZE_KEY = PREFIX + "prefetch.size";
+
+    String URI_CACHE_KEY = PREFIX + "uri.cache.enabled";
+    boolean URI_CACHE_DEFAULT = false;
 
     interface ShortCircuit {
       String PREFIX = Read.PREFIX + "shortcircuit.";

@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -399,7 +399,7 @@ public class DiskBalancer {
 
     if ((planID == null) ||
         (planID.length() != sha1Length) ||
-        !DigestUtils.shaHex(plan.getBytes(Charset.forName("UTF-8")))
+        !DigestUtils.sha1Hex(plan.getBytes(Charset.forName("UTF-8")))
             .equalsIgnoreCase(planID)) {
       LOG.error("Disk Balancer - Invalid plan hash.");
       throw new DiskBalancerException("Invalid or mis-matched hash.",
@@ -504,7 +504,7 @@ public class DiskBalancer {
     Map<String, String> storageIDToVolBasePathMap = new HashMap<>();
     FsDatasetSpi.FsVolumeReferences references;
     try {
-      try(AutoCloseableLock lock = this.dataset.acquireDatasetLock()) {
+      try(AutoCloseableLock lock = this.dataset.acquireDatasetReadLock()) {
         references = this.dataset.getFsVolumeReferences();
         for (int ndx = 0; ndx < references.size(); ndx++) {
           FsVolumeSpi vol = references.get(ndx);
@@ -902,7 +902,7 @@ public class DiskBalancer {
      */
     private ExtendedBlock getBlockToCopy(FsVolumeSpi.BlockIterator iter,
                                          DiskBalancerWorkItem item) {
-      while (!iter.atEnd() && item.getErrorCount() < getMaxError(item)) {
+      while (!iter.atEnd() && item.getErrorCount() <= getMaxError(item)) {
         try {
           ExtendedBlock block = iter.nextBlock();
           if(null == block){
@@ -923,7 +923,7 @@ public class DiskBalancer {
           item.incErrorCount();
         }
       }
-      if (item.getErrorCount() >= getMaxError(item)) {
+      if (item.getErrorCount() > getMaxError(item)) {
         item.setErrMsg("Error count exceeded.");
         LOG.info("Maximum error count exceeded. Error count: {} Max error:{} ",
             item.getErrorCount(), item.getMaxDiskErrors());

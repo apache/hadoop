@@ -13,7 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;

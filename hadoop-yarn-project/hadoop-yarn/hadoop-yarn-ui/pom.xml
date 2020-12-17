@@ -184,7 +184,7 @@
                   <goal>install-node-and-yarn</goal>
                 </goals>
                 <configuration>
-                  <nodeVersion>v8.17.0</nodeVersion>
+                  <nodeVersion>v10.21.0</nodeVersion>
                   <yarnVersion>v1.21.1</yarnVersion>
                 </configuration>
               </execution>
@@ -202,7 +202,7 @@
                 <phase>generate-resources</phase>
                 <id>bower install</id>
                 <configuration>
-                  <arguments>install</arguments>
+                  <arguments>install --allow-root</arguments>
                 </configuration>
                 <goals>
                   <goal>bower</goal>

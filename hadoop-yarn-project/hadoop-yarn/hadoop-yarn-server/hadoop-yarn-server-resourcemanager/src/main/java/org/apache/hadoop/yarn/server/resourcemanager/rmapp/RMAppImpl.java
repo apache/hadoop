@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AppAdminClient;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -110,7 +111,7 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class RMAppImpl implements RMApp, Recoverable {
@@ -772,6 +773,9 @@ public class RMAppImpl implements RMApp, Recoverable {
       report.setUnmanagedApp(submissionContext.getUnmanagedAM());
       report.setAppNodeLabelExpression(getAppNodeLabelExpression());
       report.setAmNodeLabelExpression(getAmNodeLabelExpression());
+      if (HAUtil.isFederationEnabled(conf)) {
+        report.setRMClusterId(YarnConfiguration.getClusterId(conf));
+      }
 
       ApplicationTimeout timeout = ApplicationTimeout
           .newInstance(ApplicationTimeoutType.LIFETIME, UNLIMITED, UNKNOWN);

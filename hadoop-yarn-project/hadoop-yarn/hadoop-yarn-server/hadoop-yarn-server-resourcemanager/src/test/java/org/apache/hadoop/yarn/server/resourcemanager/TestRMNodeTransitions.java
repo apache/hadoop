@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -44,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -216,8 +220,9 @@ public class TestRMNodeTransitions {
 
   @Test (timeout = 5000)
   public void testExpiredContainer() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     // Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     verify(scheduler).handle(any(NodeAddedSchedulerEvent.class));
     
     // Expire a container
@@ -280,12 +285,13 @@ public class TestRMNodeTransitions {
 
   @Test (timeout = 5000)
   public void testContainerUpdate() throws InterruptedException{
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     //Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost:1", 1);
     RMNodeImpl node2 = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
-    node2.handle(new RMNodeStartedEvent(null, null, null));
+    node2.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
 
     ApplicationId app0 = BuilderUtils.newApplicationId(0, 0);
     ApplicationId app1 = BuilderUtils.newApplicationId(1, 1);
@@ -341,8 +347,9 @@ public class TestRMNodeTransitions {
 
   @Test (timeout = 5000)
   public void testStatusChange(){
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     //Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     //Add info to the queue first
     node.setNextHeartBeat(false);
 
@@ -608,6 +615,33 @@ public class TestRMNodeTransitions {
   }
 
   @Test
+  public void testAddUnhealthyNode() {
+    ClusterMetrics cm = ClusterMetrics.getMetrics();
+    int initialUnhealthy = cm.getUnhealthyNMs();
+    int initialActive = cm.getNumActiveNMs();
+    int initialLost = cm.getNumLostNMs();
+    int initialDecommissioned = cm.getNumDecommisionedNMs();
+    int initialRebooted = cm.getNumRebootedNMs();
+
+    NodeHealthStatus status = NodeHealthStatus.newInstance(false, "sick",
+        System.currentTimeMillis());
+    NodeStatus nodeStatus = NodeStatus.newInstance(node.getNodeID(), 0,
+        new ArrayList<>(), null, status, null, null, null);
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        nodeStatus));
+
+    Assert.assertEquals("Unhealthy Nodes",
+        initialUnhealthy + 1, cm.getUnhealthyNMs());
+    Assert.assertEquals("Active Nodes", initialActive, cm.getNumActiveNMs());
+    Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
+    Assert.assertEquals("Decommissioned Nodes",
+        initialDecommissioned, cm.getNumDecommisionedNMs());
+    Assert.assertEquals("Rebooted Nodes",
+        initialRebooted, cm.getNumRebootedNMs());
+    Assert.assertEquals(NodeState.UNHEALTHY, node.getState());
+  }
+
+  @Test
   public void testNMShutdown() {
     RMNodeImpl node = getRunningNode();
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.SHUTDOWN));
@@ -712,7 +746,9 @@ public class TestRMNodeTransitions {
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null,
         capability, nmVersion);
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     return node;
   }
@@ -763,7 +799,10 @@ public class TestRMNodeTransitions {
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
         null, capability, null);
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.REBOOTING));
     Assert.assertEquals(NodeState.REBOOTED, node.getState());
@@ -779,7 +818,9 @@ public class TestRMNodeTransitions {
     int initialUnhealthy = cm.getUnhealthyNMs();
     int initialDecommissioned = cm.getNumDecommisionedNMs();
     int initialRebooted = cm.getNumRebootedNMs();
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
     Assert.assertEquals("Active Nodes", initialActive + 1, cm.getNumActiveNMs());
     Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
     Assert.assertEquals("Unhealthy Nodes",
@@ -1024,10 +1065,13 @@ public class TestRMNodeTransitions {
     Resource oldCapacity = node.getTotalCapability();
     assertEquals("Memory resource is not match.", oldCapacity.getMemorySize(), 4096);
     assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    assertFalse("updatedCapability should be false.",
+        node.isUpdatedCapability());
     node.handle(new RMNodeEvent(node.getNodeID(),
         RMNodeEventType.RECOMMISSION));
     Resource originalCapacity = node.getOriginalTotalCapability();
     assertEquals("Original total capability not null after recommission", null, originalCapacity);
+    assertTrue("updatedCapability should be set.", node.isUpdatedCapability());
   }
 
   @Test
@@ -1075,8 +1119,9 @@ public class TestRMNodeTransitions {
 
   @Test
   public void testForHandlingDuplicatedCompltedContainers() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     // Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     // Add info to the queue first
     node.setNextHeartBeat(false);
 
@@ -1122,5 +1167,113 @@ public class TestRMNodeTransitions {
         getContainerIdList()));
     Assert.assertEquals(1, rmNode.getContainersToBeRemovedFromNM().size());
 
+  }
+
+  private void calcIntervalTest(RMNodeImpl rmNode, ResourceUtilization nodeUtil,
+      long hbDefault, long hbMin, long hbMax, float speedup, float slowdown,
+                                float cpuUtil, long expectedHb) {
+    nodeUtil.setCPU(cpuUtil);
+    rmNode.setNodeUtilization(nodeUtil);
+    long hbInterval = rmNode.calculateHeartBeatInterval(hbDefault, hbMin, hbMax,
+        speedup, slowdown);
+    assertEquals("heartbeat interval incorrect", expectedHb, hbInterval);
+  }
+
+  @Test
+  public void testCalculateHeartBeatInterval() {
+    RMNodeImpl rmNode = getRunningNode();
+    Resource nodeCapability = rmNode.getTotalCapability();
+    ClusterMetrics metrics = ClusterMetrics.getMetrics();
+    // Set cluster capability to 10 * nodeCapability
+    int vcoreUnit = nodeCapability.getVirtualCores();
+    rmNode.setPhysicalResource(nodeCapability);
+    int clusterVcores = vcoreUnit * 10;
+    metrics.incrCapability(
+        Resource.newInstance(10 * nodeCapability.getMemorySize(),
+            clusterVcores));
+
+    long hbDefault = 2000;
+    long hbMin = 1500;
+    long hbMax = 2500;
+    float speedup = 1.0F;
+    float slowdown = 1.0F;
+    metrics.incrUtilizedVirtualCores(vcoreUnit * 5); // 50 % cluster util
+    ResourceUtilization nodeUtil = ResourceUtilization.newInstance(
+        1024, vcoreUnit, 0.0F * vcoreUnit); // 0% rmNode util
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.0F, hbMin); // 0%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.10F, hbMin); // 10%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.20F, hbMin); // 20%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.30F, 1600); // 30%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.40F, 1800); // 40%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.50F, hbDefault); // 50%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.60F, 2200); // 60%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.70F, 2400); // 70%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.80F, hbMax); // 80%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.90F, hbMax); // 90%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 1.0F, hbMax); // 100%
+
+    // Try with 50% speedup/slowdown factors
+    speedup = 0.5F;
+    slowdown = 0.5F;
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.0F, hbMin); // 0%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.10F, 1600); // 10%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.20F, 1700); // 20%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.30F, 1800); // 30%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.40F, 1900); // 40%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.50F, hbDefault); // 50%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.60F, 2100); // 60%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.70F, 2200); // 70%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.80F, 2300); // 80%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.90F, 2400); // 90%
+
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 1.0F, hbMax); // 100%
+
+    // With Physical Resource null, it should always return default
+    rmNode.setPhysicalResource(null);
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 0.1F, hbDefault); // 10%
+    calcIntervalTest(rmNode, nodeUtil, hbDefault, hbMin, hbMax,
+        speedup, slowdown, vcoreUnit * 1.0F, hbDefault); // 100%
   }
 }

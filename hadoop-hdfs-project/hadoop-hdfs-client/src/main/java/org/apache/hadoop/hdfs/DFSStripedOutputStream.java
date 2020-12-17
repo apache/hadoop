@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
@@ -73,6 +73,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
 
 /**
  * This class supports writing files in striped layout and erasure coded format.
@@ -503,8 +505,14 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
     LOG.debug("Allocating new block group. The previous block group: "
         + prevBlockGroup);
-    final LocatedBlock lb = addBlock(excludedNodes, dfsClient, src,
-         prevBlockGroup, fileId, favoredNodes, getAddBlockFlags());
+    final LocatedBlock lb;
+    try {
+      lb = addBlock(excludedNodes, dfsClient, src,
+          prevBlockGroup, fileId, favoredNodes, getAddBlockFlags());
+    } catch (IOException ioe) {
+      closeAllStreamers();
+      throw ioe;
+    }
     assert lb.isStriped();
     // assign the new block to the current block group
     currentBlockGroup = lb.getBlock();
@@ -1194,6 +1202,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
   @Override
   protected synchronized void closeImpl() throws IOException {
+    boolean recoverLeaseOnCloseException = dfsClient.getConfiguration()
+        .getBoolean(RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY,
+            RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT);
     try {
       if (isClosed()) {
         exceptionLastSeen.check(true);
@@ -1266,6 +1277,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
       }
       logCorruptBlocks();
     } catch (ClosedChannelException ignored) {
+    } catch (IOException ioe) {
+      recoverLease(recoverLeaseOnCloseException);
+      throw ioe;
     } finally {
       setClosed();
       // shutdown executor of flushAll tasks

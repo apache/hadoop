@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.util.Progressable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**

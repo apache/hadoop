@@ -35,7 +35,7 @@ public class TestHDFSContractMultipartUploader extends
     AbstractContractMultipartUploaderTest {
 
   protected static final Logger LOG =
-      LoggerFactory.getLogger(AbstractContractMultipartUploaderTest.class);
+      LoggerFactory.getLogger(TestHDFSContractMultipartUploader.class);
 
   @BeforeClass
   public static void createCluster() throws IOException {

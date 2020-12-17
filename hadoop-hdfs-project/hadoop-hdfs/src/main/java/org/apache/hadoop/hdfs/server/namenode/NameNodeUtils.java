@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import javax.annotation.Nullable;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -70,7 +70,7 @@ public final class NameNodeUtils {
     final Collection<String> nameservices =
         DFSUtilClient.getNameServiceIds(conf);
 
-    final String nnAddr = conf.get(FS_DEFAULT_NAME_KEY);
+    final String nnAddr = conf.getTrimmed(FS_DEFAULT_NAME_KEY);
     if (nnAddr == null) {
       // default fs is not set.
       return null;

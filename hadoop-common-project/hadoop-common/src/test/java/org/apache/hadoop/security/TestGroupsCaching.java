@@ -21,9 +21,9 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -34,7 +34,7 @@ import org.apache.hadoop.util.FakeTimer;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -75,7 +75,7 @@ public class TestGroupsCaching {
     private static volatile CountDownLatch latch = null;
 
     @Override
-    public List<String> getGroups(String user) throws IOException {
+    public Set<String> getGroupsSet(String user) throws IOException {
       TESTLOG.info("Getting groups for " + user);
       delayIfNecessary();
 
@@ -86,9 +86,14 @@ public class TestGroupsCaching {
       }
 
       if (blackList.contains(user)) {
-        return new LinkedList<String>();
+        return Collections.emptySet();
       }
-      return new LinkedList<String>(allGroups);
+      return new LinkedHashSet<>(allGroups);
+    }
+
+    @Override
+    public List<String> getGroups(String user) throws IOException {
+      return new ArrayList<>(getGroupsSet(user));
     }
 
     /**
@@ -129,7 +134,7 @@ public class TestGroupsCaching {
       TESTLOG.info("Resetting FakeGroupMapping");
       blackList.clear();
       allGroups.clear();
-      requestCount = 0;
+      resetRequestCount();
       getGroupsDelayMs = 0;
       throwException = false;
       latch = null;
@@ -193,6 +198,12 @@ public class TestGroupsCaching {
 
     @Override
     public List<String> getGroups(String user) throws IOException {
+      requestCount++;
+      throw new IOException("For test");
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
       requestCount++;
       throw new IOException("For test");
     }
@@ -550,7 +561,7 @@ public class TestGroupsCaching {
     FakeGroupMapping.clearBlackList();
 
     // We make an initial request to populate the cache
-    groups.getGroups("me");
+    List<String> g1 = groups.getGroups("me");
 
     // add another group
     groups.cacheGroupsAdd(Arrays.asList("grp3"));

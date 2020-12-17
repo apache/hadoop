@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.sls.web;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -94,11 +95,11 @@ public class SLSWebApp extends HttpServlet {
     ClassLoader cl = Thread.currentThread().getContextClassLoader();
     try {
       simulateInfoTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/simulate.info.html.template"));
+          cl.getResourceAsStream("html/simulate.info.html.template"), StandardCharsets.UTF_8);
       simulateTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/simulate.html.template"));
+          cl.getResourceAsStream("html/simulate.html.template"), StandardCharsets.UTF_8);
       trackTemplate = IOUtils.toString(
-          cl.getResourceAsStream("html/track.html.template"));
+          cl.getResourceAsStream("html/track.html.template"), StandardCharsets.UTF_8);
     } catch (IOException e) {
       e.printStackTrace();
     }

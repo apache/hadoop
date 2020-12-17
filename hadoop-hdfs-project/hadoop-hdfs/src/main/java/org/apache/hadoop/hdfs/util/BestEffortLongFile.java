@@ -28,8 +28,8 @@ import java.nio.channels.FileChannel;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.io.Files;
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Longs;
 
 /**
  * Class that represents a file on disk which stores a single <code>long</code>

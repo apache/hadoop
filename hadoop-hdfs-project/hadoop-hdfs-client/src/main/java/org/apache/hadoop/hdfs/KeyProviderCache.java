@@ -28,11 +28,11 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.util.KMSUtil;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
+import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalNotification;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

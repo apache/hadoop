@@ -28,7 +28,7 @@ import static org.apache.hadoop.security.UGIExceptionMessages.*;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +40,6 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -528,6 +527,14 @@ public class UserGroupInformation {
 
   private void setLogin(LoginContext login) {
     user.setLogin(login);
+  }
+
+  /**
+   * Set the last login time for logged in user
+   * @param loginTime the number of milliseconds since the beginning of time
+   */
+  private void setLastLogin(long loginTime) {
+    user.setLastLogin(loginTime);
   }
 
   /**
@@ -1225,7 +1232,29 @@ public class UserGroupInformation {
     reloginFromKeytab(false);
   }
 
+  /**
+   * Force re-Login a user in from a keytab file irrespective of the last login
+   * time. Loads a user identity from a keytab file and logs them in. They
+   * become the currently logged-in user. This method assumes that
+   * {@link #loginUserFromKeytab(String, String)} had happened already. The
+   * Subject field of this UserGroupInformation object is updated to have the
+   * new credentials.
+   *
+   * @throws IOException
+   * @throws KerberosAuthException on a failure
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public void forceReloginFromKeytab() throws IOException {
+    reloginFromKeytab(false, true);
+  }
+
   private void reloginFromKeytab(boolean checkTGT) throws IOException {
+    reloginFromKeytab(checkTGT, false);
+  }
+
+  private void reloginFromKeytab(boolean checkTGT, boolean ignoreLastLoginTime)
+      throws IOException {
     if (!shouldRelogin() || !isFromKeytab()) {
       return;
     }
@@ -1240,7 +1269,7 @@ public class UserGroupInformation {
         return;
       }
     }
-    relogin(login);
+    relogin(login, ignoreLastLoginTime);
   }
 
   /**
@@ -1261,25 +1290,27 @@ public class UserGroupInformation {
     if (login == null) {
       throw new KerberosAuthException(MUST_FIRST_LOGIN);
     }
-    relogin(login);
+    relogin(login, false);
   }
 
-  private void relogin(HadoopLoginContext login) throws IOException {
+  private void relogin(HadoopLoginContext login, boolean ignoreLastLoginTime)
+      throws IOException {
     // ensure the relogin is atomic to avoid leaving credentials in an
     // inconsistent state.  prevents other ugi instances, SASL, and SPNEGO
     // from accessing or altering credentials during the relogin.
     synchronized(login.getSubjectLock()) {
       // another racing thread may have beat us to the relogin.
       if (login == getLogin()) {
-        unprotectedRelogin(login);
+        unprotectedRelogin(login, ignoreLastLoginTime);
       }
     }
   }
 
-  private void unprotectedRelogin(HadoopLoginContext login) throws IOException {
+  private void unprotectedRelogin(HadoopLoginContext login,
+      boolean ignoreLastLoginTime) throws IOException {
     assert Thread.holdsLock(login.getSubjectLock());
     long now = Time.now();
-    if (!hasSufficientTimeElapsed(now)) {
+    if (!hasSufficientTimeElapsed(now) && !ignoreLastLoginTime) {
       return;
     }
     // register most recent relogin attempt
@@ -1483,8 +1514,8 @@ public class UserGroupInformation {
    * map that has the translation of usernames to groups.
    */
   private static class TestingGroups extends Groups {
-    private final Map<String, List<String>> userToGroupsMapping = 
-      new HashMap<String,List<String>>();
+    private final Map<String, Set<String>> userToGroupsMapping =
+        new HashMap<>();
     private Groups underlyingImplementation;
     
     private TestingGroups(Groups underlyingImplementation) {
@@ -1494,17 +1525,22 @@ public class UserGroupInformation {
     
     @Override
     public List<String> getGroups(String user) throws IOException {
-      List<String> result = userToGroupsMapping.get(user);
-      
-      if (result == null) {
-        result = underlyingImplementation.getGroups(user);
-      }
+      return new ArrayList<>(getGroupsSet(user));
+    }
 
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      Set<String> result = userToGroupsMapping.get(user);
+      if (result == null) {
+        result = underlyingImplementation.getGroupsSet(user);
+      }
       return result;
     }
 
     private void setUserGroups(String user, String[] groups) {
-      userToGroupsMapping.put(user, Arrays.asList(groups));
+      Set<String> groupsSet = new LinkedHashSet<>();
+      Collections.addAll(groupsSet, groups);
+      userToGroupsMapping.put(user, groupsSet);
     }
   }
 
@@ -1563,11 +1599,11 @@ public class UserGroupInformation {
   }
 
   public String getPrimaryGroupName() throws IOException {
-    List<String> groups = getGroups();
-    if (groups.isEmpty()) {
+    Set<String> groupsSet = getGroupsSet();
+    if (groupsSet.isEmpty()) {
       throw new IOException("There is no primary group for UGI " + this);
     }
-    return groups.get(0);
+    return groupsSet.iterator().next();
   }
 
   /**
@@ -1680,21 +1716,24 @@ public class UserGroupInformation {
   }
 
   /**
-   * Get the group names for this user. {@link #getGroups()} is less
+   * Get the group names for this user. {@link #getGroupsSet()} is less
    * expensive alternative when checking for a contained element.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
    */
   public String[] getGroupNames() {
-    List<String> groups = getGroups();
-    return groups.toArray(new String[groups.size()]);
+    Collection<String> groupsSet = getGroupsSet();
+    return groupsSet.toArray(new String[groupsSet.size()]);
   }
 
   /**
-   * Get the group names for this user.
+   * Get the group names for this user. {@link #getGroupsSet()} is less
+   * expensive alternative when checking for a contained element.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
+   * @deprecated Use {@link #getGroupsSet()} instead.
    */
+  @Deprecated
   public List<String> getGroups() {
     ensureInitialized();
     try {
@@ -1702,6 +1741,21 @@ public class UserGroupInformation {
     } catch (IOException ie) {
       LOG.debug("Failed to get groups for user {}", getShortUserName(), ie);
       return Collections.emptyList();
+    }
+  }
+
+  /**
+   * Get the groups names for the user as a Set.
+   * @return the set of users with the primary group first. If the command
+   *     fails, it returns an empty set.
+   */
+  public Set<String> getGroupsSet() {
+    ensureInitialized();
+    try {
+      return groups.getGroupsSet(getShortUserName());
+    } catch (IOException ie) {
+      LOG.debug("Failed to get groups for user {}", getShortUserName(), ie);
+      return Collections.emptySet();
     }
   }
 
@@ -1946,6 +2000,7 @@ public class UserGroupInformation {
       if (subject == null) {
         params.put(LoginParam.PRINCIPAL, ugi.getUserName());
         ugi.setLogin(login);
+        ugi.setLastLogin(Time.now());
       }
       return ugi;
     } catch (LoginException le) {

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.junit.Assert;
 
 import org.slf4j.Logger;
@@ -135,12 +138,15 @@ public class TestNMExpiry {
     String hostname3 = "localhost3";
     Resource capability = BuilderUtils.newResource(1024, 1);
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     RegisterNodeManagerRequest request1 = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
     NodeId nodeId1 = NodeId.newInstance(hostname1, 0);
     request1.setNodeId(nodeId1);
     request1.setHttpPort(0);
     request1.setResource(capability);
+    request1.setNodeStatus(mockNodeStatus);
     resourceTrackerService.registerNodeManager(request1);
 
     RegisterNodeManagerRequest request2 = recordFactory
@@ -149,6 +155,7 @@ public class TestNMExpiry {
     request2.setNodeId(nodeId2);
     request2.setHttpPort(0);
     request2.setResource(capability);
+    request2.setNodeStatus(mockNodeStatus);
     resourceTrackerService.registerNodeManager(request2);
     
     int waitCount = 0;

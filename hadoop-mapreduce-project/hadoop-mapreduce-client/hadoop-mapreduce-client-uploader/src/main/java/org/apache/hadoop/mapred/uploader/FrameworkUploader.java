@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapred.uploader;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
@@ -566,7 +566,7 @@ public class FrameworkUploader implements Runnable {
         path.startsWith("file://");
 
     if (fs == null) {
-      fs = conf.get(FS_DEFAULT_NAME_KEY);
+      fs = conf.getTrimmed(FS_DEFAULT_NAME_KEY);
       if (fs == null && !isFullPath) {
         LOG.error("No filesystem specified in either fs or target.");
         printHelp(opts);

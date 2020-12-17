@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -106,6 +107,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       // Update cluster capacity
       Resources.addTo(clusterCapacity, node.getTotalResource());
       staleClusterCapacity = Resources.clone(clusterCapacity);
+      ClusterMetrics.getMetrics().incrCapability(node.getTotalResource());
 
       // Update maximumAllocation
       updateMaxResources(node, true);
@@ -201,6 +203,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       // Update cluster capacity
       Resources.subtractFrom(clusterCapacity, node.getTotalResource());
       staleClusterCapacity = Resources.clone(clusterCapacity);
+      ClusterMetrics.getMetrics().decrCapability(node.getTotalResource());
 
       // Update maximumAllocation
       updateMaxResources(node, false);
@@ -492,5 +495,16 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       readLock.unlock();
     }
     return nodesPerPartition;
+  }
+
+  public List<String> getPartitions() {
+    List<String> partitions = null;
+    readLock.lock();
+    try {
+      partitions = new ArrayList(nodesPerLabel.keySet());
+    } finally {
+      readLock.unlock();
+    }
+    return partitions;
   }
 }

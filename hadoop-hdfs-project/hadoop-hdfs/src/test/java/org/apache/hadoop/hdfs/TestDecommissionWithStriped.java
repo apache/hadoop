@@ -127,8 +127,6 @@ public class TestDecommissionWithStriped {
     writeConfigFile(excludeFile, null);
 
     // Setup conf
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,

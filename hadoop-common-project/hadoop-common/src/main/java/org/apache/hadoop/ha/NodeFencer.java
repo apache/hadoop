@@ -27,8 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,15 +89,32 @@ public class NodeFencer {
   }
 
   public boolean fence(HAServiceTarget fromSvc) {
+    return fence(fromSvc, null);
+  }
+
+  public boolean fence(HAServiceTarget fromSvc, HAServiceTarget toSvc) {
     LOG.info("====== Beginning Service Fencing Process... ======");
     int i = 0;
     for (FenceMethodWithArg method : methods) {
       LOG.info("Trying method " + (++i) + "/" + methods.size() +": " + method);
       
       try {
-        if (method.method.tryFence(fromSvc, method.arg)) {
-          LOG.info("====== Fencing successful by method " + method + " ======");
-          return true;
+        // only true when target node is given, AND fencing on it failed
+        boolean toSvcFencingFailed = false;
+        // if target is given, try to fence on target first. Only if fencing
+        // on target succeeded, do fencing on source node.
+        if (toSvc != null) {
+          toSvcFencingFailed = !method.method.tryFence(toSvc, method.arg);
+        }
+        if (toSvcFencingFailed) {
+          LOG.error("====== Fencing on target failed, skipping fencing "
+              + "on source ======");
+        } else {
+          if (method.method.tryFence(fromSvc, method.arg)) {
+            LOG.info("====== Fencing successful by method "
+                + method + " ======");
+            return true;
+          }
         }
       } catch (BadFencingConfigurationException e) {
         LOG.error("Fencing method " + method + " misconfigured", e);

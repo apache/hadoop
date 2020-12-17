@@ -28,13 +28,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
@@ -871,6 +872,7 @@ public abstract class Shell {
     this.interval = interval;
     this.lastTime = (interval < 0) ? 0 : -interval;
     this.redirectErrorStream = redirectErrorStream;
+    this.environment = Collections.emptyMap();
   }
 
   /**
@@ -878,7 +880,7 @@ public abstract class Shell {
    * @param env Mapping of environment variables
    */
   protected void setEnvironment(Map<String, String> env) {
-    this.environment = env;
+    this.environment = Objects.requireNonNull(env);
   }
 
   /**
@@ -915,9 +917,7 @@ public abstract class Shell {
       builder.environment().clear();
     }
 
-    if (environment != null) {
-      builder.environment().putAll(this.environment);
-    }
+    builder.environment().putAll(this.environment);
 
     if (dir != null) {
       builder.directory(this.dir);

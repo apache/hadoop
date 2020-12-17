@@ -96,7 +96,7 @@ import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1619,6 +1619,9 @@ public class ContainerLaunch implements Callable<Integer> {
         );
 
     addToEnvMap(environment, nmVars, Environment.PWD.name(), pwd.toString());
+
+    addToEnvMap(environment, nmVars, Environment.LOCALIZATION_COUNTERS.name(),
+        container.localizationCountersAsString());
 
     if (!Shell.WINDOWS) {
       addToEnvMap(environment, nmVars, "JVM_PID", "$$");

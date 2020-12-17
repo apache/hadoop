@@ -68,7 +68,7 @@ public class SuccessData extends PersistentCommitData {
   /**
    * Serialization ID: {@value}.
    */
-  private static final long serialVersionUID = 507133045258460084L;
+  private static final long serialVersionUID = 507133045258460083L + VERSION;
 
   /**
    * Name to include in persisted data, so as to differentiate from
@@ -102,6 +102,14 @@ public class SuccessData extends PersistentCommitData {
    * Description text.
    */
   private String description;
+
+  /** Job ID, if known. */
+  private String jobId = "";
+
+  /**
+   * Source of the job ID.
+   */
+  private String jobIdSource = "";
 
   /**
    * Metrics.
@@ -324,5 +332,22 @@ public class SuccessData extends PersistentCommitData {
    */
   public void addDiagnostic(String key, String value) {
     diagnostics.put(key, value);
+  }
+
+  /** @return Job ID, if known. */
+  public String getJobId() {
+    return jobId;
+  }
+
+  public void setJobId(String jobId) {
+    this.jobId = jobId;
+  }
+
+  public String getJobIdSource() {
+    return jobIdSource;
+  }
+
+  public void setJobIdSource(final String jobIdSource) {
+    this.jobIdSource = jobIdSource;
   }
 }

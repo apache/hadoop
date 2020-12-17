@@ -96,8 +96,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateTypeProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.LocalizationStateProto;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Interner;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Interners;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**

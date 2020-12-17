@@ -20,7 +20,7 @@ package org.apache.hadoop.metrics2.lib;
 
 import java.lang.reflect.Method;
 
-import static com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.metrics2.MetricsException;

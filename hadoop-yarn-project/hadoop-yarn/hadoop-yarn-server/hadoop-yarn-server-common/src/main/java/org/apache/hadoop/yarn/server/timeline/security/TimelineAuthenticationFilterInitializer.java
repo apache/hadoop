@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timeline.security;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
@@ -31,6 +31,7 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthentica
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
 import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticationHandler;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_HTTP_AUTH_PREFIX;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,12 +49,6 @@ import java.util.Map;
  */
 public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
 
-  /**
-   * The configuration prefix of timeline HTTP authentication.
-   */
-  public static final String PREFIX =
-      "yarn.timeline-service.http-authentication.";
-
   @VisibleForTesting
   Map<String, String> filterConfig;
 
@@ -68,7 +63,8 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
     // yarn.timeline-service.http-authentication.proxyuser will override
     // hadoop.proxyuser
     Map<String, String> timelineAuthProps =
-        AuthenticationFilterInitializer.getFilterConfigMap(conf, PREFIX);
+        AuthenticationFilterInitializer.getFilterConfigMap(conf,
+                TIMELINE_HTTP_AUTH_PREFIX);
 
     filterConfig.putAll(timelineAuthProps);
   }
@@ -81,7 +77,8 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
    * Initializes {@link TimelineAuthenticationFilter}.
    * <p>
    * Propagates to {@link TimelineAuthenticationFilter} configuration all YARN
-   * configuration properties prefixed with {@value #PREFIX}.
+   * configuration properties prefixed with
+   * {@value org.apache.hadoop.yarn.conf.YarnConfiguration#TIMELINE_HTTP_AUTH_PREFIX}.
    *
    * @param container
    *          The filter container.

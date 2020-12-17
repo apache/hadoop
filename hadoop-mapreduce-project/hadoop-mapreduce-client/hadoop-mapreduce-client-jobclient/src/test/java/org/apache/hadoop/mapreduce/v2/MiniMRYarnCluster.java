@@ -69,6 +69,10 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   private JobHistoryServer historyServer;
   private JobHistoryServerWrapper historyServerWrapper;
   private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
+  public static final String MR_HISTORY_MINICLUSTER_ENABLED =
+      JHAdminConfig.MR_HISTORY_PREFIX + "minicluster.enabled";
+  public static final String MR_HISTORY_MINICLUSTER_LAUNCH_TIMEOUT_MS =
+      JHAdminConfig.MR_HISTORY_PREFIX + "minicluster.launch.timeout.ms";
 
   public MiniMRYarnCluster(String testName) {
     this(testName, 1);
@@ -77,11 +81,10 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   public MiniMRYarnCluster(String testName, int noOfNMs) {
     this(testName, noOfNMs, false);
   }
+
   @Deprecated
   public MiniMRYarnCluster(String testName, int noOfNMs, boolean enableAHS) {
     super(testName, 1, noOfNMs, 4, 4, enableAHS);
-    historyServerWrapper = new JobHistoryServerWrapper();
-    addService(historyServerWrapper);
   }
 
   public static String getResolvedMRHistoryWebAppURLWithoutScheme(
@@ -118,6 +121,11 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
 
   @Override
   public void serviceInit(Configuration conf) throws Exception {
+    if (conf.getBoolean(MR_HISTORY_MINICLUSTER_ENABLED, true)) {
+      historyServerWrapper = new JobHistoryServerWrapper();
+      addService(historyServerWrapper);
+    }
+
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     String stagingDir = conf.get(MRJobConfig.MR_AM_STAGING_DIR);
     if (stagingDir == null ||
@@ -212,11 +220,13 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   protected void serviceStart() throws Exception {
     super.serviceStart();
 
-    //need to do this because historyServer.init creates a new Configuration
-    getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
-                    historyServer.getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
-    MRWebAppUtil.setJHSWebappURLWithoutScheme(getConfig(),
-        MRWebAppUtil.getJHSWebappURLWithoutScheme(historyServer.getConfig()));
+    if (historyServer != null) {
+      //need to do this because historyServer.init creates a new Configuration
+      getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
+          historyServer.getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
+      MRWebAppUtil.setJHSWebappURLWithoutScheme(getConfig(),
+          MRWebAppUtil.getJHSWebappURLWithoutScheme(historyServer.getConfig()));
+    }
 
     LOG.info("MiniMRYARN ResourceManager address: " +
         getConfig().get(YarnConfiguration.RM_ADDRESS));
@@ -233,7 +243,6 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     public JobHistoryServerWrapper() {
       super(JobHistoryServerWrapper.class.getName());
     }
-    private volatile boolean jhsStarted = false;
 
     @Override
     public synchronized void serviceStart() throws Exception {
@@ -255,12 +264,15 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
         new Thread() {
           public void run() {
             historyServer.start();
-            jhsStarted = true;
           };
         }.start();
 
-        GenericTestUtils.waitFor(() -> jhsStarted, 1500, 60_000);
-
+        final int launchTimeout = getConfig().getInt(
+            MR_HISTORY_MINICLUSTER_LAUNCH_TIMEOUT_MS, 60_000);
+        GenericTestUtils.waitFor(
+            () -> historyServer.getServiceState() == STATE.STARTED
+                || historyServer.getServiceState() == STATE.STOPPED,
+            100, launchTimeout);
         if (historyServer.getServiceState() != STATE.STARTED) {
           throw new IOException("HistoryServer failed to start");
         }

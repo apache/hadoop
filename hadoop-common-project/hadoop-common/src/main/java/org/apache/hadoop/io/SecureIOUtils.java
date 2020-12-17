@@ -32,7 +32,7 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.Stat;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class provides secure APIs for opening and creating files on the local
@@ -272,7 +272,7 @@ public class SecureIOUtils {
             UserGroupInformation.createRemoteUser(expectedOwner);
         final String adminsGroupString = "Administrators";
         success = owner.equals(adminsGroupString)
-            && ugi.getGroups().contains(adminsGroupString);
+            && ugi.getGroupsSet().contains(adminsGroupString);
       } else {
         success = false;
       }
