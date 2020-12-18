@@ -1868,7 +1868,7 @@ public abstract class TaskAttemptImpl implements
     return result;
   }
 
-  protected String resolveHost(String src) {
+  protected static String resolveHost(String src) {
     String result = src; // Fallback in case of failure.
     try {
       InetAddress addr = InetAddress.getByName(src);
