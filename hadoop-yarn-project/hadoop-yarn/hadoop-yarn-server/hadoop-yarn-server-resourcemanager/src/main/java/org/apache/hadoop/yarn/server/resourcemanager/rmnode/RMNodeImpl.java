@@ -1325,6 +1325,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           .handle(
               new NodeResourceUpdateSchedulerEvent(rmNode, ResourceOption
                   .newInstance(rmNode.totalCapability, 0)));
+
+      rmNode.context.getDispatcher().getEventHandler().handle(
+              new NodesListManagerEvent(
+                      NodesListManagerEventType.NODE_USABLE, rmNode));
     }
   }
 
