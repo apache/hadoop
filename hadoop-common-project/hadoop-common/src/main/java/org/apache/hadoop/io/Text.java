@@ -226,13 +226,13 @@ public class Text extends BinaryComparable
    * Set to a utf8 byte array.
    */
   public void set(byte[] utf8) {
-    if(utf8.length == 0){
+    if (utf8.length == 0) {
       bytes = EMPTY_BYTES;
       length = 0;
       textLength = -1;
-      return;
+    } else {
+      set(utf8, 0, utf8.length);
     }
-    set(utf8, 0, utf8.length);
   }
 
   /**
