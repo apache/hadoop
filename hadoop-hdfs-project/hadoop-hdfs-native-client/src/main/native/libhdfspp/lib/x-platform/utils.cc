@@ -33,7 +33,7 @@ std::string XPlatform::Utils::Basename(const std::string& file_path) {
     parts.emplace_back(part.string());
   }
 
-  /*Handle the case of trailing slash*/
+  /* Handle the case of trailing slash */
   if (parts.back().empty()) {
     parts.pop_back();
   }
