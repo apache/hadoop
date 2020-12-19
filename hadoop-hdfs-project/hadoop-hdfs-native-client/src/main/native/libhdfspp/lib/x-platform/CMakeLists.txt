@@ -16,11 +16,4 @@
 # limitations under the License.
 #
 
-add_subdirectory(x-platform)
-add_subdirectory(common)
-add_subdirectory(fs)
-add_subdirectory(reader)
-add_subdirectory(rpc)
-add_subdirectory(proto)
-add_subdirectory(connection)
-add_subdirectory(bindings)
+add_library(x_platform_utils OBJECT utils.cc)
