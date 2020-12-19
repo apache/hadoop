@@ -21,14 +21,14 @@
 
 #include <string>
 
-/*
- * The XPlatform namespace contains components that
+/**
+ * The {@link XPlatform} namespace contains components that
  * aid in writing cross-platform code.
  */
 namespace XPlatform {
 class Utils {
  public:
-  /*
+  /**
    * A cross-platform implementation of basename in linux.
    * Please refer https://www.man7.org/linux/man-pages/man3/basename.3.html
    * for more details.
