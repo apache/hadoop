@@ -6068,4 +6068,13 @@
         until capacity is balanced out.
     </description>
   </property>
+
+  <property>
+    <name>dfs.balancer.getBlocks.hot-time-interval</name>
+    <value>0</value>
+    <description>
+        Balancer prefer moving cold blocks i.e blocks associated with files
+        accessed or modified before the specified time interval.
+    </description>
+  </property>
 </configuration>
