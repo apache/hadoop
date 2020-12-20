@@ -16,4 +16,4 @@
 # limitations under the License.
 #
 
-add_library(x_platform_utils OBJECT utils.cc)
+add_library(x_platform_utils_obj OBJECT utils.cc)

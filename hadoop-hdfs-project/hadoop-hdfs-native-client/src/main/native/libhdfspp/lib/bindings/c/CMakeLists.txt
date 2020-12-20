@@ -18,5 +18,4 @@
 add_library(bindings_c_obj OBJECT hdfs.cc $<TARGET_OBJECTS:x_platform_utils_obj>)
 add_dependencies(bindings_c_obj fs rpc reader proto common fs rpc reader proto common x_platform_utils_obj)
 
-add_library(bindings_c $<TARGET_OBJECTS:bindings_c_obj> $<TARGET_OBJECTS:x_platform_utils_obj>)
-add_dependencies(bindings_c x_platform_utils_obj)
+add_library(bindings_c $<TARGET_OBJECTS:bindings_c_obj>)
