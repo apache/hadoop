@@ -315,6 +315,7 @@ public class TestTaskAttempt{
         createMapTaskAttemptImplForTest(eventHandler, splitInfo);
     TaskAttemptImpl spyTa = spy(mockTaskAttempt);
     when(spyTa.resolveHost(hosts[0])).thenReturn("host1");
+    when(spyTa.resolveHostByMap(hosts[0])).thenReturn("host1");
     spyTa.dataLocalHosts = spyTa.resolveHosts(splitInfo.getLocations());
 
     TaskAttemptEvent mockTAEvent = mock(TaskAttemptEvent.class);
