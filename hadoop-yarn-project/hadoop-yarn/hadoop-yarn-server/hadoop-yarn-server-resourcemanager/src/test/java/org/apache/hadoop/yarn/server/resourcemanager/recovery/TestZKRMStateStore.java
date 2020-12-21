@@ -22,6 +22,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
+import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1567,4 +1568,16 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         Collections.emptyMap(), ctx.getApplicationSchedulingPropertiesMap());
     store.close();
   }
+
+  @Test
+  public void testMetricsInited() throws Exception  {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+    Configuration conf = createConfForDelegationTokenNodeSplit(1);
+    ZKRMStateStore store = (ZKRMStateStore)zkTester.getRMStateStore(conf);
+    MetricsCollectorImpl collector = new MetricsCollectorImpl();
+    store.zkRMStateStoreOpDurations.getMetrics(collector, true);
+    assertEquals("Incorrect number of perf metrics", 1,
+        collector.getRecords().size());
+  }
+
 }
