@@ -622,13 +622,18 @@ public class AuthenticationFilter implements Filter {
         }
         // After Jetty 9.4.21, sendError() no longer allows a custom message.
         // use setStatusWithReason() to set a custom message.
+        String reason;
         if (authenticationEx == null) {
-          ((Response)httpResponse).setStatusWithReason(errCode, "Authentication required");
-          httpResponse.sendError(errCode);
+          reason = "Authentication required";
         } else {
-          ((Response)httpResponse).setStatusWithReason(errCode, authenticationEx.getMessage());
-          httpResponse.sendError(errCode);
+          reason = authenticationEx.getMessage();
         }
+
+        if (httpResponse instanceof Response) {
+          ((Response)httpResponse).setStatusWithReason(errCode, reason);
+        }
+
+        httpResponse.sendError(errCode, reason);
       }
     }
   }
