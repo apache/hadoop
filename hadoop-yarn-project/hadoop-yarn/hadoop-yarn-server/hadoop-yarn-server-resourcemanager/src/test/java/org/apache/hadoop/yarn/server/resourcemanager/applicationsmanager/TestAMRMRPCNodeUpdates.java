@@ -183,8 +183,8 @@ public class TestAMRMRPCNodeUpdates {
     // Wait for nm2 to RECOMMISSION
     syncNodeRecommissioning(nm2);
 
-    AllocateRequest allocateRequest2 =
-            AllocateRequest.newInstance(response1.getResponseId(), 0F, null, null, null);
+    AllocateRequest allocateRequest2 = AllocateRequest
+            .newInstance(response1.getResponseId(), 0F, null, null, null);
     AllocateResponse response2 =
             allocate(attempt1.getAppAttemptId(), allocateRequest2);
     List<NodeReport> updatedNodes2 = response2.getUpdatedNodes();
