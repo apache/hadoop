@@ -320,6 +320,7 @@ public class TestTaskAttempt{
     TaskAttemptEvent mockTAEvent = mock(TaskAttemptEvent.class);
     rct.transition(spyTa, mockTAEvent);
     verify(spyTa).resolveHost(hosts[0]);
+    verify(spyTa).resolveHostByMap(hosts[0]);
     ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
     verify(eventHandler, times(2)).handle(arg.capture());
     if (!(arg.getAllValues().get(1) instanceof ContainerRequestEvent)) {

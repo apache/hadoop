@@ -182,7 +182,7 @@ public abstract class TaskAttemptImpl implements
   private final List<String> diagnostics = new ArrayList<String>();
   private final Lock readLock;
   private final Lock writeLock;
-  private static AppContext appContext;
+  private AppContext appContext;
   private Credentials credentials;
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
@@ -672,7 +672,7 @@ public abstract class TaskAttemptImpl implements
     attemptId.setTaskId(taskId);
     attemptId.setId(i);
     this.taskAttemptListener = taskAttemptListener;
-    setApplicationContextStatic(appContext);
+    this.appContext = appContext;
 
     // Initialize reportedStatus
     reportedStatus = new TaskAttemptStatus();
@@ -704,10 +704,6 @@ public abstract class TaskAttemptImpl implements
     // This "this leak" is okay because the retained pointer is in an
     //  instance variable.
     stateMachine = stateMachineFactory.make(this);
-  }
-
-  public void setApplicationContextStatic(AppContext applicationContext) {
-    this.appContext = applicationContext;
   }
 
   private void populateResourceCapability(TaskType taskType) {
@@ -1845,7 +1841,11 @@ public abstract class TaskAttemptImpl implements
     }
   }
 
-  static String resolveHostByMap(String ip) {
+  protected String resolveHostByMap(String ip) {
+    if(appContext == null) {
+      return resolveHost(ip);
+    }
+
     String host = ((MRAppMaster.RunningAppContext) appContext).getHost(ip);
     if (host != null) {
       return host;
