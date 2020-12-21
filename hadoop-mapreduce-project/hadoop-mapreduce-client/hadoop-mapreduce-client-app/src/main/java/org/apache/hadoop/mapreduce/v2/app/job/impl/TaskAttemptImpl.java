@@ -672,7 +672,7 @@ public abstract class TaskAttemptImpl implements
     attemptId.setTaskId(taskId);
     attemptId.setId(i);
     this.taskAttemptListener = taskAttemptListener;
-    this.appContext = appContext;
+    setApplicationContextStatic(appContext);
 
     // Initialize reportedStatus
     reportedStatus = new TaskAttemptStatus();
@@ -704,6 +704,10 @@ public abstract class TaskAttemptImpl implements
     // This "this leak" is okay because the retained pointer is in an
     //  instance variable.
     stateMachine = stateMachineFactory.make(this);
+  }
+
+  public void setApplicationContextStatic(AppContext applicationContext) {
+    this.appContext = applicationContext;
   }
 
   private void populateResourceCapability(TaskType taskType) {
