@@ -24,7 +24,11 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.utils.ContentSummary;
 
 import java.io.IOException;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -32,10 +36,12 @@ public class ContentSummaryProcessor {
   private final AtomicLong fileCount = new AtomicLong(0L);
   private final AtomicLong directoryCount = new AtomicLong(0L);
   private final AtomicLong totalBytes = new AtomicLong(0L);
-  private final LinkedBlockingDeque<FileStatus> queue =
-      new LinkedBlockingDeque<>();
+  private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
   private final AzureBlobFileSystemStore abfsStore;
   private static final int NUM_THREADS = 16;
+  ExecutorService executorService = new ThreadPoolExecutor(1, NUM_THREADS,
+      5, TimeUnit.SECONDS, new SynchronousQueue<>());
+  //cached thread pool with custom max threads to avoid overloading
 
   public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
     this.abfsStore = abfsStore;
@@ -44,20 +50,11 @@ public class ContentSummaryProcessor {
   public ContentSummary getContentSummary(Path path)
       throws IOException, InterruptedException {
     processDirectoryTree(path);
-    Thread[] threads = new Thread[NUM_THREADS];
 
-    for (int i = 0; i < NUM_THREADS; ++i) {
-      threads[i] = new Thread(new ContentSummaryProcessor.ThreadProcessor());
-      threads[i].start();
+    while (((ThreadPoolExecutor) executorService).getActiveCount() > 0) {
+      Thread.sleep(100);
     }
-
-    for (Thread t : threads) {
-      try {
-        t.join();
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
+    executorService.shutdown();
     return new ContentSummary(totalBytes.get(), directoryCount.get(),
         fileCount.get(), totalBytes.get());
   }
@@ -65,41 +62,37 @@ public class ContentSummaryProcessor {
   private void processDirectoryTree(Path path)
       throws IOException, InterruptedException {
     FileStatus[] fileStatuses = abfsStore.listStatus(path);
+
     for (FileStatus fileStatus : fileStatuses) {
       if (fileStatus.isDirectory()) {
-        this.processDirectory();
-        this.queue.put(fileStatus);
+        queue.put(fileStatus);
+        processDirectory();
+        synchronized (this) {
+          if (!queue.isEmpty()) {
+            executorService.submit(() -> {
+              try {
+                FileStatus fileStatus1;
+                while ((fileStatus1 = queue.poll(100, TimeUnit.MILLISECONDS)) != null) {
+                  processDirectoryTree(fileStatus1.getPath());
+                }
+              } catch (InterruptedException | IOException e) {
+                e.printStackTrace();
+              }
+            });
+          }
+        }
       } else {
-        this.processFile(fileStatus);
+        processFile(fileStatus);
       }
     }
   }
 
   private void processDirectory() {
-    this.directoryCount.incrementAndGet();
+    directoryCount.incrementAndGet();
   }
 
   private void processFile(FileStatus fileStatus) {
-    this.fileCount.incrementAndGet();
-    this.totalBytes.addAndGet(fileStatus.getLen());
-  }
-
-  private final class ThreadProcessor implements Runnable {
-    private ThreadProcessor() {
-    }
-
-    public void run() {
-      try {
-        FileStatus fileStatus;
-        fileStatus = queue.poll(3, TimeUnit.SECONDS);
-        if (fileStatus == null)
-          return;
-        if (fileStatus.isDirectory()) {
-          processDirectoryTree(fileStatus.getPath());
-        }
-      } catch (InterruptedException | IOException interruptedException) {
-      interruptedException.printStackTrace();
-      }
-    }
+    fileCount.incrementAndGet();
+    totalBytes.addAndGet(fileStatus.getLen());
   }
 }

@@ -47,7 +47,6 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       "/testFolder/testFolder3/testFolder6/leafDir",
       "/testFolderII/listMaxDir",
       "/testFolderII/listMaxDir/zFolder"};
-  //thread poll should not get interrupted before zFolder is put in queue
 
   private final Path pathToFile = new Path("/testFolder/test1");;
   private final Path pathToListMaxDir = new Path("/testFolderII/listMaxDir");
@@ -64,7 +63,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   private final int testBufferSize = 20;
   private final int filesPerDirectory = 2;
   private final int numFilesForListMaxTest =
-      DEFAULT_AZURE_LIST_MAX_RESULTS + 100;
+      DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
   private final byte[] b = new byte[testBufferSize];
 
   public TestGetContentSummary() throws Exception {
