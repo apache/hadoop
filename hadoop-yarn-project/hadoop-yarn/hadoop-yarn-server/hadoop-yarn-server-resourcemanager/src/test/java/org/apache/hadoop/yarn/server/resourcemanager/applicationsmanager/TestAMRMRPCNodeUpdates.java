@@ -191,8 +191,6 @@ public class TestAMRMRPCNodeUpdates {
     Assert.assertEquals(1, updatedNodes2.size());
     NodeReport nr2 = updatedNodes2.iterator().next();
     Assert.assertEquals(
-            decommissioningTimeout, nr2.getDecommissioningTimeout());
-    Assert.assertEquals(
             NodeUpdateType.NODE_USABLE, nr2.getNodeUpdateType());
   }
 
