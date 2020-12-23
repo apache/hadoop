@@ -293,7 +293,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
     firstRead = false;
     if (totalBytesRead < 1) {
-      return lastBytesRead;
+      restorePointerState();
+      return -1;
     }
     //  If the read was partial and the user requested part of data has
     //  not read then fallback to readoneblock. When limit is smaller than
@@ -715,6 +716,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   long getFCursor() {
     return this.fCursor;
+  }
+
+  @VisibleForTesting
+  long getFCursorAfterLastRead() {
+    return this.fCursorAfterLastRead;
   }
 
   @VisibleForTesting

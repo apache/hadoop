@@ -43,7 +43,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
-public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationTest {
+public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
 
   public ITestAbfsInputStreamSmallFileReads() throws Exception {
   }
@@ -183,30 +183,12 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
     return fileSize / 2;
   }
 
-  private AzureBlobFileSystem getFileSystem(boolean readSmallFilesCompletely)
-      throws IOException {
-    final AzureBlobFileSystem fs = getFileSystem();
-    getAbfsStore(fs).getAbfsConfiguration()
-        .setReadSmallFilesCompletely(readSmallFilesCompletely);
-    return fs;
-  }
-
-  private Path createFileWithContent(FileSystem fs, String fileName,
-      byte[] fileContent) throws IOException {
-    Path testFilePath = path(fileName);
-    try (FSDataOutputStream oStream = fs.create(testFilePath)) {
-      oStream.write(fileContent);
-      oStream.flush();
-    }
-    return testFilePath;
-  }
-
   private void seekReadAndTest(FileSystem fs, Path testFilePath, int seekPos,
       int length, byte[] fileContent)
       throws IOException, NoSuchFieldException, IllegalAccessException {
     AbfsConfiguration conf = getAbfsStore(fs).getAbfsConfiguration();
     try (FSDataInputStream iStream = fs.open(testFilePath)) {
-      iStream.seek(seekPos);
+      seek(iStream, seekPos);
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
       assertEquals(bytesRead, length);
@@ -240,69 +222,10 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
             : readBufferSize;
       }
       assertEquals(expectedFCursor, abfsInputStream.getFCursor());
+      assertEquals(expectedFCursor, abfsInputStream.getFCursorAfterLastRead());
       assertEquals(expectedBCursor, abfsInputStream.getBCursor());
       assertEquals(expectedLimit, abfsInputStream.getLimit());
     }
-  }
-
-  private AzureBlobFileSystemStore getAbfsStore(FileSystem fs)
-      throws NoSuchFieldException, IllegalAccessException {
-    AzureBlobFileSystem abfs = (AzureBlobFileSystem) fs;
-    Field abfsStoreField = AzureBlobFileSystem.class
-        .getDeclaredField("abfsStore");
-    abfsStoreField.setAccessible(true);
-    return (AzureBlobFileSystemStore) abfsStoreField.get(abfs);
-  }
-
-  private Map<String, Long> getInstrumentationMap(FileSystem fs)
-      throws NoSuchFieldException, IllegalAccessException {
-    AzureBlobFileSystem abfs = (AzureBlobFileSystem) fs;
-    Field abfsCountersField = AzureBlobFileSystem.class
-        .getDeclaredField("abfsCounters");
-    abfsCountersField.setAccessible(true);
-    AbfsCounters abfsCounters = (AbfsCounters) abfsCountersField.get(abfs);
-    return abfsCounters.toMap();
-  }
-
-  private void assertContentReadCorrectly(byte[] actualFileContent, int from,
-      int len, byte[] contentRead) {
-    for (int i = 0; i < len; i++) {
-      assertEquals(contentRead[i], actualFileContent[i + from]);
-    }
-  }
-
-  private void assertBuffersAreNotEqual(byte[] actualContent,
-      byte[] contentRead, AbfsConfiguration conf) {
-    assertBufferEquality(actualContent, contentRead, conf, false);
-  }
-
-  private void assertBuffersAreEqual(byte[] actualContent, byte[] contentRead,
-      AbfsConfiguration conf) {
-    assertBufferEquality(actualContent, contentRead, conf, true);
-  }
-
-  private void assertBufferEquality(byte[] actualContent, byte[] contentRead,
-      AbfsConfiguration conf, boolean assertEqual) {
-    int bufferSize = conf.getReadBufferSize();
-    int actualContentSize = actualContent.length;
-    int n = (actualContentSize < bufferSize) ? actualContentSize : bufferSize;
-    int matches = 0;
-    for (int i = 0; i < n; i++) {
-      if (actualContent[i] == contentRead[i]) {
-        matches++;
-      }
-    }
-    if (assertEqual) {
-      assertEquals(n, matches);
-    } else {
-      assertNotEquals(n, matches);
-    }
-  }
-
-  private byte[] getRandomBytesArray(int length) {
-    final byte[] b = new byte[length];
-    new Random().nextBytes(b);
-    return b;
   }
 
   @Test
@@ -321,7 +244,7 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
   private void partialReadWithNoDataSeekReadAndTest(final FileSystem fs,
       final Path testFilePath,
       final int seekPos, final int length, final byte[] fileContent)
-      throws IOException, NoSuchFieldException, IllegalAccessException {
+      throws IOException {
 
     FSDataInputStream iStream = fs.open(testFilePath);
     try {
@@ -335,12 +258,14 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
           .readRemote(anyLong(), any(), anyInt(), anyInt());
 
       iStream = new FSDataInputStream(abfsInputStream);
-      iStream.seek(seekPos);
+      seek(iStream, seekPos);
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
       assertEquals(bytesRead, length);
       assertContentReadCorrectly(fileContent, seekPos, length, buffer);
       assertEquals(fileContent.length, abfsInputStream.getFCursor());
+      assertEquals(fileContent.length,
+          abfsInputStream.getFCursorAfterLastRead());
       assertEquals(length, abfsInputStream.getBCursor());
       assertTrue(abfsInputStream.getLimit() >= length);
     } finally {
@@ -383,12 +308,13 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
           .readRemote(anyLong(), any(), anyInt(), anyInt());
 
       iStream = new FSDataInputStream(abfsInputStream);
-      iStream.seek(seekPos);
+      seek(iStream, seekPos);
 
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
       assertEquals(length, bytesRead);
       assertTrue(abfsInputStream.getFCursor() > seekPos + length);
+      assertTrue(abfsInputStream.getFCursorAfterLastRead() > seekPos + length);
       //  Optimized read was no complete but it got some user requested data
       //  from server. So obviously the buffer will contain data more than
       //  seekPos + len
@@ -400,4 +326,5 @@ public class ITestAbfsInputStreamSmallFileReads extends AbstractAbfsIntegrationT
   }
 
   private enum SeekTo {BEGIN, MIDDLE, END}
+
 }
