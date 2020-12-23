@@ -985,9 +985,11 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   @Override
-  public RemoteIterator<FileStatus> listStatusIterator(Path p)
+  public RemoteIterator<FileStatus> listStatusIterator(Path path)
       throws IOException {
-    return new ListStatusRemoteIterator(p, abfsStore);
+    LOG.debug("AzureBlobFileSystem.listStatusIterator path : {}", path);
+    Path qualifiedPath = makeQualified(path);
+    return new ListStatusRemoteIterator(qualifiedPath, abfsStore);
   }
 
   private FileStatus tryGetFileStatus(final Path f) {
