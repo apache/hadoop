@@ -52,7 +52,7 @@ public class ZKRMStateStoreOpDurations implements MetricsSource {
   @Metric("Duration to handle a remove application state call")
   MutableRate removeApplicationStateCall;
 
-  private static final MetricsInfo RECORD_INFO =
+  public static final MetricsInfo RECORD_INFO =
       info("ZKRMStateStoreOpDurations", "Durations of ZKRMStateStore calls");
 
   private final MetricsRegistry registry;

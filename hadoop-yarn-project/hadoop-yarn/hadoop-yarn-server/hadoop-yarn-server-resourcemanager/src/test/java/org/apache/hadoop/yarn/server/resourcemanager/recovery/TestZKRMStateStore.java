@@ -22,7 +22,9 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
+import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
+import org.apache.hadoop.metrics2.impl.MetricsRecords;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1573,11 +1575,30 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   public void testMetricsInited() throws Exception  {
     TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
     Configuration conf = createConfForDelegationTokenNodeSplit(1);
-    ZKRMStateStore store = (ZKRMStateStore)zkTester.getRMStateStore(conf);
     MetricsCollectorImpl collector = new MetricsCollectorImpl();
-    store.zkRMStateStoreOpDurations.getMetrics(collector, true);
+    ZKRMStateStoreOpDurations opDurations = ((ZKRMStateStore)zkTester.getRMStateStore(conf))
+        .zkRMStateStoreOpDurations;
+
+    long anyDuration = 10;
+    opDurations.addLoadStateCallDuration(anyDuration);
+    opDurations.addStoreApplicationStateCallDuration(anyDuration);
+    opDurations.addUpdateApplicationStateCallDuration(anyDuration);
+    opDurations.addRemoveApplicationStateCallDuration(anyDuration);
+
+    Thread.sleep(110);
+
+    opDurations.getMetrics(collector, true);
     assertEquals("Incorrect number of perf metrics", 1,
         collector.getRecords().size());
+    MetricsRecord record = collector.getRecords().get(0);
+    MetricsRecords.assertTag(record, ZKRMStateStoreOpDurations.RECORD_INFO.name(),
+        "ZKRMStateStoreOpDurations");
+
+    double expectAvgTime = anyDuration;
+    MetricsRecords.assertMetric(record, "LoadStateCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "StoreApplicationStateCallAvgTime", expectAvgTime);
+    MetricsRecords.assertMetric(record, "UpdateApplicationStateCallAvgTime", expectAvgTime);
+    MetricsRecords.assertMetric(record, "RemoveApplicationStateCallAvgTime", expectAvgTime);
   }
 
 }
