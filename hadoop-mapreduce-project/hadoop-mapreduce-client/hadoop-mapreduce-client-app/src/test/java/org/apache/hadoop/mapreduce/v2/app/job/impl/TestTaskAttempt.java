@@ -316,8 +316,6 @@ public class TestTaskAttempt{
     TaskAttemptImpl spyTa = spy(mockTaskAttempt);
     when(spyTa.resolveHost(hosts[0])).thenReturn("host1");
     spyTa.dataLocalHosts = spyTa.resolveHosts(splitInfo.getLocations());
-    String host = spyTa.resolveHostByMap(hosts[0]);
-    assertEquals(host, "host1");
 
     TaskAttemptEvent mockTAEvent = mock(TaskAttemptEvent.class);
     rct.transition(spyTa, mockTAEvent);
