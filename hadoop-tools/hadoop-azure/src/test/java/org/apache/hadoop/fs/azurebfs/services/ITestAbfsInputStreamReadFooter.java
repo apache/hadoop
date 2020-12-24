@@ -19,19 +19,14 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.Map;
-import java.util.Random;
 
 import org.junit.Test;
 
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static java.lang.Math.max;
@@ -164,7 +159,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      seekReadAndTest(fs, testFilePath, seekPos(seekTo, fileSize), 100,
+      seekReadAndTest(fs, testFilePath, seekPos(seekTo, fileSize), HUNDRED,
           fileContent);
     }
   }
@@ -224,7 +219,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         expectedFCursor = actualContentLength;
       } else {
         if (seekPos + bufferSize < actualContentLength) {
-          expectedLimit = expectedFCursor = bufferSize;
+          expectedLimit = bufferSize;
+          expectedFCursor = bufferSize;
         } else {
           expectedLimit = actualContentLength - seekPos;
           expectedFCursor = min(seekPos + bufferSize, actualContentLength);

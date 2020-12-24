@@ -290,8 +290,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       LOG.debug("Optimized read failed. Defaulting to readOneBlock {}", e);
       restorePointerState();
       return readOneBlock(b, off, len);
+    } finally {
+      firstRead = false;
     }
-    firstRead = false;
     if (totalBytesRead < 1) {
       restorePointerState();
       return -1;

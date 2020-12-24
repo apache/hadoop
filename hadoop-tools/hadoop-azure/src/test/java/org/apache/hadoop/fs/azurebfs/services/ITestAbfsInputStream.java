@@ -42,6 +42,8 @@ import static org.mockito.Mockito.spy;
 
 public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
+  protected static final int HUNDRED = 100;
+  
   public ITestAbfsInputStream() throws Exception {
   }
 
@@ -53,7 +55,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      testWithNoOptimization(fs, testFilePath, 100,
+      testWithNoOptimization(fs, testFilePath, HUNDRED,
           fileSize / 4, fileContent);
     }
   }
@@ -77,10 +79,10 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       assertEquals(bytesRead, length);
       assertContentReadCorrectly(fileContent, seekPos, length, buffer);
 
-      assertTrue(abfsInputStream.getFCursor()>seekPos+length);
-      assertTrue( abfsInputStream.getFCursorAfterLastRead()>seekPos+length);
-      assertTrue(abfsInputStream.getBCursor()>=length);
-      assertTrue(abfsInputStream.getLimit()>=length);
+      assertTrue(abfsInputStream.getFCursor() > seekPos + length);
+      assertTrue(abfsInputStream.getFCursorAfterLastRead() > seekPos + length);
+      assertTrue(abfsInputStream.getBCursor() >= length);
+      assertTrue(abfsInputStream.getLimit() >= length);
     } finally {
       iStream.close();
     }
@@ -94,7 +96,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      testExceptionInOptimization(fs, testFilePath, fileSize - 100,
+      testExceptionInOptimization(fs, testFilePath, fileSize - HUNDRED,
           fileSize / 4, fileContent);
     }
   }
