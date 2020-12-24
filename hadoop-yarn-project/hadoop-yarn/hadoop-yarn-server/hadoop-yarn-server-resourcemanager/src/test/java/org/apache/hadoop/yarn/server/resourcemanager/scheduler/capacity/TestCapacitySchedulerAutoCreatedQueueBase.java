@@ -420,7 +420,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
         (C, NODEL_LABEL_SSD);
 
 
-    LOG.info("Setup " + C + " as an auto leaf creation enabled parent queue");
+    LOG.info("Setup " + D + " as an auto leaf creation enabled parent queue");
 
     conf.setUserLimitFactor(D, 1.0f);
     conf.setAutoCreateChildQueueEnabled(D, true);

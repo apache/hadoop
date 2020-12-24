@@ -157,7 +157,9 @@
 <property>
   <name>dfs.datanode.handler.count</name>
   <value>10</value>
-  <description>The number of server threads for the datanode.</description>
+  <description>
+     The number of Datanode RPC server threads that listen to
+     requests from client.</description>
 </property>
 
 <property>
@@ -4858,6 +4860,27 @@
 </property>
 
 <property>
+  <name>dfs.namenode.audit.log.async.blocking</name>
+  <value>true</value>
+  <description>
+    Only used when enables asynchronous audit log. Sets whether audit log async
+    appender should wait if there is no space available in the event buffer or
+    immediately return. Default value is true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.audit.log.async.buffer.size</name>
+  <value>128</value>
+  <description>
+    Only used when enables asynchronous audit log. Sets the number of audit
+    logs allowed in the event buffer before the calling thread is blocked
+    (if dfs.namenode.audit.log.async.blocking is true) or until logs are
+    summarized and discarded. Default value is 128.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.audit.log.token.tracking.id</name>
   <value>false</value>
   <description>
@@ -6043,6 +6066,15 @@
         data blocks exist and the configured ratio is small, which will
         prevent the volume from taking new blocks
         until capacity is balanced out.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.getBlocks.hot-time-interval</name>
+    <value>0</value>
+    <description>
+        Balancer prefer moving cold blocks i.e blocks associated with files
+        accessed or modified before the specified time interval.
     </description>
   </property>
 </configuration>

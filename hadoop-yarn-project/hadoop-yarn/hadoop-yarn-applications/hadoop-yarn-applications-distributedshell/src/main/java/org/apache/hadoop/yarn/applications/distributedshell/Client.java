@@ -143,6 +143,9 @@ public class Client {
   private static final int DEFAULT_AM_VCORES = 1;
   private static final int DEFAULT_CONTAINER_MEMORY = 10;
   private static final int DEFAULT_CONTAINER_VCORES = 1;
+
+  // check the application once per second.
+  private static final int APP_MONITOR_INTERVAL = 1000;
   
   // Configuration
   private Configuration conf;
@@ -209,7 +212,7 @@ public class Client {
   private String rollingFilesPattern = "";
 
   // Start time for client
-  private final long clientStartTime = System.currentTimeMillis();
+  private long clientStartTime = System.currentTimeMillis();
   // Timeout threshold for client. Kill app after time interval expires.
   private long clientTimeout = 600000;
 
@@ -670,6 +673,8 @@ public class Client {
 
     LOG.info("Running Client");
     yarnClient.start();
+    // set the client start time.
+    clientStartTime = System.currentTimeMillis();
 
     YarnClusterMetrics clusterMetrics = yarnClient.getYarnClusterMetrics();
     LOG.info("Got Cluster metric info from ASM" 
@@ -983,7 +988,6 @@ public class Client {
     if (keepContainers) {
       vargs.add("--keep_containers_across_application_attempts");
     }
-
     for (Map.Entry<String, String> entry : shellEnv.entrySet()) {
       vargs.add("--shell_env " + entry.getKey() + "=" + entry.getValue());
     }
@@ -1110,13 +1114,17 @@ public class Client {
   private boolean monitorApplication(ApplicationId appId)
       throws YarnException, IOException {
 
+    boolean res = false;
+    boolean needForceKill = false;
     while (true) {
-
       // Check app status every 1 second.
       try {
-        Thread.sleep(1000);
+        Thread.sleep(APP_MONITOR_INTERVAL);
       } catch (InterruptedException e) {
-        LOG.debug("Thread sleep in monitoring loop interrupted");
+        LOG.warn("Thread sleep in monitoring loop interrupted");
+        // if the application is to be killed when client times out;
+        // then set needForceKill to true
+        break;
       }
 
       // Get application report for the appId we are interested in 
@@ -1139,22 +1147,20 @@ public class Client {
       FinalApplicationStatus dsStatus = report.getFinalApplicationStatus();
       if (YarnApplicationState.FINISHED == state) {
         if (FinalApplicationStatus.SUCCEEDED == dsStatus) {
-          LOG.info("Application has completed successfully. Breaking monitoring loop");
-          return true;        
+          LOG.info("Application has completed successfully. "
+                  + "Breaking monitoring loop");
+          res = true;
+        } else {
+          LOG.info("Application did finished unsuccessfully. "
+                  + "YarnState={}, DSFinalStatus={}. Breaking monitoring loop",
+              state, dsStatus);
         }
-        else {
-          LOG.info("Application did finished unsuccessfully."
-              + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
-              + ". Breaking monitoring loop");
-          return false;
-        }
-      }
-      else if (YarnApplicationState.KILLED == state
+        break;
+      } else if (YarnApplicationState.KILLED == state
           || YarnApplicationState.FAILED == state) {
-        LOG.info("Application did not finish."
-            + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
-            + ". Breaking monitoring loop");
-        return false;
+        LOG.info("Application did not finish. YarnState={}, DSFinalStatus={}. "
+                + "Breaking monitoring loop", state, dsStatus);
+        break;
       }
 
       // The value equal or less than 0 means no timeout
@@ -1162,11 +1168,16 @@ public class Client {
           && System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
         LOG.info("Reached client specified timeout for application. " +
             "Killing application");
-        forceKillApplication(appId);
-        return false;
+        needForceKill = true;
+        break;
       }
     }
 
+    if (needForceKill) {
+      forceKillApplication(appId);
+    }
+
+    return res;
   }
 
   /**

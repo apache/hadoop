@@ -47,8 +47,8 @@ public class NodeResourceMonitorImpl extends AbstractService implements
   private ResourceCalculatorPlugin resourceCalculatorPlugin;
 
   /** Current <em>resource utilization</em> of the node. */
-  private ResourceUtilization nodeUtilization;
-
+  private ResourceUtilization nodeUtilization =
+      ResourceUtilization.newInstance(0, 0, 0f);
   private Context nmContext;
 
   /**

@@ -537,10 +537,9 @@ class BlockReceiver implements Closeable {
     packetReceiver.receiveNextPacket(in);
 
     PacketHeader header = packetReceiver.getHeader();
-    if (LOG.isDebugEnabled()){
-      LOG.debug("Receiving one packet for block " + block +
-                ": " + header);
-    }
+    long seqno = header.getSeqno();
+    LOG.debug("Receiving one packet for block {} seqno:{} header:{} ", block,
+        seqno, header);
 
     // Sanity check the header
     if (header.getOffsetInBlock() > replicaInfo.getNumBytes()) {
@@ -556,7 +555,6 @@ class BlockReceiver implements Closeable {
     }
 
     long offsetInBlock = header.getOffsetInBlock();
-    long seqno = header.getSeqno();
     boolean lastPacketInBlock = header.isLastPacketInBlock();
     final int len = header.getDataLen();
     boolean syncBlock = header.getSyncBlock();

@@ -228,7 +228,7 @@ public class TestBalancerWithHANameNodes {
         int expectedObserverIdx = withObserverFailure ? 3 : 2;
         int expectedCount = (i == expectedObserverIdx) ? 2 : 0;
         verify(namesystemSpies.get(i), times(expectedCount))
-            .getBlocks(any(), anyLong(), anyLong());
+            .getBlocks(any(), anyLong(), anyLong(), anyLong());
       }
     } finally {
       if (qjmhaCluster != null) {
