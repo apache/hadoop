@@ -39,14 +39,15 @@ public class ContentSummaryProcessor {
   private final AtomicLong fileCount = new AtomicLong(0L);
   private final AtomicLong directoryCount = new AtomicLong(0L);
   private final AtomicLong totalBytes = new AtomicLong(0L);
-  private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
-  private final Logger LOG =
-      LoggerFactory.getLogger(ContentSummaryProcessor.class);
+  private final AtomicInteger numTasks = new AtomicInteger(0);
   private final AzureBlobFileSystemStore abfsStore;
+  private final ExecutorService executorService = new ThreadPoolExecutor(1,
+      NUM_THREADS, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
+  private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ContentSummaryProcessor.class);
   private static final int NUM_THREADS = 16;
-  private final AtomicInteger NUM_TASKS = new AtomicInteger(0);
-  ExecutorService executorService = new ThreadPoolExecutor(1, NUM_THREADS,
-      5, TimeUnit.SECONDS, new SynchronousQueue<>());
+  private static final int POLL_TIMEOUT = 100;
 
   public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
     this.abfsStore = abfsStore;
@@ -56,7 +57,7 @@ public class ContentSummaryProcessor {
       throws IOException, InterruptedException {
     processDirectoryTree(path);
 
-    while(!queue.isEmpty() || NUM_TASKS.get() > 0) {
+    while (!queue.isEmpty() || numTasks.get() > 0) {
       Thread.sleep(10);
     }
     executorService.shutdown();
@@ -73,26 +74,26 @@ public class ContentSummaryProcessor {
         queue.put(fileStatus);
         processDirectory();
         synchronized (this) {
-          if (!queue.isEmpty() && NUM_TASKS.get() < NUM_THREADS) {
-            NUM_TASKS.incrementAndGet();
+          if (!queue.isEmpty() && numTasks.get() < NUM_THREADS) {
+            numTasks.incrementAndGet();
             executorService.submit(() -> {
               try {
                 FileStatus fileStatus1;
-                while ((fileStatus1 = queue.poll(100, TimeUnit.MILLISECONDS))
+                while ((fileStatus1 = queue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS))
                     != null) {
                   processDirectoryTree(fileStatus1.getPath());
                 }
-                NUM_TASKS.decrementAndGet();
               } catch (IOException | InterruptedException e) {
-                NUM_TASKS.decrementAndGet();
                 LOG.debug(e.toString());
                 throw new IOException(e.getMessage());
+              } finally {
+                numTasks.decrementAndGet();
               }
               return null;
             });
           }
         }
-      }else {
+      } else {
         processFile(fileStatus);
       }
     }
