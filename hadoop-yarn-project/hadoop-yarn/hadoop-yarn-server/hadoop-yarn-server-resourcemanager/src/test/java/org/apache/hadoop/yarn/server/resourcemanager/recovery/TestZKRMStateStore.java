@@ -1576,8 +1576,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
     Configuration conf = createConfForDelegationTokenNodeSplit(1);
     MetricsCollectorImpl collector = new MetricsCollectorImpl();
-    ZKRMStateStoreOpDurations opDurations = ((ZKRMStateStore)zkTester.getRMStateStore(conf))
-        .zkRMStateStoreOpDurations;
+    ZKRMStateStoreOpDurations opDurations =
+        ((ZKRMStateStore)zkTester.getRMStateStore(conf)).opDurations;
 
     long anyDuration = 10;
     opDurations.addLoadStateCallDuration(anyDuration);
@@ -1591,14 +1591,19 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     assertEquals("Incorrect number of perf metrics", 1,
         collector.getRecords().size());
     MetricsRecord record = collector.getRecords().get(0);
-    MetricsRecords.assertTag(record, ZKRMStateStoreOpDurations.RECORD_INFO.name(),
+    MetricsRecords.assertTag(record,
+        ZKRMStateStoreOpDurations.RECORD_INFO.name(),
         "ZKRMStateStoreOpDurations");
 
     double expectAvgTime = anyDuration;
-    MetricsRecords.assertMetric(record, "LoadStateCallAvgTime",  expectAvgTime);
-    MetricsRecords.assertMetric(record, "StoreApplicationStateCallAvgTime", expectAvgTime);
-    MetricsRecords.assertMetric(record, "UpdateApplicationStateCallAvgTime", expectAvgTime);
-    MetricsRecords.assertMetric(record, "RemoveApplicationStateCallAvgTime", expectAvgTime);
+    MetricsRecords.assertMetric(record,
+        "LoadStateCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record,
+        "StoreApplicationStateCallAvgTime", expectAvgTime);
+    MetricsRecords.assertMetric(record,
+        "UpdateApplicationStateCallAvgTime", expectAvgTime);
+    MetricsRecords.assertMetric(record,
+        "RemoveApplicationStateCallAvgTime", expectAvgTime);
   }
 
 }

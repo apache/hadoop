@@ -38,7 +38,7 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 @Metrics(context="ZKRMStateStore-op-durations")
-public class ZKRMStateStoreOpDurations implements MetricsSource {
+public final class ZKRMStateStoreOpDurations implements MetricsSource {
 
   @Metric("Duration for a load state call")
   MutableRate loadStateCall;
@@ -52,12 +52,13 @@ public class ZKRMStateStoreOpDurations implements MetricsSource {
   @Metric("Duration to handle a remove application state call")
   MutableRate removeApplicationStateCall;
 
-  public static final MetricsInfo RECORD_INFO =
+  protected static final MetricsInfo RECORD_INFO =
       info("ZKRMStateStoreOpDurations", "Durations of ZKRMStateStore calls");
 
   private final MetricsRegistry registry;
 
-  private static final ZKRMStateStoreOpDurations INSTANCE = new ZKRMStateStoreOpDurations();
+  private static final ZKRMStateStoreOpDurations INSTANCE
+      = new ZKRMStateStoreOpDurations();
 
   public static ZKRMStateStoreOpDurations getInstance() {
     return INSTANCE;

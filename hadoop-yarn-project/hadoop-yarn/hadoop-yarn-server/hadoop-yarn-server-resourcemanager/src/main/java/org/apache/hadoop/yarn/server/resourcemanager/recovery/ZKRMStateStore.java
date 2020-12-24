@@ -238,7 +238,7 @@ public class ZKRMStateStore extends RMStateStore {
 
   private volatile Clock clock = SystemClock.getInstance();
   @VisibleForTesting
-  protected  ZKRMStateStoreOpDurations zkRMStateStoreOpDurations;
+  protected ZKRMStateStoreOpDurations opDurations;
 
   /*
    * Indicates different app attempt state store operations.
@@ -335,7 +335,7 @@ public class ZKRMStateStore extends RMStateStore {
       appIdNodeSplitIndex = YarnConfiguration.DEFAULT_ZK_APPID_NODE_SPLIT_INDEX;
     }
 
-    zkRMStateStoreOpDurations = ZKRMStateStoreOpDurations.getInstance();
+    opDurations = ZKRMStateStoreOpDurations.getInstance();
 
     zkAcl = ZKCuratorManager.getZKAcls(conf);
 
@@ -538,7 +538,7 @@ public class ZKRMStateStore extends RMStateStore {
     loadReservationSystemState(rmState);
     // recover ProxyCAManager state
     loadProxyCAManagerState(rmState);
-    zkRMStateStoreOpDurations.addLoadStateCallDuration(clock.getTime() - start);
+    opDurations.addLoadStateCallDuration(clock.getTime() - start);
     return rmState;
   }
 
@@ -861,7 +861,7 @@ public class ZKRMStateStore extends RMStateStore {
           + " exceeds the maximum allowed size for application data. "
           + "See yarn.resourcemanager.zk-max-znode-size.bytes.");
     }
-    zkRMStateStoreOpDurations.addStoreApplicationStateCallDuration(clock.getTime() - start);
+    opDurations.addStoreApplicationStateCallDuration(clock.getTime() - start);
   }
 
   @Override
@@ -905,7 +905,7 @@ public class ZKRMStateStore extends RMStateStore {
       LOG.debug("Path {} for {} didn't exist. Creating a new znode to update"
           + " the application state.", nodeUpdatePath, appId);
     }
-    zkRMStateStoreOpDurations.addUpdateApplicationStateCallDuration(clock.getTime() - start);
+    opDurations.addUpdateApplicationStateCallDuration(clock.getTime() - start);
   }
 
   /*
@@ -993,7 +993,7 @@ public class ZKRMStateStore extends RMStateStore {
     long start = clock.getTime();
     removeApp(appState.getApplicationSubmissionContext().
         getApplicationId().toString(), true, appState.attempts.keySet());
-    zkRMStateStoreOpDurations.addRemoveApplicationStateCallDuration(clock.getTime() - start);
+    opDurations.addRemoveApplicationStateCallDuration(clock.getTime() - start);
   }
 
   private void removeApp(String removeAppId) throws Exception {
