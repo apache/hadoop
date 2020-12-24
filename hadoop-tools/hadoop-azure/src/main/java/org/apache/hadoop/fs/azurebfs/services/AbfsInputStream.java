@@ -126,11 +126,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
   }
 
-  public void registerListener(Listener listener1) {
-    listener = listener1;
-    tracingContext.setListener(listener);
-  }
-
   @Override
   public int read() throws IOException {
     byte[] b = new byte[1];
@@ -559,6 +554,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
+  }
+
+  @VisibleForTesting
+  public void registerListener(Listener listener1) {
+    listener = listener1;
+    tracingContext.setListener(listener);
   }
 
   /**
