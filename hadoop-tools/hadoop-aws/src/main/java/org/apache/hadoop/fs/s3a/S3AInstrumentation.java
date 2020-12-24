@@ -1108,13 +1108,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private void merge(boolean isClosed) {
 
-      final IOStatisticsStore localIOStats = this.getIOStatistics();
-      IOStatisticsStore ioStatistics = localIOStats;
+      IOStatisticsStore ioStatistics = this.getIOStatistics();
       LOG.debug("Merging statistics into FS statistics in {}: {}",
           (isClosed ? "close()" : "unbuffer()"),
           demandStringifyIOStatistics(ioStatistics));
       promoteInputStreamCountersToMetrics();
-      mergedStats = snapshotIOStatistics(localIOStats);
+      mergedStats = snapshotIOStatistics(this.getIOStatistics());
 
       if (isClosed) {
         // stream is being closed.
