@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-public class ContentSummary {
+public class ABFSContentSummary {
   private final long length;
   private final long directoryCount;
   private final long fileCount;
   private final long spaceConsumed;
 
-  public ContentSummary(long length, long directoryCount, long fileCount,
+  public ABFSContentSummary(long length, long directoryCount, long fileCount,
       long spaceConsumed) {
     this.length = length;
     this.directoryCount = directoryCount;

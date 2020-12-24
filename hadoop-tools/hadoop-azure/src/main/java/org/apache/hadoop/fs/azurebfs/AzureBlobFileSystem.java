@@ -37,9 +37,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.ContentSummary.Builder;
-import org.apache.hadoop.fs.azurebfs.services.ContentSummaryProcessor;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -52,6 +49,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonPathCapabilities;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -73,6 +72,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderExcept
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.azurebfs.services.ContentSummaryProcessor;
+import org.apache.hadoop.fs.azurebfs.utils.ABFSContentSummary;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -367,17 +368,18 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   @Override
-  public ContentSummary getContentSummary(Path f) throws IOException {
-    org.apache.hadoop.fs.azurebfs.utils.ContentSummary contentSummary = null;
+  public ContentSummary getContentSummary(Path path) throws IOException {
     try {
-      contentSummary = (new ContentSummaryProcessor(abfsStore)).getContentSummary(f);
+      ABFSContentSummary contentSummary =
+          (new ContentSummaryProcessor(abfsStore)).getContentSummary(path);
+      return new Builder().length(contentSummary.getLength())
+          .directoryCount(contentSummary.getDirectoryCount())
+          .fileCount(contentSummary.getFileCount())
+          .spaceConsumed(contentSummary.getSpaceConsumed()).build();
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      LOG.debug(e.toString());
+      throw new IOException(e.getMessage());
     }
-    return new Builder().length(contentSummary.getLength())
-        .directoryCount(contentSummary.getDirectoryCount())
-        .fileCount(contentSummary.getFileCount())
-        .spaceConsumed(contentSummary.getSpaceConsumed()).build();
   }
 
   @Override

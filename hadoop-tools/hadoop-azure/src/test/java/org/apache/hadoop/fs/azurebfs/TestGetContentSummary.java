@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +27,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_LIST_MAX_RESULTS;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
 
@@ -115,6 +117,14 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
     checkContentSummary(
         fs.getContentSummary(pathToListMaxDir), 1,
         numFilesForListMaxTest + filesPerDirectory, 0);
+  }
+
+  @Test
+  public void testInvalidPath() throws Exception {
+    intercept(IOException.class, () -> fs.getContentSummary(new Path(
+        "/nonExistentPath")));
+    intercept(IOException.class, () -> fs.getContentSummary(new Path(
+        "testFolder/IntermediateNonExistentPath")));
   }
 
   private void checkContentSummary(ContentSummary contentSummary,
