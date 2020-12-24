@@ -31,8 +31,10 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
-import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationMetaCollector;
+import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.RemoteLogPathEntry;
@@ -262,6 +264,36 @@ public class LogServlet extends Configured {
 
     return getContainerLogsInfo(hsr, logMetaRequestBuilder, nmId,
         redirectedFromNode, null, manualRedirection);
+  }
+
+  public Response getContainerLogsInfo(
+      HttpServletRequest req,
+      ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder logsRequest)
+      throws IOException {
+    List<ContainerLogMeta> logs = new ArrayList<>();
+
+    if (!logsRequest.isUserSet()) {
+      logsRequest.setUser(UserGroupInformation.getCurrentUser().getUserName());
+    }
+    LogAggregationMetaCollector collector = new LogAggregationMetaCollector(
+        logsRequest.build(), getConf());
+
+    for (LogAggregationFileController fc : getOrCreateFactory()
+        .getConfiguredLogAggregationFileControllerList()) {
+      logs.addAll(collector.collect(fc));
+    }
+
+    List<ContainerLogsInfo> containersLogsInfo = convertToContainerLogsInfo(
+        logs, false);
+    GenericEntity<List<ContainerLogsInfo>> meta =
+        new GenericEntity<List<ContainerLogsInfo>>(containersLogsInfo) {
+        };
+    Response.ResponseBuilder response = Response.ok(meta);
+    // Sending the X-Content-Type-Options response header with the value
+    // nosniff will prevent Internet Explorer from MIME-sniffing a response
+    // away from the declared content-type.
+    response.header("X-Content-Type-Options", "nosniff");
+    return response.build();
   }
 
 

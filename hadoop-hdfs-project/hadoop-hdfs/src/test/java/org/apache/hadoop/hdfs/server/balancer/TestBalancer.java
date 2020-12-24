@@ -2170,7 +2170,8 @@ public class TestBalancer {
         endGetBlocksTime.getAndUpdate((curr) -> Math.max(curr, endTime));
         numGetBlocksCalls.incrementAndGet();
         return blk;
-      }}).when(fsnSpy).getBlocks(any(DatanodeID.class), anyLong(), anyLong());
+      }}).when(fsnSpy).getBlocks(any(DatanodeID.class),
+        anyLong(), anyLong(), anyLong());
   }
 
   /**

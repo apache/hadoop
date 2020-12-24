@@ -203,6 +203,7 @@ public class Balancer {
       + "on over-utilized machines."
       + "\n\t[-asService]\tRun as a long running service."
       + "\n\t[-sortTopNodes]"
+      + "\n\t[-hotBlockTimeInterval]\tprefer to move cold blocks."
       + "\tSort datanodes based on the utilization so "
       + "that highly utilized datanodes get scheduled first.";
 
@@ -315,6 +316,14 @@ public class Balancer {
     final long maxIterationTime = conf.getLong(
         DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_KEY,
         DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_DEFAULT);
+    /**
+     * Balancer prefer to get blocks which are belong to the cold files
+     * created before this time period.
+     */
+    final long hotBlockTimeInterval = conf.getTimeDuration(
+        DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY,
+        DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
 
     // DataNode configuration parameters for balancing
     final int maxConcurrentMovesPerNode = getInt(conf,
@@ -329,7 +338,7 @@ public class Balancer {
             p.getExcludedNodes(), movedWinWidth, moverThreads,
             dispatcherThreads, maxConcurrentMovesPerNode, getBlocksSize,
             getBlocksMinBlockSize, blockMoveTimeout, maxNoMoveInterval,
-            maxIterationTime, conf);
+            maxIterationTime, hotBlockTimeInterval, conf);
     this.threshold = p.getThreshold();
     this.policy = p.getBalancingPolicy();
     this.sourceNodes = p.getSourceNodes();
@@ -990,6 +999,14 @@ public class Balancer {
             } else if ("-asService".equalsIgnoreCase(args[i])) {
               b.setRunAsService(true);
               LOG.info("Balancer will run as a long running service");
+            } else if ("-hotBlockTimeInterval".equalsIgnoreCase(args[i])) {
+              checkArgument(++i < args.length,
+                  "hotBlockTimeInterval value is missing: args = "
+                  + Arrays.toString(args));
+              long hotBlockTimeInterval = Long.parseLong(args[i]);
+              LOG.info("Using a hotBlockTimeInterval of "
+                  + hotBlockTimeInterval);
+              b.setHotBlockTimeInterval(hotBlockTimeInterval);
             } else if ("-sortTopNodes".equalsIgnoreCase(args[i])) {
               b.setSortTopNodes(true);
               LOG.info("Balancer will sort nodes by" +

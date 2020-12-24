@@ -870,7 +870,7 @@ Please refer the following links for further information.
 listStatus API fetches the FileStatus information from server in a page by page
 manner. The config `fs.azure.list.max.results` used to set the maxResults URI
  param which sets the pagesize(maximum results per call). The value should
- be >  0. By default this will be 500. Server has a maximum value for this
+ be >  0. By default this will be 5000. Server has a maximum value for this
  parameter as 5000. So even if the config is above 5000 the response will only
 contain 5000 entries. Please refer the following link for further information.
 https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list

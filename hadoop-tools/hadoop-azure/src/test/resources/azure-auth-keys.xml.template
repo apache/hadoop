@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<configuration>
+
+  <!--====================== IMPORTANT!! ========================-->
+  <!--
+      1. COPY THE CONTENTS OF THIS FILE TO "azure-auth-keys.xml" AND THEN EDIT.
+      2. UPDATE runtests.sh
+         A.  "fs.azure.abfs.account.name" AND "fs.azure.test.namespace.enabled"
+             ARE MANDATORY WITH EVERY SCENARIO. AUTHTYPE BY DEFAULT WILL BE
+             SHAREDKEY AS CONFIGURED IN THIS TEMPLATE FILE.
+         B.  PLEASE ADD MORE SCENARIOS IF THE CODE CHANGE REQUIRES TESTING WITH
+             DIFFERENT VARIANTS OF CONFIGS.
+      3. THE SCRIPT REQUIRES THE FOLLOWING UTILITIES xmlstarlet AND pcregrep
+      4. NOW THE SCRIPT CAN BE EXECUTED WITH ./runtests.sh
+  -->
+
+  <!--=============== Auth type ===============-->
+  <property>
+    <name>fs.azure.account.auth.type</name>
+    <value>SharedKey</value>
+  </property>
+
+  <!--=============== Auth related accounts ===============-->
+  <!-- This set of configs needs to be provided for all the accounts with which
+   the tests needs to be ran. -->
+  <property>
+    <name>fs.azure.account.key.{ABFS_ACCOUNT_NAME}.dfs.core.windows.net</name>
+    <value>{ACCOUNT_ACCESS_KEY}</value>
+    <description>Account access key</description>
+  </property>
+  <property>
+    <name>
+      fs.azure.account.oauth.provider.type.{ABFS_ACCOUNT_NAME}.dfs.core.windows.net
+    </name>
+    <value>org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider</value>
+    <description>OAuth token provider implementation class</description>
+  </property>
+  <property>
+    <name>
+      fs.azure.account.oauth2.client.endpoint.{ABFS_ACCOUNT_NAME}.dfs.core.windows.net
+    </name>
+    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+    <description>Token end point, this can be found through Azure portal
+    </description>
+  </property>
+  <property>
+    <name>
+      fs.azure.account.oauth2.client.id.{ABFS_ACCOUNT_NAME}.dfs.core.windows.net
+    </name>
+    <value>{client id}</value>
+    <description>AAD client id.</description>
+  </property>
+  <property>
+    <name>
+      fs.azure.account.oauth2.client.secret.{ABFS_ACCOUNT_NAME}.dfs.core.windows.net
+    </name>
+    <value>{client secret}</value>
+    <description>AAD client secret</description>
+  </property>
+
+  <!--=============== Configs for hadoop contract tests for ABFS ===============-->
+  <property>
+    <name>fs.contract.test.fs.abfs</name>
+    <value>abfs://{CONTAINER_NAME}@{ACCOUNT_NAME}.dfs.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.abfss</name>
+    <value>abfss://{CONTAINER_NAME}@{ACCOUNT_NAME}.dfs.core.windows.net</value>
+  </property>
+
+  <!--=============== WASB Configs ===============-->
+  <property>
+    <name>fs.azure.wasb.account.name</name>
+    <value>{WASB_ACCOUNT_NAME}.blob.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.azure.account.key.{WASB_ACCOUNT_NAME}.blob.core.windows.net</name>
+    <value>WASB account key</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.wasb</name>
+    <value>wasb://{WASB_FILESYSTEM}@{WASB_ACCOUNT_NAME}.blob.core.windows.net
+    </value>
+  </property>
+
+  <!--============= Configs for ITestAzureBlobFileSystemOauth tests ===============-->
+  <property>
+    <name>fs.azure.account.oauth2.contributor.client.id</name>
+    <value>{Client id of SP with RBAC Storage Blob Data Contributor}</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.contributor.client.secret</name>
+    <value>{Client secret of SP with RBAC Storage Blob Data Contributor}</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.reader.client.id</name>
+    <value>{Client id of SP with RBAC Storage Blob Data Reader}</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.reader.client.secret</name>
+    <value>{Client secret of SP with RBAC Storage Blob Data Reader}</value>
+  </property>
+
+<!--===========================   FOR CheckAccess =========================-->
+<!-- To run ABFS CheckAccess tests, you must register an app, with no role
+ assignments, and set the configuration discussed below:
+
+    1) Register a new app with no RBAC
+    2) As part of the test configs you need to provide the guid for the above
+created app. Please follow the below steps to fetch the guid.
+      a) Get an access token with the above created app. Please refer the
+ following documentation for the same. https://docs.microsoft
+.com/en-us/azure/active-directory/develop/v2-oauth2-client-creds-grant-flow#get-a-token
+      b) Decode the token fetched with the above step. You may use https
+://jwt.ms/ to decode the token
+      d) The oid field in the decoded string is the guid.
+    3) Set the following configurations:
+-->
+
+  <property>
+    <name>fs.azure.account.test.oauth2.client.id</name>
+    <value>{client id}</value>
+    <description>The client id(app id) for the app created on step 1
+    </description>
+  </property>
+  <property>
+    <name>fs.azure.account.test.oauth2.client.secret</name>
+    <value>{client secret}</value>
+    <description>
+The client secret(application's secret) for the app created on step 1
+    </description>
+  </property>
+  <property>
+    <name>fs.azure.check.access.testuser.guid</name>
+    <value>{guid}</value>
+    <description>The guid fetched on step 2</description>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.endpoint.{account name}.dfs.core
+.windows.net</name>
+    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+    <description>
+Token end point. This can be found through Azure portal. As part of CheckAccess
+test cases. The access will be tested for an FS instance created with the
+above mentioned client credentials. So this configuration is necessary to
+create the test FS instance.
+    </description>
+  </property>
+
+  <!--========== Append blob related configs ===========-->
+  <property>
+    <name>fs.azure.test.appendblob.enabled</name>
+    <value>false</value>
+    <description>If made true, tests will be running under the assumption that
+      append blob is enabled and the root directory and contract test root
+      directory will be part of the append blob directories.
+    </description>
+  </property>
+
+</configuration>
