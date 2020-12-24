@@ -4952,6 +4952,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edits.asynclogging.pending.queue.size</name>
+  <value>4096</value>
+  <description>
+    The queue size of edit pending queue for FSEditLogAsync.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.edits.dir.minimum</name>
   <value>1</value>
   <description>
