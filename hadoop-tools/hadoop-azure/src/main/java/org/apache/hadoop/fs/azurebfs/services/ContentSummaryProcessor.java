@@ -19,11 +19,17 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -44,6 +50,8 @@ public class ContentSummaryProcessor {
   private final ExecutorService executorService = new ThreadPoolExecutor(1,
       NUM_THREADS, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
   private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
+  private final Set<Future<Object>> futures =
+      Collections.newSetFromMap(new ConcurrentHashMap<>());
   private static final Logger LOG =
       LoggerFactory.getLogger(ContentSummaryProcessor.class);
   private static final int NUM_THREADS = 16;
@@ -58,8 +66,18 @@ public class ContentSummaryProcessor {
     processDirectoryTree(path);
 
     while (!queue.isEmpty() || numTasks.get() > 0) {
-      Thread.sleep(10);
+      for (Future<Object> future : futures) {
+        try {
+          future.get(10, TimeUnit.MILLISECONDS);
+          futures.remove(future);
+        } catch (TimeoutException ignored) {
+        } catch (ExecutionException e) {
+          LOG.debug(e.toString());
+          throw new IOException(e);
+        }
+      }
     }
+
     executorService.shutdown();
     return new ABFSContentSummary(totalBytes.get(), directoryCount.get(),
         fileCount.get(), totalBytes.get());
@@ -76,21 +94,16 @@ public class ContentSummaryProcessor {
         synchronized (this) {
           if (!queue.isEmpty() && numTasks.get() < NUM_THREADS) {
             numTasks.incrementAndGet();
-            executorService.submit(() -> {
-              try {
-                FileStatus fileStatus1;
-                while ((fileStatus1 = queue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS))
-                    != null) {
-                  processDirectoryTree(fileStatus1.getPath());
-                }
-              } catch (IOException | InterruptedException e) {
-                LOG.debug(e.toString());
-                throw new IOException(e.getMessage());
-              } finally {
-                numTasks.decrementAndGet();
+            Future<Object> future = executorService.submit(() -> {
+              FileStatus fileStatus1;
+              while ((fileStatus1 = queue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS))
+                  != null) {
+                processDirectoryTree(fileStatus1.getPath());
               }
+              numTasks.decrementAndGet();
               return null;
             });
+            futures.add(future);
           }
         }
       } else {
