@@ -246,7 +246,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   }
 
   @Test
-  public void testPartialReadWithNoDataSeekToEndAndReadWithConfTrue()
+  public void testPartialReadWithNoData()
       throws Exception {
     for (int i = 2; i <= 6; i++) {
       int fileSize = i * ONE_MB;
@@ -254,13 +254,13 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      partialReadWithNoDataSeekReadAndTest(fs, testFilePath,
+      testPartialReadWithNoData(fs, testFilePath,
           fileSize - AbfsInputStream.FOOTER_SIZE, AbfsInputStream.FOOTER_SIZE,
           fileContent);
     }
   }
 
-  private void partialReadWithNoDataSeekReadAndTest(final FileSystem fs,
+  private void testPartialReadWithNoData(final FileSystem fs,
       final Path testFilePath, final int seekPos, final int length,
       final byte[] fileContent)
       throws IOException, NoSuchFieldException, IllegalAccessException {
@@ -288,7 +288,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   }
 
   @Test
-  public void testPartialReadWithSomeDataSeekToEndAndReadWithConfTrue()
+  public void testPartialReadWithSomeDat()
       throws Exception {
     for (int i = 3; i <= 6; i++) {
       int fileSize = i * ONE_MB;
@@ -296,13 +296,13 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      partialReadWithSomeDataSeekReadAndTest(fs, testFilePath,
+      testPartialReadWithSomeDat(fs, testFilePath,
           fileSize - AbfsInputStream.FOOTER_SIZE, AbfsInputStream.FOOTER_SIZE,
           fileContent);
     }
   }
 
-  private void partialReadWithSomeDataSeekReadAndTest(final FileSystem fs,
+  private void testPartialReadWithSomeDat(final FileSystem fs,
       final Path testFilePath, final int seekPos, final int length,
       final byte[] fileContent)
       throws IOException, NoSuchFieldException, IllegalAccessException {

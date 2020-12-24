@@ -43,7 +43,7 @@ import static org.mockito.Mockito.spy;
 public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
   protected static final int HUNDRED = 100;
-  
+
   public ITestAbfsInputStream() throws Exception {
   }
 
@@ -55,34 +55,38 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      testWithNoOptimization(fs, testFilePath, HUNDRED,
-          fileSize / 4, fileContent);
+      testWithNoOptimization(fs, testFilePath, HUNDRED, fileContent);
     }
   }
 
-  private void testWithNoOptimization(final FileSystem fs,
-      final Path testFilePath,
-      final int seekPos, final int length, final byte[] fileContent)
-      throws IOException, NoSuchFieldException, IllegalAccessException {
-    AbfsConfiguration conf = getAbfsStore(fs).getAbfsConfiguration();
+  protected void testWithNoOptimization(final FileSystem fs,
+      final Path testFilePath, final int seekPos, final byte[] fileContent)
+      throws IOException {
     FSDataInputStream iStream = fs.open(testFilePath);
     try {
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
           .getWrappedStream();
 
       iStream = new FSDataInputStream(abfsInputStream);
-      verifyBeforeSeek(abfsInputStream);
       seek(iStream, seekPos);
-      byte[] buffer = new byte[length];
-      int bytesRead = iStream.read(buffer, 0, length);
+      long totalBytesRead = 0;
+      int length = HUNDRED * HUNDRED;
+      do {
+        byte[] buffer = new byte[length];
+        int bytesRead = iStream.read(buffer, 0, length);
+        totalBytesRead += bytesRead;
+        if ((totalBytesRead + seekPos) >= fileContent.length) {
+          length = (fileContent.length - seekPos) % length;
+        }
+        assertEquals(length, bytesRead);
+        assertContentReadCorrectly(fileContent,
+            (int) (seekPos + totalBytesRead - length), length, buffer);
 
-      assertEquals(bytesRead, length);
-      assertContentReadCorrectly(fileContent, seekPos, length, buffer);
-
-      assertTrue(abfsInputStream.getFCursor() > seekPos + length);
-      assertTrue(abfsInputStream.getFCursorAfterLastRead() > seekPos + length);
-      assertTrue(abfsInputStream.getBCursor() >= length);
-      assertTrue(abfsInputStream.getLimit() >= length);
+        assertTrue(abfsInputStream.getFCursor() >= seekPos + totalBytesRead);
+        assertTrue(abfsInputStream.getFCursorAfterLastRead() >= seekPos + totalBytesRead);
+        assertTrue(abfsInputStream.getBCursor() >= totalBytesRead % abfsInputStream.getBufferSize());
+        assertTrue(abfsInputStream.getLimit() >= totalBytesRead % abfsInputStream.getBufferSize());
+      } while (totalBytesRead + seekPos < fileContent.length);
     } finally {
       iStream.close();
     }

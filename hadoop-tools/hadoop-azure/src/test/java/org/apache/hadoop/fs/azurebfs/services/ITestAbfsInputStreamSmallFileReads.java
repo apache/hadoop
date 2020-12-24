@@ -45,12 +45,12 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
   }
 
   @Test
-  public void testOnlyOneServerCallIsMadeWhenTheCOnfIsTrue() throws Exception {
+  public void testOnlyOneServerCallIsMadeWhenTheConfIsTrue() throws Exception {
     testNumBackendCalls(true);
   }
 
   @Test
-  public void testMultipleServerCallsAreMadeWhenTheCOnfIsFalse()
+  public void testMultipleServerCallsAreMadeWhenTheConfIsFalse()
       throws Exception {
     testNumBackendCalls(false);
   }
@@ -225,19 +225,19 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
   }
 
   @Test
-  public void testPartialReadWithNoDataSeekToEndAndReadWithConf() throws Exception {
+  public void testPartialReadWithNoData() throws Exception {
     for (int i = 2; i <= 4; i++) {
       int fileSize = i * ONE_MB;
       final AzureBlobFileSystem fs = getFileSystem(true);
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      partialReadWithNoDataSeekReadAndTest(fs, testFilePath, fileSize / 2,
-          fileSize / 4, fileContent);
+      partialReadWithNoData(fs, testFilePath, fileSize / 2, fileSize / 4,
+          fileContent);
     }
   }
 
-  private void partialReadWithNoDataSeekReadAndTest(final FileSystem fs,
+  private void partialReadWithNoData(final FileSystem fs,
       final Path testFilePath,
       final int seekPos, final int length, final byte[] fileContent)
       throws IOException {
@@ -270,19 +270,19 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
   }
 
   @Test
-  public void testPartialReadWithSomeDataSeekToEndAndReadWithConf() throws Exception {
+  public void testPartialReadWithSomeData() throws Exception {
     for (int i = 2; i <= 4; i++) {
       int fileSize = i * ONE_MB;
       final AzureBlobFileSystem fs = getFileSystem(true);
       String fileName = methodName.getMethodName() + i;
       byte[] fileContent = getRandomBytesArray(fileSize);
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      partialReadWithSomeDataSeekReadAndTest(fs, testFilePath, fileSize / 2,
+      partialReadWithSomeData(fs, testFilePath, fileSize / 2,
           fileSize / 4, fileContent);
     }
   }
 
-  private void partialReadWithSomeDataSeekReadAndTest(final FileSystem fs,
+  private void partialReadWithSomeData(final FileSystem fs,
       final Path testFilePath,
       final int seekPos, final int length, final byte[] fileContent)
       throws IOException, NoSuchFieldException, IllegalAccessException {
