@@ -526,9 +526,8 @@ public class ReflectionUtils {
   public synchronized static void printThreadInfoExt(PrintStream stream,
       String title,
       int stackDepth) {
-    int STACK_DEPTH = 20;
-    if (stackDepth > 0) {
-      STACK_DEPTH = stackDepth;
+    if (stackDepth <= 0) {
+      stackDepth = 20;
     }
     Thread[] threads =
         (Thread[]) callDeclaredMethod(Thread.class, "getThreads", null);
@@ -538,7 +537,7 @@ public class ReflectionUtils {
     stream.println(threadIds.length + " active threads");
     for (Thread thread : threads) {
       long tid = thread.getId();
-      ThreadInfo info = threadBean.getThreadInfo(tid, STACK_DEPTH);
+      ThreadInfo info = threadBean.getThreadInfo(tid, stackDepth);
       if (info == null) {
         stream.println("  Inactive");
         continue;
