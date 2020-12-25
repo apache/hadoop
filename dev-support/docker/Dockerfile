@@ -35,6 +35,10 @@ ENV DEBCONF_TERSE true
 # hadolint ignore=DL3008
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends \
+        software-properties-common \
+    && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
+    && apt-get -q update \
+    && apt-get -q install -y --no-install-recommends \
         ant \
         apt-utils \
         bats \
@@ -45,8 +49,8 @@ RUN apt-get -q update \
         doxygen \
         findbugs \
         fuse \
-        g++ \
-        gcc \
+        g++-9 \
+        gcc-9 \
         git \
         gnupg-agent \
         hugo \
@@ -82,7 +86,8 @@ RUN apt-get -q update \
         valgrind \
         zlib1g-dev \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 
 ######
 # Set env vars required to build Hadoop
