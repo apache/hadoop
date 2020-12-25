@@ -17,4 +17,3 @@
 #
 
 add_library(x_platform_utils_obj OBJECT utils.cc)
-add_library(x_platform_utils $<TARGET_OBJECTS:x_platform_utils_obj>)
