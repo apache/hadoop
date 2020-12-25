@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica;
 
+import java.text.DecimalFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -55,15 +57,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFini
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerReservedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractUsersManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAMContainerLaunchDiagnosticsConstants;
@@ -113,6 +106,10 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   private AbstractContainerAllocator containerAllocator;
 
   private boolean runnable;
+
+  // Used to record node reservation by an app.
+  // Key = RackName, Value = Set of Nodes reserved by app on rack
+  private Map<String, Set<String>> reservations = new HashMap<>();
 
   /**
    * to hold the message if its app doesn't not get container from a node
@@ -428,6 +425,59 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return true;
   }
 
+  private boolean reservationExceedsThreshold(FiCaSchedulerNode node,
+                                              NodeType type) {
+    if(scheduler instanceof CapacityScheduler) {
+      CapacityScheduler cs = (CapacityScheduler) scheduler;
+      // Only if not node-local
+      if (type != NodeType.NODE_LOCAL) {
+        int existingReservations = getNumReservations(node.getRackName(),
+            type == NodeType.OFF_SWITCH);
+        int totalAvailNodes =
+            (type == NodeType.OFF_SWITCH) ? scheduler.getNumClusterNodes() :
+                cs.getNodeTracker().nodeCount(node.getRackName());
+        float reservableNodes =
+            cs.getConfiguration().getReservableNodes();
+        int numAllowedReservations =
+            (int)Math.ceil(
+                totalAvailNodes * reservableNodes);
+        if (existingReservations >= numAllowedReservations) {
+          DecimalFormat df = new DecimalFormat();
+          df.setMaximumFractionDigits(2);
+          LOG.info("Reservation Exceeds Allowed number of nodes:" +
+              " app_id=" + getApplicationId() +
+              " existingReservations=" + existingReservations +
+              " totalAvailableNodes=" + totalAvailNodes +
+              " reservableNodesRatio=" + df.format(
+              cs.getConfiguration().getReservableNodes()) +
+              " numAllowedReservations=" + numAllowedReservations);
+          return true;
+        }
+      }
+      return false;
+    }else {
+      return false;
+    }
+  }
+
+  public int getNumReservations(String rackName, boolean isAny) {
+    int counter = 0;
+    if (isAny) {
+      for (Set<String> nodes : reservations.values()) {
+        if (nodes != null) {
+          counter += nodes.size();
+        }
+      }
+    } else {
+      Set<String> nodes = reservations.get(
+          rackName == null ? "NULL" : rackName);
+      if (nodes != null) {
+        counter += nodes.size();
+      }
+    }
+    return counter;
+  }
+
   public boolean accept(Resource cluster,
       ResourceCommitRequest<FiCaSchedulerApp, FiCaSchedulerNode> request,
       boolean checkPending) {
@@ -556,7 +606,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   public boolean apply(Resource cluster, ResourceCommitRequest<FiCaSchedulerApp,
       FiCaSchedulerNode> request, boolean updatePending) {
     boolean reReservation = false;
-
+    boolean isSkip = false;
     writeLock.lock();
     try {
 
@@ -664,10 +714,12 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         } else {
           // If the rmContainer's state is already updated to RESERVED, this is
           // a reReservation
-          reserve(schedulerContainer.getSchedulerRequestKey(),
+          isSkip =
+              reserve(schedulerContainer.getSchedulerRequestKey(),
               schedulerContainer.getSchedulerNode(),
               schedulerContainer.getRmContainer(),
               schedulerContainer.getRmContainer().getContainer(),
+              allocation.getAllocationLocalityType(),
               reReservation);
 
           LOG.info("Reserved container=" + rmContainer.getContainerId()
@@ -681,7 +733,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     }
 
     // Don't bother CS leaf queue if it is a re-reservation
-    if (!reReservation) {
+    if (!reReservation && !isSkip) {
       getCSLeafQueue().apply(cluster, request);
     }
     return true;
@@ -694,6 +746,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       // Done with the reservation?
       if (internalUnreserve(node, schedulerKey)) {
         node.unreserveResource(this);
+        clearReservation(node);
 
         // Update reserved metrics
         queue.getMetrics().unreserveResource(node.getPartition(),
@@ -901,20 +954,45 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     }
   }
 
-  public void reserve(SchedulerRequestKey schedulerKey, FiCaSchedulerNode node,
-      RMContainer rmContainer, Container container, boolean reReservation) {
-    // Update reserved metrics if this is the first reservation
-    // rmContainer will be moved to reserved in the super.reserve
-    if (!reReservation) {
-      queue.getMetrics().reserveResource(node.getPartition(),
-          getUser(), container.getResource());
+  private synchronized void setReservation(SchedulerNode node) {
+    String rackName = node.getRackName() == null ? "NULL" : node.getRackName();
+    Set<String> rackReservations = reservations.get(rackName);
+    if (rackReservations == null) {
+      rackReservations = new HashSet<>();
+      reservations.put(rackName, rackReservations);
     }
+    rackReservations.add(node.getNodeName());
+  }
 
-    // Inform the application
-    rmContainer = super.reserve(node, schedulerKey, rmContainer, container);
+  private synchronized void clearReservation(SchedulerNode node) {
+    String rackName = node.getRackName() == null ? "NULL" : node.getRackName();
+    Set<String> rackReservations = reservations.get(rackName);
+    if (rackReservations != null) {
+      rackReservations.remove(node.getNodeName());
+    }
+  }
 
-    // Update the node
-    node.reserveResource(this, schedulerKey, rmContainer);
+  public boolean reserve(SchedulerRequestKey schedulerKey, FiCaSchedulerNode node,
+      RMContainer rmContainer, Container container, NodeType type, boolean reReservation) {
+    // Should let reReservation go.
+    if (!reservationExceedsThreshold(node, type) || reReservation) {
+      // Update reserved metrics if this is the first reservation
+      // rmContainer will be moved to reserved in the super.reserve
+      if (!reReservation) {
+        queue.getMetrics().reserveResource(node.getPartition(),
+            getUser(), container.getResource());
+      }
+
+      // Inform the application
+      rmContainer = super.reserve(node, schedulerKey, rmContainer, container);
+
+      // Update the node
+      node.reserveResource(this, schedulerKey, rmContainer);
+      setReservation(node);
+      return  false;
+    } else {
+      return true;
+    }
   }
 
   @VisibleForTesting
