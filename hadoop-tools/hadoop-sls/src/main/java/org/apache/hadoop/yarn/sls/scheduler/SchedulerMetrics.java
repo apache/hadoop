@@ -316,7 +316,7 @@ public abstract class SchedulerMetrics {
         new Gauge<Long>() {
           @Override
           public Long getValue() {
-            if (scheduler.getRootQueueMetrics() == null) {
+            if (isMetricsAvailable()) {
               return 0L;
             } else {
               return scheduler.getRootQueueMetrics().getAllocatedMB();
@@ -328,7 +328,7 @@ public abstract class SchedulerMetrics {
         new Gauge<Integer>() {
           @Override
           public Integer getValue() {
-            if (scheduler.getRootQueueMetrics() == null) {
+            if (isMetricsAvailable()) {
               return 0;
             } else {
               return scheduler.getRootQueueMetrics().getAllocatedVirtualCores();
@@ -340,7 +340,7 @@ public abstract class SchedulerMetrics {
         new Gauge<Long>() {
           @Override
           public Long getValue() {
-            if (scheduler.getRootQueueMetrics() == null) {
+            if (isMetricsAvailable()) {
               return 0L;
             } else {
               return scheduler.getRootQueueMetrics().getAvailableMB();
@@ -352,7 +352,7 @@ public abstract class SchedulerMetrics {
         new Gauge<Integer>() {
           @Override
           public Integer getValue() {
-            if (scheduler.getRootQueueMetrics() == null) {
+            if (isMetricsAvailable()) {
               return 0;
             } else {
               return scheduler.getRootQueueMetrics().getAvailableVirtualCores();
@@ -360,6 +360,10 @@ public abstract class SchedulerMetrics {
           }
         }
     );
+  }
+
+  private boolean isMetricsAvailable() {
+    return scheduler.getRootQueueMetrics() == null;
   }
 
   private void registerContainerAppNumMetrics() {
