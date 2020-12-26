@@ -63,7 +63,6 @@ public class AMRunner {
   private Map<String, Class> amClassMap;
   private TraceType inputType;
   private String[] inputTraces;
-  private SynthTraceJobProducer stjp;
   private TaskRunner runner;
   private SLSRunner slsRunner;
   private int numAMs, numTasks;
@@ -148,16 +147,17 @@ public class AMRunner {
   private void startAMFromSynthGenerator() throws YarnException, IOException {
     Configuration localConf = new Configuration();
     localConf.set("fs.defaultFS", "file:///");
-    // if we use the nodeFile this could have been not initialized yet.
-    if (stjp == null) {
-      stjp = new SynthTraceJobProducer(conf, new Path(inputTraces[0]));
-      slsRunner.setStjp(stjp);
-    }
+    //TODO
+    //if we use the nodeFile this could have been not initialized yet.
+//    if (stjp == null) {
+//      stjp = new SynthTraceJobProducer(conf, new Path(inputTraces[0]));
+//      slsRunner.setStjp(stjp);
+//    }
 
     SynthJob job;
     // we use stjp, a reference to the job producer instantiated during node
     // creation
-    while ((job = (SynthJob) stjp.getNextJob()) != null) {
+    while ((job = (SynthJob) slsRunner.getStjp().getNextJob()) != null) {
       ReservationId reservationId = null;
       if (job.hasDeadline()) {
         reservationId = ReservationId
