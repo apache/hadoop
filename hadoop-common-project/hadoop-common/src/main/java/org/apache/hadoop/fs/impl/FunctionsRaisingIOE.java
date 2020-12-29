@@ -24,7 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Evolving support for functional programming/lambda-expressions.
+ * Support for functional programming/lambda-expressions.
+ * @deprecated use {@code org.apache.hadoop.util.functional}
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -37,6 +38,7 @@ public final class FunctionsRaisingIOE {
    * Function of arity 1 which may raise an IOException.
    * @param <T> type of arg1
    * @param <R> type of return value.
+   * @deprecated use {@link org.apache.hadoop.util.functional.FunctionRaisingIOE}
    */
   @FunctionalInterface
   public interface FunctionRaisingIOE<T, R> {
@@ -49,6 +51,7 @@ public final class FunctionsRaisingIOE {
    * @param <T> type of arg1
    * @param <U> type of arg2
    * @param <R> type of return value.
+   * @deprecated use {@link org.apache.hadoop.util.functional.BiFunctionRaisingIOE}
    */
   @FunctionalInterface
   public interface BiFunctionRaisingIOE<T, U, R> {
@@ -59,6 +62,7 @@ public final class FunctionsRaisingIOE {
   /**
    * This is a callable which only raises an IOException.
    * @param <R> return type
+   * @deprecated use {@link org.apache.hadoop.util.functional.CallableRaisingIOE}
    */
   @FunctionalInterface
   public interface CallableRaisingIOE<R> {
