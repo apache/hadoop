@@ -49,7 +49,7 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_
  * <p>
  * Requires both the input and output streams to offer the basic
  * bytes read/written statistics.
- * <p></p>
+ * </p>
  * If the IO is buffered, that information must be provided,
  * especially the input buffer size.
  */
@@ -75,7 +75,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
   }
 
   /**
-   * Dump the filesystem statistics after the class if contains any values
+   * Dump the filesystem statistics after the class if contains any values.
    */
   @AfterClass
   public static void dumpFileSystemIOStatistics() {

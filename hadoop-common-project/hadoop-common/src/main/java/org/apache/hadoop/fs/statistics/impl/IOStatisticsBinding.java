@@ -445,23 +445,24 @@ public final class IOStatisticsBinding {
       DurationTrackerFactory factory,
       String statistic,
       InvocationRaisingIOE input) throws IOException {
-      // create the tracker outside try-with-resources so
-      // that failures can be set in the catcher.
-      DurationTracker tracker = createTracker(factory, statistic);
-      try {
-        // exec the input function and return its value
-        input.apply();
-      } catch (IOException | RuntimeException e) {
-        // input function failed: note it
-        tracker.failed();
-        // and rethrow
-        throw e;
-      } finally {
-        // update the tracker.
-        // this is called after the catch() call would have
-        // set the failed flag.
-        tracker.close();
-      }
+
+    // create the tracker outside try-with-resources so
+    // that failures can be set in the catcher.
+    DurationTracker tracker = createTracker(factory, statistic);
+    try {
+      // exec the input function and return its value
+      input.apply();
+    } catch (IOException | RuntimeException e) {
+      // input function failed: note it
+      tracker.failed();
+      // and rethrow
+      throw e;
+    } finally {
+      // update the tracker.
+      // this is called after the catch() call would have
+      // set the failed flag.
+      tracker.close();
+    }
   }
 
   /**
