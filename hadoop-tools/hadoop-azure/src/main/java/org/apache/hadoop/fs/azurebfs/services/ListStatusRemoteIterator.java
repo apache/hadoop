@@ -20,11 +20,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.NoSuchElementException;
-import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
@@ -41,23 +41,26 @@ public class ListStatusRemoteIterator implements RemoteIterator<FileStatus> {
       .getLogger(ListStatusRemoteIterator.class);
 
   private static final boolean FETCH_ALL_FALSE = false;
+  private static final int MAX_QUEUE_SIZE = 10;
 
   private final Path path;
   private final AzureBlobFileSystemStore abfsStore;
-  private final Queue<ListIterator<FileStatus>> iteratorsQueue =
-      new LinkedList<>();
+  private final ArrayBlockingQueue<Iterator<FileStatus>> iteratorsQueue;
+  private final Object asyncOpLock = new Object();
 
-  private boolean firstRead = true;
+  private boolean firstBatch = true;
+  private boolean isAsyncInProgress = false;
   private String continuation;
-  private ListIterator<FileStatus> currIterator;
+  private Iterator<FileStatus> currIterator;
   private IOException ioException;
 
   public ListStatusRemoteIterator(final Path path,
-      final AzureBlobFileSystemStore abfsStore) throws IOException {
+      final AzureBlobFileSystemStore abfsStore) {
     this.path = path;
     this.abfsStore = abfsStore;
-    fetchAllAsync();
-    updateCurrentIterator();
+    iteratorsQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
+    currIterator = Collections.emptyIterator();
+    fetchBatchesAsync();
   }
 
   @Override
@@ -78,52 +81,69 @@ public class ListStatusRemoteIterator implements RemoteIterator<FileStatus> {
   }
 
   private void updateCurrentIterator() throws IOException {
+    fetchBatchesAsync();
     synchronized (this) {
-      while (!isIterationComplete() && iteratorsQueue.isEmpty()) {
-        try {
-          this.wait();
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          LOG.error("Thread got interrupted: {}", e);
+      if (iteratorsQueue.isEmpty()) {
+        if (ioException != null) {
+          throw ioException;
+        }
+        if (isListingComplete()) {
+          return;
         }
       }
-      if (!iteratorsQueue.isEmpty()) {
-        currIterator = iteratorsQueue.poll();
-      } else if (ioException != null) {
-        throw ioException;
+    }
+    try {
+      currIterator = iteratorsQueue.take();
+      if (!currIterator.hasNext() && !isListingComplete()) {
+        updateCurrentIterator();
       }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.error("Thread got interrupted: {}", e);
     }
   }
 
-  private void fetchAllAsync() {
-    CompletableFuture.supplyAsync(() -> {
-      while (!isIterationComplete()) {
-        List<FileStatus> fileStatuses = new ArrayList<>();
-        try {
-          continuation = abfsStore
-              .listStatus(path, null, fileStatuses, FETCH_ALL_FALSE,
-                  continuation);
-        } catch (IOException e) {
-          ioException = e;
-          return null;
-        } finally {
-          if (firstRead) {
-            firstRead = false;
-          }
-        }
-        if (fileStatuses != null && !fileStatuses.isEmpty()) {
-          iteratorsQueue.add(fileStatuses.listIterator());
-          synchronized (this) {
-            this.notifyAll();
-          }
-        }
-      }
-      return null;
-    });
+  private boolean isListingComplete() {
+    return !firstBatch && (continuation == null || continuation.isEmpty());
   }
 
-  private boolean isIterationComplete() {
-    return !firstRead && (continuation == null || continuation.isEmpty());
+  private void fetchBatchesAsync() {
+    CompletableFuture.runAsync(() -> asyncOp());
+  }
+
+  private void asyncOp() {
+    if (isAsyncInProgress) {
+      return;
+    }
+    synchronized (asyncOpLock) {
+      if (isAsyncInProgress) {
+        return;
+      }
+      isAsyncInProgress = true;
+    }
+    try {
+      while (!isListingComplete() && iteratorsQueue.size() <= MAX_QUEUE_SIZE) {
+        addNextBatchIteratorToQueue();
+      }
+    } catch (IOException e) {
+      ioException = e;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.error("Thread got interrupted: {}", e);
+    } finally {
+      isAsyncInProgress = false;
+    }
+  }
+
+  private synchronized void addNextBatchIteratorToQueue()
+      throws IOException, InterruptedException {
+    List<FileStatus> fileStatuses = new ArrayList<>();
+    continuation = abfsStore
+        .listStatus(path, null, fileStatuses, FETCH_ALL_FALSE, continuation);
+    iteratorsQueue.put(fileStatuses.iterator());
+    if (firstBatch) {
+      firstBatch = false;
+    }
   }
 
 }

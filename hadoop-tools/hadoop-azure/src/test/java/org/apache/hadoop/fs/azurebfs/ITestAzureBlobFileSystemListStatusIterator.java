@@ -18,26 +18,29 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.junit.Test;
-import org.mockito.Mockito;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+import org.mockito.Mockito;
+
+import org.apache.hadoop.fs.azurebfs.services.ListStatusRemoteIterator;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 
 /**
  * Test listStatus operation.
@@ -45,7 +48,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestAzureBlobFileSystemListStatusIterator
     extends AbstractAbfsIntegrationTest {
 
-  private static final int TEST_FILES_NUMBER = 100;
+  private static final int TEST_FILES_NUMBER = 1000;
 
   public ITestAzureBlobFileSystemListStatusIterator() throws Exception {
     super();
@@ -71,16 +74,82 @@ public class ITestAzureBlobFileSystemListStatusIterator
     assertEquals(0, fileNames.size());
   }
 
-  @Test(expected = NoSuchElementException.class)
+  @Test
   public void testNextWhenNoMoreElementsPresent() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     String rootPathStr = "testRoot2";
     Path rootPath = new Path(rootPathStr);
-    getFileSystem().create(rootPath);
+    getFileSystem().mkdirs(rootPath);
     RemoteIterator<FileStatus> fsItr = fs.listStatusIterator(rootPath);
     fsItr = Mockito.spy(fsItr);
     Mockito.doReturn(false).when(fsItr).hasNext();
-    fsItr.next();
+
+    RemoteIterator<FileStatus> finalFsItr = fsItr;
+    Assertions.assertThatThrownBy(() -> finalFsItr.next()).describedAs(
+        "next() should throw NoSuchElementException if hasNext() return "
+            + "false").isInstanceOf(NoSuchElementException.class);
+  }
+
+  @Test
+  public void testHasNextForEmptyDir() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    String rootPathStr = "testRoot3";
+    Path rootPath = new Path(rootPathStr);
+    getFileSystem().mkdirs(rootPath);
+    RemoteIterator<FileStatus> fsItr = fs.listStatusIterator(rootPath);
+    Assertions.assertThat(fsItr.hasNext())
+        .describedAs("hasNext returns false for empty directory").isFalse();
+  }
+
+  @Test
+  public void testHasNextForFile() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    String rootPathStr = "testRoot4";
+    Path rootPath = new Path(rootPathStr);
+    getFileSystem().create(rootPath);
+    RemoteIterator<FileStatus> fsItr = fs.listStatusIterator(rootPath);
+    Assertions.assertThat(fsItr.hasNext())
+        .describedAs("hasNext returns true for file").isTrue();
+  }
+
+  @Test
+  public void testHasNextForIOException() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    String rootPathStr = "testRoot5";
+    Path rootPath = new Path(rootPathStr);
+    getFileSystem().mkdirs(rootPath);
+    ListStatusRemoteIterator fsItr = (ListStatusRemoteIterator) fs
+        .listStatusIterator(rootPath);
+    Thread.sleep(1000);
+
+    String exceptionMessage = "test exception";
+    setPrivateField(fsItr, ListStatusRemoteIterator.class, "ioException",
+        new IOException(exceptionMessage));
+    setPrivateFinalField(fsItr, ListStatusRemoteIterator.class,
+        "iteratorsQueue", new ArrayBlockingQueue<Iterator>(1));
+
+    Assertions.assertThatThrownBy(() -> fsItr.hasNext()).describedAs(
+        "When ioException is not null and queue is empty exception should be "
+            + "thrown").isInstanceOf(IOException.class)
+        .hasMessage(exceptionMessage);
+  }
+
+  private void setPrivateField(Object obj, Class classObj, String fieldName,
+      Object value) throws NoSuchFieldException, IllegalAccessException {
+    Field field = classObj.getDeclaredField(fieldName);
+    field.setAccessible(true);
+    field.set(obj, value);
+  }
+
+  private void setPrivateFinalField(Object obj, Class classObj,
+      String fieldName, Object value)
+      throws NoSuchFieldException, IllegalAccessException {
+    Field field = classObj.getDeclaredField(fieldName);
+    field.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+    field.set(obj, value);
   }
 
   private List<String> createFiles(int numFiles, String rootPathStr,

@@ -114,7 +114,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.client.utils.URIBuilder;
 
-import static org.apache.commons.lang3.ArrayUtils.toArray;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
@@ -872,12 +871,12 @@ public class AzureBlobFileSystemStore implements Closeable {
 
     final String relativePath = getRelativePath(path);
 
-    if(continuation==null ||continuation.length()<1) {
+    if (continuation == null || continuation.length() < 1) {
       // generate continuation token if a valid startFrom is provided.
       if (startFrom != null && !startFrom.isEmpty()) {
-        continuation = getIsNamespaceEnabled() ?
-            generateContinuationTokenForXns(startFrom) :
-            generateContinuationTokenForNonXns(relativePath, startFrom);
+        continuation = getIsNamespaceEnabled()
+            ? generateContinuationTokenForXns(startFrom)
+            : generateContinuationTokenForNonXns(relativePath, startFrom);
       }
     }
 
