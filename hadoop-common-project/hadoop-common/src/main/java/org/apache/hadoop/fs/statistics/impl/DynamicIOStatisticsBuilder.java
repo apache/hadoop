@@ -31,7 +31,7 @@ import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.
 
 /**
  * Builder of {@link DynamicIOStatistics}.
- * <p></p>
+ *
  * Instantiate through
  * {@link IOStatisticsBinding#dynamicIOStatistics()}.
  */
@@ -233,7 +233,7 @@ public class DynamicIOStatisticsBuilder {
 
   /**
    * Add a new evaluator to the mean statistics.
-   * <p></p>
+   *
    * This is a function which must return the mean and the sample count.
    * @param key key of this statistic
    * @param eval evaluator for the statistic

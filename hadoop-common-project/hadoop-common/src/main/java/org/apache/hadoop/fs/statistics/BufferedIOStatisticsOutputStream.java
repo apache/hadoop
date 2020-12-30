@@ -31,10 +31,10 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStat
  * An extension of {@code BufferedOutputStream} which implements
  * {@link IOStatisticsSource} and forwards requests for the
  * {@link IOStatistics} to the wrapped stream.
- * <p></p>
+ *
  * This should be used when any output stream needs buffering while
  * allowing the inner stream to be a source of statistics.
- * <p></p>
+ *
  * It also implements {@link StreamCapabilities}
  * and {@link Syncable} and forwards to to the inner stream,
  * if possible.
@@ -108,7 +108,7 @@ public class BufferedIOStatisticsOutputStream
   /**
    * If the inner stream is Syncable, flush the buffer and then
    * invoke the inner stream's hflush() operation.
-   * <p></p>
+   *
    * Otherwise: throw an exception, unless the stream was constructed with
    * {@link #downgradeSyncable} set to true, in which case the stream
    * is just flushed.
@@ -133,7 +133,7 @@ public class BufferedIOStatisticsOutputStream
   /**
    * If the inner stream is Syncable, flush the buffer and then
    * invoke the inner stream's hsync() operation.
-   * <p></p>
+   *
    * Otherwise: throw an exception, unless the stream was constructed with
    * {@link #downgradeSyncable} set to true, in which case the stream
    * is just flushed.

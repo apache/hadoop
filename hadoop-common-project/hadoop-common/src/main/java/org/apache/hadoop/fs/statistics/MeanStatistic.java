@@ -29,21 +29,27 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * A mean statistic represented as the sum and the sample count;
  * the mean is calculated on demand.
- * <p></p>
+ * <p>
  * It can be used to accrue values so as to dynamically update
  * the mean. If so, know that there is no synchronization
  * on the methods.
- * <p></p>
+ * </p>
+ * <p>
  * If a statistic has 0 samples then it is considered to be empty.
- * <p></p>
+ * </p>
+ * <p>
  * All 'empty' statistics are equivalent, independent of the sum value.
- * <p></p>
+ * </p>
+ * <p>
  * For non-empty statistics, sum and sample values must match
  * for equality.
- * <p></p>
+ * </p>
+ * <p>
  * It is serializable and annotated for correct serializations with jackson2.
- * <p></p>
+ * </p>
+ * <p>
  * Thread safety. The operations to add/copy sample data, are thread safe.
+ * </p>
  * <ol>
  *   <li>{@link #add(MeanStatistic)}</li>
  *   <li>{@link #addSample(long)} </li>
@@ -52,9 +58,11 @@ import org.apache.hadoop.classification.InterfaceStability;
  *   <li>{@link #set(MeanStatistic)}</li>
  *   <li>{@link #setSamples(long)} and {@link #setSum(long)}</li>
  * </ol>
+ * <p>
  * So is the {@link #mean()} method. This ensures that when
  * used to aggregated statistics, the aggregate value and sample
  * count are set and evaluated consistently.
+ * </p>
  * <p>
  *   Other methods marked as synchronized because Findbugs overreacts
  *   to the idea that some operations to update sum and sample count
@@ -171,9 +179,8 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   /**
    * Set the sample count.
-   * <p></p>
+   *
    * If this is less than zero, it is set to zero.
-   * <p></p>
    * This stops an ill-formed JSON entry from
    * breaking deserialization, or get an invalid sample count
    * into an entry.
@@ -189,7 +196,6 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   /**
    * Get the arithmetic mean value.
-   * <p></p>
    * @return the mean
    */
   public synchronized double mean() {
@@ -224,7 +230,6 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   /**
    * Add a sample.
-   * <p></p>
    * Thread safe.
    * @param value value to add to the sum
    */

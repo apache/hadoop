@@ -51,7 +51,7 @@ public final class IOStatisticsSupport {
 
   /**
    * Create a snapshot statistics instance ready to aggregate data.
-   * <p></p>
+   *
    * The instance can be serialized, and its
    * {@code toString()} method lists all the values.
    * @return an empty snapshot
@@ -67,7 +67,7 @@ public final class IOStatisticsSupport {
    * if it is of the relevant type, otherwise,
    * if it implements {@link IOStatisticsSource}
    * extracting the value.
-   * <p></p>
+   *
    * Returns null if the source isn't of the write type
    * or the return value of
    * {@link IOStatisticsSource#getIOStatistics()} was null.
@@ -89,7 +89,7 @@ public final class IOStatisticsSupport {
   /**
    * Return a stub duration tracker factory whose returned trackers
    * are always no-ops.
-   * <p></p>
+   *
    * As singletons are returned, this is very low-cost to use.
    * @return a duration tracker factory.
    */

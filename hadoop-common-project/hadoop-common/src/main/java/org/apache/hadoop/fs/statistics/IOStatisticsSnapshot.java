@@ -151,7 +151,7 @@ public final class IOStatisticsSnapshot
 
   /**
    * Take a snapshot.
-   * <p></p>
+   *
    * This completely overwrites the map data with the statistics
    * from the source.
    * @param source statistics source.
@@ -169,7 +169,7 @@ public final class IOStatisticsSnapshot
   /**
    * Aggregate the current statistics with the
    * source reference passed in.
-   * <p></p>
+   *
    * The operation is synchronized.
    * @param source source; may be null
    * @return true if a merge took place.

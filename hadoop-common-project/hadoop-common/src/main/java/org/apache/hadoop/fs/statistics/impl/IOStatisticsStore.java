@@ -36,7 +36,7 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Increment a counter by one.
-   * <p></p>
+   *
    * No-op if the counter is unknown.
    * @param key statistics key
    * @return old value or, if the counter is unknown: 0
@@ -47,7 +47,7 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Increment a counter.
-   * <p></p>
+   *
    * No-op if the counter is unknown.
    * If the value is negative, it is ignored.
    * @param key statistics key
@@ -58,7 +58,7 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Set a counter.
-   * <p></p>
+   *
    * No-op if the counter is unknown.
    * @param key statistics key
    * @param value value to set
@@ -67,7 +67,7 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Set a gauge.
-   * <p></p>
+   *
    * No-op if the gauge is unknown.
    * @param key statistics key
    * @param value value to set
@@ -226,7 +226,7 @@ public interface IOStatisticsStore extends IOStatistics,
   /**
    * Add a duration to the min/mean/max statistics, using the
    * given prefix and adding a suffix for each specific value.
-   * <p></p>
+   *
    * The update is not-atomic, even though each individual statistic
    * is updated thread-safely. If two threads update the values
    * simultaneously, at the end of each operation the state will
@@ -241,10 +241,10 @@ public interface IOStatisticsStore extends IOStatistics,
    * Add a duration to the min/mean/max statistics, using the
    * given prefix and adding a suffix for each specific value.;
    * increment tha counter whose name == prefix.
-   * <p></p>
+   *
    * If any of the statistics are not registered, that part of
    * the sequence will be omitted -the rest will proceed.
-   * <p></p>
+   *
    * The update is not-atomic, even though each individual statistic
    * is updated thread-safely. If two threads update the values
    * simultaneously, at the end of each operation the state will

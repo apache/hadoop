@@ -42,8 +42,7 @@ public class StorageStatisticsFromIOStatistics
    * Instantiate.
    * @param name storage statistics name.
    * @param scheme FS scheme; may be null.
-   * @param source IOStatistics source.
-   * @return a dynamic storage statistics object.
+   * @param ioStatistics IOStatistics source.
    */
   public StorageStatisticsFromIOStatistics(
       final String name,

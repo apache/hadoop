@@ -26,10 +26,10 @@ import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 /**
  * A duration tracker factory which aggregates two other trackers
  * to have the same lifecycle.
- * <p></p>
+ *
  * This is to ease having instance-level tracking alongside global
  * values, such as an input stream and a filesystem.
- * <p></p>
+ *
  * It's got some inefficiencies -assuming system time is used for
  * the tracking, System.currentTimeMillis will be invoked twice
  * at each point of the process -and the results may actually be different.

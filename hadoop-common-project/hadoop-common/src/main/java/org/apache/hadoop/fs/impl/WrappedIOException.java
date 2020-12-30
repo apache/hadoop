@@ -31,10 +31,10 @@ import org.apache.hadoop.classification.InterfaceStability;
  * A wrapper for an IOException which
  * {@link FutureIOSupport#raiseInnerCause(ExecutionException)} knows to
  * always extract the exception.
- * <p></p>
+ *
  * The constructor signature guarantees the cause will be an IOException,
  * and as it checks for a null-argument, non-null.
- * @deprecated: use the {@code UncheckedIOException}.
+ * @deprecated use the {@code UncheckedIOException}.
  */
 @Deprecated
 @InterfaceAudience.Private

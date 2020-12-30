@@ -124,7 +124,7 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
 
   /**
    * Evaluate all the entries and provide a list of the results.
-   * <p></p>
+   *
    * This is not a snapshot, so if the evaluators actually return
    * references to mutable objects (e.g. a MeanStatistic instance)
    * then that value may still change.
@@ -149,11 +149,11 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
 
   /**
    * Creating the entry set forces an evaluation of the functions.
-   * <p></p>
+   *
    * This is not a snapshot, so if the evaluators actually return
    * references to mutable objects (e.g. a MeanStatistic instance)
    * then that value may still change.
-   * <p></p>
+   *
    * The evaluation may be parallelized.
    * @return an evaluated set of values
    */

@@ -63,7 +63,7 @@
  * recommended names for statistics provided for
  * input and output streams.
  * <p>
- * Utility classes are includes to assist use
+ * Utility classes:
  * <ul>
  *   <li>
  *     {@link org.apache.hadoop.fs.statistics.IOStatisticsSupport}.
@@ -74,7 +74,8 @@
  *     {@link org.apache.hadoop.fs.statistics.IOStatisticsLogging}.
  *     Methods for robust/on-demand string conversion, designed
  *     for use in logging statements and {@code toString()} implementations.
- *   </li> *   <li>
+ *   </li>
+ *   <li>
  *     {@link org.apache.hadoop.fs.statistics.IOStatisticsSnapshot}.
  *     A static snaphot of statistics which can be marshalled via
  *     java serialization or as JSON via jackson. It supports

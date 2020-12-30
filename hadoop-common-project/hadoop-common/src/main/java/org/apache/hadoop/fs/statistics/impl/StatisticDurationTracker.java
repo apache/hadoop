@@ -24,10 +24,10 @@ import org.apache.hadoop.util.OperationDuration;
 
 /**
  * Track the duration of an object.
- * <p></p>
+ *
  * When closed the
  * min/max/mean statistics are updated.
- * <p></p>
+ *
  * In the constructor, the counter with name of 'key' is
  * incremented -default is by 1, but can be set to other
  * values, including 0.

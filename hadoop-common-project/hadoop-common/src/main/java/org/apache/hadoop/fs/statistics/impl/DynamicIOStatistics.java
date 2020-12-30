@@ -27,10 +27,10 @@ import org.apache.hadoop.fs.statistics.MeanStatistic;
 /**
  * These statistics are dynamically evaluated by the supplied
  * String -&gt; type functions.
- * <p></p>
+ *
  * This allows statistic sources to supply a list of callbacks used to
  * generate the statistics on demand; similar to some of the Coda Hale metrics.
- * <p></p>
+ *
  * The evaluation actually takes place during the iteration's {@code next()}
  * call.
  */

@@ -25,7 +25,7 @@ import java.time.Duration;
  * It extends AutoCloseable to fit into a try-with-resources statement,
  * but then strips out the {@code throws Exception} aspect of the signature
  * so it doesn't force code to add extra handling for any failures.
- * <p></p>
+ *
  * If a duration is declared as "failed()" then the failure counters
  * will be updated.
  */

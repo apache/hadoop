@@ -244,7 +244,7 @@ public final class StoreStatisticNames {
    * Suffix to use for a minimum value when
    * the same key is shared across min/mean/max
    * statistics.
-   * <p></p>
+   *
    * Value {@value}.
    */
   public static final String SUFFIX_MIN = ".min";
@@ -253,7 +253,7 @@ public final class StoreStatisticNames {
    * Suffix to use for a maximum value when
    * the same key is shared across max/mean/max
    * statistics.
-   * <p></p>
+   *
    * Value {@value}.
    */
   public static final String SUFFIX_MAX = ".max";
@@ -262,7 +262,7 @@ public final class StoreStatisticNames {
    * Suffix to use for a mean statistic value when
    * the same key is shared across mean/mean/max
    * statistics.
-   * <p></p>
+   *
    * Value {@value}.
    */
   public static final String SUFFIX_MEAN = ".mean";
@@ -270,7 +270,7 @@ public final class StoreStatisticNames {
   /**
    * String to add to counters and other stats to track failures.
    * This comes before the .min/.mean//max suffixes.
-   * <p></p>
+   *
    * Value {@value}.
    */
   public static final String SUFFIX_FAILURES = ".failures";

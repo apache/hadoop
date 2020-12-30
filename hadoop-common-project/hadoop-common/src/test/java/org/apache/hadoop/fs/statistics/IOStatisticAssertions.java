@@ -40,7 +40,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Assertions and any other support for IOStatistics testing.
- * <p></p>
  * If used downstream: know it is unstable.
  */
 

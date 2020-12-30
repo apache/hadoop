@@ -22,8 +22,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A source of IO statistics.
- * <p></p>
+ * <p>
  * These statistics MUST be instance specific, not thread local.
+ * </p>
  */
 
 @InterfaceStability.Unstable

@@ -62,7 +62,7 @@ public final class IOStatisticsBinding {
 
   /**
    * Create  IOStatistics from a storage statistics instance.
-   * <p></p>
+   *
    * This will be updated as the storage statistics change.
    * @param storageStatistics source data.
    * @return an IO statistics source.
@@ -177,7 +177,7 @@ public final class IOStatisticsBinding {
   /**
    * Take a snapshot of a supplied map, where the copy option simply
    * uses the existing value.
-   * <p></p>
+   *
    * For this to be safe, the map must refer to immutable objects.
    * @param source source map
    * @param <E> type of values.
