@@ -3702,6 +3702,16 @@
 </property>
 
 <property>
+  <name>dfs.datanode.ec.reconstruction.validation</name>
+  <value>false</value>
+  <description>
+    Decide if datanode validates that EC reconstruction tasks reconstruct
+    target blocks correctly. When validation fails, reconstruction tasks
+    will fail and be retried by namenode.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.quota.init-threads</name>
   <value>4</value>
   <description>

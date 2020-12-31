@@ -84,6 +84,8 @@ public class TestReconstructStripedFile {
   private int groupSize;
   private int dnNum;
 
+  private boolean isValidationEnabled;
+
   static {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(BlockManager.LOG, Level.TRACE);
@@ -107,6 +109,19 @@ public class TestReconstructStripedFile {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
 
+  public boolean isValidationEnabled() {
+    return false;
+  }
+
+  public int getPendingTimeout() {
+    return DFSConfigKeys
+            .DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT;
+  }
+
+  public int getBlockSize() {
+    return blockSize;
+  }
+
   @Before
   public void setup() throws IOException {
     ecPolicy = getEcPolicy();
@@ -128,6 +143,11 @@ public class TestReconstructStripedFile {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
+    conf.setInt(
+            DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
+            getPendingTimeout());
+    conf.setBoolean(DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_VALIDATION_KEY,
+        isValidationEnabled());
     File basedir = new File(GenericTestUtils.getRandomizedTempPath());
     cluster = new MiniDFSCluster.Builder(conf, basedir).numDataNodes(dnNum)
         .build();
@@ -303,7 +323,7 @@ public class TestReconstructStripedFile {
    *    and verify the block replica length, generationStamp and content.
    * 2. Read the file and verify content.
    */
-  private void assertFileBlocksReconstruction(String fileName, int fileLen,
+  void assertFileBlocksReconstruction(String fileName, int fileLen,
       ReconstructionType type, int toRecoverBlockNum) throws Exception {
     if (toRecoverBlockNum < 1 || toRecoverBlockNum > parityBlkNum) {
       Assert.fail("toRecoverBlockNum should be between 1 ~ " + parityBlkNum);
