@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 
 /**
  * Put tracker for Magic commits.
@@ -102,6 +104,7 @@ public class MagicCommitTracker extends PutTracker {
    * @param uploadId Upload ID
    * @param parts list of parts
    * @param bytesWritten bytes written
+   * @param iostatistics nullable IO statistics
    * @return false, indicating that the commit must fail.
    * @throws IOException any IO problem.
    * @throws IllegalArgumentException bad argument
@@ -109,7 +112,8 @@ public class MagicCommitTracker extends PutTracker {
   @Override
   public boolean aboutToComplete(String uploadId,
       List<PartETag> parts,
-      long bytesWritten)
+      long bytesWritten,
+      final IOStatistics iostatistics)
       throws IOException {
     Preconditions.checkArgument(StringUtils.isNotEmpty(uploadId),
         "empty/null upload ID: "+ uploadId);
@@ -117,6 +121,15 @@ public class MagicCommitTracker extends PutTracker {
         "No uploaded parts list");
     Preconditions.checkArgument(!parts.isEmpty(),
         "No uploaded parts to save");
+
+    // put a 0-byte file with the name of the original under-magic path
+    PutObjectRequest originalDestPut = writer.createPutObjectRequest(
+        originalDestKey,
+        new ByteArrayInputStream(EMPTY),
+        0);
+    writer.uploadObject(originalDestPut);
+
+    // build the commit summary
     SinglePendingCommit commitData = new SinglePendingCommit();
     commitData.touch(System.currentTimeMillis());
     commitData.setDestinationKey(getDestKey());
@@ -126,6 +139,8 @@ public class MagicCommitTracker extends PutTracker {
     commitData.setText("");
     commitData.setLength(bytesWritten);
     commitData.bindCommitData(parts);
+    commitData.setIOStatistics(
+        new IOStatisticsSnapshot(iostatistics));
     byte[] bytes = commitData.toBytes();
     LOG.info("Uncommitted data pending to file {};"
             + " commit metadata for {} parts in {}. sixe: {} byte(s)",
@@ -138,12 +153,6 @@ public class MagicCommitTracker extends PutTracker {
         bytes.length);
     writer.uploadObject(put);
 
-    // now put a 0-byte file with the name of the original under-magic path
-    PutObjectRequest originalDestPut = writer.createPutObjectRequest(
-        originalDestKey,
-        new ByteArrayInputStream(EMPTY),
-        0);
-    writer.uploadObject(originalDestPut);
     return false;
   }
 

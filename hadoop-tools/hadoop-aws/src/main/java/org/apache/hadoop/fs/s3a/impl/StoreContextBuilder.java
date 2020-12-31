@@ -24,8 +24,8 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -51,7 +51,7 @@ public class StoreContextBuilder {
 
   private Invoker invoker;
 
-  private S3AInstrumentation instrumentation;
+  private S3AStatisticsContext instrumentation;
 
   private S3AStorageStatistics storageStatistics;
 
@@ -112,7 +112,7 @@ public class StoreContextBuilder {
   }
 
   public StoreContextBuilder setInstrumentation(
-      final S3AInstrumentation instr) {
+      final S3AStatisticsContext instr) {
     this.instrumentation = instr;
     return this;
   }

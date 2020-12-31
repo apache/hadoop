@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Iterator;
 
-import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 
@@ -88,7 +88,7 @@ class RetryingCollection<T> implements Iterable<T> {
 
     /**
      * {@inheritDoc}.
-     * @throws WrappedIOException for IO failure, including throttling.
+     * @throws UncheckedIOException for IO failure, including throttling.
      */
     @Override
     @Retries.RetryTranslated
@@ -100,13 +100,13 @@ class RetryingCollection<T> implements Iterable<T> {
             true,
             iterator::hasNext);
       } catch (IOException e) {
-        throw new WrappedIOException(e);
+        throw new UncheckedIOException(e);
       }
     }
 
     /**
      * {@inheritDoc}.
-     * @throws WrappedIOException for IO failure, including throttling.
+     * @throws UncheckedIOException for IO failure, including throttling.
      */
     @Override
     @Retries.RetryTranslated
@@ -118,7 +118,7 @@ class RetryingCollection<T> implements Iterable<T> {
             true,
             iterator::next);
       } catch (IOException e) {
-        throw new WrappedIOException(e);
+        throw new UncheckedIOException(e);
       }
     }
   }
