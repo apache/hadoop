@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
@@ -1470,12 +1471,7 @@ public final class S3AUtils {
   public static long applyLocatedFiles(
       RemoteIterator<? extends LocatedFileStatus> iterator,
       CallOnLocatedFileStatus eval) throws IOException {
-    long count = 0;
-    while (iterator.hasNext()) {
-      count++;
-      eval.call(iterator.next());
-    }
-    return count;
+    return RemoteIterators.foreach(iterator, eval::call);
   }
 
   /**

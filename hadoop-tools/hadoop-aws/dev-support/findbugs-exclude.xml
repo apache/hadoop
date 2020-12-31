@@ -74,4 +74,14 @@
     <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
   </Match>
 
+  <!--
+  Some of the S3A Instrumentation classes increment volatile references from
+  within synchronized contexts; they use volatile to keep the cost
+  of these updates and reading them down.
+   -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.s3a.S3AInstrumentation$InputStreamStatisticsImpl"/>
+    <Bug pattern="VO_VOLATILE_INCREMENT"/>
+  </Match>
+
 </FindBugsFilter>
