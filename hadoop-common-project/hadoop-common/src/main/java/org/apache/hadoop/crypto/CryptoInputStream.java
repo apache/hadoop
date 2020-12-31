@@ -46,8 +46,12 @@ import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.StreamCapabilitiesPolicy;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
  * CryptoInputStream decrypts data. It is not thread-safe. AES CTR mode is
@@ -66,7 +70,7 @@ public class CryptoInputStream extends FilterInputStream implements
     Seekable, PositionedReadable, ByteBufferReadable, HasFileDescriptor, 
     CanSetDropBehind, CanSetReadahead, HasEnhancedByteBufferAccess, 
     ReadableByteChannel, CanUnbuffer, StreamCapabilities,
-    ByteBufferPositionedReadable {
+    ByteBufferPositionedReadable, IOStatisticsSource {
   private final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Decryptor decryptor;
@@ -867,8 +871,16 @@ public class CryptoInputStream extends FilterInputStream implements
           + " does not expose its stream capabilities.");
       }
       return ((StreamCapabilities) in).hasCapability(capability);
+    case StreamCapabilities.IOSTATISTICS:
+      return (in instanceof StreamCapabilities)
+          && ((StreamCapabilities) in).hasCapability(capability);
     default:
       return false;
     }
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    return retrieveIOStatistics(in);
   }
 }
