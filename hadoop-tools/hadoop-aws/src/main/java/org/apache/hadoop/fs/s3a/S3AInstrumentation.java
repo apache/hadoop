@@ -1042,7 +1042,17 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void inputPolicySet(int updatedPolicy) {
       increment(StreamStatisticNames.STREAM_READ_SEEK_POLICY_CHANGED);
-      this.getIOStatistics().setGauge(STREAM_READ_GAUGE_INPUT_POLICY, updatedPolicy);
+      localIOStatistics().setGauge(STREAM_READ_GAUGE_INPUT_POLICY,
+          updatedPolicy);
+    }
+
+    /**
+     * Get the inner class's IO Statistics. This is
+     * needed to avoid findbugs warnings about ambiguity.
+     * @return the Input Stream's statistics.
+     */
+    private IOStatisticsStore localIOStatistics() {
+      return InputStreamStatistics.super.getIOStatistics();
     }
 
     /**
@@ -1053,7 +1063,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public ChangeTrackerStatistics getChangeTrackerStatistics() {
       return new CountingChangeTracker(
-          this.getIOStatistics().getCounterReference(
+          localIOStatistics().getCounterReference(
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES));
     }
 
@@ -1069,7 +1079,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       final StringBuilder sb = new StringBuilder(
           "StreamStatistics{");
       sb.append(IOStatisticsLogging.ioStatisticsToString(
-          this.getIOStatistics()));
+          localIOStatistics()));
       sb.append('}');
       return sb.toString();
     }
@@ -1108,12 +1118,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private void merge(boolean isClosed) {
 
-      IOStatisticsStore ioStatistics = this.getIOStatistics();
+      IOStatisticsStore ioStatistics = localIOStatistics();
       LOG.debug("Merging statistics into FS statistics in {}: {}",
           (isClosed ? "close()" : "unbuffer()"),
           demandStringifyIOStatistics(ioStatistics));
       promoteInputStreamCountersToMetrics();
-      mergedStats = snapshotIOStatistics(this.getIOStatistics());
+      mergedStats = snapshotIOStatistics(localIOStatistics());
 
       if (isClosed) {
         // stream is being closed.
@@ -1147,7 +1157,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private void promoteInputStreamCountersToMetrics() {
       // iterate through all the counters
-      this.getIOStatistics().counters()
+      localIOStatistics().counters()
           .keySet().stream()
           .forEach(e -> promoteIOCounter(e));
     }
@@ -1262,7 +1272,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public long getInputPolicy() {
-      return this.getIOStatistics().gauges().get(STREAM_READ_GAUGE_INPUT_POLICY);
+      return localIOStatistics().gauges()
+          .get(STREAM_READ_GAUGE_INPUT_POLICY);
     }
 
     @Override
@@ -1309,8 +1320,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * in close() for better cross-thread accounting.
    * </p>
    * <p>
-   *   Some of the collected statistics are not directly served via IOStatistics;
-   *   they are added to the instrumentation IOStatistics and metric counters
+   *   Some of the collected statistics are not directly served via
+   *   IOStatistics.
+   *   They are added to the instrumentation IOStatistics and metric counters
    *   during the {@link #mergeOutputStreamStatistics(OutputStreamStatistics)}
    *   operation.
    * </p>
@@ -1407,11 +1419,20 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       // the local counter is used in toString reporting.
       queueDuration.addAndGet(timeInQueue.toMillis());
       // update the duration fields in the IOStatistics.
-      this.getIOStatistics().addTimedOperation(
+      localIOStatistics().addTimedOperation(
           ACTION_EXECUTOR_ACQUIRED,
           timeInQueue);
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_PENDING, -1);
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_ACTIVE, 1);
+    }
+
+    /**
+     * Get the inner class's IO Statistics. This is
+     * needed to avoid findbugs warnings about ambiguity.
+     * @return the Input Stream's statistics.
+     */
+    private IOStatisticsStore localIOStatistics() {
+      return OutputStreamStatistics.super.getIOStatistics();
     }
 
     /**
@@ -1553,7 +1574,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "OutputStreamStatistics{");
-      sb.append(this.getIOStatistics().toString());
+      sb.append(localIOStatistics().toString());
       sb.append(", blocksActive=").append(blocksActive);
       sb.append(", blockUploadsCompleted=").append(blockUploadsCompleted);
       sb.append(", blocksAllocated=").append(blocksAllocated);

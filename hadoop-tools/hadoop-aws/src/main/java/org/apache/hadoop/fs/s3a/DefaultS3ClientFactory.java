@@ -208,6 +208,7 @@ public class DefaultS3ClientFactory extends Configured
    * options.
    *
    * @param s3 S3 Client.
+   * @param endPoint s3 endpoint, may be empty
    * @param pathStyleAccess enable path style access?
    * @return S3 client
    * @throws IllegalArgumentException if misconfigured
