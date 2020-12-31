@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,9 @@ import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -125,5 +128,21 @@ implements Seekable, PositionedReadable, HasFileDescriptor {
     } else {
       return null;
     }
+  }
+
+  @Override
+  public int minimumReasonableSeek() {
+    return ((PositionedReadable) in).minimumReasonableSeek();
+  }
+
+  @Override
+  public int maximumReadSize() {
+    return ((PositionedReadable) in).maximumReadSize();
+  }
+
+  @Override
+  public void readAsync(List<? extends FileRange> ranges,
+                        IntFunction<ByteBuffer> allocate) {
+    ((PositionedReadable) in).readAsync(ranges, allocate);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -47,7 +49,7 @@ public class FSDataInputStream extends DataInputStream
    */
   private final IdentityHashStore<ByteBuffer, ByteBufferPool>
     extendedReadBuffers
-      = new IdentityHashStore<ByteBuffer, ByteBufferPool>(0);
+      = new IdentityHashStore<>(0);
 
   public FSDataInputStream(InputStream in) {
     super(in);
@@ -266,5 +268,21 @@ public class FSDataInputStream extends DataInputStream
       throw new UnsupportedOperationException("Byte-buffer pread " +
               "unsupported by " + in.getClass().getCanonicalName());
     }
+  }
+
+  @Override
+  public int minimumReasonableSeek() {
+    return ((PositionedReadable) in).minimumReasonableSeek();
+  }
+
+  @Override
+  public int maximumReadSize() {
+    return ((PositionedReadable) in).maximumReadSize();
+  }
+
+  @Override
+  public void readAsync(List<? extends FileRange> ranges,
+                        IntFunction<ByteBuffer> allocate) {
+    ((PositionedReadable) in).readAsync(ranges, allocate);
   }
 }
