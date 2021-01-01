@@ -2331,6 +2331,22 @@
   </property>
 
 <property>
+  <name>dfs.datanode.min.outlier.detection.nodes</name>
+  <value>10</value>
+  <description>
+    Minimum number of nodes to run outlier detection.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.slowpeer.low.threshold.ms</name>
+  <value>5</value>
+  <description>
+    Threshold in milliseconds below which a DataNode is definitely not slow.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.outliers.report.interval</name>
   <value>30m</value>
   <description>
