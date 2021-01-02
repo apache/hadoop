@@ -34,6 +34,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -404,5 +406,16 @@ public final class TestAbfsPerfTracker {
       tracker12.registerResult(httpOperation).registerSuccess(false).registerAggregates(Instant.MAX, TEST_AGGREGATE_COUNT);
       tracker13.registerResult(httpOperation).registerSuccess(false).registerAggregates(Instant.MIN, TEST_AGGREGATE_COUNT);
     }
+  }
+
+  /**
+   * Test helper method to create an AbfsPerfTracker instance.
+   * @param abfsConfig active test abfs config
+   * @return instance of AbfsPerfTracker
+   */
+  public static AbfsPerfTracker getAPerfTrackerInstance(AbfsConfiguration abfsConfig) {
+    AbfsPerfTracker tracker = new AbfsPerfTracker("test",
+        abfsConfig.getAccountName(), abfsConfig);
+    return tracker;
   }
 }
