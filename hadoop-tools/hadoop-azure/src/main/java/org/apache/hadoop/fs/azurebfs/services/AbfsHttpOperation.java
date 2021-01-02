@@ -86,12 +86,23 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
 
-  public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(final URL url,
-      final String method, final int httpStatus) {
-       return new AbfsHttpOperation(url, method, httpStatus);
+  public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
+      final URL url,
+      final String method,
+      final int httpStatus) {
+    AbfsHttpOperationWithFixedResult httpOp
+        = new AbfsHttpOperationWithFixedResult(url, method, httpStatus);
+    return httpOp;
   }
 
-  private AbfsHttpOperation(final URL url, final String method,
+  /**
+   * Constructor for FixedResult instance, avoiding connection init.
+   * @param url request url
+   * @param method Http method
+   * @param httpStatus HttpStatus
+   */
+  protected AbfsHttpOperation(final URL url,
+      final String method,
       final int httpStatus) {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
@@ -547,4 +558,24 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return this.maskedEncodedUrl;
   }
 
+  public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
+    /**
+     * Creates an instance to represent fixed results.
+     * This is used in idempotency handling.
+     *
+     * @param url The full URL including query string parameters.
+     * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
+     * @param httpStatus StatusCode to hard set
+     */
+    public AbfsHttpOperationWithFixedResult(final URL url,
+        final String method,
+        final int httpStatus) {
+      super(url, method, httpStatus);
+    }
+
+    @Override
+    public String getResponseHeader(final String httpHeader) {
+      return "";
+    }
+  }
 }
