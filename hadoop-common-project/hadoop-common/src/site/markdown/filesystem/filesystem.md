@@ -92,6 +92,36 @@ Get the status of a path
             stat.isEncrypted = False
 
 
+
+### `msync()`
+
+Synchronize metadata state of the client with the latest state of the metadata
+service of the FileSystem.
+
+In highly available FileSystems standby service can be used as a read-only
+metadata replica. This call is essential to guarantee consistency of
+reads from the standby replica and to avoid stale reads.
+
+It is currently only implemented for HDFS and others will just throw
+`UnsupportedOperationException`.
+
+#### Preconditions
+
+
+#### Postconditions
+
+This call internally records the state of the metadata service at the time of
+the call. This guarantees consistency of subsequent reads from any metadata
+replica. It assures the client will never access the state of the metadata that
+preceded the recorded state.
+
+#### HDFS implementation notes
+
+HDFS supports `msync()` in HA mode by calling the Active NameNode and requesting
+its latest journal transaction ID. For more details see HDFS documentation
+[Consistent Reads from HDFS Observer NameNode](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/ObserverNameNode.html)
+
+
 ### `Path getHomeDirectory()`
 
 The function `getHomeDirectory` returns the home directory for the FileSystem
