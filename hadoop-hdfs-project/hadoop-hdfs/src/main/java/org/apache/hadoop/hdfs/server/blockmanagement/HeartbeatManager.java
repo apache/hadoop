@@ -276,9 +276,10 @@ class HeartbeatManager implements DatanodeStatistics {
   }
 
   synchronized void startDecommission(final DatanodeDescriptor node) {
+    LOG.info("Starting decommission of {} node {}",
+        node.isAlive() ? "live" : "dead", node);
     if (!node.isAlive()) {
-      LOG.info("Dead node {} is decommissioned immediately.", node);
-      node.setDecommissioned();
+      node.startDecommission();
     } else {
       stats.subtract(node);
       node.startDecommission();
@@ -287,22 +288,23 @@ class HeartbeatManager implements DatanodeStatistics {
   }
 
   synchronized void startMaintenance(final DatanodeDescriptor node) {
-    if (!node.isAlive()) {
-      LOG.info("Dead node {} is put in maintenance state immediately.", node);
+    if (node.isAlive()) {
+      stats.subtract(node);
+    }
+    if (node.isDecommissioned()) {
+      LOG.info("Decommissioned node " + node + " is put in maintenance state"
+          + " immediately.");
+      node.setInMaintenance();
+    } else if (blockManager.getMinReplicationToBeInMaintenance() == 0) {
+      LOG.info("MinReplicationToBeInMaintenance is set to zero. " + node +
+          " is put in maintenance state" + " immediately.");
       node.setInMaintenance();
     } else {
-      stats.subtract(node);
-      if (node.isDecommissioned()) {
-        LOG.info("Decommissioned node " + node + " is put in maintenance state"
-            + " immediately.");
-        node.setInMaintenance();
-      } else if (blockManager.getMinReplicationToBeInMaintenance() == 0) {
-        LOG.info("MinReplicationToBeInMaintenance is set to zero. " + node +
-            " is put in maintenance state" + " immediately.");
-        node.setInMaintenance();
-      } else {
-        node.startMaintenance();
-      }
+      LOG.info("Starting maintenance of {} node {}",
+          node.isAlive() ? "live" : "dead", node);
+      node.startMaintenance();
+    }
+    if (node.isAlive()) {
       stats.add(node);
     }
   }
