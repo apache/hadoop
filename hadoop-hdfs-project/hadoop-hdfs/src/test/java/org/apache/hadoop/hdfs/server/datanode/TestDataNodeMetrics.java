@@ -167,7 +167,7 @@ public class TestDataNodeMetrics {
   public void testReceivePacketSlowMetrics() throws Exception {
     Configuration conf = new HdfsConfiguration();
     final int interval = 1;
-    conf.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, "" + interval);
+    conf.setInt(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, interval);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3).build();
     try {
@@ -175,7 +175,7 @@ public class TestDataNodeMetrics {
       DistributedFileSystem fs = cluster.getFileSystem();
       final DataNodeFaultInjector injector =
           Mockito.mock(DataNodeFaultInjector.class);
-      Mockito.doAnswer(new Answer() {
+      Answer answer = new Answer() {
         @Override
         public Object answer(InvocationOnMock invocationOnMock)
             throws Throwable {
@@ -183,25 +183,11 @@ public class TestDataNodeMetrics {
           Thread.sleep(1000);
           return null;
         }
-      }).when(injector).stopSendingPacketDownstream(Mockito.anyString());
-      Mockito.doAnswer(new Answer() {
-        @Override
-        public Object answer(InvocationOnMock invocationOnMock)
-            throws Throwable {
-          // make the op taking longer time
-          Thread.sleep(1000);
-          return null;
-        }
-      }).when(injector).delayWriteToOsCache();
-      Mockito.doAnswer(new Answer() {
-        @Override
-        public Object answer(InvocationOnMock invocationOnMock)
-            throws Throwable {
-          // make the op taking longer time
-          Thread.sleep(1000);
-          return null;
-        }
-      }).when(injector).delayWriteToDisk();
+      };
+      Mockito.doAnswer(answer).when(injector).
+          stopSendingPacketDownstream(Mockito.anyString());
+      Mockito.doAnswer(answer).when(injector).delayWriteToOsCache();
+      Mockito.doAnswer(answer).when(injector).delayWriteToDisk();
       DataNodeFaultInjector.set(injector);
       Path testFile = new Path("/testFlushNanosMetric.txt");
       FSDataOutputStream fout = fs.create(testFile);
@@ -218,7 +204,9 @@ public class TestDataNodeMetrics {
       assertCounter("TotalPacketsSlowWriteToDisk", 1L, dnMetrics);
       assertCounter("TotalPacketsSlowWriteOsCache", 0L, dnMetrics);
     } finally {
-      if (cluster != null) {cluster.shutdown();}
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
