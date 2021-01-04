@@ -1529,6 +1529,24 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return newReplicaInfo;
   }
 
+  public ReplicaInfo hardLinkBlockToTmpLocation(ExtendedBlock block,
+      ReplicaInfo replicaInfo) throws IOException {
+
+    File[] blockFiles = FsDatasetImpl.hardLinkBlockFiles(block.getBlockId(),
+        block.getGenerationStamp(), replicaInfo,
+        getTmpDir(block.getBlockPoolId()));
+
+    ReplicaInfo newReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
+        .setBlockId(replicaInfo.getBlockId())
+        .setGenerationStamp(replicaInfo.getGenerationStamp())
+        .setFsVolume(this)
+        .setDirectoryToUse(blockFiles[0].getParentFile())
+        .setBytesToReserve(0)
+        .build();
+    newReplicaInfo.setNumBytes(blockFiles[1].length());
+    return newReplicaInfo;
+  }
+
   public File[] copyBlockToLazyPersistLocation(String bpId, long blockId,
       long genStamp,
       ReplicaInfo replicaInfo,

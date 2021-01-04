@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
@@ -166,6 +168,25 @@ public class HardLink {
     if (linkName == null) {
       throw new IOException(
           "invalid arguments to createHardLink: link name is null");
+    }
+    createLink(linkName.toPath(), file.toPath());
+  }
+
+  /**
+   * Creates a hardlink, create parent if not exist.
+   * @param file - existing source file
+   * @param linkName - desired target link file
+   */
+  public static void createHardLinkWithParentDir(File file, File linkName)
+      throws IOException {
+    if (file == null || linkName == null) {
+      throw new IOException(
+          "Invalid arguments to createHardLink: source file is "
+              + file + ", link name is " + linkName);
+    }
+    if (!linkName.getParentFile().exists() && !linkName.getParentFile().mkdirs()) {
+      throw new IOException(
+          "Failed to create parent folder for hardLink " + linkName);
     }
     createLink(linkName.toPath(), file.toPath());
   }
