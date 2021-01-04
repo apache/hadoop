@@ -383,16 +383,30 @@ public class TestDecommissioningStatus {
 
   /**
    * Verify the support for decommissioning a datanode that is already dead.
-   * Under this scenario the datanode should immediately be marked as
-   * DECOMMISSIONED
+   * Under this scenario the datanode should be marked as
+   * DECOMMISSION_IN_PROGRESS first. When pendingReplicationBlocksCount and
+   * underReplicatedBlocksCount are both 0, it becomes DECOMMISSIONED.
    */
   @Test(timeout=120000)
   public void testDecommissionDeadDN() throws Exception {
     Logger log = Logger.getLogger(DatanodeAdminManager.class);
     log.setLevel(Level.DEBUG);
+    DistributedFileSystem fileSys =
+        (DistributedFileSystem)cluster.getFileSystem();
+
+    // Create a file with one block. That block has one replica.
+    Path f = new Path("decommission.dat");
+    DFSTestUtil.createFile(fileSys, f, fileSize, fileSize, fileSize,
+        (short)1, seed);
+
+    // Find the DN that owns the only replica.
+    RemoteIterator<LocatedFileStatus> fileList = fileSys.listLocatedStatus(f);
+    BlockLocation[] blockLocations = fileList.next().getBlockLocations();
+    String dnName = blockLocations[0].getNames()[0];
     DatanodeID dnID = cluster.getDataNodes().get(0).getDatanodeId();
-    String dnName = dnID.getXferAddr();
-    DataNodeProperties stoppedDN = cluster.stopDataNode(0);
+
+    // Stop the DN leads to 1 block under-replicated
+    DataNodeProperties stoppedDN = cluster.stopDataNode(dnName);
     DFSTestUtil.waitForDatanodeState(cluster, dnID.getDatanodeUuid(),
         false, 30000);
     FSNamesystem fsn = cluster.getNamesystem();
@@ -403,7 +417,17 @@ public class TestDecommissioningStatus {
     BlockManagerTestUtil.recheckDecommissionState(dm);
     // Block until the admin's monitor updates the number of tracked nodes.
     waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 0);
-    assertTrue(dnDescriptor.isDecommissioned());
+    
+    // The dead DN should be in DECOMMISSION_IN_PROGRESS
+    // since there is one under-replicated block
+    assertTrue(dnDescriptor.isDecommissionInProgress());
+
+    // Delete the under-replicated file, which should let the
+    // DECOMMISSION_IN_PROGRESS node become DECOMMISSIONED
+    AdminStatesBaseTest.cleanupFile(fileSys, f);
+    BlockManagerTestUtil.recheckDecommissionState(dm);
+    assertTrue("the node should be decommissioned",
+        dnDescriptor.isDecommissioned());
 
     // Add the node back
     cluster.restartDataNode(stoppedDN, true);
