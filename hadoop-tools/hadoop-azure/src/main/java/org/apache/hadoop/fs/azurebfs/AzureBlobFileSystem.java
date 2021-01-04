@@ -43,6 +43,7 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.DurationInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -510,7 +511,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     Path qualifiedPath = makeQualified(f);
 
-    try {
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "Acquire lease for %s",
+        qualifiedPath)) {
       return abfsStore.acquireLease(qualifiedPath, duration);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -523,7 +525,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     Path qualifiedPath = makeQualified(f);
 
-    try {
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "Renew lease for %s",
+        qualifiedPath)) {
       abfsStore.renewLease(qualifiedPath, leaseId);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -535,7 +538,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     Path qualifiedPath = makeQualified(f);
 
-    try {
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "Release lease for %s",
+        qualifiedPath)) {
       abfsStore.releaseLease(qualifiedPath, leaseId);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -547,7 +551,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
     Path qualifiedPath = makeQualified(f);
 
-    try {
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "Break lease for %s",
+        qualifiedPath)) {
       abfsStore.breakLease(qualifiedPath);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);

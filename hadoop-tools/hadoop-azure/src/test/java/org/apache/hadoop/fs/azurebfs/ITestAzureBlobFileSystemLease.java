@@ -239,6 +239,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
           out.close();
         }
         // exception might or might not occur
+        Assert.fail("No exception on close after broken lease");
       } catch (IOException e) {
         Assert.assertTrue("Unexpected error message: " + e.getMessage(),
             e.getMessage().contains(ERR_LEASE_EXPIRED));

@@ -18,14 +18,17 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
@@ -71,6 +74,10 @@ public final class SelfRenewingLease {
     public LeaseException(Exception innerException) {
       super(ERR_ACQUIRING_LEASE, innerException);
     }
+
+    public LeaseException() {
+      super(ERR_ACQUIRING_LEASE);
+    }
   }
 
   public SelfRenewingLease(AbfsClient client, Path path) throws AzureBlobFileSystemException {
@@ -80,33 +87,42 @@ public final class SelfRenewingLease {
     this.path = path;
 
     // Try to get the lease a specified number of times, else throw an error
+    RetryPolicy retryPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(LEASE_MAX_RETRIES,
+        LEASE_ACQUIRE_RETRY_INTERVAL, TimeUnit.MILLISECONDS);
     int numRetries = 0;
-    while (leaseID == null && numRetries < LEASE_MAX_RETRIES) {
-      numRetries++;
+    Exception lastException = null;
+    while (leaseID == null) {
       try {
+        if (RetryPolicy.RetryAction.RetryDecision.RETRY !=
+            retryPolicy.shouldRetry(null, numRetries, 0, true).action) {
+          LOG.error("Exceeded maximum number of retries for acquiring lease on blob {}", path);
+          if (lastException != null) {
+            throw new LeaseException(lastException);
+          }
+          throw new LeaseException();
+        }
+
         LOG.debug("lease path: {}", path);
         final AbfsRestOperation op =
             client.acquireLease(getRelativePath(path),
                 LEASE_TIMEOUT);
 
         leaseID = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_LEASE_ID);
-      } catch (IOException e) {
-        if (numRetries < LEASE_MAX_RETRIES) {
-          LOG.info("Caught exception when trying to acquire lease on blob {}, retrying: {}", path,
-              e.getMessage());
-          LOG.debug("Exception acquiring lease", e);
-        } else {
-          throw new LeaseException(e);
-        }
+      } catch (Exception e) {
+        lastException = e;
+      } finally {
+        numRetries++;
       }
-      if (leaseID == null) {
-        try {
-          Thread.sleep(LEASE_ACQUIRE_RETRY_INTERVAL);
-        } catch (InterruptedException e) {
 
-          // Restore the interrupted status
-          Thread.currentThread().interrupt();
-        }
+      if (leaseID != null) {
+        break;
+      }
+
+      try {
+        Thread.sleep(LEASE_ACQUIRE_RETRY_INTERVAL);
+      } catch (InterruptedException e) {
+        // Restore the interrupted status
+        Thread.currentThread().interrupt();
       }
     }
     renewer = new Thread(new Renewer());
