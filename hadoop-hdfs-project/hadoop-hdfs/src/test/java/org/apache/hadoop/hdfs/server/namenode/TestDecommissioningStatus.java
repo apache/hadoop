@@ -391,46 +391,62 @@ public class TestDecommissioningStatus {
   public void testDecommissionDeadDN() throws Exception {
     Logger log = Logger.getLogger(DatanodeAdminManager.class);
     log.setLevel(Level.DEBUG);
-    DistributedFileSystem fileSys =
-        (DistributedFileSystem)cluster.getFileSystem();
+
+    DistributedFileSystem fileSystem = cluster.getFileSystem();
 
     // Create a file with one block. That block has one replica.
     Path f = new Path("decommission.dat");
-    DFSTestUtil.createFile(fileSys, f, fileSize, fileSize, fileSize,
+    DFSTestUtil.createFile(fileSystem, f, fileSize, fileSize, fileSize,
         (short)1, seed);
 
     // Find the DN that owns the only replica.
-    RemoteIterator<LocatedFileStatus> fileList = fileSys.listLocatedStatus(f);
+    RemoteIterator<LocatedFileStatus> fileList =
+        fileSystem.listLocatedStatus(f);
     BlockLocation[] blockLocations = fileList.next().getBlockLocations();
-    String dnName = blockLocations[0].getNames()[0];
-    DatanodeID dnID = cluster.getDataNodes().get(0).getDatanodeId();
+    String[] dnNames = blockLocations[0].getNames();
 
     // Stop the DN leads to 1 block under-replicated
-    DataNodeProperties stoppedDN = cluster.stopDataNode(dnName);
-    DFSTestUtil.waitForDatanodeState(cluster, dnID.getDatanodeUuid(),
-        false, 30000);
+    DataNodeProperties[] stoppedDNs = new DataNodeProperties[dnNames.length];
+    for (int i = 0; i < dnNames.length; i++) {
+      stoppedDNs[i] = cluster.stopDataNode(dnNames[i]);
+    }
+
     FSNamesystem fsn = cluster.getNamesystem();
     final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
-    DatanodeDescriptor dnDescriptor = dm.getDatanode(dnID);
-    decommissionNode(dnName);
+    final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+    while (true) {
+      dm.fetchDatanodes(null, dead, false);
+      if (dead.size() == 3) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+
+    for (String dnName : dnNames) {
+      decommissionNode(dnName);
+    }
     dm.refreshNodes(conf);
     BlockManagerTestUtil.recheckDecommissionState(dm);
-    // Block until the admin's monitor updates the number of tracked nodes.
-    waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 0);
-    
+
     // The dead DN should be in DECOMMISSION_IN_PROGRESS
     // since there is one under-replicated block
-    assertTrue(dnDescriptor.isDecommissionInProgress());
+    for (DatanodeDescriptor deadDN : dead) {
+      assertTrue(deadDN.isDecommissionInProgress());
+    }
 
     // Delete the under-replicated file, which should let the
     // DECOMMISSION_IN_PROGRESS node become DECOMMISSIONED
-    AdminStatesBaseTest.cleanupFile(fileSys, f);
+    AdminStatesBaseTest.cleanupFile(fileSystem, f);
     BlockManagerTestUtil.recheckDecommissionState(dm);
-    assertTrue("the node should be decommissioned",
-        dnDescriptor.isDecommissioned());
+    for (DatanodeDescriptor deadDN : dead) {
+      assertTrue("the node should be decommissioned",
+          deadDN.isDecommissioned());
+    }
 
     // Add the node back
-    cluster.restartDataNode(stoppedDN, true);
+    for (DataNodeProperties stoppedDN : stoppedDNs) {
+      cluster.restartDataNode(stoppedDN, true);
+    }
     cluster.waitActive();
 
     // Call refreshNodes on FSNamesystem with empty exclude file to remove the
@@ -477,10 +493,10 @@ public class TestDecommissioningStatus {
     BlockManagerTestUtil.recheckDecommissionState(dm);
     // Block until the admin's monitor updates the number of tracked nodes.
     waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 0);
-    assertTrue(dnDescriptor0.isDecommissioned());
-    assertTrue(dnDescriptor1.isDecommissioned());
+    assertTrue(dnDescriptor0.isDecommissionInProgress());
+    assertTrue(dnDescriptor1.isDecommissionInProgress());
 
-    // All nodes are dead and decommed. Blocks should be missing.
+    // All nodes are dead and DecommissionInProgress. Blocks should be missing.
     long  missingBlocks = bm.getMissingBlocksCount();
     long underreplicated = bm.getLowRedundancyBlocksCount();
     assertTrue(missingBlocks > 0);
