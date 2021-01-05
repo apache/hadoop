@@ -148,7 +148,7 @@ public final class HttpServer2 implements FilterContainer {
   // idle timeout in milliseconds
   public static final String HTTP_IDLE_TIMEOUT_MS_KEY =
       "hadoop.http.idle_timeout.ms";
-  public static final int HTTP_IDLE_TIMEOUT_MS_DEFAULT = 10000;
+  public static final int HTTP_IDLE_TIMEOUT_MS_DEFAULT = 60000;
   public static final String HTTP_TEMP_DIR_KEY = "hadoop.http.temp.dir";
 
   public static final String FILTER_INITIALIZER_PROPERTY
