@@ -50,7 +50,7 @@
 
   <property>
     <name>hadoop.http.idle_timeout.ms</name>
-    <value>1000</value>
+    <value>60000</value>
     <description>
       NN/JN/DN Server connection timeout in milliseconds.
     </description>

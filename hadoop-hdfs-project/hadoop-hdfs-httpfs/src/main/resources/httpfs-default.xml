@@ -56,7 +56,7 @@
   <!-- HTTP properties -->
   <property>
     <name>hadoop.http.idle_timeout.ms</name>
-    <value>1000</value>
+    <value>60000</value>
     <description>
       Httpfs Server connection timeout in milliseconds.
     </description>
