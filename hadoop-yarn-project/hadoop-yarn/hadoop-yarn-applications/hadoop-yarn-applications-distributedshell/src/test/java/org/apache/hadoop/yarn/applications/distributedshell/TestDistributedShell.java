@@ -182,6 +182,8 @@ public class TestDistributedShell {
           true);
     conf.setBoolean(
         YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
+    conf.setInt(YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
+        10);
     conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     // ATS version specific settings
