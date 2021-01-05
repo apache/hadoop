@@ -21,18 +21,21 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.fs.azurebfs.utils.Listener;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,21 +44,24 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.utils.ABFSContentSummary;
 
-public class ContentSummaryProcessor {
+public class ContentSummaryProcessor implements AutoCloseable {
   private final AtomicLong fileCount = new AtomicLong(0L);
   private final AtomicLong directoryCount = new AtomicLong(0L);
   private final AtomicLong totalBytes = new AtomicLong(0L);
   private final AtomicInteger numTasks = new AtomicInteger(0);
   private final AzureBlobFileSystemStore abfsStore;
+  private static final int NUM_THREADS = 16;
   private final ExecutorService executorService = new ThreadPoolExecutor(1,
       NUM_THREADS, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
+  private final CompletionService<Void> completionService = new ExecutorCompletionService<>(
+      executorService);
   private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
-  private final Set<Future<Object>> futures =
+  private final Set<Future<Void>> futures =
       Collections.newSetFromMap(new ConcurrentHashMap<>());
   private static final Logger LOG =
       LoggerFactory.getLogger(ContentSummaryProcessor.class);
-  private static final int NUM_THREADS = 16;
   private static final int POLL_TIMEOUT = 100;
+  private Listener listener = null;
 
   public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
     this.abfsStore = abfsStore;
@@ -65,20 +71,33 @@ public class ContentSummaryProcessor {
       throws IOException, InterruptedException {
     processDirectoryTree(path);
 
-    while (!queue.isEmpty() || numTasks.get() > 0) {
-      for (Future<Object> future : futures) {
-        try {
-          future.get(10, TimeUnit.MILLISECONDS);
-          futures.remove(future);
-        } catch (TimeoutException ignored) {
-        } catch (ExecutionException e) {
-          LOG.debug(e.toString());
-          throw new IOException(e);
+    try {
+      while (!queue.isEmpty() || numTasks.get() > 0
+          || ((ThreadPoolExecutor) executorService).getActiveCount() > 0) {
+        numTasks.decrementAndGet();
+        completionService.take().get();
+        if (listener != null) {
+          listener.checkInterrupt();
         }
+      }
+    } catch (ExecutionException e) {
+      LOG.debug(e.getMessage());
+      throw new IOException(e);
+    } finally {
+      executorService.shutdown();
+      if (listener != null) {
+        listener.checkShutdown(((ThreadPoolExecutor)executorService).getActiveCount());
       }
     }
 
-    executorService.shutdown();
+//    close();
+    executorService.shutdownNow();
+    if (listener != null) {
+      // statement reachable only when no exceptions thrown by threads
+      listener.checkAllTasksComplete(numTasks,
+          ((ThreadPoolExecutor)executorService).getActiveCount());
+    }
+
     return new ABFSContentSummary(totalBytes.get(), directoryCount.get(),
         fileCount.get(), totalBytes.get());
   }
@@ -86,6 +105,12 @@ public class ContentSummaryProcessor {
   private void processDirectoryTree(Path path)
       throws IOException, InterruptedException {
     FileStatus[] fileStatuses = abfsStore.listStatus(path);
+    if (listener != null) {
+      synchronized (this) {
+        listener.verifyThreadCount(numTasks,
+            (ThreadPoolExecutor) executorService, NUM_THREADS);
+      }
+    }
 
     for (FileStatus fileStatus : fileStatuses) {
       if (fileStatus.isDirectory()) {
@@ -94,13 +119,20 @@ public class ContentSummaryProcessor {
         synchronized (this) {
           if (!queue.isEmpty() && numTasks.get() < NUM_THREADS) {
             numTasks.incrementAndGet();
-            Future<Object> future = executorService.submit(() -> {
+            Future<Void> future = completionService.submit(() -> {
               FileStatus fileStatus1;
               while ((fileStatus1 = queue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS))
                   != null) {
                 processDirectoryTree(fileStatus1.getPath());
               }
-              numTasks.decrementAndGet();
+              if (listener != null) {
+                synchronized (this) {
+                  if (!listener.isInterrupted() && listener.shouldInterrupt()) {
+                    listener.setInterrupted();
+                    throw new InterruptedException();
+                  }
+                }
+              }
               return null;
             });
             futures.add(future);
@@ -119,5 +151,19 @@ public class ContentSummaryProcessor {
   private void processFile(FileStatus fileStatus) {
     fileCount.incrementAndGet();
     totalBytes.addAndGet(fileStatus.getLen());
+  }
+
+  @Override
+  public void close() {
+    while (completionService.poll() != null);
+    executorService.shutdown();
+    if (!executorService.isTerminated()) {
+      executorService.shutdownNow();
+    }
+  }
+
+  @VisibleForTesting
+  void registerListener(Listener listener) {
+    this.listener = listener;
   }
 }

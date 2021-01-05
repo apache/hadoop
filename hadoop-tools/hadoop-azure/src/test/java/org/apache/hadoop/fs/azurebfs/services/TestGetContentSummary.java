@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +26,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+import org.apache.hadoop.fs.azurebfs.utils.ExecutorServiceTestUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -36,6 +41,10 @@ import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
 
@@ -64,8 +73,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   private final AzureBlobFileSystem fs = createFileSystem();
   private final int testBufferSize = 20;
   private final int filesPerDirectory = 2;
-  private final int numFilesForListMaxTest =
-      DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
+  private final int numFilesForListMaxTest = DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
   private final byte[] b = new byte[testBufferSize];
 
   public TestGetContentSummary() throws Exception {
@@ -113,7 +121,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testDirOverListMaxResultsItems()
-      throws IOException, ExecutionException, InterruptedException {
+      throws IOException {
     checkContentSummary(
         fs.getContentSummary(pathToListMaxDir), 1,
         numFilesForListMaxTest + filesPerDirectory, 0);
@@ -125,6 +133,18 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
         "/nonExistentPath")));
     intercept(IOException.class, () -> fs.getContentSummary(new Path(
         "testFolder/IntermediateNonExistentPath")));
+  }
+
+  @Test
+  public void testExecutorServiceConcurrency() throws Exception {
+    AzureBlobFileSystemStore mockStore = getAbfsStore(fs);
+    ContentSummaryProcessor contentSummaryProcessor =
+        new ContentSummaryProcessor(mockStore);
+    contentSummaryProcessor.registerListener(new ExecutorServiceTestUtils(false));
+    contentSummaryProcessor.getContentSummary(new Path("/"));
+    contentSummaryProcessor.registerListener(new ExecutorServiceTestUtils(true));
+    intercept(IOException.class, () ->
+      contentSummaryProcessor.getContentSummary(new Path("/")));
   }
 
   private void checkContentSummary(ContentSummary contentSummary,
