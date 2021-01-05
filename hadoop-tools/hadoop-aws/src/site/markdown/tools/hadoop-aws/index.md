@@ -1040,9 +1040,9 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.bucket.probe</name>
-  <value>2</value>
+  <value>0</value>
   <description>
-     The value can be 0, 1 or 2 (default).
+     The value can be 0 (default), 1 or 2.
      When set to 0, bucket existence checks won't be done
      during initialization thus making it faster.
      Though it should be noted that when the bucket is not available in S3,

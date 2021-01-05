@@ -518,7 +518,7 @@ public final class Constants {
    * will be validated using {@code S3AFileSystem.verifyBucketExistsV2()}.
    * Value: {@value}
    */
-  public static final int S3A_BUCKET_PROBE_DEFAULT = 2;
+  public static final int S3A_BUCKET_PROBE_DEFAULT = 0;
 
   /**
    * How long a directory listing in the MS is considered as authoritative.
