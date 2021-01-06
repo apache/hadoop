@@ -394,8 +394,10 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
         // when S3Guard is enabled, the restricted policy still
         // permits S3Guard record lookup, so getFileStatus calls
         // will work iff the record is in the database.
+        // probe the store using a path other than /, so a HEAD
+        // request is issued.
         forbidden("getFileStatus",
-            () -> fs.getFileStatus(ROOT));
+            () -> fs.getFileStatus(methodPath()));
       }
       forbidden("",
           () -> fs.listStatus(ROOT));
