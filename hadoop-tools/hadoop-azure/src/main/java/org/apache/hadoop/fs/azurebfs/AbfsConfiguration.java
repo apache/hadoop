@@ -100,6 +100,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_WRITE_BUFFER_SIZE)
   private int writeBufferSize;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION,
+      DefaultValue = DEFAULT_AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION)
+  private boolean enableSmallWriteOptimization;
+
   @BooleanConfigurationValidatorAnnotation(
       ConfigurationKey = AZURE_READ_SMALL_FILES_COMPLETELY,
       DefaultValue = DEFAULT_READ_SMALL_FILES_COMPLETELY)
@@ -535,6 +539,10 @@ public class AbfsConfiguration{
 
   public int getWriteBufferSize() {
     return this.writeBufferSize;
+  }
+
+  public boolean isSmallWriteOptimizationEnabled() {
+    return this.enableSmallWriteOptimization;
   }
 
   public boolean readSmallFilesCompletely() {
