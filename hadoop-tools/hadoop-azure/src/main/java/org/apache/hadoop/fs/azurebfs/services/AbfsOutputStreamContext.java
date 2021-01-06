@@ -27,6 +27,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private boolean enableFlush;
 
+  private boolean enableSmallWriteOptimization;
+
   private boolean disableOutputStreamFlush;
 
   private AbfsOutputStreamStatistics streamStatistics;
@@ -49,6 +51,11 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public AbfsOutputStreamContext enableFlush(final boolean enableFlush) {
     this.enableFlush = enableFlush;
+    return this;
+  }
+
+  public AbfsOutputStreamContext enableSmallWriteOptimization(final boolean enableSmallWriteOptimization) {
+    this.enableSmallWriteOptimization = enableSmallWriteOptimization;
     return this;
   }
 
@@ -113,5 +120,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public int getMaxWriteRequestsToQueue() {
     return this.maxWriteRequestsToQueue;
+  }
+
+  public boolean isEnableSmallWriteOptimization() {
+    return this.enableSmallWriteOptimization;
   }
 }
