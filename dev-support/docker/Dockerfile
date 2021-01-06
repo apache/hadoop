@@ -153,12 +153,12 @@ RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
     && npm install -g bower@1.8.8
 
 ###
-## Install Yarn 1.12.1 for web UI framework
+## Install Yarn 1.22.5 for web UI framework
 ####
 RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
     && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list \
     && apt-get -q update \
-    && apt-get install -y --no-install-recommends yarn=1.12.1-1 \
+    && apt-get install -y --no-install-recommends yarn=1.22.5-1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
