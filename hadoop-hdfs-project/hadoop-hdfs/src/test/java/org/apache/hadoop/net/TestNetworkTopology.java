@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -56,7 +57,7 @@ public class TestNetworkTopology {
   private DatanodeDescriptor dataNodes[];
 
   @Rule
-  public Timeout testTimeout = new Timeout(30000);
+  public Timeout testTimeout = new Timeout(30000, TimeUnit.MILLISECONDS);
 
   @Before
   public void setupDatanodes() {
@@ -360,7 +361,6 @@ public class TestNetworkTopology {
         || testNodes[1] == dataNodes[8]);
     assertTrue(testNodes[2] == dataNodes[5]
         || testNodes[2] == dataNodes[8]);
-
   }
   
   @Test
