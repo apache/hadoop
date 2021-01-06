@@ -51,6 +51,31 @@ find_package(Threads)
 
 include(CheckCXXSourceCompiles)
 
+# Download and build gtest
+configure_file(CMakeLists-gtest.txt.in googletest-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
+if(result)
+  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+endif()
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
+if(result)
+  message(FATAL_ERROR "Build step for googletest failed: ${result}")
+endif()
+
+# Prevent overriding the parent project's compiler/linker
+# settings on Windows
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+# Add googletest directly to our build. This defines
+# the gtest and gtest_main targets.
+add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
+                 ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
+                 EXCLUDE_FROM_ALL)
+
 # Check if thread_local is supported
 unset (THREAD_LOCAL_SUPPORTED CACHE)
 set (CMAKE_CXX_STANDARD 11)
@@ -226,7 +251,8 @@ include_directories( SYSTEM
   ${PROJECT_BINARY_DIR}/lib/proto
   ${Boost_INCLUDE_DIRS}
   third_party/rapidxml-1.13
-  third_party/gmock-1.7.0
+  ${gtest_SOURCE_DIR}/include
+  ${gmock_SOURCE_DIR}/include
   third_party/tr2
   third_party/protobuf
   third_party/uriparser2
@@ -235,8 +261,6 @@ include_directories( SYSTEM
   ${PROTOBUF_INCLUDE_DIRS}
 )
 
-
-add_subdirectory(third_party/gmock-1.7.0)
 add_subdirectory(third_party/uriparser2)
 add_subdirectory(lib)
 if(NOT HDFSPP_LIBRARY_ONLY)

@@ -724,7 +724,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     S3ATestUtils.MetricDiff getMetric = new S3ATestUtils.MetricDiff(fs,
         Statistic.OBJECT_METADATA_REQUESTS);
     S3ATestUtils.MetricDiff listMetric = new S3ATestUtils.MetricDiff(fs,
-        Statistic.OBJECT_LIST_REQUESTS);
+        Statistic.OBJECT_LIST_REQUEST);
     FileStatus[] st;
     try {
       st = filter == null

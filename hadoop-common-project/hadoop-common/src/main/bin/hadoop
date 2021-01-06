@@ -47,6 +47,7 @@ function hadoop_usage
   hadoop_add_subcommand "trace" client "view and modify Hadoop tracing settings"
   hadoop_add_subcommand "version" client "print the version"
   hadoop_add_subcommand "kdiag" client "Diagnose Kerberos Problems"
+  hadoop_add_subcommand "rbfbalance" client "move directories and files across router-based federation namespaces"
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
@@ -170,6 +171,11 @@ function hadoopcmd_case
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
+    ;;
+    rbfbalance)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.rbfbalance.RouterFedBalance
+      hadoop_add_to_classpath_tools hadoop-federation-balance
+      hadoop_add_to_classpath_tools hadoop-distcp
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"

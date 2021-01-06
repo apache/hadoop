@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -40,8 +41,8 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
   @Before
   public void setup() {
     super.setup();
-    rc = new DominantResourceCalculator();
-    when(cs.getResourceCalculator()).thenReturn(rc);
+    resourceCalculator = new DominantResourceCalculator();
+    when(cs.getResourceCalculator()).thenReturn(resourceCalculator);
     policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs, mClock);
   }
 
@@ -75,10 +76,10 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
     policy.editSchedule();
 
     // Preemption should happen in Queue b, preempt <10,20> to Queue a
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(5)).handle(argThat(
+    verify(eventHandler, times(5)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -121,7 +122,7 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -166,10 +167,10 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
