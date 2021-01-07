@@ -202,7 +202,7 @@ public class TestDataNodeMetrics {
       assertTrue("More than 1 slow packet to mirror",
           getLongCounter("TotalPacketsSlowWriteToMirror", dnMetrics) > 1L);
       assertCounter("TotalPacketsSlowWriteToDisk", 1L, dnMetrics);
-      assertCounter("TotalPacketsSlowWriteOsCache", 0L, dnMetrics);
+      assertCounter("TotalPacketsSlowWriteToOsCache", 0L, dnMetrics);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
