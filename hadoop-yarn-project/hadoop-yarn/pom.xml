@@ -24,6 +24,7 @@
   <packaging>pom</packaging>
   <name>Apache Hadoop YARN</name>
 
+
   <properties>
     <test.logs>true</test.logs>
     <test.timeout>600000</test.timeout>
