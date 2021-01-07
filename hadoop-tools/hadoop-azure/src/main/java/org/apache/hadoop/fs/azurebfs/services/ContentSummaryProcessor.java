@@ -19,22 +19,13 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.utils.ABFSContentSummary;
 
-public class ContentSummaryProcessor implements AutoCloseable {
+public class ContentSummaryProcessor {
   private final AtomicLong fileCount = new AtomicLong(0L);
   private final AtomicLong directoryCount = new AtomicLong(0L);
   private final AtomicLong totalBytes = new AtomicLong(0L);
@@ -56,47 +47,27 @@ public class ContentSummaryProcessor implements AutoCloseable {
   private final CompletionService<Void> completionService = new ExecutorCompletionService<>(
       executorService);
   private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
-  private final Set<Future<Void>> futures =
-      Collections.newSetFromMap(new ConcurrentHashMap<>());
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ContentSummaryProcessor.class);
   private static final int POLL_TIMEOUT = 100;
-  private Listener listener = null;
 
   public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
     this.abfsStore = abfsStore;
   }
 
   public ABFSContentSummary getContentSummary(Path path)
-      throws IOException, InterruptedException {
+          throws IOException, ExecutionException, InterruptedException {
+
     processDirectoryTree(path);
 
     try {
-      while (!queue.isEmpty() || numTasks.get() > 0
-          || ((ThreadPoolExecutor) executorService).getActiveCount() > 0) {
-        numTasks.decrementAndGet();
+      while (!queue.isEmpty() || numTasks.get() > 0) {
         completionService.take().get();
-        if (listener != null) {
-          listener.checkInterrupt();
-        }
+        numTasks.decrementAndGet();
       }
-    } catch (ExecutionException e) {
-      LOG.debug(e.getMessage());
-      throw new IOException(e);
     } finally {
+      numTasks.decrementAndGet();
       executorService.shutdown();
-      if (listener != null) {
-        listener.checkShutdown(((ThreadPoolExecutor)executorService).getActiveCount());
-      }
     }
-
-//    close();
-    executorService.shutdownNow();
-    if (listener != null) {
-      // statement reachable only when no exceptions thrown by threads
-      listener.checkAllTasksComplete(numTasks,
-          ((ThreadPoolExecutor)executorService).getActiveCount());
-    }
+    executorService.awaitTermination(1, TimeUnit.SECONDS);
 
     return new ABFSContentSummary(totalBytes.get(), directoryCount.get(),
         fileCount.get(), totalBytes.get());
@@ -105,39 +76,12 @@ public class ContentSummaryProcessor implements AutoCloseable {
   private void processDirectoryTree(Path path)
       throws IOException, InterruptedException {
     FileStatus[] fileStatuses = abfsStore.listStatus(path);
-    if (listener != null) {
-      synchronized (this) {
-        listener.verifyThreadCount(numTasks,
-            (ThreadPoolExecutor) executorService, NUM_THREADS);
-      }
-    }
 
     for (FileStatus fileStatus : fileStatuses) {
       if (fileStatus.isDirectory()) {
         queue.put(fileStatus);
         processDirectory();
-        synchronized (this) {
-          if (!queue.isEmpty() && numTasks.get() < NUM_THREADS) {
-            numTasks.incrementAndGet();
-            Future<Void> future = completionService.submit(() -> {
-              FileStatus fileStatus1;
-              while ((fileStatus1 = queue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS))
-                  != null) {
-                processDirectoryTree(fileStatus1.getPath());
-              }
-              if (listener != null) {
-                synchronized (this) {
-                  if (!listener.isInterrupted() && listener.shouldInterrupt()) {
-                    listener.setInterrupted();
-                    throw new InterruptedException();
-                  }
-                }
-              }
-              return null;
-            });
-            futures.add(future);
-          }
-        }
+        conditionalSubmitTaskToExecutor();
       } else {
         processFile(fileStatus);
       }
@@ -153,17 +97,18 @@ public class ContentSummaryProcessor implements AutoCloseable {
     totalBytes.addAndGet(fileStatus.getLen());
   }
 
-  @Override
-  public void close() {
-    while (completionService.poll() != null);
-    executorService.shutdown();
-    if (!executorService.isTerminated()) {
-      executorService.shutdownNow();
+  private synchronized void conditionalSubmitTaskToExecutor() {
+    if (!queue.isEmpty() && numTasks.get() < NUM_THREADS) {
+      numTasks.incrementAndGet();
+      completionService.submit(() -> {
+        FileStatus fileStatus1;
+        while ((fileStatus1 = queue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS))
+                != null) {
+          processDirectoryTree(fileStatus1.getPath());
+        }
+        return null;
+      });
     }
   }
 
-  @VisibleForTesting
-  void registerListener(Listener listener) {
-    this.listener = listener;
-  }
 }

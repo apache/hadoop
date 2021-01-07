@@ -19,19 +19,15 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
-import org.apache.hadoop.fs.azurebfs.utils.ExecutorServiceTestUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -44,7 +40,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
 
@@ -57,7 +52,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       "/testFolder/testFolder3/testFolder7",
       "/testFolder/testFolder3/testFolder6/leafDir",
       "/testFolderII/listMaxDir",
-      "/testFolderII/listMaxDir/zFolder"};
+      "/testFolderII/listMaxDir/" + DEFAULT_AZURE_LIST_MAX_RESULTS/2 + "_mid_folder"};
 
   private final Path pathToFile = new Path("/testFolder/test1");;
   private final Path pathToListMaxDir = new Path("/testFolderII/listMaxDir");
@@ -135,16 +130,50 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
         "testFolder/IntermediateNonExistentPath")));
   }
 
+  @Test(timeout = 10000)
+  public void testTimeTaken() throws Exception {
+    fs.getContentSummary(new Path("/testFolder"));
+  }
+
   @Test
-  public void testExecutorServiceConcurrency() throws Exception {
-    AzureBlobFileSystemStore mockStore = getAbfsStore(fs);
+  public void testConcurrentCallsOnFilesystem()
+          throws InterruptedException, ExecutionException {
+    ExecutorService executorService = new ThreadPoolExecutor(1,
+            16, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
+    ArrayList<Future<ContentSummary>> futures = new ArrayList<>();
+    for (String directory : directories) {
+      Future<ContentSummary> future = executorService.submit(
+              () -> fs.getContentSummary(new Path(directory)));
+      futures.add(future);
+    }
+    int[][] dirCS = {{8, 16, 8 * testBufferSize},
+            {0, 2, 2 * testBufferSize}, {2, 6, 2 * testBufferSize},
+            {3, 6, 2 * testBufferSize}, {2, 14, 0}, {0, 2, 0},
+            {0, 2, 2 * testBufferSize}, {1, 2, 0}, {0, 2, 0},
+            {0, 0, 0}, {1, 12, 0}, {0, 2, 0}};
+    executorService.shutdown();
+    for(int i=0; i<directories.length; i++) {
+      ContentSummary contentSummary = futures.get(i).get();
+      checkContentSummary(contentSummary, dirCS[i][0], dirCS[i][1], dirCS[i][2]);
+    }
+  }
+
+  @Test
+  public void testExecutorShutdown() throws NoSuchFieldException,
+          IllegalAccessException, InterruptedException, IOException, ExecutionException {
     ContentSummaryProcessor contentSummaryProcessor =
-        new ContentSummaryProcessor(mockStore);
-    contentSummaryProcessor.registerListener(new ExecutorServiceTestUtils(false));
-    contentSummaryProcessor.getContentSummary(new Path("/"));
-    contentSummaryProcessor.registerListener(new ExecutorServiceTestUtils(true));
-    intercept(IOException.class, () ->
-      contentSummaryProcessor.getContentSummary(new Path("/")));
+            new ContentSummaryProcessor(getAbfsStore(fs));
+    Field executorServiceField =
+            ContentSummaryProcessor.class.getDeclaredField("executorService");
+    executorServiceField.setAccessible(true);
+    ExecutorService fieldValue = (ExecutorService) executorServiceField.get(contentSummaryProcessor);
+    contentSummaryProcessor.getContentSummary(pathToIntermediateDirWithFilesAndSubdirs);
+    Assertions.assertThat(((ThreadPoolExecutor) fieldValue).getLargestPoolSize())
+        .describedAs("Core size is 1, so max threads at any time should be >=1")
+        .isGreaterThanOrEqualTo(1);
+    Assertions.assertThat(((ThreadPoolExecutor) fieldValue).getPoolSize())
+        .describedAs("No threads should remain after executor shutdown")
+        .isEqualTo(0);
   }
 
   private void checkContentSummary(ContentSummary contentSummary,

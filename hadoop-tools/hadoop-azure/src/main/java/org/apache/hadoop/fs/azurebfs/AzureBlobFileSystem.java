@@ -376,9 +376,10 @@ public class AzureBlobFileSystem extends FileSystem {
           .directoryCount(contentSummary.getDirectoryCount())
           .fileCount(contentSummary.getFileCount())
           .spaceConsumed(contentSummary.getSpaceConsumed()).build();
-    } catch (InterruptedException e) {
-      LOG.debug(e.toString());
-      throw new IOException(e.getMessage());
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.debug((e instanceof InterruptedException || e.getCause() instanceof InterruptedException)?
+              "Thread interrupted": e.getCause().getMessage());
+      throw new IOException(e);
     }
   }
 
