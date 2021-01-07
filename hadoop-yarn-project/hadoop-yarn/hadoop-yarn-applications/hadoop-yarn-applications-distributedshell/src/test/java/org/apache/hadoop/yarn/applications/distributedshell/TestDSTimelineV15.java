@@ -71,7 +71,7 @@ public class TestDSTimelineV15 extends DistributedShellBaseTest {
         getTimelineVersion());
     HdfsConfiguration hdfsConfig = new HdfsConfiguration();
     hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
-        .numDataNodes(NUM_DATANODES).build();
+        .numDataNodes(NUM_DATA_NODES).build();
     hdfsCluster.waitActive();
     setFileSystem(hdfsCluster.getFileSystem());
     PluginStoreTestUtils.prepareFileSystemForPluginStore(getFileSystem());

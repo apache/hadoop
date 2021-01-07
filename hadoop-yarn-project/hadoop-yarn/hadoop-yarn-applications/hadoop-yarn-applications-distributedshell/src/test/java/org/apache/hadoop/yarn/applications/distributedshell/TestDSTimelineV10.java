@@ -612,11 +612,11 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
         listOfFiles[currentContainerLogFileIndex].listFiles();
 
     int numOfWords = 0;
-    for (int i = 0; i < containerFiles.length; i++) {
-      if (containerFiles[i] == null) {
+    for (File containerFile : containerFiles) {
+      if (containerFile == null) {
         continue;
       }
-      for (File output : containerFiles[i].listFiles()) {
+      for (File output : containerFile.listFiles()) {
         if (output.getName().trim().contains("stdout")) {
           List<String> stdOutContent = new ArrayList<>();
           try (BufferedReader br = new BufferedReader(new FileReader(output))) {

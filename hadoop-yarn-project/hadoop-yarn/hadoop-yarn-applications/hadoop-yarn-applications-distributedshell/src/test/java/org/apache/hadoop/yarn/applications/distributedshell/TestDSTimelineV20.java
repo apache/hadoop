@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
@@ -104,26 +103,25 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
         new AtomicReference<>(null);
     AtomicReference<ApplicationAttemptReport> appAttemptReportRef =
         new AtomicReference<>(null);
-
-    setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
+    String[] args = createArgumentsWithAppName(
+        "--num_containers",
+        "2",
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1",
+        "--shell_command",
+        getListCommand(),
+        "--container_type",
+        "OPPORTUNISTIC",
+        "--enforce_execution_type"
+    );
     try {
-      String[] args = createArgumentsWithAppName(
-          "--num_containers",
-          "2",
-          "--master_memory",
-          "512",
-          "--master_vcores",
-          "2",
-          "--container_memory",
-          "128",
-          "--container_vcores",
-          "1",
-          "--shell_command",
-          getListCommand(),
-          "--container_type",
-          "OPPORTUNISTIC",
-          "--enforce_execution_type"
-      );
+      setAndGetDSClient(new Configuration(getYarnClusterConfiguration()));
       getDSClient().init(args);
       Thread dsClientRunner = new Thread(() -> {
         try {
@@ -138,7 +136,8 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
       yarnClient.init(new Configuration(getYarnClusterConfiguration()));
       yarnClient.start();
 
-      waitForContainersLaunch(yarnClient, 2, appAttemptReportRef,
+      // expecting three containers including the AM container.
+      waitForContainersLaunch(yarnClient, 3, appAttemptReportRef,
           containersListRef, appAttemptIdRef, thrownError);
       if (thrownError.get() != null) {
         Assert.fail(thrownError.get().getMessage());
@@ -186,7 +185,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     String masterMemoryString = "1 Gi";
     String containerMemoryString = "512 Mi";
     long[] memVars = {1024, 512};
-
+    YarnClient yarnClient = null;
     Assume.assumeTrue("The cluster doesn't have enough memory for this test",
         clusterResource.getMemorySize() >= memVars[0] + memVars[1]);
     Assume.assumeTrue("The cluster doesn't have enough cores for this test",
@@ -224,12 +223,11 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
       }
     });
     dsClientRunner.start();
-
-    YarnClient yarnClient = YarnClient.createYarnClient();
-    yarnClient.init(new Configuration(getYarnClusterConfiguration()));
-    yarnClient.start();
-
     try {
+      yarnClient = YarnClient.createYarnClient();
+      yarnClient.init(new Configuration(getYarnClusterConfiguration()));
+      yarnClient.start();
+      // expecting two containers.
       waitForContainersLaunch(yarnClient, 2, appAttemptReportRef,
           containersListRef, appAttemptIdRef, thrownExceptionRef);
       if (thrownExceptionRef.get() != null) {
@@ -290,13 +288,12 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
   }
 
   @Override
-  protected void checkTimeline(ApplicationId appId,
-      boolean defaultFlow, boolean haveDomain, ApplicationReport appReport)
-      throws Exception {
+  protected void checkTimeline(ApplicationId appId, boolean defaultFlow,
+      boolean haveDomain, ApplicationReport appReport) throws Exception {
     LOG.info("Started {}#checkTimeline()", getClass().getCanonicalName());
     // For PoC check using the file-based timeline writer (YARN-3264)
-    String tmpRoot = getTimelineV2StorageDir() + File.separator + "entities" +
-        File.separator;
+    String tmpRoot = getTimelineV2StorageDir() + File.separator + "entities"
+        + File.separator;
 
     File tmpRootFolder = new File(tmpRoot);
     try {
@@ -312,15 +309,15 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
                   "test_flow_version" + File.separator + "12345678" +
                   File.separator) +
           appId.toString();
-      LOG.info("basePath: {}", basePath);
+      LOG.info("basePath for appId {}: {}", appId, basePath);
       // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
 
       // Verify DS_APP_ATTEMPT entities posted by the client
       // there will be at least one attempt, look for that file
       String appTimestampFileName =
-          "appattempt_" + appId.getClusterTimestamp() + "_000" + appId.getId()
-              + "_000001"
-              + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+          String.format("appattempt_%d_000%d_000001%s",
+              appId.getClusterTimestamp(), appId.getId(),
+              FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION);
       File dsAppAttemptEntityFile = verifyEntityTypeFileExists(basePath,
           "DS_APP_ATTEMPT", appTimestampFileName);
       // Check if required events are published and same idprefix is sent for
@@ -334,39 +331,40 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
 
       // Verify DS_CONTAINER entities posted by the client.
       String containerTimestampFileName =
-          "container_" + appId.getClusterTimestamp() + "_000" + appId.getId()
-              + "_01_000002.thist";
+          String.format("container_%d_000%d_01_000002.thist",
+              appId.getClusterTimestamp(), appId.getId());
       File dsContainerEntityFile = verifyEntityTypeFileExists(basePath,
           "DS_CONTAINER", containerTimestampFileName);
       // Check if required events are published and same idprefix is sent for
       // on each publish.
       verifyEntityForTimeline(dsContainerEntityFile,
           DSEvent.DS_CONTAINER_START.toString(), 1, 1, 0, true);
-      // to avoid race condition of testcase, atleast check 40 times with sleep
-      // of 50ms
+      // to avoid race condition of testcase, at least check 40 times with
+      // sleep of 50ms.
       verifyEntityForTimeline(dsContainerEntityFile,
           DSEvent.DS_CONTAINER_END.toString(), 1, 40, 50, true);
 
       // Verify NM posting container metrics info.
       String containerMetricsTimestampFileName =
-          "container_" + appId.getClusterTimestamp() + "_000" + appId.getId()
-              + "_01_000001"
-              + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+          String.format("container_%d_000%d_01_000001%s",
+              appId.getClusterTimestamp(), appId.getId(),
+              FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION);
       File containerEntityFile = verifyEntityTypeFileExists(basePath,
           TimelineEntityType.YARN_CONTAINER.toString(),
           containerMetricsTimestampFileName);
       verifyEntityForTimeline(containerEntityFile,
           ContainerMetricsConstants.CREATED_EVENT_TYPE, 1, 1, 0, true);
 
-      // to avoid race condition of testcase, atleast check 40 times with sleep
-      // of 50ms
+      // to avoid race condition of testcase, at least check 40 times with
+      // sleep of 50ms
       verifyEntityForTimeline(containerEntityFile,
           ContainerMetricsConstants.FINISHED_EVENT_TYPE, 1, 40, 50, true);
 
       // Verify RM posting Application life cycle Events are getting published
       String appMetricsTimestampFileName =
-          "application_" + appId.getClusterTimestamp() + "_000" + appId.getId()
-              + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+          String.format("application_%d_000%d%s",
+              appId.getClusterTimestamp(), appId.getId(),
+              FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION);
       File appEntityFile =
           verifyEntityTypeFileExists(basePath,
               TimelineEntityType.YARN_APPLICATION.toString(),
@@ -382,9 +380,10 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
 
       // Verify RM posting AppAttempt life cycle Events are getting published
       String appAttemptMetricsTimestampFileName =
-          "appattempt_" + appId.getClusterTimestamp() + "_000" + appId.getId()
-              + "_000001"
-              + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+          String.format("appattempt_%d_000%d_000001%s",
+              appId.getClusterTimestamp(), appId.getId(),
+              FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION);
+
       File appAttemptEntityFile =
           verifyEntityTypeFileExists(basePath,
               TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(),
@@ -396,7 +395,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
     } finally {
       try {
         FileUtils.deleteDirectory(tmpRootFolder.getParentFile());
-      } catch (FileNotFoundException ex) {
+      } catch (Exception ex) {
         // the recursive delete can throw an exception when one of the file
         // does not exist.
         LOG.warn("Exception deleting a file/subDirectory: {}", ex.getMessage());
@@ -410,7 +409,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
    * @param entityFile Entity file.
    * @param expectedEvent Expected event Id.
    * @param numOfExpectedEvent Number of expected occurrences of expected event
-   *     id.
+   *                           id.
    * @param checkTimes Number of times to check.
    * @param sleepTime Sleep time for each iteration.
    * @param checkIdPrefix Whether to check idprefix.
@@ -464,7 +463,7 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
         return true;
       }
       return (numOfExpectedEvent == actualCount);
-    }, sleepTime, (sleepTime * checkTimes + 1));
+    }, sleepTime, (checkTimes + 1) * sleepTime);
 
     if (thrownExceptionRef.get() != null) {
       Assert.fail("verifyEntityForTimeline failed "
@@ -476,7 +475,8 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
       String entityFileName) {
     String outputDirPathForEntity =
         basePath + File.separator + entityType + File.separator;
-    LOG.info(outputDirPathForEntity);
+    LOG.info("verifyEntityTypeFileExists output path for entityType {}: {}",
+        entityType, outputDirPathForEntity);
     File outputDirForEntity = new File(outputDirPathForEntity);
     Assert.assertTrue(outputDirForEntity.isDirectory());
     String entityFilePath = outputDirPathForEntity + entityFileName;

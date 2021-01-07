@@ -1330,7 +1330,7 @@ public class Client {
     }
     if (amVCores == -1) {
       amVCores = DEFAULT_AM_VCORES;
-      LOG.warn("AM vcore not specified, use {}" + DEFAULT_AM_VCORES
+      LOG.warn("AM vcore not specified, use " + DEFAULT_AM_VCORES
           + " mb as AM vcores");
     }
     capability.setMemorySize(amMemory);

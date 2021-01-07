@@ -282,14 +282,14 @@ public class TestDSWithMultipleNodeManager {
     YarnClient yarnClient = null;
 
     String[] argsA =
-        DistributedShellBaseTest.createArguments(() -> generateAppName("01"),
+        DistributedShellBaseTest.createArguments(() -> generateAppName("001"),
             "--shell_command",
             DistributedShellBaseTest.getSleepCommand(30),
             "--placement_spec",
             "bar(1),notin,node,bar"
         );
     String[] argsB =
-        DistributedShellBaseTest.createArguments(() -> generateAppName("02"),
+        DistributedShellBaseTest.createArguments(() -> generateAppName("002"),
             "1",
             "--shell_command",
             DistributedShellBaseTest.getListCommand(),

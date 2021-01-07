@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -71,9 +72,9 @@ import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 /**
  * Base class for testing DistributedShell features.
  */
-public class DistributedShellBaseTest {
+public abstract class DistributedShellBaseTest {
   protected static final int MIN_ALLOCATION_MB = 128;
-  protected static final int NUM_DATANODES = 1;
+  protected static final int NUM_DATA_NODES = 1;
   protected static final int TEST_TIME_OUT = 160000;
   // set the timeout of the yarnClient to be 95% of the globalTimeout.
   protected static final int TEST_TIME_WINDOW_EXPIRE =
@@ -83,7 +84,6 @@ public class DistributedShellBaseTest {
   private static final String APP_MASTER_JAR =
       JarFinder.getJar(ApplicationMaster.class);
   private static final int NUM_NMS = 1;
-  private static final float DEFAULT_TIMELINE_VERSION = 1.0f;
   // set the timeout of the yarnClient to be 95% of the globalTimeout.
   private static final String YARN_CLIENT_TIMEOUT =
       String.valueOf(TEST_TIME_WINDOW_EXPIRE);
@@ -167,7 +167,6 @@ public class DistributedShellBaseTest {
         .delete(
             new Path(conf.get(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH)),
             true);
-
     shutdownYarnCluster();
     shutdownHdfsCluster();
   }
@@ -223,11 +222,8 @@ public class DistributedShellBaseTest {
     }, 10, TEST_TIME_WINDOW_EXPIRE);
   }
 
-  protected void customizeConfiguration(YarnConfiguration config)
-      throws Exception {
-    throw new UnsupportedOperationException(
-        "Override the method with relevant TimeLine version");
-  }
+  protected abstract void customizeConfiguration(YarnConfiguration config)
+      throws Exception;
 
   protected String[] appendFlowArgsForTestDSShell(String[] args,
       boolean defaultFlow) {
@@ -379,13 +375,8 @@ public class DistributedShellBaseTest {
         .size());
     Assert.assertEquals(entitiesAttempts.getEntities().get(0).getEntityType(),
         ApplicationMaster.DSEntity.DS_APP_ATTEMPT.toString());
-    if (haveDomain) {
-      Assert.assertEquals(domain.getId(),
-          entitiesAttempts.getEntities().get(0).getDomainId());
-    } else {
-      Assert.assertEquals("DEFAULT",
-          entitiesAttempts.getEntities().get(0).getDomainId());
-    }
+    Assert.assertEquals(haveDomain ? domain.getId() : "DEFAULT",
+        entitiesAttempts.getEntities().get(0).getDomainId());
     String currAttemptEntityId
         = entitiesAttempts.getEntities().get(0).getEntityId();
     ApplicationAttemptId attemptId = ApplicationAttemptId.fromString(
@@ -404,26 +395,21 @@ public class DistributedShellBaseTest {
         ApplicationMaster.DSEntity.DS_CONTAINER.toString());
 
     String entityId = entities.getEntities().get(0).getEntityId();
-    org.apache.hadoop.yarn.api.records.timeline.TimelineEntity entity =
+    TimelineEntity entity =
         yarnCluster.getApplicationHistoryServer().getTimelineStore()
             .getEntity(entityId,
                 ApplicationMaster.DSEntity.DS_CONTAINER.toString(), null);
     Assert.assertNotNull(entity);
     Assert.assertEquals(entityId, entity.getEntityId());
-
-    if (haveDomain) {
-      Assert.assertEquals(domain.getId(),
-          entities.getEntities().get(0).getDomainId());
-    } else {
-      Assert.assertEquals("DEFAULT",
-          entities.getEntities().get(0).getDomainId());
-    }
+    Assert.assertEquals(haveDomain ? domain.getId() : "DEFAULT",
+        entities.getEntities().get(0).getDomainId());
   }
 
   protected String[] createArgsWithPostFix(int index, String... args) {
     String[] res = mergeArgs(COMMON_ARGS, args);
     // set the application name so we can track down which command is running.
-    res[COMMON_ARGS.length - 1] = generateAppName(String.valueOf(index));
+    res[COMMON_ARGS.length - 1] = generateAppName(String.format("%03d",
+        index));
     return res;
   }
 
@@ -444,7 +430,7 @@ public class DistributedShellBaseTest {
     LOG.info("Starting up YARN cluster. Timeline version {}",
         getTimelineVersion());
 
-    this.conf = yarnConfig;
+    conf = yarnConfig;
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
         MIN_ALLOCATION_MB);
     // reduce the tearDown waiting time
@@ -476,18 +462,20 @@ public class DistributedShellBaseTest {
     conf.setBoolean(
         YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
     conf.setInt(YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
-        5);
+        10);
     conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     // ATS version specific settings
     customizeConfiguration(conf);
 
-    yarnCluster =
-        new MiniYARNCluster(getClass().getSimpleName(), 1,
-            numNodeManagers, 1, 1);
-    yarnCluster.init(conf);
-    yarnCluster.start();
-
+    if (yarnCluster == null) {
+      yarnCluster =
+          new MiniYARNCluster(getClass().getSimpleName(), 1, numNodeManagers,
+              1, 1);
+      yarnCluster.init(conf);
+      yarnCluster.start();
+    }
+    // wait for the node managers to register.
     waitForNMsToRegister();
 
     conf.set(
@@ -504,26 +492,15 @@ public class DistributedShellBaseTest {
     Configuration yarnClusterConfig = yarnCluster.getConfig();
     yarnClusterConfig.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH,
         new File(url.getPath()).getParent());
-    //write the document to a buffer (not directly to the file, as that
-    //can cause the file being written to get read -which will then fail.
+    // write the document to a buffer (not directly to the file, as that
+    // can cause the file being written to get read -which will then fail.
     ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
     yarnClusterConfig.writeXml(bytesOut);
     bytesOut.close();
-    //write the bytes to the file in the classpath
+    // write the bytes to the file in the classpath
     OutputStream os = new FileOutputStream(url.getPath());
     os.write(bytesOut.toByteArray());
     os.close();
-
-    FileContext fsContext = FileContext.getLocalFSFileContext();
-    fsContext
-        .delete(
-            new Path(conf.get(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH)),
-            true);
-    try {
-      Thread.sleep(2000);
-    } catch (InterruptedException e) {
-      LOG.info("setup thread sleep interrupted. message={}", e.getMessage());
-    }
   }
 
   protected NodeManager getNodeManager(int index) {
@@ -562,9 +539,7 @@ public class DistributedShellBaseTest {
     dsClient = null;
   }
 
-  protected float getTimelineVersion() {
-    return DEFAULT_TIMELINE_VERSION;
-  }
+  protected abstract float getTimelineVersion();
 
   protected void cleanUpDFSClient() {
     if (getDSClient() != null) {
