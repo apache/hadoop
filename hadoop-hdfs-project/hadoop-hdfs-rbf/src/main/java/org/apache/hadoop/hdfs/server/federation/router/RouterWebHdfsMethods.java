@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 
@@ -104,6 +105,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * WebHDFS Router implementation. This is an extension of
@@ -454,20 +457,23 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final String excludeDatanodes) throws IOException {
     final RouterRpcServer rpcServer = getRPCServer(router);
     DatanodeInfo[] dns = null;
+    RemoteLocation loc = null;
     try {
       dns = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+      // for simplicity, just take the first remote location to create the file
+      loc = rpcServer.getLocationsForPath(path, true).get(0);
     } catch (IOException e) {
       LOG.error("Cannot get the datanodes from the RPC server", e);
     }
 
     HashSet<Node> excludes = new HashSet<Node>();
-    if (excludeDatanodes != null) {
-      Collection<String> collection =
-          getTrimmedStringCollection(excludeDatanodes);
-      for (DatanodeInfo dn : dns) {
-        if (collection.contains(dn.getName())) {
-          excludes.add(dn);
-        }
+    Collection<String> collection =
+        getTrimmedStringCollection(excludeDatanodes);
+    for (DatanodeInfo dn : dns) {
+      String ns = getNsFromDataNodeNetworkLocation(dn.getNetworkLocation());
+      if (collection.contains(dn.getName()) ||
+          !ns.equals(loc.getNameserviceId())) {
+        excludes.add(dn);
       }
     }
 
@@ -500,6 +506,21 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     }
 
     return getRandomDatanode(dns, excludes);
+  }
+
+  /**
+   * Get the nameservice info from datanode network location.
+   * @param location
+   * @return nameservice this datanode is in
+   */
+  private String getNsFromDataNodeNetworkLocation(String location) {
+    // networklocation should be in the format of /ns/rack
+    Pattern pattern = Pattern.compile("/(.*)/");
+    Matcher matcher = pattern.matcher(location);
+    if (matcher.find()) {
+      return matcher.group(1);
+    }
+    return "";
   }
 
   /**
