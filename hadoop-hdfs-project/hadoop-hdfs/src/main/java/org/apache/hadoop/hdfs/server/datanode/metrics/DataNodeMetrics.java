@@ -186,7 +186,7 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong packetsReceived;
   @Metric MutableCounterLong packetsSlowWriteToMirror;
   @Metric MutableCounterLong packetsSlowWriteToDisk;
-  @Metric MutableCounterLong packetsSlowWriteOsCache;
+  @Metric MutableCounterLong packetsSlowWriteToOsCache;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   @Metric("Milliseconds spent on calling NN rpc")
@@ -708,7 +708,7 @@ public class DataNodeMetrics {
     packetsSlowWriteToDisk.incr();
   }
 
-  public void incrPacketsSlowWriteOsCache() {
-    packetsSlowWriteOsCache.incr();
+  public void incrPacketsSlowWriteToOsCache() {
+    packetsSlowWriteToOsCache.incr();
   }
 }

@@ -944,7 +944,7 @@ class BlockReceiver implements Closeable {
         DataNodeFaultInjector.get().delayWriteToOsCache();
         long duration = Time.monotonicNow() - begin;
         if (duration > datanodeSlowLogThresholdMs) {
-          datanode.metrics.incrPacketsSlowWriteOsCache();
+          datanode.metrics.incrPacketsSlowWriteToOsCache();
           if (LOG.isWarnEnabled()) {
             LOG.warn("Slow manageWriterOsCache took {}ms " +
                     "(threshold={}ms), volume={}, blockId={}, seqno={}",
