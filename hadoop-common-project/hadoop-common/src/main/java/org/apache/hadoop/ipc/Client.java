@@ -330,7 +330,7 @@ public class Client implements AutoCloseable {
     Writable rpcResponse;       // null if rpc has error
     IOException error;          // exception, null if success
     final RPC.RpcKind rpcKind;      // Rpc EngineKind
-    boolean done;               // true when call is done
+    volatile boolean done;      // true when call is done
     private final Object externalHandler;
     private AlignmentContext alignmentContext;
 
