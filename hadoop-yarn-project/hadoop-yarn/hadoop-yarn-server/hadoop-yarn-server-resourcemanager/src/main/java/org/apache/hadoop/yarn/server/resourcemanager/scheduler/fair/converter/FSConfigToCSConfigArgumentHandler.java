@@ -112,6 +112,9 @@ public class FSConfigToCSConfigArgumentHandler {
     ENABLE_ASYNC_SCHEDULER("enable asynchronous scheduler", "a", "enable-async-scheduler",
       "Enables the Asynchronous scheduler which decouples the CapacityScheduler" +
         " scheduling from Node Heartbeats.", false),
+    RULES_TO_FILE("rules to external file", "e", "rules-to-file",
+        "Generates the converted placement rules to an external JSON file " +
+        "called mapping-rules.json", false),
     HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
@@ -254,6 +257,13 @@ public class FSConfigToCSConfigArgumentHandler {
     checkDirectory(CliOption.OUTPUT_DIR, outputDir);
     checkOutputDirDoesNotContainXmls(yarnSiteXmlFile, outputDir);
 
+    // check mapping-rules.json if we intend to generate it
+    if (!cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch) &&
+        cliParser.hasOption(CliOption.RULES_TO_FILE.shortSwitch)) {
+      checkFileNotInOutputDir(new File(outputDir),
+          FSConfigToCSConfigConverter.MAPPING_RULES_JSON);
+    }
+
     return FSConfigToCSConfigConverterParams.Builder.create()
         .withYarnSiteXmlConfig(yarnSiteXmlFile)
         .withFairSchedulerXmlConfig(fairSchedulerXmlFile)
@@ -263,6 +273,8 @@ public class FSConfigToCSConfigArgumentHandler {
         .withConsole(cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch))
         .withOutputDirectory(outputDir)
         .withConvertPlacementRules(convertPlacementRules)
+        .withPlacementRulesToFile(
+            cliParser.hasOption(CliOption.RULES_TO_FILE.shortSwitch))
         .build();
   }
 

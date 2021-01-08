@@ -28,7 +28,7 @@ public final class FSConfigToCSConfigConverterParams {
   private String clusterResource;
   private String outputDirectory;
   private boolean convertPlacementRules;
-
+  private boolean placementRulesToFile;
 
 
   private FSConfigToCSConfigConverterParams() {
@@ -63,6 +63,10 @@ public final class FSConfigToCSConfigConverterParams {
     return convertPlacementRules;
   }
 
+  public boolean isPlacementRulesToFile() {
+    return placementRulesToFile;
+  }
+
   @Override
   public String toString() {
     return "FSConfigToCSConfigConverterParams{" +
@@ -72,6 +76,7 @@ public final class FSConfigToCSConfigConverterParams {
         ", clusterResource='" + clusterResource + '\'' +
         ", console=" + console + '\'' +
         ", convertPlacementRules=" + convertPlacementRules +
+        ", placementRulesToFile=" + placementRulesToFile +
         '}';
   }
 
@@ -87,6 +92,7 @@ public final class FSConfigToCSConfigConverterParams {
     private String clusterResource;
     private String outputDirectory;
     private boolean convertPlacementRules;
+    private boolean placementRulesToFile;
 
     private Builder() {
     }
@@ -130,6 +136,11 @@ public final class FSConfigToCSConfigConverterParams {
       return this;
     }
 
+    public Builder withPlacementRulesToFile(boolean rulesToFile) {
+      this.placementRulesToFile = rulesToFile;
+      return this;
+    }
+
     public FSConfigToCSConfigConverterParams build() {
       FSConfigToCSConfigConverterParams params =
           new FSConfigToCSConfigConverterParams();
@@ -140,6 +151,7 @@ public final class FSConfigToCSConfigConverterParams {
       params.conversionRulesConfig = this.conversionRulesConfig;
       params.outputDirectory = this.outputDirectory;
       params.convertPlacementRules = this.convertPlacementRules;
+      params.placementRulesToFile = this.placementRulesToFile;
       return params;
     }
   }
