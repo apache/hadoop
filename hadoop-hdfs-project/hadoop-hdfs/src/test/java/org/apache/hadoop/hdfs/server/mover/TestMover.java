@@ -446,6 +446,11 @@ public class TestMover {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
     testWithinSameNode(conf);
+    // Test movement with same disk tiering on
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+    conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+    testWithinSameNode(conf);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, false);
   }
 
   private void checkMovePaths(List<Path> actual, Path... expected) {

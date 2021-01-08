@@ -1108,12 +1108,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     FsVolumeReference volumeRef = null;
     boolean shouldConsiderSameMountVolume =
+        targetStorageId.isEmpty() &&
         shouldConsiderSameMountVolume(replicaInfo.getVolume(), targetStorageType);
     boolean useSameMountVolume = false;
 
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
-      // TODO: consider storage ID?
-      // TODO: make it configurable
       if (shouldConsiderSameMountVolume) {
         volumeRef = volumes.getVolumeByMount(targetStorageType,
             ((FsVolumeImpl) replicaInfo.getVolume()).getMount(),
