@@ -833,8 +833,6 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
   @Override
   protected void customizeConfiguration(
       YarnConfiguration config) throws Exception {
-    config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
-        getTimelineVersion());
     config.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
         CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT);
   }

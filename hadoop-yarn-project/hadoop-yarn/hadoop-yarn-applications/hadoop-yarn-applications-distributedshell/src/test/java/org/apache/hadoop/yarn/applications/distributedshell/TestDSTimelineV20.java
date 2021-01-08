@@ -74,9 +74,6 @@ public class TestDSTimelineV20 extends DistributedShellBaseTest {
   @Override
   protected void customizeConfiguration(
       YarnConfiguration config) throws Exception {
-    // set version to 2
-    config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
-        getTimelineVersion());
     // disable v1 timeline server since we no longer have a server here
     // enable aux-service based timeline aggregators
     config.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);

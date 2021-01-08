@@ -29,8 +29,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -112,6 +114,16 @@ public class TestDSWithMultipleNodeManager {
           CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED, true);
     }
     return conf;
+  }
+
+  @BeforeClass
+  public static void setupUnitTests() throws Exception {
+    TestDSTimelineV10.setupUnitTests();
+  }
+
+  @AfterClass
+  public static void tearDownUnitTests() throws Exception {
+    TestDSTimelineV10.tearDownUnitTests();
   }
 
   @Before

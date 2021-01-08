@@ -24,6 +24,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,8 +35,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
@@ -43,8 +48,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
@@ -95,6 +101,10 @@ public abstract class DistributedShellBaseTest {
       "--appname",
       ""
   };
+  protected static MiniDFSCluster hdfsCluster = null;
+  private static MiniYARNCluster yarnCluster = null;
+  private static String yarnSiteBackupPath = null;
+  private static String yarnSitePath = null;
   @Rule
   public Timeout globalTimeout = new Timeout(TEST_TIME_OUT,
       TimeUnit.MILLISECONDS);
@@ -103,10 +113,39 @@ public abstract class DistributedShellBaseTest {
   @Rule
   public TestName name = new TestName();
   private Client dsClient;
-  private MiniYARNCluster yarnCluster;
   private YarnConfiguration conf = null;
   // location of the filesystem timeline writer for timeline service v.2
   private String timelineV2StorageDir = null;
+
+  @BeforeClass
+  public static void setupUnitTests() throws Exception {
+    URL url = Thread.currentThread().getContextClassLoader().getResource(
+        "yarn-site.xml");
+    if (url == null) {
+      throw new RuntimeException(
+          "Could not find 'yarn-site.xml' dummy file in classpath");
+    }
+    // backup the original yarn-site file.
+    yarnSitePath = url.getPath();
+    yarnSiteBackupPath = url.getPath() + "-backup";
+    Files.copy(Paths.get(yarnSitePath), Paths.get(yarnSiteBackupPath),
+        StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+  }
+
+  @AfterClass
+  public static void tearDownUnitTests() throws Exception {
+    // shutdown the clusters.
+    shutdownYarnCluster();
+    shutdownHdfsCluster();
+    if (yarnSitePath == null || yarnSiteBackupPath == null) {
+      return;
+    }
+    // restore the original yarn-site file.
+    if (Files.exists(Paths.get(yarnSiteBackupPath))) {
+      Files.move(Paths.get(yarnSiteBackupPath), Paths.get(yarnSitePath),
+          StandardCopyOption.REPLACE_EXISTING);
+    }
+  }
 
   /**
    * Utility function to merge two String arrays to form a new String array for
@@ -146,6 +185,26 @@ public abstract class DistributedShellBaseTest {
     return Shell.WINDOWS ? "type" : "cat";
   }
 
+  protected static void shutdownYarnCluster() {
+    if (yarnCluster != null) {
+      try {
+        yarnCluster.stop();
+      } finally {
+        yarnCluster = null;
+      }
+    }
+  }
+
+  protected static void shutdownHdfsCluster() {
+    if (hdfsCluster != null) {
+      try {
+        hdfsCluster.shutdown();
+      } finally {
+        hdfsCluster = null;
+      }
+    }
+  }
+
   public String getTimelineV2StorageDir() {
     return timelineV2StorageDir;
   }
@@ -169,19 +228,6 @@ public abstract class DistributedShellBaseTest {
             true);
     shutdownYarnCluster();
     shutdownHdfsCluster();
-  }
-
-  protected void shutdownYarnCluster() {
-    if (yarnCluster != null) {
-      try {
-        yarnCluster.stop();
-      } finally {
-        yarnCluster = null;
-      }
-    }
-  }
-
-  protected void shutdownHdfsCluster() {
   }
 
   protected String[] createArgumentsWithAppName(String... args) {
@@ -274,9 +320,7 @@ public abstract class DistributedShellBaseTest {
         "128",
         "--container_vcores",
         "1");
-
     String[] domainArgs = appendDomainArgsForTestDSShell(baseArgs, haveDomain);
-
     String[] args = appendFlowArgsForTestDSShell(domainArgs, defaultFlow);
 
     LOG.info("Initializing DS Client");
@@ -346,13 +390,6 @@ public abstract class DistributedShellBaseTest {
     baseTestDSShell(haveDomain, true);
   }
 
-  protected FileSystem getFileSystem() {
-    return null;
-  }
-
-  protected void setFileSystem(FileSystem fs) {
-  }
-
   protected void checkTimeline(ApplicationId appId,
       boolean defaultFlow, boolean haveDomain,
       ApplicationReport appReport) throws Exception {
@@ -377,8 +414,8 @@ public abstract class DistributedShellBaseTest {
         ApplicationMaster.DSEntity.DS_APP_ATTEMPT.toString());
     Assert.assertEquals(haveDomain ? domain.getId() : "DEFAULT",
         entitiesAttempts.getEntities().get(0).getDomainId());
-    String currAttemptEntityId
-        = entitiesAttempts.getEntities().get(0).getEntityId();
+    String currAttemptEntityId =
+        entitiesAttempts.getEntities().get(0).getEntityId();
     ApplicationAttemptId attemptId = ApplicationAttemptId.fromString(
         currAttemptEntityId);
     NameValuePair primaryFilter = new NameValuePair(
@@ -422,14 +459,51 @@ public abstract class DistributedShellBaseTest {
         .concat(postFix == null ? "" : "-" + postFix);
   }
 
+  protected void setUpHDFSCluster() throws IOException {
+    if (hdfsCluster == null) {
+      HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+      hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
+          .numDataNodes(NUM_DATA_NODES).build();
+      hdfsCluster.waitActive();
+    }
+  }
+
+  protected void setUpYarnCluster(int numNodeManagers,
+      YarnConfiguration yarnConfig) throws Exception {
+    if (yarnCluster != null) {
+      return;
+    }
+    yarnCluster =
+        new MiniYARNCluster(getClass().getSimpleName(), 1, numNodeManagers,
+            1, 1);
+    yarnCluster.init(yarnConfig);
+    yarnCluster.start();
+    // wait for the node managers to register.
+    waitForNMsToRegister();
+    conf.set(
+        YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+        MiniYARNCluster.getHostname() + ":"
+            + yarnCluster.getApplicationHistoryServer().getPort());
+    Configuration yarnClusterConfig = yarnCluster.getConfig();
+    yarnClusterConfig.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+        new File(yarnSitePath).getParent());
+    // write the document to a buffer (not directly to the file, as that
+    // can cause the file being written to get read -which will then fail.
+    ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+    yarnClusterConfig.writeXml(bytesOut);
+    bytesOut.close();
+    // write the bytes to the file in the classpath
+    OutputStream os = new FileOutputStream(yarnSitePath);
+    os.write(bytesOut.toByteArray());
+    os.close();
+  }
+
   protected void setupInternal(int numNodeManagers,
       YarnConfiguration yarnConfig) throws Exception {
     LOG.info("========== Setting UP UnitTest {}#{} ==========",
         getClass().getCanonicalName(), name.getMethodName());
-
     LOG.info("Starting up YARN cluster. Timeline version {}",
         getTimelineVersion());
-
     conf = yarnConfig;
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
         MIN_ALLOCATION_MB);
@@ -455,8 +529,7 @@ public abstract class DistributedShellBaseTest {
     conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
     conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
     conf.setBoolean(
-        YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
-        true);
+        YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING, true);
     conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
         true);
     conf.setBoolean(
@@ -466,41 +539,12 @@ public abstract class DistributedShellBaseTest {
     conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     // ATS version specific settings
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
+        getTimelineVersion());
+    // setup the configuration of relevant for each TimelineService version.
     customizeConfiguration(conf);
-
-    if (yarnCluster == null) {
-      yarnCluster =
-          new MiniYARNCluster(getClass().getSimpleName(), 1, numNodeManagers,
-              1, 1);
-      yarnCluster.init(conf);
-      yarnCluster.start();
-    }
-    // wait for the node managers to register.
-    waitForNMsToRegister();
-
-    conf.set(
-        YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-        MiniYARNCluster.getHostname() + ":"
-            + yarnCluster.getApplicationHistoryServer().getPort());
-
-    URL url = Thread.currentThread().getContextClassLoader().getResource(
-        "yarn-site.xml");
-    if (url == null) {
-      throw new RuntimeException(
-          "Could not find 'yarn-site.xml' dummy file in classpath");
-    }
-    Configuration yarnClusterConfig = yarnCluster.getConfig();
-    yarnClusterConfig.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH,
-        new File(url.getPath()).getParent());
-    // write the document to a buffer (not directly to the file, as that
-    // can cause the file being written to get read -which will then fail.
-    ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
-    yarnClusterConfig.writeXml(bytesOut);
-    bytesOut.close();
-    // write the bytes to the file in the classpath
-    OutputStream os = new FileOutputStream(url.getPath());
-    os.write(bytesOut.toByteArray());
-    os.close();
+    // setup the yarn cluster.
+    setUpYarnCluster(numNodeManagers, conf);
   }
 
   protected NodeManager getNodeManager(int index) {
