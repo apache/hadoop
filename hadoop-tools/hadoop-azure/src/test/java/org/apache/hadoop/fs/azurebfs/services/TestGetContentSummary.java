@@ -24,22 +24,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 
 public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
 
@@ -126,8 +122,6 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   public void testInvalidPath() throws Exception {
     intercept(IOException.class, () -> fs.getContentSummary(new Path(
         "/nonExistentPath")));
-    intercept(IOException.class, () -> fs.getContentSummary(new Path(
-        "testFolder/IntermediateNonExistentPath")));
   }
 
   @Test(timeout = 10000)
@@ -136,7 +130,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testConcurrentCallsOnFilesystem()
+  public void testConcurrentGetContentSummaryCalls()
           throws InterruptedException, ExecutionException {
     ExecutorService executorService = new ThreadPoolExecutor(1,
             16, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
@@ -148,9 +142,9 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
     }
     int[][] dirCS = {{8, 16, 8 * testBufferSize},
             {0, 2, 2 * testBufferSize}, {2, 6, 2 * testBufferSize},
-            {3, 6, 2 * testBufferSize}, {2, 14, 0}, {0, 2, 0},
+            {3, 6, 2 * testBufferSize}, {2, numFilesForListMaxTest + 4, 0}, {0, 2, 0},
             {0, 2, 2 * testBufferSize}, {1, 2, 0}, {0, 2, 0},
-            {0, 0, 0}, {1, 12, 0}, {0, 2, 0}};
+            {0, 0, 0}, {1, numFilesForListMaxTest + 2, 0}, {0, 2, 0}};
     executorService.shutdown();
     for(int i=0; i<directories.length; i++) {
       ContentSummary contentSummary = futures.get(i).get();
