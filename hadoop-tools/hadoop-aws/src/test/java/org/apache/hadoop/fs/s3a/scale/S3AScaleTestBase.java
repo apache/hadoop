@@ -26,10 +26,8 @@ import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
-import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +35,6 @@ import java.io.InputStream;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupGaugeStatistic;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 
 /**
  * Base class for scale tests; here is where the common scale configuration

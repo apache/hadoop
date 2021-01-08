@@ -699,8 +699,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     if (multiDelete) {
       // multi-delete status checks
       deleteVerbCount.assertDiffEquals("Wrong delete request count", 0);
-      bulkDeleteVerbCount.assertDiffEquals("Wrong count of delete operations in "
-          + iostats, 1);
+      bulkDeleteVerbCount.assertDiffEquals(
+          "Wrong count of delete operations in " + iostats, 1);
       MultiObjectDeleteException mde = extractCause(
           MultiObjectDeleteException.class, ex);
       List<MultiObjectDeleteSupport.KeyPath> undeletedKeyPaths =
