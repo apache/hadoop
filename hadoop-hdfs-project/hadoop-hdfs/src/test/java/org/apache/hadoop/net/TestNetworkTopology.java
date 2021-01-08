@@ -361,6 +361,7 @@ public class TestNetworkTopology {
         || testNodes[1] == dataNodes[8]);
     assertTrue(testNodes[2] == dataNodes[5]
         || testNodes[2] == dataNodes[8]);
+
   }
   
   @Test

@@ -53,7 +53,7 @@ public class NetworkTopology {
   private static final char PATH_SEPARATOR = '/';
   private static final String PATH_SEPARATOR_STR = "/";
   private static final String ROOT = "/";
-  private static final AtomicReference<Random> randomRef =
+  private static final AtomicReference<Random> RANDOM_REF =
       new AtomicReference<>();
 
   public static class InvalidTopologyException extends RuntimeException {
@@ -438,11 +438,11 @@ public class NetworkTopology {
 
   @VisibleForTesting
   void setRandomSeed(long seed) {
-    randomRef.set(new Random(seed));
+    RANDOM_REF.set(new Random(seed));
   }
 
   Random getRandom() {
-    Random random = randomRef.get();
+    Random random = RANDOM_REF.get();
     return (random == null) ? ThreadLocalRandom.current() : random;
   }
 
@@ -878,7 +878,7 @@ public class NetworkTopology {
      * This method is called if the reader is a datanode,
      * so nonDataNodeReader flag is set to false.
      */
-    sortByDistance(reader, nodes, activeLen, list -> Collections.shuffle(list));
+    sortByDistance(reader, nodes, activeLen, null);
   }
 
   /**
@@ -921,8 +921,7 @@ public class NetworkTopology {
      * This method is called if the reader is not a datanode,
      * so nonDataNodeReader flag is set to true.
      */
-    sortByDistanceUsingNetworkLocation(reader, nodes, activeLen,
-        list -> Collections.shuffle(list, getRandom()));
+    sortByDistanceUsingNetworkLocation(reader, nodes, activeLen, null);
   }
 
   /**
@@ -943,7 +942,6 @@ public class NetworkTopology {
       T[] nodes, int activeLen, Consumer<List<T>> secondarySort) {
     sortByDistance(reader, nodes, activeLen, secondarySort, true);
   }
-
 
   /**
    * Sort nodes array by network distance to <i>reader</i>.
@@ -976,11 +974,10 @@ public class NetworkTopology {
     int idx = 0;
     // Sort nodes which have the same weight using secondarySort.
     for (List<T> nodesList : weightedNodeTree.values()) {
+      Collections.shuffle(nodesList, getRandom());
       if (secondarySort != null) {
         // a secondary sort breaks the tie between nodes.
         secondarySort.accept(nodesList);
-      } else {
-        Collections.shuffle(nodesList, getRandom());
       }
       for (T n : nodesList) {
         nodes[idx++] = n;
