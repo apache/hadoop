@@ -19,9 +19,19 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -40,6 +50,7 @@ public class ContentSummaryProcessor {
   private final CompletionService<Void> completionService = new ExecutorCompletionService<>(
       executorService);
   private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
+  private final Logger LOG = LoggerFactory.getLogger(ContentSummaryProcessor.class);
   private static final int POLL_TIMEOUT = 100;
 
   public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
@@ -48,19 +59,21 @@ public class ContentSummaryProcessor {
 
   public ABFSContentSummary getContentSummary(Path path)
           throws IOException, ExecutionException, InterruptedException {
-
-    processDirectoryTree(path);
-
     try {
+      processDirectoryTree(path);
       while (!queue.isEmpty() || numTasks.get() > 0) {
-        completionService.take().get();
-        numTasks.decrementAndGet();
+        LOG.debug("FileStatus queue size = {}, number of submitted unfinished tasks = {}, active thread count = {}",
+                queue.size(), numTasks, ((ThreadPoolExecutor)executorService).getActiveCount());
+        try {
+          completionService.take().get();
+        } finally {
+          numTasks.decrementAndGet();
+        }
       }
     } finally {
-      numTasks.decrementAndGet();
       executorService.shutdown();
+      executorService.awaitTermination(1, TimeUnit.SECONDS);
     }
-    executorService.awaitTermination(1, TimeUnit.SECONDS);
 
     return new ABFSContentSummary(totalBytes.get(), directoryCount.get(),
         fileCount.get(), totalBytes.get());

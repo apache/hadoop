@@ -23,7 +23,13 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -66,6 +72,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   private final int filesPerDirectory = 2;
   private final int numFilesForListMaxTest = DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
   private final byte[] b = new byte[testBufferSize];
+  private final int maxThreads = 16;
 
   public TestGetContentSummary() throws Exception {
     createDirectoryStructure();
@@ -124,37 +131,31 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
         "/nonExistentPath")));
   }
 
-  @Test(timeout = 10000)
-  public void testTimeTaken() throws Exception {
-    fs.getContentSummary(new Path("/testFolder"));
-  }
-
   @Test
   public void testConcurrentGetContentSummaryCalls()
           throws InterruptedException, ExecutionException {
     ExecutorService executorService = new ThreadPoolExecutor(1,
-            16, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
+            maxThreads, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
     ArrayList<Future<ContentSummary>> futures = new ArrayList<>();
     for (String directory : directories) {
       Future<ContentSummary> future = executorService.submit(
               () -> fs.getContentSummary(new Path(directory)));
       futures.add(future);
     }
-    int[][] dirCS = {{8, 16, 8 * testBufferSize},
-            {0, 2, 2 * testBufferSize}, {2, 6, 2 * testBufferSize},
-            {3, 6, 2 * testBufferSize}, {2, numFilesForListMaxTest + 4, 0}, {0, 2, 0},
-            {0, 2, 2 * testBufferSize}, {1, 2, 0}, {0, 2, 0},
-            {0, 0, 0}, {1, numFilesForListMaxTest + 2, 0}, {0, 2, 0}};
+    int[][] dirCS = {{8, 8 * filesPerDirectory, 8 * testBufferSize}, {0, filesPerDirectory, 2 * testBufferSize},
+            {2, 3 * filesPerDirectory, 2 * testBufferSize}, {3, 3 * filesPerDirectory, 2 * testBufferSize},
+            {2, numFilesForListMaxTest + 2 * filesPerDirectory, 0}, {0, filesPerDirectory, 0},
+            {0, filesPerDirectory, filesPerDirectory * testBufferSize}, {1, filesPerDirectory, 0},
+            {0, filesPerDirectory, 0}, {0, 0, 0}, {1, numFilesForListMaxTest + 2, 0}, {0, filesPerDirectory, 0}};
     executorService.shutdown();
-    for(int i=0; i<directories.length; i++) {
+    for (int i=0; i<directories.length; i++) {
       ContentSummary contentSummary = futures.get(i).get();
       checkContentSummary(contentSummary, dirCS[i][0], dirCS[i][1], dirCS[i][2]);
     }
   }
 
   @Test
-  public void testExecutorShutdown() throws NoSuchFieldException,
-          IllegalAccessException, InterruptedException, IOException, ExecutionException {
+  public void testExecutorShutdown() throws Exception {
     ContentSummaryProcessor contentSummaryProcessor =
             new ContentSummaryProcessor(getAbfsStore(fs));
     Field executorServiceField =
@@ -168,6 +169,13 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(((ThreadPoolExecutor) fieldValue).getPoolSize())
         .describedAs("No threads should remain after executor shutdown")
         .isEqualTo(0);
+    ContentSummaryProcessor contentSummaryProcessor1 =
+            new ContentSummaryProcessor(getAbfsStore(fs));
+    fieldValue = (ExecutorService) executorServiceField.get(contentSummaryProcessor1);
+    intercept(IOException.class, () -> contentSummaryProcessor1.getContentSummary(new Path("/invalidPath")));
+    Assertions.assertThat(((ThreadPoolExecutor) fieldValue).getLargestPoolSize())
+            .describedAs("No task was submitted")
+            .isEqualTo(0);
   }
 
   private void checkContentSummary(ContentSummary contentSummary,
