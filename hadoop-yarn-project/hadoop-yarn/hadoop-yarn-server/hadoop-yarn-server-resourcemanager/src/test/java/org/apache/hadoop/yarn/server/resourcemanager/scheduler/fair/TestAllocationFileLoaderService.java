@@ -671,6 +671,77 @@ public class TestAllocationFileLoaderService {
     allocLoader.reloadAllocations();
   }
 
+  /**
+   * Verify that a parent queue (type = parent) cannot have a maxAMShare element
+   * as dynamic queues won't be able to inherit this setting.
+   */
+  @Test
+  public void testParentTagWitMaxAMShare() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"parent\" type=\"parent\">");
+    out.println("<maxAMShare>0.75</maxAMShare>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    try {
+      allocLoader.reloadAllocations();
+      fail("Expect allocation parsing to fail as maxAMShare cannot be set for"
+          + " a parent queue.");
+    } catch (AllocationConfigurationException ex) {
+      assertEquals(ex.getMessage(), "The configuration settings for root.parent"
+          + " are invalid. A queue element that contains child queue elements"
+          + " or that has the type='parent' attribute cannot also include a"
+          + " maxAMShare element.");
+    }
+  }
+
+  /**
+   * Verify that a parent queue that is not explicitly tagged with "type"
+   * as "parent" but has a child queue (implicit parent) cannot have a
+   * maxAMShare element.
+   */
+  @Test
+  public void testParentWithMaxAMShare() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"parent\">");
+    out.println("<maxAMShare>0.76</maxAMShare>");
+    out.println(" <queue name=\"child\">");
+    out.println(" </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    try {
+      allocLoader.reloadAllocations();
+      fail("Expect allocation parsing to fail as maxAMShare cannot be set for"
+          + " a parent queue.");
+    } catch (AllocationConfigurationException ex) {
+      assertEquals(ex.getMessage(), "The configuration settings for root.parent"
+          + " are invalid. A queue element that contains child queue elements"
+          + " or that has the type='parent' attribute cannot also include a"
+          + " maxAMShare element.");
+    }
+  }
+
   @Test
   public void testParentTagWithReservation() throws Exception {
     Configuration conf = new Configuration();

@@ -124,6 +124,7 @@ public class AllocationFileQueueParser {
     NodeList fields = element.getChildNodes();
     boolean isLeaf = true;
     boolean isReservable = false;
+    boolean isMaxAMShareSet = false;
 
     for (int j = 0; j < fields.getLength(); j++) {
       Node fieldNode = fields.item(j);
@@ -155,6 +156,7 @@ public class AllocationFileQueueParser {
         float val = Float.parseFloat(text);
         val = Math.min(val, 1.0f);
         builder.queueMaxAMShares(queueName, val);
+        isMaxAMShareSet = true;
       } else if (WEIGHT.equals(field.getTagName())) {
         String text = getTrimmedTextData(field);
         double val = Double.parseDouble(text);
@@ -220,10 +222,11 @@ public class AllocationFileQueueParser {
       builder.configuredQueues(FSQueueType.LEAF, queueName);
     } else {
       if (isReservable) {
-        throw new AllocationConfigurationException("The configuration settings"
-            + " for " + queueName + " are invalid. A queue element that "
-            + "contains child queue elements or that has the type='parent' "
-            + "attribute cannot also include a reservation element.");
+        throw new AllocationConfigurationException(
+            getErrorString(queueName, RESERVATION));
+      } else if (isMaxAMShareSet) {
+        throw new AllocationConfigurationException(
+            getErrorString(queueName, MAX_AMSHARE));
       }
       builder.configuredQueues(FSQueueType.PARENT, queueName);
     }
@@ -241,6 +244,19 @@ public class AllocationFileQueueParser {
 
     checkMinAndMaxResource(builder.getMinQueueResources(),
         builder.getMaxQueueResources(), queueName);
+  }
+
+  /**
+   * Set up the error string based on the supplied parent queueName and element.
+   * @param parentQueueName the parent queue name.
+   * @param element the element that should not be present for the parent queue.
+   * @return the error string.
+   */
+  private String getErrorString(String parentQueueName, String element) {
+    return "The configuration settings"
+        + " for " + parentQueueName + " are invalid. A queue element that "
+        + "contains child queue elements or that has the type='parent' "
+        + "attribute cannot also include a " + element + " element.";
   }
 
   private String getTrimmedTextData(Element element) {
