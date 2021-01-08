@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
