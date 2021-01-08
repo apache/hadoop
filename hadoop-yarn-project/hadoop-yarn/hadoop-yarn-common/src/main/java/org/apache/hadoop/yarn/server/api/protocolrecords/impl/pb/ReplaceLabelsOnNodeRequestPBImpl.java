@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Repla
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ReplaceLabelsOnNodeRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 public class ReplaceLabelsOnNodeRequestPBImpl extends
     ReplaceLabelsOnNodeRequest {

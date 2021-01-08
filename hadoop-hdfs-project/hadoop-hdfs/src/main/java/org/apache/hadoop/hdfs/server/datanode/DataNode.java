@@ -222,13 +222,13 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.htrace.core.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 import org.slf4j.Logger;
@@ -1661,7 +1661,9 @@ public class DataNode extends ReconfigurableBase
       // a block pool id
       String bpId = bpos.getBlockPoolId();
 
-      blockScanner.disableBlockPoolId(bpId);
+      if (blockScanner.hasAnyRegisteredScanner()) {
+        blockScanner.disableBlockPoolId(bpId);
+      }
 
       if (data != null) {
         data.shutdownBlockPool(bpId);

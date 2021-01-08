@@ -30,8 +30,8 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 
 /**
  * The {@link MultiSchemeAuthenticationHandler} supports configuring multiple

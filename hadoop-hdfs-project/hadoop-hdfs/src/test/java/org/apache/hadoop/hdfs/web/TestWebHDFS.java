@@ -52,9 +52,10 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Random;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -399,7 +400,7 @@ public class TestWebHDFS {
             try {
               it.next();
               fail("Iterator should error if out of elements.");
-            } catch (IllegalStateException e) {
+            } catch (NoSuchElementException e) {
               // pass
             }
             return null;

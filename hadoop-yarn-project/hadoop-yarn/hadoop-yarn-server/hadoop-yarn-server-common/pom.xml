@@ -72,8 +72,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
 
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->

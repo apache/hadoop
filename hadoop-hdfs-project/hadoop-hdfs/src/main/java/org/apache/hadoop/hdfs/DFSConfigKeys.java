@@ -664,6 +664,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT = false;
   public static final String  DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY = "dfs.namenode.audit.log.async";
   public static final boolean DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT = false;
+  public static final String  DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY = "dfs.namenode.audit.log.async.blocking";
+  public static final boolean DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_DEFAULT = true;
+  public static final String  DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY = "dfs.namenode.audit.log.async.buffer.size";
+  public static final int     DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT = 128;
   public static final String  DFS_NAMENODE_AUDIT_LOG_DEBUG_CMDLIST = "dfs.namenode.audit.log.debug.cmdlist";
   public static final String  DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY =
       "dfs.namenode.metrics.logger.period.seconds";
@@ -846,6 +850,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT = 21 * 24;  // 3 weeks.
   public static final String  DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND = "dfs.block.scanner.volume.bytes.per.second";
   public static final long    DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND_DEFAULT = 1048576L;
+  /**
+   * The amount of time in milliseconds that the BlockScanner times out waiting
+   * for the VolumeScanner thread to join during a shutdown call.
+   */
+  public static final String  DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_KEY =
+      "dfs.block.scanner.volume.join.timeout.ms";
+  public static final long DFS_BLOCK_SCANNER_VOLUME_JOIN_TIMEOUT_MSEC_DEFAULT =
+      TimeUnit.SECONDS.toMillis(5);
   public static final String  DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED =
       "dfs.block.scanner.skip.recent.accessed";
   public static final boolean DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED_DEFAULT =

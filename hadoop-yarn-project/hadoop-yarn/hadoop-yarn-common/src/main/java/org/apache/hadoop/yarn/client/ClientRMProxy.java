@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable

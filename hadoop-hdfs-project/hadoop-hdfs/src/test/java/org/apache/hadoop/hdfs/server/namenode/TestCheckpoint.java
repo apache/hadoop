@@ -94,12 +94,12 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import java.util.function.Supplier;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 /**
  * This class tests the creation and validation of a checkpoint.

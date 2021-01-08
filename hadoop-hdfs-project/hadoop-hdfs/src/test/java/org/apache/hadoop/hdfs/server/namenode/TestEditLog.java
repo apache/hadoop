@@ -103,8 +103,8 @@ import org.mockito.Mockito;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * This class tests the creation and validation of a checkpoint.

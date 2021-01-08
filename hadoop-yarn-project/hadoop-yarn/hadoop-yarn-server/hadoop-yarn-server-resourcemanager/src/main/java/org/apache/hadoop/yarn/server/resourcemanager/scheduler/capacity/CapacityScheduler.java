@@ -162,9 +162,9 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QUEUE_MAPPING;
 
@@ -224,7 +224,8 @@ public class CapacityScheduler extends
   private boolean usePortForNodeName;
 
   private boolean scheduleAsynchronously;
-  private List<AsyncScheduleThread> asyncSchedulerThreads;
+  @VisibleForTesting
+  protected List<AsyncScheduleThread> asyncSchedulerThreads;
   private ResourceCommitterService resourceCommitterService;
   private RMNodeLabelsManager labelManager;
   private AppPriorityACLsManager appPriorityACLManager;
@@ -2282,6 +2283,21 @@ public class CapacityScheduler extends
   public boolean checkAccess(UserGroupInformation callerUGI,
       QueueACL acl, String queueName) {
     CSQueue queue = getQueue(queueName);
+
+    if (queueName.startsWith("root.")) {
+      // can only check proper ACLs if the path is fully qualified
+      while (queue == null) {
+        int sepIndex = queueName.lastIndexOf(".");
+        String parentName = queueName.substring(0, sepIndex);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Queue {} does not exist, checking parent {}",
+              queueName, parentName);
+        }
+        queueName = parentName;
+        queue = queueManager.getQueue(queueName);
+      }
+    }
+
     if (queue == null) {
       LOG.debug("ACL not found for queue access-type {} for queue {}",
           acl, queueName);
@@ -3284,5 +3300,18 @@ public class CapacityScheduler extends
   @VisibleForTesting
   public void setMaxRunningAppsEnforcer(CSMaxRunningAppsEnforcer enforcer) {
     this.maxRunningEnforcer = enforcer;
+  }
+
+  /**
+   * Returning true as capacity scheduler supports placement constraints.
+   */
+  @Override
+  public boolean placementConstraintEnabled() {
+    return true;
+  }
+
+  @VisibleForTesting
+  public void setQueueManager(CapacitySchedulerQueueManager qm) {
+    this.queueManager = qm;
   }
 }

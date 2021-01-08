@@ -32,7 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -206,6 +207,19 @@ public class CallQueueManager<E extends Schedulable>
   // This should be only called once per call and cached in the call object
   int getPriorityLevel(Schedulable e) {
     return scheduler.getPriorityLevel(e);
+  }
+
+  int getPriorityLevel(UserGroupInformation user) {
+    if (scheduler instanceof DecayRpcScheduler) {
+      return ((DecayRpcScheduler)scheduler).getPriorityLevel(user);
+    }
+    return 0;
+  }
+
+  void setPriorityLevel(UserGroupInformation user, int priority) {
+    if (scheduler instanceof DecayRpcScheduler) {
+      ((DecayRpcScheduler)scheduler).setPriorityLevel(user, priority);
+    }
   }
 
   void setClientBackoffEnabled(boolean value) {

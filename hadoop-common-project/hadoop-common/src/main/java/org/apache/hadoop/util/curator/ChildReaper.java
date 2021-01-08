@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.util.curator;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.curator.framework.recipes.locks.Reaper;
 import org.apache.curator.utils.CloseableUtils;
 import org.apache.curator.framework.CuratorFramework;

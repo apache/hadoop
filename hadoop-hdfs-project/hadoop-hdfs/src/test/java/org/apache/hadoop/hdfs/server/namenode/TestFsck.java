@@ -129,7 +129,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 /**
  * A JUnit test for doing fsck.
@@ -254,6 +254,7 @@ public class TestFsck {
       file.delete();
     }
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    logger.removeAllAppenders();
     logger.setLevel(Level.INFO);
     PatternLayout layout = new PatternLayout("%m%n");
     RollingFileAppender appender =

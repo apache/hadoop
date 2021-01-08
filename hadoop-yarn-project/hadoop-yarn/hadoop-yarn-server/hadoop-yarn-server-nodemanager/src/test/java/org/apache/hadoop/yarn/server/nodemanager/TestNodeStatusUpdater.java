@@ -398,12 +398,15 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     private final long rmStartIntervalMS;
     private final boolean rmNeverStart;
     public ResourceTracker resourceTracker;
+    private final boolean useSocketTimeoutEx;
     public MyNodeStatusUpdater4(Context context, Dispatcher dispatcher,
         NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
-        long rmStartIntervalMS, boolean rmNeverStart) {
+        long rmStartIntervalMS, boolean rmNeverStart,
+        boolean useSocketTimeoutEx) {
       super(context, dispatcher, healthChecker, metrics);
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
+      this.useSocketTimeoutEx = useSocketTimeoutEx;
     }
 
     @Override
@@ -418,7 +421,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           HAUtil.isHAEnabled(conf));
       resourceTracker =
           (ResourceTracker) RetryProxy.create(ResourceTracker.class,
-            new MyResourceTracker6(rmStartIntervalMS, rmNeverStart),
+            new MyResourceTracker6(rmStartIntervalMS, rmNeverStart,
+                useSocketTimeoutEx),
             retryPolicy);
       return resourceTracker;
     }
@@ -721,15 +725,11 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
         } else if (heartBeatID == 2 || heartBeatID == 3) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          if (heartBeatID == 2) {
-            // NM should send completed containers again, since the last
-            // heartbeat is lost.
-            Assert.assertEquals(4, statuses.size());
-          } else {
-            // NM should not send completed containers again, since the last
-            // heartbeat is successful.
-            Assert.assertEquals(2, statuses.size());
-          }
+          // NM should send completed containers on heartbeat 2,
+          // since heartbeat 1 was lost.  It will send them again on
+          // heartbeat 3, because it does not clear them if the previous
+          // heartbeat was lost in case the RM treated it as a duplicate.
+          Assert.assertEquals(4, statuses.size());
           Assert.assertEquals(4, context.getContainers().size());
 
           boolean container2Exist = false, container3Exist = false,
@@ -760,14 +760,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
               container5Exist = true;
             }
           }
-          if (heartBeatID == 2) {
-            Assert.assertTrue(container2Exist && container3Exist
-                && container4Exist && container5Exist);
-          } else {
-            // NM do not send completed containers again
-            Assert.assertTrue(container2Exist && !container3Exist
-                && container4Exist && !container5Exist);
-          }
+          Assert.assertTrue(container2Exist && container3Exist
+              && container4Exist && container5Exist);
 
           if (heartBeatID == 3) {
             finishedContainersPulledByAM.add(containerStatus3.getContainerId());
@@ -862,11 +856,14 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     private long rmStartIntervalMS;
     private boolean rmNeverStart;
     private final long waitStartTime;
+    private final boolean useSocketTimeoutEx;
 
-    public MyResourceTracker6(long rmStartIntervalMS, boolean rmNeverStart) {
+    MyResourceTracker6(long rmStartIntervalMS, boolean rmNeverStart,
+                       boolean useSocketTimeoutEx) {
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
       this.waitStartTime = System.currentTimeMillis();
+      this.useSocketTimeoutEx = useSocketTimeoutEx;
     }
 
     @Override
@@ -875,8 +872,13 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
         IOException {
       if (System.currentTimeMillis() - waitStartTime <= rmStartIntervalMS
           || rmNeverStart) {
-        throw new java.net.ConnectException("Faking RM start failure as start "
-            + "delay timer has not expired.");
+        if (useSocketTimeoutEx) {
+          throw new java.net.SocketTimeoutException(
+              "Faking RM start failure as start delay timer has not expired.");
+        } else {
+          throw new java.net.ConnectException(
+              "Faking RM start failure as start delay timer has not expired.");
+        }
       } else {
         NodeId nodeId = request.getNodeId();
         Resource resource = request.getResource();
@@ -1378,8 +1380,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     }
   }
 
-  @Test (timeout = 150000)
-  public void testNMConnectionToRM() throws Exception {
+  private void testNMConnectionToRMInternal(boolean useSocketTimeoutEx)
+      throws Exception {
     final long delta = 50000;
     final long connectionWaitMs = 5000;
     final long connectionRetryIntervalMs = 1000;
@@ -1398,7 +1400,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
         NodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater4(
             context, dispatcher, healthChecker, metrics,
-            rmStartIntervalMS, true);
+            rmStartIntervalMS, true, useSocketTimeoutEx);
         return nodeStatusUpdater;
       }
     };
@@ -1430,7 +1432,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
         NodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater4(
             context, dispatcher, healthChecker, metrics, rmStartIntervalMS,
-            false);
+            false, useSocketTimeoutEx);
         return nodeStatusUpdater;
       }
     };
@@ -1459,6 +1461,16 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
         +" milliseconds of RM starting up: actual " + duration
         + " " + myUpdater,
         (duration < (rmStartIntervalMS + delta)));
+  }
+
+  @Test (timeout = 150000)
+  public void testNMConnectionToRM() throws Exception {
+    testNMConnectionToRMInternal(false);
+  }
+
+  @Test (timeout = 150000)
+  public void testNMConnectionToRMwithSocketTimeout() throws Exception {
+    testNMConnectionToRMInternal(true);
   }
 
   /**

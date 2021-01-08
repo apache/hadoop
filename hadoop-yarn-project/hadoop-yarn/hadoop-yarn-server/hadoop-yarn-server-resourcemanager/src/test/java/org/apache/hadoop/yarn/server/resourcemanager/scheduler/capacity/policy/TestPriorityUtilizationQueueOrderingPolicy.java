@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableTable;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableTable;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;

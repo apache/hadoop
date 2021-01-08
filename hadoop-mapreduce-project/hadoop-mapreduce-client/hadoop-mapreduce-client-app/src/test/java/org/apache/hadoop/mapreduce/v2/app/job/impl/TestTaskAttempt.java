@@ -38,11 +38,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -113,7 +114,7 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class TestTaskAttempt{
@@ -153,6 +154,11 @@ public class TestTaskAttempt{
   @BeforeClass
   public static void setupBeforeClass() {
     ResourceUtils.resetResourceTypes(new Configuration());
+  }
+
+  @Before
+  public void before() {
+    TaskAttemptImpl.RESOURCE_REQUEST_CACHE.clear();
   }
 
   @After
@@ -1721,6 +1727,7 @@ public class TestTaskAttempt{
       TestAppender testAppender = new TestAppender();
       final Logger logger = Logger.getLogger(TaskAttemptImpl.class);
       try {
+        TaskAttemptImpl.RESOURCE_REQUEST_CACHE.clear();
         logger.addAppender(testAppender);
         EventHandler eventHandler = mock(EventHandler.class);
         Clock clock = SystemClock.getInstance();

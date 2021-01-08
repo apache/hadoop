@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
@@ -52,8 +53,9 @@ import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -190,8 +192,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.function.Supplier;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -242,9 +244,10 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
   private NodeManager registerNode(ResourceManager rm, String hostName,
       int containerManagerPort, int httpPort, String rackName,
-          Resource capability) throws IOException, YarnException {
+      Resource capability, NodeStatus nodeStatus)
+      throws IOException, YarnException {
     NodeManager nm = new NodeManager(hostName,
-        containerManagerPort, httpPort, rackName, capability, rm);
+        containerManagerPort, httpPort, rackName, capability, rm, nodeStatus);
     NodeAddedSchedulerEvent nodeAddEvent1 =
         new NodeAddedSchedulerEvent(rm.getRMContext().getRMNodes()
             .get(nm.getNodeId()));
@@ -286,11 +289,11 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   }
 
   private NodeManager registerNode(String hostName, int containerManagerPort,
-                                   int httpPort, String rackName,
-                                   Resource capability)
-          throws IOException, YarnException {
+      int httpPort, String rackName,
+      Resource capability, NodeStatus nodeStatus)
+      throws IOException, YarnException {
     NodeManager nm = new NodeManager(hostName, containerManagerPort, httpPort,
-        rackName, capability, resourceManager);
+        rackName, capability, resourceManager, nodeStatus);
     NodeAddedSchedulerEvent nodeAddEvent1 =
         new NodeAddedSchedulerEvent(resourceManager.getRMContext()
             .getRMNodes().get(nm.getNodeId()));
@@ -303,17 +306,19 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     LOG.info("--- START: testCapacityScheduler ---");
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(4 * GB, 1));
+            Resources.createResource(4 * GB, 1), mockNodeStatus);
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(2 * GB, 1));
+            Resources.createResource(2 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -443,11 +448,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     when(mC.getConfigurationProvider()).thenReturn(
         new LocalConfigurationProvider());
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host0 = "host_0";
     NodeManager nm0 =
         registerNode(rm, host0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(10 * GB, 10));
+        Resources.createResource(10 * GB, 10), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority0 = Priority.newInstance(0);
@@ -545,11 +552,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     when(mC.getConfigurationProvider()).thenReturn(
             new LocalConfigurationProvider());
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host0 = "host_0";
     NodeManager nm0 =
         registerNode(rm, host0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(10 * GB, 10));
+        Resources.createResource(10 * GB, 10), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority0 = Priority.newInstance(0);
@@ -2097,17 +2106,20 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   public void testMoveAppForMoveToQueueWithFreeCap() throws Exception {
 
     ResourceScheduler scheduler = resourceManager.getResourceScheduler();
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(4 * GB, 1));
+        Resources.createResource(4 * GB, 1), mockNodeStatus);
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(2 * GB, 1));
+        Resources.createResource(2 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -2213,17 +2225,19 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     ResourceScheduler scheduler = resourceManager.getResourceScheduler();
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1));
+        Resources.createResource(5 * GB, 1), mockNodeStatus);
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1));
+        Resources.createResource(5 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -2335,11 +2349,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     ResourceScheduler scheduler = resourceManager.getResourceScheduler();
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(6 * GB, 1));
+        Resources.createResource(6 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -2383,17 +2399,19 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   public void testMoveAppQueueMetricsCheck() throws Exception {
     ResourceScheduler scheduler = resourceManager.getResourceScheduler();
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1));
+        Resources.createResource(5 * GB, 1), mockNodeStatus);
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1));
+        Resources.createResource(5 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -4594,9 +4612,12 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   }
   @Test
   public void testRemovedNodeDecomissioningNode() throws Exception {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register nodemanager
     NodeManager nm = registerNode("host_decom", 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
 
     RMNode node =
         resourceManager.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -4639,10 +4660,14 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     ((CapacityScheduler) resourceManager.getResourceScheduler())
         .setRMContext(spyContext);
     ((AsyncDispatcher) mockDispatcher).start();
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node
     String host_0 = "host_0";
     NodeManager nm_0 = registerNode(host_0, 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
 

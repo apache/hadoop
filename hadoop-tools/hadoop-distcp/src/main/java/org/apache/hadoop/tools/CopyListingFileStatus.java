@@ -40,9 +40,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.base.Objects;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 /**
  * CopyListingFileStatus is a view of {@link FileStatus}, recording additional

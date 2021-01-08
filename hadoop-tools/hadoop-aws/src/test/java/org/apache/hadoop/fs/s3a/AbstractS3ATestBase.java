@@ -60,6 +60,9 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     // filesystems which add default configuration resources to do it before
     // our tests start adding/removing options. See HADOOP-16626.
     FileSystem.getLocal(new Configuration());
+    // Force deprecated key load through the
+    // static initializers. See: HADOOP-17385
+    S3AFileSystem.initializeClass();
     super.setup();
   }
 
@@ -90,10 +93,23 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
             && !fs.getDirectoryMarkerPolicy()
             .keepDirectoryMarkers(methodPath)
             && fs.isDirectory(methodPath)) {
-          MarkerTool.ScanResult result = MarkerTool.execMarkerTool(fs,
-              methodPath, true, 0, UNLIMITED_LISTING, false);
-          assertEquals("Audit of " + methodPath + " failed: " + result,
+          MarkerTool.ScanResult result = MarkerTool.execMarkerTool(
+              new MarkerTool.ScanArgsBuilder()
+                  .withSourceFS(fs)
+                  .withPath(methodPath)
+                  .withDoPurge(true)
+                  .withMinMarkerCount(0)
+                  .withMaxMarkerCount(0)
+                  .withLimit(UNLIMITED_LISTING)
+                  .withNonAuth(false)
+                  .build());
+          final String resultStr = result.toString();
+          assertEquals("Audit of " + methodPath + " failed: "
+                  + resultStr,
               0, result.getExitCode());
+          assertEquals("Marker Count under " + methodPath
+                  + " non-zero: " + resultStr,
+              0, result.getFilteredMarkerCount());
         }
       } catch (FileNotFoundException ignored) {
       } catch (Exception e) {

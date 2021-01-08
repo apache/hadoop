@@ -28,7 +28,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.HTML;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public class JQueryUI extends HtmlBlock {

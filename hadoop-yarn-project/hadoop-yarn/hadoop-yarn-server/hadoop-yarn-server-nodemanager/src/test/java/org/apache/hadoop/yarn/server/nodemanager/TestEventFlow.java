@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.mockito.Mockito.mock;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -134,6 +136,9 @@ public class TestEventFlow {
         new DummyContainerManager(context, exec, del, nodeStatusUpdater,
           metrics, dirsHandler);
     nodeStatusUpdater.init(conf);
+    NodeResourceMonitorImpl nodeResourceMonitor = mock(
+        NodeResourceMonitorImpl.class);
+    ((NMContext) context).setNodeResourceMonitor(nodeResourceMonitor);
     ((NMContext)context).setContainerManager(containerManager);
     nodeStatusUpdater.start();
     ((NMContext)context).setNodeStatusUpdater(nodeStatusUpdater);

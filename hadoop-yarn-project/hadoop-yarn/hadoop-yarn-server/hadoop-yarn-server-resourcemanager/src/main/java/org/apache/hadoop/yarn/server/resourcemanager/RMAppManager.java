@@ -79,8 +79,8 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Times;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.yarn.util.StringHelper;
 
 /**
@@ -927,6 +927,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         return usernameUsedForPlacement;
       }
       String queue = appPlacementContext.getQueue();
+      String parent = appPlacementContext.getParentQueue();
+      if (scheduler instanceof CapacityScheduler && parent != null) {
+        queue = parent + "." + queue;
+      }
       if (callerUGI != null && scheduler
               .checkAccess(callerUGI, QueueACL.SUBMIT_APPLICATIONS, queue)) {
         usernameUsedForPlacement = userNameFromAppTag;

@@ -65,8 +65,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ShutdownHookManager;
 
-import com.google.common.base.Preconditions;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1247,6 +1247,16 @@ public class FileContext implements PathCapabilities {
         return fs.getFileStatus(p);
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * Synchronize client metadata state.
+   *
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  public void msync() throws IOException, UnsupportedOperationException {
+    defaultFS.msync();
   }
 
   /**

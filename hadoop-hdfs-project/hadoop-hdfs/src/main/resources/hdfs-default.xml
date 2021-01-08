@@ -1597,6 +1597,15 @@
 </property>
 
 <property>
+  <name>dfs.block.scanner.volume.join.timeout.ms</name>
+  <value>5000</value>
+  <description>
+    The amount of time in milliseconds that the BlockScanner times out waiting
+    for the VolumeScanner thread to join during a shutdown call.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.readahead.bytes</name>
   <value>4194304</value>
   <description>
@@ -4800,6 +4809,27 @@
 </property>
 
 <property>
+  <name>dfs.namenode.audit.log.async.blocking</name>
+  <value>true</value>
+  <description>
+    Only used when enables asynchronous audit log. Sets whether audit log async
+    appender should wait if there is no space available in the event buffer or
+    immediately return. Default value is true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.audit.log.async.buffer.size</name>
+  <value>128</value>
+  <description>
+    Only used when enables asynchronous audit log. Sets the number of audit
+    logs allowed in the event buffer before the calling thread is blocked
+    (if dfs.namenode.audit.log.async.blocking is true) or until logs are
+    summarized and discarded. Default value is 128.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.audit.log.token.tracking.id</name>
   <value>false</value>
   <description>
@@ -4953,7 +4983,7 @@
   <name>dfs.namenode.replication.max-streams</name>
   <value>2</value>
   <description>
-    Hard limit for the number of highest-priority replication streams.
+    Hard limit for the number of replication streams other than those with highest-priority.
   </description>
 </property>
 

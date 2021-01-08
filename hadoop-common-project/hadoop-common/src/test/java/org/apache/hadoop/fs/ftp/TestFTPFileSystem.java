@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Comparator;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;

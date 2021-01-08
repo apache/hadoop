@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -237,7 +237,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID) {
     super(nodeID);
-    updateHeartbeatState(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0, null);
+    setLastUpdate(Time.now());
+    setLastUpdateMonotonic(Time.monotonicNow());
   }
 
   /**
@@ -248,7 +249,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation) {
     super(nodeID, networkLocation);
-    updateHeartbeatState(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0, null);
+    setLastUpdate(Time.now());
+    setLastUpdateMonotonic(Time.monotonicNow());
   }
 
   public CachedBlocksList getPendingCached() {

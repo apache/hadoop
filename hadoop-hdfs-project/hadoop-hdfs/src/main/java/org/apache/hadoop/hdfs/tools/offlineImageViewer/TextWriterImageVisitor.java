@@ -22,7 +22,7 @@ import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * TextWriterImageProcessor mixes in the ability for ImageVisitor

@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import com.google.common.base.Objects;
+import org.apache.hadoop.thirdparty.com.google.common.base.Objects;
 import org.apache.hadoop.metrics2.MetricsInfo;
 
 import java.util.StringJoiner;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Making implementing metric info a little easier

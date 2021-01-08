@@ -116,6 +116,36 @@ for both files and directories, MUST always return `true` to the `isEncrypted()`
 predicate. This can be done by setting the `encrypted` flag to true when creating
 the `FileStatus` instance.
 
+
+### `msync()`
+
+Synchronize metadata state of the client with the latest state of the metadata
+service of the FileSystem.
+
+In highly available FileSystems standby service can be used as a read-only
+metadata replica. This call is essential to guarantee consistency of
+reads from the standby replica and to avoid stale reads.
+
+It is currently only implemented for HDFS and others will just throw
+`UnsupportedOperationException`.
+
+#### Preconditions
+
+
+#### Postconditions
+
+This call internally records the state of the metadata service at the time of
+the call. This guarantees consistency of subsequent reads from any metadata
+replica. It assures the client will never access the state of the metadata that
+preceded the recorded state.
+
+#### HDFS implementation notes
+
+HDFS supports `msync()` in HA mode by calling the Active NameNode and requesting
+its latest journal transaction ID. For more details see HDFS documentation
+[Consistent Reads from HDFS Observer NameNode](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/ObserverNameNode.html)
+
+
 ### `Path getHomeDirectory()`
 
 The function `getHomeDirectory` returns the home directory for the FileSystem
@@ -294,6 +324,24 @@ any optimizations.
 The atomicity and consistency constraints are as for
 `listStatus(Path, PathFilter)`.
 
+### `RemoteIterator<FileStatus> listStatusIterator(Path p)`
+
+Return an iterator enumerating the `FileStatus` entries under
+a path. This is similar to `listStatus(Path)` except the fact that
+rather than returning an entire list, an iterator is returned.
+The result is exactly the same as `listStatus(Path)`, provided no other
+caller updates the directory during the listing. Having said that, this does
+not guarantee atomicity if other callers are adding/deleting the files
+inside the directory while listing is being performed. Different filesystems
+may provide a more efficient implementation, for example S3A does the
+listing in pages and fetches the next pages asynchronously while a
+page is getting processed.
+
+Note that now since the initial listing is async, bucket/path existence
+exception may show up later during next() call.
+
+Callers should prefer using listStatusIterator over listStatus as it
+is incremental in nature.
 
 ### `FileStatus[] listStatus(Path[] paths)`
 
@@ -1107,7 +1155,7 @@ Rename includes the calculation of the destination path.
 If the destination exists and is a directory, the final destination
 of the rename becomes the destination + the filename of the source path.
 
-    let dest = if (isDir(FS, src) and d != src) :
+    let dest = if (isDir(FS, d) and d != src) :
             d + [filename(src)]
         else :
             d
@@ -1186,10 +1234,10 @@ If `src` is a directory then all its children will then exist under `dest`, whil
 `src` and its descendants will no longer exist. The names of the paths under
 `dest` will match those under `src`, as will the contents:
 
-    if isDir(FS, src) isDir(FS, dest) and src != dest :
+    if isDir(FS, src) and isDir(FS, dest) and src != dest :
         FS' where:
             not exists(FS', src)
-            and dest in FS'.Directories]
+            and dest in FS'.Directories
             and forall c in descendants(FS, src) :
                 not exists(FS', c))
             and forall c in descendants(FS, src) where isDir(FS, c):

@@ -44,7 +44,7 @@ class LongLong {
     return d0 & mask;
   }
 
-  /** Shift right operation (<<). */
+  /** Shift right operation (>>). */
   long shiftRight(int n) {
     return (d1 << (BITS_PER_LONG - n)) + (d0 >>> n);
   }

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service.utils;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.yarn.proto.ClientAMProtocol.GetCompInstancesRequestProto;
 import org.apache.hadoop.yarn.service.MockRunningServiceContext;
 import org.apache.hadoop.yarn.service.ServiceContext;

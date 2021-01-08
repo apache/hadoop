@@ -45,6 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.SocketFactory;
 
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -56,7 +57,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -806,6 +807,11 @@ public class NetUtils {
                 + " failed on socket exception: " + exception
                 + ";"
                 + see("SocketException"));
+      } else if (exception instanceof AccessControlException) {
+        return wrapWithMessage(exception,
+            "Call From "
+                + localHost + " to " + destHost + ":" + destPort
+                + " failed: " + exception.getMessage());
       } else {
         // 1. Return instance of same type with exception msg if Exception has a
         // String constructor.

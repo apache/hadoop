@@ -85,6 +85,18 @@ public interface AbfsInputStreamStatistics {
   void remoteReadOperation();
 
   /**
+   * Records the bytes read from readAhead buffer.
+   * @param bytes the bytes to be incremented.
+   */
+  void readAheadBytesRead(long bytes);
+
+  /**
+   * Records bytes read remotely after nothing from readAheadBuffer was read.
+   * @param bytes the bytes to be incremented.
+   */
+  void remoteBytesRead(long bytes);
+
+  /**
    * Makes the string of all the AbfsInputStream statistics.
    * @return the string with all the statistics.
    */

@@ -28,11 +28,11 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.google.common.util.concurrent.ListeningExecutorService;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -71,8 +71,8 @@ public class CosNFileSystem extends FileSystem {
   private String owner = "Unknown";
   private String group = "Unknown";
 
-  private ListeningExecutorService boundedIOThreadPool;
-  private ListeningExecutorService boundedCopyThreadPool;
+  private ExecutorService boundedIOThreadPool;
+  private ExecutorService boundedCopyThreadPool;
 
   public CosNFileSystem() {
   }

@@ -33,8 +33,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +70,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private byte[] buffer;
   private int bufferIndex;
   private final int maxConcurrentRequestCount;
+  private final int maxRequestsThatCanBeQueued;
 
   private ConcurrentLinkedDeque<WriteOperation> writeOperations;
   private final ThreadPoolExecutor threadExecutor;
@@ -119,8 +120,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     if (this.isAppendBlob) {
       this.maxConcurrentRequestCount = 1;
     } else {
-      this.maxConcurrentRequestCount = 4 * Runtime.getRuntime().availableProcessors();
+      this.maxConcurrentRequestCount = abfsOutputStreamContext
+          .getWriteMaxConcurrentRequestCount();
     }
+    this.maxRequestsThatCanBeQueued = abfsOutputStreamContext
+        .getMaxWriteRequestsToQueue();
     this.threadExecutor
         = new ThreadPoolExecutor(maxConcurrentRequestCount,
         maxConcurrentRequestCount,
@@ -371,7 +375,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final long offset = position;
     position += bytesLength;
 
-    if (threadExecutor.getQueue().size() >= maxConcurrentRequestCount * 2) {
+    if (threadExecutor.getQueue().size() >= maxRequestsThatCanBeQueued) {
       long start = System.currentTimeMillis();
       waitForTaskToComplete();
       outputStreamStatistics.timeSpentTaskWait(start, System.currentTimeMillis());
@@ -541,6 +545,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   @VisibleForTesting
   public int getWriteOperationsSize() {
     return writeOperations.size();
+  }
+
+  @VisibleForTesting
+  int getMaxConcurrentRequestCount() {
+    return this.maxConcurrentRequestCount;
+  }
+
+  @VisibleForTesting
+  int getMaxRequestsThatCanBeQueued() {
+    return maxRequestsThatCanBeQueued;
   }
 
   /**

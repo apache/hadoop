@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -111,7 +112,10 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
         keepMarkers
             ? DIRECTORY_MARKER_POLICY_KEEP
             : DIRECTORY_MARKER_POLICY_DELETE);
-    conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
+    if (isGuarded()) {
+      conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_DYNAMO);
+      conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
+    }
     disableFilesystemCaching(conf);
     return conf;
   }
@@ -138,6 +142,14 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
     isDeleting = !isKeeping;
 
+    // check that the FS has the expected state
+    DirectoryPolicy markerPolicy = fs.getDirectoryMarkerPolicy();
+    Assertions.assertThat(markerPolicy.getMarkerPolicy())
+        .describedAs("Marker policy for filesystem %s", fs)
+        .isEqualTo(isKeepingMarkers()
+            ? DirectoryPolicy.MarkerPolicy.Keep
+            : DirectoryPolicy.MarkerPolicy.Delete);
+
     // insert new metrics so as to keep the list sorted
     costValidator = OperationCostValidator.builder(getFileSystem())
         .withMetrics(
@@ -148,6 +160,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
             INVOCATION_COPY_FROM_LOCAL_FILE,
             OBJECT_COPY_REQUESTS,
             OBJECT_DELETE_REQUESTS,
+            OBJECT_DELETE_OBJECTS,
             OBJECT_LIST_REQUESTS,
             OBJECT_METADATA_REQUESTS,
             OBJECT_PUT_BYTES,

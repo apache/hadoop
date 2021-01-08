@@ -77,6 +77,11 @@ public final class OperationCost {
   public static final OperationCost FILE_STATUS_FILE_PROBE = HEAD_OPERATION;
 
   /**
+   * Cost of getFileStatus on root directory.
+   */
+  public static final OperationCost ROOT_FILE_STATUS_PROBE = NO_IO;
+
+  /**
    * Cost of {@link org.apache.hadoop.fs.s3a.impl.StatusProbeEnum#ALL}.
    */
   public static final OperationCost FILE_STATUS_ALL_PROBES =
@@ -107,9 +112,10 @@ public final class OperationCost {
       new OperationCost(0, 1);
 
   /** listFiles always does a LIST. */
-  public static final OperationCost LIST_FILES_LIST_OP =
-      new OperationCost(0, 1);
+  public static final OperationCost LIST_FILES_LIST_OP = LIST_OPERATION;
 
+  /** listStatus always does a LIST. */
+  public static final OperationCost LIST_STATUS_LIST_OP = LIST_OPERATION;
   /**
    * Metadata cost of a copy operation, as used during rename.
    * This happens even if the store is guarded.
@@ -152,6 +158,13 @@ public final class OperationCost {
    */
   public static final OperationCost CREATE_FILE_NO_OVERWRITE =
       FILE_STATUS_ALL_PROBES;
+
+  /**
+   * S3Guard in non-auth mode always attempts a single file
+   * status call.
+   */
+  public static final OperationCost S3GUARD_NONAUTH_FILE_STATUS_PROBE =
+      FILE_STATUS_FILE_PROBE;
 
   /** Expected HEAD count. */
   private final int head;

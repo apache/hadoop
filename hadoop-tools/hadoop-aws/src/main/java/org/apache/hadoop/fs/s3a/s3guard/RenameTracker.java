@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 
 /**

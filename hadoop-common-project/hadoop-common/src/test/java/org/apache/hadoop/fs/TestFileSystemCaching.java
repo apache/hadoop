@@ -21,22 +21,31 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.HadoopTestBase;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import java.security.PrivilegedExceptionAction;
-import java.util.concurrent.Semaphore;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_CREATION_PARALLEL_COUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 
-public class TestFileSystemCaching {
+public class TestFileSystemCaching extends HadoopTestBase {
 
   @Test
   public void testCacheEnabled() throws Exception {
@@ -335,5 +344,135 @@ public class TestFileSystemCaching {
         new URI("wasb://A@account.blob.core.windows.net"), conf));
     assertNotEquals(keyA, new FileSystem.Cache.Key(
         new URI("wasb://a:password@account.blob.core.windows.net"), conf));
+  }
+
+
+  /**
+   * Single semaphore: no surplus FS instances will be created
+   * and then discarded.
+   */
+  @Test
+  public void testCacheSingleSemaphoredConstruction() throws Exception {
+    FileSystem.Cache cache = semaphoredCache(1);
+    createFileSystems(cache, 10);
+    Assertions.assertThat(cache.getDiscardedInstances())
+        .describedAs("Discarded FS instances")
+        .isEqualTo(0);
+  }
+
+  /**
+   * Dual semaphore: thread 2 will get as far as
+   * blocking in the initialize() method while awaiting
+   * thread 1 to complete its initialization.
+   * <p></p>
+   * The thread 2 FS instance will be discarded.
+   * All other threads will block for a cache semaphore,
+   * so when they are given an opportunity to proceed,
+   * they will find that an FS instance exists.
+   */
+  @Test
+  public void testCacheDualSemaphoreConstruction() throws Exception {
+    FileSystem.Cache cache = semaphoredCache(2);
+    createFileSystems(cache, 10);
+    Assertions.assertThat(cache.getDiscardedInstances())
+        .describedAs("Discarded FS instances")
+        .isEqualTo(1);
+  }
+
+  /**
+   * Construct the FS instances in a cache with effectively no
+   * limit on the number of instances which can be created
+   * simultaneously.
+   * <p></p>
+   * This is the effective state before HADOOP-17313.
+   * <p></p>
+   * All but one thread's FS instance will be discarded.
+   */
+  @Test
+  public void testCacheLargeSemaphoreConstruction() throws Exception {
+    FileSystem.Cache cache = semaphoredCache(999);
+    int count = 10;
+    createFileSystems(cache, count);
+    Assertions.assertThat(cache.getDiscardedInstances())
+        .describedAs("Discarded FS instances")
+        .isEqualTo(count -1);
+  }
+
+  /**
+   * Create a cache with a given semaphore size.
+   * @param semaphores number of semaphores
+   * @return the cache.
+   */
+  private FileSystem.Cache semaphoredCache(final int semaphores) {
+    final Configuration conf1 = new Configuration();
+    conf1.setInt(FS_CREATION_PARALLEL_COUNT, semaphores);
+    FileSystem.Cache cache = new FileSystem.Cache(conf1);
+    return cache;
+  }
+
+  /**
+   * Attempt to create {@code count} filesystems in parallel,
+   * then assert that they are all equal.
+   * @param cache cache to use
+   * @param count count of filesystems to instantiate
+   */
+  private void createFileSystems(final FileSystem.Cache cache, final int count)
+      throws URISyntaxException, InterruptedException,
+             java.util.concurrent.ExecutionException {
+    final Configuration conf = new Configuration();
+    conf.set("fs.blocking.impl", BlockingInitializer.NAME);
+    // only one instance can be created at a time.
+    URI uri = new URI("blocking://a");
+    ListeningExecutorService pool =
+        MoreExecutors.listeningDecorator(
+            BlockingThreadPoolExecutorService.newInstance(count * 2, 0,
+            10, TimeUnit.SECONDS,
+            "creation-threads"));
+
+    // submit a set of requests to create an FS instance.
+    // the semaphore will block all but one, and that will block until
+    // it is allowed to continue
+    List<ListenableFuture<FileSystem>> futures = new ArrayList<>(count);
+
+    // acquire the semaphore so blocking all FS instances from
+    // being initialized.
+    Semaphore semaphore = BlockingInitializer.SEM;
+    semaphore.acquire();
+
+    for (int i = 0; i < count; i++) {
+      futures.add(pool.submit(
+          () -> cache.get(uri, conf)));
+    }
+    // now let all blocked initializers free
+    semaphore.release();
+    // get that first FS
+    FileSystem createdFS = futures.get(0).get();
+    // verify all the others are the same instance
+    for (int i = 1; i < count; i++) {
+      FileSystem fs = futures.get(i).get();
+      Assertions.assertThat(fs)
+          .isSameAs(createdFS);
+    }
+  }
+
+  /**
+   * An FS which blocks in initialize() until it can acquire the shared
+   * semaphore (which it then releases).
+   */
+  private static final class BlockingInitializer extends LocalFileSystem {
+
+    private static final String NAME = BlockingInitializer.class.getName();
+
+    private static final Semaphore SEM = new Semaphore(1);
+
+    @Override
+    public void initialize(URI uri, Configuration conf) throws IOException {
+      try {
+        SEM.acquire();
+        SEM.release();
+      } catch (InterruptedException e) {
+        throw new IOException(e.toString(), e);
+      }
+    }
   }
 }

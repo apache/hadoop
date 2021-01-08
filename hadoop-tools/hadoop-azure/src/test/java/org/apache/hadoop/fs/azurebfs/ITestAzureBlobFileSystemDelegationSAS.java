@@ -25,7 +25,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import org.junit.Assert;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -39,6 +41,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
@@ -53,6 +57,7 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test Perform Authorization Check operation
@@ -91,13 +96,16 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
 
     Path rootPath = new Path("/");
+    fs.setOwner(rootPath, MockDelegationSASTokenProvider.TEST_OWNER, null);
     fs.setPermission(rootPath, new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE, FsAction.EXECUTE));
     FileStatus rootStatus = fs.getFileStatus(rootPath);
     assertEquals("The directory permissions are not expected.", "rwxr-x--x", rootStatus.getPermission().toString());
+    assertEquals("The directory owner is not expected.",
+        MockDelegationSASTokenProvider.TEST_OWNER,
+        rootStatus.getOwner());
 
     Path dirPath = new Path(UUID.randomUUID().toString());
     fs.mkdirs(dirPath);
-    fs.setOwner(dirPath, MockDelegationSASTokenProvider.TEST_OWNER, null);
 
     Path filePath = new Path(dirPath, "file1");
     fs.create(filePath).close();
@@ -321,8 +329,10 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     Path rootPath = new Path(AbfsHttpConstants.ROOT_PATH);
 
+    fs.setOwner(rootPath, MockDelegationSASTokenProvider.TEST_OWNER, null);
     FileStatus status = fs.getFileStatus(rootPath);
     assertEquals("rwxr-x---", status.getPermission().toString());
+    assertEquals(MockDelegationSASTokenProvider.TEST_OWNER, status.getOwner());
     assertTrue(status.isDirectory());
 
     AclStatus acl = fs.getAclStatus(rootPath);
@@ -380,5 +390,91 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     fs.setXAttr(reqPath, propertyName, propertyValue);
 
     assertArrayEquals(propertyValue, fs.getXAttr(reqPath, propertyName));
+  }
+
+  @Test
+  public void testSignatureMask() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    String src = "/testABC/test.xt";
+    fs.create(new Path(src));
+    AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
+        .renamePath(src, "/testABC" + "/abc.txt", null);
+    AbfsHttpOperation result = abfsHttpRestOperation.getResult();
+    String url = result.getSignatureMaskedUrl();
+    String encodedUrl = result.getSignatureMaskedEncodedUrl();
+    Assertions.assertThat(url.substring(url.indexOf("sig=")))
+        .describedAs("Signature query param should be masked")
+        .startsWith("sig=XXXX");
+    Assertions.assertThat(encodedUrl.substring(encodedUrl.indexOf("sig%3D")))
+        .describedAs("Signature query param should be masked")
+        .startsWith("sig%3DXXXX");
+  }
+
+  @Test
+  public void testSignatureMaskOnExceptionMessage() throws Exception {
+    intercept(IOException.class, "sig=XXXX",
+        () -> getFileSystem().getAbfsClient()
+            .renamePath("testABC/test.xt", "testABC/abc.txt", null));
+  }
+
+  @Test
+  // SetPermission should fail when saoid is not the owner and succeed when it is.
+  public void testSetPermissionForNonOwner() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+
+    Path rootPath = new Path("/");
+    FileStatus rootStatus = fs.getFileStatus(rootPath);
+    assertEquals("The permissions are not expected.",
+        "rwxr-x---",
+        rootStatus.getPermission().toString());
+    assertNotEquals("The owner is not expected.",
+        MockDelegationSASTokenProvider.TEST_OWNER,
+        rootStatus.getOwner());
+
+    // Attempt to set permission without being the owner.
+    try {
+      fs.setPermission(rootPath, new FsPermission(FsAction.ALL,
+          FsAction.READ_EXECUTE, FsAction.EXECUTE));
+      assertTrue("Set permission should fail because saoid is not the owner.", false);
+    } catch (AbfsRestOperationException ex) {
+      // Should fail with permission mismatch
+      assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH,
+          ex.getErrorCode());
+    }
+
+    // Attempt to set permission as the owner.
+    fs.setOwner(rootPath, MockDelegationSASTokenProvider.TEST_OWNER, null);
+    fs.setPermission(rootPath, new FsPermission(FsAction.ALL,
+        FsAction.READ_EXECUTE, FsAction.EXECUTE));
+    rootStatus = fs.getFileStatus(rootPath);
+    assertEquals("The permissions are not expected.",
+        "rwxr-x--x",
+        rootStatus.getPermission().toString());
+    assertEquals("The directory owner is not expected.",
+        MockDelegationSASTokenProvider.TEST_OWNER,
+        rootStatus.getOwner());
+  }
+
+  @Test
+  // Without saoid or suoid, setPermission should succeed with sp=p for a non-owner.
+  public void testSetPermissionWithoutAgentForNonOwner() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path(MockDelegationSASTokenProvider.NO_AGENT_PATH);
+    fs.create(path).close();
+
+    FileStatus status = fs.getFileStatus(path);
+    assertEquals("The permissions are not expected.",
+        "rw-r--r--",
+        status.getPermission().toString());
+    assertNotEquals("The owner is not expected.",
+        TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID,
+        status.getOwner());
+
+    fs.setPermission(path, new FsPermission(FsAction.READ, FsAction.READ, FsAction.NONE));
+
+    FileStatus fileStatus = fs.getFileStatus(path);
+    assertEquals("The permissions are not expected.",
+        "r--r-----",
+        fileStatus.getPermission().toString());
   }
 }

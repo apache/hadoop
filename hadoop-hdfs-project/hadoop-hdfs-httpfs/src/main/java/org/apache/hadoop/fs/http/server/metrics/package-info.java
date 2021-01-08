@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +16,12 @@
  * limitations under the License.
  */
 
+/**
+ * A package to implement metrics for the HttpFS Server.
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+package org.apache.hadoop.fs.http.server.metrics;
 
-#ifndef ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
-#define ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
-
-#include "org_apache_hadoop.h"
-
-#ifdef UNIX
-#include <dlfcn.h>
-#endif
-
-#include <jni.h>
-#include <snappy-c.h>
-#include <stddef.h>
-
-#endif //ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

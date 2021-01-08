@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -124,6 +125,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES;
 import static org.junit.Assert.assertEquals;
@@ -4863,9 +4865,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @Test
   public void testRemovedNodeDecomissioningNode() throws Exception {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register nodemanager
     NodeManager nm = registerNode("host_decom", 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
 
     RMNode node =
         resourceManager.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -4908,10 +4913,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ((FairScheduler) resourceManager.getResourceScheduler())
         .setRMContext(spyContext);
     ((AsyncDispatcher) mockDispatcher).start();
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node
     String host_0 = "host_0";
     NodeManager nm_0 = registerNode(host_0, 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
 
     RMNode node =
         resourceManager.getRMContext().getRMNodes().get(nm_0.getNodeId());
@@ -4950,11 +4959,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   private NodeManager registerNode(String hostName, int containerManagerPort,
-                                   int httpPort, String rackName,
-                                   Resource capability)
+      int httpPort, String rackName,
+      Resource capability, NodeStatus nodeStatus)
       throws IOException, YarnException {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     NodeManager nm = new NodeManager(hostName, containerManagerPort, httpPort,
-        rackName, capability, resourceManager);
+        rackName, capability, resourceManager, mockNodeStatus);
 
     // after YARN-5375, scheduler event is processed in rm main dispatcher,
     // wait it processed, or may lead dead lock

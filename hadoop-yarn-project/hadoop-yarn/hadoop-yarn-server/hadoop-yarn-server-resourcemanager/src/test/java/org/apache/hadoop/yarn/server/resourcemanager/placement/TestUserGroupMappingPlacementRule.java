@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;

@@ -23,8 +23,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 
-import com.google.common.base.Preconditions;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +70,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   /** Stream statistics. */
   private final AbfsInputStreamStatistics streamStatistics;
+  private long bytesFromReadAhead; // bytes read from readAhead; for testing
+  private long bytesFromRemoteRead; // bytes read remotely; for testing
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -235,9 +237,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       // try reading from buffers first
       receivedBytes = ReadBufferManager.getBufferManager().getBlock(this, position, length, b);
+      bytesFromReadAhead += receivedBytes;
       if (receivedBytes > 0) {
         incrementReadOps();
         LOG.debug("Received data from read ahead, not doing remote read");
+        if (streamStatistics != null) {
+          streamStatistics.readAheadBytesRead(receivedBytes);
+        }
         return receivedBytes;
       }
 
@@ -292,10 +298,14 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(ex);
     }
     long bytesRead = op.getResult().getBytesReceived();
+    if (streamStatistics != null) {
+      streamStatistics.remoteBytesRead(bytesRead);
+    }
     if (bytesRead > Integer.MAX_VALUE) {
       throw new IOException("Unexpected Content-Length");
     }
     LOG.debug("HTTP request read bytes = {}", bytesRead);
+    bytesFromRemoteRead += bytesRead;
     return (int) bytesRead;
   }
 
@@ -495,6 +505,26 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
+  }
+
+  /**
+   * Getter for bytes read from readAhead buffer that fills asynchronously.
+   *
+   * @return value of the counter in long.
+   */
+  @VisibleForTesting
+  public long getBytesFromReadAhead() {
+    return bytesFromReadAhead;
+  }
+
+  /**
+   * Getter for bytes read remotely from the data store.
+   *
+   * @return value of the counter in long.
+   */
+  @VisibleForTesting
+  public long getBytesFromRemoteRead() {
+    return bytesFromRemoteRead;
   }
 
   /**

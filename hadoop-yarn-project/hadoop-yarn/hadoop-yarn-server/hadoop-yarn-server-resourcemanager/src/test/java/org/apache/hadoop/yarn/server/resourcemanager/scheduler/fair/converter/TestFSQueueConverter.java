@@ -47,7 +47,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 
 /**

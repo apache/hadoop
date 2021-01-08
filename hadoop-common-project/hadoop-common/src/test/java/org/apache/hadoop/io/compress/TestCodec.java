@@ -76,8 +76,6 @@ import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,30 +133,22 @@ public class TestCodec {
   
   @Test
   public void testSnappyCodec() throws IOException {
-    if (SnappyCodec.isNativeCodeLoaded()) {
-      codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
-      codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
-    }
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
   }
   
   @Test
   public void testLz4Codec() throws IOException {
-    if (NativeCodeLoader.isNativeCodeLoaded()) {
-      if (Lz4Codec.isNativeCodeLoaded()) {
-        conf.setBoolean(
-            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
-            false);
-        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
-        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
-        conf.setBoolean(
-            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
-            true);
-        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
-        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
-      } else {
-        Assert.fail("Native hadoop library available but lz4 not");
-      }
-    }
+    conf.setBoolean(
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
+        false);
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
+    conf.setBoolean(
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
+        true);
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
   }
 
   @Test
@@ -614,7 +604,6 @@ public class TestCodec {
    */
   @Test
   public void testSnappyMapFile() throws Exception {
-    Assume.assumeTrue(SnappyCodec.isNativeCodeLoaded());
     codecTestMapFile(SnappyCodec.class, CompressionType.BLOCK, 100);
   }
   

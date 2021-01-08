@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -700,24 +700,25 @@ final class BlockChecksumHelper {
               blockGroup, ecPolicy, blockIndices, datanodes, errIndices);
       BlockChecksumType groupChecksumType =
           getBlockChecksumOptions().getBlockChecksumType();
-      final StripedBlockChecksumReconstructor checksumRecon =
+      try (StripedBlockChecksumReconstructor checksumRecon =
           groupChecksumType == BlockChecksumType.COMPOSITE_CRC ?
           new StripedBlockChecksumCompositeCrcReconstructor(
               getDatanode().getErasureCodingWorker(), stripedReconInfo,
               blockChecksumBuf, blockLength) :
           new StripedBlockChecksumMd5CrcReconstructor(
               getDatanode().getErasureCodingWorker(), stripedReconInfo,
-              blockChecksumBuf, blockLength);
-      checksumRecon.reconstruct();
+              blockChecksumBuf, blockLength)) {
+        checksumRecon.reconstruct();
 
-      DataChecksum checksum = checksumRecon.getChecksum();
-      long crcPerBlock = checksum.getChecksumSize() <= 0 ? 0
-          : checksumRecon.getChecksumDataLen() / checksum.getChecksumSize();
-      setOrVerifyChecksumProperties(errBlkIndex,
-          checksum.getBytesPerChecksum(), crcPerBlock,
-          checksum.getChecksumType());
-      LOG.debug("Recalculated checksum for the block index:{}, checksum={}",
-          errBlkIndex, checksumRecon.getDigestObject());
+        DataChecksum checksum = checksumRecon.getChecksum();
+        long crcPerBlock = checksum.getChecksumSize() <= 0 ? 0
+            : checksumRecon.getChecksumDataLen() / checksum.getChecksumSize();
+        setOrVerifyChecksumProperties(errBlkIndex,
+            checksum.getBytesPerChecksum(), crcPerBlock,
+            checksum.getChecksumType());
+        LOG.debug("Recalculated checksum for the block index:{}, checksum={}",
+            errBlkIndex, checksumRecon.getDigestObject());
+      }
     }
 
     private void setOrVerifyChecksumProperties(int blockIdx, int bpc,

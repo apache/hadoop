@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Longs;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Longs;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 

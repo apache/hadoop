@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.junit.Test;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 
 public class TestPendingDataNodeMessages {

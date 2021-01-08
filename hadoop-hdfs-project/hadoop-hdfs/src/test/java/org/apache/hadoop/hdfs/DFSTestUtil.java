@@ -72,13 +72,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.tools.DFSck;
@@ -200,7 +200,7 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {

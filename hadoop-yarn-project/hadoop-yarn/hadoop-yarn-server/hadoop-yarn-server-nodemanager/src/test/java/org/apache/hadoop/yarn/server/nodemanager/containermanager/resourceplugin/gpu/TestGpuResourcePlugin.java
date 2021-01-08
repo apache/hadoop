@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;

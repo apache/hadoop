@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +93,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
         whenRaw(FILE_STATUS_FILE_PROBE
             .plus(LIST_LOCATED_STATUS_LIST_OP)),
         whenAuthoritative(LIST_LOCATED_STATUS_LIST_OP),
-        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP
+            .plus(S3GUARD_NONAUTH_FILE_STATUS_PROBE)));
   }
 
   @Test
@@ -177,6 +179,50 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
   }
 
   @Test
+  public void testCostOfListStatusOnFile() throws Throwable {
+    describe("Performing listStatus() on a file");
+    Path file = path(getMethodName() + ".txt");
+    S3AFileSystem fs = getFileSystem();
+    touch(fs, file);
+    verifyMetrics(() ->
+            fs.listStatus(file),
+            whenRaw(LIST_STATUS_LIST_OP
+                    .plus(GET_FILE_STATUS_ON_FILE)),
+            whenAuthoritative(LIST_STATUS_LIST_OP),
+            whenNonauth(LIST_STATUS_LIST_OP
+                .plus(S3GUARD_NONAUTH_FILE_STATUS_PROBE)));
+  }
+
+  @Test
+  public void testCostOfListStatusOnEmptyDir() throws Throwable {
+    describe("Performing listStatus() on an empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    verifyMetrics(() ->
+            fs.listStatus(dir),
+            whenRaw(LIST_STATUS_LIST_OP
+            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)),
+            whenAuthoritative(NO_IO),
+            whenNonauth(LIST_STATUS_LIST_OP));
+  }
+
+  @Test
+  public void testCostOfListStatusOnNonEmptyDir() throws Throwable {
+    describe("Performing listStatus() on a non empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    Path file = new Path(dir, "file.txt");
+    touch(fs, file);
+    verifyMetrics(() ->
+            fs.listStatus(dir),
+            whenRaw(LIST_STATUS_LIST_OP),
+            whenAuthoritative(NO_IO),
+            whenNonauth(LIST_STATUS_LIST_OP));
+  }
+
+  @Test
   public void testCostOfGetFileStatusOnFile() throws Throwable {
     describe("performing getFileStatus on a file");
     Path simpleFile = file(methodPath());
@@ -211,6 +257,36 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     interceptRawGetFileStatusFNFE(methodPath(), false,
         StatusProbeEnum.ALL,
         GET_FILE_STATUS_FNFE);
+  }
+
+  @Test
+  public void testCostOfRootFileStatus() throws Throwable {
+    Path root = path("/");
+    S3AFileStatus rootStatus = verifyRawInnerGetFileStatus(
+            root,
+            false,
+            StatusProbeEnum.ALL,
+            ROOT_FILE_STATUS_PROBE);
+    String rootStatusContent = rootStatus.toString();
+    Assertions.assertThat(rootStatus.isDirectory())
+            .describedAs("Status returned should be a directory "
+                    + rootStatusContent)
+            .isEqualTo(true);
+    Assertions.assertThat(rootStatus.isEmptyDirectory())
+            .isEqualTo(Tristate.UNKNOWN);
+
+    rootStatus = verifyRawInnerGetFileStatus(
+            root,
+            true,
+            StatusProbeEnum.ALL,
+            FILE_STATUS_DIR_PROBE);
+    Assertions.assertThat(rootStatus.isDirectory())
+            .describedAs("Status returned should be a directory "
+                    + rootStatusContent)
+            .isEqualTo(true);
+    Assertions.assertThat(rootStatus.isEmptyDirectory())
+            .isNotEqualByComparingTo(Tristate.UNKNOWN);
+
   }
 
   @Test
@@ -406,8 +482,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     fs.globStatus(basePath.suffix("/*"));
     // 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
-    verifyRaw(GET_FILE_STATUS_ON_DIR
-        .plus(LIST_OPERATION),
+    verifyRaw(LIST_STATUS_LIST_OP,
         () -> fs.globStatus(basePath.suffix("/*")));
   }
 
@@ -426,8 +501,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // unguarded: 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
     // no additional operations from symlink resolution
-    verifyRaw(GET_FILE_STATUS_ON_DIR
-        .plus(LIST_OPERATION),
+    verifyRaw(LIST_STATUS_LIST_OP,
         () -> fs.globStatus(basePath.suffix("/*")));
   }
 

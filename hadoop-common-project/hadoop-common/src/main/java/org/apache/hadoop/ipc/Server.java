@@ -123,7 +123,7 @@ import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
@@ -643,7 +643,22 @@ public abstract class Server {
           address.getPort(), e);
     }
   }
-  
+
+  @VisibleForTesting
+  int getPriorityLevel(Schedulable e) {
+    return callQueue.getPriorityLevel(e);
+  }
+
+  @VisibleForTesting
+  int getPriorityLevel(UserGroupInformation ugi) {
+    return callQueue.getPriorityLevel(ugi);
+  }
+
+  @VisibleForTesting
+  void setPriorityLevel(UserGroupInformation ugi, int priority) {
+    callQueue.setPriorityLevel(ugi, priority);
+  }
+
   /**
    * Returns a handle to the rpcMetrics (required in tests)
    * @return rpc metrics
@@ -2043,7 +2058,7 @@ public abstract class Server {
             LOG.debug("SASL server successfully authenticated client: " + user);
           }
           rpcMetrics.incrAuthenticationSuccesses();
-          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
+          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user + " from " + toString());
           saslContextEstablished = true;
         }
       } catch (RpcServerException rse) { // don't re-wrap
@@ -2187,7 +2202,7 @@ public abstract class Server {
     private void doSaslReply(Exception ioe) throws IOException {
       setupResponse(authFailedCall,
           RpcStatusProto.FATAL, RpcErrorCodeProto.FATAL_UNAUTHORIZED,
-          null, ioe.getClass().getName(), ioe.toString());
+          null, ioe.getClass().getName(), ioe.getMessage());
       sendResponse(authFailedCall);
     }
 
@@ -2582,8 +2597,7 @@ public abstract class Server {
         final RpcCall call = new RpcCall(this, callId, retry);
         setupResponse(call,
             rse.getRpcStatusProto(), rse.getRpcErrorCodeProto(), null,
-            t.getClass().getName(),
-            t.getMessage() != null ? t.getMessage() : t.toString());
+            t.getClass().getName(), t.getMessage());
         sendResponse(call);
       }
     }
@@ -3714,7 +3728,7 @@ public abstract class Server {
         if (count == null) {
           count = 1;
         } else {
-          count++;
+          count = count + 1;
         }
         userToConnectionsMap.put(user, count);
       }
@@ -3726,7 +3740,7 @@ public abstract class Server {
         if (count == null) {
           return;
         } else {
-          count--;
+          count = count - 1;
         }
         if (count == 0) {
           userToConnectionsMap.remove(user);

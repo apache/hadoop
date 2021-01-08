@@ -18,7 +18,7 @@
       <a ng-click="stopApp(appName)" class="btn btn-secondary"><span class="glyphicon glyphicon-stop"></span> Stop</a>
       <a ng-click="upgradeApp(appName)" class="btn btn-secondary"><span class="glyphicon glyphicon-circle-arrow-up"></span> Upgrade</a>
       <div style="display:inline-block;" ng-repeat="(key, value) in details.yarnfile.quicklinks">
-        <a href="{{value}}" class="btn btn-secondary" ng-hide="checkServiceLink()"><span class="glyphicon glyphicon-new-window"></span> {{key}}</a>
+        <a ng-href="{{value}}" class="btn btn-secondary" ng-hide="checkServiceLink()"><span class="glyphicon glyphicon-new-window"></span> {{key}}</a>
       </div>
       {{details.yarnfile.state}}
     </div>
@@ -53,7 +53,7 @@
           <tbody class="table-striped">
             <tr ng-repeat="container in docker.containers">
               <td>{{container.bare_host}}</td>
-              <td><a href="http://{{container.bare_host}}:8042/terminal/terminal.template?container={{container.id}}" target="_blank">{{container.id}}</a></td>
+              <td><a ng-href="http://{{container.bare_host}}:8042/terminal/terminal.template?container={{container.id}}" target="_blank">{{container.id}}</a></td>
               <td>{{container.launch_time | date:'yyyy-MM-dd HH:mm:ss Z'}}</td>
               <td>{{container.state}}</td>
             </tr>

@@ -128,7 +128,7 @@
             <executions>
               <execution>
                 <goals>
-                  <goal>javadoc</goal>
+                  <goal>javadoc-no-fork</goal>
                 </goals>
                 <phase>prepare-package</phase>
               </execution>

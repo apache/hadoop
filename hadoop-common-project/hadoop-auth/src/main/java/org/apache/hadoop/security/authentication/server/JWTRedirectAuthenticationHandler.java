@@ -28,7 +28,7 @@ import java.text.ParseException;
 
 import java.security.interfaces.RSAPublicKey;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.util.CertificateUtil;
 import org.slf4j.Logger;

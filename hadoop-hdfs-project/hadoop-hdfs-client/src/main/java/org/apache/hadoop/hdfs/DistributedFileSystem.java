@@ -19,9 +19,9 @@
 package org.apache.hadoop.hdfs;
 
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.collections.list.TreeList;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1762,6 +1762,18 @@ public class DistributedFileSystem extends FileSystem
         return fs.getFileStatus(p);
       }
     }.resolve(this, absF);
+  }
+
+  /**
+   * Synchronize client metadata state with Active NameNode.
+   * <p>
+   * In HA the client synchronizes its state with the Active NameNode
+   * in order to guarantee subsequent read consistency from Observer Nodes.
+   * @throws IOException
+   */
+  @Override
+  public void msync() throws IOException {
+    dfs.msync();
   }
 
   @SuppressWarnings("deprecation")

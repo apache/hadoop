@@ -30,8 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -62,7 +62,7 @@ public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private final String xMsVersion = "2018-11-09";
+  private final String xMsVersion = "2019-12-12";
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
@@ -265,7 +265,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
                                       final String permission, final String umask,
-                                      final boolean isAppendBlob) throws AzureBlobFileSystemException {
+                                      final boolean isAppendBlob, final String eTag) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
@@ -277,6 +277,10 @@ public class AbfsClient implements Closeable {
 
     if (umask != null && !umask.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_UMASK, umask));
+    }
+
+    if (eTag != null && !eTag.isEmpty()) {
+      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();

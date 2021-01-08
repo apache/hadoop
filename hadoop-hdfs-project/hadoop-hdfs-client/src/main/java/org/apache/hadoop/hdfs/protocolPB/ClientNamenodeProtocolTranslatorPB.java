@@ -24,7 +24,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;

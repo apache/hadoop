@@ -242,7 +242,7 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
         + "(" + StringUtils.join(", ", args) + ")"
         + " failed", 0, result);
     validateSuccessFile(dest, committerName(), getFileSystem(), stage,
-        minimumFileCount);
+        minimumFileCount, "");
     completedStage(stage, d);
   }
 

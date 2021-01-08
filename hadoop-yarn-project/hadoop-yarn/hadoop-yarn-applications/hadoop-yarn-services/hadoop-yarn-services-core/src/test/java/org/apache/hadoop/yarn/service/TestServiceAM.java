@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.test.TestingCluster;
 import org.apache.hadoop.fs.Path;

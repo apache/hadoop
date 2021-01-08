@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.http.server;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -106,8 +106,38 @@ import java.util.Map;
 @Path(HttpFSFileSystem.SERVICE_VERSION)
 @InterfaceAudience.Private
 public class HttpFSServer {
+
+  enum AccessMode {
+    READWRITE, WRITEONLY, READONLY;
+  }
   private static Logger AUDIT_LOG = LoggerFactory.getLogger("httpfsaudit");
   private static final Logger LOG = LoggerFactory.getLogger(HttpFSServer.class);
+  AccessMode accessMode = AccessMode.READWRITE;
+
+  public HttpFSServer() {
+    Configuration conf = HttpFSServerWebApp.get().getConfig();
+    final String accessModeString =  conf.get("httpfs.access.mode", "read-write").toLowerCase();
+    if(accessModeString.compareTo("write-only") == 0)
+      accessMode = AccessMode.WRITEONLY;
+    else if(accessModeString.compareTo("read-only") == 0)
+      accessMode = AccessMode.READONLY;
+    else
+      accessMode = AccessMode.READWRITE;
+  }
+
+
+  // First try getting a user through HttpUserGroupInformation. This will return
+  // if the built-in hadoop auth filter is not used.  Fall back to getting the
+  // authenticated user from the request.
+  private UserGroupInformation getHttpUGI(HttpServletRequest request) {
+    UserGroupInformation user = HttpUserGroupInformation.get();
+    if (user != null) {
+      return user;
+    }
+
+    return UserGroupInformation.createRemoteUser(request.getUserPrincipal().getName());
+  }
+
 
   /**
    * Executes a {@link FileSystemAccess.FileSystemExecutor} using a filesystem for the effective
@@ -218,6 +248,12 @@ public class HttpFSServer {
                       @Context Parameters params,
                       @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
+    // Restrict access to only GETFILESTATUS and LISTSTATUS in write-only mode
+    if((op.value() != HttpFSFileSystem.Operation.GETFILESTATUS) &&
+            (op.value() != HttpFSFileSystem.Operation.LISTSTATUS) &&
+            accessMode == AccessMode.WRITEONLY) {
+      return Response.status(Response.Status.FORBIDDEN).build();
+    }
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
@@ -490,6 +526,10 @@ public class HttpFSServer {
                          @Context Parameters params,
                          @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
+    // Do not allow DELETE commands in read-only mode
+    if(accessMode == AccessMode.READONLY) {
+      return Response.status(Response.Status.FORBIDDEN).build();
+    }
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
@@ -577,6 +617,10 @@ public class HttpFSServer {
                        @Context Parameters params,
                        @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
+    // Do not allow POST commands in read-only mode
+    if(accessMode == AccessMode.READONLY) {
+      return Response.status(Response.Status.FORBIDDEN).build();
+    }
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
@@ -718,6 +762,10 @@ public class HttpFSServer {
                        @Context Parameters params,
                        @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
+    // Do not allow PUT commands in read-only mode
+    if(accessMode == AccessMode.READONLY) {
+      return Response.status(Response.Status.FORBIDDEN).build();
+    }
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);

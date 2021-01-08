@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
@@ -96,7 +97,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import com.google.inject.Guice;
 import com.google.inject.Singleton;
 import com.google.inject.servlet.ServletModule;
@@ -241,8 +242,10 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
   }
 
   private void sendStartedEvent(RMNode node) {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     ((RMNodeImpl) node)
-        .handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+        .handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
   }
 
   private void sendLostEvent(RMNode node) {
@@ -858,7 +861,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
 
   public void verifyNodeInfo(JSONObject nodeInfo, RMNode nm)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 21, nodeInfo.length());
+    assertEquals("incorrect number of elements", 23, nodeInfo.length());
 
     JSONObject resourceInfo = nodeInfo.getJSONObject("resourceUtilization");
     verifyNodeInfoGeneric(nm, nodeInfo.getString("state"),

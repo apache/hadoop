@@ -56,7 +56,7 @@
   <!-- HTTP properties -->
   <property>
     <name>hadoop.http.idle_timeout.ms</name>
-    <value>1000</value>
+    <value>60000</value>
     <description>
       Httpfs Server connection timeout in milliseconds.
     </description>
@@ -323,4 +323,15 @@
     </description>
   </property>
 
+  <property>
+    <name>httpfs.access.mode</name>
+    <value>read-write</value>
+    <description>
+      Sets the access mode for HTTPFS. If access is not allowed the FORBIDDED (403) is returned.
+      Valid access modes are:
+       read-write   Full Access allowed
+       write-only   PUT POST and DELETE full Access. GET only allows GETFILESTATUS and LISTSTATUS
+       read-only    GET Full Access PUT POST and DELETE are FORBIDDEN
+    </description>
+  </property>
 </configuration>

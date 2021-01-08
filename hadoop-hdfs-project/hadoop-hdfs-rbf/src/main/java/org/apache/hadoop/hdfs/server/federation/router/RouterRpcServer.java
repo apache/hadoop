@@ -156,7 +156,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
@@ -526,8 +526,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    *                          client requests.
    */
   private void checkSafeMode() throws StandbyException {
-    RouterSafemodeService safemodeService = router.getSafemodeService();
-    if (safemodeService != null && safemodeService.isInSafeMode()) {
+    if (isSafeMode()) {
       // Throw standby exception, router is not available
       if (rpcMonitor != null) {
         rpcMonitor.routerFailureSafemode();
@@ -536,6 +535,16 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       throw new StandbyException("Router " + router.getRouterId() +
           " is in safe mode and cannot handle " + op + " requests");
     }
+  }
+
+  /**
+   * Return true if the Router is in safe mode.
+   *
+   * @return true if the Router is in safe mode.
+   */
+  boolean isSafeMode() {
+    RouterSafemodeService safemodeService = router.getSafemodeService();
+    return (safemodeService != null && safemodeService.isInSafeMode());
   }
 
   /**

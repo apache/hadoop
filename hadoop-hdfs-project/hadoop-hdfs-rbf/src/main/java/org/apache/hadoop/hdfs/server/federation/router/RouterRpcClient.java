@@ -29,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -74,8 +75,8 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A client proxy for Router to NN communication using the NN ClientProtocol.
@@ -582,9 +583,9 @@ public class RouterRpcClient {
    * @return If the exception comes from an unavailable subcluster.
    */
   public static boolean isUnavailableException(IOException ioe) {
-    if (ioe instanceof ConnectException ||
-        ioe instanceof ConnectTimeoutException ||
+    if (ioe instanceof ConnectTimeoutException ||
         ioe instanceof EOFException ||
+        ioe instanceof SocketException ||
         ioe instanceof StandbyException) {
       return true;
     }

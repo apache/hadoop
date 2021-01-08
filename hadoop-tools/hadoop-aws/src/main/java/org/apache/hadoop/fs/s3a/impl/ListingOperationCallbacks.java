@@ -78,7 +78,7 @@ public interface ListingOperationCallbacks {
   /**
    * Create a {@code ListObjectsRequest} request against this bucket,
    * with the maximum keys returned in a query set by
-   * {@link this.getMaxKeys()}.
+   * {@link #getMaxKeys()}.
    * @param key key for request
    * @param delimiter any delimiter
    * @return the request

@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 
 public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
@@ -197,8 +197,8 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
       NMToken nmToken = null;
       if (nodeSet != null) {
         if (!nodeSet.contains(container.getNodeId())) {
-          LOG.info("Sending NMToken for nodeId : " + container.getNodeId()
-              + " for container : " + container.getId());
+          LOG.debug("Sending NMToken for nodeId : {} for container : {}",
+              container.getNodeId(), container.getId());
           Token token =
               createNMToken(container.getId().getApplicationAttemptId(),
                 container.getNodeId(), applicationSubmitter);

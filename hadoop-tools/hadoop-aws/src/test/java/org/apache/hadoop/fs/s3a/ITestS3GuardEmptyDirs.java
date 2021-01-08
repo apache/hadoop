@@ -32,6 +32,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -286,4 +287,27 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
     s3.putObject(putObjectRequest);
   }
 
+  @Test
+  public void testDirMarkerDelete() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    assumeFilesystemHasMetadatastore(getFileSystem());
+    Path baseDir = methodPath();
+    Path subFile = new Path(baseDir, "subdir/file.txt");
+    // adds the s3guard entry
+    fs.mkdirs(baseDir);
+    touch(fs, subFile);
+    // PUT a marker
+    createEmptyObject(fs, fs.pathToKey(baseDir) + "/");
+    fs.delete(baseDir, true);
+    assertPathDoesNotExist("Should have been deleted", baseDir);
+
+    // now create the dir again
+    fs.mkdirs(baseDir);
+    FileStatus fileStatus = fs.getFileStatus(baseDir);
+    Assertions.assertThat(fileStatus)
+        .matches(FileStatus::isDirectory, "Not a directory");
+    Assertions.assertThat(fs.listStatus(baseDir))
+        .describedAs("listing of %s", baseDir)
+        .isEmpty();
+  }
 }

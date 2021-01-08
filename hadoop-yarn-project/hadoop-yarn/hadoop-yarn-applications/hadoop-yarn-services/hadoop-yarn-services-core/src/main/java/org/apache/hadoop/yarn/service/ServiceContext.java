@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.base.Preconditions;
-import com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.service.api.records.Service;

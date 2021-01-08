@@ -34,7 +34,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.examples.pi.math.Bellard;
 import org.apache.hadoop.examples.pi.math.Bellard.Parameter;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /** A class for parsing outputs */
 public final class Parser {

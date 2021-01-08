@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import org.apache.hadoop.http.JettyUtils;

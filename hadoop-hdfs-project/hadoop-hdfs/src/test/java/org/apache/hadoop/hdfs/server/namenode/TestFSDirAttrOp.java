@@ -20,8 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -55,6 +57,54 @@ public class TestFSDirAttrOp {
     when(inode.getAccessTime()).thenReturn(atime0);
 
     return FSDirAttrOp.unprotectedSetTimes(fsd, iip, mtime, atime, force);
+  }
+
+  private boolean unprotectedSetAttributes(short currPerm, short newPerm)
+      throws Exception {
+    return unprotectedSetAttributes(currPerm, newPerm, "user1", "user1",
+        false);
+  }
+
+  private boolean unprotectedSetAttributes(short currPerm, short newPerm,
+      String currUser, String newUser, boolean testChangeOwner)
+      throws Exception {
+    String groupName = "testGroup";
+    FsPermission originalPerm = new FsPermission(currPerm);
+    FsPermission updatedPerm = new FsPermission(newPerm);
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    SnapshotManager ssMgr = Mockito.mock(SnapshotManager.class);
+    FSDirectory fsd = Mockito.mock(FSDirectory.class);
+    INodesInPath iip = Mockito.mock(INodesInPath.class);
+    when(fsd.getFSNamesystem()).thenReturn(fsn);
+    when(fsn.getSnapshotManager()).thenReturn(ssMgr);
+    when(ssMgr.getSkipCaptureAccessTimeOnlyChange()).thenReturn(false);
+    when(fsd.getAccessTimePrecision()).thenReturn(1000L);
+    when(fsd.hasWriteLock()).thenReturn(Boolean.TRUE);
+    when(iip.getLatestSnapshotId()).thenReturn(0);
+    INode inode = new INodeDirectory(1000, DFSUtil.string2Bytes(""),
+        new PermissionStatus(currUser, "testGroup", originalPerm), 0L);
+    when(iip.getLastINode()).thenReturn(inode);
+    return testChangeOwner ? FSDirAttrOp.unprotectedSetOwner(fsd, iip, newUser,
+        groupName) : FSDirAttrOp.unprotectedSetPermission(fsd, iip,
+        updatedPerm);
+  }
+
+  @Test
+  public void testUnprotectedSetPermissions() throws Exception {
+    assertTrue("setPermissions return true for updated permissions",
+        unprotectedSetAttributes((short) 0777, (short) 0));
+    assertFalse("setPermissions should return false for same permissions",
+        unprotectedSetAttributes((short) 0777, (short) 0777));
+  }
+
+  @Test
+  public void testUnprotectedSetOwner() throws Exception {
+    assertTrue("SetOwner should return true for a new user",
+        unprotectedSetAttributes((short) 0777, (short) 0777, "user1",
+            "user2", true));
+    assertFalse("SetOwner should return false for same user",
+        unprotectedSetAttributes((short) 0777, (short) 0777, "user1",
+            "user1", true));
   }
 
   @Test

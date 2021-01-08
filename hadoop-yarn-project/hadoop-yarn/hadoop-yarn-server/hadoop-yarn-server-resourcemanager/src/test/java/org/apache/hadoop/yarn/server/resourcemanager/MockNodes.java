@@ -42,8 +42,8 @@ import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Test helper to generate mock nodes
@@ -334,6 +334,13 @@ public class MockNodes {
     @Override
     public Resource getPhysicalResource() {
       return this.physicalResource;
+    }
+
+    @Override
+    public long calculateHeartBeatInterval(
+        long defaultInterval, long minInterval, long maxInterval,
+        float speedupFactor, float slowdownFactor) {
+      return defaultInterval;
     }
   };
 

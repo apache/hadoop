@@ -20,9 +20,9 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.net.InetAddresses;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -326,12 +326,14 @@ public class DatanodeManager {
     this.readConsiderStorageType = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY,
         DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_DEFAULT);
-    LOG.warn(
-        "{} and {} are incompatible and only one can be enabled. "
-            + "Both are currently enabled.",
-        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
-        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY);
-
+    if (readConsiderLoad && readConsiderStorageType) {
+      LOG.warn(
+          "{} and {} are incompatible and only one can be enabled. "
+              + "Both are currently enabled. {} will be ignored.",
+          DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
+          DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY);
+    }
     this.avoidStaleDataNodesForWrite = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);

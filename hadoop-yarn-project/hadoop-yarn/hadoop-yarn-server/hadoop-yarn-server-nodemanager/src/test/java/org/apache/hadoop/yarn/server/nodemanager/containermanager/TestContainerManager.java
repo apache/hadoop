@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.records.LocalizationState;
@@ -200,8 +200,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Override
   protected ContainerManagerImpl
       createContainerManager(DeletionService delSrvc) {
-    return  new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
-      metrics, dirsHandler) {
+    return  new ContainerManagerImpl(context, exec, delSrvc,
+        getNodeStatusUpdater(), metrics, dirsHandler) {
 
       @Override
       protected UserGroupInformation getRemoteUgi() throws YarnException {
@@ -1744,7 +1744,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Test
   public void testNullTokens() throws Exception {
     ContainerManagerImpl cMgrImpl =
-        new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
+        new ContainerManagerImpl(context, exec, delSrvc, getNodeStatusUpdater(),
         metrics, dirsHandler);
     String strExceptionMsg = "";
     try {

@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -85,6 +85,14 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
   private String isNamespaceEnabledAccount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_MAX_CONCURRENT_REQUESTS,
+      DefaultValue = -1)
+  private int writeMaxConcurrentRequestCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_MAX_REQUESTS_TO_QUEUE,
+      DefaultValue = -1)
+  private int maxWriteRequestsToQueue;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
@@ -172,6 +180,10 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ATOMIC_RENAME_KEY,
       DefaultValue = DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES)
   private String azureAtomicDirs;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE)
+  private boolean enableConditionalCreateOverwrite;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,
       DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
@@ -565,6 +577,10 @@ public class AbfsConfiguration{
     return this.azureAtomicDirs;
   }
 
+  public boolean isConditionalCreateOverwriteEnabled() {
+    return this.enableConditionalCreateOverwrite;
+  }
+
   public String getAppendBlobDirs() {
     return this.azureAppendBlobDirs;
   }
@@ -820,6 +836,20 @@ public class AbfsConfiguration{
     return new ExponentialRetryPolicy(oauthTokenFetchRetryCount,
         oauthTokenFetchRetryMinBackoff, oauthTokenFetchRetryMaxBackoff,
         oauthTokenFetchRetryDeltaBackoff);
+  }
+
+  public int getWriteMaxConcurrentRequestCount() {
+    if (this.writeMaxConcurrentRequestCount < 1) {
+      return 4 * Runtime.getRuntime().availableProcessors();
+    }
+    return this.writeMaxConcurrentRequestCount;
+  }
+
+  public int getMaxWriteRequestsToQueue() {
+    if (this.maxWriteRequestsToQueue < 1) {
+      return 2 * getWriteMaxConcurrentRequestCount();
+    }
+    return this.maxWriteRequestsToQueue;
   }
 
   @VisibleForTesting

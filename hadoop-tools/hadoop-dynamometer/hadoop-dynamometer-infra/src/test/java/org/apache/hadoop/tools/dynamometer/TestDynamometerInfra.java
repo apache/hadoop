@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.dynamometer;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
