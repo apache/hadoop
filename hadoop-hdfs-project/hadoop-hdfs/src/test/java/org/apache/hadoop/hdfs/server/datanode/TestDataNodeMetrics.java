@@ -64,6 +64,8 @@ import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -158,6 +160,53 @@ public class TestDataNodeMetrics {
       assertQuantileGauges("FsyncNanos" + sec, dnMetrics);
     } finally {
       if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+  @Test
+  public void testReceivePacketSlowMetrics() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    final int interval = 1;
+    conf.setInt(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, interval);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3).build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      final DataNodeFaultInjector injector =
+          Mockito.mock(DataNodeFaultInjector.class);
+      Answer answer = new Answer() {
+        @Override
+        public Object answer(InvocationOnMock invocationOnMock)
+            throws Throwable {
+          // make the op taking longer time
+          Thread.sleep(1000);
+          return null;
+        }
+      };
+      Mockito.doAnswer(answer).when(injector).
+          stopSendingPacketDownstream(Mockito.anyString());
+      Mockito.doAnswer(answer).when(injector).delayWriteToOsCache();
+      Mockito.doAnswer(answer).when(injector).delayWriteToDisk();
+      DataNodeFaultInjector.set(injector);
+      Path testFile = new Path("/testFlushNanosMetric.txt");
+      FSDataOutputStream fout = fs.create(testFile);
+      fout.write(new byte[1]);
+      fout.hsync();
+      fout.close();
+      List<DataNode> datanodes = cluster.getDataNodes();
+      DataNode datanode = datanodes.get(0);
+      MetricsRecordBuilder dnMetrics = getMetrics(datanode.getMetrics().name());
+      assertTrue("More than 1 packet received",
+          getLongCounter("TotalPacketsReceived", dnMetrics) > 1L);
+      assertTrue("More than 1 slow packet to mirror",
+          getLongCounter("TotalPacketsSlowWriteToMirror", dnMetrics) > 1L);
+      assertCounter("TotalPacketsSlowWriteToDisk", 1L, dnMetrics);
+      assertCounter("TotalPacketsSlowWriteToOsCache", 0L, dnMetrics);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
