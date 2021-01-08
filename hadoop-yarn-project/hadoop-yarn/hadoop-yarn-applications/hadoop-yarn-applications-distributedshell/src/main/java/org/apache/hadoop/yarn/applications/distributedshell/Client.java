@@ -1414,21 +1414,19 @@ public class Client {
     }
     int waitCount = 0;
     LOG.info("Waiting for Client to exit loop");
-    while (!isRunning.get()) {
+    while (isRunning.get()) {
       try {
         Thread.sleep(50);
       } catch (InterruptedException ie) {
         // do nothing
       } finally {
-        waitCount++;
-        if (isRunning.get() || waitCount > 2000) {
+        if (++waitCount > 2000) {
           break;
         }
       }
     }
-    LOG.info("Stopping yarnClient within the Client");
+    LOG.info("Stopping yarnClient within the DS Client");
     yarnClient.stop();
-    yarnClient.waitForServiceToStop(clientTimeout);
     LOG.info("done stopping Client");
   }
 }
