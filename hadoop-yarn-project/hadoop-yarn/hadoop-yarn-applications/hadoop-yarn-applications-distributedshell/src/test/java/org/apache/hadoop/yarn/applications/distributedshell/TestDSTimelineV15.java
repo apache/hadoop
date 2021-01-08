@@ -51,8 +51,8 @@ public class TestDSTimelineV15 extends DistributedShellBaseTest {
       YarnConfiguration config) throws Exception {
     setUpHDFSCluster();
     PluginStoreTestUtils.prepareFileSystemForPluginStore(
-        hdfsCluster.getFileSystem());
-    PluginStoreTestUtils.prepareConfiguration(config, hdfsCluster);
+        getHDFSCluster().getFileSystem());
+    PluginStoreTestUtils.prepareConfiguration(config, getHDFSCluster());
     config.set(YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES,
         DistributedShellTimelinePlugin.class.getName());
   }
@@ -75,7 +75,7 @@ public class TestDSTimelineV15 extends DistributedShellBaseTest {
     GenericTestUtils.waitFor(() -> {
       try {
         RemoteIterator<FileStatus> iterApps =
-            hdfsCluster.getFileSystem().listStatusIterator(doneDir);
+            getHDFSCluster().getFileSystem().listStatusIterator(doneDir);
         return (iterApps.hasNext());
       } catch (Exception e) {
         exceptionRef.set(e);

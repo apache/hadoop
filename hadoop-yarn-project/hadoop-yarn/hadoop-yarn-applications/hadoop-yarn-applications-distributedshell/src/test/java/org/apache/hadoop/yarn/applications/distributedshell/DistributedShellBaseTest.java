@@ -101,7 +101,7 @@ public abstract class DistributedShellBaseTest {
       "--appname",
       ""
   };
-  protected static MiniDFSCluster hdfsCluster = null;
+  private static MiniDFSCluster hdfsCluster = null;
   private static MiniYARNCluster yarnCluster = null;
   private static String yarnSiteBackupPath = null;
   private static String yarnSitePath = null;
@@ -128,8 +128,10 @@ public abstract class DistributedShellBaseTest {
     // backup the original yarn-site file.
     yarnSitePath = url.getPath();
     yarnSiteBackupPath = url.getPath() + "-backup";
-    Files.copy(Paths.get(yarnSitePath), Paths.get(yarnSiteBackupPath),
-        StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+    Files.copy(Paths.get(yarnSitePath),
+        Paths.get(yarnSiteBackupPath),
+        StandardCopyOption.COPY_ATTRIBUTES,
+        StandardCopyOption.REPLACE_EXISTING);
   }
 
   @AfterClass
@@ -597,5 +599,9 @@ public abstract class DistributedShellBaseTest {
       RMContext rmContext = yarnCluster.getResourceManager().getRMContext();
       return (rmContext.getRMNodes().size() >= NUM_NMS);
     }, 100, 60000);
+  }
+
+  protected MiniDFSCluster getHDFSCluster() {
+    return hdfsCluster;
   }
 }
