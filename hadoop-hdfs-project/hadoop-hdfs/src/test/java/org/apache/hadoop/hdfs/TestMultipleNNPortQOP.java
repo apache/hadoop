@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Objects;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -253,8 +252,9 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
       doTest(fsPrivacy, PATH1);
       long count = dataNodes.stream()
           .map(dn -> dn.getSaslClient().getTargetQOP())
-          .filter(Objects::nonNull).filter(qop -> qop.equals("auth")).count();
-      // For each data pipeline, targetQOPs of sasl clients in the first two
+          .filter("auth"::equals)
+          .count();
+      // For each datanode pipeline, targetQOPs of sasl clients in the first two
       // datanodes become equal to auth.
       // Note that it is not necessarily the case for all datanodes,
       // since a datanode may be always at the last position in pipelines.
@@ -263,8 +263,10 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
       clientConf.set(HADOOP_RPC_PROTECTION, "integrity");
       FileSystem fsIntegrity = FileSystem.get(uriIntegrityPort, clientConf);
       doTest(fsIntegrity, PATH2);
-      count = dataNodes.stream().map(dn -> dn.getSaslClient().getTargetQOP())
-          .filter(Objects::nonNull).filter(qop -> qop.equals("auth")).count();
+      count = dataNodes.stream()
+          .map(dn -> dn.getSaslClient().getTargetQOP())
+          .filter("auth"::equals)
+          .count();
       assertTrue("At least two qops should be auth", count >= 2);
 
       clientConf.set(HADOOP_RPC_PROTECTION, "authentication");
@@ -272,7 +274,8 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
       doTest(fsAuth, PATH3);
       count = dataNodes.stream()
           .map(dn -> dn.getSaslServer().getNegotiatedQOP())
-          .filter(Objects::nonNull).filter(qop -> qop.equals("auth")).count();
+          .filter("auth"::equals)
+          .count();
       assertEquals("All qops should be auth", 3, count);
     } finally {
       if (cluster != null) {
