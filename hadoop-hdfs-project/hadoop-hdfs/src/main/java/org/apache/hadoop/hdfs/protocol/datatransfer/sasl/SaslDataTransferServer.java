@@ -348,11 +348,6 @@ public class SaslDataTransferServer {
     return negotiatedQOP;
   }
 
-  @VisibleForTesting
-  public void setNegotiatedQOP(String negotiatedQOP) {
-    this.negotiatedQOP = negotiatedQOP;
-  }
-
   /**
    * This method actually executes the server-side SASL handshake.
    *

@@ -405,11 +405,6 @@ public class SaslDataTransferClient {
     return targetQOP;
   }
 
-  @VisibleForTesting
-  public void setTargetQOP(String targetQOP) {
-    this.targetQOP = targetQOP;
-  }
-
   /**
    * Sends client SASL negotiation for general-purpose handshake.
    *

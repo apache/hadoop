@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -263,8 +262,6 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
 
       clientConf.set(HADOOP_RPC_PROTECTION, "integrity");
       FileSystem fsIntegrity = FileSystem.get(uriIntegrityPort, clientConf);
-      // Reset targetQOPs to null to clear the last state.
-      resetTargetQOP(dataNodes);
       doTest(fsIntegrity, PATH2);
       count = dataNodes.stream().map(dn -> dn.getSaslClient().getTargetQOP())
           .filter(Objects::nonNull).filter(qop -> qop.equals("auth")).count();
@@ -272,8 +269,6 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
 
       clientConf.set(HADOOP_RPC_PROTECTION, "authentication");
       FileSystem fsAuth = FileSystem.get(uriAuthPort, clientConf);
-      // Reset negotiatedQOPs to null to clear the last state.
-      resetNegotiatedQOP(dataNodes);
       doTest(fsAuth, PATH3);
       count = dataNodes.stream()
           .map(dn -> dn.getSaslServer().getNegotiatedQOP())
@@ -284,14 +279,6 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
         cluster.shutdown();
       }
     }
-  }
-
-  private static void resetTargetQOP(List<DataNode> dns) {
-    dns.forEach(dn -> dn.getSaslClient().setTargetQOP(null));
-  }
-
-  private static void resetNegotiatedQOP(List<DataNode> dns) {
-    dns.forEach(dn -> dn.getSaslServer().setNegotiatedQOP(null));
   }
 
   private void doTest(FileSystem fs, Path path) throws Exception {
