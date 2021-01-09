@@ -72,8 +72,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.lz4</groupId>
-      <artifactId>lz4-java</artifactId>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-compression</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
