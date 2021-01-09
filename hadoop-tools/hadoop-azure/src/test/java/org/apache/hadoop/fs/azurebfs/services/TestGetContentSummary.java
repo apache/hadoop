@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -152,30 +151,6 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       ContentSummary contentSummary = futures.get(i).get();
       checkContentSummary(contentSummary, dirCS[i][0], dirCS[i][1], dirCS[i][2]);
     }
-  }
-
-  @Test
-  public void testExecutorShutdown() throws Exception {
-    ContentSummaryProcessor contentSummaryProcessor =
-            new ContentSummaryProcessor(getAbfsStore(fs));
-    Field executorServiceField =
-            ContentSummaryProcessor.class.getDeclaredField("executorService");
-    executorServiceField.setAccessible(true);
-    ExecutorService fieldValue = (ExecutorService) executorServiceField.get(contentSummaryProcessor);
-    contentSummaryProcessor.getContentSummary(pathToIntermediateDirWithFilesAndSubdirs);
-    Assertions.assertThat(((ThreadPoolExecutor) fieldValue).getLargestPoolSize())
-        .describedAs("Core size is 1, so max threads at any time should be >=1")
-        .isGreaterThanOrEqualTo(1);
-    Assertions.assertThat(((ThreadPoolExecutor) fieldValue).getPoolSize())
-        .describedAs("No threads should remain after executor shutdown")
-        .isEqualTo(0);
-    ContentSummaryProcessor contentSummaryProcessor1 =
-            new ContentSummaryProcessor(getAbfsStore(fs));
-    fieldValue = (ExecutorService) executorServiceField.get(contentSummaryProcessor1);
-    intercept(IOException.class, () -> contentSummaryProcessor1.getContentSummary(new Path("/invalidPath")));
-    Assertions.assertThat(((ThreadPoolExecutor) fieldValue).getLargestPoolSize())
-            .describedAs("No task was submitted")
-            .isEqualTo(0);
   }
 
   private void checkContentSummary(ContentSummary contentSummary,
