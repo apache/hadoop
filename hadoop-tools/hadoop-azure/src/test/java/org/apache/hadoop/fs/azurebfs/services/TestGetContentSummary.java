@@ -55,7 +55,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       "/testFolderII/listMaxDir",
       "/testFolderII/listMaxDir/" + DEFAULT_AZURE_LIST_MAX_RESULTS/2 + "_mid_folder"};
 
-  private final Path pathToFile = new Path("/testFolder/test1");;
+  private final Path pathToFile = new Path("/testFolder/test1");
   private final Path pathToListMaxDir = new Path("/testFolderII/listMaxDir");
   private final Path pathToLeafDir =
       new Path("/testFolder/testFolder3/testFolder6/leafDir");

@@ -19,10 +19,10 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -50,7 +50,7 @@ public class ContentSummaryProcessor {
   private final CompletionService<Void> completionService = new ExecutorCompletionService<>(
       executorService);
   private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
-  private final Logger LOG = LoggerFactory.getLogger(ContentSummaryProcessor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ContentSummaryProcessor.class);
   private static final int POLL_TIMEOUT = 100;
 
   public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
@@ -63,7 +63,7 @@ public class ContentSummaryProcessor {
       processDirectoryTree(path);
       while (!queue.isEmpty() || numTasks.get() > 0) {
         LOG.debug("FileStatus queue size = {}, number of submitted unfinished tasks = {}, active thread count = {}",
-                queue.size(), numTasks, ((ThreadPoolExecutor)executorService).getActiveCount());
+                queue.size(), numTasks, ((ThreadPoolExecutor) executorService).getActiveCount());
         try {
           completionService.take().get();
         } finally {
@@ -71,8 +71,7 @@ public class ContentSummaryProcessor {
         }
       }
     } finally {
-      executorService.shutdown();
-      executorService.awaitTermination(1, TimeUnit.SECONDS);
+      executorService.shutdownNow();
     }
 
     return new ABFSContentSummary(totalBytes.get(), directoryCount.get(),
