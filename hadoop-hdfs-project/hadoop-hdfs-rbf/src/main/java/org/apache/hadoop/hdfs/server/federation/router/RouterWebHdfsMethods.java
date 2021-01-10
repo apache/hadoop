@@ -457,11 +457,12 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final String excludeDatanodes) throws IOException {
     final RouterRpcServer rpcServer = getRPCServer(router);
     DatanodeInfo[] dns = null;
-    RemoteLocation loc = null;
+    String resolvedNs = null;
     try {
       dns = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
       // for simplicity, just take the first remote location to create the file
-      loc = rpcServer.getLocationsForPath(path, true).get(0);
+      resolvedNs = rpcServer.getLocationsForPath(path, true)
+          .get(0).getNameserviceId();
     } catch (IOException e) {
       LOG.error("Cannot get the datanodes from the RPC server", e);
     }
@@ -472,7 +473,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     for (DatanodeInfo dn : dns) {
       String ns = getNsFromDataNodeNetworkLocation(dn.getNetworkLocation());
       if (collection.contains(dn.getName()) ||
-          !ns.equals(loc.getNameserviceId())) {
+          !ns.equals(resolvedNs)) {
         excludes.add(dn);
       }
     }
@@ -510,11 +511,11 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
 
   /**
    * Get the nameservice info from datanode network location.
-   * @param location
+   * @param location network location with format `/ns0/rack1`
    * @return nameservice this datanode is in
    */
-  private String getNsFromDataNodeNetworkLocation(String location) {
-    // networklocation should be in the format of /ns/rack
+  private static String getNsFromDataNodeNetworkLocation(String location) {
+    // network location should be in the format of /ns/rack
     Pattern pattern = Pattern.compile("/(.*)/");
     Matcher matcher = pattern.matcher(location);
     if (matcher.find()) {

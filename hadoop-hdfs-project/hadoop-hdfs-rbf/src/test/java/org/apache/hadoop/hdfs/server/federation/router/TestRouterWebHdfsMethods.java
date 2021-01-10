@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createMountTableEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.net.HttpURLConnection;
@@ -85,8 +86,8 @@ public class TestRouterWebHdfsMethods {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("PUT");
     assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
-    verifyFileExists("ns0", path1);
-    verifyFileNotExists("ns1", path1);
+    verifyFile("ns0", path1, true);
+    verifyFile("ns1", path1, false);
 
     // case 2: the file is created at mounted ns (ns1)
     String mountPoint = "/tmp-ns1";
@@ -99,8 +100,8 @@ public class TestRouterWebHdfsMethods {
     conn = (HttpURLConnection) url2.openConnection();
     conn.setRequestMethod("PUT");
     assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
-    verifyFileExists("ns1", path2);
-    verifyFileNotExists("ns0", path2);
+    verifyFile("ns1", path2, true);
+    verifyFile("ns0", path2, false);
   }
 
   private String getUri(String path) {
@@ -113,21 +114,20 @@ public class TestRouterWebHdfsMethods {
     return uri.toString();
   }
 
-  private void verifyFileExists(String ns, String path) throws Exception {
+  private void verifyFile(String ns, String path, boolean shouldExist)
+      throws Exception {
     FileSystem fs = cluster.getNamenode(ns, null).getFileSystem();
     try {
       fs.getFileStatus(new Path(path));
+      if (!shouldExist) {
+        LOG.info("{} should not exist in ns {}", path, ns);
+        fail();
+      }
     } catch (FileNotFoundException e) {
-      assertTrue("File should exist in " + ns, false);
-    }
-  }
-
-  private void verifyFileNotExists(String ns, String path) throws Exception {
-    FileSystem fs = cluster.getNamenode(ns, null).getFileSystem();
-    try {
-      fs.getFileStatus(new Path(path));
-    } catch (FileNotFoundException e) {
-      assertTrue("File should not exist in " + ns, true);
+      if (shouldExist) {
+        LOG.info("{} should exist in ns {}", path, ns);
+        fail();
+      }
     }
   }
 }
