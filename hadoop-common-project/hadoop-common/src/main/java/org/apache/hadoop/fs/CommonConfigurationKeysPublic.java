@@ -1037,6 +1037,6 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String HADOOP_HTTP_IDLE_TIMEOUT_MS_KEY =
       "hadoop.http.idle_timeout.ms";
-  public static final int HADOOP_HTTP_IDLE_TIMEOUT_MS_DEFAULT = 1000;
+  public static final int HADOOP_HTTP_IDLE_TIMEOUT_MS_DEFAULT = 60000;
 }
 

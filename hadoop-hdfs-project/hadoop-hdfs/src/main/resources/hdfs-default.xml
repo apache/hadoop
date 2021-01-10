@@ -2331,6 +2331,22 @@
   </property>
 
 <property>
+  <name>dfs.datanode.min.outlier.detection.nodes</name>
+  <value>10</value>
+  <description>
+    Minimum number of nodes to run outlier detection.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.slowpeer.low.threshold.ms</name>
+  <value>5</value>
+  <description>
+    Threshold in milliseconds below which a DataNode is definitely not slow.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.outliers.report.interval</name>
   <value>30m</value>
   <description>
@@ -4948,6 +4964,14 @@
   <description>
     If set to true, enables asynchronous edit logs in the Namenode.  If set
     to false, the Namenode uses the traditional synchronous edit logs.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edits.asynclogging.pending.queue.size</name>
+  <value>4096</value>
+  <description>
+    The queue size of edit pending queue for FSEditLogAsync.
   </description>
 </property>
 

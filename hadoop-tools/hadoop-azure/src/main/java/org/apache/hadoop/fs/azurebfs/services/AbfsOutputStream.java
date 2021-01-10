@@ -35,11 +35,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.fs.FileSystem.Statistics;
@@ -48,6 +50,9 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
 import static org.apache.hadoop.io.IOUtils.wrapException;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_CLOSE_MODE;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_MODE;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
@@ -60,6 +65,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private boolean closed;
   private boolean supportFlush;
   private boolean disableOutputStreamFlush;
+  private boolean enableSmallWriteOptimization;
   private boolean isAppendBlob;
   private volatile IOException lastError;
 
@@ -69,6 +75,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private final int bufferSize;
   private byte[] buffer;
   private int bufferIndex;
+  private int numOfAppendsToServerSinceLastFlush;
   private final int maxConcurrentRequestCount;
   private final int maxRequestsThatCanBeQueued;
 
@@ -108,12 +115,15 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.supportFlush = abfsOutputStreamContext.isEnableFlush();
     this.disableOutputStreamFlush = abfsOutputStreamContext
             .isDisableOutputStreamFlush();
+    this.enableSmallWriteOptimization
+        = abfsOutputStreamContext.isEnableSmallWriteOptimization();
     this.isAppendBlob = abfsOutputStreamContext.isAppendBlob();
     this.lastError = null;
     this.lastFlushOffset = 0;
     this.bufferSize = abfsOutputStreamContext.getWriteBufferSize();
     this.buffer = byteBufferPool.getBuffer(false, bufferSize).array();
     this.bufferIndex = 0;
+    this.numOfAppendsToServerSinceLastFlush = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
     this.outputStreamStatistics = abfsOutputStreamContext.getStreamStatistics();
 
@@ -309,8 +319,29 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private synchronized void flushInternal(boolean isClose) throws IOException {
     maybeThrowLastError();
+
+    // if its a flush post write < buffersize, send flush parameter in append
+    if (!isAppendBlob
+        && enableSmallWriteOptimization
+        && (numOfAppendsToServerSinceLastFlush == 0) // there are no ongoing store writes
+        && (writeOperations.size() == 0) // double checking no appends in progress
+        && (bufferIndex > 0)) { // there is some data that is pending to be written
+      smallWriteOptimizedflushInternal(isClose);
+      return;
+    }
+
     writeCurrentBufferToService();
     flushWrittenBytesToService(isClose);
+    numOfAppendsToServerSinceLastFlush = 0;
+  }
+
+  private synchronized void smallWriteOptimizedflushInternal(boolean isClose) throws IOException {
+    // writeCurrentBufferToService will increment numOfAppendsToServerSinceLastFlush
+    writeCurrentBufferToService(true, isClose);
+    waitForAppendsToComplete();
+    shrinkWriteOperationQueue();
+    maybeThrowLastError();
+    numOfAppendsToServerSinceLastFlush = 0;
   }
 
   private synchronized void flushInternalAsync() throws IOException {
@@ -335,8 +366,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "writeCurrentBufferToService", "append")) {
-      AbfsRestOperation op = client.append(path, offset, bytes, 0,
-          bytesLength, cachedSasToken.get(), this.isAppendBlob);
+      AppendRequestParameters reqParams = new AppendRequestParameters(offset, 0,
+          bytesLength, APPEND_MODE, true);
+      AbfsRestOperation op = client.append(path, bytes, reqParams, cachedSasToken.get());
       cachedSasToken.update(op.getSasToken());
       outputStreamStatistics.uploadSuccessful(bytesLength);
       perfInfo.registerResult(op.getResult());
@@ -358,6 +390,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   private synchronized void writeCurrentBufferToService() throws IOException {
+    writeCurrentBufferToService(false, false);
+  }
+
+  private synchronized void writeCurrentBufferToService(boolean isFlush, boolean isClose) throws IOException {
     if (this.isAppendBlob) {
       writeAppendBlobCurrentBufferToService();
       return;
@@ -367,6 +403,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       return;
     }
     outputStreamStatistics.writeCurrentBuffer();
+    numOfAppendsToServerSinceLastFlush++;
 
     final byte[] bytes = buffer;
     final int bytesLength = bufferIndex;
@@ -388,8 +425,19 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         AbfsPerfTracker tracker = client.getAbfsPerfTracker();
         try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
                 "writeCurrentBufferToService", "append")) {
-          AbfsRestOperation op = client.append(path, offset, bytes, 0,
-                  bytesLength, cachedSasToken.get(), false);
+          AppendRequestParameters.Mode
+              mode = APPEND_MODE;
+          if (isFlush & isClose) {
+            mode = FLUSH_CLOSE_MODE;
+          } else if (isFlush) {
+            mode = FLUSH_MODE;
+          }
+
+          AppendRequestParameters reqParams = new AppendRequestParameters(
+              offset, 0, bytesLength, mode, false);
+          AbfsRestOperation op = client.append(path, bytes, reqParams,
+              cachedSasToken.get());
+
           cachedSasToken.update(op.getSasToken());
           perfInfo.registerResult(op.getResult());
           byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
@@ -410,7 +458,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     shrinkWriteOperationQueue();
   }
 
-  private synchronized void flushWrittenBytesToService(boolean isClose) throws IOException {
+  private synchronized void waitForAppendsToComplete() throws IOException {
     for (WriteOperation writeOperation : writeOperations) {
       try {
         writeOperation.task.get();
@@ -428,6 +476,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         throw lastError;
       }
     }
+  }
+
+  private synchronized void flushWrittenBytesToService(boolean isClose) throws IOException {
+    waitForAppendsToComplete();
     flushWrittenBytesToServiceInternal(position, false, isClose);
   }
 
@@ -556,6 +608,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   @VisibleForTesting
   int getMaxRequestsThatCanBeQueued() {
     return maxRequestsThatCanBeQueued;
+  }
+
+  @VisibleForTesting
+  Boolean isAppendBlobStream() {
+    return isAppendBlob;
   }
 
   /**

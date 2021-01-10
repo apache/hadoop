@@ -223,10 +223,18 @@ public class Text extends BinaryComparable
   }
 
   /**
-   * Set to a utf8 byte array.
+   * Set to a utf8 byte array. If the length of <code>utf8</code> is
+   * <em>zero</em>, actually clear {@link #bytes} and any existing
+   * data is lost.
    */
   public void set(byte[] utf8) {
-    set(utf8, 0, utf8.length);
+    if (utf8.length == 0) {
+      bytes = EMPTY_BYTES;
+      length = 0;
+      textLength = -1;
+    } else {
+      set(utf8, 0, utf8.length);
+    }
   }
 
   /**

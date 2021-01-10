@@ -26,7 +26,10 @@ import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.io.IOUtils;
+
+import org.junit.AfterClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +42,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 
 /**
  * An extension of the contract test base set up for S3A tests.
@@ -47,6 +52,12 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     implements S3ATestConstants {
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractS3ATestBase.class);
+
+  /**
+   * FileSystem statistics are collected across every test case.
+   */
+  protected static final IOStatisticsSnapshot FILESYSTEM_IOSTATS =
+      snapshotIOStatistics();
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
@@ -73,8 +84,20 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     maybeAuditTestPath();
 
     super.teardown();
+    if (getFileSystem() != null) {
+      FILESYSTEM_IOSTATS.aggregate(getFileSystem().getIOStatistics());
+    }
     describe("closing file system");
     IOUtils.closeStream(getFileSystem());
+  }
+
+  /**
+   * Dump the filesystem statistics after the class.
+   */
+  @AfterClass
+  public static void dumpFileSystemIOStatistics() {
+    LOG.info("Aggregate FileSystem Statistics {}",
+        ioStatisticsToPrettyString(FILESYSTEM_IOSTATS));
   }
 
   /**

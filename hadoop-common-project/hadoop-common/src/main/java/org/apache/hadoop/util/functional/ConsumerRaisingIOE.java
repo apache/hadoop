@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,33 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+package org.apache.hadoop.util.functional;
+
+import java.io.IOException;
 
 /**
- * End-to-end tests for COMPOSITE_CRC combine mode.
+ * Version of java.util.function.Consumer which raises
+ * exceptions.
+ * @param <T> type of argument,.
  */
-public class TestFileChecksumCompositeCrc extends TestFileChecksum {
-  @Override
-  protected void customizeConf(Configuration conf) {
-    conf.set(
-        HdfsClientConfigKeys.DFS_CHECKSUM_COMBINE_MODE_KEY, "COMPOSITE_CRC");
-  }
+@FunctionalInterface
+public interface ConsumerRaisingIOE<T> {
 
-  @Override
-  protected boolean expectComparableStripedAndReplicatedFiles() {
-    return true;
-  }
+  /**
+   * Process the argument.
+   * @param t type
+   * @throws IOException if needed
+   */
+  void accept(T t) throws IOException;
 
-  @Override
-  protected boolean expectComparableDifferentBlockSizeReplicatedFiles() {
-    return true;
-  }
-
-  @Override
-  protected boolean expectSupportForSingleFileMixedBytesPerChecksum() {
-    return true;
+  /**
+   * after calling {@link #accept(Object)},
+   * invoke the next consumer in the chain.
+   * @param next next consumer
+   * @return the chain.
+   */
+  default ConsumerRaisingIOE<T> andThen(
+      ConsumerRaisingIOE<? super T> next) {
+    return (T t) -> {
+      accept(t);
+      next.accept(t);
+    };
   }
 }
