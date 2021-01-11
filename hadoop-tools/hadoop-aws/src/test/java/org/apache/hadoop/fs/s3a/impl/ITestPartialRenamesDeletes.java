@@ -57,8 +57,9 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.FILES_DELETE_REJECTED;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
@@ -664,7 +665,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);
-    MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUESTS);
+    MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUEST);
+    MetricDiff bulkDeleteVerbCount = new MetricDiff(roleFS,
+        OBJECT_BULK_DELETE_REQUEST);
     MetricDiff deleteObjectCount = new MetricDiff(roleFS,
         OBJECT_DELETE_OBJECTS);
 
@@ -673,7 +676,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     if (multiDelete) {
       // multi-delete status checks
       extractCause(MultiObjectDeleteException.class, ex);
-      deleteVerbCount.assertDiffEquals("Wrong delete request count", 1);
+      deleteVerbCount.assertDiffEquals("Wrong delete request count", 0);
+      bulkDeleteVerbCount.assertDiffEquals("Wrong bulk delete request count",
+          1);
       deleteObjectCount.assertDiffEquals("Number of keys in delete request",
           readOnlyFiles.size());
       rejectionCount.assertDiffEquals("Wrong rejection count",

@@ -36,7 +36,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -463,6 +462,7 @@ public class TestFSConfigToCSConfigConverter {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
         .withClusterResource(CLUSTER_RESOURCE_STRING)
         .withConvertPlacementRules(true)
+        .withPlacementRulesToFile(true)
         .build();
 
     converter.convert(params);
@@ -612,17 +612,17 @@ public class TestFSConfigToCSConfigConverter {
     config.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
         true);
 
-    ByteArrayOutputStream jsonOutStream = new ByteArrayOutputStream();
     converter.setConvertPlacementRules(true);
-    converter.setMappingRulesOutputStream(jsonOutStream);
     converter.setConsoleMode(true);
     converter.convert(config);
+    String json = converter.getCapacitySchedulerConfig()
+        .get(CapacitySchedulerConfiguration.MAPPING_RULE_JSON);
 
     MappingRulesDescription description =
         new ObjectMapper()
           .reader()
           .forType(MappingRulesDescription.class)
-          .readValue(jsonOutStream.toByteArray());
+          .readValue(json);
 
     if (hasPlacementRules) {
       // fs.xml defines 5 rules

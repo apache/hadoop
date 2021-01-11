@@ -157,7 +157,9 @@
 <property>
   <name>dfs.datanode.handler.count</name>
   <value>10</value>
-  <description>The number of server threads for the datanode.</description>
+  <description>
+     The number of Datanode RPC server threads that listen to
+     requests from client.</description>
 </property>
 
 <property>
@@ -2327,6 +2329,22 @@
       If the number of samples is below this then outlier detection is skipped.
     </description>
   </property>
+
+<property>
+  <name>dfs.datanode.min.outlier.detection.nodes</name>
+  <value>10</value>
+  <description>
+    Minimum number of nodes to run outlier detection.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.slowpeer.low.threshold.ms</name>
+  <value>5</value>
+  <description>
+    Threshold in milliseconds below which a DataNode is definitely not slow.
+  </description>
+</property>
 
 <property>
   <name>dfs.datanode.outliers.report.interval</name>
@@ -4950,6 +4968,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edits.asynclogging.pending.queue.size</name>
+  <value>4096</value>
+  <description>
+    The queue size of edit pending queue for FSEditLogAsync.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.edits.dir.minimum</name>
   <value>1</value>
   <description>
@@ -6064,6 +6090,15 @@
         data blocks exist and the configured ratio is small, which will
         prevent the volume from taking new blocks
         until capacity is balanced out.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.getBlocks.hot-time-interval</name>
+    <value>0</value>
+    <description>
+        Balancer prefer moving cold blocks i.e blocks associated with files
+        accessed or modified before the specified time interval.
     </description>
   </property>
 </configuration>

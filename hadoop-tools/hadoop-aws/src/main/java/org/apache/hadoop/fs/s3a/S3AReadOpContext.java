@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 
 import javax.annotation.Nullable;
 
@@ -60,8 +61,8 @@ public class S3AReadOpContext extends S3AOpContext {
    * @param isS3GuardEnabled true iff S3Guard is enabled.
    * @param invoker invoker for normal retries.
    * @param s3guardInvoker S3Guard-specific retry invoker.
-   * @param stats statistics (may be null)
-   * @param instrumentation FS instrumentation
+   * @param stats Fileystem statistics (may be null)
+   * @param instrumentation statistics context
    * @param dstFileStatus target file status
    * @param inputPolicy the input policy
    * @param readahead readahead for GET operations/skip, etc.
@@ -71,13 +72,14 @@ public class S3AReadOpContext extends S3AOpContext {
       final Path path,
       boolean isS3GuardEnabled,
       Invoker invoker,
-      Invoker s3guardInvoker,
+      @Nullable Invoker s3guardInvoker,
       @Nullable FileSystem.Statistics stats,
-      S3AInstrumentation instrumentation,
+      S3AStatisticsContext instrumentation,
       FileStatus dstFileStatus,
       S3AInputPolicy inputPolicy,
       ChangeDetectionPolicy changeDetectionPolicy,
       final long readahead) {
+
     super(isS3GuardEnabled, invoker, s3guardInvoker, stats, instrumentation,
         dstFileStatus);
     this.path = checkNotNull(path);

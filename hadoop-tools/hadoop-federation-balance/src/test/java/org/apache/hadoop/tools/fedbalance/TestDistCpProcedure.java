@@ -281,7 +281,7 @@ public class TestDistCpProcedure {
     FedBalanceContext context = buildContext(src, dst, MOUNT);
     DistCpProcedure dcProcedure =
         new DistCpProcedure("distcp-procedure", null, 1000, context);
-    dcProcedure.disableWrite();
+    dcProcedure.disableWrite(context);
     dcProcedure.finish();
 
     // Verify path and permission.
@@ -317,7 +317,8 @@ public class TestDistCpProcedure {
     dcp[0] = serializeProcedure(dcp[0]);
     executeProcedure(dcp[0], Stage.DISABLE_WRITE, () -> dcp[0].diffDistCp());
     dcp[0] = serializeProcedure(dcp[0]);
-    executeProcedure(dcp[0], Stage.FINAL_DISTCP, () -> dcp[0].disableWrite());
+    executeProcedure(dcp[0], Stage.FINAL_DISTCP,
+        () -> dcp[0].disableWrite(context));
     dcp[0] = serializeProcedure(dcp[0]);
     OutputStream out = fs.append(new Path(src, "b/c"));
     executeProcedure(dcp[0], Stage.FINISH, () -> dcp[0].finalDistCp());
@@ -372,7 +373,7 @@ public class TestDistCpProcedure {
         new DistCpProcedure("distcp-procedure", null, 1000, context);
     assertNotEquals(0, fs.getFileStatus(src).getPermission().toShort());
     executeProcedure(dcProcedure, Stage.FINAL_DISTCP,
-        () -> dcProcedure.disableWrite());
+        () -> dcProcedure.disableWrite(context));
     assertEquals(0, fs.getFileStatus(src).getPermission().toShort());
     cleanup(fs, new Path(testRoot));
   }
