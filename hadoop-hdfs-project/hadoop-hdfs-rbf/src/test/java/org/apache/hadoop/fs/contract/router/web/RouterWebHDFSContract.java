@@ -64,6 +64,7 @@ public class RouterWebHDFSContract extends HDFSContract {
       conf.addResource(CONTRACT_WEBHDFS_XML);
 
       cluster = new MiniRouterDFSCluster(true, 2, conf);
+      cluster.setIndependentDNs();
 
       // Start NNs and DNs and wait until ready
       cluster.startCluster(conf);
