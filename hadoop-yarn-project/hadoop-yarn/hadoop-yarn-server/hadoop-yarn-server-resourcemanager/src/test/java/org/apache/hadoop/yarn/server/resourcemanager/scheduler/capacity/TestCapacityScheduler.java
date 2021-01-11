@@ -1450,7 +1450,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     assertMemory(scheduler, nmId, 5 * GB, 0);
 
     // reduce the resources again to trigger a preempt request to the AM for c2
-    long t0 = Time.now();
+    long t0 = Time.monotonicNow();
     updateNodeResource(rm, nmId, 3 * GB, 2, 2 * 1000);
     waitMemory(scheduler, nmId, 5 * GB, -2 * GB, 200, 5 * 1000);
 
@@ -1475,7 +1475,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     ContainerStatus c2status = completedContainers.get(0);
     assertContainerKilled(c2.getId(), c2status);
 
-    assertTime(2000, Time.now() - t0);
+    assertTime(2000, Time.monotonicNow() - t0);
 
     rm.stop();
   }

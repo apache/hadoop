@@ -257,7 +257,7 @@ public abstract class TestSchedulerOvercommit {
     assertMemory(scheduler, nmId, 4 * GB, 0);
 
     // Reducing to 2GB should kill the container
-    long t0 = Time.now();
+    long t0 = Time.monotonicNow();
     updateNodeResource(rm, nmId, 2 * GB, 2, 0);
     waitMemory(scheduler, nm, 2 * GB, 0 * GB, INTERVAL, 2 * INTERVAL);
 
@@ -269,7 +269,7 @@ public abstract class TestSchedulerOvercommit {
     assertContainerKilled(container.getId(), containerStatus);
 
     // It should kill the containers right away
-    assertTime(0, Time.now() - t0);
+    assertTime(0, Time.monotonicNow() - t0);
   }
 
   /**
@@ -285,7 +285,7 @@ public abstract class TestSchedulerOvercommit {
     final int timeout = (int)TimeUnit.SECONDS.toMillis(2);
 
     // Reducing to 2GB should first preempt the container
-    long t0 = Time.now();
+    long t0 = Time.monotonicNow();
     updateNodeResource(rm, nmId, 2 * GB, 2, timeout);
     waitMemory(scheduler, nm, 4 * GB, -2 * GB, INTERVAL, timeout);
 
@@ -307,7 +307,7 @@ public abstract class TestSchedulerOvercommit {
     assertContainerKilled(container.getId(), containerStatus);
 
     // Check how long it took to kill the container
-    assertTime(timeout, Time.now() - t0);
+    assertTime(timeout, Time.monotonicNow() - t0);
   }
 
   /**
@@ -339,8 +339,8 @@ public abstract class TestSchedulerOvercommit {
     updateNodeResource(rm, nmId, 4 * GB, 2, timeout);
     waitMemory(scheduler, nm, 4 * GB, 0, INTERVAL, timeout);
 
-    long t0 = Time.now();
-    while (Time.now() - t0 < TimeUnit.SECONDS.toMillis(2)) {
+    long t0 = Time.monotonicNow();
+    while (Time.monotonicNow() - t0 < TimeUnit.SECONDS.toMillis(2)) {
       nm.nodeHeartbeat(true);
       AllocateResponse allocation = am.schedule();
       assertNoPreemption(allocation.getPreemptionMessage());
@@ -505,7 +505,7 @@ public abstract class TestSchedulerOvercommit {
     assertMemory(scheduler, nmId, 5 * GB, 0);
 
     // reduce the resources again to trigger a preempt request to the AM for c2
-    long t0 = Time.now();
+    long t0 = Time.monotonicNow();
     updateNodeResource(rm, nmId, 3 * GB, 2, 2 * 1000);
     waitMemory(scheduler, nmId, 5 * GB, -2 * GB, 200, 5 * 1000);
 
@@ -533,7 +533,7 @@ public abstract class TestSchedulerOvercommit {
     ContainerStatus c2status = completedContainers.get(0);
     assertContainerKilled(c2.getId(), c2status);
 
-    assertTime(2000, Time.now() - t0);
+    assertTime(2000, Time.monotonicNow() - t0);
   }
 
   /**
