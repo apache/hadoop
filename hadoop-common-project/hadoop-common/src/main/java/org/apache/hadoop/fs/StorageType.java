@@ -92,7 +92,8 @@ public enum StorageType {
   }
 
   public static boolean allowSameDiskTiering(StorageType storageType) {
-    return storageType == StorageType.DISK || storageType == StorageType.ARCHIVE;
+    return storageType == StorageType.DISK
+        || storageType == StorageType.ARCHIVE;
   }
 
   private static List<StorageType> getNonTransientTypes() {

@@ -484,7 +484,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // should share the same amount of reserved capacity.
     // When calculating actual non dfs used,
     // exclude DFS used capacity by another volume.
-    if (enableSameDiskTiering && StorageType.allowSameDiskTiering(storageType)) {
+    if (enableSameDiskTiering
+        && StorageType.allowSameDiskTiering(storageType)) {
       StorageType counterpartStorageType = storageType == StorageType.DISK
           ? StorageType.ARCHIVE : StorageType.DISK;
       FsVolumeReference counterpartRef = dataset

@@ -178,7 +178,8 @@ public class HardLink {
       throw new IOException(
           "invalid arguments to createHardLink: link name is null");
     }
-    if (p && !linkName.getParentFile().exists() && !linkName.getParentFile().mkdirs()) {
+    if (p && !linkName.getParentFile().exists()
+        && !linkName.getParentFile().mkdirs()) {
       throw new IOException(
           "Failed to create parent folder for hardLink " + linkName);
     }

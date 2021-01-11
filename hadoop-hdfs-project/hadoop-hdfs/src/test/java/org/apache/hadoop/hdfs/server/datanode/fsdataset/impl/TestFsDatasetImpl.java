@@ -1151,18 +1151,22 @@ public class TestFsDatasetImpl {
   }
 
   /**
-   * When moving blocks on same mount with hard link and append happened in the middle,
+   * When moving blocks on same mount with hard link
+   * and append happened in the middle,
    * block movement should fail and hardlink is removed.
    */
   @Test(timeout = 30000)
   public void testMoveBlockFailureWithSameMountMove() {
     MiniDFSCluster cluster = null;
     try {
-      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
-      conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+      conf.setBoolean(DFSConfigKeys
+          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys
+          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1)
-          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
           .storagesPerDatanode(2)
           .build();
       FileSystem fs = cluster.getFileSystem();
@@ -1175,7 +1179,8 @@ public class TestFsDatasetImpl {
 
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
 
-      ReplicaInfo newReplicaInfo = createNewReplicaObjWithLink(block, fsDataSetImpl);
+      ReplicaInfo newReplicaInfo =
+          createNewReplicaObjWithLink(block, fsDataSetImpl);
 
       // Append to file to update its GS
       FSDataOutputStream out = fs.append(filePath, (short) 1);
@@ -1206,17 +1211,20 @@ public class TestFsDatasetImpl {
 
   /**
    * Make sure datanode restart can clean up un-finalized links,
-   * if the block is not finalized yet
+   * if the block is not finalized yet.
    */
   @Test(timeout = 30000)
   public void testDnRestartWithHardLinkInTmp() {
     MiniDFSCluster cluster = null;
     try {
-      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
-      conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+      conf.setBoolean(DFSConfigKeys
+          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys
+          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1)
-          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
           .storagesPerDatanode(2)
           .build();
       FileSystem fs = cluster.getFileSystem();
@@ -1230,7 +1238,8 @@ public class TestFsDatasetImpl {
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
 
       ReplicaInfo oldReplicaInfo = fsDataSetImpl.getReplicaInfo(block);
-      ReplicaInfo newReplicaInfo = createNewReplicaObjWithLink(block, fsDataSetImpl);
+      ReplicaInfo newReplicaInfo =
+          createNewReplicaObjWithLink(block, fsDataSetImpl);
 
       // Link exists
       assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
@@ -1265,11 +1274,14 @@ public class TestFsDatasetImpl {
   public void testDnRestartWithHardLink() {
     MiniDFSCluster cluster = null;
     try {
-      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
-      conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+      conf.setBoolean(DFSConfigKeys
+          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys
+          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1)
-          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
           .storagesPerDatanode(2)
           .build();
       FileSystem fs = cluster.getFileSystem();
@@ -1296,7 +1308,8 @@ public class TestFsDatasetImpl {
       assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
       assertTrue(Files.exists(Paths.get(oldReplicaInfo.getBlockURI())));
 
-      DirectoryScanner scanner = new DirectoryScanner((FsDatasetImpl)cluster.getDataNodes().get(0).getFSDataset(), conf);
+      DirectoryScanner scanner = new DirectoryScanner(
+          cluster.getDataNodes().get(0).getFSDataset(), conf);
       scanner.start();
       scanner.run();
 
@@ -1323,8 +1336,10 @@ public class TestFsDatasetImpl {
   public void testMoveBlockSuccessWithSameMountMove() {
     MiniDFSCluster cluster = null;
     try {
-      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
-      conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+      conf.setBoolean(DFSConfigKeys
+          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys
+          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1)
           .storageTypes(new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
@@ -1338,15 +1353,19 @@ public class TestFsDatasetImpl {
       ExtendedBlock block = createTestFile(fs, fileLen, filePath);
 
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
-      assertEquals(StorageType.DISK, fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
+      assertEquals(StorageType.DISK,
+          fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
 
-      FsDatasetImpl fsDataSetImplSpy = spy((FsDatasetImpl) dataNode.getFSDataset());
-      fsDataSetImplSpy.moveBlockAcrossStorage(block, StorageType.ARCHIVE, null);
+      FsDatasetImpl fsDataSetImplSpy =
+          spy((FsDatasetImpl) dataNode.getFSDataset());
+      fsDataSetImplSpy.moveBlockAcrossStorage(
+          block, StorageType.ARCHIVE, null);
 
       // Make sure it is done thru hardlink
       verify(fsDataSetImplSpy).moveBlock(any(), any(), any(), eq(true));
 
-      assertEquals(StorageType.ARCHIVE, fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
+      assertEquals(StorageType.ARCHIVE,
+          fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
       validateFileLen(fs, fileLen, filePath);
 
     } catch (Exception ex) {
@@ -1364,11 +1383,14 @@ public class TestFsDatasetImpl {
   public void testMoveBlockWithSameMountMoveWithoutSpace() {
     MiniDFSCluster cluster = null;
     try {
-      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
-      conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.0);
+      conf.setBoolean(DFSConfigKeys
+          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys
+          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.0);
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1)
-          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
           .storagesPerDatanode(2)
           .build();
       FileSystem fs = cluster.getFileSystem();
@@ -1379,12 +1401,16 @@ public class TestFsDatasetImpl {
       ExtendedBlock block = createTestFile(fs, fileLen, filePath);
 
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
-      assertEquals(StorageType.DISK, fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
+      assertEquals(StorageType.DISK,
+          fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
 
-      FsDatasetImpl fsDataSetImplSpy = spy((FsDatasetImpl) dataNode.getFSDataset());
-      fsDataSetImplSpy.moveBlockAcrossStorage(block, StorageType.ARCHIVE, null);
+      FsDatasetImpl fsDataSetImplSpy =
+          spy((FsDatasetImpl) dataNode.getFSDataset());
+      fsDataSetImplSpy.moveBlockAcrossStorage(
+          block, StorageType.ARCHIVE, null);
 
-      fail("testMoveBlockWithSameMountMoveWithoutSpace operation should failed");
+      fail("testMoveBlockWithSameMountMoveWithoutSpace operation" +
+          " should failed");
     } catch (Exception ex) {
       assertTrue(ex instanceof DiskChecker.DiskOutOfSpaceException);
     } finally {
@@ -1394,19 +1420,21 @@ public class TestFsDatasetImpl {
     }
   }
 
-  // More tests on shouldConsiderSameMountVolume
+  // More tests on shouldConsiderSameMountVolume.
   @Test(timeout = 10000)
   public void testShouldConsiderSameMountVolume() throws IOException {
     FsVolumeImpl volume = new FsVolumeImplBuilder()
         .setConf(conf)
         .setDataset(dataset)
         .setStorageID("storage-id")
-        .setStorageDirectory(new StorageDirectory(StorageLocation.parse(BASE_DIR)))
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation.parse(BASE_DIR)))
         .build();
-    assertFalse(dataset.shouldConsiderSameMountVolume(volume, StorageType.ARCHIVE, null));
+    assertFalse(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.ARCHIVE, null));
 
-    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
-        true);
+    conf.setBoolean(DFSConfigKeys
+            .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
     conf.setDouble(DFSConfigKeys
             .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         0.5);
@@ -1414,12 +1442,17 @@ public class TestFsDatasetImpl {
         .setConf(conf)
         .setDataset(dataset)
         .setStorageID("storage-id")
-        .setStorageDirectory(new StorageDirectory(StorageLocation.parse(BASE_DIR)))
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation.parse(BASE_DIR)))
         .build();
-    assertTrue(dataset.shouldConsiderSameMountVolume(volume, StorageType.ARCHIVE, null));
-    assertTrue(dataset.shouldConsiderSameMountVolume(volume, StorageType.ARCHIVE, ""));
-    assertFalse(dataset.shouldConsiderSameMountVolume(volume, StorageType.DISK, null));
-    assertFalse(dataset.shouldConsiderSameMountVolume(volume, StorageType.ARCHIVE, "target"));
+    assertTrue(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.ARCHIVE, null));
+    assertTrue(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.ARCHIVE, ""));
+    assertFalse(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.DISK, null));
+    assertFalse(dataset.shouldConsiderSameMountVolume(volume,
+        StorageType.ARCHIVE, "target"));
   }
 
   /**
