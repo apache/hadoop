@@ -1342,7 +1342,8 @@ public class TestFsDatasetImpl {
           .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1)
-          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storageTypes(
+              new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
           .storagesPerDatanode(2)
           .build();
       FileSystem fs = cluster.getFileSystem();
@@ -1477,20 +1478,22 @@ public class TestFsDatasetImpl {
    * @param fsDataSetImpl - FsDatasetImpl reference
    * @throws IOException
    */
-  private ReplicaInfo createNewReplicaObjWithLink(ExtendedBlock block, FsDatasetImpl
-      fsDataSetImpl) throws IOException {
+  private ReplicaInfo createNewReplicaObjWithLink(ExtendedBlock block,
+      FsDatasetImpl fsDataSetImpl) throws IOException {
     ReplicaInfo replicaInfo = fsDataSetImpl.getReplicaInfo(block);
     FsVolumeSpi destVolume = getDestinationVolume(block, fsDataSetImpl);
     return fsDataSetImpl.moveReplicaToVolumeOnSameMount(block, replicaInfo,
         destVolume.obtainReference());
   }
 
-  private ExtendedBlock createTestFile(FileSystem fs, long fileLen, Path filePath) throws IOException {
+  private ExtendedBlock createTestFile(FileSystem fs,
+      long fileLen, Path filePath) throws IOException {
     DFSTestUtil.createFile(fs, filePath, fileLen, (short) 1, 0);
     return DFSTestUtil.getFirstBlock(fs, filePath);
   }
 
-  private void validateFileLen(FileSystem fs, long fileLen, Path filePath) throws IOException {
+  private void validateFileLen(FileSystem fs,
+      long fileLen, Path filePath) throws IOException {
     // Read data file to make sure it is good.
     InputStream in = fs.open(filePath);
     int bytesCount = 0;

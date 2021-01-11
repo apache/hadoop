@@ -1265,7 +1265,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @throws IOException
    */
   @VisibleForTesting
-  ReplicaInfo moveReplicaToVolumeOnSameMount(ExtendedBlock block, ReplicaInfo replicaInfo,
+  ReplicaInfo moveReplicaToVolumeOnSameMount(ExtendedBlock block,
+      ReplicaInfo replicaInfo,
       FsVolumeReference volumeRef) throws IOException {
     FsVolumeImpl targetVolume = (FsVolumeImpl) volumeRef.getVolume();
     // Copy files to temp dir first
