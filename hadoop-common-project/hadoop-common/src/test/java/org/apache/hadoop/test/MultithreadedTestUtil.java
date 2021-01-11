@@ -110,10 +110,10 @@ public abstract class MultithreadedTestUtil {
      * have thrown up an error.
      */
     public synchronized void waitFor(long millis) throws Exception {
-      long endTime = Time.now() + millis;
+      long endTime = Time.monotonicNow() + millis;
       while (shouldRun() &&
              finishedThreads.size() < testThreads.size()) {
-        long left = endTime - Time.now();
+        long left = endTime - Time.monotonicNow();
         if (left <= 0) break;
         checkException();
         wait(left);

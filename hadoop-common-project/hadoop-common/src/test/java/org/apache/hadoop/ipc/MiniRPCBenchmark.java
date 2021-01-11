@@ -188,10 +188,10 @@ public class MiniRPCBenchmark {
   throws IOException {
     MiniProtocol client = null;
     try {
-      long start = Time.now();
+      long start = Time.monotonicNow();
       client = RPC.getProxy(MiniProtocol.class,
           MiniProtocol.versionID, addr, conf);
-      long end = Time.now();
+      long end = Time.monotonicNow();
       return end - start;
     } finally {
       RPC.stopProxy(client);
@@ -234,7 +234,7 @@ public class MiniRPCBenchmark {
       final Configuration conf, final InetSocketAddress addr) throws IOException {
     MiniProtocol client = null;
     try {
-      long start = Time.now();
+      long start = Time.monotonicNow();
       try {
         client = currentUgi.doAs(new PrivilegedExceptionAction<MiniProtocol>() {
           @Override
@@ -246,7 +246,7 @@ public class MiniRPCBenchmark {
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
-      long end = Time.now();
+      long end = Time.monotonicNow();
       return end - start;
     } finally {
       RPC.stopProxy(client);

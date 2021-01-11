@@ -91,12 +91,12 @@ public class TestTFileSeqFileComparison {
   }
 
   public void startTime() throws IOException {
-    startTimeEpoch = Time.now();
+    startTimeEpoch = Time.monotonicNow();
     System.out.println(formatTime() + " Started timing.");
   }
 
   public void stopTime() throws IOException {
-    finishTimeEpoch = Time.now();
+    finishTimeEpoch = Time.monotonicNow();
     System.out.println(formatTime() + " Stopped timing.");
   }
 

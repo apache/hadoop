@@ -401,7 +401,7 @@ public class RPC {
                                int rpcTimeout,
                                RetryPolicy connectionRetryPolicy,
                                long timeout) throws IOException { 
-    long startTime = Time.now();
+    long startTime = Time.monotonicNow();
     IOException ioe;
     while (true) {
       try {
@@ -419,7 +419,7 @@ public class RPC {
         ioe = nrthe;
       }
       // check if timed out
-      if (Time.now()-timeout >= startTime) {
+      if (Time.monotonicNow() - timeout >= startTime) {
         throw ioe;
       }
 

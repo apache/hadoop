@@ -65,11 +65,11 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
   @Test(timeout=(STRESS_RUNTIME_SECS + EXTRA_TIMEOUT_SECS) * 1000)
   public void testExpireBackAndForth() throws Exception {
     cluster.start();
-    long st = Time.now();
+    long st = Time.monotonicNow();
     long runFor = STRESS_RUNTIME_SECS * 1000;
 
     int i = 0;
-    while (Time.now() - st < runFor) {
+    while (Time.monotonicNow() - st < runFor) {
       // flip flop the services back and forth
       int from = i % 2;
       int to = (i + 1) % 2;
@@ -91,11 +91,11 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
   @Test(timeout=(STRESS_RUNTIME_SECS + EXTRA_TIMEOUT_SECS) * 1000)
   public void testRandomExpirations() throws Exception {
     cluster.start();
-    long st = Time.now();
+    long st = Time.monotonicNow();
     long runFor = STRESS_RUNTIME_SECS * 1000;
 
     Random r = new Random();
-    while (Time.now() - st < runFor) {
+    while (Time.monotonicNow() - st < runFor) {
       cluster.getTestContext().checkException();
       int targetIdx = r.nextInt(2);
       ActiveStandbyElector target = cluster.getElector(targetIdx);
@@ -128,8 +128,8 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
     // setting up the mock.
     cluster.start();
     
-    long st = Time.now();
-    while (Time.now() - st < runFor) {
+    long st = Time.monotonicNow();
+    while (Time.monotonicNow() - st < runFor) {
       cluster.getTestContext().checkException();
       serverFactory.closeAll();
       Thread.sleep(50);

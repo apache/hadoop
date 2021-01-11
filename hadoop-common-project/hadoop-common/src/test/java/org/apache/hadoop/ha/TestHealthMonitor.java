@@ -143,8 +143,8 @@ public class TestHealthMonitor {
 
   private void waitForState(HealthMonitor hm, State state)
       throws InterruptedException {
-    long st = Time.now();
-    while (Time.now() - st < 2000) {
+    long st = Time.monotonicNow();
+    while (Time.monotonicNow() - st < 2000) {
       if (hm.getHealthState() == state) {
         return;
       }

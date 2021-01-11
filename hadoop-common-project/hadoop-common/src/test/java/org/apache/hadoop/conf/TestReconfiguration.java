@@ -317,8 +317,8 @@ public class TestReconfiguration {
     }
     dummy.reconfigureProperty(PROP1, VAL2);
 
-    long endWait = Time.now() + 2000;
-    while (dummyThread.isAlive() && Time.now() < endWait) {
+    long endWait = Time.monotonicNow() + 2000;
+    while (dummyThread.isAlive() && Time.monotonicNow() < endWait) {
       try {
         Thread.sleep(50);
       } catch (InterruptedException ignore) {

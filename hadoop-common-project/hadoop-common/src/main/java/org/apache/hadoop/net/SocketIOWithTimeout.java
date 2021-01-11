@@ -194,7 +194,7 @@ abstract class SocketIOWithTimeout {
       }
 
       long timeoutLeft = timeout;
-      long endTime = (timeout > 0) ? (Time.now() + timeout): 0;
+      long endTime = (timeout > 0) ? (Time.monotonicNow() + timeout): 0;
       
       while (true) {
         // we might have to call finishConnect() more than once
@@ -206,10 +206,12 @@ abstract class SocketIOWithTimeout {
         if (ret > 0 && channel.finishConnect()) {
           return;
         }
-        
-        if (ret == 0 ||
-            (timeout > 0 &&  
-              (timeoutLeft = (endTime - Time.now())) <= 0)) {
+        boolean throwFlag = (ret == 0);
+        if (ret != 0 && timeout > 0) {
+          timeoutLeft = endTime - Time.monotonicNow();
+          throwFlag = (timeoutLeft <= 0);
+        }
+        if (throwFlag) {
           throw new SocketTimeoutException(
                     timeoutExceptionString(channel, timeout, 
                                            SelectionKey.OP_CONNECT));
@@ -330,7 +332,7 @@ abstract class SocketIOWithTimeout {
       
       try {
         while (true) {
-          long start = (timeout == 0) ? 0 : Time.now();
+          long start = (timeout == 0) ? 0 : Time.monotonicNow();
 
           key = channel.register(info.selector, ops);
           ret = info.selector.select(timeoutLeft);
@@ -343,7 +345,7 @@ abstract class SocketIOWithTimeout {
            * unknown reasons. So select again if required.
            */
           if (timeout > 0) {
-            timeoutLeft -= Time.now() - start;
+            timeoutLeft -= Time.monotonicNow() - start;
             timeoutLeft = Math.max(0, timeoutLeft);
           }
           

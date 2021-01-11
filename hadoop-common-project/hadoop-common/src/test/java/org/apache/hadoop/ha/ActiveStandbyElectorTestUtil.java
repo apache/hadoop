@@ -37,7 +37,7 @@ public abstract class ActiveStandbyElectorTestUtil {
   public static void waitForActiveLockData(TestContext ctx,
       ZooKeeperServer zks, String parentDir, byte[] activeData)
       throws Exception {
-    long st = Time.now();
+    long st = Time.monotonicNow();
     long lastPrint = st;
     while (true) {
       if (ctx != null) {
@@ -52,17 +52,17 @@ public abstract class ActiveStandbyElectorTestUtil {
             Arrays.equals(activeData, data)) {
           return;
         }
-        if (Time.now() > lastPrint + LOG_INTERVAL_MS) {
+        if (Time.monotonicNow() > lastPrint + LOG_INTERVAL_MS) {
           LOG.info("Cur data: " + StringUtils.byteToHexString(data));
-          lastPrint = Time.now();
+          lastPrint = Time.monotonicNow();
         }
       } catch (NoNodeException nne) {
         if (activeData == null) {
           return;
         }
-        if (Time.now() > lastPrint + LOG_INTERVAL_MS) {
+        if (Time.monotonicNow() > lastPrint + LOG_INTERVAL_MS) {
           LOG.info("Cur data: no node");
-          lastPrint = Time.now();
+          lastPrint = Time.monotonicNow();
         }
       }
       Thread.sleep(50);

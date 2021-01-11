@@ -703,7 +703,7 @@ extends AbstractDelegationTokenIdentifier>
           / (60 * 1000) + " min(s)");
       try {
         while (running) {
-          long now = Time.now();
+          long now = Time.monotonicNow();
           if (lastMasterKeyUpdate + keyUpdateInterval < now) {
             try {
               rollMasterKey();

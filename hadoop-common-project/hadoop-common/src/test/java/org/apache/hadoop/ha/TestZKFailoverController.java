@@ -472,9 +472,9 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     // Ask it to cede active for 3 seconds. It should respond promptly
     // (i.e. the RPC itself should not take 3 seconds!)
     ZKFCProtocol proxy = zkfc.getLocalTarget().getZKFCProxy(conf, 5000);
-    long st = Time.now();
+    long st = Time.monotonicNow();
     proxy.cedeActive(3000);
-    long et = Time.now();
+    long et = Time.monotonicNow();
     assertTrue("RPC to cedeActive took " + (et - st) + " ms",
         et - st < 1000);
 
@@ -486,7 +486,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     // After the prescribed 3 seconds, should go into STANDBY state,
     // since the other node in the cluster would have taken ACTIVE.
     cluster.waitForElectorState(0, ActiveStandbyElector.State.STANDBY);
-    long et2 = Time.now();
+    long et2 = Time.monotonicNow();
     assertTrue("Should take ~3 seconds to rejoin. Only took " + (et2 - et) +
         "ms before rejoining.",
         et2 - et > 2800);

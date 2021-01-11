@@ -128,12 +128,12 @@ public class AsyncDiskService {
   public synchronized boolean awaitTermination(long milliseconds) 
       throws InterruptedException {
 
-    long end = Time.now() + milliseconds;
+    long end = Time.monotonicNow() + milliseconds;
     for (Map.Entry<String, ThreadPoolExecutor> e:
         executors.entrySet()) {
       ThreadPoolExecutor executor = e.getValue();
       if (!executor.awaitTermination(
-          Math.max(end - Time.now(), 0),
+          Math.max(end - Time.monotonicNow(), 0),
           TimeUnit.MILLISECONDS)) {
         LOG.warn("AsyncDiskService awaitTermination timeout.");
         return false;

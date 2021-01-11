@@ -508,7 +508,7 @@ public class Client implements AutoCloseable {
 
     /** Update lastActivity with the current time. */
     private void touch() {
-      lastActivity.set(Time.now());
+      lastActivity.set(Time.monotonicNow());
     }
 
     /**
@@ -1046,8 +1046,8 @@ public class Client implements AutoCloseable {
      */
     private synchronized boolean waitForWork() {
       if (calls.isEmpty() && !shouldCloseConnection.get()  && running.get())  {
-        long timeout = maxIdleTime-
-              (Time.now()-lastActivity.get());
+        long timeout = maxIdleTime -
+              (Time.monotonicNow() - lastActivity.get());
         if (timeout>0) {
           try {
             wait(timeout);
@@ -1077,7 +1077,7 @@ public class Client implements AutoCloseable {
      * since last I/O activity is equal to or greater than the ping interval
      */
     private synchronized void sendPing() throws IOException {
-      long curTime = Time.now();
+      long curTime = Time.monotonicNow();
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
         synchronized (ipcStreams.out) {

@@ -28,7 +28,7 @@ import org.junit.Test;
 
 public class TestGSet {
   private static final Random ran = new Random();
-  private static final long starttime = Time.now();
+  private static final long START_TIME = Time.monotonicNow();
 
   private static void print(Object s) {
     System.out.print(s);
@@ -278,7 +278,7 @@ public class TestGSet {
     }
     println("DONE " + test.stat());
 
-    final long s = (Time.now() - starttime)/1000L;
+    final long s = (Time.monotonicNow() - START_TIME)/1000L;
     println("total time elapsed=" + s + "s\n");
   }
 
@@ -290,7 +290,7 @@ public class TestGSet {
     final IntData data;
 
     final String info;
-    final long starttime = Time.now();
+    private final long startTime = Time.monotonicNow();
     /** Determine the probability in {@link #check()}. */
     final int denominator;
     int iterate_count = 0;
@@ -418,7 +418,7 @@ public class TestGSet {
     }
 
     String stat() {
-      final long t = Time.now() - starttime;
+      final long t = Time.monotonicNow() - startTime;
       return String.format(" iterate=%5d, contain=%5d, time elapsed=%5d.%03ds",
           iterate_count, contain_count, t/1000, t%1000);
     }

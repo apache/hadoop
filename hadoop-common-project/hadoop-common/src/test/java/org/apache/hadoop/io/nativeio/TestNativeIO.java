@@ -131,8 +131,8 @@ public class TestNativeIO {
       Thread statter = new Thread() {
         @Override
         public void run() {
-          long et = Time.now() + 5000;
-          while (Time.now() < et) {
+          long et = Time.monotonicNow() + 5000;
+          while (Time.monotonicNow() < et) {
             try {
               NativeIO.POSIX.Stat stat = NativeIO.POSIX.getFstat(fos.getFD());
               assertEquals(System.getProperty("user.name"), stat.getOwner());

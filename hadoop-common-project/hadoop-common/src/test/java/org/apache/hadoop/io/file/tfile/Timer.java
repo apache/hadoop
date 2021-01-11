@@ -30,11 +30,11 @@ public  class Timer {
   long finishTimeEpoch;
   
   public void startTime() throws IOException {
-    startTimeEpoch = Time.now();
+    startTimeEpoch = Time.monotonicNow();
   }
 
   public void stopTime() throws IOException {
-    finishTimeEpoch = Time.now();
+    finishTimeEpoch = Time.monotonicNow();
   }
 
   public long getIntervalMillis() throws IOException {

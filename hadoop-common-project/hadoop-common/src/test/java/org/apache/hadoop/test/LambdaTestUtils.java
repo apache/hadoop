@@ -125,7 +125,7 @@ public final class LambdaTestUtils {
         "timeoutMillis must be >= 0");
     Preconditions.checkNotNull(timeoutHandler);
 
-    long endTime = Time.now() + timeoutMillis;
+    long endTime = Time.monotonicNow() + timeoutMillis;
     Throwable ex = null;
     boolean running = true;
     int iterations = 0;
@@ -146,7 +146,7 @@ public final class LambdaTestUtils {
         LOG.debug("eventually() iteration {}", iterations, e);
         ex = e;
       }
-      running = Time.now() < endTime;
+      running = Time.monotonicNow() < endTime;
       if (running) {
         int sleeptime = retry.call();
         if (sleeptime >= 0) {
@@ -241,7 +241,7 @@ public final class LambdaTestUtils {
       Callable<Integer> retry) throws Exception {
     Preconditions.checkArgument(timeoutMillis >= 0,
         "timeoutMillis must be >= 0");
-    long endTime = Time.now() + timeoutMillis;
+    long endTime = Time.monotonicNow() + timeoutMillis;
     Throwable ex;
     boolean running;
     int sleeptime;
@@ -259,7 +259,7 @@ public final class LambdaTestUtils {
         LOG.debug("evaluate() iteration {}", iterations, e);
         ex = e;
       }
-      running = Time.now() < endTime;
+      running = Time.monotonicNow() < endTime;
       if (running && (sleeptime = retry.call()) >= 0) {
         Thread.sleep(sleeptime);
       }

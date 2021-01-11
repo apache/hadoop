@@ -72,9 +72,9 @@ public class TestDNS {
     String hostname1 = DNS.getDefaultHost(DEFAULT);
     assertNotNull(hostname1);
     String hostname2 = DNS.getDefaultHost(DEFAULT);
-    long t1 = Time.now();
+    long t1 = Time.monotonicNow();
     String hostname3 = DNS.getDefaultHost(DEFAULT);
-    long t2 = Time.now();
+    long t2 = Time.monotonicNow();
     assertEquals(hostname3, hostname2);
     assertEquals(hostname2, hostname1);
     long interval = t2 - t1;

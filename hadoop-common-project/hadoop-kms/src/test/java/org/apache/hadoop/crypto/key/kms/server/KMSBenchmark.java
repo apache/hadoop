@@ -207,7 +207,7 @@ public class KMSBenchmark implements Tool {
         for (tIdx=0; tIdx < numThreads; tIdx++) {
           daemons.add(new StatsDaemon(tIdx, opsPerThread[tIdx], this));
         }
-        start = Time.now();
+        start = Time.monotonicNow();
         LOG.info("Starting "+numOpsRequired+" "+getOpName()+"(s).");
         for (StatsDaemon d : daemons) {
           d.start();
@@ -218,7 +218,7 @@ public class KMSBenchmark implements Tool {
             Thread.sleep(500);
           } catch (InterruptedException e) {}
         }
-        elapsedTime = Time.now() - start;
+        elapsedTime = Time.monotonicNow() - start;
         for (StatsDaemon d : daemons) {
           incrementStats(d.localNumOpsExecuted, d.localCumulativeTime);
           System.out.println(d.toString() + ": ops Exec = " +
@@ -429,14 +429,14 @@ public class KMSBenchmark implements Tool {
     @Override
     long executeOp(int daemonId, int inputIdx, String clientName)
             throws IOException {
-      long start = Time.now();
+      long start = Time.monotonicNow();
       try {
         eek = kp.generateEncryptedKey(encryptionKeyName);
       } catch (GeneralSecurityException e) {
         LOG.warn("failed to generate encrypted key", e);
       }
 
-      long end = Time.now();
+      long end = Time.monotonicNow();
       return end-start;
     }
 
@@ -500,13 +500,13 @@ public class KMSBenchmark implements Tool {
     @Override
     long executeOp(int daemonId, int inputIdx, String clientName)
         throws IOException {
-      long start = Time.now();
+      long start = Time.monotonicNow();
       try {
         kp.decryptEncryptedKey(eek);
       } catch (GeneralSecurityException e) {
         LOG.warn("failed to generate and/or decrypt key", e);
       }
-      long end = Time.now();
+      long end = Time.monotonicNow();
       return end - start;
     }
 

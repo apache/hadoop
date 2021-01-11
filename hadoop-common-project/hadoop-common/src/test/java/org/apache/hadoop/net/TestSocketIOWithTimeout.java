@@ -66,7 +66,7 @@ public class TestSocketIOWithTimeout {
     byte buf[] = new byte[PAGE_SIZE + 19];
     
     while (true) {
-      long start = Time.now();
+      long start = Time.monotonicNow();
       try {
         if (in != null) {
           in.read(buf);
@@ -74,7 +74,7 @@ public class TestSocketIOWithTimeout {
           out.write(buf);
         }
       } catch (SocketTimeoutException e) {
-        long diff = Time.now() - start;
+        long diff = Time.monotonicNow() - start;
         LOG.info("Got SocketTimeoutException as expected after " + 
                  diff + " millis : " + e.getMessage());
         assertTrue(Math.abs(expectedTimeout - diff) <=

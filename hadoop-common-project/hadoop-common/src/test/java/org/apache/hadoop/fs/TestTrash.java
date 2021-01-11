@@ -870,7 +870,7 @@ public class TestTrash {
       
       writeFile(fs, myFile, 10);
       
-      start = Time.now();
+      start = Time.monotonicNow();
       
       try {
         retVal = shell.run(args);
@@ -882,7 +882,7 @@ public class TestTrash {
       
       assertTrue(retVal == 0);
       
-      long iterTime = Time.now() - start;
+      long iterTime = Time.monotonicNow() - start;
       // take median of the first 10 runs
       if(i<10) {
         if(i==0) {

@@ -160,9 +160,9 @@ class MetricsSourceAdapter implements DynamicMBean {
   private void updateJmxCache() {
     boolean getAllMetrics = false;
     synchronized(this) {
-      if (Time.now() - jmxCacheTS >= jmxCacheTTL) {
+      if (Time.monotonicNow() - jmxCacheTS >= jmxCacheTTL) {
         // temporarilly advance the expiry while updating the cache
-        jmxCacheTS = Time.now() + jmxCacheTTL;
+        jmxCacheTS = Time.monotonicNow() + jmxCacheTTL;
         // lastRecs might have been set to an object already by another thread.
         // Track the fact that lastRecs has been reset once to make sure refresh
         // is correctly triggered.
@@ -188,7 +188,7 @@ class MetricsSourceAdapter implements DynamicMBean {
         updateAttrCache(lastRecs);
         updateInfoCache(lastRecs);
       }
-      jmxCacheTS = Time.now();
+      jmxCacheTS = Time.monotonicNow();
       lastRecsCleared = true;
     }
   }
