@@ -36,6 +36,7 @@ import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JvmPauseMonitor;
+import org.apache.hadoop.util.Time;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -179,9 +180,9 @@ public class TestJvmMetrics {
 
     List<String> garbageStrings = new ArrayList<>();
 
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.monotonicNow();
     // Run this for at least 1 sec for our monitor to collect enough data
-    while (System.currentTimeMillis() - startTime < 1000) {
+    while (Time.monotonicNow() - startTime < 1000) {
       for (int j = 0; j < 100000; j++) {
         garbageStrings.add(
             "Long string prefix just to fill memory with garbage " + j);

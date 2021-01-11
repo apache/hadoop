@@ -91,9 +91,9 @@ public final class ShutdownHookManager {
               LOG.info("Shutdown process invoked a second time: ignoring");
               return;
             }
-            long started = System.currentTimeMillis();
+            long started = Time.monotonicNow();
             int timeoutCount = MGR.executeShutdown();
-            long ended = System.currentTimeMillis();
+            long ended = Time.monotonicNow();
             LOG.debug(String.format(
                 "Completed shutdown in %.3f seconds; Timeouts: %d",
                 (ended-started)/1000.0, timeoutCount));

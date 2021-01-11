@@ -48,7 +48,7 @@ public class CacheableIPList implements IPList {
     if (cacheTimeout < 0) {
       cacheExpiryTimeStamp = -1; // no automatic cache expiry.
     }else {
-      cacheExpiryTimeStamp = System.currentTimeMillis() + cacheTimeout;
+      cacheExpiryTimeStamp = Time.monotonicNow() + cacheTimeout;
     }
   }
 
@@ -63,10 +63,10 @@ public class CacheableIPList implements IPList {
   public boolean isIn(String ipAddress) {
     //is cache expired
     //Uses Double Checked Locking using volatile
-    if (cacheExpiryTimeStamp >= 0 && cacheExpiryTimeStamp < System.currentTimeMillis()) {
+    if (cacheExpiryTimeStamp >= 0 && cacheExpiryTimeStamp < Time.monotonicNow()) {
       synchronized(this) {
         //check if cache expired again
-        if (cacheExpiryTimeStamp < System.currentTimeMillis()) {
+        if (cacheExpiryTimeStamp < Time.monotonicNow()) {
           reset();
         }
       }

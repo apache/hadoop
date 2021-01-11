@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Time;
+
 import org.junit.Assert;
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -1394,13 +1396,13 @@ public class ContractTestUtils extends Assert {
    */
   public static FileStatus getFileStatusEventually(FileSystem fs, Path path,
       int timeout) throws IOException, InterruptedException {
-    long endTime = System.currentTimeMillis() + timeout;
+    long endTime = Time.monotonicNow() + timeout;
     FileStatus stat = null;
     do {
       try {
         stat = fs.getFileStatus(path);
       } catch (FileNotFoundException e) {
-        if (System.currentTimeMillis() > endTime) {
+        if (Time.monotonicNow() > endTime) {
           // timeout, raise an assert with more diagnostics
           assertPathExists(fs, "Path not found after " + timeout + " mS", path);
         } else {

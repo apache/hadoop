@@ -25,6 +25,8 @@ import org.apache.hadoop.service.LoggingStateChangeListener;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.util.Time;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -336,11 +338,11 @@ public class TestServiceLifecycle extends ServiceAssert {
     service.init(new Configuration());
     service.start();
     assertServiceInState(service, Service.STATE.STARTED);
-    long start = System.currentTimeMillis();
+    long start = Time.monotonicNow();
     synchronized (listener) {
       listener.wait(20000);
     }
-    long duration = System.currentTimeMillis() - start;
+    long duration = Time.monotonicNow() - start;
     assertEquals(Service.STATE.STOPPED, listener.notifyingState);
     assertServiceInState(service, Service.STATE.STOPPED);
     assertTrue("Duration of " + duration + " too long", duration < 10000);

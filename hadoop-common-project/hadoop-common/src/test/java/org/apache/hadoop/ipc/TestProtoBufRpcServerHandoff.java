@@ -32,6 +32,8 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcHandoffProto;
+import org.apache.hadoop.util.Time;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -76,7 +78,7 @@ public class TestProtoBufRpcServerHandoff {
     completionService.submit(new ClientInvocationCallable(client, 5000l));
     completionService.submit(new ClientInvocationCallable(client, 5000l));
 
-    long submitTime = System.currentTimeMillis();
+    long submitTime = Time.monotonicNow();
     Future<ClientInvocationCallable> future1 = completionService.take();
     Future<ClientInvocationCallable> future2 = completionService.take();
 
@@ -89,7 +91,7 @@ public class TestProtoBufRpcServerHandoff {
     // Ensure the 5 second sleep responses are within a reasonable time of each
     // other.
     Assert.assertTrue(Math.abs(callable1.endTime - callable2.endTime) < 2000l);
-    Assert.assertTrue(System.currentTimeMillis() - submitTime < 7000l);
+    Assert.assertTrue(Time.monotonicNow() - submitTime < 7000l);
 
   }
 

@@ -38,6 +38,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.SocksSocketFactory;
 import org.apache.hadoop.net.StandardSocketFactory;
+import org.apache.hadoop.util.Time;
+
 import org.junit.After;
 import org.junit.Test;
 import static org.junit.Assert.assertSame;
@@ -64,11 +66,11 @@ public class TestSocketFactory {
     serverRunnable = new ServerRunnable();
     serverThread = new Thread(serverRunnable);
     serverThread.start();
-    final long timeout = System.currentTimeMillis() + START_STOP_TIMEOUT_SEC * 1000;
+    final long timeout = Time.monotonicNow() + START_STOP_TIMEOUT_SEC * 1000;
     while (!serverRunnable.isReady()) {
       assertNull(serverRunnable.getThrowable());
       Thread.sleep(10);
-      if (System.currentTimeMillis() > timeout) {
+      if (Time.monotonicNow() > timeout) {
         fail("Server thread did not start properly in allowed time of "
             + START_STOP_TIMEOUT_SEC + " sec.");
       }

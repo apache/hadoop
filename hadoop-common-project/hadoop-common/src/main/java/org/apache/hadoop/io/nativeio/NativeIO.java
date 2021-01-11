@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.util.Time;
 
 /**
  * JNI wrappers for various native IO-related calls not available in Java.
@@ -620,7 +621,7 @@ public class NativeIO {
         ? USER_ID_NAME_CACHE : GROUP_ID_NAME_CACHE;
       String name;
       CachedName cachedName = idNameCache.get(id);
-      long now = System.currentTimeMillis();
+      long now = Time.monotonicNow();
       if (cachedName != null && (cachedName.timestamp + cacheTimeout) > now) {
         name = cachedName.name;
       } else {
@@ -915,7 +916,7 @@ public class NativeIO {
     } else {
       long uid = POSIX.getUIDforFDOwnerforOwner(fd);
       CachedUid cUid = uidCache.get(uid);
-      long now = System.currentTimeMillis();
+      long now = Time.monotonicNow();
       if (cUid != null && (cUid.timestamp + cacheTimeout) > now) {
         return cUid.username;
       }
