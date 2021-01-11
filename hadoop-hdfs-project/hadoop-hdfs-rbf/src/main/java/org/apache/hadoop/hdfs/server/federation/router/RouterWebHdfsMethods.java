@@ -94,6 +94,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -514,7 +515,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
    * @param location network location with format `/ns0/rack1`
    * @return nameservice this datanode is in
    */
-  private static String getNsFromDataNodeNetworkLocation(String location) {
+  @VisibleForTesting
+  public static String getNsFromDataNodeNetworkLocation(String location) {
     // network location should be in the format of /ns/rack
     Pattern pattern = Pattern.compile("/(.*)/");
     Matcher matcher = pattern.matcher(location);

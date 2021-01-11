@@ -82,12 +82,13 @@ public class TestRouterWebHdfsMethods {
     // case 1: the file is created at default ns (ns0)
     String path1 = "/tmp/file";
     URL url = new URL(getUri(path1));
-    LOG.info(url.toString());
+    LOG.info("URL: ", url.toString());
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("PUT");
     assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
     verifyFile("ns0", path1, true);
     verifyFile("ns1", path1, false);
+    conn.disconnect();
 
     // case 2: the file is created at mounted ns (ns1)
     String mountPoint = "/tmp-ns1";
@@ -96,12 +97,13 @@ public class TestRouterWebHdfsMethods {
         router.getRouter(), mountPoint,
         DestinationOrder.RANDOM, Collections.singletonList("ns1"));
     URL url2 = new URL(getUri(path2));
-    LOG.info(url2.toString());
-    conn = (HttpURLConnection) url2.openConnection();
-    conn.setRequestMethod("PUT");
+    LOG.info("URL 2: ", url2.toString());
+    HttpURLConnection conn2 = (HttpURLConnection) url2.openConnection();
+    conn2.setRequestMethod("PUT");
     assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
     verifyFile("ns1", path2, true);
     verifyFile("ns0", path2, false);
+    conn2.disconnect();
   }
 
   private String getUri(String path) {
@@ -120,14 +122,20 @@ public class TestRouterWebHdfsMethods {
     try {
       fs.getFileStatus(new Path(path));
       if (!shouldExist) {
-        LOG.info("{} should not exist in ns {}", path, ns);
-        fail();
+        fail(path + " should not exist in ns " + ns);
       }
     } catch (FileNotFoundException e) {
       if (shouldExist) {
-        LOG.info("{} should exist in ns {}", path, ns);
-        fail();
+        fail(path + " should exist in ns " + ns);
       }
     }
+  }
+
+  @Test
+  public void testGetNsFromDataNodeNetworkLocation() {
+    assertEquals("ns0", RouterWebHdfsMethods
+        .getNsFromDataNodeNetworkLocation("/ns0/rack-info1"));
+    assertEquals("", RouterWebHdfsMethods
+        .getNsFromDataNodeNetworkLocation("whatever-rack-info1"));
   }
 }
