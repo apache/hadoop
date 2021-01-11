@@ -80,6 +80,7 @@ import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.http.HttpConfig;
@@ -445,8 +446,8 @@ public class TestMover {
   public void testScheduleBlockWithinSameNode() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
-    testWithinSameNode(conf);
-    // Test movement with same disk tiering on
+    // testWithinSameNode(conf);
+    // Test movement with hardlink, when same disk tiering is enabled.
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
     conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
     testWithinSameNode(conf);

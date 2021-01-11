@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.InputStream;
-import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.function.Supplier;
@@ -1257,7 +1256,6 @@ public class TestFsDatasetImpl {
     }
   }
 
-
   /**
    * If new block is finalized and DN restarted,
    * DiskScanner should clean up the hardlink correctly.
@@ -1356,6 +1354,33 @@ public class TestFsDatasetImpl {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test(timeout = 10000)
+  public void testShouldConsiderSameMountVolume() throws IOException {
+    FsVolumeImpl volume = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(new StorageDirectory(StorageLocation.parse(BASE_DIR)))
+        .build();
+    assertFalse(dataset.shouldConsiderSameMountVolume(volume, StorageType.ARCHIVE, null));
+
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        true);
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
+        0.5);
+    volume = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(new StorageDirectory(StorageLocation.parse(BASE_DIR)))
+        .build();
+    assertTrue(dataset.shouldConsiderSameMountVolume(volume, StorageType.ARCHIVE, null));
+    assertTrue(dataset.shouldConsiderSameMountVolume(volume, StorageType.ARCHIVE, ""));
+    assertFalse(dataset.shouldConsiderSameMountVolume(volume, StorageType.DISK, null));
+    assertFalse(dataset.shouldConsiderSameMountVolume(volume, StorageType.ARCHIVE, "target"));
   }
 
   /**

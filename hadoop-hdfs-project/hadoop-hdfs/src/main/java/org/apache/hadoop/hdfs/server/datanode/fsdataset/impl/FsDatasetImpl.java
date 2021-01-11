@@ -997,7 +997,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * Copy the block and meta files for the given block to the given destination.
+   * Link the block and meta files for the given block to the given destination.
    * @return the new meta and block files.
    * @throws IOException
    */
@@ -1108,8 +1108,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     FsVolumeReference volumeRef = null;
     boolean shouldConsiderSameMountVolume =
-        targetStorageId.isEmpty() &&
-        shouldConsiderSameMountVolume(replicaInfo.getVolume(), targetStorageType);
+        shouldConsiderSameMountVolume(replicaInfo.getVolume(), targetStorageType, targetStorageId);
     boolean useSameMountVolume = false;
 
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
@@ -1142,8 +1141,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * When configuring DISK/ARCHIVE on same volume,
    * check if we should find the counterpart on the same disk mount.
    */
-  private boolean shouldConsiderSameMountVolume(FsVolumeSpi fsVolume,
-      StorageType targetStorageType) {
+  @VisibleForTesting
+  boolean shouldConsiderSameMountVolume(FsVolumeSpi fsVolume,
+      StorageType targetStorageType, String targetStorageID) {
+    if (targetStorageID != null && !targetStorageID.isEmpty()) {
+      return false;
+    }
     if (!(fsVolume instanceof FsVolumeImpl)
         || ((FsVolumeImpl) fsVolume).getMount().isEmpty()) {
       return false;
