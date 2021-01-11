@@ -67,7 +67,6 @@ import java.util.EnumSet;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HdfsAdmin {
-
   final private DistributedFileSystem dfs;
   public static final FsPermission TRASH_PERMISSION = new FsPermission(
       FsAction.ALL, FsAction.ALL, FsAction.ALL, true);

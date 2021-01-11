@@ -1325,6 +1325,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           .handle(
               new NodeResourceUpdateSchedulerEvent(rmNode, ResourceOption
                   .newInstance(rmNode.totalCapability, 0)));
+
+      // Notify NodesListManager to notify all RMApp that this node has been
+      // recommissioned so that each Application Master can take any required
+      // actions.
+      rmNode.context.getDispatcher().getEventHandler().handle(
+              new NodesListManagerEvent(
+                      NodesListManagerEventType.NODE_USABLE, rmNode));
     }
   }
 

@@ -38,6 +38,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSI
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests related to S3A DT support.
@@ -56,6 +57,14 @@ public class TestS3ADelegationTokenSupport {
     AbstractS3ATokenIdentifier identifier
         = new SessionTokenIdentifier();
     assertEquals(SESSION_TOKEN_KIND, identifier.getKind());
+  }
+
+  @Test
+  public void testSessionTokenIssueDate() throws Throwable {
+    AbstractS3ATokenIdentifier identifier
+        = new SessionTokenIdentifier();
+    assertEquals(SESSION_TOKEN_KIND, identifier.getKind());
+    assertTrue("issue date is not set", identifier.getIssueDate() > 0L);
   }
 
   @Test
@@ -90,6 +99,8 @@ public class TestS3ADelegationTokenSupport {
         UserGroupInformation.AuthenticationMethod.TOKEN,
         decodedUser.getAuthenticationMethod());
     assertEquals("origin", decoded.getOrigin());
+    assertEquals("issue date", identifier.getIssueDate(),
+        decoded.getIssueDate());
   }
 
   @Test

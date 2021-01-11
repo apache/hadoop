@@ -21,9 +21,13 @@ package org.apache.hadoop.fs.http.server;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.http.server.metrics.HttpFSServerMetrics;
 import org.apache.hadoop.lib.server.ServerException;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.servlet.ServerWebApp;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.util.JvmPauseMonitor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +60,7 @@ public class HttpFSServerWebApp extends ServerWebApp {
   public static final String CONF_ADMIN_GROUP = "admin.group";
 
   private static HttpFSServerWebApp SERVER;
+  private static HttpFSServerMetrics metrics;
 
   private String adminGroup;
 
@@ -102,6 +107,7 @@ public class HttpFSServerWebApp extends ServerWebApp {
     LOG.info("Connects to Namenode [{}]",
              get().get(FileSystemAccess.class).getFileSystemConfiguration().
                getTrimmed(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY));
+    setMetrics(getConfig());
   }
 
   /**
@@ -110,9 +116,22 @@ public class HttpFSServerWebApp extends ServerWebApp {
   @Override
   public void destroy() {
     SERVER = null;
+    if (metrics != null) {
+      metrics.shutdown();
+    }
     super.destroy();
   }
 
+  private static void setMetrics(Configuration config) {
+    LOG.info("Initializing HttpFSServerMetrics");
+    metrics = HttpFSServerMetrics.create(config, "HttpFSServer");
+    JvmPauseMonitor pauseMonitor = new JvmPauseMonitor();
+    pauseMonitor.init(config);
+    pauseMonitor.start();
+    metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
+    FSOperations.setBufferSize(config);
+    DefaultMetricsSystem.initialize("HttpFSServer");
+  }
   /**
    * Returns HttpFSServer server singleton, configuration and services are
    * accessible through it.
@@ -121,6 +140,14 @@ public class HttpFSServerWebApp extends ServerWebApp {
    */
   public static HttpFSServerWebApp get() {
     return SERVER;
+  }
+
+  /**
+   * gets the HttpFSServerMetrics instance.
+   * @return the HttpFSServerMetrics singleton.
+   */
+  public static HttpFSServerMetrics getMetrics() {
+    return metrics;
   }
 
   /**

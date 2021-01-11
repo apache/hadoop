@@ -157,7 +157,9 @@
 <property>
   <name>dfs.datanode.handler.count</name>
   <value>10</value>
-  <description>The number of server threads for the datanode.</description>
+  <description>
+     The number of Datanode RPC server threads that listen to
+     requests from client.</description>
 </property>
 
 <property>
@@ -2329,6 +2331,22 @@
   </property>
 
 <property>
+  <name>dfs.datanode.min.outlier.detection.nodes</name>
+  <value>10</value>
+  <description>
+    Minimum number of nodes to run outlier detection.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.slowpeer.low.threshold.ms</name>
+  <value>5</value>
+  <description>
+    Threshold in milliseconds below which a DataNode is definitely not slow.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.outliers.report.interval</name>
   <value>30m</value>
   <description>
@@ -4459,6 +4477,14 @@
 </property>
 
 <property>
+  <name>dfs.data.transfer.max.packet.size</name>
+  <value>16777216</value>
+  <description>
+    The max size of any single packet.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.balance.max.concurrent.moves</name>
   <value>100</value>
   <description>
@@ -4850,6 +4876,27 @@
 </property>
 
 <property>
+  <name>dfs.namenode.audit.log.async.blocking</name>
+  <value>true</value>
+  <description>
+    Only used when enables asynchronous audit log. Sets whether audit log async
+    appender should wait if there is no space available in the event buffer or
+    immediately return. Default value is true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.audit.log.async.buffer.size</name>
+  <value>128</value>
+  <description>
+    Only used when enables asynchronous audit log. Sets the number of audit
+    logs allowed in the event buffer before the calling thread is blocked
+    (if dfs.namenode.audit.log.async.blocking is true) or until logs are
+    summarized and discarded. Default value is 128.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.audit.log.token.tracking.id</name>
   <value>false</value>
   <description>
@@ -4917,6 +4964,14 @@
   <description>
     If set to true, enables asynchronous edit logs in the Namenode.  If set
     to false, the Namenode uses the traditional synchronous edit logs.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edits.asynclogging.pending.queue.size</name>
+  <value>4096</value>
+  <description>
+    The queue size of edit pending queue for FSEditLogAsync.
   </description>
 </property>
 
@@ -5019,7 +5074,7 @@
   <name>dfs.namenode.replication.max-streams</name>
   <value>2</value>
   <description>
-    Hard limit for the number of highest-priority replication streams.
+    Hard limit for the number of replication streams other than those with highest-priority.
   </description>
 </property>
 
@@ -6012,4 +6067,38 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.datanode.same-disk-tiering.enabled</name>
+    <value>false</value>
+    <description>
+        HDFS-15548 to allow DISK/ARCHIVE to be
+        configured on the same disk mount to manage disk IO.
+        When this is enabled, datanode will control the capacity
+        of DISK/ARCHIVE based on reserve-for-archive.percentage.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.reserve-for-archive.default.percentage</name>
+    <value>0.0</value>
+    <description>
+        Default disk capacity ratio of ARCHIVE volume,
+        expected the value to be between 0 to 1.
+        This will be applied when DISK/ARCHIVE volumes are configured
+        on the same mount, which is detected by datanode.
+        Beware that capacity usage might be >100% if there are already
+        data blocks exist and the configured ratio is small, which will
+        prevent the volume from taking new blocks
+        until capacity is balanced out.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.getBlocks.hot-time-interval</name>
+    <value>0</value>
+    <description>
+        Balancer prefer moving cold blocks i.e blocks associated with files
+        accessed or modified before the specified time interval.
+    </description>
+  </property>
 </configuration>

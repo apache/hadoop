@@ -3158,6 +3158,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return getKeyProviderUri() != null;
   }
 
+  /**
+   * @return true if p is an encryption zone root
+   */
+  boolean isEZRoot(Path p) throws IOException {
+    EncryptionZone ez = getEZForPath(p.toUri().getPath());
+    if (ez == null) {
+      return false;
+    }
+    return ez.getPath().equals(p.toString());
+  }
+
   boolean isSnapshotTrashRootEnabled() throws IOException {
     return getServerDefaults().getSnapshotTrashRootEnabled();
   }

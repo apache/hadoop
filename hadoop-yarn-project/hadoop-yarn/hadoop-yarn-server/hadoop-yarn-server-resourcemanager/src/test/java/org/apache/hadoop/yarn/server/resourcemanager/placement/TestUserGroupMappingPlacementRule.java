@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.isNull;
@@ -157,7 +156,7 @@ public class TestUserGroupMappingPlacementRule {
             .build());
   }
 
-  @Test(expected = YarnException.class)
+  @Test
   public void testNullGroupMapping() throws IOException, YarnException {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         NullGroupsMapping.class, GroupMappingServiceProvider.class);
@@ -171,7 +170,6 @@ public class TestUserGroupMappingPlacementRule {
             .inputUser("a")
             .expectedQueue("default")
             .build());
-    fail("No Groups for user 'a'");
   }
 
   @Test

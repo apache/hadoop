@@ -592,6 +592,61 @@ with the Hadoop Distributed File System permissions model when hierarchical
 namespace is enabled for the storage account.  Furthermore, the metadata and data
 produced by ADLS Gen 2 REST API can be consumed by Blob REST API, and vice versa.
 
+## Generating test run configurations and test triggers over various config combinations
+
+To simplify the testing across various authentication and features combinations
+that are mandatory for a PR, script `dev-support/testrun-scripts/runtests.sh`
+should be used. Once the script is updated with relevant config settings for
+various test combinations, it will:
+1. Auto-generate configs specific to each test combinations
+2. Run tests for all combinations
+3. Summarize results across all the test combination runs.
+
+As a pre-requiste step, fill config values for test accounts and credentials
+needed for authentication in `src/test/resources/azure-auth-keys.xml.template`
+and rename as `src/test/resources/azure-auth-keys.xml`.
+
+**To add a new test combination:** Templates for mandatory test combinations
+for PR validation are present in `dev-support/testrun-scripts/runtests.sh`.
+If a new one needs to be added, add a combination set within
+`dev-support/testrun-scripts/runtests.sh` similar to the ones already defined
+and
+1. Provide a new combination name
+2. Update properties and values array which need to be effective for the test
+combination
+3. Call generateconfigs
+
+**To run PR validation:** Running command
+* `dev-support/testrun-scripts/runtests.sh` will generate configurations for
+each of the combinations defined and run tests for all the combinations.
+* `dev-support/testrun-scripts/runtests.sh -c {combinationname}` Specific
+combinations can be provided with -c option. If combinations are provided
+with -c option, tests for only those combinations will be run.
+
+**Test logs:** Test runs will create a folder within dev-support/testlogs to
+save the test logs. Folder name will be the test start timestamp. The mvn verify
+command line logs for each combination will be saved into a file as
+Test-Logs-$combination.txt into this folder. In case of any failures, this file
+will have the failure exception stack. At the end of the test run, the
+consolidated results of all the combination runs will be saved into a file as
+Test-Results.log in the same folder. When run for PR validation, the
+consolidated test results needs to be pasted into the PR comment section.
+
+**To generate config for use in IDE:** Running command with -a (activate) option
+`dev-support/testrun-scripts/runtests.sh -a {combination name}` will update
+the effective config relevant for the specific test combination. Hence the same
+config files used by the mvn test runs can be used for IDE without any manual
+updates needed within config file.
+
+**Other command line options:**
+* -a <COMBINATION_NAME> Specify the combination name which needs to be
+activated. This is to be used to generate config for use in IDE.
+* -c <COMBINATION_NAME> Specify the combination name for test runs. If this
+config is specified, tests for only the specified combinations will run. All
+combinations of tests will be running if this config is not specified.
+* -t <THREAD_COUNT> ABFS mvn tests are run in parallel mode. Tests by default
+are run with 8 thread count. It can be changed by providing -t <THREAD_COUNT>
+
 In order to test ABFS, please add the following configuration to your
 `src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
 compatibility tests which require WASB credentials, in addition to the ABFS

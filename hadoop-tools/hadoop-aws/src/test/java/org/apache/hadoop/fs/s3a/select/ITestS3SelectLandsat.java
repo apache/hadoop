@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.mapred.JobConf;
@@ -381,7 +381,7 @@ public class ITestS3SelectLandsat extends AbstractS3SelectTest {
                  SELECT_EVERYTHING)) {
       SelectInputStream sis
           = (SelectInputStream) seekStream.getWrappedStream();
-      S3AInstrumentation.InputStreamStatistics streamStats
+      S3AInputStreamStatistics streamStats
           = sis.getS3AStreamStatistics();
       // lazy seek doesn't raise a problem here
       seekStream.seek(0);
@@ -410,7 +410,7 @@ public class ITestS3SelectLandsat extends AbstractS3SelectTest {
       assertEquals("byte at seek position",
           dataset[(int) seekStream.getPos()], seekStream.read());
       assertEquals("Seek bytes skipped in " + streamStats,
-          seekRange, streamStats.bytesSkippedOnSeek);
+          seekRange, streamStats.getBytesSkippedOnSeek());
       long offset;
       long increment = 64 * _1KB;
 

@@ -171,7 +171,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             volume.getDfsUsed(),
             volume.getAvailable(),
             volume.getBlockPoolUsed(bpid),
-            volume.getNonDfsUsed());
+            volume.getNonDfsUsed(),
+            volume.getMount()
+        );
         reports.add(sr);
       } catch (ClosedChannelException e) {
         continue;
@@ -188,6 +190,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
       return r != null ? (FsVolumeImpl) r.getVolume() : null;
     }
+  }
+
+  MountVolumeMap getMountVolumeMap() {
+    return volumes.getMountVolumeMap();
   }
 
   @Override // FsDatasetSpi
@@ -365,7 +371,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             RoundRobinVolumeChoosingPolicy.class,
             VolumeChoosingPolicy.class), conf);
     volumes = new FsVolumeList(volumeFailureInfos, datanode.getBlockScanner(),
-        blockChooserImpl);
+        blockChooserImpl, conf);
     asyncDiskService = new FsDatasetAsyncDiskService(datanode, this);
     asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode, conf);
     deletingBlock = new HashMap<String, Set<Long>>();
@@ -464,12 +470,27 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         LOG.error(errorMsg);
         throw new IOException(errorMsg);
       }
+      // Check if there is same storage type on the mount.
+      // Only useful when same disk tiering is turned on.
+      FsVolumeImpl volumeImpl = (FsVolumeImpl) ref.getVolume();
+      FsVolumeReference checkRef = volumes
+          .getMountVolumeMap()
+          .getVolumeRefByMountAndStorageType(
+              volumeImpl.getMount(), volumeImpl.getStorageType());
+      if (checkRef != null) {
+        final String errorMsg = String.format(
+            "Storage type %s already exists on same mount: %s.",
+            volumeImpl.getStorageType(), volumeImpl.getMount());
+        checkRef.close();
+        LOG.error(errorMsg);
+        throw new IOException(errorMsg);
+      }
       volumeMap.mergeAll(replicaMap);
       storageMap.put(sd.getStorageUuid(),
           new DatanodeStorage(sd.getStorageUuid(),
               DatanodeStorage.State.NORMAL,
               storageType));
-      asyncDiskService.addVolume((FsVolumeImpl) ref.getVolume());
+      asyncDiskService.addVolume(volumeImpl);
       volumes.addVolume(ref);
     }
   }

@@ -38,6 +38,11 @@
     <value>false</value>
   </property>
 
+  <property>
+    <name>fs.contract.rename-returns-false-if-dest-exists</name>
+    <value>true</value>
+  </property>
+
   <!--====================  ABFS CONFIGURATION ====================-->
   <!-- SEE relevant section in "site/markdown/testing_azure.md"-->
 
@@ -58,6 +63,10 @@
   <!--=============================================================-->
 
   <include xmlns="http://www.w3.org/2001/XInclude" href="azure-auth-keys.xml">
+    <fallback />
+  </include>
+
+  <include xmlns="http://www.w3.org/2001/XInclude" href="abfs-combination-test-configs.xml">
     <fallback />
   </include>
 

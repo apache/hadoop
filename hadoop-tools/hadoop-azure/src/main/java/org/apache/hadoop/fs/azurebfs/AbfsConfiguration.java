@@ -100,6 +100,20 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_WRITE_BUFFER_SIZE)
   private int writeBufferSize;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION,
+      DefaultValue = DEFAULT_AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION)
+  private boolean enableSmallWriteOptimization;
+
+  @BooleanConfigurationValidatorAnnotation(
+      ConfigurationKey = AZURE_READ_SMALL_FILES_COMPLETELY,
+      DefaultValue = DEFAULT_READ_SMALL_FILES_COMPLETELY)
+  private boolean readSmallFilesCompletely;
+
+  @BooleanConfigurationValidatorAnnotation(
+      ConfigurationKey = AZURE_READ_OPTIMIZE_FOOTER_READ,
+      DefaultValue = DEFAULT_OPTIMIZE_FOOTER_READ)
+  private boolean optimizeFooterRead;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_READ_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
       MaxValue = MAX_BUFFER_SIZE,
@@ -200,6 +214,16 @@ public class AbfsConfiguration{
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_AHEAD_QUEUE_DEPTH,
       DefaultValue = DEFAULT_READ_AHEAD_QUEUE_DEPTH)
   private int readAheadQueueDepth;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_READ_AHEAD_BLOCK_SIZE,
+      MinValue = MIN_BUFFER_SIZE,
+      MaxValue = MAX_BUFFER_SIZE,
+      DefaultValue = DEFAULT_READ_AHEAD_BLOCK_SIZE)
+  private int readAheadBlockSize;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ALWAYS_READ_BUFFER_SIZE,
+      DefaultValue = DEFAULT_ALWAYS_READ_BUFFER_SIZE)
+  private boolean alwaysReadBufferSize;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_FLUSH,
       DefaultValue = DEFAULT_ENABLE_FLUSH)
@@ -517,6 +541,18 @@ public class AbfsConfiguration{
     return this.writeBufferSize;
   }
 
+  public boolean isSmallWriteOptimizationEnabled() {
+    return this.enableSmallWriteOptimization;
+  }
+
+  public boolean readSmallFilesCompletely() {
+    return this.readSmallFilesCompletely;
+  }
+
+  public boolean optimizeFooterRead() {
+    return this.optimizeFooterRead;
+  }
+
   public int getReadBufferSize() {
     return this.readBufferSize;
   }
@@ -597,6 +633,14 @@ public class AbfsConfiguration{
 
   public int getReadAheadQueueDepth() {
     return this.readAheadQueueDepth;
+  }
+
+  public int getReadAheadBlockSize() {
+    return this.readAheadBlockSize;
+  }
+
+  public boolean shouldReadBufferSizeAlways() {
+    return this.alwaysReadBufferSize;
   }
 
   public boolean isFlushEnabled() {
@@ -905,6 +949,16 @@ public class AbfsConfiguration{
       authority = authority + AbfsHttpConstants.FORWARD_SLASH;
     }
     return authority;
+  }
+
+  @VisibleForTesting
+  public void setReadSmallFilesCompletely(boolean readSmallFilesCompletely) {
+    this.readSmallFilesCompletely = readSmallFilesCompletely;
+  }
+
+  @VisibleForTesting
+  public void setOptimizeFooterRead(boolean optimizeFooterRead) {
+    this.optimizeFooterRead = optimizeFooterRead;
   }
 
 }

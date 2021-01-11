@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement
     .ApplicationPlacementContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -86,11 +87,11 @@ import java.util.Set;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
-import static org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.CURRENT_USER_MAPPING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -105,6 +106,8 @@ public class TestCapacitySchedulerAutoQueueCreation
 
   private static final Logger LOG = LoggerFactory.getLogger(
       TestCapacitySchedulerAutoQueueCreation.class);
+
+  private static final String CURRENT_USER_MAPPING = "%user";
 
   private static final Resource TEMPLATE_MAX_RES = Resource.newInstance(16 *
           GB,
@@ -424,16 +427,16 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       //dynamic queue mapping
       try {
-        setupQueueMapping(newCS, CURRENT_USER_MAPPING, "a",
+        setupQueueMapping(newCS, CURRENT_USER_MAPPING, "a1",
             CURRENT_USER_MAPPING);
         newCS.updatePlacementRules();
         fail("Expected invalid parent queue mapping failure");
 
       } catch (IOException e) {
         //expected exception
+
         assertTrue(e.getMessage().contains(
-            "invalid parent queue which does not have auto creation of leaf "
-                + "queues enabled [" + "a" + "]"));
+            "Target queue path 'a1.%user' has a non-managed parent queue"));
       }
 
       //"a" is not auto create enabled and app_user does not exist as a leaf
@@ -446,8 +449,8 @@ public class TestCapacitySchedulerAutoQueueCreation
         fail("Expected invalid parent queue mapping failure");
       } catch (IOException e) {
         //expected exception
-        assertTrue(e.getMessage()
-            .contains("invalid parent queue [" + "INVALID_PARENT_QUEUE" + "]"));
+        assertTrue(e.getMessage().contains(
+            "contains an invalid parent queue 'INVALID_PARENT_QUEUE'"));
       }
     } finally {
       if (newMockRM != null) {
@@ -477,7 +480,7 @@ public class TestCapacitySchedulerAutoQueueCreation
         fail("Expected invalid parent queue mapping failure");
       } catch (IOException e) {
         //expected exception
-        assertTrue(e.getMessage().contains("invalid parent queue []"));
+        assertTrue(e.getMessage().contains("invalid parent queue"));
       }
     } finally {
       if (newMockRM != null) {
@@ -500,7 +503,12 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       assertNotNull(newCS.getQueue(USER0));
 
-      setupQueueMapping(newCS, USER0, "d", USER0);
+      //The new placement engine's validation is a bit more
+      //strict so it would reject the original u:user_0:a.user_0 rule since
+      //it checks if that paths exists or is a managed parent, but if we use
+      //a.%user we can trick the engine, since it cannot validate if the actual
+      //value of the %user will exist or not, it allows the rule
+      setupQueueMapping(newCS, USER0, "a", "%user");
       newCS.updatePlacementRules();
 
       RMContext rmContext = mock(RMContext.class);
@@ -508,13 +516,65 @@ public class TestCapacitySchedulerAutoQueueCreation
       newCS.setRMContext(rmContext);
 
       ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+      //The new engine would return root.a as the parent queue for this
+      // submission so creating the ApplicationPlacementContext accordingly
       SchedulerEvent addAppEvent = new AppAddedSchedulerEvent(appId, USER0,
-          USER0, new ApplicationPlacementContext(USER0, "d"));
+          USER0, new ApplicationPlacementContext(USER0, "root.a"));
       newCS.handle(addAppEvent);
 
       RMAppEvent event = new RMAppEvent(appId, RMAppEventType.APP_REJECTED,
           "error");
       dispatcher.spyOnNextEvent(event, 10000);
+    } finally {
+      if (newMockRM != null) {
+        ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
+        newMockRM.stop();
+      }
+    }
+  }
+
+  /**
+   * This test case checks if a mapping rule can put an application to an auto
+   * created queue even if an other queue with the same leaf name already
+   * exists.
+   *
+   * In this scenario we use the following queues
+   *   root.a.a1 - already existing queue
+   *   root.c    - managed parent queue
+   *
+   * And the following mapping rule
+   *   u:%user:root.c.%user - Any submission should go to root.c.USERNAME queue
+   *
+   * When user 'a1' submits a new application we expect it to go to 'root.c.a1'
+   * because of the mapping rule, and the queue should be created.
+   *
+   * @throws Exception - When stuff go wrong, obvious reason to fail the test
+   */
+  @Test
+  public void testAutoQueueCreationWhenQueueExistsWithSameName()
+      throws Exception {
+
+    MockRM newMockRM = setupSchedulerInstance();
+    CapacityScheduler newCS =
+        (CapacityScheduler) newMockRM.getResourceScheduler();
+
+    try {
+      setupQueueMapping(newCS, "%user", "root.c", "%user");
+      newCS.updatePlacementRules();
+
+      //making sure the target queue does not exist before submission
+      assertNull(newCS.getQueue("root.c.a1"));
+      RMApp app = MockRMAppSubmitter.submit(newMockRM,
+          MockRMAppSubmissionData.Builder.createWithMemory(512, newMockRM)
+              .withAppName("testAutoQueueCreationWhenQueueExistsWithSameName")
+              .withUser("a1")
+              .withQueue("default")
+              .build());
+      RMAppAttempt attempt = MockRM.waitForAttemptScheduled(app, newMockRM);
+      //checking if the target queue have been created during the submission
+      assertNotNull(newCS.getQueue("root.c.a1"));
+      //making sure the application is indeed in the right queue
+      assertEquals("root.c.a1", app.getQueue());
     } finally {
       if (newMockRM != null) {
         ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();

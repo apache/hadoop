@@ -578,6 +578,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     return new AbfsOutputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withWriteBufferSize(bufferSize)
             .enableFlush(abfsConfiguration.isFlushEnabled())
+            .enableSmallWriteOptimization(abfsConfiguration.isSmallWriteOptimizationEnabled())
             .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())
             .withAppendBlob(isAppendBlob)
@@ -643,7 +644,12 @@ public class AzureBlobFileSystemStore implements Closeable {
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
             .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
             .withTolerateOobAppends(abfsConfiguration.getTolerateOobAppends())
+            .withReadSmallFilesCompletely(abfsConfiguration.readSmallFilesCompletely())
+            .withOptimizeFooterRead(abfsConfiguration.optimizeFooterRead())
             .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
+            .withShouldReadBufferSizeAlways(
+                abfsConfiguration.shouldReadBufferSizeAlways())
+            .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
             .build();
   }
 

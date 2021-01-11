@@ -33,14 +33,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
 
 public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAbfsNetworkStatistics.class);
-  private static final int LARGE_OPERATIONS = 10;
+  private static final int WRITE_OPERATION_LOOP_COUNT = 10;
 
   public ITestAbfsNetworkStatistics() throws Exception {
   }
@@ -58,117 +60,126 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     Map<String, Long> metricMap;
     Path sendRequestPath = path(getMethodName());
     String testNetworkStatsString = "http_send";
-    long connectionsMade, requestsSent, bytesSent;
 
     metricMap = fs.getInstrumentationMap();
-    long connectionsMadeBeforeTest = metricMap
-        .get(CONNECTIONS_MADE.getStatName());
-    long requestsMadeBeforeTest = metricMap.get(SEND_REQUESTS.getStatName());
+    long expectedConnectionsMade = metricMap.get(CONNECTIONS_MADE.getStatName());
+    long expectedRequestsSent = metricMap.get(SEND_REQUESTS.getStatName());
+    long expectedBytesSent = 0;
 
-    /*
-     * Creating AbfsOutputStream will result in 1 connection made and 1 send
-     * request.
-     */
+    // --------------------------------------------------------------------
+     // Operation: Creating AbfsOutputStream
     try (AbfsOutputStream out = createAbfsOutputStreamWithFlushEnabled(fs,
         sendRequestPath)) {
+       // Network stats calculation: For Creating AbfsOutputStream:
+       // 1 create request = 1 connection made and 1 send request
+      expectedConnectionsMade++;
+      expectedRequestsSent++;
+      // --------------------------------------------------------------------
+
+      // Operation: Write small data
+      // Network stats calculation: No additions.
+      // Data written is less than the buffer size and hence will not
+      // trigger any append request to store
       out.write(testNetworkStatsString.getBytes());
+      // --------------------------------------------------------------------
 
-      /*
-       * Flushes all outstanding data (i.e. the current unfinished packet)
-       * from the client into the service on all DataNode replicas.
-       */
+       // Operation: HFlush
+       // Flushes all outstanding data (i.e. the current unfinished packet)
+       // from the client into the service on all DataNode replicas.
       out.hflush();
-
-      metricMap = fs.getInstrumentationMap();
-
       /*
-       * Testing the network stats with 1 write operation.
+       * Network stats calculation:
+       * 3 possibilities here:
+       * A. As there is pending data to be written to store, this will result in:
+       *    1 append + 1 flush = 2 connections and 2 send requests
        *
-       * connections_made : (connections made above) + 2(flush).
+       * B. If config "fs.azure.enable.small.write.optimization" is enabled, append
+       *   and flush call will be merged for small data in buffer in this test.
+       *   In which case it will be:
+       *   1 append+flush request = 1 connection and 1 send request
        *
-       * send_requests : (requests sent above) + 2(flush).
-       *
-       * bytes_sent : bytes wrote in AbfsOutputStream.
+       * C. If the path is configured for append Blob files to be used, hflush
+       *   is a no-op. So in this case:
+       *   1 append = 1 connection and 1 send request
        */
-      long extraCalls = 0;
-      if (!fs.getAbfsStore()
-          .isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())) {
-        // no network calls are made for hflush in case of appendblob
-        extraCalls++;
+      if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())
+          || (this.getConfiguration().isSmallWriteOptimizationEnabled())) {
+        expectedConnectionsMade++;
+        expectedRequestsSent++;
+      } else {
+        expectedConnectionsMade += 2;
+        expectedRequestsSent += 2;
       }
-      long expectedConnectionsMade = connectionsMadeBeforeTest + extraCalls + 2;
-      long expectedRequestsSent = requestsMadeBeforeTest + extraCalls + 2;
-      connectionsMade = assertAbfsStatistics(CONNECTIONS_MADE,
+      expectedBytesSent += testNetworkStatsString.getBytes().length;
+      // --------------------------------------------------------------------
+
+      // Assertions
+      metricMap = fs.getInstrumentationMap();
+      assertAbfsStatistics(CONNECTIONS_MADE,
           expectedConnectionsMade, metricMap);
-      requestsSent = assertAbfsStatistics(SEND_REQUESTS, expectedRequestsSent,
+      assertAbfsStatistics(SEND_REQUESTS, expectedRequestsSent,
           metricMap);
-      bytesSent = assertAbfsStatistics(AbfsStatistic.BYTES_SENT,
-          testNetworkStatsString.getBytes().length, metricMap);
+      assertAbfsStatistics(AbfsStatistic.BYTES_SENT,
+          expectedBytesSent, metricMap);
     }
 
-    // To close the AbfsOutputStream 1 connection is made and 1 request is sent.
-    connectionsMade++;
-    requestsSent++;
+    // --------------------------------------------------------------------
+    // Operation: AbfsOutputStream close.
+    // Network Stats calculation: 1 flush (with close) is send.
+    // 1 flush request = 1 connection and 1 send request
+    expectedConnectionsMade++;
+    expectedRequestsSent++;
+    // --------------------------------------------------------------------
 
-
+    // Operation: Re-create the file / create overwrite scenario
     try (AbfsOutputStream out = createAbfsOutputStreamWithFlushEnabled(fs,
         sendRequestPath)) {
-
-      // Is a file overwrite case
-      long createRequestCalls = 1;
-      long createTriggeredGFSForETag = 0;
-      if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
-        createRequestCalls += 1;
-        createTriggeredGFSForETag = 1;
-      }
-
-      for (int i = 0; i < LARGE_OPERATIONS; i++) {
-        out.write(testNetworkStatsString.getBytes());
-
-        /*
-         * 1 flush call would create 2 connections and 2 send requests.
-         * when hflush() is called it will essentially trigger append() and
-         * flush() inside AbfsRestOperation. Both of which calls
-         * executeHttpOperation() method which creates a connection and sends
-         * requests.
-         */
-        out.hflush();
-      }
-
-      metricMap = fs.getInstrumentationMap();
-
       /*
-       * Testing the network stats with Large amount of bytes sent.
+       * Network Stats calculation: create overwrite
+       * There are 2 possibilities here.
+       * A. create overwrite results in 1 server call
+       *    create with overwrite=true = 1 connection and 1 send request
        *
-       * connections made : connections_made(Last assertion) + 1
-       * (AbfsOutputStream) + LARGE_OPERATIONS * 2(flush).
-       *
-       * send requests : requests_sent(Last assertion) + 1(AbfsOutputStream) +
-       * LARGE_OPERATIONS * 2(flush).
-       *
-       * bytes sent : bytes_sent(Last assertion) + LARGE_OPERATIONS * (bytes
-       * wrote each time).
-       *
+       * B. If config "fs.azure.enable.conditional.create.overwrite" is enabled,
+       *    create overwrite=false (will fail in this case as file is indeed present)
+       *    + getFileStatus to fetch the file ETag
+       *    + create overwrite=true
+       *    = 3 connections and 2 send requests
        */
-
-      connectionsMade += createRequestCalls + createTriggeredGFSForETag;
-      requestsSent += createRequestCalls;
-      if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())) {
-        // no network calls are made for hflush in case of appendblob
-        assertAbfsStatistics(CONNECTIONS_MADE,
-            connectionsMade + LARGE_OPERATIONS, metricMap);
-        assertAbfsStatistics(SEND_REQUESTS,
-            requestsSent + LARGE_OPERATIONS, metricMap);
+      if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
+        expectedConnectionsMade += 3;
+        expectedRequestsSent += 2;
       } else {
-        assertAbfsStatistics(CONNECTIONS_MADE,
-            connectionsMade + LARGE_OPERATIONS * 2, metricMap);
-        assertAbfsStatistics(SEND_REQUESTS,
-            requestsSent + LARGE_OPERATIONS * 2, metricMap);
+        expectedConnectionsMade += 1;
+        expectedRequestsSent += 1;
       }
-      assertAbfsStatistics(AbfsStatistic.BYTES_SENT,
-          bytesSent + LARGE_OPERATIONS * (testNetworkStatsString.getBytes().length),
-          metricMap);
+      // --------------------------------------------------------------------
 
+      // Operation: Multiple small appends + hflush
+      for (int i = 0; i < WRITE_OPERATION_LOOP_COUNT; i++) {
+        out.write(testNetworkStatsString.getBytes());
+        // Network stats calculation: no-op. Small write
+        out.hflush();
+        // Network stats calculation: Hflush
+        // refer to previous comments for hFlush network stats calcualtion
+        // possibilities
+        if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())
+            || (this.getConfiguration().isSmallWriteOptimizationEnabled())) {
+          expectedConnectionsMade++;
+          expectedRequestsSent++;
+        } else {
+          expectedConnectionsMade += 2;
+          expectedRequestsSent += 2;
+        }
+        expectedBytesSent += testNetworkStatsString.getBytes().length;
+      }
+      // --------------------------------------------------------------------
+
+      // Assertions
+      metricMap = fs.getInstrumentationMap();
+      assertAbfsStatistics(CONNECTIONS_MADE, expectedConnectionsMade, metricMap);
+      assertAbfsStatistics(SEND_REQUESTS, expectedRequestsSent, metricMap);
+      assertAbfsStatistics(AbfsStatistic.BYTES_SENT, expectedBytesSent, metricMap);
     }
 
   }
@@ -185,130 +196,100 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     Path getResponsePath = path(getMethodName());
     Map<String, Long> metricMap;
     String testResponseString = "some response";
-    long getResponses, bytesReceived;
 
     FSDataOutputStream out = null;
     FSDataInputStream in = null;
-    try {
+    long expectedConnectionsMade;
+    long expectedGetResponses;
+    long expectedBytesReceived;
 
-      /*
-       * Creating a File and writing some bytes in it.
-       *
-       * get_response : 3(getFileSystem) + 1(OutputStream creation) + 2
-       * (Writing data in Data store).
-       *
-       */
+    try {
+      // Creating a File and writing some bytes in it.
       out = fs.create(getResponsePath);
       out.write(testResponseString.getBytes());
       out.hflush();
 
+      // Set metric baseline
       metricMap = fs.getInstrumentationMap();
-      long getResponsesBeforeTest = metricMap
-          .get(CONNECTIONS_MADE.getStatName());
+      long bytesWrittenToFile = testResponseString.getBytes().length;
+      expectedConnectionsMade = metricMap.get(CONNECTIONS_MADE.getStatName());
+      expectedGetResponses = metricMap.get(CONNECTIONS_MADE.getStatName());
+      expectedBytesReceived = metricMap.get(BYTES_RECEIVED.getStatName());
 
-      // open would require 1 get response.
+      // --------------------------------------------------------------------
+      // Operation: Create AbfsInputStream
       in = fs.open(getResponsePath);
-      // read would require 1 get response and also get the bytes received.
+      // Network stats calculation: For Creating AbfsInputStream:
+      // 1 GetFileStatus request to fetch file size = 1 connection and 1 get response
+      expectedConnectionsMade++;
+      expectedGetResponses++;
+      // --------------------------------------------------------------------
+
+      // Operation: Read
       int result = in.read();
+      // Network stats calculation: For read:
+      // 1 read request = 1 connection and 1 get response
+      expectedConnectionsMade++;
+      expectedGetResponses++;
+      expectedBytesReceived += bytesWrittenToFile;
+      // --------------------------------------------------------------------
 
-      // Confirming read isn't -1.
-      LOG.info("Result of read operation : {}", result);
-
+      // Assertions
       metricMap = fs.getInstrumentationMap();
-
-      /*
-       * Testing values of statistics after writing and reading a buffer.
-       *
-       * get_responses - (above operations) + 1(open()) + 1 (read()).;
-       *
-       * bytes_received - This should be equal to bytes sent earlier.
-       */
-      long extraCalls = 0;
-      if (!fs.getAbfsStore()
-          .isAppendBlobKey(fs.makeQualified(getResponsePath).toString())) {
-        // no network calls are made for hflush in case of appendblob
-        extraCalls++;
-      }
-      long expectedGetResponses = getResponsesBeforeTest + extraCalls + 1;
-      getResponses = assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
-          expectedGetResponses, metricMap);
-
-      // Testing that bytes received is equal to bytes sent.
-      long bytesSend = metricMap.get(AbfsStatistic.BYTES_SENT.getStatName());
-      bytesReceived = assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
-          bytesSend,
-          metricMap);
-
+      assertAbfsStatistics(CONNECTIONS_MADE, expectedConnectionsMade, metricMap);
+      assertAbfsStatistics(GET_RESPONSES, expectedGetResponses, metricMap);
+      assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, expectedBytesReceived, metricMap);
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
     }
 
-    // To close the streams 1 response is received.
-    getResponses++;
+    // --------------------------------------------------------------------
+    // Operation: AbfsOutputStream close.
+    // Network Stats calculation: no op.
+    // --------------------------------------------------------------------
 
     try {
 
-      /*
-       * Creating a file and writing buffer into it.
-       * This is a file recreate, so it will trigger
-       * 2 extra calls if create overwrite is off by default.
-       * Also recording the buffer for future read() call.
-       * This creating outputStream and writing requires 2 *
-       * (LARGE_OPERATIONS) get requests.
-       */
+      // Recreate file with different file size
+      // [Create and append related network stats checks are done in
+      // test method testAbfsHttpSendStatistics]
       StringBuilder largeBuffer = new StringBuilder();
       out = fs.create(getResponsePath);
 
-      long createRequestCalls = 1;
-      if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
-        createRequestCalls += 2;
-      }
-
-      for (int i = 0; i < LARGE_OPERATIONS; i++) {
+      for (int i = 0; i < WRITE_OPERATION_LOOP_COUNT; i++) {
         out.write(testResponseString.getBytes());
         out.hflush();
         largeBuffer.append(testResponseString);
       }
 
-      // Open requires 1 get_response.
-      in = fs.open(getResponsePath);
-
-      /*
-       * Reading the file which was written above. This read() call would
-       * read bytes equal to the bytes that was written above.
-       * Get response would be 1 only.
-       */
-      in.read(0, largeBuffer.toString().getBytes(), 0,
-          largeBuffer.toString().getBytes().length);
-
+      // sync back to metric baseline
       metricMap = fs.getInstrumentationMap();
+      expectedConnectionsMade = metricMap.get(CONNECTIONS_MADE.getStatName());
+      expectedGetResponses = metricMap.get(GET_RESPONSES.getStatName());
+      // --------------------------------------------------------------------
+      // Operation: Create AbfsInputStream
+      in = fs.open(getResponsePath);
+      // Network stats calculation: For Creating AbfsInputStream:
+      // 1 GetFileStatus for file size = 1 connection and 1 get response
+      expectedConnectionsMade++;
+      expectedGetResponses++;
+      // --------------------------------------------------------------------
 
-      /*
-       * Testing the statistics values after writing and reading a large buffer.
-       *
-       * get_response : get_responses(Last assertion) + 1
-       * (OutputStream) + 2 * LARGE_OPERATIONS(Writing and flushing
-       * LARGE_OPERATIONS times) + 1(open()) + 1(read()) +
-       * 1 (createOverwriteTriggeredGetForeTag).
-       *
-       * bytes_received : bytes_received(Last assertion) + LARGE_OPERATIONS *
-       * bytes wrote each time (bytes_received is equal to bytes wrote in the
-       * File).
-       *
-       */
-      assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
-          bytesReceived + LARGE_OPERATIONS * (testResponseString.getBytes().length),
-          metricMap);
-      if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(getResponsePath).toString())) {
-        // no network calls are made for hflush in case of appendblob
-        assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
-            getResponses + 3 + LARGE_OPERATIONS, metricMap);
-      } else {
-        assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
-            getResponses + 2 + createRequestCalls + 2 * LARGE_OPERATIONS,
-            metricMap);
-      }
+      // Operation: Read
+      in.read(0, largeBuffer.toString().getBytes(), 0, largeBuffer.toString().getBytes().length);
+      // Network stats calculation: Total data written is still lesser than
+      // a buffer size. Hence will trigger only one read to store. So result is:
+      // 1 read request = 1 connection and 1 get response
+      expectedConnectionsMade++;
+      expectedGetResponses++;
+      expectedBytesReceived += (WRITE_OPERATION_LOOP_COUNT * testResponseString.getBytes().length);
+      // --------------------------------------------------------------------
 
+      // Assertions
+      metricMap = fs.getInstrumentationMap();
+      assertAbfsStatistics(CONNECTIONS_MADE, expectedConnectionsMade, metricMap);
+      assertAbfsStatistics(GET_RESPONSES, expectedGetResponses, metricMap);
+      assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, expectedBytesReceived, metricMap);
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
     }

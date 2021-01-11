@@ -276,8 +276,14 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     }
   }
 
+  @Test
+  public void testS3AIOStatisticsUninitialized() throws Throwable {
+    try (S3AFileSystem fs = new S3AFileSystem()) {
+      fs.getIOStatistics();
+    }
+
+  }
   /**
-<<<<<<< ours
    * Verify that paths with a trailing "/" are fixed up.
    */
   @Test

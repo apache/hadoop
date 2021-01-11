@@ -469,6 +469,10 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `CheckAndUpdateOpAvgTime` | Average time of check and update operations in milliseconds |
 | `UpdateReplicaUnderRecoveryOpNumOps` | Total number of update replica under recovery operations |
 | `UpdateReplicaUnderRecoveryOpAvgTime` | Average time of update replica under recovery operations in milliseconds |
+| `PacketsReceived` | Total number of packets received by Datanode (excluding heartbeat packet from client) |
+| `PacketsSlowWriteToMirror` | Total number of packets whose write to other Datanodes in the pipeline takes more than a certain time (300ms by default) |
+| `PacketsSlowWriteToDisk` | Total number of packets whose write to disk takes more than a certain time (300ms by default) |
+| `PacketsSlowWriteToOsCache` | Total number of packets whose write to os cache takes more than a certain time (300ms by default) |
 
 FsVolume
 --------
@@ -548,8 +552,8 @@ RouterRPCMetrics shows the statistics of the Router component in Router-based fe
 |:---- |:---- |
 | `ProcessingOp` | Number of operations the Router processed internally |
 | `ProxyOp` | Number of operations the Router proxied to a Namenode |
-| `ProxyOpFailureStandby` | Number of operations to fail to reach NN |
-| `ProxyOpFailureCommunicate` | Number of operations to hit a standby NN |
+| `ProxyOpFailureStandby` | Number of operations to hit a standby NN |
+| `ProxyOpFailureCommunicate` | Number of operations to fail to reach NN |
 | `ProxyOpNotImplemented` | Number of operations not implemented |
 | `RouterFailureStateStore` | Number of failed requests due to State Store unavailable |
 | `RouterFailureReadOnly` | Number of failed requests due to read only mount point |

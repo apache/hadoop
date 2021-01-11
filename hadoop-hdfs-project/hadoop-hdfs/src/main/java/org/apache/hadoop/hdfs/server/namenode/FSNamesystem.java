@@ -829,7 +829,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
                         DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
       LOG.info("Enabling async auditlog");
-      enableAsyncAuditLog();
+      enableAsyncAuditLog(conf);
     }
     fsLock = new FSNamesystemLock(conf, detailedLockHoldTimeMetrics);
     cond = fsLock.newWriteLockCondition();
@@ -1893,13 +1893,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param minimumBlockSize
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size, long
-      minimumBlockSize) throws IOException {
+      minimumBlockSize, long timeInterval) throws IOException {
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
       return getBlockManager().getBlocksWithLocations(datanode, size,
-          minimumBlockSize);
+          minimumBlockSize, timeInterval);
     } finally {
       readUnlock("getBlocks");
     }
@@ -3321,7 +3321,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw e;
     }
     getEditLog().logSync();
-    logAuditEvent(true, operationName, src);
+    logAuditEvent(ret, operationName, src);
     if (toRemovedBlocks != null) {
       removeBlocks(toRemovedBlocks); // Incremental deletion of blocks
     }
@@ -3711,17 +3711,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             " internalReleaseLease: Committed blocks are minimally" +
             " replicated, lease removed, file" + src + " closed.");
         return true;  // closed!
-      } else if (penultimateBlockMinStorage && lastBlock.getNumBytes() == 0) {
-        // HDFS-14498 - this is a file with a final block of zero bytes and was
-        // likely left in this state by a client which exited unexpectedly
-        pendingFile.removeLastBlock(lastBlock);
-        finalizeINodeFileUnderConstruction(src, pendingFile,
-            iip.getLatestSnapshotId(), false);
-        NameNode.stateChangeLog.warn("BLOCK*" +
-            " internalReleaseLease: Committed last block is zero bytes with" +
-            " insufficient replicas. Final block removed, lease removed, file "
-            + src + " closed.");
-        return true;
       }
       // Cannot close file right now, since some blocks 
       // are not yet minimally replicated.
@@ -3729,10 +3718,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // if there are no valid replicas on data-nodes.
       String message = "DIR* NameSystem.internalReleaseLease: " +
           "Failed to release lease for file " + src +
-          ". Committed blocks are waiting to be minimally replicated." +
-          " Try again later.";
+          ". Committed blocks are waiting to be minimally replicated.";
       NameNode.stateChangeLog.warn(message);
-      throw new AlreadyBeingCreatedException(message);
+      if (!penultimateBlockMinStorage) {
+        throw new AlreadyBeingCreatedException(message);
+      }
+      // Intentionally fall through to UNDER_RECOVERY so BLOCK_RECOVERY is
+      // attempted
     case UNDER_CONSTRUCTION:
     case UNDER_RECOVERY:
       BlockUnderConstructionFeature uc =
@@ -6323,13 +6315,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private static UserGroupInformation getRemoteUser() throws IOException {
     return NameNode.getRemoteUser();
   }
-  
+
   /**
-   * Log fsck event in the audit log 
+   * Log fsck event in the audit log.
+   *
+   * @param succeeded Whether authorization succeeded.
+   * @param src Path of affected source file.
+   * @param remoteAddress Remote address of the request.
+   * @throws IOException if {@link #getRemoteUser()} fails.
    */
-  void logFsckEvent(String src, InetAddress remoteAddress) throws IOException {
+  void logFsckEvent(boolean succeeded, String src, InetAddress remoteAddress)
+      throws IOException {
     if (isAuditEnabled()) {
-      logAuditEvent(true, getRemoteUser(),
+      logAuditEvent(succeeded, getRemoteUser(),
                     remoteAddress,
                     "fsck", src, null, null);
     }
@@ -8709,7 +8707,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  private static void enableAsyncAuditLog() {
+  private static void enableAsyncAuditLog(Configuration conf) {
     if (!(auditLog instanceof Log4JLogger)) {
       LOG.warn("Log4j is required to enable async auditlog");
       return;
@@ -8720,6 +8718,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // failsafe against trying to async it more than once
     if (!appenders.isEmpty() && !(appenders.get(0) instanceof AsyncAppender)) {
       AsyncAppender asyncAppender = new AsyncAppender();
+      asyncAppender.setBlocking(conf.getBoolean(
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY,
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_DEFAULT
+      ));
+      asyncAppender.setBufferSize(conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT
+      ));
       // change logger to have an async appender containing all the
       // previously configured appenders
       for (Appender appender : appenders) {

@@ -201,6 +201,8 @@
                     <exclude>**/ITestMarkerToolRootOperations.java</exclude>
                     <!-- operations across the metastore -->
                     <exclude>**/ITestS3GuardDDBRootOperations.java</exclude>
+                    <!-- leave this until the end for better statistics -->
+                    <exclude>**/ITestAggregateIOStatistics.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -250,6 +252,8 @@
                     <!-- operations across the metastore -->
                     <include>**/ITestS3AContractRootDir.java</include>
                     <include>**/ITestS3GuardDDBRootOperations.java</include>
+                    <!-- leave this until the end for better statistics -->
+                    <include>**/ITestAggregateIOStatistics.java</include>
                   </includes>
                 </configuration>
               </execution>

@@ -88,7 +88,8 @@ public class TestFsVolumeList {
   @Test(timeout=30000)
   public void testGetNextVolumeWithClosedVolume() throws IOException {
     FsVolumeList volumeList = new FsVolumeList(
-        Collections.<VolumeFailureInfo>emptyList(), blockScanner, blockChooser);
+        Collections.<VolumeFailureInfo>emptyList(),
+        blockScanner, blockChooser, conf);
     final List<FsVolumeImpl> volumes = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       File curDir = new File(baseDir, "nextvolume-" + i);
@@ -131,7 +132,7 @@ public class TestFsVolumeList {
   @Test(timeout=30000)
   public void testReleaseVolumeRefIfNoBlockScanner() throws IOException {
     FsVolumeList volumeList = new FsVolumeList(
-        Collections.<VolumeFailureInfo>emptyList(), null, blockChooser);
+        Collections.<VolumeFailureInfo>emptyList(), null, blockChooser, conf);
     File volDir = new File(baseDir, "volume-0");
     volDir.mkdirs();
     FsVolumeImpl volume = new FsVolumeImplBuilder()
@@ -477,5 +478,146 @@ public class TestFsVolumeList {
 
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_KEY,
         DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT);
+  }
+
+  // Test basics with same disk archival turned on.
+  @Test
+  public void testGetVolumeWithSameDiskArchival() throws Exception {
+    File diskVolDir = new File(baseDir, "volume-disk");
+    File archivalVolDir = new File(baseDir, "volume-archival");
+    diskVolDir.mkdirs();
+    archivalVolDir.mkdirs();
+    double reservedForArchival = 0.75;
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        true);
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
+        reservedForArchival);
+    FsVolumeImpl diskVolume = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(
+                StorageLocation.parse(diskVolDir.getPath())))
+        .build();
+    FsVolumeImpl archivalVolume = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation
+                .parse("[ARCHIVE]" + archivalVolDir.getPath())))
+        .build();
+    FsVolumeList volumeList = new FsVolumeList(
+        Collections.<VolumeFailureInfo>emptyList(),
+        blockScanner, blockChooser, conf);
+    volumeList.addVolume(archivalVolume.obtainReference());
+    volumeList.addVolume(diskVolume.obtainReference());
+
+    assertEquals(diskVolume.getMount(), archivalVolume.getMount());
+    String device = diskVolume.getMount();
+
+    // 1) getVolumeRef should return correct reference.
+    assertEquals(diskVolume,
+        volumeList.getMountVolumeMap()
+            .getVolumeRefByMountAndStorageType(
+            device, StorageType.DISK).getVolume());
+    assertEquals(archivalVolume,
+        volumeList.getMountVolumeMap()
+            .getVolumeRefByMountAndStorageType(
+            device, StorageType.ARCHIVE).getVolume());
+
+    // 2) removeVolume should work as expected
+    volumeList.removeVolume(diskVolume.getStorageLocation(), true);
+    assertNull(volumeList.getMountVolumeMap()
+            .getVolumeRefByMountAndStorageType(
+            device, StorageType.DISK));
+    assertEquals(archivalVolume, volumeList.getMountVolumeMap()
+        .getVolumeRefByMountAndStorageType(
+        device, StorageType.ARCHIVE).getVolume());
+  }
+
+  // Test dfs stats with same disk archival
+  @Test
+  public void testDfsUsageStatWithSameDiskArchival() throws Exception {
+    File diskVolDir = new File(baseDir, "volume-disk");
+    File archivalVolDir = new File(baseDir, "volume-archival");
+    diskVolDir.mkdirs();
+    archivalVolDir.mkdirs();
+
+    long dfCapacity = 1100L;
+    double reservedForArchival = 0.75;
+    // Disk and Archive shares same du Reserved.
+    long duReserved = 100L;
+    long diskDfsUsage = 100L;
+    long archivalDfsUsage = 200L;
+    long dfUsage = 700L;
+    long dfAvailable = 300L;
+
+    // Set up DISK and ARCHIVAL and capacity.
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY, duReserved);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        true);
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
+        reservedForArchival);
+    FsVolumeImpl diskVolume = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation.parse(diskVolDir.getPath())))
+        .build();
+    FsVolumeImpl archivalVolume = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(
+                StorageLocation.parse("[ARCHIVE]" + archivalVolDir.getPath())))
+        .build();
+    FsVolumeImpl spyDiskVolume = Mockito.spy(diskVolume);
+    FsVolumeImpl spyArchivalVolume = Mockito.spy(archivalVolume);
+    long testDfCapacity = dfCapacity - duReserved;
+    spyDiskVolume.setCapacityForTesting(testDfCapacity);
+    spyArchivalVolume.setCapacityForTesting(testDfCapacity);
+    Mockito.doReturn(dfAvailable).when(spyDiskVolume).getDfAvailable();
+    Mockito.doReturn(dfAvailable).when(spyArchivalVolume).getDfAvailable();
+
+    MountVolumeMap mountVolumeMap = new MountVolumeMap(conf);
+    mountVolumeMap.addVolume(spyDiskVolume);
+    mountVolumeMap.addVolume(spyArchivalVolume);
+    Mockito.doReturn(mountVolumeMap).when(dataset).getMountVolumeMap();
+
+    // 1) getCapacity() should reflect configured archive storage percentage.
+    long diskStorageTypeCapacity =
+        (long) ((dfCapacity - duReserved) * (1 - reservedForArchival));
+    assertEquals(diskStorageTypeCapacity, spyDiskVolume.getCapacity());
+    long archiveStorageTypeCapacity =
+        (long) ((dfCapacity - duReserved) * (reservedForArchival));
+    assertEquals(archiveStorageTypeCapacity, spyArchivalVolume.getCapacity());
+
+    // 2) getActualNonDfsUsed() should count in both DISK and ARCHIVE.
+    // expectedActualNonDfsUsage =
+    // diskUsage - archivalDfsUsage - diskDfsUsage
+    long expectedActualNonDfsUsage = 400L;
+    Mockito.doReturn(diskDfsUsage)
+        .when(spyDiskVolume).getDfsUsed();
+    Mockito.doReturn(archivalDfsUsage)
+        .when(spyArchivalVolume).getDfsUsed();
+    Mockito.doReturn(dfUsage)
+        .when(spyDiskVolume).getDfUsed();
+    Mockito.doReturn(dfUsage)
+        .when(spyArchivalVolume).getDfUsed();
+    assertEquals(expectedActualNonDfsUsage,
+        spyDiskVolume.getActualNonDfsUsed());
+    assertEquals(expectedActualNonDfsUsage,
+        spyArchivalVolume.getActualNonDfsUsed());
+
+    // 3) When there is only one volume on a disk mount,
+    // we allocate the full disk capacity regardless of the default ratio.
+    mountVolumeMap.removeVolume(spyArchivalVolume);
+    assertEquals(dfCapacity - duReserved, spyDiskVolume.getCapacity());
   }
 }

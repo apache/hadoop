@@ -150,12 +150,12 @@ RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
     && npm install -g bower@1.8.8
 
 ###
-## Install Yarn 1.12.1 for web UI framework
+## Install Yarn 1.22.5 for web UI framework
 ####
 RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
     && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list \
     && apt-get -q update \
-    && apt-get install -y --no-install-recommends yarn=1.21.1-1 \
+    && apt-get install -y --no-install-recommends yarn=1.22.5-1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -168,26 +168,6 @@ RUN curl -L -s -S \
    && chmod a+rx /bin/hadolint \
    && shasum -a 512 /bin/hadolint | \
         awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
-
-######
-# Intel ISA-L 2.29.0
-######
-# hadolint ignore=DL3003,DL3008
-RUN mkdir -p /opt/isa-l-src \
-    && apt-get -q update \
-    && apt-get install -y --no-install-recommends automake yasm \
-    && apt-get clean \
-    && curl -L -s -S \
-      https://github.com/intel/isa-l/archive/v2.29.0.tar.gz \
-      -o /opt/isa-l.tar.gz \
-    && tar xzf /opt/isa-l.tar.gz --strip-components 1 -C /opt/isa-l-src \
-    && cd /opt/isa-l-src \
-    && ./autogen.sh \
-    && ./configure \
-    && make \
-    && make install \
-    && cd /root \
-    && rm -rf /opt/isa-l-src
 
 ###
 # Avoid out of memory errors in builds

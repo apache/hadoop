@@ -162,6 +162,7 @@ public class NameNodeConnector implements Closeable {
   private OutputStream out;
   private final List<Path> targetPaths;
   private final AtomicLong bytesMoved = new AtomicLong();
+  private final AtomicLong blocksMoved = new AtomicLong();
 
   private final int maxNotChangedIterations;
   private int notChangedIterations = 0;
@@ -233,9 +234,22 @@ public class NameNodeConnector implements Closeable {
     return bytesMoved;
   }
 
+  AtomicLong getBlocksMoved() {
+    return blocksMoved;
+  }
+
+  public void addBytesMoved(long numBytes) {
+    bytesMoved.addAndGet(numBytes);
+    blocksMoved.incrementAndGet();
+  }
+
+  public URI getNameNodeUri() {
+    return nameNodeUri;
+  }
+
   /** @return blocks with locations. */
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize) throws IOException {
+      minBlockSize, long timeInterval) throws IOException {
     if (getBlocksRateLimiter != null) {
       getBlocksRateLimiter.acquire();
     }
@@ -270,7 +284,7 @@ public class NameNodeConnector implements Closeable {
       } else {
         nnproxy = namenode;
       }
-      return nnproxy.getBlocks(datanode, size, minBlockSize);
+      return nnproxy.getBlocks(datanode, size, minBlockSize, timeInterval);
     } finally {
       if (isRequestStandby) {
         LOG.info("Request #getBlocks to Standby NameNode success.");

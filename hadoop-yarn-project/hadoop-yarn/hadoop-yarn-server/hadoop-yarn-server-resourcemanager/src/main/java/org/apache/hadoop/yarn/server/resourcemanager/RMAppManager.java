@@ -500,11 +500,25 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       }
     }
 
+    //In the case of capacity scheduler the queue name only means the name of
+    // the leaf queue, but since YARN-9879, internal queue references should
+    // use full path, so we get the queue and parent name from the placement
+    // context instead of the submissionContext.
+    String placementQueueName = submissionContext.getQueue();
+    if (placementContext != null && scheduler instanceof CapacityScheduler) {
+      if (placementContext.hasParentQueue()) {
+        placementQueueName = placementContext.getParentQueue() + "." +
+            placementContext.getQueue();
+      } else {
+        placementQueueName = placementContext.getQueue();
+      }
+    }
+
     // Create RMApp
     RMAppImpl application =
         new RMAppImpl(applicationId, rmContext, this.conf,
             submissionContext.getApplicationName(), user,
-            submissionContext.getQueue(),
+            placementQueueName,
             submissionContext, this.scheduler, this.masterService,
             submitTime, submissionContext.getApplicationType(),
             submissionContext.getApplicationTags(), amReqs, placementContext,
@@ -864,9 +878,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     if (placementManager != null) {
       try {
         String usernameUsedForPlacement =
-                getUserNameForPlacement(user, context, placementManager);
+            getUserNameForPlacement(user, context, placementManager);
         placementContext = placementManager
-                .placeApplication(context, usernameUsedForPlacement);
+            .placeApplication(context, usernameUsedForPlacement, isRecovery);
       } catch (YarnException e) {
         // Placement could also fail if the user doesn't exist in system
         // skip if the user is not found during recovery.
