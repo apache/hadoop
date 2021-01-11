@@ -21,12 +21,13 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
  * Interface for {@link AbfsOutputStream} statistics.
  */
 @InterfaceStability.Unstable
-public interface AbfsOutputStreamStatistics {
+public interface AbfsOutputStreamStatistics extends IOStatisticsSource {
 
   /**
    * Number of bytes to be uploaded.
@@ -51,6 +52,7 @@ public interface AbfsOutputStreamStatistics {
 
   /**
    * Time spent in waiting for tasks to be completed in the blocking queue.
+   * @return instance of the DurationTracker that tracks the time for waiting.
    */
   DurationTracker timeSpentTaskWait();
 

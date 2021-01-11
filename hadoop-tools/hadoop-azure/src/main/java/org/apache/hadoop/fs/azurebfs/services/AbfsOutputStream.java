@@ -38,7 +38,6 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
@@ -54,6 +53,7 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
 import static org.apache.hadoop.io.IOUtils.wrapException;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_CLOSE_MODE;
@@ -103,7 +103,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
   private final Statistics statistics;
   private final AbfsOutputStreamStatistics outputStreamStatistics;
-  private final IOStatistics ioStatistics;
+  private IOStatistics ioStatistics;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbfsOutputStream.class);
@@ -151,7 +151,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
     this.cachedSasToken = new CachedSASToken(
         abfsOutputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
-    ioStatistics = outputStreamStatistics.getIOStatistics();
+    if (outputStreamStatistics != null) {
+      this.ioStatistics = outputStreamStatistics.getIOStatistics();
+    }
   }
 
   /**
@@ -362,11 +364,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     if (bufferIndex == 0) {
       return;
     }
-    outputStreamStatistics.writeCurrentBuffer();
-
     final byte[] bytes = buffer;
     final int bytesLength = bufferIndex;
-    outputStreamStatistics.bytesToUpload(bytesLength);
+    if (outputStreamStatistics != null) {
+      outputStreamStatistics.writeCurrentBuffer();
+      outputStreamStatistics.bytesToUpload(bytesLength);
+    }
     buffer = byteBufferPool.getBuffer(false, bufferSize).array();
     bufferIndex = 0;
     final long offset = position;
@@ -378,7 +381,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
           bytesLength, APPEND_MODE, true);
       AbfsRestOperation op = client.append(path, bytes, reqParams, cachedSasToken.get());
       cachedSasToken.update(op.getSasToken());
-      outputStreamStatistics.uploadSuccessful(bytesLength);
+      if (outputStreamStatistics != null) {
+        outputStreamStatistics.uploadSuccessful(bytesLength);
+      }
       perfInfo.registerResult(op.getResult());
       byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
       perfInfo.registerSuccess(true);
@@ -410,12 +415,14 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     if (bufferIndex == 0) {
       return;
     }
-    outputStreamStatistics.writeCurrentBuffer();
     numOfAppendsToServerSinceLastFlush++;
 
     final byte[] bytes = buffer;
     final int bytesLength = bufferIndex;
-    outputStreamStatistics.bytesToUpload(bytesLength);
+    if (outputStreamStatistics != null) {
+      outputStreamStatistics.writeCurrentBuffer();
+      outputStreamStatistics.bytesToUpload(bytesLength);
+    }
     buffer = byteBufferPool.getBuffer(false, bufferSize).array();
     bufferIndex = 0;
     final long offset = position;
@@ -423,14 +430,18 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
     if (threadExecutor.getQueue().size() >= maxRequestsThatCanBeQueued) {
       //Tracking time spent on waiting for task to complete.
-      try (DurationTracker ignored = outputStreamStatistics.timeSpentTaskWait()) {
+      if (outputStreamStatistics != null) {
+        try (DurationTracker ignored = outputStreamStatistics.timeSpentTaskWait()) {
+          waitForTaskToComplete();
+        }
+      } else {
         waitForTaskToComplete();
       }
     }
     final Future<Void> job =
         completionService.submit(IOStatisticsBinding
             .trackDurationOfCallable((IOStatisticsStore) ioStatistics,
-                AbfsStatistic.TIME_SPENT_ON_PUT_REQUEST.getStatName(),
+                TIME_SPENT_ON_PUT_REQUEST,
                 () -> {
                   AbfsPerfTracker tracker = client.getAbfsPerfTracker();
                   try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
@@ -455,10 +466,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
                 })
         );
 
-    if (job.isCancelled()) {
-      outputStreamStatistics.uploadFailed(bytesLength);
-    } else {
-      outputStreamStatistics.uploadSuccessful(bytesLength);
+    if (outputStreamStatistics != null) {
+      if (job.isCancelled()) {
+        outputStreamStatistics.uploadFailed(bytesLength);
+      } else {
+        outputStreamStatistics.uploadSuccessful(bytesLength);
+      }
     }
     writeOperations.add(new WriteOperation(job, offset, bytesLength));
 
@@ -535,7 +548,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         lastTotalAppendOffset += writeOperations.peek().length;
         writeOperations.remove();
         // Incrementing statistics to indicate queue has been shrunk.
-        outputStreamStatistics.queueShrunk();
+        if (outputStreamStatistics != null) {
+          outputStreamStatistics.queueShrunk();
+        }
       }
     } catch (Exception e) {
       if (e.getCause() instanceof AzureBlobFileSystemException) {
@@ -636,9 +651,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(super.toString());
-    sb.append("AbfsOuputStream@").append(this.hashCode()).append("){");
-    sb.append(outputStreamStatistics.toString());
-    sb.append("}");
+    if (outputStreamStatistics != null) {
+      sb.append("AbfsOutputStream@").append(this.hashCode());
+      sb.append("){");
+      sb.append(outputStreamStatistics.toString());
+      sb.append("}");
+    }
     return sb.toString();
   }
 }

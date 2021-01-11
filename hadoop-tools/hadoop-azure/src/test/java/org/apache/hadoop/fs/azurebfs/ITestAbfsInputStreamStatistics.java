@@ -389,6 +389,7 @@ public class ITestAbfsInputStreamStatistics
       AbfsInputStreamStatisticsImpl abfsInputStreamStatistics =
           (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
 
+      LOG.info("AbfsInputStreamStats info: {}", abfsInputStreamStatistics.toString());
       Assertions.assertThat(
           abfsInputStreamStatistics.getActionHttpGetRequest())
           .describedAs("Mismatch in time taken by a GET request")

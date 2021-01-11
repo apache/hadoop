@@ -20,12 +20,13 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
  * Interface for statistics for the AbfsInputStream.
  */
 @InterfaceStability.Unstable
-public interface AbfsInputStreamStatistics {
+public interface AbfsInputStreamStatistics extends IOStatisticsSource {
   /**
    * Seek backwards, incrementing the seek and backward seek counters.
    *

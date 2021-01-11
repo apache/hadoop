@@ -20,15 +20,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.annotations.VisibleForTesting;
-
-import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
@@ -36,7 +33,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatist
  * Stats for the AbfsInputStream.
  */
 public class AbfsInputStreamStatisticsImpl
-    implements AbfsInputStreamStatistics, IOStatisticsSource {
+    implements AbfsInputStreamStatistics {
 
   private final IOStatisticsStore ioStatisticsStore = iostatisticsStore()
       .withCounters(
@@ -47,15 +44,18 @@ public class AbfsInputStreamStatisticsImpl
           STREAM_READ_SEEK_BYTES_SKIPPED,
           STREAM_READ_OPERATIONS,
           STREAM_READ_SEEK_BYTES_BACKWARDS,
-          getStatName(SEEK_IN_BUFFER),
-          getStatName(BYTES_READ_BUFFER),
-          getStatName(REMOTE_READ_OP),
-          getStatName(READ_AHEAD_BYTES_READ),
-          getStatName(REMOTE_BYTES_READ)
+          SEEK_IN_BUFFER,
+          BYTES_READ_BUFFER,
+          REMOTE_READ_OP,
+          READ_AHEAD_BYTES_READ,
+          REMOTE_BYTES_READ
           )
-      .withDurationTracking(StoreStatisticNames.ACTION_HTTP_GET_REQUEST)
+      .withDurationTracking(ACTION_HTTP_GET_REQUEST)
       .build();
 
+  /* Reference to the atomic counter for frequently updated counters to avoid
+   * cost of the map lookup on every increment.
+   */
   private final AtomicLong bytesRead =
       ioStatisticsStore.getCounterReference(STREAM_READ_BYTES);
   private final AtomicLong readOps =
@@ -127,7 +127,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void bytesReadFromBuffer(long bytes) {
-    ioStatisticsStore.incrementCounter(getStatName(BYTES_READ_BUFFER), bytes);
+    ioStatisticsStore.incrementCounter(BYTES_READ_BUFFER, bytes);
   }
 
   /**
@@ -137,7 +137,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void seekInBuffer() {
-    ioStatisticsStore.incrementCounter(getStatName(SEEK_IN_BUFFER));
+    ioStatisticsStore.incrementCounter(SEEK_IN_BUFFER);
   }
 
   /**
@@ -155,7 +155,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void readAheadBytesRead(long bytes) {
-    ioStatisticsStore.incrementCounter(getStatName(READ_AHEAD_BYTES_READ), bytes);
+    ioStatisticsStore.incrementCounter(READ_AHEAD_BYTES_READ, bytes);
   }
 
   /**
@@ -165,7 +165,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void remoteBytesRead(long bytes) {
-    ioStatisticsStore.incrementCounter(getStatName(REMOTE_BYTES_READ), bytes);
+    ioStatisticsStore.incrementCounter(REMOTE_BYTES_READ, bytes);
   }
 
   /**
@@ -175,7 +175,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void remoteReadOperation() {
-    ioStatisticsStore.incrementCounter(getStatName(REMOTE_READ_OP));
+    ioStatisticsStore.incrementCounter(REMOTE_READ_OP);
   }
 
   /**
@@ -219,7 +219,7 @@ public class AbfsInputStreamStatisticsImpl
 
   @VisibleForTesting
   public long getSeekInBuffer() {
-    return ioStatisticsStore.counters().get(getStatName(SEEK_IN_BUFFER));
+    return ioStatisticsStore.counters().get(SEEK_IN_BUFFER);
 
   }
 
@@ -230,22 +230,22 @@ public class AbfsInputStreamStatisticsImpl
 
   @VisibleForTesting
   public long getBytesReadFromBuffer() {
-    return ioStatisticsStore.counters().get(getStatName(BYTES_READ_BUFFER));
+    return ioStatisticsStore.counters().get(BYTES_READ_BUFFER);
   }
 
   @VisibleForTesting
   public long getRemoteReadOperations() {
-    return ioStatisticsStore.counters().get(getStatName(REMOTE_READ_OP));
+    return ioStatisticsStore.counters().get(REMOTE_READ_OP);
   }
 
   @VisibleForTesting
   public long getReadAheadBytesRead() {
-    return ioStatisticsStore.counters().get(getStatName(READ_AHEAD_BYTES_READ));
+    return ioStatisticsStore.counters().get(READ_AHEAD_BYTES_READ);
   }
 
   @VisibleForTesting
   public long getRemoteBytesRead() {
-    return ioStatisticsStore.counters().get(getStatName(REMOTE_BYTES_READ));
+    return ioStatisticsStore.counters().get(REMOTE_BYTES_READ);
   }
 
   /**
@@ -256,16 +256,7 @@ public class AbfsInputStreamStatisticsImpl
   @VisibleForTesting
   public double getActionHttpGetRequest() {
     return ioStatisticsStore.meanStatistics().
-        get(StoreStatisticNames.ACTION_HTTP_GET_REQUEST + StoreStatisticNames.SUFFIX_MEAN).mean();
-  }
-
-  /**
-   * Method to get Statistic name from the enum class.
-   * @param statistic AbfsStatistic to get the name of.
-   * @return String value of AbfsStatistic name.
-   */
-  private String getStatName(AbfsStatistic statistic) {
-    return statistic.getStatName();
+        get(ACTION_HTTP_GET_REQUEST + SUFFIX_MEAN).mean();
   }
 
   /**
