@@ -71,6 +71,7 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
@@ -1339,11 +1340,13 @@ public class TestFsDatasetImpl {
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
       assertEquals(StorageType.DISK, fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
 
-      ReplicaInfo newReplicaInfo = createNewReplicaObjWithLink(block, fsDataSetImpl);
-      fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block);
+      FsDatasetImpl fsDataSetImplSpy = spy((FsDatasetImpl) dataNode.getFSDataset());
+      fsDataSetImplSpy.moveBlockAcrossStorage(block, StorageType.ARCHIVE, null);
+
+      // Make sure it is done thru hardlink
+      verify(fsDataSetImplSpy).moveBlock(any(), any(), any(), eq(true));
 
       assertEquals(StorageType.ARCHIVE, fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
-
       validateFileLen(fs, fileLen, filePath);
 
     } catch (Exception ex) {
@@ -1356,6 +1359,42 @@ public class TestFsDatasetImpl {
     }
   }
 
+  // Move should fail if the volume on same mount has no space.
+  @Test(timeout = 30000)
+  public void testMoveBlockWithSameMountMoveWithoutSpace() {
+    MiniDFSCluster cluster = null;
+    try {
+      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+      conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.0);
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
+          .storagesPerDatanode(2)
+          .build();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      Path filePath = new Path("testData");
+      long fileLen = 100;
+
+      ExtendedBlock block = createTestFile(fs, fileLen, filePath);
+
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+      assertEquals(StorageType.DISK, fsDataSetImpl.getReplicaInfo(block).getVolume().getStorageType());
+
+      FsDatasetImpl fsDataSetImplSpy = spy((FsDatasetImpl) dataNode.getFSDataset());
+      fsDataSetImplSpy.moveBlockAcrossStorage(block, StorageType.ARCHIVE, null);
+
+      fail("testMoveBlockWithSameMountMoveWithoutSpace operation should failed");
+    } catch (Exception ex) {
+      assertTrue(ex instanceof DiskChecker.DiskOutOfSpaceException);
+    } finally {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  // More tests on shouldConsiderSameMountVolume
   @Test(timeout = 10000)
   public void testShouldConsiderSameMountVolume() throws IOException {
     FsVolumeImpl volume = new FsVolumeImplBuilder()

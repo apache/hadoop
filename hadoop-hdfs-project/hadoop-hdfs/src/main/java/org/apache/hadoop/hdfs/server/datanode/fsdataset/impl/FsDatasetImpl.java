@@ -1109,7 +1109,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     FsVolumeReference volumeRef = null;
     boolean shouldConsiderSameMountVolume =
         shouldConsiderSameMountVolume(replicaInfo.getVolume(), targetStorageType, targetStorageId);
-    boolean useSameMountVolume = false;
+    boolean useVolumeOnSameMount = false;
 
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
       if (shouldConsiderSameMountVolume) {
@@ -1117,16 +1117,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             ((FsVolumeImpl) replicaInfo.getVolume()).getMount(),
             block.getNumBytes());
         if (volumeRef != null) {
-          useSameMountVolume = true;
+          useVolumeOnSameMount = true;
         }
       }
-      if (!useSameMountVolume) {
+      if (!useVolumeOnSameMount) {
         volumeRef = volumes.getNextVolume(targetStorageType, targetStorageId,
             block.getNumBytes());
       }
     }
     try {
-      moveBlock(block, replicaInfo, volumeRef, useSameMountVolume);
+      moveBlock(block, replicaInfo, volumeRef, useVolumeOnSameMount);
     } finally {
       if (volumeRef != null) {
         volumeRef.close();
@@ -1240,13 +1240,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * Short cut to use hardlink to move blocks on same mount.
+   * Shortcut to use hardlink to move blocks on same mount.
    * This is useful when moving blocks between storage types on same disk mount.
-   * Two cases need to be handled carefully:
+   * Two cases need to be considered carefully:
    * 1) Datanode restart in the middle should not cause data loss.
    *    We use hardlink to avoid this.
    * 2) Finalized blocks can be reopened to append.
-   *    We acquire lock to avoid race condition, as there is no actual data copy involved.
+   *    This is already handled by dataset lock and gen stamp.
+   *    See HDFS-12942
    *
    * @param block       - Extended Block
    * @param replicaInfo - ReplicaInfo
