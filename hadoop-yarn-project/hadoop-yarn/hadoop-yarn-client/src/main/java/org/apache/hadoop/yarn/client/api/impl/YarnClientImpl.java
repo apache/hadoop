@@ -45,6 +45,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
@@ -336,7 +337,7 @@ public class YarnClientImpl extends YarnClient {
     rmClient.submitApplication(request);
 
     int pollCount = 0;
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.monotonicNow();
     EnumSet<YarnApplicationState> waitingStates = 
                                  EnumSet.of(YarnApplicationState.NEW,
                                  YarnApplicationState.NEW_SAVING,
@@ -357,7 +358,7 @@ public class YarnClientImpl extends YarnClient {
           break;
         }
 
-        long elapsedMillis = System.currentTimeMillis() - startTime;
+        long elapsedMillis = Time.monotonicNow() - startTime;
         if (enforceAsyncAPITimeout() &&
             elapsedMillis >= asyncApiPollTimeoutMillis) {
           throw new YarnException("Timed out while waiting for application " +
@@ -554,7 +555,7 @@ public class YarnClientImpl extends YarnClient {
 
     try {
       int pollCount = 0;
-      long startTime = System.currentTimeMillis();
+      long startTime = Time.monotonicNow();
 
       while (true) {
         KillApplicationResponse response =
@@ -564,7 +565,7 @@ public class YarnClientImpl extends YarnClient {
           break;
         }
 
-        long elapsedMillis = System.currentTimeMillis() - startTime;
+        long elapsedMillis = Time.monotonicNow() - startTime;
         if (enforceAsyncAPITimeout()
             && elapsedMillis >= this.asyncApiPollTimeoutMillis) {
           throw new YarnException("Timed out while waiting for application "

@@ -43,6 +43,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -150,7 +151,7 @@ public class RMStateStoreTestBase {
   }
 
   void waitNotify(TestDispatcher dispatcher) {
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.monotonicNow();
     while(!dispatcher.notified) {
       synchronized (dispatcher) {
         try {
@@ -159,7 +160,7 @@ public class RMStateStoreTestBase {
           e.printStackTrace();
         }
       }
-      if(System.currentTimeMillis() - startTime > 1000*60) {
+      if (Time.monotonicNow() - startTime > 1000 * 60) {
         fail("Timed out attempt store notification");
       }
     }

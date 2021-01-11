@@ -41,6 +41,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -240,7 +241,7 @@ public class TestAMRMTokens {
     final MockRMWithAMS rm =
         new MockRMWithAMS(conf, containerManager);
     rm.start();
-    Long startTime = System.currentTimeMillis();
+    Long startTime = Time.monotonicNow();
     final Configuration conf = rm.getConfig();
     final YarnRPC rpc = YarnRPC.create(conf);
     ApplicationMasterProtocol rmClient = null;
@@ -290,7 +291,7 @@ public class TestAMRMTokens {
 
       // Wait for enough time and make sure the roll_over happens
       // At mean time, the old AMRMToken should continue to work
-      while(System.currentTimeMillis() - startTime < rolling_interval_sec*1000) {
+      while (Time.monotonicNow() - startTime < rolling_interval_sec * 1000) {
         rmClient.allocate(allocateRequest);
         Thread.sleep(500);
       }

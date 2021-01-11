@@ -56,6 +56,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -213,7 +214,7 @@ public class Client {
   private String rollingFilesPattern = "";
 
   // Start time for client
-  private long clientStartTime = System.currentTimeMillis();
+  private long clientStartTime = Time.monotonicNow();
   // Timeout threshold for client. Kill app after time interval expires.
   private long clientTimeout = 600000;
 
@@ -681,7 +682,7 @@ public class Client {
     isRunning.set(true);
     yarnClient.start();
     // set the client start time.
-    clientStartTime = System.currentTimeMillis();
+    clientStartTime = Time.monotonicNow();
 
     YarnClusterMetrics clusterMetrics = yarnClient.getYarnClusterMetrics();
     LOG.info("Got Cluster metric info from ASM" 
@@ -1179,7 +1180,7 @@ public class Client {
 
       // The value equal or less than 0 means no timeout
       if (clientTimeout > 0
-          && System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
+          && Time.monotonicNow() > (clientStartTime + clientTimeout)) {
         LOG.info("Reached client specified timeout for application. " +
             "Killing application");
         needForceKill = true;

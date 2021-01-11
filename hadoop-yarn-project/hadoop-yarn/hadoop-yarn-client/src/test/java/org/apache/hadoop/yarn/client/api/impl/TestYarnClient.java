@@ -23,6 +23,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
@@ -1067,9 +1068,9 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
 
       appId = createApp(rmClient, true);
       waitTillAccepted(rmClient, appId, true);
-      long start = System.currentTimeMillis();
+      long start = Time.monotonicNow();
       while (rmClient.getAMRMToken(appId) == null) {
-        if (System.currentTimeMillis() - start > 20 * 1000) {
+        if (Time.monotonicNow() - start > 20 * 1000) {
           Assert.fail("AMRM token is null");
         }
         Thread.sleep(100);
@@ -1088,9 +1089,9 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
             rmClient.start();
             ApplicationId appId = createApp(rmClient, true);
           waitTillAccepted(rmClient, appId, true);
-            long start = System.currentTimeMillis();
+            long start = Time.monotonicNow();
             while (rmClient.getAMRMToken(appId) == null) {
-              if (System.currentTimeMillis() - start > 20 * 1000) {
+              if (Time.monotonicNow() - start > 20 * 1000) {
                 Assert.fail("AMRM token is null");
               }
               Thread.sleep(100);
@@ -1150,10 +1151,10 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
   private void waitTillAccepted(YarnClient rmClient, ApplicationId appId,
       boolean unmanagedApplication)
     throws Exception {
-    long start = System.currentTimeMillis();
+    long start = Time.monotonicNow();
     ApplicationReport report = rmClient.getApplicationReport(appId);
     while (YarnApplicationState.ACCEPTED != report.getYarnApplicationState()) {
-      if (System.currentTimeMillis() - start > 20 * 1000) {
+      if (Time.monotonicNow() - start > 20 * 1000) {
         throw new Exception(
             "App '" + appId + "' time out, failed to reach ACCEPTED state");
       }

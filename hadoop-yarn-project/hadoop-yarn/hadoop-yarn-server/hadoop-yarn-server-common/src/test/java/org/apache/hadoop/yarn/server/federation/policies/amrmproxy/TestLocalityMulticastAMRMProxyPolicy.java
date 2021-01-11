@@ -33,6 +33,7 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -215,14 +216,14 @@ public class TestLocalityMulticastAMRMProxyPolicy
     prepPolicyWithHeadroom(true);
 
     int numIterations = 1000;
-    long tstart = System.currentTimeMillis();
+    long tstart = Time.monotonicNow();
     for (int i = 0; i < numIterations; i++) {
       Map<SubClusterId, List<ResourceRequest>> response =
           ((FederationAMRMProxyPolicy) getPolicy()).splitResourceRequests(
               resourceRequests, new HashSet<SubClusterId>());
       validateSplit(response, resourceRequests);
     }
-    long tend = System.currentTimeMillis();
+    long tend = Time.monotonicNow();
 
     LOG.info("Performed " + numIterations + " policy invocations (and "
         + "validations) in " + (tend - tstart) + "ms");

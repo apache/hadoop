@@ -32,6 +32,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -432,7 +433,7 @@ public class TestAMRMClientOnRMRestart {
     // start first RM
     MyResourceManager2 rm1 = new MyResourceManager2(conf, memStore);
     rm1.start();
-    Long startTime = System.currentTimeMillis();
+    Long startTime = Time.monotonicNow();
     // Submit the application
     RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     rm1.drainEvents();
@@ -463,7 +464,7 @@ public class TestAMRMClientOnRMRestart {
 
     // Wait for enough time and make sure the roll_over happens
     // At mean time, the old AMRMToken should continue to work
-    while (System.currentTimeMillis() - startTime < rolling_interval_sec * 1000) {
+    while (Time.monotonicNow() - startTime < rolling_interval_sec * 1000) {
       amClient.allocate(0.1f);
       try {
         Thread.sleep(1000);

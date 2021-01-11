@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -868,9 +869,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
 
   private long waitForResourceUpdate(MockRM rm, String queuename, long memory,
       String label, long timeout) throws InterruptedException {
-    long start = System.currentTimeMillis();
+    long start = Time.monotonicNow();
     long memorySize = 0;
-    while (System.currentTimeMillis() - start < timeout) {
+    while (Time.monotonicNow() - start < timeout) {
       CapacityScheduler scheduler =
           (CapacityScheduler) rm.getResourceScheduler();
       CSQueue queue = scheduler.getQueue(queuename);
@@ -886,9 +887,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
 
   private long waitForNodeLabelSchedulerEventUpdate(MockRM rm, String partition,
       long expectedNodeCount, long timeout) throws InterruptedException {
-    long start = System.currentTimeMillis();
+    long start = Time.monotonicNow();
     long size = 0;
-    while (System.currentTimeMillis() - start < timeout) {
+    while (Time.monotonicNow() - start < timeout) {
       CapacityScheduler scheduler = (CapacityScheduler) rm
           .getResourceScheduler();
       size = scheduler.getNodeTracker().getNodesPerPartition(partition).size();

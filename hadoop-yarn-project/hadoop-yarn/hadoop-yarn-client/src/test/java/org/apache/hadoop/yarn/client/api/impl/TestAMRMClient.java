@@ -55,6 +55,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -1781,7 +1782,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
       amClient.init(conf);
       amClient.start();
 
-      Long startTime = System.currentTimeMillis();
+      Long startTime = Time.monotonicNow();
       amClient.registerApplicationMaster("Host", 10000, "");
 
       org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken_1 =
@@ -1792,7 +1793,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
 
       // Wait for enough time and make sure the roll_over happens
       // At mean time, the old AMRMToken should continue to work
-      while (System.currentTimeMillis() - startTime <
+      while (Time.monotonicNow() - startTime <
           rollingIntervalSec * 1000) {
         amClient.allocate(0.1f);
         sleep(1000);

@@ -63,6 +63,7 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -872,7 +873,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
                        boolean useSocketTimeoutEx) {
       this.rmStartIntervalMS = rmStartIntervalMS;
       this.rmNeverStart = rmNeverStart;
-      this.waitStartTime = System.currentTimeMillis();
+      this.waitStartTime = Time.monotonicNow();
       this.useSocketTimeoutEx = useSocketTimeoutEx;
     }
 
@@ -880,7 +881,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     public RegisterNodeManagerResponse registerNodeManager(
         RegisterNodeManagerRequest request) throws YarnException, IOException,
         IOException {
-      if (System.currentTimeMillis() - waitStartTime <= rmStartIntervalMS
+      if (Time.monotonicNow() - waitStartTime <= rmStartIntervalMS
           || rmNeverStart) {
         if (useSocketTimeoutEx) {
           throw new java.net.SocketTimeoutException(
@@ -1353,12 +1354,12 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
       }
     };
     nm.init(conf);
-    long waitStartTime = System.currentTimeMillis();
+    long waitStartTime = Time.monotonicNow();
     try {
       nm.start();
       Assert.fail("NM should have failed to start due to RM connect failure");
     } catch(Exception e) {
-      long t = System.currentTimeMillis();
+      long t = Time.monotonicNow();
       long duration = t - waitStartTime;
       boolean waitTimeValid = (duration >= nmRmConnectionWaitMs) &&
           (duration < (nmRmConnectionWaitMs + delta));
@@ -1398,12 +1399,12 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
       }
     };
     nm.init(conf);
-    long waitStartTime = System.currentTimeMillis();
+    long waitStartTime = Time.monotonicNow();
     try {
       nm.start();
       Assert.fail("NM should have failed to start due to RM connect failure");
     } catch(Exception e) {
-      long t = System.currentTimeMillis();
+      long t = Time.monotonicNow();
       long duration = t - waitStartTime;
       boolean waitTimeValid = (duration >= connectionWaitMs)
               && (duration < (connectionWaitMs + delta));
@@ -1432,7 +1433,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     nm.init(conf);
     NodeStatusUpdater updater = nmWithUpdater.getUpdater();
     Assert.assertNotNull("Updater not yet created ", updater);
-    waitStartTime = System.currentTimeMillis();
+    waitStartTime = Time.monotonicNow();
     try {
       nm.start();
     } catch (Exception ex){
@@ -1440,7 +1441,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
                 "after connecting to RM.", ex);
       throw ex;
     }
-    long duration = System.currentTimeMillis() - waitStartTime;
+    long duration = Time.monotonicNow() - waitStartTime;
     MyNodeStatusUpdater4 myUpdater = (MyNodeStatusUpdater4) updater;
     Assert.assertTrue("NM started before updater triggered",
                       myUpdater.isTriggered());

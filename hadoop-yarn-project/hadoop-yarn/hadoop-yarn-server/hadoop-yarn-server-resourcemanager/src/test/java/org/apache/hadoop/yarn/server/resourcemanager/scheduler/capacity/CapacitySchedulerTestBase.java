@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -80,8 +81,8 @@ public class CapacitySchedulerTestBase {
 
   protected void waitforNMRegistered(ResourceScheduler scheduler, int nodecount,
       int timesec) throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start < timesec * 1000) {
+    long start = Time.monotonicNow();
+    while (Time.monotonicNow() - start < timesec * 1000) {
       if (scheduler.getNumClusterNodes() < nodecount) {
         Thread.sleep(100);
       } else {

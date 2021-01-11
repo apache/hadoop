@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -286,7 +288,7 @@ public class TestCGroupElasticMemoryController {
               10000,
               handler
           );
-      long start = System.currentTimeMillis();
+      long start = Time.monotonicNow();
       service.submit(() -> {
         try {
           Thread.sleep(2000);
@@ -294,7 +296,7 @@ public class TestCGroupElasticMemoryController {
           assertTrue("Wait interrupted.", false);
         }
         LOG.info(String.format("Calling process destroy in %d ms",
-            System.currentTimeMillis() - start));
+            Time.monotonicNow() - start));
         controller.stopListening();
         LOG.info("Called process destroy.");
       });

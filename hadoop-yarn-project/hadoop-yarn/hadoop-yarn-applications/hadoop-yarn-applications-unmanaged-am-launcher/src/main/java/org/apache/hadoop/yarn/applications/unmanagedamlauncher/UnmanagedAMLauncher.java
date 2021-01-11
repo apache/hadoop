@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -385,7 +386,7 @@ public class UnmanagedAMLauncher {
   private ApplicationAttemptReport monitorCurrentAppAttempt(
       ApplicationId appId, YarnApplicationAttemptState attemptState)
       throws YarnException, IOException {
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.monotonicNow();
     ApplicationAttemptId attemptId = null;
     while (true) {
       if (attemptId == null) {
@@ -409,7 +410,7 @@ public class UnmanagedAMLauncher {
         LOG.warn("Interrupted while waiting for current attempt of " + appId
             + " to reach " + attemptState);
       }
-      if (System.currentTimeMillis() - startTime > AM_STATE_WAIT_TIMEOUT_MS) {
+      if (Time.monotonicNow() - startTime > AM_STATE_WAIT_TIMEOUT_MS) {
         String errmsg =
             "Timeout for waiting current attempt of " + appId + " to reach "
                 + attemptState;
@@ -478,8 +479,8 @@ public class UnmanagedAMLauncher {
       // come back
       if (amCompleted) {
         if (foundAMCompletedTime == 0) {
-          foundAMCompletedTime = System.currentTimeMillis();
-        } else if ((System.currentTimeMillis() - foundAMCompletedTime)
+          foundAMCompletedTime = Time.monotonicNow();
+        } else if ((Time.monotonicNow() - foundAMCompletedTime)
             > AM_STATE_WAIT_TIMEOUT_MS) {
           LOG.warn("Waited " + AM_STATE_WAIT_TIMEOUT_MS/1000
               + " seconds after process completed for AppReport"

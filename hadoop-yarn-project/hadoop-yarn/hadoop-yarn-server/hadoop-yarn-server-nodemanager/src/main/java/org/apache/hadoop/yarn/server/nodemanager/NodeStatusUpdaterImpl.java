@@ -43,6 +43,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -957,7 +958,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           value = null;
         } finally {
           // Set last send time in heartbeat
-          lastSendMills = System.currentTimeMillis();
+          lastSendMills = Time.monotonicNow();
         }
       } else {
         // if value have not changed then no need to send
@@ -971,7 +972,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
      */
     public boolean isResyncIntervalElapsed() {
       long elapsedTimeSinceLastSync =
-          System.currentTimeMillis() - lastSendMills;
+          Time.monotonicNow() - lastSendMills;
       if (elapsedTimeSinceLastSync > resyncInterval) {
         return true;
       }

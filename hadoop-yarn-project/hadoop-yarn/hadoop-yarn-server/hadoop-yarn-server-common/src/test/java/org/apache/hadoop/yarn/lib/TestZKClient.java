@@ -29,6 +29,7 @@ import java.net.Socket;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.junit.Assert;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.lib.ZKClient;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZKDatabase;
@@ -83,7 +84,7 @@ public class TestZKClient  {
   }
 
   public static boolean waitForServerDown(String hp, long timeout) {
-    long start = System.currentTimeMillis();
+    long start = Time.monotonicNow();
     while (true) {
       try {
         String host = hp.split(":")[0];
@@ -93,7 +94,7 @@ public class TestZKClient  {
         return true;
       }
 
-      if (System.currentTimeMillis() > start + timeout) {
+      if (Time.monotonicNow() > start + timeout) {
         break;
       }
       try {
@@ -107,7 +108,7 @@ public class TestZKClient  {
 
 
   public static boolean waitForServerUp(String hp, long timeout) {
-    long start = System.currentTimeMillis();
+    long start = Time.monotonicNow();
     while (true) {
       try {
         String host = hp.split(":")[0];
@@ -119,7 +120,7 @@ public class TestZKClient  {
         }
       } catch (IOException e) {
       }
-      if (System.currentTimeMillis() > start + timeout) {
+      if (Time.monotonicNow() > start + timeout) {
         break;
       }
       try {

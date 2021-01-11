@@ -35,6 +35,7 @@ import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -460,9 +461,9 @@ public class TestActivitiesManager {
       Supplier<Void> supplier, int testingTimes) {
     long totalTime = 0;
     for (int i = 0; i < testingTimes; i++) {
-      long startTime = System.currentTimeMillis();
+      long startTime = Time.monotonicNow();
       supplier.get();
-      totalTime += System.currentTimeMillis() - startTime;
+      totalTime += Time.monotonicNow() - startTime;
     }
     System.out.println("#" + testingName + ", testing times : " + testingTimes
         + ", total cost time : " + totalTime + " ms, average cost time : "

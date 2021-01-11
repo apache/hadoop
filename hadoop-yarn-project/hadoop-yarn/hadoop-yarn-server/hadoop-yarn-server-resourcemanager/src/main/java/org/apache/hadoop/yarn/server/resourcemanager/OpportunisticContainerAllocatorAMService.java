@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.CentralizedOpportunisticContainerAllocator;
 import org.slf4j.Logger;
@@ -240,7 +241,7 @@ public class OpportunisticContainerAllocatorAMService
         YarnConfiguration.
             DEFAULT_NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS);
     this.cacheRefreshInterval = nodeSortInterval;
-    this.lastCacheUpdateTime = System.currentTimeMillis();
+    this.lastCacheUpdateTime = Time.monotonicNow();
     NodeQueueLoadMonitor.LoadComparator comparator =
         NodeQueueLoadMonitor.LoadComparator.valueOf(
             rmContext.getYarnConfiguration().get(
@@ -457,7 +458,7 @@ public class OpportunisticContainerAllocatorAMService
 
   @VisibleForTesting
   synchronized List<RemoteNode> getLeastLoadedNodes() {
-    long currTime = System.currentTimeMillis();
+    long currTime = Time.monotonicNow();
     if ((currTime - lastCacheUpdateTime > cacheRefreshInterval)
         || (cachedNodes == null)) {
       cachedNodes = convertToRemoteNodes(

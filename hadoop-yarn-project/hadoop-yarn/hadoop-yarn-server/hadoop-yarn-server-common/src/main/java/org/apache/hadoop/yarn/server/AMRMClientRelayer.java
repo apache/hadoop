@@ -29,6 +29,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -279,7 +280,7 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
         UpdateContainerRequest req =
             this.remotePendingChange.put(update.getContainerId(), update);
         this.changeTimeStamp
-            .put(update.getContainerId(), System.currentTimeMillis());
+            .put(update.getContainerId(), Time.monotonicNow());
         if (req == null) {
           // If this is a brand new request, all we have to do is increment
           this.metrics
@@ -309,7 +310,7 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
   public AllocateResponse allocate(AllocateRequest allocateRequest)
       throws YarnException, IOException {
     AllocateResponse allocateResponse = null;
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.monotonicNow();
     synchronized (this) {
       if(this.shutdown){
         throw new YarnException("Allocate called after AMRMClientRelayer for "
@@ -383,7 +384,7 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
     } catch (Throwable t) {
       // Unexpected exception - rethrow and increment heart beat failure metric
       this.metrics.addHeartbeatFailure(this.rmId,
-          System.currentTimeMillis() - startTime);
+          Time.monotonicNow() - startTime);
 
       // If RM is complaining about responseId out of sync, force reset next
       // time
@@ -434,7 +435,7 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
   private void updateMetrics(AllocateResponse allocateResponse,
       long startTime) {
     this.metrics.addHeartbeatSuccess(this.rmId,
-        System.currentTimeMillis() - startTime);
+        Time.monotonicNow() - startTime);
     // Process the allocate response from RM
     if (allocateResponse.getAllocatedContainers() != null) {
       for (Container container : allocateResponse
@@ -456,7 +457,7 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
               this.metrics.addFulfillLatency(this.rmId,
                   AMRMClientRelayerMetrics
                       .getRequestType(container.getExecutionType()),
-                  System.currentTimeMillis() - this.askTimeStamp
+                  Time.monotonicNow() - this.askTimeStamp
                       .get(container.getAllocationRequestId()));
             }
           }
@@ -486,7 +487,7 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
           this.metrics
               .decrClientPending(rmId, req.getContainerUpdateType(), 1);
           this.metrics.addFulfillLatency(rmId, req.getContainerUpdateType(),
-              System.currentTimeMillis() - this.changeTimeStamp
+              Time.monotonicNow() - this.changeTimeStamp
                   .remove(req.getContainerId()));
           this.metrics
               .addFulfilledQPS(rmId, req.getContainerUpdateType(), 1);
@@ -558,7 +559,7 @@ public class AMRMClientRelayer implements ApplicationMasterProtocol {
     for (ResourceRequestSetKey key : nonZeroNewKeys) {
       if(remotePendingAsks.containsKey(key)){
         this.askTimeStamp.put(key.getAllocationRequestId(),
-            System.currentTimeMillis());
+            Time.monotonicNow());
         int count = this.remotePendingAsks.get(key).getNumContainers();
         this.pendingCountForMetrics.put(key.getAllocationRequestId(), count);
         this.metrics.incrClientPending(this.rmId,

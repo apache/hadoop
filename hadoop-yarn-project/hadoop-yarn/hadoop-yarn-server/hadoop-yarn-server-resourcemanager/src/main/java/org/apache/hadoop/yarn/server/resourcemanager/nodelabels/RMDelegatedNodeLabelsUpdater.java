@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -117,7 +118,7 @@ public class RMDelegatedNodeLabelsUpdater extends CompositeService {
 
       if (allNodesLabelUpdateInterval != DISABLE_DELEGATED_NODE_LABELS_UPDATE) {
         long elapsedTimeSinceLastUpdate =
-            System.currentTimeMillis() - lastAllNodesLabelUpdateMills;
+            Time.monotonicNow() - lastAllNodesLabelUpdateMills;
         if (elapsedTimeSinceLastUpdate > allNodesLabelUpdateInterval) {
           nodesToUpdateLabels =
               Collections.unmodifiableSet(rmContext.getRMNodes().keySet());
@@ -137,7 +138,7 @@ public class RMDelegatedNodeLabelsUpdater extends CompositeService {
         if (nodesToUpdateLabels != null && !nodesToUpdateLabels.isEmpty()) {
           updateNodeLabelsInternal(nodesToUpdateLabels);
           if (isUpdatingAllNodes) {
-            lastAllNodesLabelUpdateMills = System.currentTimeMillis();
+            lastAllNodesLabelUpdateMills = Time.monotonicNow();
           }
           synchronized (lock) {
             newlyRegisteredNodes.removeAll(nodesToUpdateLabels);

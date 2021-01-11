@@ -43,6 +43,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -507,9 +508,10 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     private void waitForAppMastersToFinish(long timeoutMillis) throws InterruptedException {
-      long started = System.currentTimeMillis();
+      long started = Time.monotonicNow();
       synchronized (appMasters) {
-        while (!appMasters.isEmpty() && System.currentTimeMillis() - started < timeoutMillis) {
+        while (!appMasters.isEmpty()
+            && Time.monotonicNow() - started < timeoutMillis) {
           appMasters.wait(1000);
         }
       }

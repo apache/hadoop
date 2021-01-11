@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
@@ -116,8 +117,8 @@ public class TestQueueManagementDynamicEditPolicy extends
   private void waitForPolicyState(float expectedVal,
       GuaranteedOrZeroCapacityOverTimePolicy queueManagementPolicy, String
       nodeLabel, int timesec) throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start < timesec * 1000) {
+    long start = Time.monotonicNow();
+    while (Time.monotonicNow() - start < timesec * 1000) {
       if (Math.abs(expectedVal - queueManagementPolicy
           .getAbsoluteActivatedChildQueueCapacity(nodeLabel)) > EPSILON) {
         Thread.sleep(100);

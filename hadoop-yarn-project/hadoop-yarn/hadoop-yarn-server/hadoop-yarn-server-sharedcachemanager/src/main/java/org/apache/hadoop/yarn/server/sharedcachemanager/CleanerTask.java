@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.sharedcache.SharedCacheUtil;
@@ -149,7 +150,7 @@ class CleanerTask implements Runnable {
           fs.globStatus(new Path(root, pattern));
       int numResources = resources == null ? 0 : resources.length;
       LOG.info("Processing " + numResources + " resources in the shared cache");
-      long beginMs = System.currentTimeMillis();
+      long beginMs = Time.monotonicNow();
       if (resources != null) {
         for (FileStatus resource : resources) {
           // check for interruption so it can abort in a timely manner in case
@@ -172,7 +173,7 @@ class CleanerTask implements Runnable {
           }
         }
       }
-      long endMs = System.currentTimeMillis();
+      long endMs = Time.monotonicNow();
       long durationMs = endMs - beginMs;
       LOG.info("Processed " + numResources + " resource(s) in " + durationMs +
           " ms.");

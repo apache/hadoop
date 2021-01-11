@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
@@ -365,7 +366,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     entitiesPrep.addEntity(entityToStorePrep);
     store.put(entitiesPrep);
 
-    long start = System.currentTimeMillis();
+    long start = Time.monotonicNow();
     int num = 1000000;
 
     Log.getLog().info("Start test for " + num);
@@ -413,7 +414,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
       store.put(entities);
     }
 
-    long duration = System.currentTimeMillis() - start;
+    long duration = Time.monotonicNow() - start;
     Log.getLog().info("Duration for " + num + ": " + duration);
   }
 

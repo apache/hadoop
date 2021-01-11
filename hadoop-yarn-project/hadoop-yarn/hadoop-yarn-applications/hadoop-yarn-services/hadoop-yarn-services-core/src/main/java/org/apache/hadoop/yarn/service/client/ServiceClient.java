@@ -46,6 +46,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
@@ -761,7 +762,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
         return EXIT_SUCCESS;
       }
       // Wait until the app is killed.
-      long startTime = System.currentTimeMillis();
+      long startTime = Time.monotonicNow();
       int pollCount = 0;
       while (true) {
         Thread.sleep(2000);
@@ -771,7 +772,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
           break;
         }
         // Forcefully kill after 10 seconds.
-        if ((System.currentTimeMillis() - startTime) > 10000) {
+        if ((Time.monotonicNow() - startTime) > 10000) {
           LOG.info("Stop operation timeout stopping, forcefully kill the app "
               + serviceName);
           yarnClient.killApplication(currentAppId,

@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -534,10 +535,10 @@ public class TestNonAggregatingLogHandler {
   static void testDeletionServiceCall(DeletionService delService, String user,
       long timeout, Path... matchPaths) {
 
-    long verifyStartTime = System.currentTimeMillis();
+    long verifyStartTime = Time.monotonicNow();
     WantedButNotInvoked notInvokedException = null;
     boolean matched = false;
-    while (!matched && System.currentTimeMillis() < verifyStartTime + timeout) {
+    while (!matched && Time.monotonicNow() < verifyStartTime + timeout) {
       try {
         verify(delService, times(1)).delete(argThat(new FileDeletionMatcher(
             delService, user, null, Arrays.asList(matchPaths))));

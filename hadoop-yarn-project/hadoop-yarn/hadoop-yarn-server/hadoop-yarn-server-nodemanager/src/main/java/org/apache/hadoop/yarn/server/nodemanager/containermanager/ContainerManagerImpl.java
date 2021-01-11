@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.records.LocalizationStatus;
@@ -740,9 +741,10 @@ public class ContainerManagerImpl extends CompositeService implements
 
     LOG.info("Waiting for Applications to be Finished");
 
-    long waitStartTime = System.currentTimeMillis();
+    long waitStartTime = Time.monotonicNow();
     while (!applications.isEmpty()
-        && System.currentTimeMillis() - waitStartTime < waitForContainersOnShutdownMillis) {
+        && Time.monotonicNow() - waitStartTime
+            < waitForContainersOnShutdownMillis) {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ex) {

@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -450,7 +451,7 @@ public class UnmanagedApplicationManager {
       YarnApplicationAttemptState attemptState)
       throws YarnException, IOException {
 
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.monotonicNow();
     ApplicationAttemptId appAttemptId = null;
     while (true) {
       if (appAttemptId == null) {
@@ -495,7 +496,7 @@ public class UnmanagedApplicationManager {
             + " to reach " + attemptState);
       }
 
-      if (System.currentTimeMillis() - startTime > AM_STATE_WAIT_TIMEOUT_MS) {
+      if (Time.monotonicNow() - startTime > AM_STATE_WAIT_TIMEOUT_MS) {
         throw new RuntimeException("Timeout for waiting current attempt of "
             + appId + " to reach " + attemptState);
       }

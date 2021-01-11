@@ -46,6 +46,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.Token;
@@ -471,10 +472,10 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
             // Try to drain the remaining entities to be published @ the max for
             // 2 seconds
             long timeTillweDrain =
-                System.currentTimeMillis() + drainTimeoutPeriod;
+                Time.monotonicNow() + drainTimeoutPeriod;
             while (!timelineEntityQueue.isEmpty()) {
               publishWithoutBlockingOnQueue(timelineEntityQueue.poll());
-              if (System.currentTimeMillis() > timeTillweDrain) {
+              if (Time.monotonicNow() > timeTillweDrain) {
                 // time elapsed stop publishing further....
                 if (!timelineEntityQueue.isEmpty()) {
                   LOG.warn("Time to drain elapsed! Remaining "
