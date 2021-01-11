@@ -378,9 +378,7 @@ class FsVolumeList {
    * Check if same disk tiering is applied to the volume.
    */
   private boolean isSameDiskTieringApplied(FsVolumeImpl target) {
-    return enableSameDiskTiering &&
-        (target.getStorageType() == StorageType.DISK
-            || target.getStorageType() == StorageType.ARCHIVE);
+    return enableSameDiskTiering && StorageType.allowSameDiskTiering(target.getStorageType());
   }
 
   /**

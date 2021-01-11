@@ -1056,7 +1056,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   static File hardLinkBlockFile(ReplicaInfo srcReplica, File dstFile)
       throws IOException {
     try {
-      HardLink.createHardLinkWithParentDir(new File(srcReplica.getBlockURI()), dstFile);
+      HardLink.createHardLink(new File(srcReplica.getBlockURI()), dstFile, true);
     } catch (IOException e) {
       throw new IOException("Failed to hardLink " + srcReplica + " block file to "
           + dstFile, e);
@@ -1067,7 +1067,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   static File hardLinkBlockMetaFile(ReplicaInfo srcReplica, File dstMeta)
       throws IOException {
     try {
-      HardLink.createHardLinkWithParentDir(new File(srcReplica.getMetadataURI()), dstMeta);
+      HardLink.createHardLink(new File(srcReplica.getMetadataURI()), dstMeta, true);
     } catch (IOException e) {
       throw new IOException("Failed to hardLink " + srcReplica + " metadata to "
           + dstMeta, e);

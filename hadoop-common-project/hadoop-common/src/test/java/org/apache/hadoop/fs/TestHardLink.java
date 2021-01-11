@@ -253,6 +253,11 @@ public class TestHardLink {
     assertTrue(fetchFileContents(x1_one).equals(str1 + str3));
     assertTrue(fetchFileContents(x11_one).equals(str1 + str3));
     assertTrue(fetchFileContents(x1).equals(str1 + str3));
+
+    // Validate create parent flag
+    File pathWithoutParentDir = new File(tgt_one, "newDir/dest");
+    createHardLink(x1, pathWithoutParentDir, true);
+    assertTrue(pathWithoutParentDir.exists());
   }
   
   /*
