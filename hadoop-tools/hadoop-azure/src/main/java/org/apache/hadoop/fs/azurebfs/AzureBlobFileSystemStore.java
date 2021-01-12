@@ -50,10 +50,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -255,17 +258,24 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   @Override
   public void close() throws IOException {
+    List<ListenableFuture<?>> futures = new ArrayList<>();
     for (SelfRenewingLease lease : leaseRefs.keySet()) {
       if (lease == null) {
         continue;
       }
-      try {
-        lease.free();
-      } catch (Exception e) {
-        LOG.debug("Got exception freeing lease {}", lease.getLeaseID(), e);
-      }
+      ListenableFuture<?> future = client.submit(() -> lease.free());
+      futures.add(future);
     }
-    IOUtils.cleanupWithLogger(LOG, client);
+    try {
+      Futures.allAsList(futures).get();
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted freeing leases", e);
+      Thread.currentThread().interrupt();
+    } catch (ExecutionException e) {
+      LOG.error("Error freeing leases", e);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, client);
+    }
   }
 
   byte[] encodeAttribute(String value) throws UnsupportedEncodingException {
@@ -1726,7 +1736,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.isNamespaceEnabled = isNamespaceEnabled;
   }
 
-  void updateSingleWriterDirs() {
+  private void updateSingleWriterDirs() {
     this.azureSingleWriterDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureSingleWriterDirs().split(AbfsHttpConstants.COMMA)));
     // remove the empty string, since isKeyForDirectory returns true for empty strings

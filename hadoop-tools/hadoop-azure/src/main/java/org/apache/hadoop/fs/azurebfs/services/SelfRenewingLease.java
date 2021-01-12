@@ -20,138 +20,185 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableScheduledFuture;
+import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_FUTURE_EXISTS;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THREADS;
 
 /**
- * An Azure blob lease that automatically renews itself indefinitely
- * using a background thread. Use it to synchronize distributed processes,
- * or to prevent writes to the blob by other processes that don't
- * have the lease.
+ * An Azure blob lease that automatically renews itself indefinitely by scheduling lease
+ * operations through the ABFS client. Use it to prevent writes to the blob by other processes
+ * that don't have the lease.
  *
- * Creating a new Lease object blocks the caller until the Azure blob lease is
- * acquired.
+ * Creating a new Lease object blocks the caller until the Azure blob lease is acquired. It will
+ * retry a fixed number of times before failing if there is a problem acquiring the lease.
  *
- * Call free() to release the Lease.
- *
- * You can use this Lease like a distributed lock. If the holder process
- * dies, the lease will time out since it won't be renewed.
- *
- * See also {@link org.apache.hadoop.fs.azure.SelfRenewingLease}.
+ * Call free() to release the Lease. If the holder process dies, the lease will time out since it
+ * won't be renewed.
  */
 public final class SelfRenewingLease {
+  private static final Logger LOG = LoggerFactory.getLogger(SelfRenewingLease.class);
+
+  static final int LEASE_DURATION = 60; // Lease duration in seconds
+  static final int LEASE_RENEWAL_PERIOD = 40; // Lease renewal interval in seconds
+
+  static final int LEASE_ACQUIRE_RETRY_INTERVAL = 10; // Retry interval for acquiring lease in secs
+  static final int LEASE_ACQUIRE_MAX_RETRIES = 7; // Number of retries for acquiring lease
 
   private final AbfsClient client;
-  private final Path path;
-  private Thread renewer;
+  private final String path;
+
+  // Lease status variables
   private volatile boolean leaseFreed;
-  private String leaseID = null;
-  private static final int LEASE_TIMEOUT = 60;  // Lease timeout in seconds
-
-  // Time to wait to renew lease in milliseconds
-  public static final int LEASE_RENEWAL_PERIOD = 40000;
-  public static final Logger LOG = LoggerFactory.getLogger(SelfRenewingLease.class);
-
-  // Used to allocate thread serial numbers in thread name
-  private static AtomicInteger threadNumber = new AtomicInteger(0);
-
-
-  // Time to wait to retry getting the lease in milliseconds
-  static final int LEASE_ACQUIRE_RETRY_INTERVAL = 2000;
-  static final int LEASE_MAX_RETRIES = 5;
+  private volatile String leaseID = null;
+  private volatile Throwable exception = null;
+  private volatile ListenableScheduledFuture<AbfsRestOperation> future = null;
 
   public static class LeaseException extends AzureBlobFileSystemException {
-    public LeaseException(Exception innerException) {
-      super(ERR_ACQUIRING_LEASE, innerException);
+    public LeaseException(Throwable t) {
+      super(ERR_ACQUIRING_LEASE + ": " + t.getMessage());
     }
 
-    public LeaseException() {
-      super(ERR_ACQUIRING_LEASE);
+    public LeaseException(String s) {
+      super(s);
     }
   }
 
   public SelfRenewingLease(AbfsClient client, Path path) throws AzureBlobFileSystemException {
-
     this.leaseFreed = false;
     this.client = client;
-    this.path = path;
+    this.path = getRelativePath(path);
+
+    if (client.getNumLeaseThreads() < 1) {
+      throw new LeaseException(ERR_NO_LEASE_THREADS);
+    }
 
     // Try to get the lease a specified number of times, else throw an error
-    RetryPolicy retryPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(LEASE_MAX_RETRIES,
-        LEASE_ACQUIRE_RETRY_INTERVAL, TimeUnit.MILLISECONDS);
-    int numRetries = 0;
-    Exception lastException = null;
-    while (leaseID == null) {
-      try {
-        if (RetryPolicy.RetryAction.RetryDecision.RETRY !=
-            retryPolicy.shouldRetry(null, numRetries, 0, true).action) {
-          LOG.error("Exceeded maximum number of retries for acquiring lease on blob {}", path);
-          if (lastException != null) {
-            throw new LeaseException(lastException);
+    RetryPolicy retryPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
+        LEASE_ACQUIRE_MAX_RETRIES, LEASE_ACQUIRE_RETRY_INTERVAL, TimeUnit.SECONDS);
+    acquireLease(retryPolicy, 0, 0);
+
+    while (leaseID == null && exception == null) {
+    }
+    if (exception != null) {
+      LOG.error("Failed to acquire lease on {}", path);
+      throw new LeaseException(exception);
+    }
+
+    renewLease(LEASE_RENEWAL_PERIOD);
+
+    LOG.debug("Acquired lease {} on {}", leaseID, path);
+  }
+
+  private void acquireLease(RetryPolicy retryPolicy, int numRetries, long delay)
+      throws LeaseException {
+    LOG.debug("Attempting to acquire lease on {}, retry {}", path, numRetries);
+    if (future != null && !future.isDone()) {
+      throw new LeaseException(ERR_LEASE_FUTURE_EXISTS);
+    }
+    future = client.schedule(() -> client.acquireLease(path, LEASE_DURATION),
+        delay, TimeUnit.SECONDS);
+    client.addCallback(future, new FutureCallback<AbfsRestOperation>() {
+      @Override
+      public void onSuccess(@Nullable AbfsRestOperation op) {
+        leaseID = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_LEASE_ID);
+        LOG.debug("Acquired lease {} on {}", leaseID, path);
+      }
+
+      @Override
+      public void onFailure(Throwable throwable) {
+        try {
+          if (RetryPolicy.RetryAction.RetryDecision.RETRY ==
+              retryPolicy.shouldRetry(null, numRetries, 0, true).action) {
+            LOG.debug("Failed acquire lease on {}, retrying: {}", path, throwable);
+            acquireLease(retryPolicy, numRetries + 1, LEASE_ACQUIRE_RETRY_INTERVAL);
+          } else {
+            exception = throwable;
           }
-          throw new LeaseException();
+        } catch (Exception e) {
+          exception = throwable;
+        }
+      }
+    });
+  }
+
+  private void renewLease(long delay) {
+    LOG.debug("Attempting to renew lease on {}, renew lease id {}, delay {}", path, leaseID, delay);
+    if (future != null && !future.isDone()) {
+      LOG.warn("Unexpected new lease renewal operation occurred while operation already existed. "
+          + "Not initiating new renewal");
+      return;
+    }
+    future = client.schedule(() -> client.renewLease(path, leaseID), delay,
+            TimeUnit.SECONDS);
+    client.addCallback(future, new FutureCallback<AbfsRestOperation>() {
+      @Override
+      public void onSuccess(@Nullable AbfsRestOperation op) {
+        LOG.debug("Renewed lease {} on {}", leaseID, path);
+        renewLease(delay);
+      }
+
+      @Override
+      public void onFailure(Throwable throwable) {
+        if (throwable instanceof CancellationException) {
+          LOG.info("Stopping renewal due to cancellation");
+          free();
+          return;
+        } else if (throwable instanceof AbfsRestOperationException) {
+          AbfsRestOperationException opEx = ((AbfsRestOperationException) throwable);
+          if (opEx.getStatusCode() < HTTP_INTERNAL_ERROR) {
+            // error in 400 range indicates a type of error that should not result in a retry
+            // such as the lease being broken or a different lease being present
+            LOG.info("Stopping renewal due to {}: {}, {}", opEx.getStatusCode(),
+                opEx.getErrorCode(), opEx.getErrorMessage());
+            free();
+            return;
+          }
         }
 
-        LOG.debug("lease path: {}", path);
-        final AbfsRestOperation op =
-            client.acquireLease(getRelativePath(path),
-                LEASE_TIMEOUT);
-
-        leaseID = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_LEASE_ID);
-      } catch (Exception e) {
-        lastException = e;
-      } finally {
-        numRetries++;
+        LOG.debug("Failed to renew lease on {}, renew lease id {}, retrying: {}", path, leaseID,
+            throwable);
+        renewLease(0);
       }
-
-      if (leaseID != null) {
-        break;
-      }
-
-      try {
-        Thread.sleep(LEASE_ACQUIRE_RETRY_INTERVAL);
-      } catch (InterruptedException e) {
-        // Restore the interrupted status
-        Thread.currentThread().interrupt();
-      }
-    }
-    renewer = new Thread(new Renewer());
-
-    // A Renewer running should not keep JVM from exiting, so make it a daemon.
-    renewer.setDaemon(true);
-    renewer.setName("AzureBFSLeaseRenewer-" + threadNumber.getAndIncrement());
-    renewer.start();
-    LOG.debug("Acquired lease {} on {} managed by thread {}", leaseID, path, renewer.getName());
+    });
   }
 
   /**
-   * Free the lease and stop the keep-alive thread.
+   * Cancel renewal and free the lease. If an exception occurs, this method assumes the lease
+   * will expire after the lease duration.
    */
   public void free() {
     try {
-      LOG.debug("lease path: {}, release lease id: {}", path, leaseID);
-      client.releaseLease(getRelativePath(path), leaseID);
+      LOG.debug("Freeing lease: path {}, lease id {}", path, leaseID);
+      if (future != null && !future.isDone()) {
+        future.cancel(true);
+      }
+      client.releaseLease(path, leaseID);
     } catch (IOException e) {
       LOG.info("Exception when trying to release lease {} on {}. Lease will be left to expire: {}",
           leaseID, path, e.getMessage());
-      LOG.debug("Exception releasing lease", e);
     } finally {
 
       // Even if releasing the lease fails (e.g. because the file was deleted),
       // make sure to record that we freed the lease, to terminate the
       // keep-alive thread.
       leaseFreed = true;
-      LOG.debug("Freed lease {} on {} managed by thread {}", leaseID, path, renewer.getName());
+      LOG.debug("Freed lease {} on {}", leaseID, path);
     }
   }
 
@@ -161,51 +208,6 @@ public final class SelfRenewingLease {
 
   public String getLeaseID() {
     return leaseID;
-  }
-
-  private class Renewer implements Runnable {
-
-    /**
-     * Start a keep-alive thread that will continue to renew
-     * the lease until it is freed or the process dies.
-     */
-    @Override
-    public void run() {
-      LOG.debug("Starting lease keep-alive thread.");
-
-      while (!leaseFreed) {
-        try {
-          Thread.sleep(LEASE_RENEWAL_PERIOD);
-        } catch (InterruptedException e) {
-          LOG.debug("Keep-alive thread for lease {} interrupted", leaseID);
-
-          // Restore the interrupted status
-          Thread.currentThread().interrupt();
-        }
-        try {
-          if (!leaseFreed) {
-            LOG.debug("lease path: {}, renew lease id: {}", path, leaseID);
-            client.renewLease(getRelativePath(path), leaseID);
-
-            // It'll be very rare to renew the lease (most will be short)
-            // so log that we did it, to help with system debugging.
-            LOG.info("Renewed lease {} on {}", leaseID, path);
-          }
-        } catch (IOException e) {
-          if (!leaseFreed) {
-
-            // Free the lease so we don't leave this thread running forever.
-            leaseFreed = true;
-
-            // Normally leases should be freed and there should be no
-            // exceptions, so log a warning.
-            LOG.warn("Attempt to renew lease {} on {} failed, stopping renewal thread: ",
-                leaseID, path, e.getMessage());
-            LOG.debug("Exception renewing lease", e);
-          }
-        }
-      }
-    }
   }
 
   private String getRelativePath(final Path path) {

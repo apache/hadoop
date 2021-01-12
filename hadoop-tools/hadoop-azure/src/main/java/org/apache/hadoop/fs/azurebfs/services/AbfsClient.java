@@ -30,6 +30,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -37,6 +40,12 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableScheduledFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +86,8 @@ public class AbfsClient implements Closeable {
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
 
+  private final ListeningScheduledExecutorService executorService;
+
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final AbfsClientContext abfsClientContext) {
@@ -107,6 +118,9 @@ public class AbfsClient implements Closeable {
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
     this.abfsPerfTracker = abfsClientContext.getAbfsPerfTracker();
     this.abfsCounters = abfsClientContext.getAbfsCounters();
+
+    this.executorService = MoreExecutors.listeningDecorator(
+        Executors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads()));
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -130,6 +144,7 @@ public class AbfsClient implements Closeable {
     if (tokenProvider instanceof Closeable) {
       IOUtils.cleanupWithLogger(LOG, (Closeable) tokenProvider);
     }
+    executorService.shutdownNow();
   }
 
   public String getFileSystem() {
@@ -1086,5 +1101,22 @@ public class AbfsClient implements Closeable {
    */
   protected AbfsCounters getAbfsCounters() {
     return abfsCounters;
+  }
+
+  public int getNumLeaseThreads() {
+    return abfsConfiguration.getNumLeaseThreads();
+  }
+
+  public <V> ListenableScheduledFuture<V> schedule(Callable<V> callable, long delay,
+      TimeUnit timeUnit) {
+    return executorService.schedule(callable, delay, timeUnit);
+  }
+
+  public ListenableFuture<?> submit(Runnable runnable) {
+    return executorService.submit(runnable);
+  }
+
+  public <V> void addCallback(ListenableFuture<V> future, FutureCallback<V> callback) {
+    Futures.addCallback(future, callback, executorService);
   }
 }

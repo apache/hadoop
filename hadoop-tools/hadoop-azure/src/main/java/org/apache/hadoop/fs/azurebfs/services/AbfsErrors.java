@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
+
 /**
  * ABFS error constants.
  */
@@ -32,7 +34,11 @@ public final class AbfsErrors {
   public static final String ERR_PARALLEL_ACCESS_DETECTED = "Parallel access to the create path "
       + "detected. Failing request to honor single writer semantics";
   public static final String ERR_ACQUIRING_LEASE = "Unable to acquire lease";
-  public static final String ERR_LEASE_PRESENT = "There is already a lease present.";
+  public static final String ERR_LEASE_NOT_PRESENT = "There is currently no lease on the resource";
+  public static final String ERR_LEASE_FUTURE_EXISTS = "There is already an existing lease "
+      + "operation";
+  public static final String ERR_NO_LEASE_THREADS = "Lease desired but no lease threads "
+      + "configured, set " + FS_AZURE_LEASE_THREADS;
 
   private AbfsErrors() {}
 }

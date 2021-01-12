@@ -328,9 +328,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       throw wrapException(path, e.getMessage(), e);
     } finally {
       if (lease != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.info("Freeing lease {}", leaseId);
-        }
         lease.free();
         lease = null;
       }

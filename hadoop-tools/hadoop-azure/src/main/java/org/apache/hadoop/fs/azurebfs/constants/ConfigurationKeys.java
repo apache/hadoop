@@ -90,6 +90,9 @@ public final class ConfigurationKeys {
   /** Provides a config to provide comma separated path prefixes which support single writers.
    *  Default is empty. **/
   public static final String FS_AZURE_SINGLE_WRITER_KEY = "fs.azure.singlewriter.directories";
+  /** Provides a number of threads to use for lease operations for single writer directories.
+   *  Must be set to a minimum of 1 if single writer directories are to be used. Default is 0. **/
+  public static final String FS_AZURE_LEASE_THREADS = "fs.azure.lease.threads";
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
   public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.read.alwaysReadBufferSize";
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";
