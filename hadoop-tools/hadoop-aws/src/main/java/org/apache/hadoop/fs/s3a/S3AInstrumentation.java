@@ -64,8 +64,10 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import java.io.Closeable;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -181,6 +183,20 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   private final IOStatisticsStore instanceIOStatistics;
 
   /**
+   * Gauges to create.
+   * <p></p>
+   * All statistics which are not gauges or quantiles
+   * are registered as counters.
+   */
+  private static final Statistic[] GAUGES_TO_CREATE = {
+      OBJECT_PUT_REQUESTS_ACTIVE,
+      OBJECT_PUT_BYTES_PENDING,
+      STREAM_WRITE_BLOCK_UPLOADS_ACTIVE,
+      STREAM_WRITE_BLOCK_UPLOADS_PENDING,
+      STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING,
+  };
+
+  /**
    * Construct the instrumentation for a filesystem.
    * @param name URI of filesystem.
    */
@@ -195,6 +211,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     // create the builder
     IOStatisticsStoreBuilder storeBuilder = iostatisticsStore();
 
+    // add the gauges
+    List<Statistic> gauges = Arrays.asList(GAUGES_TO_CREATE);
+    gauges.forEach(this::gauge);
+
     // declare all counter statistics
     EnumSet.allOf(Statistic.class).stream()
         .filter(statistic ->
@@ -202,14 +222,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         .forEach(stat -> {
           counter(stat);
           storeBuilder.withCounters(stat.getSymbol());
-        });
-    // declare all gauge statistics
-    EnumSet.allOf(Statistic.class).stream()
-        .filter(statistic ->
-            statistic.getType() == StatisticTypeEnum.TYPE_GAUGE)
-        .forEach(stat -> {
-          gauge(stat);
-          storeBuilder.withGauges(stat.getSymbol());
         });
 
     // and durations
@@ -1340,13 +1352,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       this.filesystemStatistics = filesystemStatistics;
       IOStatisticsStore st = iostatisticsStore()
           .withCounters(
-              STREAM_WRITE_BLOCK_UPLOADS.getSymbol(),
+              StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
               STREAM_WRITE_BYTES.getSymbol(),
               STREAM_WRITE_EXCEPTIONS.getSymbol(),
-              STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol(),
+              StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING,
+              STREAM_WRITE_TOTAL_TIME.getSymbol(),
               STREAM_WRITE_QUEUE_DURATION.getSymbol(),
               STREAM_WRITE_TOTAL_DATA.getSymbol(),
-              STREAM_WRITE_TOTAL_TIME.getSymbol())
+              STREAM_WRITE_EXCEPTIONS.getSymbol(),
+              STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol())
           .withGauges(
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
@@ -1456,7 +1470,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void bytesTransferred(long byteCount) {
       bytesUploaded.addAndGet(byteCount);
-      incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING, -byteCount);
+      incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING, -byteCount);
     }
 
     @Override

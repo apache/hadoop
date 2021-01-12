@@ -67,46 +67,23 @@ public class StorageStatisticsFromIOStatistics
   public Iterator<LongStatistic> getLongStatistics() {
     final Set<Map.Entry<String, Long>> counters = counters()
         .entrySet();
-    final Set<LongStatistic> statisticSet = counters.stream().map(
-        this::toLongStatistic)
-        .collect(Collectors.toSet());
-
-    // add the gauges
-    gauges().entrySet().forEach(entry ->
-        statisticSet.add(toLongStatistic(entry)));
-    return statisticSet.iterator();
-  }
-
-  /**
-   * Convert a counter/gauge entry to a long statistics.
-   * @param e entry
-   * @return statistic
-   */
-  private LongStatistic toLongStatistic(final Map.Entry<String, Long> e) {
-    return new LongStatistic(e.getKey(), e.getValue());
+    return counters.stream().map(e ->
+        new StorageStatistics.LongStatistic(e.getKey(), e.getValue()))
+        .collect(Collectors.toSet()).iterator();
   }
 
   private Map<String, Long> counters() {
     return ioStatistics.counters();
   }
 
-  private Map<String, Long> gauges() {
-    return ioStatistics.gauges();
-  }
-
   @Override
   public Long getLong(final String key) {
-    Long l = counters().get(key);
-    if (l == null) {
-      l = gauges().get(key);
-    }
-    return l;
+    return counters().get(key);
   }
 
   @Override
   public boolean isTracked(final String key) {
-    return counters().containsKey(key)
-        || gauges().containsKey(key);
+    return counters().containsKey(key);
   }
 
   @Override

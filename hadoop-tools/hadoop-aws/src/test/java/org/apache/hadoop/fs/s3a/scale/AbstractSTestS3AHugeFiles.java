@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
@@ -48,11 +49,10 @@ import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 
 /**
  * Scale test which creates a huge file.
@@ -169,8 +169,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     // there's lots of logging here, so that a tail -f on the output log
     // can give a view of what is happening.
     S3AFileSystem fs = getFileSystem();
-    IOStatistics iostats = fs.getIOStatistics();
-
+    StorageStatistics storageStatistics = fs.getStorageStatistics();
     String putRequests = Statistic.OBJECT_PUT_REQUESTS.getSymbol();
     String putBytes = Statistic.OBJECT_PUT_BYTES.getSymbol();
     Statistic putRequestsActive = Statistic.OBJECT_PUT_REQUESTS_ACTIVE;
@@ -206,9 +205,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
               percentage,
               writtenMB,
               filesizeMB,
-              iostats.counters().get(putBytes),
+              storageStatistics.getLong(putBytes),
               gaugeValue(putBytesPending),
-              iostats.counters().get(putRequests),
+              storageStatistics.getLong(putRequests),
               gaugeValue(putRequestsActive),
               elapsedTime,
               writtenMB / elapsedTime));
@@ -228,27 +227,27 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     logFSState();
     bandwidth(timer, filesize);
     LOG.info("Statistics after stream closed: {}", streamStatistics);
-
+    IOStatistics iostats = snapshotIOStatistics(
+        retrieveIOStatistics(getFileSystem()));
     LOG.info("IOStatistics after upload: {}",
         demandStringifyIOStatistics(iostats));
-    long putRequestCount = lookupCounterStatistic(iostats, putRequests);
-    long putByteCount = lookupCounterStatistic(iostats, putBytes);
+    long putRequestCount = storageStatistics.getLong(putRequests);
+    Long putByteCount = storageStatistics.getLong(putBytes);
     Assertions.assertThat(putRequestCount)
         .describedAs("Put request count from filesystem stats %s",
             iostats)
         .isGreaterThan(0);
     Assertions.assertThat(putByteCount)
-        .describedAs("%s count from filesystem stats %s",
-            putBytes, iostats)
+        .describedAs("putByteCount count from filesystem stats %s",
+            iostats)
         .isGreaterThan(0);
     LOG.info("PUT {} bytes in {} operations; {} MB/operation",
         putByteCount, putRequestCount,
         putByteCount / (putRequestCount * _1MB));
     LOG.info("Time per PUT {} nS",
         toHuman(timer.nanosPerOperation(putRequestCount)));
-    verifyStatisticGaugeValue(iostats, putRequestsActive.getSymbol(), 0);
-    verifyStatisticGaugeValue(iostats,
-        STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol(), 0);
+    assertEquals("active put requests in \n" + fs,
+        0, gaugeValue(putRequestsActive));
     progress.verifyNoFailures(
         "Put file " + fileToCreate + " of size " + filesize);
     if (streamStatistics != null) {
