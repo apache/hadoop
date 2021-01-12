@@ -18,7 +18,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM ubuntu:bionic
+FROM ubuntu:focal
 
 WORKDIR /root
 
