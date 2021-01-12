@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createMountTableEntry;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
@@ -42,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test suite for Router Web Hdfs methods
+ * Test suite for Router Web Hdfs methods.
  */
 public class TestRouterWebHdfsMethods {
   static final Logger LOG =
@@ -100,7 +99,7 @@ public class TestRouterWebHdfsMethods {
     LOG.info("URL 2: ", url2.toString());
     HttpURLConnection conn2 = (HttpURLConnection) url2.openConnection();
     conn2.setRequestMethod("PUT");
-    assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_CREATED, conn2.getResponseCode());
     verifyFile("ns1", path2, true);
     verifyFile("ns0", path2, false);
     conn2.disconnect();
