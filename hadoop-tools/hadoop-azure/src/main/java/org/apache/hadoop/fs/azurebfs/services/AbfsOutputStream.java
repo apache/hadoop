@@ -32,6 +32,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
@@ -53,7 +54,6 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
-import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
 import static org.apache.hadoop.io.IOUtils.wrapException;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_CLOSE_MODE;
@@ -441,7 +441,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     final Future<Void> job =
         completionService.submit(IOStatisticsBinding
             .trackDurationOfCallable((IOStatisticsStore) ioStatistics,
-                TIME_SPENT_ON_PUT_REQUEST,
+                StreamStatisticNames.TIME_SPENT_ON_PUT_REQUEST,
                 () -> {
                   AbfsPerfTracker tracker = client.getAbfsPerfTracker();
                   try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,

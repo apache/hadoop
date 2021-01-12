@@ -21,12 +21,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
-import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
@@ -37,18 +37,18 @@ public class AbfsInputStreamStatisticsImpl
 
   private final IOStatisticsStore ioStatisticsStore = iostatisticsStore()
       .withCounters(
-          STREAM_READ_SEEK_OPERATIONS,
-          STREAM_READ_SEEK_FORWARD_OPERATIONS,
-          STREAM_READ_SEEK_BACKWARD_OPERATIONS,
-          STREAM_READ_BYTES,
-          STREAM_READ_SEEK_BYTES_SKIPPED,
-          STREAM_READ_OPERATIONS,
-          STREAM_READ_SEEK_BYTES_BACKWARDS,
-          SEEK_IN_BUFFER,
-          BYTES_READ_BUFFER,
-          REMOTE_READ_OP,
-          READ_AHEAD_BYTES_READ,
-          REMOTE_BYTES_READ
+          StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS,
+          StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
+          StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
+          StreamStatisticNames.STREAM_READ_BYTES,
+          StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
+          StreamStatisticNames.STREAM_READ_OPERATIONS,
+          StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS,
+          StreamStatisticNames.SEEK_IN_BUFFER,
+          StreamStatisticNames.BYTES_READ_BUFFER,
+          StreamStatisticNames.REMOTE_READ_OP,
+          StreamStatisticNames.READ_AHEAD_BYTES_READ,
+          StreamStatisticNames.REMOTE_BYTES_READ
           )
       .withDurationTracking(ACTION_HTTP_GET_REQUEST)
       .build();
@@ -57,11 +57,11 @@ public class AbfsInputStreamStatisticsImpl
    * cost of the map lookup on every increment.
    */
   private final AtomicLong bytesRead =
-      ioStatisticsStore.getCounterReference(STREAM_READ_BYTES);
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.STREAM_READ_BYTES);
   private final AtomicLong readOps =
-      ioStatisticsStore.getCounterReference(STREAM_READ_OPERATIONS);
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.STREAM_READ_OPERATIONS);
   private final AtomicLong seekOps =
-      ioStatisticsStore.getCounterReference(STREAM_READ_SEEK_OPERATIONS);
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
 
   /**
    * Seek backwards, incrementing the seek and backward seek counters.
@@ -72,8 +72,8 @@ public class AbfsInputStreamStatisticsImpl
   @Override
   public void seekBackwards(long negativeOffset) {
     seekOps.incrementAndGet();
-    ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_BACKWARD_OPERATIONS);
-    ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_BYTES_BACKWARDS, negativeOffset);
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS);
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS, negativeOffset);
   }
 
   /**
@@ -86,8 +86,8 @@ public class AbfsInputStreamStatisticsImpl
   @Override
   public void seekForwards(long skipped) {
     seekOps.incrementAndGet();
-    ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_FORWARD_OPERATIONS);
-    ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_BYTES_SKIPPED, skipped);
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS);
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED, skipped);
   }
 
   /**
@@ -127,7 +127,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void bytesReadFromBuffer(long bytes) {
-    ioStatisticsStore.incrementCounter(BYTES_READ_BUFFER, bytes);
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.BYTES_READ_BUFFER, bytes);
   }
 
   /**
@@ -137,7 +137,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void seekInBuffer() {
-    ioStatisticsStore.incrementCounter(SEEK_IN_BUFFER);
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.SEEK_IN_BUFFER);
   }
 
   /**
@@ -155,7 +155,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void readAheadBytesRead(long bytes) {
-    ioStatisticsStore.incrementCounter(READ_AHEAD_BYTES_READ, bytes);
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.READ_AHEAD_BYTES_READ, bytes);
   }
 
   /**
@@ -165,7 +165,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void remoteBytesRead(long bytes) {
-    ioStatisticsStore.incrementCounter(REMOTE_BYTES_READ, bytes);
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.REMOTE_BYTES_READ, bytes);
   }
 
   /**
@@ -175,7 +175,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void remoteReadOperation() {
-    ioStatisticsStore.incrementCounter(REMOTE_READ_OP);
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.REMOTE_READ_OP);
   }
 
   /**
@@ -189,63 +189,63 @@ public class AbfsInputStreamStatisticsImpl
 
   @VisibleForTesting
   public long getSeekOperations() {
-    return ioStatisticsStore.counters().get(STREAM_READ_SEEK_OPERATIONS);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
   }
 
   @VisibleForTesting
   public long getForwardSeekOperations() {
-    return ioStatisticsStore.counters().get(STREAM_READ_SEEK_FORWARD_OPERATIONS);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS);
   }
 
   @VisibleForTesting
   public long getBackwardSeekOperations() {
-    return ioStatisticsStore.counters().get(STREAM_READ_SEEK_BACKWARD_OPERATIONS);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS);
   }
 
   @VisibleForTesting
   public long getBytesRead() {
-    return ioStatisticsStore.counters().get(STREAM_READ_BYTES);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.STREAM_READ_BYTES);
   }
 
   @VisibleForTesting
   public long getBytesSkippedOnSeek() {
-    return ioStatisticsStore.counters().get(STREAM_READ_SEEK_BYTES_SKIPPED);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED);
   }
 
   @VisibleForTesting
   public long getBytesBackwardsOnSeek() {
-    return ioStatisticsStore.counters().get(STREAM_READ_SEEK_BYTES_BACKWARDS);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS);
   }
 
   @VisibleForTesting
   public long getSeekInBuffer() {
-    return ioStatisticsStore.counters().get(SEEK_IN_BUFFER);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.SEEK_IN_BUFFER);
 
   }
 
   @VisibleForTesting
   public long getReadOperations() {
-    return ioStatisticsStore.counters().get(STREAM_READ_OPERATIONS);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.STREAM_READ_OPERATIONS);
   }
 
   @VisibleForTesting
   public long getBytesReadFromBuffer() {
-    return ioStatisticsStore.counters().get(BYTES_READ_BUFFER);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.BYTES_READ_BUFFER);
   }
 
   @VisibleForTesting
   public long getRemoteReadOperations() {
-    return ioStatisticsStore.counters().get(REMOTE_READ_OP);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.REMOTE_READ_OP);
   }
 
   @VisibleForTesting
   public long getReadAheadBytesRead() {
-    return ioStatisticsStore.counters().get(READ_AHEAD_BYTES_READ);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.READ_AHEAD_BYTES_READ);
   }
 
   @VisibleForTesting
   public long getRemoteBytesRead() {
-    return ioStatisticsStore.counters().get(REMOTE_BYTES_READ);
+    return ioStatisticsStore.counters().get(StreamStatisticNames.REMOTE_BYTES_READ);
   }
 
   /**
