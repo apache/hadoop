@@ -25,26 +25,22 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -288,6 +284,76 @@ public class FSDownload implements Callable<Path> {
     downloadAndUnpack(sCopy, destination);
   }
 
+  private class ThreadCopyTask implements Callable<Void> {
+    private final Path destination;
+    private final Path[] sourcePaths;
+    private final FileSystem sourceFileSystem;
+    private final FileSystem destinationFileSystem;
+
+    ThreadCopyTask(Path destination, Path[] sourcePaths,
+                          FileSystem sourceFileSystem,
+                          FileSystem destinationFileSystem) {
+      this.destination = destination;
+      this.sourcePaths = sourcePaths;
+      this.sourceFileSystem = sourceFileSystem;
+      this.destinationFileSystem = destinationFileSystem;
+    }
+
+    public Void call() throws IOException, ExecutionException,
+                              InterruptedException {
+      FileUtil.copy(sourceFileSystem, sourcePaths,
+                    destinationFileSystem, destination, false,
+                    true, conf);
+      return null;
+    }
+  }
+
+  /**
+   * Split directory's contents in groups, process each group
+   * in its own Callable task.
+   * @param sourceFileSystem Source filesystem
+   * @param destinationFileSystem Destination filesystem
+   * @param source source path to copy. Typically HDFS
+   * @param destination destination path. Typically local filesystem
+   * @exception YarnException Any error has occurred
+   */
+  private void localizeDirectoryInParallel(FileSystem sourceFileSystem,
+                                           FileSystem destinationFileSystem,
+                                           Path source, Path destination)
+          throws YarnException {
+    FileStatus[] fileStatuses;
+    try {
+      fileStatuses = sourceFileSystem.listStatus(source);
+    }catch (Exception e) {
+      throw new YarnException("Download and unpack failed", e);
+    }
+    int nThreads = Math.min(conf.getInt(
+            YarnConfiguration.NM_LOCALIZER_FETCH_THREAD_COUNT,
+            YarnConfiguration.DEFAULT_NM_LOCALIZER_FETCH_THREAD_COUNT),
+            fileStatuses.length);
+    List<Callable<Void>> tasks = new ArrayList<>(nThreads);
+    ExecutorService executor = Executors.newFixedThreadPool(nThreads);
+    if (nThreads > fileStatuses.length){
+      nThreads = fileStatuses.length;
+    }
+    int chunkSize = (int) Math.floor((float) fileStatuses.length / nThreads);
+    for (int i = 0; i < fileStatuses.length; i += chunkSize){
+      Path[] sourcePaths = Arrays.stream(fileStatuses, i,
+              Math.min(i + chunkSize, fileStatuses.length))
+                                 .map(FileStatus::getPath)
+                                 .toArray(Path[]::new);
+      tasks.add(new ThreadCopyTask(destination, sourcePaths,
+              sourceFileSystem, destinationFileSystem));
+    }
+    List<Future<?>> futures = tasks.stream()
+                                   .map(executor::submit)
+                                   .collect(Collectors.toList());
+    while (!futures.isEmpty()) {
+      futures.removeIf(Future::isDone);
+    }
+    executor.shutdown();
+  }
+
   /**
    * Copy source path to destination with localization rules.
    * @param source source path to copy. Typically HDFS
@@ -299,11 +365,12 @@ public class FSDownload implements Callable<Path> {
     try {
       FileSystem sourceFileSystem = source.getFileSystem(conf);
       FileSystem destinationFileSystem = destination.getFileSystem(conf);
-      if (sourceFileSystem.getFileStatus(source).isDirectory()) {
-        FileUtil.copy(
-            sourceFileSystem, source,
-            destinationFileSystem, destination, false,
-            true, conf);
+      FileStatus sourceFileStatus = sourceFileSystem.getFileStatus(source);
+      if (sourceFileStatus.isDirectory()) {
+        destinationFileSystem.mkdirs(destination,
+                sourceFileStatus.getPermission());
+        localizeDirectoryInParallel(sourceFileSystem, destinationFileSystem,
+                                   source, destination);
       } else {
         unpack(source, destination, sourceFileSystem, destinationFileSystem);
       }
