@@ -121,17 +121,21 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         with(DIRECTORIES_DELETED, 0),
         with(FILES_DELETED, 1),
 
+        // a single DELETE call is made to delete the object
+        with(OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST),
+
         // keeping: create no parent dirs or delete parents
         withWhenKeeping(DIRECTORIES_CREATED, 0),
-        withWhenKeeping(OBJECT_DELETE_OBJECTS, DELETE_OBJECT_REQUEST),
+        withWhenKeeping(OBJECT_BULK_DELETE_REQUEST, 0),
 
         // deleting: create a parent and delete any of its parents
         withWhenDeleting(DIRECTORIES_CREATED, 1),
-        // two objects will be deleted
-        withWhenDeleting(OBJECT_DELETE_OBJECTS,
-            DELETE_OBJECT_REQUEST
-                + DELETE_MARKER_REQUEST)
+        // a bulk delete for all parents is issued.
+        // the number of objects in it depends on the depth of the tree;
+        // don't worry about that
+        withWhenDeleting(OBJECT_BULK_DELETE_REQUEST, DELETE_MARKER_REQUEST)
     );
+
     // there is an empty dir for a parent
     S3AFileStatus status = verifyRawInnerGetFileStatus(dir, true,
         StatusProbeEnum.ALL, GET_FILE_STATUS_ON_DIR);
