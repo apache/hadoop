@@ -27,9 +27,10 @@ begin
 
 ### ADD THE TEST COMBINATIONS BELOW. DO NOT EDIT THE ABOVE LINES.
 
+
 combination=HNS-OAuth
 properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled"
-  "fs.azure.account.auth.type")
+"fs.azure.account.auth.type")
 values=("{account name}.dfs.core.windows.net" "true" "OAuth")
 generateconfigs
 
@@ -45,6 +46,7 @@ generateconfigs
   values=("{account name}.dfs.core.windows.net" "false" "SharedKey")
 }
 generateconfigs
+
 
 ### DO NOT EDIT THE LINES BELOW.
 
