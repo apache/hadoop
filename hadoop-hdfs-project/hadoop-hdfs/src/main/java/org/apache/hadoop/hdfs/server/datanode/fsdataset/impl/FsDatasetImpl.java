@@ -1049,7 +1049,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Linked " + srcReplica.getBlockURI() + " to " + dstFile);
     }
-    return new File[] {dstMeta, dstFile};
+    return new File[]{dstMeta, dstFile};
   }
 
   static File hardLinkBlockFile(ReplicaInfo srcReplica, File dstFile)
@@ -1209,7 +1209,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     finalizeNewReplica(newReplicaInfo, block);
     removeOldReplica(replicaInfo, newReplicaInfo, block.getBlockPoolId());
-
     return newReplicaInfo;
   }
 
@@ -1269,7 +1268,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ReplicaInfo replicaInfo,
       FsVolumeReference volumeRef) throws IOException {
     FsVolumeImpl targetVolume = (FsVolumeImpl) volumeRef.getVolume();
-    // Copy files to temp dir first
+    // Move files to temp dir first
     ReplicaInfo newReplicaInfo = targetVolume.hardLinkBlockToTmpLocation(block,
         replicaInfo);
     return newReplicaInfo;
