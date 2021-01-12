@@ -456,8 +456,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final String path, final HttpOpParam.Op op, final long openOffset,
       final String excludeDatanodes) throws IOException {
     final RouterRpcServer rpcServer = getRPCServer(router);
-    DatanodeInfo[] dns = null;
-    String resolvedNs = null;
+    DatanodeInfo[] dns = {};
+    String resolvedNs = "";
     try {
       dns = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
       // for simplicity, just take the first remote location to create the file
