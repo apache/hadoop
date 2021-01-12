@@ -38,20 +38,27 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.utils.ABFSContentSummary;
 
+/**
+ * Processes a given path for count of subdirectories, files and total number
+ * of bytes.
+ */
 public class ContentSummaryProcessor {
+  private static final int CORE_POOL_SIZE = 1;
+  private static final int MAX_THREAD_COUNT = 16;
+  private static final int KEEP_ALIVE_TIME = 5;
+  private static final int POLL_TIMEOUT = 100;
+  private static final Logger LOG = LoggerFactory.getLogger(ContentSummaryProcessor.class);
   private final AtomicLong fileCount = new AtomicLong(0L);
   private final AtomicLong directoryCount = new AtomicLong(0L);
   private final AtomicLong totalBytes = new AtomicLong(0L);
   private final AtomicInteger numTasks = new AtomicInteger(0);
   private final AzureBlobFileSystemStore abfsStore;
-  private static final int NUM_THREADS = 16;
-  private final ExecutorService executorService = new ThreadPoolExecutor(1,
-      NUM_THREADS, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
-  private final CompletionService<Void> completionService = new ExecutorCompletionService<>(
-      executorService);
+  private final ExecutorService executorService = new ThreadPoolExecutor(
+      CORE_POOL_SIZE, MAX_THREAD_COUNT, KEEP_ALIVE_TIME, TimeUnit.SECONDS,
+      new SynchronousQueue<>());
+  private final CompletionService<Void> completionService =
+      new ExecutorCompletionService<>(executorService);
   private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
-  private static final Logger LOG = LoggerFactory.getLogger(ContentSummaryProcessor.class);
-  private static final int POLL_TIMEOUT = 100;
 
   public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
     this.abfsStore = abfsStore;
@@ -62,22 +69,31 @@ public class ContentSummaryProcessor {
     try {
       processDirectoryTree(path);
       while (!queue.isEmpty() || numTasks.get() > 0) {
-        LOG.debug("FileStatus queue size = {}, number of submitted unfinished tasks = {}, active thread count = {}",
-                queue.size(), numTasks, ((ThreadPoolExecutor) executorService).getActiveCount());
         try {
           completionService.take().get();
         } finally {
           numTasks.decrementAndGet();
+          LOG.debug("FileStatus queue size = {}, number of submitted unfinished tasks = {}, active thread count = {}",
+              queue.size(), numTasks, ((ThreadPoolExecutor) executorService).getActiveCount());
         }
       }
     } finally {
       executorService.shutdownNow();
+      LOG.debug("Executor shutdown");
     }
-
+    LOG.debug("Processed content summary of subtree under given path");
     return new ABFSContentSummary(totalBytes.get(), directoryCount.get(),
         fileCount.get(), totalBytes.get());
   }
 
+  /**
+   * Calls listStatus on given path and populated fileStatus queue with
+   * subdirectories. Is called by new tasks to process the complete subtree
+   * under a given path
+   * @param path: Path to a file or directory
+   * @throws IOException: listStatus error
+   * @throws InterruptedException: error while inserting into queue
+   */
   private void processDirectoryTree(Path path)
       throws IOException, InterruptedException {
     FileStatus[] fileStatuses = abfsStore.listStatus(path);
@@ -97,13 +113,21 @@ public class ContentSummaryProcessor {
     directoryCount.incrementAndGet();
   }
 
+  /**
+   * Increments file count and byte count
+   * @param fileStatus: Provides file size to update byte count
+   */
   private void processFile(FileStatus fileStatus) {
     fileCount.incrementAndGet();
     totalBytes.addAndGet(fileStatus.getLen());
   }
 
+  /**
+   * Submit task for processing a subdirectory based on current size of
+   * filestatus queue and number of already submitted tasks
+   */
   private synchronized void conditionalSubmitTaskToExecutor() {
-    if (!queue.isEmpty() && numTasks.get() < NUM_THREADS) {
+    if (!queue.isEmpty() && numTasks.get() < MAX_THREAD_COUNT) {
       numTasks.incrementAndGet();
       completionService.submit(() -> {
         FileStatus fileStatus1;

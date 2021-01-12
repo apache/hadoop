@@ -44,9 +44,17 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
 
+  private static final int TEST_BUFFER_SIZE = 20;
+  private static final int FILES_PER_DIRECTORY = 2;
+  private static final int MAX_THREADS = 16;
+  private static final int NUM_FILES_FOR_LIST_MAX_TEST =
+      DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
+
   private final String[] directories = {"/testFolder",
       "/testFolder/testFolder1",
-      "/testFolder/testFolder2", "/testFolder/testFolder3", "/testFolderII",
+      "/testFolder/testFolder2",
+      "/testFolder/testFolder3",
+      "/testFolderII",
       "/testFolder/testFolder2/testFolder4",
       "/testFolder/testFolder2/testFolder5",
       "/testFolder/testFolder3/testFolder6",
@@ -54,7 +62,6 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       "/testFolder/testFolder3/testFolder6/leafDir",
       "/testFolderII/listMaxDir",
       "/testFolderII/listMaxDir/" + DEFAULT_AZURE_LIST_MAX_RESULTS/2 + "_mid_folder"};
-
   private final Path pathToFile = new Path("/testFolder/test1");
   private final Path pathToListMaxDir = new Path("/testFolderII/listMaxDir");
   private final Path pathToLeafDir =
@@ -67,11 +74,7 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       "/testFolder/testFolder2/testFolder5", "/testFolder/testFolder3"};
 
   private final AzureBlobFileSystem fs = createFileSystem();
-  private final int testBufferSize = 20;
-  private final int filesPerDirectory = 2;
-  private final int numFilesForListMaxTest = DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
-  private final byte[] b = new byte[testBufferSize];
-  private final int maxThreads = 16;
+  private final byte[] b = new byte[TEST_BUFFER_SIZE];
 
   public TestGetContentSummary() throws Exception {
     createDirectoryStructure();
@@ -82,46 +85,46 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   public void testFilesystemRoot()
       throws IOException {
     int fileCount =
-        (directories.length - 2) * filesPerDirectory + numFilesForListMaxTest;
+        (directories.length - 2) * FILES_PER_DIRECTORY + NUM_FILES_FOR_LIST_MAX_TEST;
     ContentSummary contentSummary = fs.getContentSummary(new Path("/"));
-    checkContentSummary(contentSummary, directories.length, fileCount,
-        dirsWithNonEmptyFiles.length * filesPerDirectory * testBufferSize);
+    verifyContentSummary(contentSummary, directories.length, fileCount,
+        dirsWithNonEmptyFiles.length * FILES_PER_DIRECTORY * TEST_BUFFER_SIZE);
   }
 
   @Test
   public void testFileContentSummary() throws IOException {
     ContentSummary contentSummary = fs.getContentSummary(pathToFile);
-    checkContentSummary(contentSummary, 0, 1, testBufferSize);
+    verifyContentSummary(contentSummary, 0, 1, TEST_BUFFER_SIZE);
   }
 
   @Test
   public void testLeafDir() throws IOException {
     ContentSummary contentSummary = fs.getContentSummary(pathToLeafDir);
-    checkContentSummary(contentSummary, 0, 0, 0);
+    verifyContentSummary(contentSummary, 0, 0, 0);
   }
 
   @Test
   public void testIntermediateDirWithFilesOnly() throws IOException {
     ContentSummary contentSummary =
         fs.getContentSummary(pathToIntermediateDirWithFilesOnly);
-    checkContentSummary(contentSummary, 0, filesPerDirectory,
-        testBufferSize * filesPerDirectory);
+    verifyContentSummary(contentSummary, 0, FILES_PER_DIRECTORY,
+        TEST_BUFFER_SIZE * FILES_PER_DIRECTORY);
   }
 
   @Test
   public void testIntermediateDirWithFilesAndSubdirs() throws IOException {
     ContentSummary contentSummary =
         fs.getContentSummary(pathToIntermediateDirWithFilesAndSubdirs);
-    checkContentSummary(contentSummary, 3, 3 * filesPerDirectory,
-        testBufferSize * filesPerDirectory);
+    verifyContentSummary(contentSummary, 3, 3 * FILES_PER_DIRECTORY,
+        TEST_BUFFER_SIZE * FILES_PER_DIRECTORY);
   }
 
   @Test
   public void testDirOverListMaxResultsItems()
       throws IOException {
-    checkContentSummary(
+    verifyContentSummary(
         fs.getContentSummary(pathToListMaxDir), 1,
-        numFilesForListMaxTest + filesPerDirectory, 0);
+        NUM_FILES_FOR_LIST_MAX_TEST + FILES_PER_DIRECTORY, 0);
   }
 
   @Test
@@ -133,36 +136,44 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   @Test
   public void testConcurrentGetContentSummaryCalls()
           throws InterruptedException, ExecutionException {
-    ExecutorService executorService = new ThreadPoolExecutor(1,
-            maxThreads, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
+    ExecutorService executorService = new ThreadPoolExecutor(1, MAX_THREADS,
+        5, TimeUnit.SECONDS, new SynchronousQueue<>());
     ArrayList<Future<ContentSummary>> futures = new ArrayList<>();
     for (String directory : directories) {
       Future<ContentSummary> future = executorService.submit(
               () -> fs.getContentSummary(new Path(directory)));
       futures.add(future);
     }
-    int[][] dirCS = {{8, 8 * filesPerDirectory, 8 * testBufferSize}, {0, filesPerDirectory, 2 * testBufferSize},
-            {2, 3 * filesPerDirectory, 2 * testBufferSize}, {3, 3 * filesPerDirectory, 2 * testBufferSize},
-            {2, numFilesForListMaxTest + 2 * filesPerDirectory, 0}, {0, filesPerDirectory, 0},
-            {0, filesPerDirectory, filesPerDirectory * testBufferSize}, {1, filesPerDirectory, 0},
-            {0, filesPerDirectory, 0}, {0, 0, 0}, {1, numFilesForListMaxTest + 2, 0}, {0, filesPerDirectory, 0}};
-    executorService.shutdown();
+    int[][] dirCS = {{8, 8 * FILES_PER_DIRECTORY, 8 * TEST_BUFFER_SIZE},
+        {0, FILES_PER_DIRECTORY, 2 * TEST_BUFFER_SIZE},
+        {2, 3 * FILES_PER_DIRECTORY, 2 * TEST_BUFFER_SIZE},
+        {3, 3 * FILES_PER_DIRECTORY, 2 * TEST_BUFFER_SIZE},
+        {2, NUM_FILES_FOR_LIST_MAX_TEST + 2 * FILES_PER_DIRECTORY, 0},
+        {0, FILES_PER_DIRECTORY, 0},
+        {0, FILES_PER_DIRECTORY, FILES_PER_DIRECTORY * TEST_BUFFER_SIZE},
+        {1, FILES_PER_DIRECTORY, 0},
+        {0, FILES_PER_DIRECTORY, 0},
+        {0, 0, 0},
+        {1, NUM_FILES_FOR_LIST_MAX_TEST + 2, 0},
+        {0, FILES_PER_DIRECTORY, 0}};
+
     for (int i=0; i<directories.length; i++) {
       ContentSummary contentSummary = futures.get(i).get();
-      checkContentSummary(contentSummary, dirCS[i][0], dirCS[i][1], dirCS[i][2]);
+      verifyContentSummary(contentSummary, dirCS[i][0], dirCS[i][1], dirCS[i][2]);
     }
+    executorService.shutdown();
   }
 
-  private void checkContentSummary(ContentSummary contentSummary,
-      long directoryCount, long fileCount, long byteCount) {
+  private void verifyContentSummary(ContentSummary contentSummary,
+      long expectedDirectoryCount, long expectedFileCount, long expectedByteCount) {
     Assertions.assertThat(contentSummary.getDirectoryCount())
-        .describedAs("Incorrect directory count").isEqualTo(directoryCount);
+        .describedAs("Incorrect directory count").isEqualTo(expectedDirectoryCount);
     Assertions.assertThat(contentSummary.getFileCount())
-        .describedAs("Incorrect file count").isEqualTo(fileCount);
+        .describedAs("Incorrect file count").isEqualTo(expectedFileCount);
     Assertions.assertThat(contentSummary.getLength())
-        .describedAs("Incorrect length").isEqualTo(byteCount);
+        .describedAs("Incorrect length").isEqualTo(expectedByteCount);
     Assertions.assertThat(contentSummary.getSpaceConsumed())
-        .describedAs("Incorrect value of space consumed").isEqualTo(byteCount);
+        .describedAs("Incorrect value of space consumed").isEqualTo(expectedByteCount);
   }
 
   private void createDirectoryStructure()
@@ -172,17 +183,17 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
       fs.mkdirs(dirPath);
       if (!(dirPath.equals(pathToLeafDir) || dirPath
           .equals(pathToListMaxDir))) {
-        populateDirWithFiles(dirPath, filesPerDirectory);
+        populateDirWithFiles(dirPath, FILES_PER_DIRECTORY);
       }
     }
     for (String dir : dirsWithNonEmptyFiles) {
-      for (int i = 0; i < filesPerDirectory; i++) {
+      for (int i = 0; i < FILES_PER_DIRECTORY; i++) {
         FSDataOutputStream out = fs.append(new Path(dir + "/test" + i));
         out.write(b);
         out.close();
       }
     }
-    populateDirWithFiles(pathToListMaxDir, numFilesForListMaxTest);
+    populateDirWithFiles(pathToListMaxDir, NUM_FILES_FOR_LIST_MAX_TEST);
   }
 
   private void populateDirWithFiles(Path directory, int numFiles)

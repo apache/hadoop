@@ -367,6 +367,13 @@ public class AzureBlobFileSystem extends FileSystem {
 
   }
 
+  /**
+   * Performs a series of listStatus operations to the count of directories,
+   * files and total number of bytes under a given path
+   * @param path: The given path
+   * @return ContentSummary
+   * @throws IOException
+   */
   @Override
   public ContentSummary getContentSummary(Path path) throws IOException {
     try {
@@ -376,10 +383,12 @@ public class AzureBlobFileSystem extends FileSystem {
           .directoryCount(contentSummary.getDirectoryCount())
           .fileCount(contentSummary.getFileCount())
           .spaceConsumed(contentSummary.getSpaceConsumed()).build();
-    } catch (InterruptedException | ExecutionException e) {
-      LOG.debug((e instanceof InterruptedException || e.getCause() instanceof InterruptedException)
-              ? "Thread interrupted" : e.getCause().getMessage());
+    } catch (InterruptedException e) {
+      LOG.debug("Thread interrupted");
       throw new IOException(e);
+    } catch(ExecutionException ex) {
+      LOG.debug(ex.getCause().getMessage());
+      throw new IOException(ex);
     }
   }
 
