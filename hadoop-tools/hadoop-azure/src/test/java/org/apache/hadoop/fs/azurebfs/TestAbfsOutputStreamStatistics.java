@@ -94,17 +94,11 @@ public class TestAbfsOutputStreamStatistics
     assertEquals("Mismatch in time spent on waiting for tasks to complete", 0,
         abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
 
-    int smallRandomStartTime =
-        new Random().nextInt(LOW_RANGE_FOR_RANDOM_VALUE);
-    int smallRandomEndTime =
-        new Random().nextInt(LOW_RANGE_FOR_RANDOM_VALUE)
-            + smallRandomStartTime;
-    int smallDiff = smallRandomEndTime - smallRandomStartTime;
     abfsOutputStreamStatistics
-        .timeSpentTaskWait(smallRandomStartTime, smallRandomEndTime);
-    //Test for small random value of timeSpentWaitTask.
+        .timeSpentTaskWait();
+    //Test for one op call value of timeSpentWaitTask.
     assertEquals("Mismatch in time spent on waiting for tasks to complete",
-        smallDiff, abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
+        1, abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
 
     //Reset statistics for the next test.
     abfsOutputStreamStatistics = new AbfsOutputStreamStatisticsImpl();
@@ -113,23 +107,16 @@ public class TestAbfsOutputStreamStatistics
      * Entering multiple values for timeSpentTaskWait() to check the
      * summation is happening correctly. Also calculating the expected result.
      */
-    int expectedRandomDiff = 0;
     for (int i = 0; i < OPERATIONS; i++) {
-      int largeRandomStartTime =
-          new Random().nextInt(HIGH_RANGE_FOR_RANDOM_VALUE);
-      int largeRandomEndTime = new Random().nextInt(HIGH_RANGE_FOR_RANDOM_VALUE)
-          + largeRandomStartTime;
-      abfsOutputStreamStatistics
-          .timeSpentTaskWait(largeRandomStartTime, largeRandomEndTime);
-      expectedRandomDiff += largeRandomEndTime - largeRandomStartTime;
+       abfsOutputStreamStatistics.timeSpentTaskWait();
     }
 
     /*
-     * Test to check correct value of timeSpentTaskWait after multiple
-     * random values are passed in it.
+     * Test to check correct value of timeSpentTaskWait after OPERATIONS
+     * number of op calls.
      */
     assertEquals("Mismatch in time spent on waiting for tasks to complete",
-        expectedRandomDiff,
+        OPERATIONS,
         abfsOutputStreamStatistics.getTimeSpentOnTaskWait());
   }
 
