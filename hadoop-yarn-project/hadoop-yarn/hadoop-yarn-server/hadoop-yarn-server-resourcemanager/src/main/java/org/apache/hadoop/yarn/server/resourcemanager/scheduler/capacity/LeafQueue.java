@@ -200,26 +200,18 @@ public class LeafQueue extends AbstractCSQueue {
       usersManager.setUserLimit(conf.getUserLimit(getQueuePath()));
       usersManager.setUserLimitFactor(conf.getUserLimitFactor(getQueuePath()));
 
-      maxApplications = conf.getMaximumApplicationsPerQueue(getQueuePath());
-      if (maxApplications < 0) {
-        int maxGlobalPerQueueApps = schedConf
-            .getGlobalMaximumApplicationsPerQueue();
-        if (maxGlobalPerQueueApps > 0) {
-          maxApplications = maxGlobalPerQueueApps;
-        } else {
-          int maxSystemApps = schedConf.
-              getMaximumSystemApplications();
-          maxApplications =
-              (int) (maxSystemApps * queueCapacities.getAbsoluteCapacity());
-        }
-      }
-      maxApplicationsPerUser = Math.min(maxApplications,
-          (int) (maxApplications * (usersManager.getUserLimit() / 100.0f)
-              * usersManager.getUserLimitFactor()));
-
       maxAMResourcePerQueuePercent =
           conf.getMaximumApplicationMasterResourcePerQueuePercent(
               getQueuePath());
+
+      maxApplications = conf.getMaximumApplicationsPerQueue(getQueuePath());
+      if (maxApplications < 0) {
+        int maxGlobalPerQueueApps =
+            csContext.getConfiguration().getGlobalMaximumApplicationsPerQueue();
+        if (maxGlobalPerQueueApps > 0) {
+          maxApplications = maxGlobalPerQueueApps;
+        }
+      }
 
       priorityAcls = conf.getPriorityAcls(getQueuePath(),
           scheduler.getMaxClusterLevelAppPriority());
@@ -639,7 +631,8 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       // Check submission limits for queues
-      if (getNumApplications() >= getMaxApplications()) {
+      //TODO recalculate max applications because they can depend on capacity
+      if (getNumApplications() >= getMaxApplications() && !(this instanceof AutoCreatedLeafQueue)) {
         String msg =
             "Queue " + getQueuePath() + " already has " + getNumApplications()
                 + " applications,"
@@ -650,7 +643,8 @@ public class LeafQueue extends AbstractCSQueue {
 
       // Check submission limits for the user on this queue
       User user = usersManager.getUserAndAddIfAbsent(userName);
-      if (user.getTotalApplications() >= getMaxApplicationsPerUser()) {
+      //TODO recalculate max applications because they can depend on capacity
+      if (user.getTotalApplications() >= getMaxApplicationsPerUser() &&  !(this instanceof AutoCreatedLeafQueue)) {
         String msg = "Queue " + getQueuePath() + " already has " + user
             .getTotalApplications() + " applications from user " + userName
             + " cannot accept submission of application: " + applicationId;
@@ -1893,13 +1887,35 @@ public class LeafQueue extends AbstractCSQueue {
         currentResourceLimits.getLimit()));
   }
 
+  private void updateAbsoluteCapacitiesAndRelatedFields() {
+    updateAbsoluteCapacities();
+    CapacitySchedulerConfiguration schedulerConf = csContext.getConfiguration();
+
+    // If maxApplications not set, use the system total max app, apply newly
+    // calculated abs capacity of the queue.
+    if (maxApplications <= 0) {
+      int maxSystemApps = schedulerConf.
+          getMaximumSystemApplications();
+      maxApplications =
+          (int) (maxSystemApps * queueCapacities.getAbsoluteCapacity());
+    }
+    maxApplicationsPerUser = Math.min(maxApplications,
+        (int) (maxApplications * (usersManager.getUserLimit() / 100.0f)
+            * usersManager.getUserLimitFactor()));
+  }
+
   @Override
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits currentResourceLimits) {
     writeLock.lock();
     try {
-      updateCurrentResourceLimits(currentResourceLimits, clusterResource);
       lastClusterResource = clusterResource;
+
+      updateAbsoluteCapacitiesAndRelatedFields();
+
+      super.updateEffectiveResources(clusterResource);
+
+      updateCurrentResourceLimits(currentResourceLimits, clusterResource);
 
       // Update headroom info based on new cluster resource value
       // absoluteMaxCapacity now,  will be replaced with absoluteMaxAvailCapacity

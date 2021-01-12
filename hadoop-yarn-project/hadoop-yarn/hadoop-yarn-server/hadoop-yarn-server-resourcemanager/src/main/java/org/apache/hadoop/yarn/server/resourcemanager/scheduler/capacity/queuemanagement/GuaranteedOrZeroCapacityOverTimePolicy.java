@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .queuemanagement;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .QueueManagementDynamicEditPolicy;
 import org.slf4j.Logger;
@@ -358,6 +359,12 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   public List<QueueManagementChange> computeQueueManagementChanges()
       throws SchedulerDynamicEditException {
 
+    // Update template absolute capacities as the capacities could have changed
+    // in weight mode
+    updateTemplateAbsoluteCapacities(managedParentQueue.getQueueCapacities(),
+        (GuaranteedOrZeroCapacityOverTimePolicy)
+            managedParentQueue.getAutoCreatedQueueManagementPolicy());
+
     //TODO : Add support for node labels on leaf queue template configurations
     //synch/add missing leaf queue(s) if any to state
     updateLeafQueueState();
@@ -468,6 +475,24 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     } finally {
       readLock.unlock();
     }
+  }
+
+  private void updateTemplateAbsoluteCapacities(QueueCapacities parentQueueCapacities,
+                                                GuaranteedOrZeroCapacityOverTimePolicy policy) {
+    writeLock.lock();
+    try {
+      CSQueueUtils.updateAbsoluteCapacitiesByNodeLabels(
+          policy.leafQueueTemplate.getQueueCapacities(),
+          parentQueueCapacities, policy.leafQueueTemplateNodeLabels);
+      policy.leafQueueTemplateCapacities =
+          policy.leafQueueTemplate.getQueueCapacities();
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public void updateTemplateAbsoluteCapacities(QueueCapacities queueCapacities) {
+    updateTemplateAbsoluteCapacities(queueCapacities, this);
   }
 
   private float getTotalDeactivatedCapacity(
@@ -821,6 +846,10 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         leafQueueTemplateCapacities.getCapacity(nodeLabel));
     capacities.setMaximumCapacity(nodeLabel,
         leafQueueTemplateCapacities.getMaximumCapacity(nodeLabel));
+    capacities.setAbsoluteCapacity(nodeLabel,
+        leafQueueTemplateCapacities.getAbsoluteCapacity(nodeLabel));
+    capacities.setAbsoluteMaximumCapacity(nodeLabel,
+        leafQueueTemplateCapacities.getAbsoluteMaximumCapacity(nodeLabel));
   }
 
   @VisibleForTesting

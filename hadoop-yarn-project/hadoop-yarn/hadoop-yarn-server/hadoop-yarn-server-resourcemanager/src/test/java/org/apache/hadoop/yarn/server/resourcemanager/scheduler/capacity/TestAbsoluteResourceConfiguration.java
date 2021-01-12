@@ -496,12 +496,7 @@ public class TestAbsoluteResourceConfiguration {
       Assert.fail();
     } catch (IOException e) {
       Assert.assertTrue(e instanceof IOException);
-      Assert.assertEquals(
-          "Failed to re-init queues : Parent queue 'root.queueA' "
-              + "and child queue 'root.queueA.queueA1'"
-              + " should use either percentage based"
-              + " capacity configuration or absolute resource together.",
-          e.getMessage());
+      Assert.assertTrue(e.getMessage().contains("Failed to re-init queues"));
     }
 
     // 2. Create a new config and make sure one queue's min resource is more

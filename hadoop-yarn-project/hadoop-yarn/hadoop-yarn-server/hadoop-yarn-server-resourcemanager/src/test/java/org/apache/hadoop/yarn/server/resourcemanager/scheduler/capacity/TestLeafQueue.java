@@ -3677,11 +3677,13 @@ public class TestLeafQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    // Manipulate queue 'a'
+    // Manipulate queue 'b'
     LeafQueue b = stubLeafQueue((LeafQueue) queues.get(B));
     assertEquals(0.1f, b.getMaxAMResourcePerQueuePercent(), 1e-3f);
-    assertEquals(b.calculateAndGetAMResourceLimit(),
-        Resources.createResource(159 * GB, 1));
+    // Queue b has 100 * 16 = 1600 GB effective usable resource, so the
+    // AM limit is 1600 GB * 0.1 * 0.99 = 162816 MB
+    assertEquals(Resources.createResource(162816, 1),
+        b.calculateAndGetAMResourceLimit());
 
     csConf.setFloat(
         CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
@@ -4747,6 +4749,9 @@ public class TestLeafQueue {
       LeafQueue leafQueue = new LeafQueue(csContext, conf,
           leafQueueName, cs.getRootQueue(),
           null);
+
+      leafQueue.updateClusterResource(Resource.newInstance(0, 0),
+          new ResourceLimits(Resource.newInstance(0, 0)));
 
       assertEquals(30, leafQueue.getNodeLocalityDelay());
       assertEquals(20, leafQueue.getMaxApplications());

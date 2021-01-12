@@ -1027,7 +1027,7 @@ public class TestRMWebServices extends JerseyTestBase {
     Assert.assertEquals(Status.BAD_REQUEST
             .getStatusCode(), response.getStatus());
     Assert.assertTrue(response.getEntity().toString()
-            .contains("Illegal capacity of 0.5 for children of queue"));
+            .contains("IOException"));
   }
 
   @Test
