@@ -71,10 +71,8 @@ RUN apt-get -q update \
         pkg-config \
         python \
         python2.7 \
-        python-pip \
         python-pkg-resources \
         python-setuptools \
-        python-wheel \
         rsync \
         shellcheck \
         software-properties-common \
@@ -91,6 +89,14 @@ ENV MAVEN_HOME /usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV FINDBUGS_HOME /usr
+
+RUN mkdir -p /opt/pip \
+    && curl -L https://bootstrap.pypa.io/get-pip.py > get-pip.py \
+    && mv get-pip.py /opt/pip \
+    && cd /opt/pip \
+    && python2.7 get-pip.py \
+    && cd /root \
+    && rm -rf /opt/pip
 
 #######
 # Install Boost 1.72 (1.65 ships with Bionic)
