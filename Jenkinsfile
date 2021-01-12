@@ -119,7 +119,7 @@ pipeline {
                         # changing these to higher values may cause problems
                         # with other jobs on systemd-enabled machines
                         YETUS_ARGS+=("--proclimit=5500")
-                        YETUS_ARGS+=("--dockermemlimit=20g")
+                        YETUS_ARGS+=("--dockermemlimit=22g")
 
                         # -1 findbugs issues that show up prior to the patch being applied
                         YETUS_ARGS+=("--findbugs-strict-precheck")
