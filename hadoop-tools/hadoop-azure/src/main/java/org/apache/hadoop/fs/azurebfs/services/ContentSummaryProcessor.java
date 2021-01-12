@@ -38,10 +38,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.utils.ABFSContentSummary;
 
-/**
- * Processes a given path for count of subdirectories, files and total number
- * of bytes.
- */
 public class ContentSummaryProcessor {
   private static final int CORE_POOL_SIZE = 1;
   private static final int MAX_THREAD_COUNT = 16;
@@ -60,6 +56,12 @@ public class ContentSummaryProcessor {
       new ExecutorCompletionService<>(executorService);
   private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
 
+  /**
+   * Processes a given path for count of subdirectories, files and total number
+   * of bytes
+   * @param abfsStore Instance of AzureBlobFileSystemStore, used to make
+   * listStatus calls to server
+   */
   public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
     this.abfsStore = abfsStore;
   }

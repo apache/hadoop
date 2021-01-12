@@ -368,11 +368,12 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   /**
-   * Performs a series of listStatus operations to the count of directories,
+   * Returns a ContentSummary instance containing the count of directories,
    * files and total number of bytes under a given path
-   * @param path: The given path
+   * @param path The given path
    * @return ContentSummary
-   * @throws IOException
+   * @throws IOException if an error is encountered during listStatus calls
+   * or if there is any issue with the thread pool used while processing
    */
   @Override
   public ContentSummary getContentSummary(Path path) throws IOException {
