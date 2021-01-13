@@ -98,6 +98,9 @@ ENV FINDBUGS_HOME /usr
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
+####
+# Install pip (deprecated from Focal toolchain)
+####
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/pip \
     && curl -L https://bootstrap.pypa.io/get-pip.py > get-pip.py \
@@ -122,9 +125,9 @@ RUN pip2 install \
 ####
 RUN pip2 install python-dateutil==2.7.3
 
-###
+####
 # Install bower
-###
+####
 # hadolint ignore=DL3008
 RUN npm install -g bower@1.8.8
 
