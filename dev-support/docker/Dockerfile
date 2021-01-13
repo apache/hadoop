@@ -51,6 +51,7 @@ RUN apt-get -q update \
         gcc \
         git \
         gnupg-agent \
+        hugo \
         libbcprov-java \
         libboost-all-dev \
         libbz2-dev \
@@ -169,12 +170,6 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 # So tell Yetus not to read the rest of the file:
 # YETUS CUT HERE
 ###
-
-# Hugo static website generator for new hadoop site
-RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-64bit.deb \
-    && dpkg --install hugo.deb \
-    && rm hugo.deb
-
 
 # Add a welcome message and environment checks.
 COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh
