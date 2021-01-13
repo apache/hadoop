@@ -57,6 +57,7 @@ RUN apt-get -q update \
         libcurl4-openssl-dev \
         libfuse-dev \
         libprotobuf-dev \
+        libprotobuf-java \
         libprotoc-dev \
         libsasl2-dev \
         libsnappy-dev \
@@ -90,6 +91,8 @@ ENV MAVEN_HOME /usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV FINDBUGS_HOME /usr
+ENV PROTOBUF_HOME /opt/protobuf
+ENV PATH "${PATH}:/opt/protobuf/bin"
 
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/pip \
@@ -99,23 +102,6 @@ RUN mkdir -p /opt/pip \
     && python2.7 get-pip.py \
     && cd /root \
     && rm -rf /opt/pip
-
-######
-# Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
-######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/protobuf-src \
-    && curl -L -s -S \
-      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
-      -o /opt/protobuf.tar.gz \
-    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
-    && cd /opt/protobuf-src \
-    && ./configure --prefix=/opt/protobuf \
-    && make install \
-    && cd /root \
-    && rm -rf /opt/protobuf-src
-ENV PROTOBUF_HOME /opt/protobuf
-ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ####
 # Install pylint at fixed version (2.0.0 removed python2 support)
