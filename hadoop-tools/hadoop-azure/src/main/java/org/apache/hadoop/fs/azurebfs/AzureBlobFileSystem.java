@@ -37,16 +37,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.azurebfs.services.ListStatusRemoteIterator;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -988,8 +989,14 @@ public class AzureBlobFileSystem extends FileSystem {
   public RemoteIterator<FileStatus> listStatusIterator(Path path)
       throws IOException {
     LOG.debug("AzureBlobFileSystem.listStatusIterator path : {}", path);
-    Path qualifiedPath = makeQualified(path);
-    return new ListStatusRemoteIterator(qualifiedPath, abfsStore);
+    if (abfsStore.getAbfsConfiguration().enableAbfsListIterator()) {
+      Path qualifiedPath = makeQualified(path);
+      AbfsListStatusRemoteIterator abfsLsItr =
+          new AbfsListStatusRemoteIterator(qualifiedPath, abfsStore);
+      return RemoteIterators.typeCastingRemoteIterator(abfsLsItr);
+    } else {
+      return super.listStatusIterator(path);
+    }
   }
 
   private FileStatus tryGetFileStatus(final Path f) {

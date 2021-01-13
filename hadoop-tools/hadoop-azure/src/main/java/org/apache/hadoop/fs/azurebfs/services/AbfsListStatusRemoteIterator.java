@@ -33,31 +33,30 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 
-public class ListStatusRemoteIterator implements RemoteIterator<FileStatus> {
+public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> {
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(ListStatusRemoteIterator.class);
+      .getLogger(AbfsListStatusRemoteIterator.class);
 
   private static final boolean FETCH_ALL_FALSE = false;
   private static final int MAX_QUEUE_SIZE = 10;
 
   private final Path path;
-  private final AzureBlobFileSystemStore abfsStore;
+  private final ListingSupport listingSupport;
   private final ArrayBlockingQueue<Iterator<FileStatus>> iteratorsQueue;
   private final Object asyncOpLock = new Object();
 
+  private volatile boolean isAsyncInProgress = false;
   private boolean firstBatch = true;
-  private boolean isAsyncInProgress = false;
   private String continuation;
   private Iterator<FileStatus> currIterator;
   private IOException ioException;
 
-  public ListStatusRemoteIterator(final Path path,
-      final AzureBlobFileSystemStore abfsStore) {
+  public AbfsListStatusRemoteIterator(final Path path,
+      final ListingSupport listingSupport) {
     this.path = path;
-    this.abfsStore = abfsStore;
+    this.listingSupport = listingSupport;
     iteratorsQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
     currIterator = Collections.emptyIterator();
     fetchBatchesAsync();
@@ -103,15 +102,11 @@ public class ListStatusRemoteIterator implements RemoteIterator<FileStatus> {
     }
   }
 
-  private boolean isListingComplete() {
+  private synchronized boolean isListingComplete() {
     return !firstBatch && (continuation == null || continuation.isEmpty());
   }
 
   private void fetchBatchesAsync() {
-    CompletableFuture.runAsync(() -> asyncOp());
-  }
-
-  private void asyncOp() {
     if (isAsyncInProgress) {
       return;
     }
@@ -121,6 +116,10 @@ public class ListStatusRemoteIterator implements RemoteIterator<FileStatus> {
       }
       isAsyncInProgress = true;
     }
+    CompletableFuture.runAsync(() -> asyncOp());
+  }
+
+  private void asyncOp() {
     try {
       while (!isListingComplete() && iteratorsQueue.size() <= MAX_QUEUE_SIZE) {
         addNextBatchIteratorToQueue();
@@ -131,14 +130,16 @@ public class ListStatusRemoteIterator implements RemoteIterator<FileStatus> {
       Thread.currentThread().interrupt();
       LOG.error("Thread got interrupted: {}", e);
     } finally {
-      isAsyncInProgress = false;
+      synchronized (asyncOpLock) {
+        isAsyncInProgress = false;
+      }
     }
   }
 
   private synchronized void addNextBatchIteratorToQueue()
       throws IOException, InterruptedException {
     List<FileStatus> fileStatuses = new ArrayList<>();
-    continuation = abfsStore
+    continuation = listingSupport
         .listStatus(path, null, fileStatuses, FETCH_ALL_FALSE, continuation);
     iteratorsQueue.put(fileStatuses.iterator());
     if (firstBatch) {

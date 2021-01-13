@@ -102,6 +102,7 @@ import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
+import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
@@ -131,7 +132,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AzureBlobFileSystemStore implements Closeable {
+public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystemStore.class);
 
   private AbfsClient client;
@@ -838,6 +839,7 @@ public class AzureBlobFileSystemStore implements Closeable {
    * @param path The list path.
    * @return the entries in the path.
    * */
+  @Override
   public FileStatus[] listStatus(final Path path) throws IOException {
     return listStatus(path, null);
   }
@@ -854,12 +856,14 @@ public class AzureBlobFileSystemStore implements Closeable {
    * @return the entries in the path start from  "startFrom" in lexical order.
    * */
   @InterfaceStability.Unstable
+  @Override
   public FileStatus[] listStatus(final Path path, final String startFrom) throws IOException {
     List<FileStatus> fileStatuses = new ArrayList<>();
     listStatus(path, startFrom, fileStatuses, true, null);
     return fileStatuses.toArray(new FileStatus[fileStatuses.size()]);
   }
 
+  @Override
   public String listStatus(final Path path, final String startFrom,
       List<FileStatus> fileStatuses, final boolean fetchAll,
       String continuation) throws IOException {
@@ -874,7 +878,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
     final String relativePath = getRelativePath(path);
 
-    if (continuation == null || continuation.length() < 1) {
+    if (continuation == null || continuation.isEmpty()) {
       // generate continuation token if a valid startFrom is provided.
       if (startFrom != null && !startFrom.isEmpty()) {
         continuation = getIsNamespaceEnabled()
