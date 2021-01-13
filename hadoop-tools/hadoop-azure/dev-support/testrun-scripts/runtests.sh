@@ -39,12 +39,9 @@ properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled" "fs.a
 values=("{account name}.dfs.core.windows.net" "true" "SharedKey")
 generateconfigs
 
-# shellcheck disable=SC2034
-{
-  combination=NonHNS-SharedKey
-  properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled" "fs.azure.account.auth.type")
-  values=("{account name}.dfs.core.windows.net" "false" "SharedKey")
-}
+combination=NonHNS-SharedKey
+properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled" "fs.azure.account.auth.type")
+values=("{account name}.dfs.core.windows.net" "false" "SharedKey")
 generateconfigs
 
 
