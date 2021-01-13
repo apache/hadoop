@@ -115,6 +115,10 @@ public class FSConfigToCSConfigArgumentHandler {
     RULES_TO_FILE("rules to external file", "e", "rules-to-file",
         "Generates the converted placement rules to an external JSON file " +
         "called mapping-rules.json", false),
+    CONVERT_PERCENTAGES("convert weights to percentages",
+        "pc", "percentage",
+        "Converts FS queue weights to percentages",
+        false),
     HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
@@ -275,6 +279,8 @@ public class FSConfigToCSConfigArgumentHandler {
         .withConvertPlacementRules(convertPlacementRules)
         .withPlacementRulesToFile(
             cliParser.hasOption(CliOption.RULES_TO_FILE.shortSwitch))
+        .withUsePercentages(
+            cliParser.hasOption(CliOption.CONVERT_PERCENTAGES.shortSwitch))
         .build();
   }
 

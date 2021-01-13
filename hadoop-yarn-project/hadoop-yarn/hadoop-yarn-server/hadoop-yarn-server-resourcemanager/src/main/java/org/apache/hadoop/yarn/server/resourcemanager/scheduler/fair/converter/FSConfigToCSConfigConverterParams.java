@@ -29,7 +29,7 @@ public final class FSConfigToCSConfigConverterParams {
   private String outputDirectory;
   private boolean convertPlacementRules;
   private boolean placementRulesToFile;
-
+  private boolean usePercentages;
 
   private FSConfigToCSConfigConverterParams() {
     //must use builder
@@ -67,6 +67,10 @@ public final class FSConfigToCSConfigConverterParams {
     return placementRulesToFile;
   }
 
+  public boolean isUsePercentages() {
+    return usePercentages;
+  }
+
   @Override
   public String toString() {
     return "FSConfigToCSConfigConverterParams{" +
@@ -84,6 +88,7 @@ public final class FSConfigToCSConfigConverterParams {
    * Builder that can construct FSConfigToCSConfigConverterParams objects.
    *
    */
+  @SuppressWarnings("checkstyle:hiddenfield")
   public static final class Builder {
     private String yarnSiteXmlConfig;
     private String fairSchedulerXmlConfig;
@@ -93,6 +98,7 @@ public final class FSConfigToCSConfigConverterParams {
     private String outputDirectory;
     private boolean convertPlacementRules;
     private boolean placementRulesToFile;
+    private boolean usePercentages;
 
     private Builder() {
     }
@@ -141,6 +147,11 @@ public final class FSConfigToCSConfigConverterParams {
       return this;
     }
 
+    public Builder withUsePercentages(boolean usePercentages) {
+      this.usePercentages = usePercentages;
+      return this;
+    }
+
     public FSConfigToCSConfigConverterParams build() {
       FSConfigToCSConfigConverterParams params =
           new FSConfigToCSConfigConverterParams();
@@ -152,6 +163,7 @@ public final class FSConfigToCSConfigConverterParams {
       params.outputDirectory = this.outputDirectory;
       params.convertPlacementRules = this.convertPlacementRules;
       params.placementRulesToFile = this.placementRulesToFile;
+      params.usePercentages = this.usePercentages;
       return params;
     }
   }

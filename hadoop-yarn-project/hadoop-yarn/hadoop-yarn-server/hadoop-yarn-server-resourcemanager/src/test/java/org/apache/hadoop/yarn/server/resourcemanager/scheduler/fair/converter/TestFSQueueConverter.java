@@ -265,8 +265,8 @@ public class TestFSQueueConverter {
   }
 
   @Test
-  public void testChildCapacity() {
-    converter = builder.build();
+  public void testChildCapacityInCapacityMode() {
+    converter = builder.withPercentages(true).build();
 
     converter.convertQueueHierarchy(rootQueue);
 
@@ -300,8 +300,43 @@ public class TestFSQueueConverter {
   }
 
   @Test
+  public void testChildCapacityInWeightMode() {
+    converter = builder.withPercentages(false).build();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    // root
+    assertEquals("root.default weight", "1.0w",
+        csConfig.get(PREFIX + "root.default.capacity"));
+    assertEquals("root.admins weight", "1.0w",
+        csConfig.get(PREFIX + "root.admins.capacity"));
+    assertEquals("root.users weight", "1.0w",
+        csConfig.get(PREFIX + "root.users.capacity"));
+
+    // root.users
+    assertEquals("root.users.john weight", "1.0w",
+        csConfig.get(PREFIX + "root.users.john.capacity"));
+    assertEquals("root.users.joe weight", "3.0w",
+        csConfig.get(PREFIX + "root.users.joe.capacity"));
+
+    // root.admins
+    assertEquals("root.admins.alice weight", "3.0w",
+        csConfig.get(PREFIX + "root.admins.alice.capacity"));
+    assertEquals("root.admins.bob weight", "1.0w",
+        csConfig.get(PREFIX + "root.admins.bob.capacity"));
+
+    // root.misc
+    assertEquals("root.misc weight", "0.0w",
+        csConfig.get(PREFIX + "root.misc.capacity"));
+    assertEquals("root.misc.a weight", "0.0w",
+        csConfig.get(PREFIX + "root.misc.a.capacity"));
+    assertEquals("root.misc.b weight", "0.0w",
+        csConfig.get(PREFIX + "root.misc.b.capacity"));
+  }
+
+  @Test
   public void testZeroSumCapacityValidation() {
-    converter = builder.build();
+    converter = builder.withPercentages(true).build();
 
     converter.convertQueueHierarchy(rootQueue);
 

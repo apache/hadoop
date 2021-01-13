@@ -102,6 +102,7 @@ public class FSConfigToCSConfigConverter {
   private boolean convertPlacementRules = true;
   private String outputDirectory;
   private boolean rulesToFile;
+  private boolean usePercentages;
 
   public FSConfigToCSConfigConverter(FSConfigToCSConfigRuleHandler
       ruleHandler, ConversionOptions conversionOptions) {
@@ -119,6 +120,7 @@ public class FSConfigToCSConfigConverter {
     this.convertPlacementRules = params.isConvertPlacementRules();
     this.outputDirectory = params.getOutputDirectory();
     this.rulesToFile = params.isPlacementRulesToFile();
+    this.usePercentages = params.isUsePercentages();
     prepareOutputFiles(params.isConsole());
     loadConversionRules(params.getConversionRulesConfig());
     Configuration inputYarnSiteConfig = getInputYarnSiteConfig(params);
@@ -300,6 +302,7 @@ public class FSConfigToCSConfigConverter {
         .withQueueMaxAppsDefault(queueMaxAppsDefault)
         .withConversionOptions(conversionOptions)
         .withDrfUsed(drfUsed)
+        .withPercentages(usePercentages)
         .build();
 
     queueConverter.convertQueueHierarchy(rootQueue);

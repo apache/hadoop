@@ -1,22 +1,24 @@
-/**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.weightconversion;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -27,32 +29,41 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
-import org.apache.hadoop.yarn.util.resource.Resources;
 
-/**
- * Utility class that converts Fair Scheduler weights to capacities in
- * percentages.
- *
- * It also makes sure that the sum of the capacities adds up to exactly 100.0.
- *
- * There is a special case when one or more queues have a capacity of 0. This
- * can happen if the weight was originally 0 in the FS configuration. In
- * this case, we need an extra queue with a capacity of 100.0 to have a valid
- * CS configuration.
- */
-final class WeightToCapacityConversionUtil {
+public class WeightToPercentConverter
+    implements CapacityConverter {
+
   private static final BigDecimal HUNDRED = new BigDecimal(100).setScale(3);
   private static final BigDecimal ZERO = new BigDecimal(0).setScale(3);
 
-  private WeightToCapacityConversionUtil() {
-    // no instances
+  @Override
+  public void convertWeightsForChildQueues(FSQueue queue,
+      Configuration csConfig) {
+    List<FSQueue> children = queue.getChildQueues();
+
+    int totalWeight = getTotalWeight(children);
+    Pair<Map<String, BigDecimal>, Boolean> result =
+        getCapacities(totalWeight, children);
+
+    Map<String, BigDecimal> capacities = result.getLeft();
+    boolean shouldAllowZeroSumCapacity = result.getRight();
+
+    capacities
+        .forEach((key, value) -> csConfig.set(PREFIX + key +
+                ".capacity", value.toString()));
+
+    if (shouldAllowZeroSumCapacity) {
+      String queueName = queue.getName();
+      csConfig.setBoolean(
+          PREFIX + queueName + ".allow-zero-capacity-sum", true);
+    }
   }
 
-  @VisibleForTesting
-  static Pair<Map<String, BigDecimal>, Boolean> getCapacities(int totalWeight,
-      List<FSQueue> children, FSConfigToCSConfigRuleHandler ruleHandler) {
+  private Pair<Map<String, BigDecimal>, Boolean> getCapacities(int totalWeight,
+      List<FSQueue> children) {
 
     if (children.size() == 0) {
       return Pair.of(new HashMap<>(), false);
@@ -82,10 +93,6 @@ final class WeightToCapacityConversionUtil {
                   .setScale(3);
             }
 
-            if (Resources.none().compareTo(queue.getMinShare()) != 0) {
-              ruleHandler.handleMinResources();
-            }
-
             capacities.put(queue.getName(), pct);
           });
 
@@ -105,9 +112,8 @@ final class WeightToCapacityConversionUtil {
   }
 
   @VisibleForTesting
-  static boolean fixCapacities(Map<String, BigDecimal> capacities,
+  boolean fixCapacities(Map<String, BigDecimal> capacities,
       BigDecimal totalPct) {
-    final BigDecimal hundred = new BigDecimal(100).setScale(3);
     boolean shouldAllowZeroSumCapacity = false;
 
     // Sort the list so we'll adjust the highest capacity value,
@@ -134,11 +140,19 @@ final class WeightToCapacityConversionUtil {
       // because we have zero weights on this level
       shouldAllowZeroSumCapacity = true;
     } else {
-      BigDecimal diff = hundred.subtract(totalPct);
+      BigDecimal diff = HUNDRED.subtract(totalPct);
       BigDecimal correctedHighest = highestCapacity.add(diff);
       capacities.put(highestCapacityQueue, correctedHighest);
     }
 
     return shouldAllowZeroSumCapacity;
+  }
+
+  private int getTotalWeight(List<FSQueue> children) {
+    double sum = children
+                  .stream()
+                  .mapToDouble(c -> c.getWeight())
+                  .sum();
+    return (int) sum;
   }
 }

@@ -713,4 +713,41 @@ public class TestFSConfigToCSConfigArgumentHandler {
     assertFalse("-a switch wasn't provided but async scheduling option is true",
             conversionOptions.isEnableAsyncScheduler());
   }
+
+  @Test
+  public void testUsePercentages() throws Exception {
+    testUsePercentages(true);
+  }
+
+  @Test
+  public void testUseWeights() throws Exception {
+    testUsePercentages(false);
+  }
+
+  private void testUsePercentages(boolean enabled) throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+        new FSConfigToCSConfigArgumentHandler(conversionOptions, mockValidator);
+    argumentHandler.setConverterSupplier(this::getMockConverter);
+
+    String[] args;
+    if (enabled) {
+      args = getArgumentsAsArrayWithDefaults("-f",
+          FSConfigConverterTestCommons.FS_ALLOC_FILE, "-p",
+          "-pc");
+    } else {
+      args = getArgumentsAsArrayWithDefaults("-f",
+          FSConfigConverterTestCommons.FS_ALLOC_FILE, "-p");
+    }
+
+    argumentHandler.parseAndConvert(args);
+
+    ArgumentCaptor<FSConfigToCSConfigConverterParams> captor =
+        ArgumentCaptor.forClass(FSConfigToCSConfigConverterParams.class);
+    verify(mockConverter).convert(captor.capture());
+    FSConfigToCSConfigConverterParams params = captor.getValue();
+
+    assertEquals("Use percentages", enabled, params.isUsePercentages());
+  }
 }
