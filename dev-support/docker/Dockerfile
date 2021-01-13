@@ -52,6 +52,7 @@ RUN apt-get -q update \
         git \
         gnupg-agent \
         libbcprov-java \
+        libboost-all-dev \
         libbz2-dev \
         libcurl4-openssl-dev \
         libfuse-dev \
@@ -90,6 +91,7 @@ ENV MAVEN_HOME /usr
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV FINDBUGS_HOME /usr
 
+# hadolint ignore=DL3003
 RUN mkdir -p /opt/pip \
     && curl -L https://bootstrap.pypa.io/get-pip.py > get-pip.py \
     && mv get-pip.py /opt/pip \
@@ -97,21 +99,6 @@ RUN mkdir -p /opt/pip \
     && python2.7 get-pip.py \
     && cd /root \
     && rm -rf /opt/pip
-
-#######
-# Install Boost 1.72 (1.65 ships with Bionic)
-#######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/boost-library \
-    && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
-    && mv boost_1_72_0.tar.bz2 /opt/boost-library \
-    && cd /opt/boost-library \
-    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
-    && cd /opt/boost-library/boost_1_72_0 \
-    && ./bootstrap.sh --prefix=/usr/ \
-    && ./b2 --without-python install \
-    && cd /root \
-    && rm -rf /opt/boost-library
 
 ######
 # Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
