@@ -3956,6 +3956,18 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
       false;
 
+  /**
+   * Connection and Read timeout from the Router to RM.
+   */
+  public static final String ROUTER_WEBAPP_CONNECT_TIMEOUT =
+      ROUTER_WEBAPP_PREFIX + "connect-timeout";
+  public static final long DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT =
+      TimeUnit.SECONDS.toMillis(30);
+  public static final String ROUTER_WEBAPP_READ_TIMEOUT =
+      ROUTER_WEBAPP_PREFIX + "read-timeout";
+  public static final long DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT =
+      TimeUnit.SECONDS.toMillis(30);
+
   ////////////////////////////////
   // CSI Volume configs
   ////////////////////////////////
