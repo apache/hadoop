@@ -70,6 +70,7 @@ RUN apt-get -q update \
         maven \
         nodejs \
         node-yarn \
+        npm \
         openjdk-11-jdk \
         openjdk-8-jdk \
         pinentry-curses \
