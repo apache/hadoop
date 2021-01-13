@@ -67,6 +67,7 @@ RUN apt-get -q update \
         locales \
         make \
         maven \
+        nodejs \
         openjdk-11-jdk \
         openjdk-8-jdk \
         pinentry-curses \
@@ -119,14 +120,10 @@ RUN pip2 install \
 RUN pip2 install python-dateutil==2.7.3
 
 ###
-# Install node.js 10.x for web UI framework (4.2.6 ships with Xenial)
+# Install bower
 ###
 # hadolint ignore=DL3008
-RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g bower@1.8.8
+RUN npm install -g bower@1.8.8
 
 ###
 ## Install Yarn 1.22.5 for web UI framework
