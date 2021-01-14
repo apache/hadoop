@@ -30,9 +30,11 @@ import java.util.concurrent.RejectedExecutionException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SINGLE_WRITER_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_EXPIRED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_NOT_PRESENT;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_ID_SPECIFIED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THREADS;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_PARALLEL_ACCESS_DETECTED;
 
@@ -43,9 +45,13 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   private static final int TEST_EXECUTION_TIMEOUT = 30 * 1000;
   private static final int LONG_TEST_EXECUTION_TIMEOUT = 90 * 1000;
   private static final String TEST_FILE = "testfile";
+  private final boolean isHNSEnabled;
 
   public ITestAzureBlobFileSystemLease() throws Exception {
     super();
+
+    this.isHNSEnabled = getConfiguration()
+        .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }
 
   private AzureBlobFileSystem getCustomFileSystem(String singleWriterDirs, int numLeaseThreads)
@@ -123,7 +129,11 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
       try (FSDataOutputStream out2 = fs.create(testFilePath)) {
         Assert.fail("Second create succeeded");
       } catch (IOException e) {
-        GenericTestUtils.assertExceptionContains(ERR_PARALLEL_ACCESS_DETECTED, e);
+        if (isHNSEnabled) {
+          GenericTestUtils.assertExceptionContains(ERR_PARALLEL_ACCESS_DETECTED, e);
+        } else {
+          GenericTestUtils.assertExceptionContains(ERR_NO_LEASE_ID_SPECIFIED, e);
+        }
       }
     }
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
@@ -245,7 +255,11 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         }
         Assert.fail("No exception on close after broken lease");
       } catch (IOException e) {
-        GenericTestUtils.assertExceptionContains(ERR_LEASE_NOT_PRESENT, e);
+        if (isHNSEnabled) {
+          GenericTestUtils.assertExceptionContains(ERR_LEASE_NOT_PRESENT, e);
+        } else {
+          GenericTestUtils.assertExceptionContains(ERR_LEASE_EXPIRED, e);
+        }
       }
     }
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
@@ -266,7 +280,11 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
       out.close();
       Assert.fail("No exception on close after closed FS");
     } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(ERR_LEASE_NOT_PRESENT, e);
+      if (isHNSEnabled) {
+        GenericTestUtils.assertExceptionContains(ERR_LEASE_NOT_PRESENT, e);
+      } else {
+        GenericTestUtils.assertExceptionContains(ERR_LEASE_EXPIRED, e);
+      }
     }
 
     try (FSDataOutputStream out2 = fs.append(testFilePath)) {

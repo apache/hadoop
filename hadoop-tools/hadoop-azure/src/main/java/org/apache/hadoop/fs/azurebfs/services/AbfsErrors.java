@@ -30,7 +30,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 public final class AbfsErrors {
   public static final String ERR_WRITE_WITHOUT_LEASE = "Attempted to write to file without lease";
   public static final String ERR_LEASE_EXPIRED = "A lease ID was specified, but the lease for the"
-      + " resource has expired.";
+      + " resource has expired";
+  public static final String ERR_NO_LEASE_ID_SPECIFIED = "There is currently a lease on the "
+      + "resource and no lease ID was specified in the request";
   public static final String ERR_PARALLEL_ACCESS_DETECTED = "Parallel access to the create path "
       + "detected. Failing request to honor single writer semantics";
   public static final String ERR_ACQUIRING_LEASE = "Unable to acquire lease";
