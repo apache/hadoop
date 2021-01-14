@@ -28,7 +28,7 @@ project (libhdfspp)
 
 cmake_minimum_required(VERSION 2.8)
 
-find_package (Boost 1.72.0 REQUIRED)
+find_package (Boost 1.71.0 REQUIRED)
 
 enable_testing()
 include (CTest)
