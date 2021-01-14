@@ -123,7 +123,7 @@ public class DelegationTokenRenewer extends AbstractService {
   private long tokenRenewerThreadRetryInterval;
   private int tokenRenewerThreadRetryMaxAttempts;
   private final Map<DelegationTokenRenewerEvent, Future<?>> futures =
-      new HashMap<>();
+      new ConcurrentHashMap<>();
   private boolean delegationTokenRenewerPoolTrackerFlag = true;
 
   // this config is supposedly not used by end-users.

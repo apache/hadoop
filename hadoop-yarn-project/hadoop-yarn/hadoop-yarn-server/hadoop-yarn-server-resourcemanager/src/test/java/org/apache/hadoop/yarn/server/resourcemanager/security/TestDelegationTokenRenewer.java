@@ -699,8 +699,6 @@ public class TestDelegationTokenRenewer {
       token1.renew(lconf);
       fail("Renewal of cancelled token should have failed");
     } catch (InvalidToken ite) {}
-
-    localDtr.close();
   }
 
   /**
@@ -1732,6 +1730,7 @@ public class TestDelegationTokenRenewer {
   @Test(timeout = 30000)
   public void testTokenThreadTimeout() throws Exception {
     Configuration yarnConf = new YarnConfiguration();
+    yarnConf.set("override_token_expire_time", "30000");
     yarnConf.setBoolean(YarnConfiguration.RM_PROXY_USER_PRIVILEGES_ENABLED,
         true);
     yarnConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
@@ -1741,7 +1740,7 @@ public class TestDelegationTokenRenewer {
     yarnConf.setTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT, 2,
         TimeUnit.SECONDS);
     yarnConf.setTimeDuration(
-        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL, 1,
+        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL, 0,
         TimeUnit.SECONDS);
     yarnConf.setInt(YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
         3);
