@@ -123,8 +123,8 @@ public final class SelfRenewingLease {
       @Override
       public void onFailure(Throwable throwable) {
         try {
-          if (RetryPolicy.RetryAction.RetryDecision.RETRY ==
-              retryPolicy.shouldRetry(null, numRetries, 0, true).action) {
+          if (RetryPolicy.RetryAction.RetryDecision.RETRY
+              == retryPolicy.shouldRetry(null, numRetries, 0, true).action) {
             LOG.debug("Failed acquire lease on {}, retrying: {}", path, throwable);
             acquireLease(retryPolicy, numRetries + 1, LEASE_ACQUIRE_RETRY_INTERVAL);
           } else {

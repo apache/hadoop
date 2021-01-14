@@ -758,7 +758,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param path file name
    * @param duration time lease will be held before expiring
    * @return the acquired lease ID
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException on any exception while acquiring the lease
    */
   public String acquireLease(final Path path, final int duration) throws AzureBlobFileSystemException {
     LOG.debug("lease path: {}", path);
@@ -774,7 +774,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    *
    * @param path file name
    * @param leaseId lease ID to renew
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException on any exception while renewing the lease
    */
   public void renewLease(final Path path, final String leaseId) throws AzureBlobFileSystemException {
     LOG.debug("lease path: {}, renew lease id: {}", path, leaseId);
@@ -787,7 +787,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    *
    * @param path file name
    * @param leaseId lease ID to release
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException on any exception while releasing the lease
    */
   public void releaseLease(final Path path, final String leaseId) throws AzureBlobFileSystemException {
     LOG.debug("lease path: {}, release lease id: {}", path, leaseId);
@@ -799,7 +799,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * Break any current lease on an ABFS file.
    *
    * @param path file name
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException on any exception while breaking the lease
    */
   public void breakLease(final Path path) throws AzureBlobFileSystemException {
     LOG.debug("lease path: {}", path);
