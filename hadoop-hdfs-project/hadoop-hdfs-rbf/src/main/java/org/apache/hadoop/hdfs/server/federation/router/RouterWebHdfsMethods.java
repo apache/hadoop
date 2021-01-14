@@ -460,11 +460,16 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     String resolvedNs = "";
     try {
       dns = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
-      // for simplicity, just take the first remote location to create the file
-      resolvedNs = rpcServer.getLocationsForPath(path, true)
-          .get(0).getNameserviceId();
     } catch (IOException e) {
       LOG.error("Cannot get the datanodes from the RPC server", e);
+    }
+
+    if (op == PutOpParam.Op.CREATE) {
+      try {
+        resolvedNs = rpcServer.getCreateLocation(path).getNameserviceId();
+      } catch (IOException e) {
+        LOG.error("Cannot get the name service to create file", e);
+      }
     }
 
     HashSet<Node> excludes = new HashSet<Node>();
@@ -473,7 +478,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     for (DatanodeInfo dn : dns) {
       String ns = getNsFromDataNodeNetworkLocation(dn.getNetworkLocation());
       if (collection.contains(dn.getName()) ||
-          !ns.equals(resolvedNs)) {
+          (op == PutOpParam.Op.CREATE && !ns.equals(resolvedNs))) {
         excludes.add(dn);
       }
     }
