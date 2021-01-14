@@ -18,15 +18,15 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
+import org.apache.hadoop.security.NetgroupCache.NetgroupCacheListAdder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 
-import org.apache.hadoop.security.NetgroupCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +43,13 @@ public class ShellBasedUnixGroupsNetgroupMapping
   private static final Logger LOG =
       LoggerFactory.getLogger(ShellBasedUnixGroupsNetgroupMapping.class);
 
+  private ShellBasedNetgroupCacheAdder groupBulkAdder;
+
+  public ShellBasedUnixGroupsNetgroupMapping() {
+    super();
+    init();
+  }
+
   /**
    * Get unix groups (parent) and netgroups for given user
    *
@@ -52,7 +59,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
   @Override
   public List<String> getGroups(String user) throws IOException {
     // parent get unix groups
-    List<String> groups = new LinkedList<String>(super.getGroups(user));
+    List<String> groups = new LinkedList<>(super.getGroups(user));
     NetgroupCache.getNetgroups(user, groups);
     return groups;
   }
@@ -62,9 +69,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
    */
   @Override
   public void cacheGroupsRefresh() throws IOException {
-    List<String> groups = NetgroupCache.getNetgroupNames();
-    NetgroupCache.clear();
-    cacheGroupsAdd(groups);
+    groupBulkAdder.refreshCachedGroups();
   }
 
   /**
@@ -74,17 +79,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
    */
   @Override
   public void cacheGroupsAdd(List<String> groups) throws IOException {
-    for(String group: groups) {
-      if(group.length() == 0) {
-        // better safe than sorry (should never happen)
-      } else if(group.charAt(0) == '@') {
-        if(!NetgroupCache.isCached(group)) {
-          NetgroupCache.add(group, getUsersForNetgroup(group));
-        }
-      } else {
-        // unix group, not caching
-      }
-    }
+    groupBulkAdder.addGroupToCacheInBulk(groups);
   }
 
   /**
@@ -93,7 +88,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
    * @param netgroup return users for this netgroup
    * @return list of users for a given netgroup
    */
-  protected List<String> getUsersForNetgroup(String netgroup) 
+  private List<String> getUsersForNetgroup(String netgroup)
     throws IOException {
 
     List<String> users = new LinkedList<String>();
@@ -129,7 +124,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
    * @param netgroup get users for this netgroup
    * @return string of users for a given netgroup in getent netgroups format
    */
-  protected String execShellGetUserForNetgroup(final String netgroup)
+  private String execShellGetUserForNetgroup(final String netgroup)
       throws IOException {
     String result = "";
     try {
@@ -141,5 +136,17 @@ public class ShellBasedUnixGroupsNetgroupMapping
       LOG.warn("error getting users for netgroup " + netgroup, e);
     }
     return result;
+  }
+
+  protected void init() {
+    groupBulkAdder = new ShellBasedNetgroupCacheAdder();
+  }
+
+  class ShellBasedNetgroupCacheAdder extends NetgroupCacheListAdder {
+    @Override
+    Collection<String> getValuesForEntryKey(String entryKey)
+        throws IOException {
+      return getUsersForNetgroup(entryKey);
+    }
   }
 }

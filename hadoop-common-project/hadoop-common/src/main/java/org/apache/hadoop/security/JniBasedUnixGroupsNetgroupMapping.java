@@ -20,22 +20,26 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.LinkedList;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.hadoop.security.NetgroupCache.NetgroupCacheListAdder;
 import org.apache.hadoop.util.NativeCodeLoader;
 
-import org.apache.hadoop.security.NetgroupCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A JNI-based implementation of {@link GroupMappingServiceProvider} 
- * that invokes libC calls to get the group
+ * that invokes libC calls to get the group.
  * memberships of a given user.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
@@ -56,6 +60,13 @@ public class JniBasedUnixGroupsNetgroupMapping
     LOG.debug("Using JniBasedUnixGroupsNetgroupMapping for Netgroup resolution");
   }
 
+  private JniUnixGroupsNetgroupCacheAdder groupBulkAdder;
+
+  public JniBasedUnixGroupsNetgroupMapping() {
+    super();
+    init();
+  }
+
   /**
    * Gets unix groups and netgroups for the user.
    *
@@ -67,7 +78,15 @@ public class JniBasedUnixGroupsNetgroupMapping
   @Override
   public List<String> getGroups(String user) throws IOException {
     // parent gets unix groups
-    List<String> groups = new LinkedList<String>(super.getGroups(user));
+    List<String> groups = new LinkedList<>(super.getGroups(user));
+    NetgroupCache.getNetgroups(user, groups);
+    return groups;
+  }
+
+  @Override
+  public Set<String> getGroupsSet(String user) throws IOException {
+    // parent gets unix groups
+    Set<String> groups = new LinkedHashSet<>(super.getGroupsSet(user));
     NetgroupCache.getNetgroups(user, groups);
     return groups;
   }
@@ -77,9 +96,7 @@ public class JniBasedUnixGroupsNetgroupMapping
    */
   @Override
   public void cacheGroupsRefresh() throws IOException {
-    List<String> groups = NetgroupCache.getNetgroupNames();
-    NetgroupCache.clear();
-    cacheGroupsAdd(groups);
+    groupBulkAdder.refreshCachedGroups();
   }
 
   /**
@@ -89,17 +106,7 @@ public class JniBasedUnixGroupsNetgroupMapping
    */
   @Override
   public void cacheGroupsAdd(List<String> groups) throws IOException {
-    for(String group: groups) {
-      if(group.length() == 0) {
-        // better safe than sorry (should never happen)
-      } else if(group.charAt(0) == '@') {
-        if(!NetgroupCache.isCached(group)) {
-          NetgroupCache.add(group, getUsersForNetgroup(group));
-        }
-      } else {
-        // unix group, not caching
-      }
-    }
+    groupBulkAdder.addGroupToCacheInBulk(groups);
   }
 
   /**
@@ -110,22 +117,30 @@ public class JniBasedUnixGroupsNetgroupMapping
    * @param netgroup return users for this netgroup
    * @return list of users for a given netgroup
    */
-  protected synchronized List<String> getUsersForNetgroup(String netgroup) {
+  private synchronized Set<String> getUsersForNetgroup(String netgroup) {
     String[] users = null;
     try {
       // JNI code does not expect '@' at the beginning of the group name
       users = getUsersForNetgroupJNI(netgroup.substring(1));
     } catch (Exception e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Error getting users for netgroup " + netgroup, e);
-      } else {
-        LOG.info("Error getting users for netgroup " + netgroup + 
-            ": " + e.getMessage());
-      }
+      LOG.debug("Error getting users for netgroup {}", netgroup, e);
+      LOG.info("Error getting users for netgroup {}: {}", netgroup,
+          e.getMessage());
     }
     if (users != null && users.length != 0) {
-      return Arrays.asList(users);
+      return new HashSet<>(Arrays.asList(users));
     }
-    return Collections.emptyList();
+    return Collections.emptySet();
+  }
+
+  protected void init() {
+    groupBulkAdder = new JniUnixGroupsNetgroupCacheAdder();
+  }
+
+  class JniUnixGroupsNetgroupCacheAdder extends NetgroupCacheListAdder {
+    @Override
+    Collection<String> getValuesForEntryKey(String entryKey) {
+      return getUsersForNetgroup(entryKey);
+    }
   }
 }
