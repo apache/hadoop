@@ -56,7 +56,6 @@ RUN apt-get -q update \
         gnupg-agent \
         hugo \
         libbcprov-java \
-        libboost-all-dev \
         libbz2-dev \
         libcurl4-openssl-dev \
         libfuse-dev \
@@ -100,6 +99,21 @@ ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV FINDBUGS_HOME /usr
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
+
+#######
+# Install Boost 1.72 (1.71 ships with Focal)
+#######
+# hadolint ignore=DL3003
+RUN mkdir -p /opt/boost-library \
+    && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
+    && mv boost_1_72_0.tar.bz2 /opt/boost-library \
+    && cd /opt/boost-library \
+    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
+    && cd /opt/boost-library/boost_1_72_0 \
+    && ./bootstrap.sh --prefix=/usr/ \
+    && ./b2 --without-python install \
+    && cd /root \
+    && rm -rf /opt/boost-library
 
 ####
 # Install pip (deprecated from Focal toolchain)
