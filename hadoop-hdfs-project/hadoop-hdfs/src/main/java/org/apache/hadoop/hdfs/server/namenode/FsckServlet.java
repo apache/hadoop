@@ -59,15 +59,22 @@ public class FsckServlet extends DfsServlet {
         @Override
         public Object run() throws Exception {
           NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-          
+
           final FSNamesystem namesystem = nn.getNamesystem();
           final BlockManager bm = namesystem.getBlockManager();
-          final int totalDatanodes = 
-              namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
-          new NamenodeFsck(conf, nn,
+          final int totalDatanodes =
+              namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE);
+          NamenodeFsck fsck = new NamenodeFsck(conf, nn,
               bm.getDatanodeManager().getNetworkTopology(), pmap, out,
-              totalDatanodes, remoteAddress).fsck();
-          
+              totalDatanodes, remoteAddress);
+          String auditSource = fsck.getAuditSource();
+          boolean success = false;
+          try {
+            fsck.fsck();
+            success = true;
+          } finally {
+            namesystem.logFsckEvent(success, auditSource, remoteAddress);
+          }
           return null;
         }
       });
