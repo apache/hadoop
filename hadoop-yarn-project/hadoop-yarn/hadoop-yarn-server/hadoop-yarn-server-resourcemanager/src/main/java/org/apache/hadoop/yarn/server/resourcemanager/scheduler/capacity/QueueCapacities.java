@@ -82,7 +82,7 @@ public class QueueCapacities {
           .append("reserved_cap=" + capacitiesArr[7] + "%, ")
           .append("abs_reserved_cap=" + capacitiesArr[8] + "%, ")
           .append("weight=" + capacitiesArr[9] + "w, ")
-          .append("normalized_weight=" + capacitiesArr[9] + "w}");
+          .append("normalized_weight=" + capacitiesArr[10] + "w}");
       return sb.toString();
     }
   }

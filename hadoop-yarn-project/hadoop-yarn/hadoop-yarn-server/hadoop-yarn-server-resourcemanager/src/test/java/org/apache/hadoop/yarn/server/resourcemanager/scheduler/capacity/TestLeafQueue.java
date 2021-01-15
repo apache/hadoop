@@ -3291,7 +3291,11 @@ public class TestLeafQueue {
             newQueues, queues,
             TestUtils.spyHook);
     queues = newQueues;
+    // This will not update active apps
     root.reinitialize(newRoot, csContext.getClusterResource());
+    // Cause this to update active apps
+    root.updateClusterResource(csContext.getClusterResource(),
+        new ResourceLimits(csContext.getClusterResource()));
 
     // after reinitialization
     assertEquals(3, e.getNumActiveApplications());

@@ -526,7 +526,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     throwExceptionForUnexpectedWeight(weight, queue, label);
     return weight;
   }
-  
+
   public float getNonLabeledQueueCapacity(String queue) {
     String configuredCapacity = get(getQueuePrefix(queue) + CAPACITY);
     boolean absoluteResourceConfigured = (configuredCapacity != null)
@@ -2009,6 +2009,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       AUTO_CREATE_CHILD_QUEUE_PREFIX + "enabled";
 
   @Private
+  private static final String AUTO_QUEUE_CREATION_V2_PREFIX =
+      "auto-queue-creation-v2";
+
+  @Private
+  public static final String AUTO_QUEUE_CREATION_V2_ENABLED =
+      AUTO_QUEUE_CREATION_V2_PREFIX + ".enabled";
+
+  @Private
+  public static final boolean DEFAULT_AUTO_QUEUE_CREATION_ENABLED = false;
+
+  @Private
   public static final String AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX =
       "leaf-queue-template";
 
@@ -2042,6 +2053,20 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setBoolean(getQueuePrefix(queuePath) +
             AUTO_CREATE_CHILD_QUEUE_ENABLED,
         autoCreationEnabled);
+  }
+
+  public void setAutoQueueCreationV2Enabled(String queuePath,
+      boolean autoQueueCreation) {
+    setBoolean(
+        getQueuePrefix(queuePath) + AUTO_QUEUE_CREATION_V2_ENABLED,
+        autoQueueCreation);
+  }
+
+  public boolean isAutoQueueCreationV2Enabled(String queuePath) {
+    boolean isAutoQueueCreation = getBoolean(
+        getQueuePrefix(queuePath) + AUTO_QUEUE_CREATION_V2_ENABLED,
+        DEFAULT_AUTO_QUEUE_CREATION_ENABLED);
+    return isAutoQueueCreation;
   }
 
   /**

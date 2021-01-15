@@ -907,7 +907,12 @@ public class TestCapacitySchedulerAutoQueueCreation
   @Test
   public void testDynamicAutoQueueCreationWithTags()
       throws Exception {
-    MockRM rm = null;
+    // This test we will reinitialize mockRM, so stop the previous initialized
+    // mockRM to avoid issues like MetricsSystem
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+    mockRM = null;
     try {
       CapacitySchedulerConfiguration csConf
           = new CapacitySchedulerConfiguration();
@@ -929,35 +934,35 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
       mgr.init(csConf);
-      rm = new MockRM(csConf) {
+      mockRM = new MockRM(csConf) {
         @Override
         public RMNodeLabelsManager createNodeLabelManager() {
           return mgr;
         }
       };
-      rm.start();
-      MockNM nm = rm.registerNode("127.0.0.1:1234", 16 * GB);
+      mockRM.start();
+      MockNM nm = mockRM.registerNode("127.0.0.1:1234", 16 * GB);
 
       MockRMAppSubmissionData data =
-          MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+          MockRMAppSubmissionData.Builder.createWithMemory(GB, mockRM)
           .withAppName("apptodynamicqueue")
           .withUser("hadoop")
           .withAcls(null)
           .withUnmanagedAM(false)
           .withApplicationTags(Sets.newHashSet("userid=testuser"))
           .build();
-      RMApp app = MockRMAppSubmitter.submit(rm, data);
-      MockRM.launchAndRegisterAM(app, rm, nm);
+      RMApp app = MockRMAppSubmitter.submit(mockRM, data);
+      MockRM.launchAndRegisterAM(app, mockRM, nm);
       nm.nodeHeartbeat(true);
 
-      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
       CSQueue queue = cs.getQueue("root.a.testuser");
       assertNotNull("Leaf queue has not been auto-created", queue);
       assertEquals("Number of running applications", 1,
           queue.getNumApplications());
     } finally {
-      if (rm != null) {
-        rm.close();
+      if (mockRM != null) {
+        mockRM.close();
       }
     }
   }

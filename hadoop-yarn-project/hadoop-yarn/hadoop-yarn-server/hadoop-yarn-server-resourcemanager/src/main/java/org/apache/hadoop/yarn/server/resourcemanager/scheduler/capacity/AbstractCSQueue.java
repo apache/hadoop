@@ -151,6 +151,14 @@ public abstract class AbstractCSQueue implements CSQueue {
   private Map<String, Float> userWeights = new HashMap<String, Float>();
   private int maxParallelApps;
 
+  // is it a dynamic queue?
+  private boolean dynamicQueue = false;
+
+  // When this queue has application submit to?
+  // This property only applies to dynamic queue,
+  // and will be used to check when the queue need to be removed.
+  private long lastSubmittedTimestamp;
+
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     this(cs, cs.getConfiguration(), queueName, parent, old);
@@ -172,7 +180,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.metrics = old != null ?
         (CSQueueMetrics) old.getMetrics() :
         CSQueueMetrics.forQueue(getQueuePath(), parent,
-            cs.getConfiguration().getEnableUserMetrics(), cs.getConf());
+            cs.getConfiguration().getEnableUserMetrics(), configuration);
 
     this.csContext = cs;
     this.minimumAllocation = csContext.getMinimumResourceCapability();
@@ -192,6 +200,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock = lock.writeLock();
   }
 
+  @VisibleForTesting
   protected void setupConfigurableCapacities() {
     setupConfigurableCapacities(csContext.getConfiguration());
   }
@@ -345,11 +354,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     return defaultLabelExpression;
   }
 
-  void setupQueueConfigs(Resource clusterResource)
-      throws IOException {
-    setupQueueConfigs(clusterResource, csContext.getConfiguration());
-  }
-
   protected void setupQueueConfigs(Resource clusterResource,
       CapacitySchedulerConfiguration configuration) throws
       IOException {
@@ -405,7 +409,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       QueueState parentState = (parent == null) ? null : parent.getState();
       initializeQueueState(previous, configuredState, parentState);
 
-      authorizer = YarnAuthorizationProvider.getInstance(csContext.getConf());
+      authorizer = YarnAuthorizationProvider.getInstance(configuration);
 
       this.acls = configuration.getAcls(getQueuePath());
 
@@ -437,7 +441,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       }
 
       this.reservationsContinueLooking =
-          csContext.getConfiguration().getReservationContinueLook();
+          configuration.getReservationContinueLook();
 
       this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this,
           configuration);
@@ -1607,6 +1611,40 @@ public abstract class AbstractCSQueue implements CSQueue {
             + "and Updating effective max resource as effMaxResource="
             + queueResourceQuotas.getEffectiveMaxResource(label));
       }
+    }
+  }
+
+  public boolean isDynamicQueue() {
+    readLock.lock();
+
+    try {
+      return dynamicQueue;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public void setDynamicQueue(boolean dynamicQueue) {
+    writeLock.lock();
+
+    try {
+      this.dynamicQueue = dynamicQueue;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public long getLastSubmittedTimestamp() {
+    return lastSubmittedTimestamp;
+  }
+
+  // "Tab" the queue, so this queue won't be removed because of idle timeout.
+  public void signalToSubmitToQueue() {
+    writeLock.lock();
+    try {
+      this.lastSubmittedTimestamp = System.currentTimeMillis();
+    } finally {
+      writeLock.unlock();
     }
   }
 }

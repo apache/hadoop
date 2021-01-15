@@ -22,6 +22,7 @@ import java.util.Set;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -40,7 +41,7 @@ public class CSQueueUtils {
       float capacity, float maximumCapacity) {
     if (maximumCapacity < 0.0f || maximumCapacity > 1.0f) {
       throw new IllegalArgumentException(
-          "Illegal value  of maximumCapacity " + maximumCapacity + 
+          "Illegal value  of maximumCapacity " + maximumCapacity +
           " used in call to setMaxCapacity for queue " + queuePath);
     }
     }
@@ -61,11 +62,11 @@ public class CSQueueUtils {
 
   public static float computeAbsoluteMaximumCapacity(
       float maximumCapacity, CSQueue parent) {
-    float parentAbsMaxCapacity = 
+    float parentAbsMaxCapacity =
         (parent == null) ? 1.0f : parent.getAbsoluteMaximumCapacity();
     return (parentAbsMaxCapacity * maximumCapacity);
   }
-  
+
   public static void loadCapacitiesByLabelsFromConf(String queuePath,
       QueueCapacities queueCapacities, CapacitySchedulerConfiguration csConf) {
     queueCapacities.clearConfigurableFields();
@@ -310,6 +311,17 @@ public class CSQueueUtils {
             parentQueueCapacities == null ? 1 :
                 parentQueueCapacities.getAbsoluteMaximumCapacity(label)));
       }
+    }
+  }
+
+  public static ApplicationPlacementContext extractQueuePath(String queuePath) {
+    int parentQueueNameEndIndex = queuePath.lastIndexOf(".");
+    if (parentQueueNameEndIndex > -1) {
+      String parent = queuePath.substring(0, parentQueueNameEndIndex).trim();
+      String leaf = queuePath.substring(parentQueueNameEndIndex + 1).trim();
+      return new ApplicationPlacementContext(leaf, parent);
+    } else{
+      return new ApplicationPlacementContext(queuePath);
     }
   }
 }
