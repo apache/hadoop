@@ -1106,11 +1106,9 @@ public class TestFsDatasetImpl {
 
       Path filePath = new Path("testData");
       long fileLen = 100;
-
       ExtendedBlock block = createTestFile(fs, fileLen, filePath);
 
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
-
       ReplicaInfo newReplicaInfo =
           createNewReplicaObjWithLink(block, fsDataSetImpl);
 
@@ -1119,6 +1117,7 @@ public class TestFsDatasetImpl {
       out.write(100);
       out.hflush();
 
+      // Call finalizeNewReplica
       assertTrue(newReplicaInfo.blockDataExists());
       LOG.info("GenerationStamp of old replica: {}",
           block.getGenerationStamp());
