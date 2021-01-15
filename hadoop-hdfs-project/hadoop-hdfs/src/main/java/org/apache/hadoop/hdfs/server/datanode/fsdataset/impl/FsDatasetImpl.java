@@ -1044,38 +1044,29 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   static File[] hardLinkBlockFiles(ReplicaInfo srcReplica, File dstMeta,
       File dstFile)
       throws IOException {
-    hardLinkBlockMetaFile(srcReplica, dstMeta);
-    hardLinkBlockFile(srcReplica, dstFile);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Linked " + srcReplica.getBlockURI() + " to " + dstFile);
-    }
-    return new File[]{dstMeta, dstFile};
-  }
-
-  static File hardLinkBlockFile(ReplicaInfo srcReplica, File dstFile)
-      throws IOException {
+    // Create parent folder if not exists.
+    srcReplica.getFileIoProvider()
+        .mkdirs(srcReplica.getVolume(), dstFile.getParentFile());
     try {
       HardLink.createHardLink(
-          new File(srcReplica.getBlockURI()), dstFile, true);
+          new File(srcReplica.getBlockURI()), dstFile);
     } catch (IOException e) {
       throw new IOException("Failed to hardLink "
           + srcReplica + " block file to "
           + dstFile, e);
     }
-    return dstFile;
-  }
-
-  static File hardLinkBlockMetaFile(ReplicaInfo srcReplica, File dstMeta)
-      throws IOException {
     try {
       HardLink.createHardLink(
-          new File(srcReplica.getMetadataURI()), dstMeta, true);
+          new File(srcReplica.getMetadataURI()), dstMeta);
     } catch (IOException e) {
       throw new IOException("Failed to hardLink "
           + srcReplica + " metadata to "
           + dstMeta, e);
     }
-    return dstMeta;
+    if (LOG.isDebugEnabled()) {
+      LOG.info("Linked " + srcReplica.getBlockURI() + " to " + dstFile);
+    }
+    return new File[]{dstMeta, dstFile};
   }
 
   /**
@@ -1174,21 +1165,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @param block       - Extended Block
    * @param replicaInfo - ReplicaInfo
    * @param volumeRef   - Volume Ref - Closed by caller.
-   * @return newReplicaInfo
-   * @throws IOException
-   */
-  @VisibleForTesting
-  ReplicaInfo moveBlock(ExtendedBlock block, ReplicaInfo replicaInfo,
-      FsVolumeReference volumeRef) throws IOException {
-    return moveBlock(block, replicaInfo, volumeRef, false);
-  }
-
-  /**
-   * Moves a block from a given volume to another.
-   *
-   * @param block       - Extended Block
-   * @param replicaInfo - ReplicaInfo
-   * @param volumeRef   - Volume Ref - Closed by caller.
    * @param moveBlockToLocalMount   - Whether we use shortcut
    *                               to move block on same mount.
    * @return newReplicaInfo
@@ -1198,7 +1174,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   ReplicaInfo moveBlock(ExtendedBlock block, ReplicaInfo replicaInfo,
       FsVolumeReference volumeRef, boolean moveBlockToLocalMount)
       throws IOException {
-    ReplicaInfo newReplicaInfo = null;
+    ReplicaInfo newReplicaInfo;
     if (moveBlockToLocalMount) {
       newReplicaInfo = moveReplicaToVolumeOnSameMount(block, replicaInfo,
           volumeRef);
@@ -1323,7 +1299,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     try {
-      moveBlock(block, replicaInfo, volumeRef);
+      moveBlock(block, replicaInfo, volumeRef, false);
     } finally {
       if (volumeRef != null) {
         volumeRef.close();

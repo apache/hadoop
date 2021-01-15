@@ -445,7 +445,7 @@ public class TestMover {
   public void testScheduleBlockWithinSameNode() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
-    // testWithinSameNode(conf);
+    testWithinSameNode(conf);
     // Test movement with hardlink, when same disk tiering is enabled.
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
     conf.setDouble(DFSConfigKeys

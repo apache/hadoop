@@ -159,17 +159,6 @@ public class HardLink {
    */
   public static void createHardLink(File file, File linkName)
       throws IOException {
-    createHardLink(file, linkName, false);
-  }
-
-  /**
-   * Creates a hardlink 
-   * @param file - existing source file
-   * @param linkName - desired target link file
-   * @param p - Whether we need to create parents if not exists.
-   */
-  public static void createHardLink(File file, File linkName, boolean p)
-      throws IOException {
     if (file == null) {
       throw new IOException(
           "invalid arguments to createHardLink: source file is null");
@@ -177,11 +166,6 @@ public class HardLink {
     if (linkName == null) {
       throw new IOException(
           "invalid arguments to createHardLink: link name is null");
-    }
-    if (p && !linkName.getParentFile().exists()
-        && !linkName.getParentFile().mkdirs()) {
-      throw new IOException(
-          "Failed to create parent folder for hardLink " + linkName);
     }
     createLink(linkName.toPath(), file.toPath());
   }

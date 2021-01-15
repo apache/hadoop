@@ -1075,52 +1075,6 @@ public class TestFsDatasetImpl {
   }
 
   @Test(timeout = 30000)
-  public void testMoveBlockFailure() {
-    MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf)
-          .numDataNodes(1)
-          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
-          .storagesPerDatanode(2)
-          .build();
-      FileSystem fs = cluster.getFileSystem();
-      DataNode dataNode = cluster.getDataNodes().get(0);
-
-      Path filePath = new Path("testData");
-      DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
-      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
-
-      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
-      ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
-
-      // Append to file to update its GS
-      FSDataOutputStream out = fs.append(filePath, (short) 1);
-      out.write(100);
-      out.hflush();
-
-      // Call finalizeNewReplica
-
-      assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
-      LOG.info("GenerationStamp of old replica: {}",
-          block.getGenerationStamp());
-      LOG.info("GenerationStamp of new replica: {}", fsDataSetImpl
-          .getReplicaInfo(block.getBlockPoolId(), newReplicaInfo.getBlockId())
-          .getGenerationStamp());
-      LambdaTestUtils.intercept(IOException.class, "Generation Stamp "
-              + "should be monotonically increased.",
-          () -> fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block));
-      assertFalse(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
-    } catch (Exception ex) {
-      LOG.info("Exception in testMoveBlockFailure ", ex);
-      fail("Exception while testing testMoveBlockFailure ");
-    } finally {
-      if (cluster.isClusterUp()) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-  @Test(timeout = 30000)
   public void testMoveBlockSuccess() {
     MiniDFSCluster cluster = null;
     try {
@@ -1151,18 +1105,26 @@ public class TestFsDatasetImpl {
   }
 
   /**
-   * When moving blocks on same mount with hard link
+   * When moving blocks using hardLink or copy
    * and append happened in the middle,
    * block movement should fail and hardlink is removed.
    */
   @Test(timeout = 30000)
-  public void testMoveBlockFailureWithSameMountMove() {
+  public void testMoveBlockFailure() {
+    // Test copy
+    testMoveBlockFailure(conf);
+    // Test hardlink
+    conf.setBoolean(DFSConfigKeys
+        .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+    conf.setDouble(DFSConfigKeys
+        .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+    testMoveBlockFailure(conf);
+  }
+
+  private void testMoveBlockFailure(Configuration config) {
     MiniDFSCluster cluster = null;
     try {
-      conf.setBoolean(DFSConfigKeys
-          .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
-      conf.setDouble(DFSConfigKeys
-          .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1)
           .storageTypes(
@@ -1184,7 +1146,7 @@ public class TestFsDatasetImpl {
 
       // Append to file to update its GS
       FSDataOutputStream out = fs.append(filePath, (short) 1);
-      out.write(100);
+      out.write((int) fileLen);
       out.hflush();
 
       assertTrue(newReplicaInfo.blockDataExists());
@@ -1570,7 +1532,8 @@ public class TestFsDatasetImpl {
       ReplicaInfo replicaInfo = fsDataSetImpl.getReplicaInfo(block);
       FsVolumeSpi destVolume = getDestinationVolume(block, fsDataSetImpl);
       assertNotNull("Destination volume should not be null.", destVolume);
-      fsDataSetImpl.moveBlock(block, replicaInfo, destVolume.obtainReference());
+      fsDataSetImpl.moveBlock(block, replicaInfo,
+          destVolume.obtainReference(), false);
       // Trigger block report to update block info in NN
       cluster.triggerBlockReports();
       blkReader.read(buf, 512, 512);
