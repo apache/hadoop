@@ -1074,36 +1074,6 @@ public class TestFsDatasetImpl {
     }
   }
 
-  @Test(timeout = 30000)
-  public void testMoveBlockSuccess() {
-    MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf)
-          .numDataNodes(1)
-          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
-          .storagesPerDatanode(2)
-          .build();
-      FileSystem fs = cluster.getFileSystem();
-      DataNode dataNode = cluster.getDataNodes().get(0);
-
-      Path filePath = new Path("testData");
-      DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
-      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
-
-      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
-      ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
-      fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block);
-
-    } catch (Exception ex) {
-      LOG.info("Exception in testMoveBlockSuccess ", ex);
-      fail("MoveBlock operation should succeed");
-    } finally {
-      if (cluster.isClusterUp()) {
-        cluster.shutdown();
-      }
-    }
-  }
-
   /**
    * When moving blocks using hardLink or copy
    * and append happened in the middle,
@@ -1146,7 +1116,7 @@ public class TestFsDatasetImpl {
 
       // Append to file to update its GS
       FSDataOutputStream out = fs.append(filePath, (short) 1);
-      out.write((int) fileLen);
+      out.write(100);
       out.hflush();
 
       assertTrue(newReplicaInfo.blockDataExists());
@@ -1162,8 +1132,38 @@ public class TestFsDatasetImpl {
 
       validateFileLen(fs, fileLen, filePath);
     } catch (Exception ex) {
-      LOG.info("Exception in testMoveBlockFailureWithSameMountMove ", ex);
-      fail("Exception while testing testMoveBlockFailureWithSameMountMove ");
+      LOG.info("Exception in testMoveBlockFailure ", ex);
+      fail("Exception while testing testMoveBlockFailure ");
+    } finally {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testMoveBlockSuccess() {
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
+          .storagesPerDatanode(2)
+          .build();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+
+      Path filePath = new Path("testData");
+      DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
+
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+      ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
+      fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block);
+
+    } catch (Exception ex) {
+      LOG.info("Exception in testMoveBlockSuccess ", ex);
+      fail("MoveBlock operation should succeed");
     } finally {
       if (cluster.isClusterUp()) {
         cluster.shutdown();

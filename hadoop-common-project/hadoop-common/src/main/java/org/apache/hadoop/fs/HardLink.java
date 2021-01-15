@@ -153,7 +153,7 @@ public class HardLink {
    */
 
   /**
-   * Creates a hardlink without creating parent folder.
+   * Creates a hardlink
    * @param file - existing source file
    * @param linkName - desired target link file
    */
