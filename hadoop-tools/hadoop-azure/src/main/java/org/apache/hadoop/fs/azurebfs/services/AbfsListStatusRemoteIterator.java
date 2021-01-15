@@ -131,13 +131,8 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
       LOG.error("Thread got interrupted: {}", e);
     } finally {
       synchronized (asyncOpLock) {
-        try {
-          iteratorsQueue.put(Collections.emptyIterator());
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          LOG.error("Thread got interrupted: {}", e);
-        }
         isAsyncInProgress = false;
+        iteratorsQueue.offer(Collections.emptyIterator());
       }
     }
   }
