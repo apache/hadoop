@@ -990,9 +990,8 @@ public class AzureBlobFileSystem extends FileSystem {
       throws IOException {
     LOG.debug("AzureBlobFileSystem.listStatusIterator path : {}", path);
     if (abfsStore.getAbfsConfiguration().enableAbfsListIterator()) {
-      Path qualifiedPath = makeQualified(path);
       AbfsListStatusRemoteIterator abfsLsItr =
-          new AbfsListStatusRemoteIterator(qualifiedPath, abfsStore);
+          new AbfsListStatusRemoteIterator(getFileStatus(path), abfsStore);
       return RemoteIterators.typeCastingRemoteIterator(abfsLsItr);
     } else {
       return super.listStatusIterator(path);

@@ -42,7 +42,7 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
   private static final boolean FETCH_ALL_FALSE = false;
   private static final int MAX_QUEUE_SIZE = 10;
 
-  private final Path path;
+  private final FileStatus fileStatus;
   private final ListingSupport listingSupport;
   private final ArrayBlockingQueue<Iterator<FileStatus>> iteratorsQueue;
   private final Object asyncOpLock = new Object();
@@ -53,9 +53,9 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
   private Iterator<FileStatus> currIterator;
   private IOException ioException;
 
-  public AbfsListStatusRemoteIterator(final Path path,
+  public AbfsListStatusRemoteIterator(final FileStatus fileStatus,
       final ListingSupport listingSupport) {
-    this.path = path;
+    this.fileStatus = fileStatus;
     this.listingSupport = listingSupport;
     iteratorsQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
     currIterator = Collections.emptyIterator();
@@ -146,7 +146,8 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
       throws IOException, InterruptedException {
     List<FileStatus> fileStatuses = new ArrayList<>();
     continuation = listingSupport
-        .listStatus(path, null, fileStatuses, FETCH_ALL_FALSE, continuation);
+        .listStatus(fileStatus.getPath(), null, fileStatuses, FETCH_ALL_FALSE,
+            continuation);
     iteratorsQueue.put(fileStatuses.iterator());
     if (firstBatch) {
       firstBatch = false;

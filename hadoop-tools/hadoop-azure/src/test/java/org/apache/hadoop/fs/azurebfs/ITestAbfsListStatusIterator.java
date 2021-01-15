@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -64,7 +66,7 @@ public class ITestAbfsListStatusIterator extends AbstractAbfsIntegrationTest {
 
     ListingSupport listngSupport = Mockito.spy(getFileSystem().getAbfsStore());
     RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(
-        getFileSystem().makeQualified(testDir), listngSupport);
+        getFileSystem().getFileStatus(testDir), listngSupport);
     Assertions.assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
@@ -99,7 +101,7 @@ public class ITestAbfsListStatusIterator extends AbstractAbfsIntegrationTest {
 
     ListingSupport listngSupport = Mockito.spy(getFileSystem().getAbfsStore());
     RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(
-        getFileSystem().makeQualified(testDir), listngSupport);
+        getFileSystem().getFileStatus(testDir), listngSupport);
     Assertions.assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
@@ -202,7 +204,7 @@ public class ITestAbfsListStatusIterator extends AbstractAbfsIntegrationTest {
     Path testDir = createTestDirectory();
     setPageSize(10);
     RemoteIterator fsItr =
-        new AbfsListStatusRemoteIterator(getFileSystem().makeQualified(testDir),
+        new AbfsListStatusRemoteIterator(getFileSystem().getFileStatus(testDir),
             getFileSystem().getAbfsStore());
     fsItr = Mockito.spy(fsItr);
     Mockito.doReturn(false).when(fsItr).hasNext();
@@ -250,7 +252,7 @@ public class ITestAbfsListStatusIterator extends AbstractAbfsIntegrationTest {
     String exceptionMessage = "test exception";
     ListingSupport lsSupport =getMockListingSupport(exceptionMessage);
     RemoteIterator fsItr =
-        new AbfsListStatusRemoteIterator(getFileSystem().makeQualified(testDir),
+        new AbfsListStatusRemoteIterator(getFileSystem().getFileStatus(testDir),
         lsSupport);
 
     Assertions.assertThatThrownBy(() -> fsItr.next())
@@ -259,6 +261,16 @@ public class ITestAbfsListStatusIterator extends AbstractAbfsIntegrationTest {
             + "thrown")
         .isInstanceOf(IOException.class)
         .hasMessage(exceptionMessage);
+  }
+
+  @Test
+  public void testNonExistingPath() throws Throwable {
+    Path nonExistingDir = new Path("nonExistingPath");
+    Assertions.assertThatThrownBy(
+        () -> getFileSystem().listStatusIterator(nonExistingDir)).describedAs(
+        "test the listStatusIterator call on a path which is not "
+            + "present should result in FileNotFoundException")
+        .isInstanceOf(FileNotFoundException.class);
   }
 
   private ListingSupport getMockListingSupport(String exceptionMessage) {
