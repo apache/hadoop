@@ -24,7 +24,6 @@ import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
-import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorCompletionService;
@@ -120,7 +119,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
           final Statistics statistics,
           final String path,
           final long position,
-          final Map<SelfRenewingLease, Object> leaseRefs,
           AbfsOutputStreamContext abfsOutputStreamContext) throws AzureBlobFileSystemException {
     this.client = client;
     this.statistics = statistics;
@@ -154,9 +152,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     if (abfsOutputStreamContext.isEnableSingleWriter()) {
       lease = new SelfRenewingLease(client, new Path(path));
       this.leaseId = lease.getLeaseID();
-      if (leaseRefs != null) {
-        leaseRefs.put(lease, null);
-      }
+      abfsOutputStreamContext.addLease(lease);
     }
 
     this.threadExecutor
@@ -220,7 +216,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       throw new IndexOutOfBoundsException();
     }
 
-    if (lease != null && lease.isFreed()) {
+    if (hasLease() && isLeaseFreed()) {
       throw new PathIOException(path, ERR_WRITE_WITHOUT_LEASE);
     }
 
@@ -327,7 +323,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       // See HADOOP-16785
       throw wrapException(path, e.getMessage(), e);
     } finally {
-      if (lease != null) {
+      if (hasLease()) {
         lease.free();
         lease = null;
       }

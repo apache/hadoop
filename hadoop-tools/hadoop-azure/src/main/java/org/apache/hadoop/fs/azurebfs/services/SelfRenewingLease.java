@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableScheduledFuture;
@@ -31,11 +30,13 @@ import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.N
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_FUTURE_EXISTS;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THREADS;
@@ -71,7 +72,7 @@ public final class SelfRenewingLease {
 
   public static class LeaseException extends AzureBlobFileSystemException {
     public LeaseException(Throwable t) {
-      super(ERR_ACQUIRING_LEASE + ": " + t.getMessage());
+      super(ERR_ACQUIRING_LEASE, t);
     }
 
     public LeaseException(String s) {
@@ -161,7 +162,7 @@ public final class SelfRenewingLease {
           return;
         } else if (throwable instanceof AbfsRestOperationException) {
           AbfsRestOperationException opEx = ((AbfsRestOperationException) throwable);
-          if (opEx.getStatusCode() < HTTP_INTERNAL_ERROR) {
+          if (opEx.getStatusCode() < HttpURLConnection.HTTP_INTERNAL_ERROR) {
             // error in 400 range indicates a type of error that should not result in a retry
             // such as the lease being broken or a different lease being present
             LOG.info("Stopping renewal due to {}: {}, {}", opEx.getStatusCode(),
@@ -183,6 +184,9 @@ public final class SelfRenewingLease {
    * will expire after the lease duration.
    */
   public void free() {
+    if (leaseFreed) {
+      return;
+    }
     try {
       LOG.debug("Freeing lease: path {}, lease id {}", path, leaseID);
       if (future != null && !future.isDone()) {
@@ -193,10 +197,8 @@ public final class SelfRenewingLease {
       LOG.info("Exception when trying to release lease {} on {}. Lease will be left to expire: {}",
           leaseID, path, e.getMessage());
     } finally {
-
       // Even if releasing the lease fails (e.g. because the file was deleted),
-      // make sure to record that we freed the lease, to terminate the
-      // keep-alive thread.
+      // make sure to record that we freed the lease
       leaseFreed = true;
       LOG.debug("Freed lease {} on {}", leaseID, path);
     }

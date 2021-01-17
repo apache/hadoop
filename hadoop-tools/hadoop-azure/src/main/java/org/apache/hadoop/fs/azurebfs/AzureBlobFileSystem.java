@@ -43,7 +43,6 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.util.DurationInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,6 +87,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
@@ -506,6 +506,20 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Acquire a lease on an ABFS file for a specified duration. This requires the file to exist.
+   * Writes will not be able to be performed while the lease is held because there is not
+   * currently a way to provide a previously acquired lease ID to AbfsOutputStream.
+   *
+   * If the file is in a single writer directory, the client will automatically acquire, renew,
+   * and release a lease and this method does not need to be used. The output stream holding the
+   * lease will be able to write to the file in that case.
+   *
+   * @param f file name
+   * @param duration time lease will be held before expiring
+   * @return the acquired lease ID
+   * @throws IOException on any exception while acquiring the lease
+   */
   public String acquireLease(final Path f, final int duration) throws IOException {
     LOG.debug("AzureBlobFileSystem.acquireLease path: {}", f);
 
@@ -520,6 +534,15 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Renew an existing lease on an ABFS file. If a lease expires without being renewed, a
+   * different lease may be acquired. A lease can still be renewed after expiring if a different
+   * lease has not been acquired.
+   *
+   * @param f file name
+   * @param leaseId lease ID to renew
+   * @throws IOException on any exception while renewing the lease
+   */
   public void renewLease(final Path f, final String leaseId) throws IOException {
     LOG.debug("AzureBlobFileSystem.renewLease path: {} id: {}", f, leaseId);
 
@@ -533,6 +556,13 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Release an existing lease on an ABFS file.
+   *
+   * @param f file name
+   * @param leaseId lease ID to release
+   * @throws IOException on any exception while releasing the lease
+   */
   public void releaseLease(final Path f, final String leaseId) throws IOException {
     LOG.debug("AzureBlobFileSystem.releaseLease path: {} id: {}", f, leaseId);
 
@@ -546,6 +576,13 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Break the current lease on an ABFS file if it exists. A lease that is broken cannot be
+   * renewed. A new lease may be obtained on the file immediately.
+   *
+   * @param f file name
+   * @throws IOException on any exception while breaking the lease
+   */
   public void breakLease(final Path f) throws IOException {
     LOG.debug("AzureBlobFileSystem.breakLease path: {}", f);
 

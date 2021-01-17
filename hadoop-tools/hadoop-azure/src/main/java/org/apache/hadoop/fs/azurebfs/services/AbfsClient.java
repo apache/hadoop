@@ -31,15 +31,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
@@ -49,6 +44,9 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecut
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
@@ -59,6 +57,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
@@ -120,7 +120,7 @@ public class AbfsClient implements Closeable {
     this.abfsCounters = abfsClientContext.getAbfsCounters();
 
     this.executorService = MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads()));
+        HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads()));
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -144,7 +144,7 @@ public class AbfsClient implements Closeable {
     if (tokenProvider instanceof Closeable) {
       IOUtils.cleanupWithLogger(LOG, (Closeable) tokenProvider);
     }
-    executorService.shutdownNow();
+    HadoopExecutors.shutdown(executorService, LOG, 0, TimeUnit.SECONDS);
   }
 
   public String getFileSystem() {

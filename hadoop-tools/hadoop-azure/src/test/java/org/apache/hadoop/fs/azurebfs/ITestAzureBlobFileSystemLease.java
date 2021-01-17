@@ -17,22 +17,28 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.IOException;
+import java.util.concurrent.RejectedExecutionException;
+
+import org.junit.Assert;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.util.concurrent.RejectedExecutionException;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SINGLE_WRITER_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_ALREADY_PRESENT;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_BROKEN;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_DID_NOT_MATCH;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_EXPIRED;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_ID_NOT_PRESENT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_NOT_PRESENT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_ID_SPECIFIED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THREADS;
@@ -44,6 +50,7 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_PARALLEL_ACC
 public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   private static final int TEST_EXECUTION_TIMEOUT = 30 * 1000;
   private static final int LONG_TEST_EXECUTION_TIMEOUT = 90 * 1000;
+  private static final int TEST_LEASE_DURATION = 15;
   private static final String TEST_FILE = "testfile";
   private final boolean isHNSEnabled;
 
@@ -126,15 +133,12 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.mkdirs(testFilePath.getParent());
 
     try (FSDataOutputStream out = fs.create(testFilePath)) {
-      try (FSDataOutputStream out2 = fs.create(testFilePath)) {
-        Assert.fail("Second create succeeded");
-      } catch (IOException e) {
-        if (isHNSEnabled) {
-          GenericTestUtils.assertExceptionContains(ERR_PARALLEL_ACCESS_DETECTED, e);
-        } else {
-          GenericTestUtils.assertExceptionContains(ERR_NO_LEASE_ID_SPECIFIED, e);
+      LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_PARALLEL_ACCESS_DETECTED :
+          ERR_NO_LEASE_ID_SPECIFIED, () -> {
+        try (FSDataOutputStream out2 = fs.create(testFilePath)) {
         }
-      }
+        return "Expected second create on single writer dir to fail";
+      });
     }
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
   }
@@ -146,8 +150,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         out2.hsync();
       } catch (IOException e) {
         if (expectException) {
-          Assert.assertTrue("Unexpected error message: " + e.getMessage(),
-              e.getMessage().contains(ERR_ACQUIRING_LEASE));
+          GenericTestUtils.assertExceptionContains(ERR_ACQUIRING_LEASE, e);
         } else {
           Assert.fail("Unexpected exception " + e.getMessage());
         }
@@ -206,19 +209,17 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     out.hsync();
 
     fs.breakLease(testFilePath);
-    try {
+
+    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_EXPIRED, () -> {
       out.write(1);
       out.hsync();
-      Assert.fail("Expected exception on write after lease break");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(ERR_LEASE_EXPIRED, e);
-    }
-    try {
+      return "Expected exception on write after lease break but got " + out;
+    });
+
+    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_EXPIRED, () -> {
       out.close();
-      Assert.fail("Expected exception on close after lease break");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(ERR_LEASE_EXPIRED, e);
-    }
+      return "Expected exception on close after lease break but got " + out;
+    });
 
     Assert.assertTrue(((AbfsOutputStream) out.getWrappedStream()).isLeaseFreed());
 
@@ -236,32 +237,24 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent().toString(), 1);
     fs.mkdirs(testFilePath.getParent());
 
-    FSDataOutputStream out = null;
-    try {
-      out = fs.create(testFilePath);
-      out.write(0);
+    FSDataOutputStream out = fs.create(testFilePath);
+    out.write(0);
 
-      fs.breakLease(testFilePath);
-      while (!((AbfsOutputStream) out.getWrappedStream()).isLeaseFreed()) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-        }
-      }
-    } finally {
+    fs.breakLease(testFilePath);
+
+    while (!((AbfsOutputStream) out.getWrappedStream()).isLeaseFreed()) {
       try {
-        if (out != null) {
-          out.close();
-        }
-        Assert.fail("No exception on close after broken lease");
-      } catch (IOException e) {
-        if (isHNSEnabled) {
-          GenericTestUtils.assertExceptionContains(ERR_LEASE_NOT_PRESENT, e);
-        } else {
-          GenericTestUtils.assertExceptionContains(ERR_LEASE_EXPIRED, e);
-        }
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
       }
     }
+
+    LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_LEASE_NOT_PRESENT :
+        ERR_LEASE_EXPIRED, () -> {
+      out.close();
+      return "Expected exception on close after lease break but got " + out;
+    });
+
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
   }
 
@@ -276,20 +269,57 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     Assert.assertFalse(fs.getAbfsStore().areLeasesFreed());
     fs.close();
     Assert.assertTrue(fs.getAbfsStore().areLeasesFreed());
-    try {
-      out.close();
-      Assert.fail("No exception on close after closed FS");
-    } catch (IOException e) {
-      if (isHNSEnabled) {
-        GenericTestUtils.assertExceptionContains(ERR_LEASE_NOT_PRESENT, e);
-      } else {
-        GenericTestUtils.assertExceptionContains(ERR_LEASE_EXPIRED, e);
-      }
-    }
 
-    try (FSDataOutputStream out2 = fs.append(testFilePath)) {
-      Assert.fail("Expected an error on operation after closed FS");
-    } catch (RejectedExecutionException e) {
-    }
+    LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_LEASE_NOT_PRESENT :
+        ERR_LEASE_EXPIRED, () -> {
+      out.close();
+      return "Expected exception on close after closed FS but got " + out;
+    });
+
+    LambdaTestUtils.intercept(RejectedExecutionException.class, () -> {
+      try (FSDataOutputStream out2 = fs.append(testFilePath)) {
+      }
+      return "Expected exception on new append after closed FS";
+    });
+  }
+
+  @Test(timeout = TEST_EXECUTION_TIMEOUT)
+  public void testFileSystemLeaseOps() throws Exception {
+    final Path testDir = path(methodName.getMethodName());
+    final AzureBlobFileSystem fs = getFileSystem();
+    fs.mkdirs(testDir);
+
+    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_ID_NOT_PRESENT, () -> {
+      fs.breakLease(testDir);
+      return "Expected exception on break lease when no lease is held";
+    });
+
+    String leaseId = fs.acquireLease(testDir, TEST_LEASE_DURATION);
+    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_ALREADY_PRESENT, () -> {
+      fs.acquireLease(testDir, TEST_LEASE_DURATION);
+      return "Expected exception on acquire lease when lease is already held";
+    });
+    fs.renewLease(testDir, leaseId);
+    fs.releaseLease(testDir, leaseId);
+    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_NOT_PRESENT, () -> {
+      fs.renewLease(testDir, leaseId);
+      return "Expected exception on renew lease after lease has been released";
+    });
+
+    String leaseId2 = fs.acquireLease(testDir, TEST_LEASE_DURATION);
+    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_DID_NOT_MATCH, () -> {
+      fs.renewLease(testDir, leaseId);
+      return "Expected exception on renew wrong lease ID";
+    });
+    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_DID_NOT_MATCH, () -> {
+      fs.releaseLease(testDir, leaseId);
+      return "Expected exception on release wrong lease ID";
+    });
+    fs.breakLease(testDir);
+    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_BROKEN, () -> {
+      fs.renewLease(testDir, leaseId2);
+      return "Expected exception on renewing broken lease";
+    });
+    fs.releaseLease(testDir, leaseId2);
   }
 }

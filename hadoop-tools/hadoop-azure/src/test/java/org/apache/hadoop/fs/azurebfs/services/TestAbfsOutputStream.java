@@ -89,7 +89,7 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, null,
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
@@ -136,7 +136,7 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, null,
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
@@ -194,7 +194,7 @@ public final class TestAbfsOutputStream {
     when(op.getSasToken()).thenReturn("testToken");
     when(op.getResult()).thenReturn(httpOp);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, null,
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
@@ -252,7 +252,7 @@ public final class TestAbfsOutputStream {
     when(op.getSasToken()).thenReturn("testToken");
     when(op.getResult()).thenReturn(httpOp);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, null,
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
@@ -294,7 +294,7 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, null,
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, true));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
@@ -337,7 +337,7 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, null,
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
@@ -391,7 +391,7 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, null,
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);

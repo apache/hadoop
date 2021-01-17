@@ -533,7 +533,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           statistics,
           relativePath,
           0,
-          leaseRefs,
           populateAbfsOutputStreamContext(isAppendBlob, enableSingleWriter));
     }
   }
@@ -622,6 +621,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
             .withSingleWriterEnabled(enableSingleWriter)
+            .withLeaseRefs(leaseRefs)
             .build();
   }
 
@@ -747,7 +747,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           statistics,
           relativePath,
           offset,
-          leaseRefs,
           populateAbfsOutputStreamContext(isAppendBlob, enableSingleWriter));
     }
   }

@@ -36,7 +36,14 @@ public final class AbfsErrors {
   public static final String ERR_PARALLEL_ACCESS_DETECTED = "Parallel access to the create path "
       + "detected. Failing request to honor single writer semantics";
   public static final String ERR_ACQUIRING_LEASE = "Unable to acquire lease";
+  public static final String ERR_LEASE_ALREADY_PRESENT = "There is already a lease present";
   public static final String ERR_LEASE_NOT_PRESENT = "There is currently no lease on the resource";
+  public static final String ERR_LEASE_ID_NOT_PRESENT = "The lease ID is not present with the "
+      + "specified lease operation";
+  public static final String ERR_LEASE_DID_NOT_MATCH = "The lease ID specified did not match the "
+      + "lease ID for the resource with the specified lease operation";
+  public static final String ERR_LEASE_BROKEN = "The lease ID matched, but the lease has been "
+    + "broken explicitly and cannot be renewed";
   public static final String ERR_LEASE_FUTURE_EXISTS = "There is already an existing lease "
       + "operation";
   public static final String ERR_NO_LEASE_THREADS = "Lease desired but no lease threads "

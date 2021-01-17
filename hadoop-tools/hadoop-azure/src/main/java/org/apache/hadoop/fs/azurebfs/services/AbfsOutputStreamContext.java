@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.Map;
+
 /**
  * Class to hold extra output stream configs.
  */
@@ -40,6 +42,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   private int maxWriteRequestsToQueue;
 
   private boolean enableSingleWriter;
+
+  private Map<SelfRenewingLease, Object> leaseRefs;
 
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -101,6 +105,11 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withLeaseRefs(final Map<SelfRenewingLease, Object> leaseRefs) {
+    this.leaseRefs = leaseRefs;
+    return this;
+  }
+
   public int getWriteBufferSize() {
     return writeBufferSize;
   }
@@ -135,5 +144,11 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public boolean isEnableSingleWriter() {
     return this.enableSingleWriter;
+  }
+
+  public void addLease(SelfRenewingLease lease) {
+    if (this.leaseRefs != null) {
+      this.leaseRefs.put(lease, null);
+    }
   }
 }
