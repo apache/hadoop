@@ -261,6 +261,24 @@ public class RouterRpcClient {
   }
 
   /**
+   * Total number of idle sockets between the router and NNs.
+   *
+   * @return Number of namenode clients.
+   */
+  public int getNumIdleConnections() {
+    return this.connectionManager.getNumIdleConnections();
+  }
+
+  /**
+   * Total number of active sockets between the router and NNs.
+   *
+   * @return Number of recently active namenode clients.
+   */
+  public int getNumActiveConnectionsRecently() {
+    return this.connectionManager.getNumActiveConnectionsRecently();
+  }
+
+  /**
    * Total number of open connection pools to a NN. Each connection pool.
    * represents one user + one NN.
    *

@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.util.Time;
 
 /**
  * Context to track a connection in a {@link ConnectionPool}. When a client uses
@@ -42,7 +43,10 @@ public class ConnectionContext {
   private int numThreads = 0;
   /** If the connection is closed. */
   private boolean closed = false;
-
+  /** Last timestamp the connection was active. */
+  private long lastActiveTs = 0;
+  /** The connection's active status would expire after this window. */
+  private long activeWindow = 30 * 1000;
 
   public ConnectionContext(ProxyAndInfo<?> connection) {
     this.client = connection;
@@ -55,6 +59,17 @@ public class ConnectionContext {
    */
   public synchronized boolean isActive() {
     return this.numThreads > 0;
+  }
+
+  /**
+   * Check if the connection is/was active recently.
+   *
+   * @return True if the connection is active or
+   * was active in the past period of time.
+   */
+  public synchronized boolean isActiveRecently() {
+    return isActive() ||
+        Time.monotonicNow() - this.lastActiveTs <= activeWindow;
   }
 
   /**
@@ -83,30 +98,38 @@ public class ConnectionContext {
    */
   public synchronized ProxyAndInfo<?> getClient() {
     this.numThreads++;
+    this.lastActiveTs = Time.monotonicNow();
     return this.client;
   }
 
   /**
-   * Release this connection. If the connection was closed, close the proxy.
-   * Otherwise, mark the connection as not used by us anymore.
+   * Release this connection.
    */
   public synchronized void release() {
-    if (--this.numThreads == 0 && this.closed) {
-      close();
+    if (this.numThreads > 0) {
+      this.numThreads--;
     }
   }
 
   /**
-   * We will not use this connection anymore. If it's not being used, we close
-   * it. Otherwise, we let release() do it once we are done with it.
+   * Close a connection. Only idle connections can be closed since
+   * the RPC proxy would be shut down immediately.
+   *
+   * @param force whether the connection should be closed anyway.
+   * @throws IllegalStateException when the connection is not idle
    */
-  public synchronized void close() {
-    this.closed = true;
-    if (this.numThreads == 0) {
-      Object proxy = this.client.getProxy();
-      // Nobody should be using this anymore so it should close right away
-      RPC.stopProxy(proxy);
+  public synchronized void close(boolean force) throws IllegalStateException {
+    if (!force && this.numThreads > 0) {
+      throw new IllegalStateException("Active connection cannot be closed");
     }
+    this.closed = true;
+    Object proxy = this.client.getProxy();
+    // Nobody should be using this anymore so it should close right away
+    RPC.stopProxy(proxy);
+  }
+
+  public synchronized void close() {
+    close(false);
   }
 
   @Override
