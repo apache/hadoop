@@ -56,7 +56,7 @@ public abstract class MutableMetric {
   protected void clearChanged() { changed = false; }
 
   /**
-   * @return  true if metric is changed since last snapshot/snapshot
+   * @return  true if metric is changed since last snapshot
    */
   public boolean changed() { return changed; }
 }
