@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -454,7 +455,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
    */
   private void mergePaths(FileSystem fs, final FileStatus from,
       final Path to, JobContext context) throws IOException {
+    long timeStartNs = -1L;
     if (LOG.isDebugEnabled()) {
+      timeStartNs = System.nanoTime();
       LOG.debug("Merging data from " + from + " to " + to);
     }
     reportProgress(context);
@@ -492,6 +495,12 @@ public class FileOutputCommitter extends PathOutputCommitter {
       } else {
         renameOrMerge(fs, from, to, context);
       }
+    }
+    if (LOG.isDebugEnabled() && timeStartNs > 0) {
+      long timeEndNs = System.nanoTime();
+      // use getPath() to reduce log message (another info would be available in previous log)
+      LOG.debug("Merged data from " + from.getPath() + " to " + to + " in " +
+          TimeUnit.MILLISECONDS.convert(timeEndNs - timeStartNs, TimeUnit.NANOSECONDS) + " ms");
     }
   }
 
