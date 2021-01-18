@@ -497,10 +497,10 @@ public class FileOutputCommitter extends PathOutputCommitter {
       }
     }
     if (LOG.isDebugEnabled() && timeStartNs > 0) {
-      long timeEndNs = System.nanoTime();
-      // use getPath() to reduce log message (another info would be available in previous log)
+      long elapsedMs = TimeUnit.MILLISECONDS.convert(
+          System.nanoTime() - timeStartNs, TimeUnit.NANOSECONDS);
       LOG.debug("Merged data from " + from.getPath() + " to " + to + " in " +
-          TimeUnit.MILLISECONDS.convert(timeEndNs - timeStartNs, TimeUnit.NANOSECONDS) + " ms");
+          elapsedMs + " ms");
     }
   }
 
