@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.AbstractComparatorOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -136,8 +137,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
 
     // 3. Loop through all partitions to select containers for preemption.
     for (String partition : preemptionContext.getAllPartitions()) {
-      LinkedHashSet<String> queueNames = preemptionContext
-          .getUnderServedQueuesPerPartition(partition);
+      LinkedHashSet<String> queueNames =
+          getUnderServedQueuesPerPartition(preemptionContext, partition);
 
       // Error check to handle non-mapped labels to queue.
       if (null == queueNames) {
@@ -181,7 +182,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
         leafQueue.getReadLock().lock();
         try {
           for (FiCaSchedulerApp app : apps) {
-            preemptFromLeastStarvedApp(app, selectedCandidates,
+            preemptFromLeastStarvedApp(leafQueue, app, selectedCandidates,
                 curCandidates, clusterResource, totalPreemptedResourceAllowed,
                 resToObtainByPartition, rollingResourceUsagePerUser);
           }
@@ -206,7 +207,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
     }
   }
 
-  private void preemptFromLeastStarvedApp(FiCaSchedulerApp app,
+  private void preemptFromLeastStarvedApp(AbstractLeafQueue leafQueue,
+      FiCaSchedulerApp app,
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
       Resource clusterResource, Resource totalPreemptedResourceAllowed,
@@ -255,7 +257,9 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
             c.getContainerId(), c.getAllocatedResource(), app.getUser(),
             rollingUsedResourcePerUser);
 
-        break;
+        // Other containers from current app may still be preemptable
+        // within the current constraints.
+        continue;
       }
 
       // Try to preempt this container
@@ -272,6 +276,17 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
         Resources.subtractFrom(rollingUsedResourcePerUser,
             c.getAllocatedResource());
       }
+
+      // If FairOrderingPolicy is being used,
+      // subtract the preempted resource from the app's to-be-preempted.
+      // This is required because we don't keep track of
+      // preempted containers from an app in this round.
+      // So, for fair-share preemption, we don't know if,
+      // after preemption, the app is dropping below its fairShare.
+      if(ret && leafQueue.getOrderingPolicy() instanceof FairOrderingPolicy) {
+        fifoPreemptionComputePlugin
+            .deductActuallyToBePreemptedFromApp(app, c, clusterResource);
+      }
     }
   }
 
@@ -281,8 +296,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
 
     // 1. Iterate through all partition to calculate demand within a partition.
     for (String partition : context.getAllPartitions()) {
-      LinkedHashSet<String> queueNames = context
-          .getUnderServedQueuesPerPartition(partition);
+      LinkedHashSet<String> queueNames =
+          getUnderServedQueuesPerPartition(context, partition);
 
       if (null == queueNames) {
         continue;
@@ -319,5 +334,50 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
             context.getMaxAllowableLimitForIntraQueuePreemption());
       }
     }
+  }
+
+  private LinkedHashSet<String> getUnderServedQueuesPerPartition(
+      CapacitySchedulerPreemptionContext contextToCheck, String partition) {
+
+    LinkedHashSet<String> queueNames =
+        contextToCheck.getUnderServedQueuesPerPartition(partition);
+
+    if(queueNames == null) {
+      queueNames = getUnderServedLQueuesForFairOrder(
+          contextToCheck, partition);
+    } else {
+      queueNames.addAll(getUnderServedLQueuesForFairOrder(
+          contextToCheck, partition));
+    }
+
+    return queueNames;
+  }
+
+  // In case we have FairOrderingPolicy being used,
+  // we may want to consider pending resource requests
+  // without headroom consideration as well.
+  // This is because resources might be pending from starved apps of a user
+  // who has hit his headroom.
+  // In such cases, we want to consider pending resources beyond headroom
+  // so that the starved apps can claim resources from the overfed apps.
+  private LinkedHashSet<String> getUnderServedLQueuesForFairOrder(
+      CapacitySchedulerPreemptionContext contextToCheck, String partition) {
+    LinkedHashSet<String> underServedQueues = new LinkedHashSet<>();
+    for(String leafQueue : contextToCheck.getLeafQueueNames()) {
+      TempQueuePerPartition tq =
+          contextToCheck.getQueueByPartition(leafQueue, partition);
+      if(tq == null || tq.leafQueue == null) {
+        continue;
+      }
+
+      if(!(tq.leafQueue.getOrderingPolicy() instanceof FairOrderingPolicy)) {
+        continue;
+      }
+
+      if(!Resources.isNone(tq.getPendingWithoutULandHeadroom())) {
+        underServedQueues.add(tq.getQueueName());
+      }
+    }
+    return underServedQueues;
   }
 }

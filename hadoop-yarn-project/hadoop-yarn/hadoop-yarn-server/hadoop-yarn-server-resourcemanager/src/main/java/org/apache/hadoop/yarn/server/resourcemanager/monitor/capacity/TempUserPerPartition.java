@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Temporary data-structure tracking resource availability, pending resource
@@ -34,12 +38,15 @@ public class TempUserPerPartition extends AbstractPreemptionEntity {
   private Resource userLimit;
   private boolean donePreemptionQuotaForULDelta = false;
 
+  private Map<ApplicationId, TempAppPerPartition> apps;
+
   TempUserPerPartition(User user, String queueName, Resource usedPerPartition,
       Resource amUsedPerPartition, Resource reserved,
       Resource pendingPerPartition) {
     super(queueName, usedPerPartition, amUsedPerPartition, reserved,
         pendingPerPartition);
     this.user = user;
+    this.apps = new HashMap<>();
   }
 
   @Override
@@ -84,5 +91,36 @@ public class TempUserPerPartition extends AbstractPreemptionEntity {
 
   public void updatePreemptionQuotaForULDeltaAsDone(boolean done) {
     this.donePreemptionQuotaForULDelta = done;
+  }
+
+  /**
+   * Method to add a new app under this user.
+   * @param applicationId application_id of the app
+   * @param tempAppPerPartition TempAppPerPartition object of the app
+   */
+  public void addApp(ApplicationId applicationId,
+      TempAppPerPartition tempAppPerPartition) {
+    apps.put(applicationId, tempAppPerPartition);
+  }
+
+  /**
+   * Getter method to return TempAppPerPartition for given application_id.
+   * @param applicationId application_id of the app
+   * @return TempAppPerPartition corresponding to given app_id.
+   *         Null if app_id is absent.
+   */
+  public TempAppPerPartition getApp(ApplicationId applicationId) {
+    if(!apps.containsKey(applicationId)) {
+      return null;
+    }
+    return apps.get(applicationId);
+  }
+
+  /**
+   * Getter method to return all the TempAppPerPartition under given user.
+   * @return collection of TempAppPerPartition user this user.
+   */
+  public Collection<TempAppPerPartition> getApps() {
+    return apps.values();
   }
 }

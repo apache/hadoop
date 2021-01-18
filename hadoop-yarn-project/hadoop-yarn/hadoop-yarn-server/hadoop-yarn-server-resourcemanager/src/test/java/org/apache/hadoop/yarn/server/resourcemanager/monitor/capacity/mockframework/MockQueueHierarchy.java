@@ -262,6 +262,8 @@ class MockQueueHierarchy {
         when(lq.getTotalPendingResourcesConsideringUserLimit(isA(Resource.class),
             isA(String.class), eq(true))).thenReturn(
             Resources.subtract(pending, reserved));
+        when(lq.getTotalPendingResources(
+            isA(String.class), eq(false))).thenReturn(pending);
       }
       ru.setUsed(partitionName, parseResourceFromString(values[2].trim()));
 

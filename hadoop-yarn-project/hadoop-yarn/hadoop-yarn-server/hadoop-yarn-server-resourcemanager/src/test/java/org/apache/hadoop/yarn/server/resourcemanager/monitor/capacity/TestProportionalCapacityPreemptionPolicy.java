@@ -1371,6 +1371,9 @@ public class TestProportionalCapacityPreemptionPolicy {
             reserved[i] == null ? Resources.none() : reserved[i]),
         Resources.none()));
 
+    when(lq.getTotalPendingResources(
+        isA(String.class), eq(false))).thenReturn(pending[i]);
+
     // need to set pending resource in resource usage as well
     ResourceUsage ru = new ResourceUsage();
     ru.setPending(pending[i]);

@@ -141,6 +141,10 @@ public class FifoIntraQueuePreemptionPlugin
     PriorityQueue<TempAppPerPartition> orderedByPriority = createTempAppForResCalculation(
         tq, apps, clusterResource, perUserAMUsed);
 
+    if(tq.leafQueue.getOrderingPolicy() instanceof FairOrderingPolicy) {
+      setFairShareForApps(tq, Resources.add(queueReassignableResource, amUsed));
+    }
+
     // 4. Calculate idealAssigned per app by checking based on queue's
     // unallocated resource.Also return apps arranged from lower priority to
     // higher priority.
@@ -176,14 +180,74 @@ public class FifoIntraQueuePreemptionPlugin
 
     // 8. There are chances that we may preempt for the demand from same
     // priority level, such cases are to be validated out.
-    validateOutSameAppPriorityFromDemand(clusterResource,
-        (TreeSet<TempAppPerPartition>) orderedApps, tq.getUsersPerPartition(),
-        context.getIntraQueuePreemptionOrderPolicy());
+
+    // if fairOrderingPolicy is being used, calculate toBePreempted
+    // based on FS per app.
+    if(tq.leafQueue.getOrderingPolicy() instanceof FairOrderingPolicy) {
+      calcActuallyToBePreemptedBasedOnFS(clusterResource, orderedApps);
+    } else {
+      validateOutSameAppPriorityFromDemand(clusterResource,
+          (TreeSet<TempAppPerPartition>) orderedApps, tq.getUsersPerPartition(),
+          context.getIntraQueuePreemptionOrderPolicy());
+    }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Queue Name:" + tq.queueName + ", partition:" + tq.partition);
       for (TempAppPerPartition tmpApp : tq.getApps()) {
         LOG.debug(tmpApp.toString());
+      }
+    }
+  }
+
+  /**
+   * For Fairness calculation, we treat UserLimit as an upper bound
+   * to the amount of resources allocated to a user.
+   * Following is the calculation used:
+   *
+   *    fairSharePerApp = total Queue Cap / no: of apps
+   *    idealFairSharePerAppwithUL = UL / no: of apps of that user
+   *
+   *    if(UserLimitPercent < 100)
+   *      fairSharePerApp = idealFairSharePerAppwithUL
+   *
+   * Using above formula,
+   * we firstly ensure all the apps in the queue get equal resources.
+   * However, if any user would be hitting their userlimit,
+   * then we try and ensure all apps for that user
+   * have fairness within their UserLimit.
+   * @param tq tempQueuePerPartition being considered
+   */
+  private void setFairShareForApps(TempQueuePerPartition tq,
+      Resource queueReassignableResource) {
+    int numOfAppsInQueue = tq.leafQueue.getAllApplications().size();
+    Resource fairShareAcrossApps = Resources.none();
+
+    if(numOfAppsInQueue > 0) {
+      fairShareAcrossApps = Resources.divideAndCeil(
+          this.rc, queueReassignableResource, numOfAppsInQueue);
+    }
+
+    for(TempUserPerPartition tmpUser : tq.getUsersPerPartition().values()){
+      int numOfAppsInUser = tmpUser.getApps().size();
+      Resource userLimitWithAmUsed = Resources.add(
+          tmpUser.getUserLimit(), tmpUser.getAMUsed());
+      Resource fairShareWithinUL = Resources.divideAndCeil(
+          this.rc, userLimitWithAmUsed, numOfAppsInUser);
+
+      for(TempAppPerPartition tmpApp : tmpUser.getApps()) {
+        Resource fairShareForApp = tq.leafQueue.getUserLimit() == 100 ?
+          fairShareAcrossApps : fairShareWithinUL;
+
+        fairShareForApp =
+            Resources.componentwiseMax(fairShareForApp, Resources.none());
+        tmpApp.setFairShare(fairShareForApp);
+
+        LOG.debug("App: " + tmpApp.getApplicationId()
+            + " from user: " + tmpUser.getUserName()
+            + ", FairShareAcrossApps: " + fairShareAcrossApps
+            + ", fairShareWithinUL: " + fairShareWithinUL
+            + ", num_of_apps for user: " + numOfAppsInUser
+            + ". Calculated FairShare for app is: " + tmpApp.getFairShare());
       }
     }
   }
@@ -213,9 +277,15 @@ public class FifoIntraQueuePreemptionPlugin
       // Calculate toBePreempted from apps as follows:
       // app.preemptable = min(max(app.used - app.selected - app.ideal, 0),
       // intra_q_preemptable)
-      tmpApp.toBePreempted = Resources.min(rc, clusterResource, Resources
-          .max(rc, clusterResource, preemtableFromApp, Resources.none()),
-          Resources.clone(preemptionLimit));
+      if(Resources.fitsIn(
+          tmpApp.getFiCaSchedulerApp().getCSLeafQueue().getMinimumAllocation(),
+          preemtableFromApp)) {
+        tmpApp.toBePreempted = Resources.min(rc, clusterResource, Resources
+                .max(rc, clusterResource, preemtableFromApp, Resources.none()),
+            Resources.clone(preemptionLimit));
+      } else {
+        tmpApp.toBePreempted = Resources.createResource(0, 0);
+      }
 
       preemptionLimit = Resources.subtractFromNonNegative(preemptionLimit,
           tmpApp.toBePreempted);
@@ -287,10 +357,13 @@ public class FifoIntraQueuePreemptionPlugin
       orderedApps.add(tmpApp);
 
       // Once unallocated resource is 0, we can stop assigning ideal per app.
-      if (Resources.lessThanOrEqual(rc, clusterResource,
+      // However, for FairOrderingPolicy, we want to iterate over all apps
+      // because fairness is calculated across all apps.
+      if (!(tq.leafQueue.getOrderingPolicy() instanceof FairOrderingPolicy) &&
+          (Resources.lessThanOrEqual(rc, clusterResource,
           queueReassignableResource, Resources.none()) ||
           (rc.isAnyMajorResourceZeroOrNegative(queueReassignableResource)
-              && context.getInQueuePreemptionConservativeDRF())) {
+              && context.getInQueuePreemptionConservativeDRF()))) {
         continue;
       }
 
@@ -308,9 +381,23 @@ public class FifoIntraQueuePreemptionPlugin
       // idealAssigned may fall to 0 if higher priority apps demand is more.
       Resource appIdealAssigned = Resources.add(tmpApp.getUsedDeductAM(),
           tmpApp.getPending());
+
+      // In case of fair ordering based preemption,
+      // consider fairShare of each app in a given queue
+      // as a max-cap.
+      if (queueOrderingPolicy instanceof FairOrderingPolicy) {
+        appIdealAssigned = Resources.min(rc, clusterResource,
+            tmpApp.getFairShare(), appIdealAssigned);
+        appIdealAssigned = Resources.componentwiseMax(
+            appIdealAssigned, Resources.none());
+      }
+
       Resources.subtractFrom(appIdealAssigned, tmpApp.selected);
 
-      if (Resources.lessThan(rc, clusterResource, idealAssignedForUser,
+      if(tq.leafQueue.getOrderingPolicy() instanceof FairOrderingPolicy) {
+        tmpApp.idealAssigned = appIdealAssigned;
+        Resources.addTo(idealAssignedForUser, tmpApp.idealAssigned);
+      } else if (Resources.lessThan(rc, clusterResource, idealAssignedForUser,
           userLimitResource)) {
         Resource idealAssigned = Resources.min(rc, clusterResource,
             appIdealAssigned,
@@ -451,6 +538,9 @@ public class FifoIntraQueuePreemptionPlugin
       }
       tmpApp.setTempUserPerPartition(tmpUser);
       orderedByPriority.add(tmpApp);
+      tq.getUsersPerPartition()
+          .get(tmpUser.getUserName())
+          .addApp(tmpApp.getApplicationId(), tmpApp);
     }
 
     return orderedByPriority;
@@ -574,6 +664,65 @@ public class FifoIntraQueuePreemptionPlugin
     }
   }
 
+  /**
+   * For each starved app, iterate over all the overfed apps.
+   * Mark as many resources as possible from overfed apps
+   * to satisfy the starvation of the starved app.
+   * starvedResources =
+   *    ToBePreemptFromOther - starvation_fulfilled_by_other_overfed_apps
+   * overfedResources =
+   *    ToBePreempted - resources_already_marked_for_preemption
+   * @param clusterResource total resources present in the cluster
+   * @param orderedApps TreeSet of apps ordered by the excess used resources
+   */
+  private void calcActuallyToBePreemptedBasedOnFS(Resource clusterResource,
+      TreeSet<TempAppPerPartition> orderedApps) {
+    TempAppPerPartition[] apps = orderedApps.toArray(
+        new TempAppPerPartition[orderedApps.size()]);
+    if (apps.length <= 1) {
+      return;
+    }
+
+    for(int starvedAppInd = apps.length-1; starvedAppInd>=0; starvedAppInd--) {
+      TempAppPerPartition starvedApp = apps[starvedAppInd];
+
+      for(TempAppPerPartition overfedApp : apps) {
+        if(overfedApp == starvedApp) {
+          continue;
+        }
+
+        Resource preemptForStarved = starvedApp.getToBePreemptFromOther();
+        if(Resources.lessThanOrEqual(
+            rc, clusterResource, preemptForStarved, Resources.none())) {
+          break;
+        }
+
+        Resource preemptFromOverfed =
+            Resources.subtractNonNegative(overfedApp.toBePreempted,
+                overfedApp.getActuallyToBePreempted());
+        if(Resources.lessThanOrEqual(
+            rc, clusterResource, preemptFromOverfed, Resources.none())) {
+          continue;
+        }
+
+
+        Resource preempt = Resources.min(rc, clusterResource,
+            preemptFromOverfed, preemptForStarved);
+
+        LOG.debug("Marking:  " + preempt
+            + " resources which can be preempted from " + overfedApp
+            + " to " + starvedApp);
+
+        starvedApp.setToBePreemptFromOther(
+            Resources.subtractNonNegative(
+                starvedApp.getToBePreemptFromOther(), preempt));
+
+        overfedApp.setActuallyToBePreempted(
+            Resources.add(overfedApp.getActuallyToBePreempted(), preempt));
+      }
+    }
+  }
+
   private Resource calculateUsedAMResourcesPerQueue(String partition,
       AbstractLeafQueue leafQueue, Map<String, Resource> perUserAMUsed) {
     Collection<FiCaSchedulerApp> runningApps = leafQueue.getApplications();
@@ -606,17 +755,25 @@ public class FifoIntraQueuePreemptionPlugin
     // skip some containers as per this check. If used resource is under user
     // limit, then these containers of this user has to be preempted as demand
     // might be due to high priority apps running in same user.
-    String partition = context.getScheduler()
-        .getSchedulerNode(c.getAllocatedNode()).getPartition();
-    String queuePath =
-        context.getScheduler().getQueue(app.getQueueName()).getQueuePath();
-    TempQueuePerPartition tq =
-        context.getQueueByPartition(queuePath, partition);
+    TempQueuePerPartition tq = getTmpQueueOfContainer(app, c);
     TempUserPerPartition tmpUser = tq.getUsersPerPartition().get(app.getUser());
 
     // Given user is not present, skip the check.
     if (tmpUser == null) {
       return false;
+    }
+
+    TempAppPerPartition tmpApp = tmpUser.getApp(app.getApplicationId());
+
+    if(tq.leafQueue.getOrderingPolicy() instanceof FairOrderingPolicy) {
+      // Check we don't preempt more resources than
+      // ActuallyToBePreempted from the app
+      if(tmpApp != null
+          && Resources.fitsIn(
+          c.getAllocatedResource(), tmpApp.getActuallyToBePreempted())) {
+        return false;
+      }
+      return true;
     }
 
     // For ideal resource computations, user-limit got saved by subtracting am
@@ -628,5 +785,34 @@ public class FifoIntraQueuePreemptionPlugin
         Resources.subtract(usedResource, c.getAllocatedResource()), userLimit)
         && context.getIntraQueuePreemptionOrderPolicy()
             .equals(IntraQueuePreemptionOrderPolicy.USERLIMIT_FIRST);
+  }
+
+  private TempQueuePerPartition getTmpQueueOfContainer(
+      FiCaSchedulerApp app, RMContainer c) {
+    String partition = context.getScheduler()
+        .getSchedulerNode(c.getAllocatedNode()).getPartition();
+    String queuePath = context.getScheduler()
+        .getQueue(app.getQueueName()).getQueuePath();
+    TempQueuePerPartition tq = context.getQueueByPartition(
+        queuePath, partition);
+    return tq;
+  }
+
+  @Override
+  public void deductActuallyToBePreemptedFromApp(FiCaSchedulerApp app,
+      RMContainer c, Resource clusterResource) {
+    TempQueuePerPartition tq = getTmpQueueOfContainer(app, c);
+    TempUserPerPartition tmpUser = tq.getUsersPerPartition().get(app.getUser());
+    if(tmpUser == null) {
+      return;
+    }
+
+    TempAppPerPartition tmpApp = tmpUser.getApp(app.getApplicationId());
+    tmpApp.deductActuallyToBePreempted(
+        rc, clusterResource, c.getAllocatedResource());
+
+    LOG.debug("App metrics after marking container: " + c.getContainerId()
+        + " with resources: " + c.getAllocatedResource()
+        + " to_be_preempted from app: " + tmpApp);
   }
 }

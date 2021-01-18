@@ -44,4 +44,7 @@ interface IntraQueuePreemptionComputePlugin {
 
   boolean skipContainerBasedOnIntraQueuePolicy(FiCaSchedulerApp app,
       Resource clusterResource, Resource usedResource, RMContainer c);
+
+  void deductActuallyToBePreemptedFromApp(FiCaSchedulerApp app,
+      RMContainer c, Resource clusterResource);
 }

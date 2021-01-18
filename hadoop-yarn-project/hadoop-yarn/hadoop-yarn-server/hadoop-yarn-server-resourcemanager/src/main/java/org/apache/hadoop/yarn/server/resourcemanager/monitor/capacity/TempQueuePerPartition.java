@@ -62,6 +62,7 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   boolean preemptionDisabled;
 
   protected Resource pendingDeductReserved;
+  private Resource pendingWithoutULandHeadroom;
 
   // Relative priority of this queue to its parent
   // If parent queue's ordering policy doesn't respect priority,
@@ -88,10 +89,13 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
           totalPartitionResource, partition, false);
       pendingDeductReserved = l.getTotalPendingResourcesConsideringUserLimit(
           totalPartitionResource, partition, true);
+      pendingWithoutULandHeadroom =
+          l.getTotalPendingResources(partition, false);
       leafQueue = l;
     } else {
       pending = Resources.createResource(0);
       pendingDeductReserved = Resources.createResource(0);
+      pendingWithoutULandHeadroom = Resources.createResource(0);
     }
 
     if (queue != null && ParentQueue.class.isAssignableFrom(queue.getClass())) {
@@ -408,6 +412,10 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
    */
   protected void initializeRootIdealWithGuarangeed() {
     idealAssigned = Resources.clone(getGuaranteed());
+  }
+
+  public Resource getPendingWithoutULandHeadroom() {
+    return pendingWithoutULandHeadroom;
   }
 
 }

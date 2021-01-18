@@ -59,13 +59,13 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
         (float) 1.0);
 
-    String labelsConfig = "=100,true;";
+    String labelsConfig = "=100:100,true;";
     String nodesConfig = // n1 has no label
         "n1= res=100";
     String queuesConfig =
         // guaranteed,max,used,pending,reserved
-        "root(=[100 100 100 1 0]);" + // root
-            "-a(=[100 100 100 1 0])"; // a
+        "root(=[100:100 100:100 100:100 1:1 0]);" + // root
+            "-a(=[100:100 100:100 100:100 1:1 0])"; // a
 
     // user1/app1 has 60 resources in queue a
     // user2/app2 has 40 resources in queue a
@@ -76,14 +76,14 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     String appsConfig =
     // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1, user1 in a
-            + "(1,1,n1,,60,false,0,user1);" +
+            + "(1,1:1,n1,,60,false,0,user1);" +
             "a\t" // app2, user2 in a
-            + "(1,1,n1,,40,false,0,user2);" +
+            + "(1,1:1,n1,,40,false,0,user2);" +
             "a\t" // app3, user3 in a
-            + "(1,1,n1,,0,false,20,user3)"
+            + "(1,1:1,n1,,0,false,20:20,user3)"
             ;
 
-    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
     policy.editSchedule();
 
     verify(eventHandler, times(20)).handle(argThat(
@@ -178,40 +178,45 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
         (float) 1.0);
 
-    String labelsConfig = "=100,true;";
+    String labelsConfig = "=100:100,true;";
     String nodesConfig = // n1 has no label
         "n1= res=100";
     String queuesConfig =
         // guaranteed,max,used,pending,reserved
-        "root(=[100 100 100 1 0]);" + // root
-            "-a(=[100 100 100 1 0])"; // a
+        "root(=[100:100 100:100 100:100 1:1 0]);" + // root
+            "-a(=[100:100 100:100 100:100 1:1 0])"; // a
 
     // user1/app1 has 35 resources in queue a
     // user1/app2 has 25 resources in queue a
     // user2/app3 has 40 resources in queue a
     // user3/app4 is requesting 20 resources in queue a
     // With 3 users, preemptable user limit should be around 35 resources each.
-    // With FairOrderingPolicy enabled on queue a, all 20 resources should be
-    // preempted from app1 since it's the most over served app from the most
-    // over served user
+    // With FairOrderingPolicy enabled on queue a,
+    // we will preempt around (60 - 35) ~ 25 resources
+    // from user1's app1 and app2.
+    // However, because app4 has only 20 container demand,
+    // 20 containers will be picked from user1.
     String appsConfig =
     // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 and app2, user1 in a
-            + "(1,1,n1,,35,false,0,user1);" +
+            + "(1,1:1,n1,,35,false,0,user1);" +
             "a\t"
-            + "(1,1,n1,,25,false,0,user1);" +
+            + "(1,1:1,n1,,25,false,0,user1);" +
             "a\t" // app3, user2 in a
-            + "(1,1,n1,,40,false,0,user2);" +
+            + "(1,1:1,n1,,40,false,0,user2);" +
             "a\t" // app4, user3 in a
-            + "(1,1,n1,,0,false,20,user3)"
+            + "(1,1:1,n1,,0,false,20:20,user3)"
             ;
 
-    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
     policy.editSchedule();
 
-    verify(eventHandler, times(20)).handle(argThat(
+    verify(eventHandler, times(16)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
+    verify(eventHandler, times(4)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(2))));
   }
 
   /*
@@ -271,6 +276,234 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
 
     // Preempt the remaining resource from User1's oldest app1.
     verify(eventHandler, times(1)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+  }
+
+  @Test
+  public void testIntraQueuePreemptionFairOrderingPolicyMultiAppsSingleUser()
+      throws IOException {
+    /**
+     * Scenario:
+     *   Queue total resources: 100
+     *   Minimum user limit percent: 100%
+     *   +--------------+------+---------+-----------+
+     *   | APP  | USER  | USED | PENDING | FAIRSHARE |
+     *   +--------------+------+---------+-----------+
+     *   | app1 | user1 | 25   | 0       | 25        |
+     *   | app2 | user1 | 35   | 0       | 25        |
+     *   | app3 | user1 | 40   | 0       | 25        |
+     *   | app4 | user1 | 0    | 20      | 25        |
+     *   +--------------+------+---------+-----------+
+     * Because all apps are from same user,
+     * we expect each app to have 25% fairshare.
+     * So app2 can give 9 containers and
+     * app3 can loose 13 containers (exclude AM).
+     * However, because we are using FiCa scheduling,
+     * app3 is least starved
+     * and so we will take all its resources above its fairshare.
+     * (check: IntraQueuePreemptionPolicy: preemptFromLeastStarvedApp())
+     * So we expect app3 to give 13 containers and
+     * app2 to give the remaining containers (20 - 13 = 7 containers)
+     */
+    // Enable FairOrderingPolicy for yarn.scheduler.capacity.root.a
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + ".a.ordering-policy", "fair");
+    // Make sure all containers will be preempted in a single round.
+    conf.setFloat(CapacitySchedulerConfiguration.
+            INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
+        (float) 1.0);
+
+    String labelsConfig = "=100:100,true;";
+    String nodesConfig = // n1 has no label
+        "n1= res=100";
+    String queuesConfig =
+        // guaranteed,max,used,pending,reserved
+        "root(=[100:100 100:100 100:100 1:1 0]);" + // root
+            "-a(=[100:100 100:100 100:100 1:1 0])"; // a
+
+    String appsConfig =
+    // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+        "a\t" // app1, app2, app3, app4 from user1
+            + "(1,1:1,n1,,25,false,0,user1);" +
+            "a\t"
+            + "(1,1:1,n1,,35,false,0,user1);" +
+            "a\t"
+            + "(1,1:1,n1,,40,false,0,user1);" +
+            "a\t"
+            + "(1,1:1,n1,,0,false,20:20,user1)";
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    policy.editSchedule();
+
+    verify(eventHandler, times(13)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(3))));
+    verify(eventHandler, times(7)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(2))));
+  }
+
+  @Test
+  public void testIntraQueuePreemptionFairOPIntraUserPreemption()
+      throws IOException {
+    /**
+     * Scenario:
+     *   Queue total resources: 100
+     *   Minimum user limit percent: 50%
+     *   +--------------+------+---------+-----------+
+     *   | APP  | USER  | USED | PENDING | FAIRSHARE |
+     *   +--------------+------+---------+-----------+
+     *   | app1 | user1 | 40   | 0       | 25        |
+     *   | app2 | user1 | 10   | 0       | 25        |
+     *   | app3 | user2 | 50   | 0       | 25        |
+     *   | app4 | user2 | 0    | 30      | 25        |
+     *   +--------------+------+---------+-----------+
+     *
+     * Because user1 is at its user limit, for app4 of user2,
+     * we will preempt the containers from user2 only, i.e. app3 of user2.
+     * Because we want to maintain fairness,
+     * we will preempt 24 containers from app3
+     * (whose fairshare is 25% -> 1/2 of 50% UL)
+     */
+    // Enable FairOrderingPolicy for yarn.scheduler.capacity.root.a
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + ".a.ordering-policy", "fair");
+    // Make sure all containers will be preempted in a single round.
+    conf.setFloat(CapacitySchedulerConfiguration.
+            INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
+        (float) 1.0);
+
+    String labelsConfig = "=100,true;";
+    String nodesConfig = // n1 has no label
+        "n1= res=100";
+    String queuesConfig =
+        // guaranteed,max,used,pending,reserved
+        "root(=[100 100 100 1 0]);" + // root
+            "-a(=[100 100 100 1 0])"; // a
+    String appsConfig =
+    // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+        "a\t" // app1 and app2, user1 in a
+            + "(1,1,n1,,40,false,0,user1);" +
+            "a\t"
+            + "(1,1,n1,,10,false,0,user1);" +
+            "a\t" // app3 and app4 from user2 in a
+            + "(1,1,n1,,50,false,0,user2);" +
+            "a\t"
+            + "(1,1,n1,,0,false,30,user2)";
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    policy.editSchedule();
+
+    verify(eventHandler, times(23)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(3))));
+  }
+
+  @Test
+  public void testIntraQueuePreemptionFairOPFairnessAcrossUsers()
+      throws IOException {
+    /**
+     * Scenario:
+     *   Queue total resources: 100
+     *   Minimum user limit percent: 50%
+     *   +--------------+------+---------+-----------+
+     *   | APP  | USER  | USED | PENDING | FAIRSHARE |
+     *   +--------------+------+---------+-----------+
+     *   | app1 | user1 | 51   | 0       | 25        |
+     *   | app2 | user1 | 49   | 0       | 25        |
+     *   | app3 | user2 | 0    | 50      | 50        |
+     *   +--------------+------+---------+-----------+
+     *
+     * User1 has 2 apps, Each app will have
+     * 25% fairshare (1/2 of 50% of user's fairShare)
+     * App3 has fairShare
+     *    = UL / num of apps in user(50%) = 50%
+     * So app3 asks for 50 resources.
+     *  ~25 are given by app1 and app2.
+     */
+    // Enable FairOrderingPolicy for yarn.scheduler.capacity.root.a
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + ".a.ordering-policy", "fair");
+    // Make sure all containers will be preempted in a single round.
+    conf.setFloat(CapacitySchedulerConfiguration.
+            INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
+        (float) 1.0);
+
+    String labelsConfig = "=100:100,true;";
+    String nodesConfig = // n1 has no label
+        "n1= res=100";
+    String queuesConfig =
+        // guaranteed,max,used,pending,reserved
+        "root(=[100:100 100:100 100:100 1:1 0]);" + // root
+            "-a(=[100:100 100:100 100:100 1:1 0])"; // a
+    String appsConfig =
+    // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+        "a\t" // app1 and app2, user1 in a
+            + "(1,1:1,n1,,51,false,0,user1);" +
+            "a\t"
+            + "(1,1:1,n1,,49,false,0,user1);" +
+            "a\t" // app3, user2 in a
+            + "(1,1:1,n1,,0,false,50:50,user2);";
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    policy.editSchedule();
+
+    verify(eventHandler, times(24)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(1))));
+    verify(eventHandler, times(22)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(2))));
+  }
+
+  @Test
+  public void testIntraQueuePreemptionFairOPUserLimitPreserved()
+      throws IOException {
+    /**
+     * Scenario:
+     *   Queue total resources: 100
+     *   Minimum user limit percent: 50%
+     *   +--------------+------------+------+---------+-----------+
+     *   | APP  | USER  | USER-LIMIT | USED | PENDING | FAIRSHARE |
+     *   +--------------+------------+------+---------+-----------+
+     *   | app1 | user1 |  50        | 100  | 0       | 50        |
+     *   | app3 | user2 |  50        | 0    | 50      | 50        |
+     *   | app4 | user3 |  50        | 0    | 50      | 50        |
+     *   +--------------+------------+------+---------+-----------+
+     *
+     * User1 has 1 app, This app will have 50% fairshare
+     * (100% of user1's fairShare)
+     * So 50 containers from app1 should be preempted.
+     */
+    // Enable FairOrderingPolicy for yarn.scheduler.capacity.root.a
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + ".a.ordering-policy", "fair");
+    // Make sure all containers will be preempted in a single round.
+    conf.setFloat(CapacitySchedulerConfiguration.
+            INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
+        (float) 1.0);
+
+    String labelsConfig = "=100:100,true;";
+    String nodesConfig = // n1 has no label
+        "n1= res=100";
+    String queuesConfig =
+        // guaranteed,max,used,pending,reserved
+        "root(=[100:100 100:100 100:100 1:1 0]);" + // root
+            "-a(=[100:100 100:100 100:100 1:1 0])"; // a
+    String appsConfig =
+    // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+        "a\t" // app1 and app2, user1 in a
+            + "(1,1:1,n1,,100,false,0,user1)" + "\t50;" +
+            "a\t" // app3, user2 in a
+            + "(1,1:1,n1,,0,false,50,user2)" + "\t50;" +
+            "a\t" // app3, user2 in a
+            + "(1,1:1,n1,,0,false,50:50,user3)" + "\t50;";
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    policy.editSchedule();
+
+    verify(eventHandler, times(48)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }

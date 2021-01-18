@@ -66,9 +66,12 @@ public class TempAppPerPartition extends AbstractPreemptionEntity {
         .append(idealAssigned).append(" PREEMPT_OTHER: ")
         .append(getToBePreemptFromOther()).append(" IDEAL_PREEMPT: ")
         .append(toBePreempted).append(" ACTUAL_PREEMPT: ")
-        .append(getActuallyToBePreempted()).append("\n");
+        .append(getActuallyToBePreempted());
+    if(getFairShare() != null) {
+      sb.append(" FAIR-SHARE: ").append(getFairShare());
+    }
 
-    return sb.toString();
+    return sb.append("\n").toString();
   }
 
   void appendLogString(StringBuilder sb) {
@@ -98,7 +101,7 @@ public class TempAppPerPartition extends AbstractPreemptionEntity {
 
   public void deductActuallyToBePreempted(ResourceCalculator resourceCalculator,
       Resource cluster, Resource toBeDeduct) {
-    if (Resources.greaterThan(resourceCalculator, cluster,
+    if (Resources.greaterThanOrEqual(resourceCalculator, cluster,
         getActuallyToBePreempted(), toBeDeduct)) {
       Resources.subtractFrom(getActuallyToBePreempted(), toBeDeduct);
     }

@@ -2573,4 +2573,44 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         && queueContext.getConfiguration().
         isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
+
+  /**
+   * Get total pending resource  for the leaf queue.
+   * This will be used for calculating pending resources in the
+   * preemption monitor when FairOrderingPolicy is used.
+   *
+   * Total pending for the queue = sum(for each app pending requests)
+   * NOTE:
+
+   * @param partition node partition
+   * @param deductReservedFromPending When a container is reserved in CS,
+   *                                  pending resource will not be deducted.
+   *                                  This could lead to double accounting when
+   *                                  doing preemption:
+   *                                  In normal cases, we should deduct reserved
+   *                                  resource from pending to avoid
+   *                                  excessive preemption.
+   * @return Total pending resources in the queue
+   */
+  public Resource getTotalPendingResources(String partition,
+                                           boolean deductReservedFromPending) {
+    try {
+      readLock.lock();
+      Resource totalPending = Resource.newInstance(0, 0);
+      for (FiCaSchedulerApp app : getApplications()) {
+        Resource pending =
+            app.getAppAttemptResourceUsage().getPending(partition);
+        // Check if we need to deduct reserved from pending
+        if (deductReservedFromPending) {
+          pending = Resources.subtract(
+              pending, app.getAppAttemptResourceUsage().getReserved(partition));
+        }
+        pending = Resources.componentwiseMax(pending, Resources.none());
+        Resources.addTo(totalPending, pending);
+      }
+      return totalPending;
+    } finally {
+      readLock.unlock();
+    }
+  }
 }

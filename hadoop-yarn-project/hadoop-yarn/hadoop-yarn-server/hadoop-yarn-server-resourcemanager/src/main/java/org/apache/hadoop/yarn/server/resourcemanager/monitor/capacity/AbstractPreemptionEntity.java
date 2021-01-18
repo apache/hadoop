@@ -42,6 +42,7 @@ public class AbstractPreemptionEntity {
   Resource selected;
   private Resource actuallyToBePreempted;
   private Resource toBePreemptFromOther;
+  private Resource fairShare;
 
   AbstractPreemptionEntity(String queueName, Resource usedPerPartition,
       Resource amUsedPerPartition, Resource reserved,
@@ -99,4 +100,19 @@ public class AbstractPreemptionEntity {
     this.toBePreemptFromOther = toBePreemptFromOther;
   }
 
+  /**
+   * Getter method to return fair share for an application in a given queue.
+   * @return resource Fair Share Resource object
+   */
+  public Resource getFairShare() {
+    return fairShare;
+  }
+
+  /**
+   * Setter method to update fair share for an application in a given queue.
+   * @param fairShare Fair Share Resource object
+   */
+  public void setFairShare(Resource fairShare) {
+    this.fairShare = fairShare;
+  }
 }

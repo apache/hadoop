@@ -179,7 +179,7 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
 
     when(cs.getRootQueue()).thenReturn(root);
     when(cs.getClusterResource()).thenReturn(clusterResource);
-    new MockApplications(appsConfig, resourceCalculator, nameToCSQueues,
+    new MockApplications(appsConfig, cs.getResourceCalculator(), nameToCSQueues,
         partitionToResource, nodeIdToSchedulerNodes);
 
     policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs, mClock);
