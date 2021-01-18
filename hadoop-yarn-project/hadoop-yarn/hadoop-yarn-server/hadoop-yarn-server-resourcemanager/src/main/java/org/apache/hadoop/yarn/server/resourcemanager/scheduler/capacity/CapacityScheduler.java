@@ -3387,8 +3387,7 @@ public class CapacityScheduler extends
                 + "which does not exist " + parentQueueName);
       }
 
-      if (parentQueue != null &&
-          conf.isAutoCreateChildQueueEnabled(parentQueue.getQueuePath())) {
+      if (conf.isAutoCreateChildQueueEnabled(parentQueue.getQueuePath())) {
         // Case 1: Handle ManagedParentQueue
         AutoCreatedLeafQueue autoCreatedLeafQueue = null;
         ManagedParentQueue autoCreateEnabledParentQueue =
