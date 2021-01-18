@@ -436,7 +436,8 @@ public class TestCapacitySchedulerAutoQueueCreation
         //expected exception
 
         assertTrue(e.getMessage().contains(
-            "Target queue path 'a1.%user' has a non-managed parent queue"));
+            "Queue path 'a1.%user' is invalid because 'root.a.a1' " +
+                "is a leaf queue"));
       }
 
       //"a" is not auto create enabled and app_user does not exist as a leaf
@@ -450,7 +451,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       } catch (IOException e) {
         //expected exception
         assertTrue(e.getMessage().contains(
-            "contains an invalid parent queue 'INVALID_PARENT_QUEUE'"));
+            "Path root 'INVALID_PARENT_QUEUE' does not exist."));
       }
     } finally {
       if (newMockRM != null) {
@@ -474,13 +475,14 @@ public class TestCapacitySchedulerAutoQueueCreation
       newCS.updatePlacementRules();
 
       try {
-        setupQueueMapping(newCS, CURRENT_USER_MAPPING, "",
+        setupQueueMapping(newCS, CURRENT_USER_MAPPING, "nonexistent",
             CURRENT_USER_MAPPING);
         newCS.updatePlacementRules();
         fail("Expected invalid parent queue mapping failure");
       } catch (IOException e) {
         //expected exception
-        assertTrue(e.getMessage().contains("invalid parent queue"));
+        assertTrue(
+            e.getMessage().contains("Path root 'nonexistent' does not exist."));
       }
     } finally {
       if (newMockRM != null) {
