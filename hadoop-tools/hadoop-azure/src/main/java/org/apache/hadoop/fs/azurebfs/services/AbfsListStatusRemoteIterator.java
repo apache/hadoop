@@ -31,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 
 public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> {
@@ -126,13 +125,13 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
       }
     } catch (IOException e) {
       ioException = e;
+      iteratorsQueue.offer(Collections.emptyIterator());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.error("Thread got interrupted: {}", e);
     } finally {
       synchronized (asyncOpLock) {
         isAsyncInProgress = false;
-        iteratorsQueue.offer(Collections.emptyIterator());
       }
     }
   }
