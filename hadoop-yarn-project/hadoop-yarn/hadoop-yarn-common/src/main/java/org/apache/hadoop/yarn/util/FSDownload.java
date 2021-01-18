@@ -27,6 +27,8 @@ import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -284,33 +286,25 @@ public class FSDownload implements Callable<Path> {
     downloadAndUnpack(sCopy, destination);
   }
 
-  private class ThreadCopyTask implements Callable<Void> {
-    private final Path destination;
-    private final Path[] sourcePaths;
-    private final FileSystem sourceFileSystem;
-    private final FileSystem destinationFileSystem;
-
-    ThreadCopyTask(Path destination, Path[] sourcePaths,
-                          FileSystem sourceFileSystem,
-                          FileSystem destinationFileSystem) {
-      this.destination = destination;
-      this.sourcePaths = sourcePaths;
-      this.sourceFileSystem = sourceFileSystem;
-      this.destinationFileSystem = destinationFileSystem;
-    }
-
-    public Void call() throws IOException, ExecutionException,
-                              InterruptedException {
-      FileUtil.copy(sourceFileSystem, sourcePaths,
-                    destinationFileSystem, destination, false,
-                    true, conf);
-      return null;
-    }
+  /**
+   * Partitions {@code FileStatus} array into numOfParts parts.
+   * @param fileStatuses input FileStatus array
+   * @param numOfParts number of partitions to be created
+   * @return {@code Collection} of partitions as {@code List} objects
+   */
+  private Collection<List<FileStatus>> partitionInputList(
+                                                      FileStatus[] fileStatuses,
+                                                      int numOfParts){
+    int chunkSize = (int) Math.ceil((float) fileStatuses.length / numOfParts);
+    final AtomicInteger counter = new AtomicInteger();
+    return Arrays.stream(fileStatuses)
+                 .collect(Collectors.groupingBy(it ->
+                            counter.getAndIncrement() / chunkSize))
+                 .values();
   }
 
   /**
-   * Split directory's contents in groups, process each group
-   * in its own Callable task.
+   * Split directory's contents in groups and localize them in parallel.
    * @param sourceFileSystem Source filesystem
    * @param destinationFileSystem Destination filesystem
    * @param source source path to copy. Typically HDFS
@@ -327,31 +321,25 @@ public class FSDownload implements Callable<Path> {
     }catch (Exception e) {
       throw new YarnException("Download and unpack failed", e);
     }
-    int nThreads = Math.min(conf.getInt(
+    int nThreads = conf.getInt(
             YarnConfiguration.NM_LOCALIZER_FETCH_THREAD_COUNT,
-            YarnConfiguration.DEFAULT_NM_LOCALIZER_FETCH_THREAD_COUNT),
-            fileStatuses.length);
-    List<Callable<Void>> tasks = new ArrayList<>(nThreads);
-    ExecutorService executor = Executors.newFixedThreadPool(nThreads);
-    if (nThreads > fileStatuses.length){
-      nThreads = fileStatuses.length;
+            YarnConfiguration.DEFAULT_NM_LOCALIZER_FETCH_THREAD_COUNT);
+    AtomicReference<IOException> ioException = new AtomicReference<>();
+    partitionInputList(fileStatuses, nThreads).parallelStream()
+        .forEach(part -> {
+          try {
+            Path[] sourcePaths = part.stream()
+                                     .map(FileStatus::getPath)
+                                     .toArray(Path[]::new);
+            FileUtil.copy(sourceFileSystem, sourcePaths, destinationFileSystem,
+                    destination, false, true, conf);
+          } catch (IOException e) {
+            ioException.set(e);
+          }
+        });
+    if (ioException.get() != null){
+      throw new YarnException("Download and unpack failed", ioException.get());
     }
-    int chunkSize = (int) Math.floor((float) fileStatuses.length / nThreads);
-    for (int i = 0; i < fileStatuses.length; i += chunkSize){
-      Path[] sourcePaths = Arrays.stream(fileStatuses, i,
-              Math.min(i + chunkSize, fileStatuses.length))
-                                 .map(FileStatus::getPath)
-                                 .toArray(Path[]::new);
-      tasks.add(new ThreadCopyTask(destination, sourcePaths,
-              sourceFileSystem, destinationFileSystem));
-    }
-    List<Future<?>> futures = tasks.stream()
-                                   .map(executor::submit)
-                                   .collect(Collectors.toList());
-    while (!futures.isEmpty()) {
-      futures.removeIf(Future::isDone);
-    }
-    executor.shutdown();
   }
 
   /**
