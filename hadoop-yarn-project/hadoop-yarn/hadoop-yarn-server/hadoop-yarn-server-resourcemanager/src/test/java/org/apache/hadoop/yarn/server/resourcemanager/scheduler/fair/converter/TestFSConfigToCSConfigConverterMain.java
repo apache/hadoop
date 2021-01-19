@@ -120,7 +120,6 @@ public class TestFSConfigToCSConfigConverterMain {
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "-p",
-        "-m",
         "-e",
         "-y", YARN_SITE_XML,
         "-f", FS_ALLOC_FILE,
@@ -167,7 +166,6 @@ public class TestFSConfigToCSConfigConverterMain {
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "--print",
-        "--convert-placement-rules",
         "--rules-to-file",
         "--percentage",
         "--yarnsiteconfig", YARN_SITE_XML,
