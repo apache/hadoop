@@ -21,15 +21,17 @@ package org.apache.hadoop.security;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.LinkedList;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.hadoop.security.NetgroupCache.NetgroupCacheProvider;
 import org.apache.hadoop.util.NativeCodeLoader;
 
-import org.apache.hadoop.security.NetgroupCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +43,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class JniBasedUnixGroupsNetgroupMapping
-  extends JniBasedUnixGroupsMapping {
+    extends JniBasedUnixGroupsMapping implements NetgroupCacheProvider {
   
   private static final Logger LOG = LoggerFactory.getLogger(
     JniBasedUnixGroupsNetgroupMapping.class);
@@ -72,14 +74,19 @@ public class JniBasedUnixGroupsNetgroupMapping
     return groups;
   }
 
+  @Override
+  public Set<String> getGroupsSet(String user) throws IOException {
+    Set<String> groups = new LinkedHashSet<>(super.getGroupsSet(user));
+    NetgroupCache.getNetgroups(user, groups);
+    return groups;
+  }
+
   /**
    * Refresh the netgroup cache
    */
   @Override
   public void cacheGroupsRefresh() throws IOException {
-    List<String> groups = NetgroupCache.getNetgroupNames();
-    NetgroupCache.clear();
-    cacheGroupsAdd(groups);
+    NetgroupCache.refreshCacheCB(this);
   }
 
   /**
@@ -89,15 +96,9 @@ public class JniBasedUnixGroupsNetgroupMapping
    */
   @Override
   public void cacheGroupsAdd(List<String> groups) throws IOException {
-    for(String group: groups) {
-      if(group.length() == 0) {
-        // better safe than sorry (should never happen)
-      } else if(group.charAt(0) == '@') {
-        if(!NetgroupCache.isCached(group)) {
-          NetgroupCache.add(group, getUsersForNetgroup(group));
-        }
-      } else {
-        // unix group, not caching
+    for (String group: groups) {
+      if (isCacheableGroup(group)) {
+        NetgroupCache.add(group, this);
       }
     }
   }
@@ -110,7 +111,8 @@ public class JniBasedUnixGroupsNetgroupMapping
    * @param netgroup return users for this netgroup
    * @return list of users for a given netgroup
    */
-  protected synchronized List<String> getUsersForNetgroup(String netgroup) {
+  @Override
+  public synchronized List<String> getUsersForNetgroup(String netgroup) {
     String[] users = null;
     try {
       // JNI code does not expect '@' at the beginning of the group name
