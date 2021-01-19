@@ -89,4 +89,12 @@ class MountVolumeMap {
       }
     }
   }
+
+  void updateReserveForArchive(FsVolumeImpl target, double capacityRatio) {
+    String mount = target.getMount();
+    if (!mount.isEmpty()) {
+      MountVolumeInfo info = mountVolumeMapping.get(mount);
+      info.setReservedForArchive(capacityRatio);
+    }
+  }
 }

@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.function.Supplier;
 
+import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
@@ -174,6 +175,27 @@ public class TestFsDatasetImpl {
       StorageType storageType, Configuration conf, DataStorage storage,
       DataNode dataNode) throws IOException {
     String archiveStorageType = "[" + storageType + "]";
+    String path = BASE_DIR + subDir;
+    new File(path).mkdirs();
+    String pathUri = new Path(path).toUri().toString();
+    StorageLocation loc = StorageLocation.parse(archiveStorageType + pathUri);
+    Storage.StorageDirectory sd = new Storage.StorageDirectory(
+        loc);
+    DataStorage.createStorageID(sd, false, conf);
+
+    DataStorage.VolumeBuilder builder =
+        new DataStorage.VolumeBuilder(storage, sd);
+    when(storage.prepareVolume(eq(dataNode), eq(loc),
+        anyList()))
+        .thenReturn(builder);
+    return loc;
+  }
+
+  private static StorageLocation createArchivalStorageWithReservedRatio(
+      String subDir, double reserveForArchive,
+      Configuration conf, DataStorage storage,
+      DataNode dataNode) throws IOException {
+    String archiveStorageType = "[ARCHIVE:" + reserveForArchive + "]";
     String path = BASE_DIR + subDir;
     new File(path).mkdirs();
     String pathUri = new Path(path).toUri().toString();
@@ -397,6 +419,63 @@ public class TestFsDatasetImpl {
         true);
     conf.setDouble(DFSConfigKeys
             .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
+        0.4);
+
+    when(datanode.getConf()).thenReturn(conf);
+    final DNConf dnConf = new DNConf(datanode);
+    when(datanode.getDnConf()).thenReturn(dnConf);
+    final BlockScanner disabledBlockScanner = new BlockScanner(datanode);
+    when(datanode.getBlockScanner()).thenReturn(disabledBlockScanner);
+    final ShortCircuitRegistry shortCircuitRegistry =
+        new ShortCircuitRegistry(conf);
+    when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+
+    createStorageDirs(storage, conf, 1);
+    dataset = new FsDatasetImpl(datanode, storage, conf);
+
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    for (String bpid : BLOCK_POOL_IDS) {
+      nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, bpid, 1));
+    }
+    StorageLocation archive = createStorageWithStorageType("archive1",
+        StorageType.ARCHIVE, conf, storage, datanode);
+    dataset.addVolume(archive, nsInfos);
+    assertEquals(2, dataset.getVolumeCount());
+
+    String mount = new DF(new File(archive.getUri()), conf).getMount();
+    double archiveRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.ARCHIVE);
+    double diskRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.DISK);
+    assertEquals(0.4, archiveRatio, 0);
+    assertEquals(0.6, diskRatio, 0);
+
+    // Add second ARCHIVAL volume should fail fsDataSetImpl.
+    try {
+      dataset.addVolume(
+          createStorageWithStorageType("archive2",
+              StorageType.ARCHIVE, conf, storage, datanode), nsInfos);
+      fail("Should throw exception for" +
+          " same storage type already exists on same mount.");
+    } catch (IOException e) {
+      assertTrue(e.getMessage()
+          .startsWith("Storage type ARCHIVE already exists on same mount:"));
+    }
+  }
+
+  @Test
+  public void testAddVolumeWithCustomizedArchiveRatio()
+      throws IOException {
+    datanode = mock(DataNode.class);
+    storage = mock(DataStorage.class);
+    this.conf = new Configuration();
+    this.conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 0);
+    this.conf.set(DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY,
+        replicaCacheRootDir);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        true);
+    conf.setDouble(DFSConfigKeys
+            .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         0.5);
 
     when(datanode.getConf()).thenReturn(conf);
@@ -415,22 +494,20 @@ public class TestFsDatasetImpl {
     for (String bpid : BLOCK_POOL_IDS) {
       nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, bpid, 1));
     }
-    dataset.addVolume(
-        createStorageWithStorageType("archive1",
-            StorageType.ARCHIVE, conf, storage, datanode), nsInfos);
+
+    StorageLocation archive = createArchivalStorageWithReservedRatio(
+        "archive1", 0.3, conf, storage, datanode);
+
+    dataset.addVolume(archive, nsInfos);
     assertEquals(2, dataset.getVolumeCount());
 
-    // Add second ARCHIVAL volume should fail fsDataSetImpl.
-    try {
-      dataset.addVolume(
-          createStorageWithStorageType("archive2",
-              StorageType.ARCHIVE, conf, storage, datanode), nsInfos);
-      fail("Should throw exception for" +
-          " same storage type already exists on same mount.");
-    } catch (IOException e) {
-      assertTrue(e.getMessage()
-          .startsWith("Storage type ARCHIVE already exists on same mount:"));
-    }
+    String mount = new DF(new File(archive.getUri()), conf).getMount();
+    double archiveRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.ARCHIVE);
+    double diskRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.DISK);
+    assertEquals(0.3, archiveRatio, 0);
+    assertEquals(0.7, diskRatio, 0);
   }
 
   @Test

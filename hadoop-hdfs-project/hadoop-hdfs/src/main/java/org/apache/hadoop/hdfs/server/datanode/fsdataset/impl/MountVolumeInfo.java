@@ -35,23 +35,23 @@ import java.util.concurrent.ConcurrentMap;
 class MountVolumeInfo {
   private final ConcurrentMap<StorageType, FsVolumeImpl>
       storageTypeVolumeMap;
-  private double reservedForArchiveDefault;
+  private double reservedForArchive;
 
   MountVolumeInfo(Configuration conf) {
     storageTypeVolumeMap = new ConcurrentHashMap<>();
-    reservedForArchiveDefault = conf.getDouble(
+    reservedForArchive = conf.getDouble(
         DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         DFSConfigKeys
             .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE_DEFAULT);
-    if (reservedForArchiveDefault > 1) {
+    if (reservedForArchive > 1) {
       FsDatasetImpl.LOG.warn("Value of reserve-for-archival is > 100%." +
           " Setting it to 100%.");
-      reservedForArchiveDefault = 1;
+      reservedForArchive = 1;
     }
-    if (reservedForArchiveDefault < 0) {
+    if (reservedForArchive < 0) {
       FsDatasetImpl.LOG.warn("Value of reserve-for-archival is < 0." +
-          " Setting it to 0.0");
-      reservedForArchiveDefault = 0;
+          " Setting it to 0%");
+      reservedForArchive = 0;
     }
   }
 
@@ -80,12 +80,18 @@ class MountVolumeInfo {
     if (storageTypeVolumeMap.containsKey(storageType)
         && storageTypeVolumeMap.size() > 1) {
       if (storageType == StorageType.ARCHIVE) {
-        return reservedForArchiveDefault;
+        return reservedForArchive;
       } else if (storageType == StorageType.DISK) {
-        return 1 - reservedForArchiveDefault;
+        return 1 - reservedForArchive;
       }
     }
     return 1;
+  }
+
+  void setReservedForArchive(double capacityRatio) {
+    if (capacityRatio >= 0 && capacityRatio <= 1) {
+      reservedForArchive = capacityRatio;
+    }
   }
 
   /**
