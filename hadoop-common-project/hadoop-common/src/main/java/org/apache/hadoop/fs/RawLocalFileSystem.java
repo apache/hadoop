@@ -43,6 +43,7 @@ import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.StringTokenizer;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -138,8 +139,13 @@ public class RawLocalFileSystem extends FileSystem {
             STREAM_READ_SKIP_BYTES)
         .build();
 
+    /** Reference to the bytes read counter for slightly faster counting. */
+    private final AtomicLong bytesRead;
+
     public LocalFSFileInputStream(Path f) throws IOException {
       fis = new FileInputStream(pathToFile(f));
+      bytesRead = ioStatistics.getCounterReference(
+          STREAM_READ_BYTES);
     }
     
     @Override
@@ -162,8 +168,8 @@ public class RawLocalFileSystem extends FileSystem {
       return false;
     }
     
-    /*
-     * Just forward to the fis
+    /**
+     * Just forward to the fis.
      */
     @Override
     public int available() throws IOException { return fis.available(); }
@@ -179,7 +185,7 @@ public class RawLocalFileSystem extends FileSystem {
         if (value >= 0) {
           this.position++;
           statistics.incrementBytesRead(1);
-          ioStatistics.incrementCounter(STREAM_READ_BYTES);
+          bytesRead.addAndGet(1);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -197,7 +203,7 @@ public class RawLocalFileSystem extends FileSystem {
         if (value > 0) {
           this.position += value;
           statistics.incrementBytesRead(value);
-          ioStatistics.incrementCounter(STREAM_READ_BYTES, value);
+          bytesRead.addAndGet(value);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -360,6 +366,10 @@ public class RawLocalFileSystem extends FileSystem {
       flush();
     }
 
+    /**
+     * HSync calls sync on fhe file descriptor after a local flush() call.
+     * @throws IOException failure
+     */
     @Override
     public void hsync() throws IOException {
       flush();

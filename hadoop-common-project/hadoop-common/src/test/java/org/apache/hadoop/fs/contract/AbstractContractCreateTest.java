@@ -501,6 +501,7 @@ public abstract class AbstractContractCreateTest extends
         try(FSDataInputStream in = fs.open(path)) {
           assertEquals('a', in.read());
           assertEquals(-1, in.read());
+          LOG.info("Successfully read synced data on a new reader {}", in);
         }
       } else {
         out.flush();
