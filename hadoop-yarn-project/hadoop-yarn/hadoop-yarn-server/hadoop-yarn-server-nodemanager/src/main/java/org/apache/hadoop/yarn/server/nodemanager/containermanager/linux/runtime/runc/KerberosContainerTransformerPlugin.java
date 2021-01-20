@@ -72,7 +72,7 @@ public class KerberosContainerTransformerPlugin extends AbstractService
     } else {
       mountOptions.add("ro");
     }
-    mountOptions.add("rbind -o");
+    mountOptions.add("rbind");
     mountOptions.add("rprivate");
 
     if (sourceExists(srcPath)) {

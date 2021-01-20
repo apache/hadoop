@@ -819,7 +819,7 @@ public class TestRuncContainerRuntime {
               "linux.runtime.runc.KerberosContainerTransformerPlugin");
 
     List<String> roOptions = new ArrayList<>();
-    roOptions.add("rbind -o");
+    roOptions.add("rbind");
     roOptions.add("ro");
     roOptions.add("rprivate");
 
@@ -851,7 +851,7 @@ public class TestRuncContainerRuntime {
               "linux.runtime.runc.KerberosContainerTransformerPlugin");
 
     List<String> roOptions = new ArrayList<>();
-    roOptions.add("rbind -o");
+    roOptions.add("rbind");
     roOptions.add("ro");
     roOptions.add("rprivate");
 
