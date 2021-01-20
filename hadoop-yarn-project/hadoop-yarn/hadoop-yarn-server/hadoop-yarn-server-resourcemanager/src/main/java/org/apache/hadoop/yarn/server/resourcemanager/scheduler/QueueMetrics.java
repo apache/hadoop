@@ -23,7 +23,6 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -43,8 +42,8 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -533,8 +532,8 @@ public class QueueMetrics implements MetricsSource {
     availableVCores.set(limit.getVirtualCores());
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources.setAvailable(limit);
-      registerCustomResources(
-          queueMetricsForCustomResources.getAvailableValues(),
+      queueMetricsForCustomResources.registerCustomResources(
+          queueMetricsForCustomResources.getAvailableValues(), registry,
           AVAILABLE_RESOURCE_METRIC_PREFIX, AVAILABLE_RESOURCE_METRIC_DESC);
     }
   }
@@ -616,16 +615,6 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
-  protected Map<String, Long> initAndGetCustomResources() {
-    Map<String, Long> customResources = new HashMap<String, Long>();
-    ResourceInformation[] resources = ResourceUtils.getResourceTypesArray();
-
-    for (int i = 2; i < resources.length; i++) {
-      ResourceInformation resource = resources[i];
-      customResources.put(resource.getName(), Long.valueOf(0));
-    }
-    return customResources;
-  }
 
   protected void createQueueMetricsForCustomResources() {
     if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
@@ -635,43 +624,21 @@ public class QueueMetrics implements MetricsSource {
     }
   }
 
-  /**
-   * Register all custom resources metrics as part of initialization. As and
-   * when this metric object construction happens for any queue, all custom
-   * resource metrics value would be initialized with '0' like any other
-   * mandatory resources metrics
-   */
   protected void registerCustomResources() {
-    Map<String, Long> customResources = initAndGetCustomResources();
-    registerCustomResources(customResources, ALLOCATED_RESOURCE_METRIC_PREFIX,
-        ALLOCATED_RESOURCE_METRIC_DESC);
-    registerCustomResources(customResources, AVAILABLE_RESOURCE_METRIC_PREFIX,
-        AVAILABLE_RESOURCE_METRIC_DESC);
-    registerCustomResources(customResources, PENDING_RESOURCE_METRIC_PREFIX,
-        PENDING_RESOURCE_METRIC_DESC);
-    registerCustomResources(customResources, RESERVED_RESOURCE_METRIC_PREFIX,
-        RESERVED_RESOURCE_METRIC_DESC);
-    registerCustomResources(customResources,
-        AGGREGATE_PREEMPTED_SECONDS_METRIC_PREFIX,
-        AGGREGATE_PREEMPTED_SECONDS_METRIC_DESC);
-  }
-
-  protected void registerCustomResources(Map<String, Long> customResources,
-      String metricPrefix, String metricDesc) {
-    for (Entry<String, Long> entry : customResources.entrySet()) {
-      String resourceName = entry.getKey();
-      Long resourceValue = entry.getValue();
-
-      MutableGaugeLong resourceMetric =
-        (MutableGaugeLong) this.registry.get(metricPrefix + resourceName);
-
-      if (resourceMetric == null) {
-        resourceMetric =
-          this.registry.newGauge(metricPrefix + resourceName,
-              metricDesc.replace("NAME", resourceName), 0L);
-      }
-      resourceMetric.set(resourceValue);
-    }
+    Map<String, Long> customResources =
+        queueMetricsForCustomResources.initAndGetCustomResources();
+    queueMetricsForCustomResources
+        .registerCustomResources(customResources, this.registry);
+    queueMetricsForCustomResources
+        .registerCustomResources(customResources, this.registry,
+            PENDING_RESOURCE_METRIC_PREFIX, PENDING_RESOURCE_METRIC_DESC);
+    queueMetricsForCustomResources
+        .registerCustomResources(customResources, this.registry,
+            RESERVED_RESOURCE_METRIC_PREFIX, RESERVED_RESOURCE_METRIC_DESC);
+    queueMetricsForCustomResources
+        .registerCustomResources(customResources, this.registry,
+            AGGREGATE_PREEMPTED_SECONDS_METRIC_PREFIX,
+            AGGREGATE_PREEMPTED_SECONDS_METRIC_DESC);
   }
 
   private void incrementPendingResources(int containers, Resource res) {
@@ -680,7 +647,8 @@ public class QueueMetrics implements MetricsSource {
     pendingVCores.incr(res.getVirtualCores() * containers);
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources.increasePending(res, containers);
-      registerCustomResources(queueMetricsForCustomResources.getPendingValues(),
+      queueMetricsForCustomResources.registerCustomResources(
+          queueMetricsForCustomResources.getPendingValues(), this.registry,
           PENDING_RESOURCE_METRIC_PREFIX, PENDING_RESOURCE_METRIC_DESC);
     }
   }
@@ -722,7 +690,8 @@ public class QueueMetrics implements MetricsSource {
     pendingVCores.decr(res.getVirtualCores() * containers);
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources.decreasePending(res, containers);
-      registerCustomResources(queueMetricsForCustomResources.getPendingValues(),
+      queueMetricsForCustomResources.registerCustomResources(
+          queueMetricsForCustomResources.getPendingValues(), this.registry,
           PENDING_RESOURCE_METRIC_PREFIX, PENDING_RESOURCE_METRIC_DESC);
     }
   }
@@ -793,8 +762,8 @@ public class QueueMetrics implements MetricsSource {
     allocatedVCores.incr(res.getVirtualCores() * containers);
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources.increaseAllocated(res, containers);
-      registerCustomResources(
-          queueMetricsForCustomResources.getAllocatedValues(),
+      queueMetricsForCustomResources.registerCustomResources(
+          queueMetricsForCustomResources.getAllocatedValues(), this.registry,
           ALLOCATED_RESOURCE_METRIC_PREFIX, ALLOCATED_RESOURCE_METRIC_DESC);
     }
     if (decrPending) {
@@ -813,8 +782,8 @@ public class QueueMetrics implements MetricsSource {
     allocatedVCores.incr(res.getVirtualCores());
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources.increaseAllocated(res);
-      registerCustomResources(
-          queueMetricsForCustomResources.getAllocatedValues(),
+      queueMetricsForCustomResources.registerCustomResources(
+          queueMetricsForCustomResources.getAllocatedValues(), this.registry,
           ALLOCATED_RESOURCE_METRIC_PREFIX, ALLOCATED_RESOURCE_METRIC_DESC);
     }
 
@@ -822,7 +791,8 @@ public class QueueMetrics implements MetricsSource {
     pendingVCores.decr(res.getVirtualCores());
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources.decreasePending(res);
-      registerCustomResources(queueMetricsForCustomResources.getPendingValues(),
+      queueMetricsForCustomResources.registerCustomResources(
+          queueMetricsForCustomResources.getPendingValues(), this.registry,
           PENDING_RESOURCE_METRIC_PREFIX, PENDING_RESOURCE_METRIC_DESC);
     }
 
@@ -879,8 +849,8 @@ public class QueueMetrics implements MetricsSource {
     allocatedVCores.decr(res.getVirtualCores() * containers);
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources.decreaseAllocated(res, containers);
-      registerCustomResources(
-          queueMetricsForCustomResources.getAllocatedValues(),
+      queueMetricsForCustomResources.registerCustomResources(
+          queueMetricsForCustomResources.getAllocatedValues(), this.registry,
           ALLOCATED_RESOURCE_METRIC_PREFIX, ALLOCATED_RESOURCE_METRIC_DESC);
     }
   }
@@ -928,9 +898,9 @@ public class QueueMetrics implements MetricsSource {
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources
           .increaseAggregatedPreemptedSeconds(res, seconds);
-      registerCustomResources(
+      queueMetricsForCustomResources.registerCustomResources(
           queueMetricsForCustomResources.getAggregatePreemptedSeconds()
-              .getValues(),
+              .getValues(), this.registry,
           AGGREGATE_PREEMPTED_SECONDS_METRIC_PREFIX,
           AGGREGATE_PREEMPTED_SECONDS_METRIC_DESC);
     }
@@ -971,8 +941,8 @@ public class QueueMetrics implements MetricsSource {
     reservedVCores.incr(res.getVirtualCores());
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources.increaseReserved(res);
-      registerCustomResources(
-          queueMetricsForCustomResources.getReservedValues(),
+      queueMetricsForCustomResources.registerCustomResources(
+          queueMetricsForCustomResources.getReservedValues(), this.registry,
           RESERVED_RESOURCE_METRIC_PREFIX, RESERVED_RESOURCE_METRIC_DESC);
     }
   }
@@ -1010,8 +980,8 @@ public class QueueMetrics implements MetricsSource {
     reservedVCores.decr(res.getVirtualCores());
     if (queueMetricsForCustomResources != null) {
       queueMetricsForCustomResources.decreaseReserved(res);
-      registerCustomResources(
-          queueMetricsForCustomResources.getReservedValues(),
+      queueMetricsForCustomResources.registerCustomResources(
+          queueMetricsForCustomResources.getReservedValues(), this.registry,
           RESERVED_RESOURCE_METRIC_PREFIX, RESERVED_RESOURCE_METRIC_DESC);
     }
   }
@@ -1114,7 +1084,7 @@ public class QueueMetrics implements MetricsSource {
    * @return QueueMetricsCustomResource
    */
   @VisibleForTesting
-  public QueueMetricsCustomResource getAggregatedPreemptedSecondsResources() {
+  public CustomResourceMetricValue getAggregatedPreemptedSecondsResources() {
     return queueMetricsForCustomResources.getAggregatePreemptedSeconds();
   }
 
@@ -1232,7 +1202,7 @@ public class QueueMetrics implements MetricsSource {
   public void fillInValuesFromAvailableResources(Resource fromResource,
       Resource targetResource) {
     if (queueMetricsForCustomResources != null) {
-      QueueMetricsCustomResource availableResources =
+      CustomResourceMetricValue availableResources =
           queueMetricsForCustomResources.getAvailable();
 
       // We expect all custom resources contained in availableResources,
@@ -1257,7 +1227,7 @@ public class QueueMetrics implements MetricsSource {
     return this.queueMetricsForCustomResources;
   }
 
-  public void setQueueMetricsForCustomResources(
+  protected void setQueueMetricsForCustomResources(
       QueueMetricsForCustomResources metrics) {
     this.queueMetricsForCustomResources = metrics;
   }
