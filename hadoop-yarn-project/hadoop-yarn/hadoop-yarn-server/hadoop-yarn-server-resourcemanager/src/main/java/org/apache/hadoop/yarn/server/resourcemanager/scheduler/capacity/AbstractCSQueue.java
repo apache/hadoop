@@ -128,7 +128,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   // either at this level or anywhere in the queue's hierarchy.
   private volatile boolean defaultAppLifetimeWasSpecifiedInConfig = false;
 
-  protected enum CapacityConfigType {
+  public enum CapacityConfigType {
     // FIXME, from what I can see, Percentage mode can almost apply to weighted
     // and percentage mode at the same time, there's only small area need to be
     // changed, we need to rename "PERCENTAGE" to "PERCENTAGE" and "WEIGHT"

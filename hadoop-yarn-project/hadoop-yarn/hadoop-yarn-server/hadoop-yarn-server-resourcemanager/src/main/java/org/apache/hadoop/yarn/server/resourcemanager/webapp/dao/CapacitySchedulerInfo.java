@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -53,6 +54,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected QueueAclsInfo queueAcls;
   protected int queuePriority;
   protected String orderingPolicyInfo;
+  protected String mode;
 
   @XmlTransient
   static final float EPSILON = 1e-8f;
@@ -98,6 +100,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
       orderingPolicyInfo = ((ParentQueue) parent).getQueueOrderingPolicy()
           .getConfigName();
     }
+    mode = CapacitySchedulerInfoHelper.getMode(parent);
   }
 
   public float getCapacity() {
@@ -173,4 +176,9 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     }
     return queuesInfo;
   }
+
+  public String getMode() {
+    return mode;
+  }
+
 }

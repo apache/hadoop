@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.
     CapacitySchedulerConfiguration.RESOURCE_PATTERN;
@@ -86,6 +87,7 @@ public class CapacitySchedulerQueueInfo {
   protected String orderingPolicyInfo;
   protected boolean autoCreateChildQueueEnabled;
   protected LeafQueueTemplateInfo leafQueueTemplate;
+  protected String mode;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -127,6 +129,8 @@ public class CapacitySchedulerQueueInfo {
     QueueCapacities qCapacities = q.getQueueCapacities();
     QueueResourceQuotas qResQuotas = q.getQueueResourceQuotas();
     populateQueueCapacities(qCapacities, qResQuotas);
+
+    mode = CapacitySchedulerInfoHelper.getMode(q);
 
     ResourceUsage queueResourceUsage = q.getQueueResourceUsage();
     populateQueueResourceUsage(queueResourceUsage);
@@ -305,5 +309,9 @@ public class CapacitySchedulerQueueInfo {
 
   public LeafQueueTemplateInfo getLeafQueueTemplate() {
     return leafQueueTemplate;
+  }
+
+  public String getMode() {
+    return mode;
   }
 }
