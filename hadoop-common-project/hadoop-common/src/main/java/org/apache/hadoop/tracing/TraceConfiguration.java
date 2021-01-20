@@ -17,26 +17,7 @@
  */
 package org.apache.hadoop.tracing;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.tracing.SpanReceiverInfo.ConfigurationPair;
-
-@InterfaceAudience.Public
-@InterfaceStability.Stable
-public class SpanReceiverInfoBuilder {
-  private SpanReceiverInfo info;
-
-  public SpanReceiverInfoBuilder(String className) {
-    info = new SpanReceiverInfo(0, className);
-  }
-
-  public void addConfigurationPair(String key, String value) {
-    info.configPairs.add(new ConfigurationPair(key, value));
-  }
-
-  public SpanReceiverInfo build() {
-    SpanReceiverInfo ret = info;
-    info = null;
-    return ret;
+public class TraceConfiguration {
+  public TraceConfiguration() {
   }
 }
