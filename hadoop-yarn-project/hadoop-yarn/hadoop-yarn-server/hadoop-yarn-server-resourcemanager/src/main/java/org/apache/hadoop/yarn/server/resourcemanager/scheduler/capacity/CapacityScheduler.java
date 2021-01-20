@@ -343,7 +343,7 @@ public class CapacityScheduler extends
       this.queueManager.setCapacitySchedulerContext(this);
 
       this.autoQueueHandler = new CapacitySchedulerAutoQueueHandler(
-          this.queueManager, this.conf);
+          this.queueManager);
 
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
 
@@ -3380,26 +3380,25 @@ public class CapacityScheduler extends
     if (!StringUtils.isEmpty(parentQueueName)) {
       CSQueue parentQueue = getQueue(parentQueueName);
 
-      if (parentQueue == null) {
-        throw new SchedulerDynamicEditException(
-            "Could not auto-create leaf queue for " + leafQueueName
-                + ". Queue mapping specifies an invalid parent queue "
-                + "which does not exist " + parentQueueName);
-      }
-
-      if (conf.isAutoCreateChildQueueEnabled(parentQueue.getQueuePath())) {
+      if (parentQueue != null &&
+          conf.isAutoCreateChildQueueEnabled(parentQueue.getQueuePath())) {
         // Case 1: Handle ManagedParentQueue
-        AutoCreatedLeafQueue autoCreatedLeafQueue = null;
         ManagedParentQueue autoCreateEnabledParentQueue =
             (ManagedParentQueue) parentQueue;
-        autoCreatedLeafQueue = new AutoCreatedLeafQueue(this, leafQueueName,
-            autoCreateEnabledParentQueue);
+        AutoCreatedLeafQueue autoCreatedLeafQueue =
+            new AutoCreatedLeafQueue(
+                this, leafQueueName, autoCreateEnabledParentQueue);
 
         addQueue(autoCreatedLeafQueue);
         return autoCreatedLeafQueue;
 
       } else {
-        return autoQueueHandler.autoCreateQueue(placementContext);
+        try {
+          writeLock.lock();
+          return autoQueueHandler.autoCreateQueue(placementContext);
+        } finally {
+          writeLock.unlock();
+        }
       }
     }
 

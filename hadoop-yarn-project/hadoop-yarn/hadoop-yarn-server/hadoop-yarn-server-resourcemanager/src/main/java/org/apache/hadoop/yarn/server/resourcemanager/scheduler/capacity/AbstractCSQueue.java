@@ -154,11 +154,6 @@ public abstract class AbstractCSQueue implements CSQueue {
   // is it a dynamic queue?
   private boolean dynamicQueue = false;
 
-  // When this queue has application submit to?
-  // This property only applies to dynamic queue,
-  // and will be used to check when the queue need to be removed.
-  private long lastSubmittedTimestamp;
-
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     this(cs, cs.getConfiguration(), queueName, parent, old);
@@ -1629,20 +1624,6 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     try {
       this.dynamicQueue = dynamicQueue;
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  public long getLastSubmittedTimestamp() {
-    return lastSubmittedTimestamp;
-  }
-
-  // "Tab" the queue, so this queue won't be removed because of idle timeout.
-  public void signalToSubmitToQueue() {
-    writeLock.lock();
-    try {
-      this.lastSubmittedTimestamp = System.currentTimeMillis();
     } finally {
       writeLock.unlock();
     }

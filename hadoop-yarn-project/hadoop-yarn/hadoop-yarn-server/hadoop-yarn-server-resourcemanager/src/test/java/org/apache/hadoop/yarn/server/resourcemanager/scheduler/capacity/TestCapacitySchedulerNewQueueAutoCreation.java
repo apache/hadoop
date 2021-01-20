@@ -83,7 +83,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     mockRM.start();
     cs.start();
     autoQueueHandler = new CapacitySchedulerAutoQueueHandler(
-        cs.getCapacitySchedulerQueueManager(), csConf);
+        cs.getCapacitySchedulerQueueManager());
     mockRM.registerNode("h1:1234", MAX_MEMORY * GB); // label = x
   }
 
@@ -409,7 +409,6 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   @Test
   public void testAutoQueueCreationOnAppSubmission() throws Exception {
     startScheduler();
-    createBasicQueueStructureAndValidate();
 
     submitApp(cs, USER0, USER0, "root.e-auto");
 
