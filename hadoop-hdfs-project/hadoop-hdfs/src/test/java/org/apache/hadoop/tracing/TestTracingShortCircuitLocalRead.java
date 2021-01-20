@@ -61,6 +61,7 @@ public class TestTracingShortCircuitLocalRead {
     sockDir.close();
   }
 
+  /*
   @Test
   public void testShortCircuitTraceHooks() throws IOException {
     assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
@@ -105,4 +106,5 @@ public class TestTracingShortCircuitLocalRead {
       cluster.shutdown();
     }
   }
+  */
 }

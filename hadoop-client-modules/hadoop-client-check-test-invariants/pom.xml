@@ -86,6 +86,10 @@
                     <exclude>org.apache.hadoop:hadoop-annotations</exclude>
                     <!-- We leave HTrace as an unshaded dependnecy on purpose so that tracing within a JVM will work -->
                     <exclude>org.apache.htrace:htrace-core4</exclude>
+                    <!-- We leave OpenTracing as an unshaded dependency - see HTrace -->
+                    <exclude>io.opentracing:opentracing-api</exclude>
+                    <exclude>io.opentracing:opentracing-util</exclude>
+                    <exclude>io.opentracing:opentracing-noop</exclude>
                     <!-- Leave slf4j unshaded so downstream users can configure logging. -->
                     <exclude>org.slf4j:slf4j-api</exclude>
                     <!-- Leave commons-logging unshaded so downstream users can configure logging. -->
