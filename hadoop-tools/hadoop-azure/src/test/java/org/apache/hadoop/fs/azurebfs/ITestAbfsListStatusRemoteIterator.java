@@ -48,11 +48,11 @@ import static org.mockito.Mockito.verify;
 /**
  * Test ListStatusRemoteIterator operation.
  */
-public class ITestAbfsListStatusIterator extends AbstractAbfsIntegrationTest {
+public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTest {
 
   private static final int TEST_FILES_NUMBER = 1000;
 
-  public ITestAbfsListStatusIterator() throws Exception {
+  public ITestAbfsListStatusRemoteIterator() throws Exception {
     super();
   }
 
@@ -319,13 +319,10 @@ public class ITestAbfsListStatusIterator extends AbstractAbfsIntegrationTest {
     ExecutorService es = Executors.newFixedThreadPool(10);
     for (int i = 0; i < numFiles; i++) {
       final Path filePath = new Path(rootPath, filenamePrefix + i);
-      Callable<Void> callable = new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
-          getFileSystem().create(filePath);
-          fileNames.add(makeQualified(filePath).toString());
-          return null;
-        }
+      Callable<Void> callable = () -> {
+        getFileSystem().create(filePath);
+        fileNames.add(makeQualified(filePath).toString());
+        return null;
       };
       tasks.add(es.submit(callable));
     }

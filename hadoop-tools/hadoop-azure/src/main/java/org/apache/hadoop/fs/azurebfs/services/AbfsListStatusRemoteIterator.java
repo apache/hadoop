@@ -43,14 +43,13 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
 
   private final FileStatus fileStatus;
   private final ListingSupport listingSupport;
-  private final ArrayBlockingQueue<Iterator<FileStatus>> iteratorsQueue;
+  private final ArrayBlockingQueue<Object> iteratorsQueue;
   private final Object asyncOpLock = new Object();
 
   private volatile boolean isAsyncInProgress = false;
-  private boolean firstBatch = true;
+  private boolean isIterationComplete = false;
   private String continuation;
   private Iterator<FileStatus> currIterator;
-  private IOException ioException;
 
   public AbfsListStatusRemoteIterator(final FileStatus fileStatus,
       final ListingSupport listingSupport) {
@@ -67,6 +66,9 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
       return true;
     }
     updateCurrentIterator();
+    if (currIterator == null) {
+      return false;
+    }
     return currIterator.hasNext();
   }
 
@@ -79,30 +81,30 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
   }
 
   private void updateCurrentIterator() throws IOException {
+    do {
+      currIterator = getNextIterator();
+    } while (currIterator != null && !currIterator.hasNext()
+        && !isIterationComplete);
+  }
+
+  private Iterator<FileStatus> getNextIterator() throws IOException {
     fetchBatchesAsync();
     synchronized (this) {
-      if (iteratorsQueue.isEmpty()) {
-        if (ioException != null) {
-          throw ioException;
-        }
-        if (isListingComplete()) {
-          return;
-        }
+      if (iteratorsQueue.isEmpty() && isIterationComplete) {
+          return null;
       }
     }
     try {
-      currIterator = iteratorsQueue.take();
-      if (!currIterator.hasNext() && !isListingComplete()) {
-        updateCurrentIterator();
+      Object obj = iteratorsQueue.take();
+      if(obj instanceof Iterator){
+        return (Iterator<FileStatus>) obj;
       }
+      throw (IOException) obj;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.error("Thread got interrupted: {}", e);
+      return null;
     }
-  }
-
-  private synchronized boolean isListingComplete() {
-    return !firstBatch && (continuation == null || continuation.isEmpty());
   }
 
   private void fetchBatchesAsync() {
@@ -120,12 +122,16 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
 
   private void asyncOp() {
     try {
-      while (!isListingComplete() && iteratorsQueue.size() <= MAX_QUEUE_SIZE) {
+      while (!isIterationComplete && iteratorsQueue.size() <= MAX_QUEUE_SIZE) {
         addNextBatchIteratorToQueue();
       }
     } catch (IOException e) {
-      ioException = e;
-      iteratorsQueue.offer(Collections.emptyIterator());
+      try {
+        iteratorsQueue.put(e);
+      } catch (InterruptedException interruptedException) {
+        Thread.currentThread().interrupt();
+        LOG.error("Thread got interrupted: {}", interruptedException);
+      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.error("Thread got interrupted: {}", e);
@@ -136,15 +142,17 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
     }
   }
 
-  private synchronized void addNextBatchIteratorToQueue()
+  private void addNextBatchIteratorToQueue()
       throws IOException, InterruptedException {
     List<FileStatus> fileStatuses = new ArrayList<>();
     continuation = listingSupport
         .listStatus(fileStatus.getPath(), null, fileStatuses, FETCH_ALL_FALSE,
             continuation);
-    iteratorsQueue.put(fileStatuses.iterator());
-    if (firstBatch) {
-      firstBatch = false;
+    synchronized (this) {
+      if (continuation == null || continuation.isEmpty()) {
+        isIterationComplete = true;
+      }
+      iteratorsQueue.put(fileStatuses.iterator());
     }
   }
 
