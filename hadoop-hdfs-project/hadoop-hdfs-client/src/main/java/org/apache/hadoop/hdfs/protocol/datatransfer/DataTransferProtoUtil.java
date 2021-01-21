@@ -92,7 +92,7 @@ public abstract class DataTransferProtoUtil {
     if (span != null) {
       DataTransferTraceInfoProto.Builder traceInfoProtoBuilder =
           DataTransferTraceInfoProto.newBuilder().setSpanContext(
-              TraceUtils.spanContextToByteString(span.context()));
+              TraceUtils.spanContextToByteString(span.getContext()));
       builder.setTraceInfo(traceInfoProtoBuilder);
     }
     return builder.build();

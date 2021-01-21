@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,47 +20,39 @@ package org.apache.hadoop.tracing;
 import java.io.Closeable;
 
 public class TraceScope implements Closeable {
-  private io.opentracing.Scope otScope;
+  Span span;
 
-  public TraceScope(io.opentracing.Scope scope) {
-    this.otScope = scope;
+  public TraceScope(Span span) {
   }
 
   // Add tag to the span
   public Span addKVAnnotation(String key, String value) {
-    // TODO: Try to reduce overhead from "new" object by returning void?
-    return new Span(this.otScope.span().setTag(key, value));
+    return span;
   }
 
   public Span addKVAnnotation(String key, Number value) {
-    return new Span(this.otScope.span().setTag(key, value));
+    return span;
   }
 
   public Span addTimelineAnnotation(String msg) {
-    return new Span(this.otScope.span().log(msg));
+    return span;
   }
 
   public Span span() {
-    return new Span(this.otScope.span());
+    return span;
   }
 
   public Span getSpan() {
-    /* e.g.
-      TraceScope scope = tracer.newScope(instance.getCommandName());
-      if (scope.getSpan() != null) {
-    */
-    return new Span(this.otScope.span());
+    return span;
   }
 
   public void reattach() {
-    // TODO: Server.java:2820
-    // scope = GlobalTracer.get().scopeManager().activate(call.span, true);
   }
 
   public void detach() {
   }
 
   public void close() {
-    otScope.close();
+    span.close();
   }
 }

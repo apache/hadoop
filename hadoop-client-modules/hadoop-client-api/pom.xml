@@ -126,9 +126,7 @@
                       <excludes>
                         <exclude>org/apache/hadoop/*</exclude>
                         <exclude>org/apache/hadoop/**/*</exclude>
-                        <!-- Our non-shaded htrace and logging libraries -->
-                        <exclude>org/apache/htrace/*</exclude>
-                        <exclude>org/apache/htrace/**/*</exclude>
+                        <!-- Our non-shaded logging libraries -->
                         <exclude>org/slf4j/*</exclude>
                         <exclude>org/slf4j/**/*</exclude>
                         <exclude>org/apache/commons/logging/*</exclude>

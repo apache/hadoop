@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,26 +17,16 @@
  */
 package org.apache.hadoop.tracing;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.tracing.SpanReceiverInfo.ConfigurationPair;
+import java.io.Closeable;
 
-@InterfaceAudience.Public
-@InterfaceStability.Stable
-public class SpanReceiverInfoBuilder {
-  private SpanReceiverInfo info;
-
-  public SpanReceiverInfoBuilder(String className) {
-    info = new SpanReceiverInfo(0, className);
+/**
+ * Wrapper class for SpanContext to avoid using OpenTracing/OpenTelemetry
+ * SpanContext class directly for better separation.
+ */
+public class SpanContext implements Closeable {
+  public SpanContext() {
   }
 
-  public void addConfigurationPair(String key, String value) {
-    info.configPairs.add(new ConfigurationPair(key, value));
-  }
-
-  public SpanReceiverInfo build() {
-    SpanReceiverInfo ret = info;
-    info = null;
-    return ret;
+  public void close() {
   }
 }

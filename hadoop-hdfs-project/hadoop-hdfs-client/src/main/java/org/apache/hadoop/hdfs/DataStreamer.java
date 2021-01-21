@@ -76,9 +76,9 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.tracing.Span;
+import org.apache.hadoop.tracing.SpanContext;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.tracing.Tracer;
-import io.opentracing.SpanContext;
 
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
@@ -757,7 +757,7 @@ class DataStreamer extends Daemon {
           if (!one.isHeartbeatPacket()) {
             if (scope != null) {
               one.setSpan(scope.span());
-              spanContext = scope.span().context();
+              spanContext = scope.span().getContext();
               scope.close();
             }
             scope = null;
@@ -1175,7 +1175,7 @@ class DataStreamer extends Daemon {
 
           synchronized (dataQueue) {
             if (one.getSpan() != null) {
-              scope = new TraceScope(Tracer.get().scopeManager().activate(one.getSpan().span(), true));
+              scope = new TraceScope(new Span());
               // TODO: Use scope = Tracer.curThreadTracer().activateSpan ?
               one.setSpan(null);
             }

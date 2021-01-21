@@ -183,7 +183,7 @@ public abstract class ProtoUtil {
     if (span != null) {
       RPCTraceInfoProto.Builder traceInfoProtoBuilder =
           RPCTraceInfoProto.newBuilder().setSpanContext(
-              TraceUtils.spanContextToByteString(span.context()));
+              TraceUtils.spanContextToByteString(span.getContext()));
       result.setTraceInfo(traceInfoProtoBuilder);
     }
 

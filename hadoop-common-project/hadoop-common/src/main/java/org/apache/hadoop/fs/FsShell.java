@@ -302,7 +302,7 @@ public class FsShell extends Configured implements Tool {
     // initialize FsShell
     init();
     Tracer tracer = new Tracer.Builder("FsShell").
-        conf(TraceUtils.wrapHadoopConfOT(SHELL_HTRACE_PREFIX, getConf())).
+        conf(TraceUtils.wrapHadoopConf(SHELL_HTRACE_PREFIX, getConf())).
         build();
     int exitCode = -1;
     if (argv.length < 1) {
