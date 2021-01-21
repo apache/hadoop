@@ -81,11 +81,12 @@ schemes.
 * Supports authentication via: environment variables, Hadoop configuration
 properties, the Hadoop key management store and IAM roles.
 * Supports per-bucket configuration.
-* With [S3Guard](./s3guard.html), adds high performance and consistent metadata/
-directory read operations. This delivers consistency as well as speed.
 * Supports S3 "Server Side Encryption" for both reading and writing:
  SSE-S3, SSE-KMS and SSE-C
 * Instrumented with Hadoop metrics.
+* Before S3 was consistent, provided a consistent view of inconsistent storage
+  through [S3Guard](./s3guard.html).
+
 * Actively maintained by the open source community.
 
 
