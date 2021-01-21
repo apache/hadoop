@@ -16,6 +16,7 @@
 * limitations under the License.
 */
 
+
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
