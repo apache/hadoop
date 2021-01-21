@@ -19,7 +19,6 @@ import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.authentication.util.*;
-import org.eclipse.jetty.server.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -620,20 +619,11 @@ public class AuthenticationFilter implements Filter {
                 KerberosAuthenticator.WWW_AUTHENTICATE))) {
           errCode = HttpServletResponse.SC_FORBIDDEN;
         }
-        // After Jetty 9.4.21, sendError() no longer allows a custom message.
-        // use setStatusWithReason() to set a custom message.
-        String reason;
         if (authenticationEx == null) {
-          reason = "Authentication required";
+          httpResponse.sendError(errCode, "Authentication required");
         } else {
-          reason = authenticationEx.getMessage();
+          httpResponse.sendError(errCode, authenticationEx.getMessage());
         }
-
-        if (httpResponse instanceof Response) {
-          ((Response)httpResponse).setStatusWithReason(errCode, reason);
-        }
-
-        httpResponse.sendError(errCode, reason);
       }
     }
   }

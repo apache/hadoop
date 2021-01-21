@@ -193,10 +193,6 @@
       <artifactId>guava</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-server</artifactId>
-    </dependency>
   </dependencies>
 
   <build>

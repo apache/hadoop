@@ -42,7 +42,6 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.security.SecurityUtil;
-import org.eclipse.jetty.server.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -120,7 +119,7 @@ public class ImageServlet extends HttpServlet {
     if (nnImage == null) {
       String errorMsg = "NameNode initialization not yet complete. "
           + "FSImage has not been set in the NameNode.";
-      sendError(response, HttpServletResponse.SC_FORBIDDEN, errorMsg);
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, errorMsg);
       throw new IOException(errorMsg);
     }
     return nnImage;
@@ -219,7 +218,7 @@ public class ImageServlet extends HttpServlet {
       
     } catch (Throwable t) {
       String errMsg = "GetImage failed. " + StringUtils.stringifyException(t);
-      sendError(response, HttpServletResponse.SC_GONE, errMsg);
+      response.sendError(HttpServletResponse.SC_GONE, errMsg);
       throw new IOException(errMsg);
     } finally {
       response.getOutputStream().close();
@@ -235,7 +234,7 @@ public class ImageServlet extends HttpServlet {
             conf)) {
       String errorMsg = "Only Namenode, Secondary Namenode, and administrators may access "
           + "this servlet";
-      sendError(response, HttpServletResponse.SC_FORBIDDEN, errorMsg);
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, errorMsg);
       LOG.warn("Received non-NN/SNN/administrator request for image or edits from "
           + request.getUserPrincipal().getName()
           + " at "
@@ -248,7 +247,7 @@ public class ImageServlet extends HttpServlet {
         && !myStorageInfoString.equals(theirStorageInfoString)) {
       String errorMsg = "This namenode has storage info " + myStorageInfoString
           + " but the secondary expected " + theirStorageInfoString;
-      sendError(response, HttpServletResponse.SC_FORBIDDEN, errorMsg);
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, errorMsg);
       LOG.warn("Received an invalid request file transfer request "
           + "from a secondary with storage info " + theirStorageInfoString);
       throw new IOException(errorMsg);
@@ -579,7 +578,7 @@ public class ImageServlet extends HttpServlet {
                 // we need a different response type here so the client can differentiate this
                 // from the failure to upload due to (1) security, or (2) other checkpoints already
                 // present
-                sendError(response, HttpServletResponse.SC_EXPECTATION_FAILED,
+                response.sendError(HttpServletResponse.SC_EXPECTATION_FAILED,
                     "Nameode "+request.getLocalAddr()+" is currently not in a state which can "
                         + "accept uploads of new fsimages. State: "+state);
                 return null;
@@ -594,7 +593,7 @@ public class ImageServlet extends HttpServlet {
               // if the node is attempting to upload an older transaction, we ignore it
               SortedSet<ImageUploadRequest> larger = currentlyDownloadingCheckpoints.tailSet(imageRequest);
               if (larger.size() > 0) {
-                sendError(response, HttpServletResponse.SC_CONFLICT,
+                response.sendError(HttpServletResponse.SC_CONFLICT,
                     "Another checkpointer is already in the process of uploading a" +
                         " checkpoint made up to transaction ID " + larger.last());
                 return null;
@@ -602,7 +601,7 @@ public class ImageServlet extends HttpServlet {
 
               //make sure no one else has started uploading one
               if (!currentlyDownloadingCheckpoints.add(imageRequest)) {
-                sendError(response, HttpServletResponse.SC_CONFLICT,
+                response.sendError(HttpServletResponse.SC_CONFLICT,
                     "Either current namenode is checkpointing or another"
                         + " checkpointer is already in the process of "
                         + "uploading a checkpoint made at transaction ID "
@@ -649,7 +648,7 @@ public class ImageServlet extends HttpServlet {
                     (txid - lastCheckpointTxid) + " expecting at least "
                     + checkpointTxnCount;
                 LOG.info(message);
-                sendError(response, HttpServletResponse.SC_CONFLICT, message);
+                response.sendError(HttpServletResponse.SC_CONFLICT, message);
                 return null;
               }
 
@@ -659,7 +658,7 @@ public class ImageServlet extends HttpServlet {
                       + "another checkpointer already uploaded an "
                       + "checkpoint for txid " + txid;
                   LOG.info(message);
-                  sendError(response, HttpServletResponse.SC_CONFLICT, message);
+                  response.sendError(HttpServletResponse.SC_CONFLICT, message);
                   return null;
                 }
 
@@ -696,18 +695,9 @@ public class ImageServlet extends HttpServlet {
           });
     } catch (Throwable t) {
       String errMsg = "PutImage failed. " + StringUtils.stringifyException(t);
-      sendError(response, HttpServletResponse.SC_GONE, errMsg);
+      response.sendError(HttpServletResponse.SC_GONE, errMsg);
       throw new IOException(errMsg);
     }
-  }
-
-  private void sendError(HttpServletResponse response, int code, String message)
-      throws IOException {
-    if (response instanceof Response) {
-      ((Response)response).setStatusWithReason(code, message);
-    }
-
-    response.sendError(code, message);
   }
 
   /*
