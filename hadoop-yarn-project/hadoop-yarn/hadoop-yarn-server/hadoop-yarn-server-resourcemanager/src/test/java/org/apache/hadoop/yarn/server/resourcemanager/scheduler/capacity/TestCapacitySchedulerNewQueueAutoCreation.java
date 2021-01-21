@@ -461,6 +461,41 @@ public class TestCapacitySchedulerNewQueueAutoCreation
             "for auto queue creation",
         ((ParentQueue)empty).isEligibleForAutoQueueCreation());
   }
+  
+  public void testAutoCreateQueueUserLimitDisabled() throws Exception {
+    startScheduler();
+    createBasicQueueStructureAndValidate();
+
+    submitApp(cs, USER0, USER0, "root.e-auto");
+
+    AbstractCSQueue e = (AbstractCSQueue) cs.getQueue("root.e-auto");
+    Assert.assertNotNull(e);
+    Assert.assertTrue(e.isDynamicQueue());
+
+    AbstractCSQueue user0 = (AbstractCSQueue) cs.getQueue(
+        "root.e-auto." + USER0);
+    Assert.assertNotNull(user0);
+    Assert.assertTrue(user0.isDynamicQueue());
+    Assert.assertTrue(user0 instanceof LeafQueue);
+
+    LeafQueue user0LeafQueue = (LeafQueue)user0;
+
+    // Assert user limit factor is -1
+    Assert.assertTrue(user0LeafQueue.getUserLimitFactor() == -1);
+
+    // Assert user max applications not limited
+    Assert.assertEquals(user0LeafQueue.getMaxApplicationsPerUser(),
+        user0LeafQueue.getMaxApplications());
+
+    // Assert AM Resource
+    Assert.assertEquals(user0LeafQueue.getAMResourceLimit().getMemorySize(),
+        user0LeafQueue.getMaxAMResourcePerQueuePercent()*MAX_MEMORY*GB, 1e-6);
+
+    // Assert user limit (no limit) when limit factor is -1
+    Assert.assertEquals(MAX_MEMORY*GB,
+        user0LeafQueue.getEffectiveMaxCapacityDown("",
+            user0LeafQueue.getMinimumAllocation()).getMemorySize(), 1e-6);
+  }
 
   private LeafQueue createQueue(String queuePath) throws YarnException {
     return autoQueueHandler.autoCreateQueue(

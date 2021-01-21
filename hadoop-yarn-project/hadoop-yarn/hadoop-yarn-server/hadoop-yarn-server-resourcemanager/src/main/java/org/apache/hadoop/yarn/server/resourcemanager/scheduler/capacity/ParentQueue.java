@@ -478,8 +478,8 @@ public class ParentQueue extends AbstractCSQueue {
         new CapacitySchedulerConfiguration(
         csContext.getConfiguration(), false);
     if (isLeaf) {
-      // FIXME: Ideally we should disable user limit factor, see YARN-10531
-      // dupCSConfig.setUserLimitFactor(childQueuePath, );
+      // set to -1, to disable it
+      dupCSConfig.setUserLimitFactor(childQueuePath, -1);
 
       // Set Max AM percentage to a higher value
       dupCSConfig.setMaximumApplicationMasterResourcePerQueuePercent(
