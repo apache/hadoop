@@ -69,6 +69,7 @@ public final class CommitConstants {
    * in the filesystem.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String MAGIC_COMMITTER_ENABLED
       = MAGIC_COMMITTER_PREFIX + ".enabled";
 

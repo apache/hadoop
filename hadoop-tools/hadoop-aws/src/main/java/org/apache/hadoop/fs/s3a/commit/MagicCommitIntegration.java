@@ -49,19 +49,17 @@ public class MagicCommitIntegration {
   private static final Logger LOG =
       LoggerFactory.getLogger(MagicCommitIntegration.class);
   private final S3AFileSystem owner;
-  private final boolean magicCommitEnabled;
+  private final boolean magicCommitEnabled = true;
 
   private final StoreContext storeContext;
 
   /**
    * Instantiate.
    * @param owner owner class
-   * @param magicCommitEnabled is magic commit enabled.
+   *
    */
-  public MagicCommitIntegration(S3AFileSystem owner,
-      boolean magicCommitEnabled) {
+  public MagicCommitIntegration(S3AFileSystem owner) {
     this.owner = owner;
-    this.magicCommitEnabled = magicCommitEnabled;
     this.storeContext = owner.createStoreContext();
   }
 
@@ -128,9 +126,7 @@ public class MagicCommitIntegration {
    * @return a list of elements, possibly empty
    */
   private List<String> finalDestination(List<String> elements) {
-    return magicCommitEnabled ?
-        MagicCommitPaths.finalDestination(elements)
-        : elements;
+    return MagicCommitPaths.finalDestination(elements);
   }
 
   /**
@@ -138,7 +134,7 @@ public class MagicCommitIntegration {
    * @return true if magic commit is turned on.
    */
   public boolean isMagicCommitEnabled() {
-    return magicCommitEnabled;
+    return true;
   }
 
   /**
@@ -158,7 +154,7 @@ public class MagicCommitIntegration {
    * @return true if writing path is to be uprated to a magic file write
    */
   private boolean isMagicCommitPath(List<String> elements) {
-    return magicCommitEnabled && isMagicFile(elements);
+    return isMagicFile(elements);
   }
 
   /**

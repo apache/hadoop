@@ -1385,15 +1385,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
         printOption(out, "\tFile conflict resolution",
             FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, DEFAULT_CONFLICT_MODE);
         break;
-      case COMMITTER_NAME_MAGIC:
-        printOption(out, "\tStore magic committer integration",
-            MAGIC_COMMITTER_ENABLED,
-            Boolean.toString(DEFAULT_MAGIC_COMMITTER_ENABLED));
-        if (!magic) {
-          println(out, "Warning: although the magic committer is enabled, "
-              + "the store does not support it");
-        }
-        break;
       default:
         println(out, "\tWarning: committer '%s' is unknown", committer);
       }

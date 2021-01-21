@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactor
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 
 /**
  * These are internal constants not intended for public use.
@@ -90,11 +89,6 @@ public final class InternalCommitterConstants {
   /** Error message for bad path: {@value}. */
   public static final String E_BAD_PATH
       = "Path does not represent a magic-commit path";
-
-  /** Error message if filesystem isn't magic: {@value}. */
-  public static final String E_NORMAL_FS
-      = "Filesystem does not have support for 'magic' committer enabled"
-      + " in configuration option " + MAGIC_COMMITTER_ENABLED;
 
   /** Error message if the dest FS isn't S3A: {@value}. */
   public static final String E_WRONG_FS

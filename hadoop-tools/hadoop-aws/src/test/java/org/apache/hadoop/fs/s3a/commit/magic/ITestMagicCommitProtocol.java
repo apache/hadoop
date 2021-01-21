@@ -24,14 +24,12 @@ import java.net.URI;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitProtocol;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjection;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjectionImpl;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -62,13 +60,6 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
-    return conf;
-  }
-
-  @Override
   protected String getCommitterFactoryName() {
     return CommitConstants.S3A_COMMITTER_FACTORY;
   }
@@ -81,7 +72,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   @Override
   public void setup() throws Exception {
     super.setup();
-    CommitUtils.verifyIsMagicCommitFS(getFileSystem());
+    getFileSystem();
   }
 
   @Override

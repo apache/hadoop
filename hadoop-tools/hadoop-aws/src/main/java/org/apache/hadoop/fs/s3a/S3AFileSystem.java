@@ -449,13 +449,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Input fadvise policy = {}", inputPolicy);
       changeDetectionPolicy = ChangeDetectionPolicy.getPolicy(conf);
       LOG.debug("Change detection policy = {}", changeDetectionPolicy);
-      boolean magicCommitterEnabled = conf.getBoolean(
-          CommitConstants.MAGIC_COMMITTER_ENABLED,
-          CommitConstants.DEFAULT_MAGIC_COMMITTER_ENABLED);
-      LOG.debug("Filesystem support for magic committers {} enabled",
-          magicCommitterEnabled ? "is" : "is not");
-      committerIntegration = new MagicCommitIntegration(
-          this, magicCommitterEnabled);
+      committerIntegration = new MagicCommitIntegration(this);
 
       // instantiate S3 Select support
       selectBinding = new SelectBinding(writeHelper);
@@ -4203,9 +4197,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     sb.append(", authoritativeStore=").append(allowAuthoritativeMetadataStore);
     sb.append(", authoritativePath=").append(allowAuthoritativePaths);
     sb.append(", useListV1=").append(useListV1);
-    if (committerIntegration != null) {
-      sb.append(", magicCommitter=").append(isMagicCommitEnabled());
-    }
     sb.append(", boundedExecutor=").append(boundedThreadPool);
     sb.append(", unboundedExecutor=").append(unboundedThreadPool);
     sb.append(", credentials=").append(credentials);
@@ -4248,10 +4239,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Is magic commit enabled?
-   * @return true if magic commit support is turned on.
+   * Now that it is always enabled, this method always returns
+   * {@code true}
+   * @return true, always.
    */
+  @Deprecated
   public boolean isMagicCommitEnabled() {
-    return committerIntegration.isMagicCommitEnabled();
+    return true;
   }
 
   /**
@@ -4737,8 +4731,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER_OLD:
-      // capability depends on FS configuration
-      return isMagicCommitEnabled();
+      return true;
 
     case SelectConstants.S3_SELECT_CAPABILITY:
       // select is only supported if enabled

@@ -1872,16 +1872,6 @@
 </property>
 
 <property>
-  <name>fs.s3a.committer.magic.enabled</name>
-  <value>false</value>
-  <description>
-    Enable support in the filesystem for the S3 "Magic" committer.
-    When working with AWS S3, S3Guard must be enabled for the destination
-    bucket, as consistent metadata listings are required.
-  </description>
-</property>
-
-<property>
   <name>fs.s3a.committer.threads</name>
   <value>8</value>
   <description>

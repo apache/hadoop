@@ -431,8 +431,6 @@ public class CommitOperations implements IOStatisticsSource {
         conf.getTrimmed(METADATASTORE_AUTHORITATIVE, "false"));
     successData.addDiagnostic(AUTHORITATIVE_PATH,
         conf.getTrimmed(AUTHORITATIVE_PATH, ""));
-    successData.addDiagnostic(MAGIC_COMMITTER_ENABLED,
-        conf.getTrimmed(MAGIC_COMMITTER_ENABLED, "false"));
 
     // now write
     Path markerPath = new Path(outputPath, _SUCCESS);

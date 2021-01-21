@@ -165,11 +165,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
     return conf;
   }
 
-  @Override
-  public boolean isMagicCommitEnabled() {
-    return true;
-  }
-
   /**
    * Make operation to set the s3 client public.
    * @param client client.

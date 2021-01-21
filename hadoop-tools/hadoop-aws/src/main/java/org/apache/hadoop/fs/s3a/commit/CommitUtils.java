@@ -53,25 +53,8 @@ public final class CommitUtils {
    */
   public static void verifyIsMagicCommitPath(S3AFileSystem fs,
       Path path) throws PathCommitException {
-    verifyIsMagicCommitFS(fs);
     if (!fs.isMagicCommitPath(path)) {
       throw new PathCommitException(path, E_BAD_PATH);
-    }
-  }
-
-  /**
-   * Verify that an S3A FS instance is a magic commit FS.
-   * @param fs filesystem
-   * @throws PathCommitException if the FS isn't a magic commit FS.
-   */
-  public static void verifyIsMagicCommitFS(S3AFileSystem fs)
-      throws PathCommitException {
-    if (!fs.isMagicCommitEnabled()) {
-      // dump out details to console for support diagnostics
-      String fsUri = fs.getUri().toString();
-      LOG.error("{}: {}:\n{}", E_NORMAL_FS, fsUri, fs);
-      // then fail
-      throw new PathCommitException(fsUri, E_NORMAL_FS);
     }
   }
 
@@ -106,7 +89,6 @@ public final class CommitUtils {
       throws PathCommitException, IOException {
     S3AFileSystem s3AFS = verifyIsS3AFS(path.getFileSystem(conf), path);
     if (magicCommitRequired) {
-      verifyIsMagicCommitFS(s3AFS);
     }
     return s3AFS;
   }
