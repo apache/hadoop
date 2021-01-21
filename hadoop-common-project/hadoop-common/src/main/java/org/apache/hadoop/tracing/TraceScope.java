@@ -23,6 +23,7 @@ public class TraceScope implements Closeable {
   Span span;
 
   public TraceScope(Span span) {
+    this.span = span;
   }
 
   // Add tag to the span
