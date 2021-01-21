@@ -18,9 +18,17 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper;
 
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
 public class CapacitySchedulerInfoHelper {
+  private static final String AUTO_CREATED_LEAF = "autoCreatedLeaf";
+  private static final String STATIC_LEAF = "staticLeaf";
+  private static final String AUTO_CREATED_PARENT = "autoCreatedParent";
+  private static final String STATIC_PARENT = "staticParent";
+  private static final String UNKNOWN_QUEUE = "unknown";
 
   private CapacitySchedulerInfoHelper() {}
 
@@ -40,5 +48,23 @@ public class CapacitySchedulerInfoHelper {
     }
     throw new YarnRuntimeException("Unknown mode for queue: " +
         queue.getQueuePath() + ". Queue details: " + queue);
+  }
+
+  public static String getQueueType(CSQueue queue) {
+    if (queue instanceof LeafQueue) {
+      if (((AbstractCSQueue)queue).isDynamicQueue()) {
+        return AUTO_CREATED_LEAF;
+      } else {
+        return STATIC_LEAF;
+      }
+    } else if (queue instanceof ParentQueue) {
+      if (((AbstractCSQueue)queue).isDynamicQueue()) {
+        return AUTO_CREATED_PARENT;
+      } else {
+        //A ParentQueue with isDynamic=false or an AbstractManagedParentQueue
+        return STATIC_PARENT;
+      }
+    }
+    return UNKNOWN_QUEUE;
   }
 }

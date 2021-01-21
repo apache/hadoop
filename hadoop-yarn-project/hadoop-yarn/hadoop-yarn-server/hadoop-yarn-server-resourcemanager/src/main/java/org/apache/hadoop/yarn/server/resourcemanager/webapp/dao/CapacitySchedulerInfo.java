@@ -57,6 +57,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected int queuePriority;
   protected String orderingPolicyInfo;
   protected String mode;
+  protected String queueType;
 
   @XmlTransient
   static final float EPSILON = 1e-8f;
@@ -105,6 +106,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
           .getConfigName();
     }
     mode = CapacitySchedulerInfoHelper.getMode(parent);
+    queueType = CapacitySchedulerInfoHelper.getQueueType(parent);
   }
 
   public float getCapacity() {
@@ -185,4 +187,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     return mode;
   }
 
+  public String getQueueType() {
+    return queueType;
+  }
 }
