@@ -356,7 +356,7 @@ the Hadoop configuration files.
 
 By default, the S3A client follows the following authentication chain:
 
-1. The options `fs.s3a.access.key`, `fs.s3a.secret.key` and `fs.s3a.sesson.key
+1. The options `fs.s3a.access.key`, `fs.s3a.secret.key` and `fs.s3a.sesson.key`
 are looked for in the Hadoop XML configuration/Hadoop credential providers,
 returning a set of session credentials if all three are defined.
 1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
