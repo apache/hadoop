@@ -149,6 +149,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
     MutableRate metric = globalMetrics.get(name);
     if (metric == null) {
       metric = new MutableRate(name, name, false);
+      metric.setUpdateTimeStamp(true);
       globalMetrics.put(name, metric);
     }
     return metric;
