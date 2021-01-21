@@ -63,8 +63,25 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     JerseyTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRMWebServicesCapacitySchedDynamicConfig.class);
+  private static final float EXP_WEIGHT_NON_WEIGHT_MODE = -1.0F;
+  private static final float EXP_NORM_WEIGHT_NON_WEIGHT_MODE = 0.0F;
+  private static final float EXP_ROOT_WEIGHT_IN_WEIGHT_MODE = 1.0F;
+  private static final double DELTA = 0.00001;
 
   protected static MockRM rm;
+
+  private static class ExpectedQueueWithProperties {
+    private String path;
+    public final float weight;
+    public final float normalizedWeight;
+
+    public ExpectedQueueWithProperties(String path, float weight,
+        float normalizedWeight) {
+      this.path = path;
+      this.weight = weight;
+      this.normalizedWeight = normalizedWeight;
+    }
+  }
 
   private static class WebServletModule extends ServletModule {
     private final Configuration conf;
@@ -124,8 +141,15 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
 
     initResourceManager(config);
     JSONObject json = sendRequestToSchedulerEndpoint();
-    validateSchedulerInfo(json, "percentage", "root.default", "root.test1",
-        "root.test2");
+    validateSchedulerInfo(json, "percentage",
+        new ExpectedQueueWithProperties("root",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE),
+        new ExpectedQueueWithProperties("root.default",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE),
+        new ExpectedQueueWithProperties("root.test1",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE),
+        new ExpectedQueueWithProperties("root.test2",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE));
   }
 
   @Test
@@ -138,8 +162,15 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
 
     initResourceManager(config);
     JSONObject json = sendRequestToSchedulerEndpoint();
-    validateSchedulerInfo(json, "absolute", "root.default", "root.test1",
-        "root.test2");
+    validateSchedulerInfo(json, "absolute",
+        new ExpectedQueueWithProperties("root",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE),
+        new ExpectedQueueWithProperties("root.default",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE),
+        new ExpectedQueueWithProperties("root.test1",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE),
+        new ExpectedQueueWithProperties("root.test2",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE));
   }
 
   @Test
@@ -152,8 +183,12 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
 
     initResourceManager(config);
     JSONObject json = sendRequestToSchedulerEndpoint();
-    validateSchedulerInfo(json, "weight", "root.default", "root.test1",
-        "root.test2");
+    validateSchedulerInfo(json, "weight",
+        new ExpectedQueueWithProperties("root",
+            EXP_ROOT_WEIGHT_IN_WEIGHT_MODE, EXP_ROOT_WEIGHT_IN_WEIGHT_MODE),
+        new ExpectedQueueWithProperties("root.default", 10.0f, 0.5f),
+        new ExpectedQueueWithProperties("root.test1", 4.0f, 0.2f),
+        new ExpectedQueueWithProperties("root.test2", 6.0f, 0.3f));
   }
 
   private JSONObject sendRequestToSchedulerEndpoint() throws Exception {
@@ -169,7 +204,14 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   }
 
   private void validateSchedulerInfo(JSONObject json, String expectedMode,
-      String... expectedQueues) throws JSONException {
+      ExpectedQueueWithProperties rootQueue,
+      ExpectedQueueWithProperties... expectedQueues) throws JSONException {
+    Map<String, ExpectedQueueWithProperties> queuesMap = new HashMap<>();
+    for (ExpectedQueueWithProperties expectedQueue : expectedQueues) {
+      queuesMap.put(expectedQueue.path, expectedQueue);
+    }
+
+
     int expectedQSize = expectedQueues.length;
     Assert.assertNotNull("SchedulerTypeInfo should not be null", json);
     assertEquals("incorrect number of elements in: " + json, 1, json.length());
@@ -178,11 +220,15 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     Assert.assertNotNull("Scheduler object should not be null", json);
     assertEquals("incorrect number of elements in: " + info, 1, info.length());
 
-    //Validate if root queue has the expected mode
+    //Validate if root queue has the expected mode and weight values
     info = info.getJSONObject("schedulerInfo");
     Assert.assertNotNull("SchedulerInfo should not be null", info);
     Assert.assertEquals("Expected Queue mode " +expectedMode, expectedMode,
         info.getString("mode"));
+    Assert.assertEquals(rootQueue.weight,
+        Float.parseFloat(info.getString("weight")), DELTA);
+    Assert.assertEquals(rootQueue.normalizedWeight,
+        Float.parseFloat(info.getString("normalizedWeight")), DELTA);
 
     JSONObject queuesObj = info.getJSONObject("queues");
     Assert.assertNotNull("QueueInfoList should not be null", queuesObj);
@@ -200,10 +246,22 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
           obj.getString("queueName");
       String mode = obj.getString("mode");
       modesMap.put(queuePath, mode);
+
+      //validate weights of all other queues
+      ExpectedQueueWithProperties expectedQueue = queuesMap.get(queuePath);
+      Assert.assertNotNull("Queue not found in expectedQueueMap with path: " +
+          queuePath, expectedQueue);
+      Assert.assertEquals("Weight value does not match",
+          expectedQueue.weight, Float.parseFloat(obj.getString("weight")),
+          DELTA);
+      Assert.assertEquals("Normalized weight value does not match",
+          expectedQueue.normalizedWeight,
+          Float.parseFloat(obj.getString("normalizedWeight")), DELTA);
     }
 
     //Validate queue paths and modes
     List<String> sortedExpectedPaths = Arrays.stream(expectedQueues)
+        .map(eq -> eq.path)
         .sorted(Comparator.comparing(String::toLowerCase))
         .collect(Collectors.toList());
 

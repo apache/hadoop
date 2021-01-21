@@ -46,6 +46,8 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected float capacity;
   protected float usedCapacity;
   protected float maxCapacity;
+  protected float weight;
+  protected float normalizedWeight;
   protected String queueName;
   protected CapacitySchedulerQueueInfoList queues;
   protected QueueCapacitiesInfo capacities;
@@ -70,6 +72,8 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     if (max < EPSILON || max > 1f)
       max = 1f;
     this.maxCapacity = max * 100;
+    this.weight = parent.getQueueCapacities().getWeight();
+    this.normalizedWeight = parent.getQueueCapacities().getNormalizedWeight();
 
     capacities = new QueueCapacitiesInfo(parent.getQueueCapacities(),
         parent.getQueueResourceQuotas(), false);
@@ -147,7 +151,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
       CapacityScheduler cs, CSQueue parent) {
     CapacitySchedulerQueueInfoList queuesInfo =
         new CapacitySchedulerQueueInfoList();
-    // JAXB marashalling leads to situation where the "type" field injected
+    // JAXB marshalling leads to situation where the "type" field injected
     // for JSON changes from string to array depending on order of printing
     // Issue gets fixed if all the leaf queues are marshalled before the
     // non-leaf queues. See YARN-4785 for more details.

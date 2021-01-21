@@ -66,6 +66,8 @@ public class CapacitySchedulerQueueInfo {
   protected float absoluteCapacity;
   protected float absoluteMaxCapacity;
   protected float absoluteUsedCapacity;
+  protected float weight;
+  protected float normalizedWeight;
   protected int numApplications;
   protected String queueName;
   protected boolean isAbsoluteResource;
@@ -109,6 +111,8 @@ public class CapacitySchedulerQueueInfo {
         cap(q.getAbsoluteMaximumCapacity(), 0f, 1f) * 100;
     absoluteUsedCapacity =
         cap(q.getAbsoluteUsedCapacity(), 0f, 1f) * 100;
+    weight = q.getQueueCapacities().getWeight();
+    normalizedWeight = q.getQueueCapacities().getNormalizedWeight();
     numApplications = q.getNumApplications();
     allocatedContainers = q.getMetrics().getAllocatedContainers();
     pendingContainers = q.getMetrics().getPendingContainers();
@@ -313,5 +317,13 @@ public class CapacitySchedulerQueueInfo {
 
   public String getMode() {
     return mode;
+  }
+
+  public float getWeight() {
+    return weight;
+  }
+
+  public float getNormalizedWeight() {
+    return normalizedWeight;
   }
 }
