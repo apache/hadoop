@@ -98,16 +98,6 @@ public abstract class DataTransferProtoUtil {
     return builder.build();
   }
 
-  /*
-  public static SpanId fromProto(DataTransferTraceInfoProto proto) {
-    if ((proto != null) && proto.hasTraceId() &&
-          proto.hasParentId()) {
-      return new SpanId(proto.getTraceId(), proto.getParentId());
-    }
-    return null;
-  }
-  */
-
   public static void checkBlockOpStatus(
           BlockOpResponseProto response,
           String logInfo) throws IOException {

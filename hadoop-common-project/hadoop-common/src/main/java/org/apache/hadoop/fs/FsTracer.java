@@ -47,20 +47,6 @@ public final class FsTracer {
     return instance;
   }
 
-  @VisibleForTesting
-  public static synchronized void clear() {
-/*
-    if (instance == null) {
-      return;
-    }
-    try {
-      instance.close();
-    } finally {
-      instance = null;
-    }
- */
-  }
-
   private FsTracer() {
   }
 }
