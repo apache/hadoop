@@ -509,7 +509,21 @@ public void hflush() throws IOException {
 }
 ```
 
-### <a name="syncable.hsync"></a>`Syncable.hsync()`
+#### `hflush()` Performance
+
+The `hflush()` call MUST block until the store has acknowledge that the
+data has been received and is now visible to others. This can be slow,
+as it will include the time to upload any outstanding data from the
+client, and for the filesystem itself to process it.
+
+Often Filesystems only offer the `Syncable.hsync()` guarantees: persistence as
+well as visibility. This means the time to return can be even greater.
+
+Application code MUST NOT call `hflush()` or `hsync()` at the end of every line
+or, unless they are writing a WAL, at the end of every record. Use with care.
+
+
+### <a name="syncable.hsync"></a> `Syncable.hsync()`
 
 Similar to POSIX `fsync()`, this call saves the data in client's user buffer
 all the way to the disk device (but the disk may have it in its cache).
@@ -530,29 +544,12 @@ Stream.open else raise IOException
 FS' = FS where data(path) == buffer
 ```
 
-The reference implementation, `DFSOutputStream` will block
-until an acknowledgement is received from the datanodes: that is, all hosts
-in the replica write chain have successfully written the file.
+_Implementations are required to block until that write has been
+acknowledged by the store._
 
-That means that the expectation callers may have is that the return of
-the method call contains visibility and durability guarantees which other
-implementations must maintain.
+This is so the caller can be confident that once the call has
+returned successfully, the data has been written.
 
-Note, however, that the reference `DFSOutputStream.hsync()` call only actually syncs
-*the current block*. If there have been a series of writes since the last sync,
-such that a block boundary has been crossed. The `hsync()` call claims only
-to write the most recent.
-
-
-From the javadocs of `DFSOutputStream.hsync(EnumSet<SyncFlag> syncFlags)`
-
-> Note that only the current block is flushed to the disk device.
-> To guarantee durable sync across block boundaries the stream should
-> be created with {@link CreateFlag#SYNC_BLOCK}.
-
-
-In virtual machines, the notion of "disk hardware" is really that of
-another software abstraction: there are few guarantees.
 
 
 ## <a name="streamcapabilities"></a>Interface `StreamCapabilities`
@@ -596,22 +593,16 @@ consult the javadocs for the complete set of options.
 
 | Name  | Probes for support of |
 |-------|---------|
+| `dropbehind` | `CanSetDropBehind.setDropBehind()` |
 | `hsync` | `Syncable.hsync()` |
 | `hflush` | `Syncable.hflush()`. Deprecated: probe for `HSYNC` only. |
 | `in:readahead` | `CanSetReadahead.setReadahead()` |
-| `dropbehind` | `CanSetDropBehind.setDropBehind()` |
 | `in:unbuffer"` | `CanUnbuffer.unbuffer()` |
 | `in:readbytebuffer` | `ByteBufferReadable#read(ByteBuffer)` |
-| `in:preadbytebuffer` | `yteBufferPositionedReadable#read(long, ByteBuffer)` |
+| `in:preadbytebuffer` | `ByteBufferPositionedReadable#read(long, ByteBuffer)` |
 
 Stream implementations MAY add their own custom options.
 These MUST be prefixed with `fs.SCHEMA.`, where `SCHEMA` is the schema of the filesystem.
-
-In particular, S3A output streams add the following capability
-
-| Name  | Probes for support of |
-|-------|---------|
-| `fs.s3a.capability.magic.output.stream` | Is the output stream a delayed-visibility stream? |
 
 ## <a name="cansetdropbehind"></a> interface `CanSetDropBehind`
 
@@ -655,15 +646,15 @@ in production.
 1. `OutputStream.write()` MAY persist the data, synchronously or asynchronously
 1. `OutputStream.flush()` flushes data to the destination. There
 are no strict persistence requirements.
-1. `Syncable.hflush()` synchronously sends all local data to the destination
+1. `Syncable.hflush()` synchronously sends all outstaning data to the destination
 filesystem. After returning to the caller, the data MUST be visible to other readers,
 it MAY be durable. That is: it does not have to be persisted, merely guaranteed
 to be consistently visible to all clients attempting to open a new stream reading
 data at the path.
-1. `Syncable.hsync()` MUST transmit the data as per `hflush` the data and persist data to the underlying durable
-storage.
+1. `Syncable.hsync()` MUST transmit the data as per `hflush` the data and persist
+   that data to the underlying durable storage.
 1. `close()` The first call to `close()` MUST flush out all remaining data in
-the buffers, and persist it.
+the buffers, and persist it, as a call to `hsync()`.
 
 
 Many applications call `flush()` far too often -such as at the end of every line written.
@@ -671,6 +662,7 @@ If this triggered an update of the data in persistent storage and any accompanyi
 metadata, distributed stores would overload fast.
 Thus: `flush()` is often treated at most as a cue to flush data to the network
 buffers -but not commit to writing any data.
+
 It is only the `Syncable` interface which offers guarantees.
 
 The two `Syncable` operations `hsync()` and `hflush()` differ purely by the extra guarantee of `hsync()`: the data must be persisted.
@@ -790,9 +782,45 @@ do not follow the simple model of the filesystem used in this specification.
 
 ### <a name="hdfs-issues"></a> HDFS
 
+#### HDFS: `hsync()` only syncs the latest block
+
+The reference implementation, `DFSOutputStream` will block until an
+acknowledgement is received from the datanodes: that is, all hosts in the
+replica write chain have successfully written the file.
+
+That means that the expectation callers may have is that the return of the
+method call contains visibility and durability guarantees which other
+implementations must maintain.
+
+Note, however, that the reference `DFSOutputStream.hsync()` call only actually
+persists *the current block*. If there have been a series of writes since the
+last sync, such that a block boundary has been crossed. The `hsync()` call
+claims only to write the most recent.
+
+From the javadocs of `DFSOutputStream.hsync(EnumSet<SyncFlag> syncFlags)`
+
+> Note that only the current block is flushed to the disk device.
+> To guarantee durable sync across block boundaries the stream should
+> be created with {@link CreateFlag#SYNC_BLOCK}.
+
+
+This is an important HDFS implementation detail which must not be ignored by
+anyone relying on HDFS to provide a Write-Ahead-Log or other database structure
+where the requirement of the application is that
+"all preceeding bytes MUST have been persisted before the commit flag in the WAL
+is flushed"
+
+See [Stonebraker81], Michael Stonebraker, _Operating System Support for Database Management_,
+1981, for a discussion on this topic.
+
+If you do need `hsync()` to have synced every block in a very large write, call
+it regularly.
+
+#### HDFS: delayed visibility of metadata updates.
+
 That HDFS file metadata often lags the content of a file being written
 to is not something everyone expects, nor convenient for any program trying
-pick up updated data in a file being written. Most visible is the length
+to pick up updated data in a file being written. Most visible is the length
 of a file returned in the various `list` commands and `getFileStatus` —this
 is often out of data.
 
@@ -809,7 +837,7 @@ read.
 recorded in the metadata.
 1. If `Status.length &gt; pos`, the file has grown.
 1. If the number has not changed, then
-    1. reopen the file.
+    1. Reopen the file.
     1. `seek(pos)` to that location
     1. If `read() != -1`, there is new data.
 
@@ -827,14 +855,17 @@ true. Otherwise it is cached and written to disk later.
 `LocalFileSystem`, `file:`, (or any other `FileSystem` implementation based on
 `ChecksumFileSystem`) has a different issue. If an output stream
 is obtained from `create()` and `FileSystem.setWriteChecksum(false)` has
-*not* been called on the filesystem, then the FS only flushes as much
+*not* been called on the filesystem, then the stream only flushes as much
 local data as can be written to full checksummed blocks of data.
 
-That is, the flush operations are not guaranteed to write all the pending
+That is, the hsync/hflush operations are not guaranteed to write all the pending
 data until the file is finally closed.
 
 For this reason, the local fileystem accessed via `file://` URLs
-does not support syncable.
+does not support `Syncable` unless `setWriteChecksum(false)` was
+called on that FileSystem instance so as do disable checksum creation.
+After which, obviously, checksums are not generated for any file.
+
 
 ### <a name="checksummed-fs-issues"></a> Checksummed output streams
 
@@ -927,25 +958,6 @@ is present: the act of instantiating the object, while potentially exhibiting
 create inconsistency, is atomic. Applications may be able to use that fact
 to their advantage.
 
-There is a special troublespot in AWS S3 where it caches 404 responses returned
-by the service from probes for an object existing _before the file has been created_.
-A 404 record can remain in the load balancer's cache for some time -it seems to expire
-only after a "sufficient" interval of no probes for that path.
-This has been difficult to deal with within the Hadoop S3A code itself
-(HADOOP-16490, HADOOP-16635) -and if applications make their own probes for files
-before creating them, the problem will intermittently surface.
-
-1. If you look for an object on S3 and it is not there - The 404 MAY be returned even
-after the object has been created.
-1. FS operations triggering such a probe include: `getFileStatus()`, `exists()`, `open()`
-and others.
-1. The S3A connector does not do a probe if a file is created through `create()` overwrite=true;
-it only makes sure that the path does not reference a directory. Applications SHOULD always
-create files with this option except when some form of exclusivity is needed on file
-creation -in which case, be aware, that with the non-atomic probe+create sequence which
-some object store connectors implement, the semantics of the creation are not sufficient
-to allow the filesystem to be used as an implicit coordination mechanism between processes.
-
 ## <a name="implementors"></a> Implementors notes.
 
 ### `StreamCapabilities`
@@ -967,6 +979,20 @@ on to the distributed FS, it SHOULD declare that it supports them.
 Implementors MAY NOT update a file's metadata (length, date, ...) after
 every `hsync()` call. HDFS doesn't, except when the written data crosses
 a block boundary.
+
+
+### Implemting `OutputStream.flush()`
+
+Implementors SHOULD NOT forward `OutputStream.flush()` to `Syncable.hflush()`.
+Too much code calls `flush()` at the end of writing every line of text;
+blocking to upload this to a remote store and waiting for the results
+significantly hurts performance.
+Given that there are no guarantees of what `flush()` does, this is
+needless.
+
+Implementors who do forward the call to `OutputStream.flush()`
+to `Syncable.hflush()` do end up having to turn this feature
+off [HADOOP-16548](https://issues.apache.org/jira/browse/HADOOP-16548).
 
 ### Does `close()` sync data?
 

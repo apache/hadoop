@@ -42,6 +42,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 
 /**
  * Test creating files, overwrite options etc.
@@ -448,32 +449,52 @@ public abstract class AbstractContractCreateTest extends
   }
 
   @Test
-  public void testHSync() throws Throwable {
+  public void testSyncable() throws Throwable {
     describe("test declared and actual Syncable behaviors");
-    Path path = methodPath();
     FileSystem fs = getFileSystem();
     boolean supportsFlush = isSupported(SUPPORTS_HFLUSH);
     boolean supportsSync = isSupported(SUPPORTS_HSYNC);
 
-    try (FSDataOutputStream out = fs.create(path, true)) {
+    validateSyncableSemantics(fs, supportsSync, supportsFlush);
+  }
 
-      boolean doesHFlush = out.hasCapability(StreamCapabilities.HFLUSH);
-      if (doesHFlush) {
-        out.hflush();
-      }
+  /**
+   * Validate the semantics of syncable.
+   * @param fs filesystem
+   * @param supportsSync sync is present
+   * @param supportsFlush flush is present.
+   * @throws IOException failure
+   */
+  protected void validateSyncableSemantics(final FileSystem fs,
+      final boolean supportsSync, final boolean supportsFlush) throws IOException {
+    Path path = methodPath();
+    LOG.info("Expecting files under {} to have supportsSync={}"
+            + " and supportsFlush={}",
+        path, supportsSync, supportsFlush);
+
+
+    try (FSDataOutputStream out = fs.create(path, true)) {
+      LOG.info("Created output stream {}", out);
+
+      // probe stream for support for flush/sync, whose capabilities
+      // of supports/does not support must match what is expected
       String[] hflushCapabilities = {
-          StreamCapabilities.HFLUSH,
+          StreamCapabilities.HFLUSH
       };
       String[] hsyncCapabilities = {
-          StreamCapabilities.HSYNC,
+          StreamCapabilities.HSYNC
       };
-      assertCapabilities(out,
-          supportsFlush ? hflushCapabilities : null,
-          supportsFlush ? null : hflushCapabilities);
-      assertCapabilities(out,
-          supportsSync ? hsyncCapabilities : null,
-          supportsSync ? null : hsyncCapabilities);
-
+      if (supportsFlush) {
+        assertCapabilities(out, hflushCapabilities, null);
+      } else {
+        assertCapabilities(out, null, hflushCapabilities);
+      }
+      if (supportsSync) {
+        assertCapabilities(out, hsyncCapabilities, null);
+      } else {
+        assertCapabilities(out, null, hsyncCapabilities);
+      }
+      out.write('a');
       try {
         out.hflush();
         if (!supportsFlush) {
@@ -486,7 +507,7 @@ public abstract class AbstractContractCreateTest extends
           throw new AssertionError("hflush not supported", e);
         }
       }
-      out.write('a');
+      out.write('b');
       try {
         out.hsync();
       } catch (UnsupportedOperationException e) {
@@ -500,6 +521,7 @@ public abstract class AbstractContractCreateTest extends
 
         try(FSDataInputStream in = fs.open(path)) {
           assertEquals('a', in.read());
+          assertEquals('b', in.read());
           assertEquals(-1, in.read());
           LOG.info("Successfully read synced data on a new reader {}", in);
         }
@@ -522,10 +544,9 @@ public abstract class AbstractContractCreateTest extends
             throw e;
           }
         }
-
       }
-
+      out.close();
+      LOG.info("{}", ioStatisticsSourceToString(out));
     }
-
   }
 }
