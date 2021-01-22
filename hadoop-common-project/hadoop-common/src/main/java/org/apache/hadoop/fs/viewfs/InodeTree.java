@@ -630,9 +630,9 @@ abstract class InodeTree<T> {
             .append(theUri.getScheme()).append("://").append(mountTableName)
             .append("/").toString());
       }
-      FileSystem.LOG.info(
-          "Empty mount table detected for {} and considering itself as a linkFallback.",
-          theUri);
+      FileSystem.LOG
+          .info("Empty mount table detected for {} and considering itself "
+              + "as a linkFallback.", theUri);
       rootFallbackLink =
           new INodeLink<T>(mountTableName, ugi, getTargetFileSystem(theUri),
               theUri);
