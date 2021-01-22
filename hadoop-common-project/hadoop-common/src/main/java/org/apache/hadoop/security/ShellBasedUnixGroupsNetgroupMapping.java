@@ -18,8 +18,11 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -53,7 +56,24 @@ public class ShellBasedUnixGroupsNetgroupMapping
   public List<String> getGroups(String user) throws IOException {
     // parent get unix groups
     List<String> groups = new LinkedList<String>(super.getGroups(user));
-    NetgroupCache.getNetgroups(user, groups);
+    NetgroupCache.getUserNetgroups(user, groups);
+    return groups;
+  }
+
+  /**
+   * Gets unix groups and netgroups for the user.
+   *
+   * @param user the user name to fetch groups.
+   * @return a set containing unix groups and netgroups used in ACLs.
+   * @throws IOException if an error fetching the groups.
+   */
+  @Override
+  public Set<String> getGroupsSet(String user) throws IOException {
+    // parent get unix groups
+    // create a new set because parent class may return an immutable set.
+    Set<String> groups = new LinkedHashSet<>(super.getGroupsSet(user));
+    // append netgroups.
+    NetgroupCache.getUserNetgroups(user, groups);
     return groups;
   }
 
