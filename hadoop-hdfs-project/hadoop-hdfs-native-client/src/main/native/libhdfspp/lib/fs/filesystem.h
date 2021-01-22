@@ -242,6 +242,7 @@ private:
 
   void FindShim(const Status &stat, const std::vector<StatInfo> & stat_infos,
                 bool directory_has_more, std::shared_ptr<FindOperationalState> current_state, std::shared_ptr<FindSharedState> shared_state);
+
 };
 }
 
