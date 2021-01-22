@@ -121,7 +121,7 @@ RUN mkdir -p /opt/pip \
     && rm -rf /opt/pip
 
 ######
-# Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
+# Install Google Protobuf 3.7.1 (3.6.1 ships with Focal)
 ######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
