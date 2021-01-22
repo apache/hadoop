@@ -52,7 +52,7 @@ public class Parameters {
   @SuppressWarnings("unchecked")
   public <V, T extends Param<V>> V get(String name, Class<T> klass) {
     List<Param<?>> multiParams = (List<Param<?>>)params.get(name);
-    if (multiParams != null && multiParams.size() > 0) {
+    if (multiParams != null && multiParams.isEmpty()) {
       return ((T) multiParams.get(0)).value(); // Return first value;
     }
     return null;

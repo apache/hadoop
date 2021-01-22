@@ -314,7 +314,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
   }
 
   protected void validateNamenode(String namenode) throws FileSystemAccessException {
-    if (nameNodeWhitelist.size() > 0 && !nameNodeWhitelist.contains("*")) {
+    if (nameNodeWhitelist.isEmpty() && !nameNodeWhitelist.contains("*")) {
       if (!nameNodeWhitelist.contains(
           StringUtils.toLowerCase(namenode))) {
         throw new FileSystemAccessException(FileSystemAccessException.ERROR.H05, namenode, "not in whitelist");

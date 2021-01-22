@@ -120,7 +120,7 @@ public class AvailableSpaceResolver
         subclusterInfo.values());
     Collections.sort(subclusterList, comparator);
 
-    return subclusterList.size() > 0 ? subclusterList.get(0).getNameserviceId()
+    return subclusterList.isEmpty() ? subclusterList.get(0).getNameserviceId()
         : null;
   }
 

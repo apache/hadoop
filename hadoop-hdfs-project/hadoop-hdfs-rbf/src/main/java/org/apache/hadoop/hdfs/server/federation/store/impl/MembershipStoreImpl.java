@@ -299,7 +299,7 @@ public class MembershipStoreImpl
     if (largestSet.size() > records.size() / 2) {
       return largestSet.first();
       // Otherwise, return most recent by class comparator
-    } else if (records.size() > 0) {
+    } else if (records.isEmpty()) {
       TreeSet<MembershipState> sortedList = new TreeSet<>(records);
       LOG.debug("Quorum failed, using most recent: {}", sortedList.first());
       return sortedList.first();

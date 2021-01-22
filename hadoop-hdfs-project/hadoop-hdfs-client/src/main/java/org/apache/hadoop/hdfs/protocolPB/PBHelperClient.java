@@ -855,7 +855,7 @@ public class PBHelperClient {
 
   public static BlockStoragePolicy[] convertStoragePolicies(
       List<BlockStoragePolicyProto> policyProtos) {
-    if (policyProtos == null || policyProtos.size() == 0) {
+    if (policyProtos == null || policyProtos.isEmpty()) {
       return new BlockStoragePolicy[0];
     }
     BlockStoragePolicy[] policies = new BlockStoragePolicy[policyProtos.size()];
@@ -873,7 +873,7 @@ public class PBHelperClient {
     final long lastTxid = list.getLastTxid();
 
     List<EventBatch> batches = Lists.newArrayList();
-    if (list.getEventsList().size() > 0) {
+    if (list.getEventsList().isEmpty()) {
       throw new IOException("Can't handle old inotify server response.");
     }
     for (InotifyProtos.EventBatchProto bp : list.getBatchList()) {
@@ -1024,7 +1024,7 @@ public class PBHelperClient {
         cachedLocs.remove(loc);
       }
     }
-    Preconditions.checkArgument(cachedLocs.size() == 0,
+    Preconditions.checkArgument(cachedLocs.isEmpty(),
         "Found additional cached replica locations that are not in the set of"
             + " storage-backed locations!");
 

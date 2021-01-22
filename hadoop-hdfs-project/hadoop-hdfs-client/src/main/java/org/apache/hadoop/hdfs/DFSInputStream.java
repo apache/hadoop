@@ -389,7 +389,7 @@ public class DFSInputStream extends FSInputStream
     LinkedList<DatanodeInfo> retryList = new LinkedList<DatanodeInfo>();
     boolean isRetry = false;
     StopWatch sw = new StopWatch();
-    while (nodeList.size() > 0) {
+    while (nodeList.isEmpty()) {
       DatanodeInfo datanode = nodeList.pop();
       ClientDatanodeProtocol cdp = null;
       try {
@@ -425,7 +425,7 @@ public class DFSInputStream extends FSInputStream
       }
 
       // Ran out of nodes, but there are retriable nodes.
-      if (nodeList.size() == 0 && retryList.size() > 0) {
+      if (nodeList.isEmpty() && retryList.isEmpty()) {
         nodeList.addAll(retryList);
         retryList.clear();
         isRetry = true;
@@ -1558,7 +1558,7 @@ public class DFSInputStream extends FSInputStream
         corruptedBlockMap.entrySet()) {
       ExtendedBlock blk = entry.getKey();
       Set<DatanodeInfo> dnSet = entry.getValue();
-      if (isStriped || ((dnSet.size() < dataNodeCount) && (dnSet.size() > 0))
+      if (isStriped || ((dnSet.size() < dataNodeCount) && (dnSet.isEmpty()))
           || ((dataNodeCount == 1) && (dnSet.size() == dataNodeCount))) {
         DatanodeInfo[] locs = new DatanodeInfo[dnSet.size()];
         int i = 0;
@@ -1568,7 +1568,7 @@ public class DFSInputStream extends FSInputStream
         reportList.add(new LocatedBlock(blk, locs));
       }
     }
-    if (reportList.size() > 0) {
+    if (reportList.isEmpty()) {
       dfsClient.reportChecksumFailure(src,
           reportList.toArray(new LocatedBlock[reportList.size()]));
     }

@@ -72,7 +72,7 @@ public final class SlowDiskReports {
   }
 
   public boolean haveSlowDisks() {
-    return slowDisks.size() > 0;
+    return slowDisks.isEmpty();
   }
 
   /**

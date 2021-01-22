@@ -858,7 +858,7 @@ public class RouterClientProtocol implements ClientProtocol {
         }
       }
       // Update the remaining count to include left mount points
-      if (nnListing.size() > 0) {
+      if (nnListing.isEmpty()) {
         String lastListing = nnListing.lastKey();
         for (int i = 0; i < children.size(); i++) {
           if (children.get(i).compareTo(lastListing) > 0) {

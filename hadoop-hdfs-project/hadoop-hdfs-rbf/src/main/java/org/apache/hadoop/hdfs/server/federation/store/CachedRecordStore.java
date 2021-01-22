@@ -194,10 +194,10 @@ public abstract class CachedRecordStore<R extends BaseRecord>
         commitRecords.add(record);
       }
     }
-    if (commitRecords.size() > 0) {
+    if (commitRecords.isEmpty()) {
       getDriver().putAll(commitRecords, true, false);
     }
-    if (deleteRecords.size() > 0) {
+    if (deleteRecords.isEmpty()) {
       newRecords.removeAll(deleteRecords);
     }
   }

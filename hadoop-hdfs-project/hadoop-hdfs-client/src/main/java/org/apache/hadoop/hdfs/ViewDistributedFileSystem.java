@@ -1260,7 +1260,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
   }
@@ -1300,7 +1300,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
   }
@@ -1330,7 +1330,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
   }
@@ -1358,7 +1358,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
         iters.add(((DistributedFileSystem) fs).listCacheDirectives(filter));
       }
     }
-    if (iters.size() == 0) {
+    if (iters.isEmpty()) {
       throw new UnsupportedOperationException(
           "No DFS found in child fs. This API can't be supported in non DFS");
     }
@@ -1417,7 +1417,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
   }
@@ -1447,7 +1447,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
   }
@@ -1477,7 +1477,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
   }
@@ -1494,7 +1494,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
         childDFSs.add((DistributedFileSystem) fs);
       }
     }
-    if (childDFSs.size() == 0) {
+    if (childDFSs.isEmpty()) {
       throw new UnsupportedOperationException(
           "No DFS found in child fs. This API can't be supported in non DFS");
     }
@@ -1887,7 +1887,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
     return results;
@@ -1918,7 +1918,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
     return results;
@@ -1949,7 +1949,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
     return results.toArray(new AddErasureCodingPolicyResponse[results.size()]);
@@ -1982,7 +1982,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
   }
@@ -2013,7 +2013,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
   }
@@ -2044,7 +2044,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child file systems.");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
   }
@@ -2091,7 +2091,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       throw new UnsupportedOperationException(
           "No DFS available in child filesystems");
     }
-    if (failedExceptions.size() > 0) {
+    if (failedExceptions.isEmpty()) {
       throw MultipleIOException.createIOException(failedExceptions);
     }
     // Let's just return the last one.

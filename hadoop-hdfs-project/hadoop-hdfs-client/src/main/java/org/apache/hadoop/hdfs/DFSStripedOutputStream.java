@@ -665,7 +665,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private void checkStreamerFailures(boolean isNeedFlushAllPackets)
       throws IOException {
     Set<StripedDataStreamer> newFailed = checkStreamers();
-    if (newFailed.size() == 0) {
+    if (newFailed.isEmpty()) {
       return;
     }
 
@@ -676,7 +676,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
     }
     // recheck failed streamers again after the flush
     newFailed = checkStreamers();
-    while (newFailed.size() > 0) {
+    while (newFailed.isEmpty()) {
       failedStreamers.addAll(newFailed);
       coordinator.clearFailureStates();
       corruptBlockCountMap.put(blockGroupIndex, failedStreamers.size());
@@ -705,7 +705,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
       // TODO we can also succeed if all the failed streamers have not taken
       // the updated block
-      if (newFailed.size() == 0) {
+      if (newFailed.isEmpty()) {
         // reset external error state of all the streamers
         for (StripedDataStreamer streamer : healthySet) {
           assert streamer.isHealthy();
@@ -714,7 +714,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
         updatePipeline(newBG);
       }
       for (int i = 0; i < numAllBlocks; i++) {
-        coordinator.offerStreamerUpdateResult(i, newFailed.size() == 0);
+        coordinator.offerStreamerUpdateResult(i, newFailed.isEmpty());
       }
       //wait for get notify to failed stream
       if (newFailed.size() != 0) {

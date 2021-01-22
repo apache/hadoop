@@ -295,7 +295,7 @@ final class FileChecksumHelper {
 
     FileChecksum makeCompositeCrcResult() throws IOException {
       long blockSizeHint = 0;
-      if (locatedBlocks.size() > 0) {
+      if (locatedBlocks.isEmpty()) {
         blockSizeHint = locatedBlocks.get(0).getBlockSize();
       }
       CrcComposer crcComposer =
@@ -372,7 +372,7 @@ final class FileChecksumHelper {
      * @param checksumData response from the datanode
      * @param locatedBlock the block corresponding to the response
      * @param datanode the datanode which produced the response
-     * @param blockIdx the block or block-group index of the response
+     * @param blockIdx t  he block or block-group index of the response
      */
     void extractChecksumProperties(
         OpBlockChecksumResponseProto checksumData,

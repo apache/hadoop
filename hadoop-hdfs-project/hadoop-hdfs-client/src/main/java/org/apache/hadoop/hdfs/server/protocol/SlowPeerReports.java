@@ -78,7 +78,7 @@ public final class SlowPeerReports {
   }
 
   public boolean haveSlowPeers() {
-    return slowPeers.size() > 0;
+    return slowPeers.isEmpty();
   }
 
   /**

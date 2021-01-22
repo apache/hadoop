@@ -96,7 +96,7 @@ public class RequestHedgingProxyProvider<T> extends
               // failed
               // over, then we dont need to create a threadpool etc.
               targetProxies.remove(toIgnore);
-              if (targetProxies.size() == 0) {
+              if (targetProxies.isEmpty()) {
                 LOG.trace("No valid proxies left");
                 throw new RemoteException(IOException.class.getName(),
                     "No valid proxies left. "
