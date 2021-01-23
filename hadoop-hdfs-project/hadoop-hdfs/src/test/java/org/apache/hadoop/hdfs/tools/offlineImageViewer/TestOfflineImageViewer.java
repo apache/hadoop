@@ -498,7 +498,7 @@ public class TestOfflineImageViewer {
         throws SAXException {
       super.endElement(uri, localName, qName);
       if (qName.equalsIgnoreCase(PBImageXmlWriter.INODE_SECTION_INODE)) {
-        if (currentInodeName != null && currentInodeName.length() > 0) {
+        if (currentInodeName != null && !currentInodeName.isEmpty()) {
           if (currentBlockType != null && currentBlockType.equalsIgnoreCase(
               BlockType.STRIPED.name())) {
             Assert.assertEquals("INode '"

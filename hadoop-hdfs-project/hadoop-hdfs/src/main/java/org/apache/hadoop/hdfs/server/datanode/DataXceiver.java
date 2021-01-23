@@ -584,7 +584,7 @@ class DataXceiver extends Receiver implements Runnable {
     DatanodeRegistration dnR = 
       datanode.getDNRegistrationForBP(block.getBlockPoolId());
     final String clientTraceFmt =
-      clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
+      !clientName.isEmpty() && ClientTraceLog.isInfoEnabled()
         ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
             "%d", "HDFS_READ", clientName, "%d",
             dnR.getDatanodeUuid(), block, "%d")
@@ -685,7 +685,7 @@ class DataXceiver extends Receiver implements Runnable {
       final String[] targetStorageIds) throws IOException {
     previousOpClientName = clientname;
     updateCurrentThreadName("Receiving block " + block);
-    final boolean isDatanode = clientname.length() == 0;
+    final boolean isDatanode = clientname.isEmpty();
     final boolean isClient = !isDatanode;
     final boolean isTransfer = stage == BlockConstructionStage.TRANSFER_RBW
         || stage == BlockConstructionStage.TRANSFER_FINALIZED;

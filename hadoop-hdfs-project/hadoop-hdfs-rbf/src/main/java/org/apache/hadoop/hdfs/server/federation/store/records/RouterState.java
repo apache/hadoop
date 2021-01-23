@@ -136,7 +136,7 @@ public abstract class RouterState extends BaseRecord {
   @Override
   public void validate() {
     super.validate();
-    if ((getAddress() == null || getAddress().length() == 0) &&
+    if ((getAddress() == null || getAddress().isEmpty()) &&
         getStatus() != RouterServiceState.INITIALIZING) {
       throw new IllegalArgumentException(
           "Invalid router entry, no address specified " + this);

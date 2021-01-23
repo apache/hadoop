@@ -391,7 +391,7 @@ public class DiskBalancer {
   private NodePlan verifyPlanHash(String planID, String plan)
       throws DiskBalancerException {
     final long sha1Length = 40;
-    if (plan == null || plan.length() == 0) {
+    if (plan == null || plan.isEmpty()) {
       LOG.error("Disk Balancer -  Invalid plan.");
       throw new DiskBalancerException("Invalid plan.",
           DiskBalancerException.Result.INVALID_PLAN);

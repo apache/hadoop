@@ -670,7 +670,7 @@ class DataStreamer extends Daemon {
         synchronized (dataQueue) {
           // wait for a packet to be sent.
           long now = Time.monotonicNow();
-          while ((!shouldStop() && dataQueue.size() == 0 &&
+          while ((!shouldStop() && dataQueue.isEmpty() &&
               (stage != BlockConstructionStage.DATA_STREAMING ||
                   now - lastPacket < halfSocketTimeout)) || doSleep) {
             long timeout = halfSocketTimeout - (now-lastPacket);

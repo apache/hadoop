@@ -38,7 +38,7 @@ public abstract class Param<T> {
 
   public T parseParam(String str) {
     try {
-      value = (str != null && str.trim().length() > 0) ? parse(str) : value;
+      value = (str != null && !str.trim().isEmpty()) ? parse(str) : value;
     } catch (Exception ex) {
       throw new IllegalArgumentException(
         MessageFormat.format("Parameter [{0}], invalid value [{1}], value must be [{2}]",

@@ -111,7 +111,7 @@ public abstract class Param<T, D extends Param.Domain<T>> {
      */
     public final T parse(final String varName, final String str) {
       try {
-        return str != null && str.trim().length() > 0 ? parse(str) : null;
+        return str != null && !str.trim().isEmpty() ? parse(str) : null;
       } catch(Exception e) {
         throw new IllegalArgumentException("Failed to parse \"" + str
             + "\" for the parameter " + varName

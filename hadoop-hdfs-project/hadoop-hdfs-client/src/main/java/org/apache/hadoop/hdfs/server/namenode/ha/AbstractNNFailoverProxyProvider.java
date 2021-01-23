@@ -173,7 +173,7 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
         DFSUtilClient.getAddresses(conf, null, addressKey);
     Map<String, InetSocketAddress> addressesInNN = map.get(uri.getHost());
 
-    if (addressesInNN == null || addressesInNN.size() == 0) {
+    if (addressesInNN == null || addressesInNN.isEmpty()) {
       throw new RuntimeException("Could not find any configured addresses " +
           "for URI " + uri);
     }

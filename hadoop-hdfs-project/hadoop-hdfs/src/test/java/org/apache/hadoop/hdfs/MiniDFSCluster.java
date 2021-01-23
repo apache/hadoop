@@ -3368,7 +3368,7 @@ public class MiniDFSCluster implements AutoCloseable {
                            boolean checkDataNodeAddrConfig) throws IOException {
     if (setupHostsFile) {
       String hostsFile = conf.get(DFS_HOSTS, "").trim();
-      if (hostsFile.length() == 0) {
+      if (hostsFile.isEmpty()) {
         throw new IOException("Parameter dfs.hosts is not setup in conf");
       }
       // Setup datanode in the include file, if it is defined in the conf

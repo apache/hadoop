@@ -897,7 +897,7 @@ public class DatanodeManager {
 
   void resolveUpgradeDomain(DatanodeDescriptor node) {
     String upgradeDomain = hostConfigManager.getUpgradeDomain(node);
-    if (upgradeDomain != null && upgradeDomain.length() > 0) {
+    if (upgradeDomain != null && !upgradeDomain.isEmpty()) {
       node.setUpgradeDomain(upgradeDomain);
     }
   }

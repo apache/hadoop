@@ -261,7 +261,7 @@ public class TestRBFMetrics extends TestMetricsBase {
 
   private void assertNotNullAndNotEmpty(String field) {
     assertNotNull(field);
-    assertTrue(field.length() > 0);
+    assertTrue(!field.isEmpty());
   }
 
   private RouterState findMockRouter(String routerId) {

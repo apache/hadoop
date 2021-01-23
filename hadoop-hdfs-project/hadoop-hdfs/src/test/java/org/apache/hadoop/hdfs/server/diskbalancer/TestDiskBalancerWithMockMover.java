@@ -601,7 +601,7 @@ public class TestDiskBalancerWithMockMover {
     public NodePlan build() throws Exception {
       final int dnIndex = 0;
       Preconditions.checkNotNull(balancerCluster);
-      Preconditions.checkState(nodeID.length() > 0);
+      Preconditions.checkState(!nodeID.isEmpty());
 
       DiskBalancerDataNode node = balancerCluster.getNodes().get(dnIndex);
       node.setDataNodeUUID(nodeID);

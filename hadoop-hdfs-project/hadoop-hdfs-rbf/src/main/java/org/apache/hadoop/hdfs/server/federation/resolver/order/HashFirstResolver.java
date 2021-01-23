@@ -58,7 +58,7 @@ public class HashFirstResolver extends HashResolver {
     String remainder = path.substring(parent.length());
     String[] components =
         remainder.replaceFirst("^/", "").split(Path.SEPARATOR);
-    if (components.length > 0 && components[0].length() > 0) {
+    if (components.length > 0 && !components[0].isEmpty()) {
       if (parent.endsWith(Path.SEPARATOR)) {
         return parent + components[0];
       } else {

@@ -2562,7 +2562,7 @@ public class DataNode extends ReconfigurableBase
       DataOutputStream out = null;
       DataInputStream in = null;
       BlockSender blockSender = null;
-      final boolean isClient = clientname.length() > 0;
+      final boolean isClient = !clientname.isEmpty();
       
       try {
         final String dnAddr = targets[0].getXferAddr(connectToDnViaHostname);

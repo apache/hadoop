@@ -263,7 +263,7 @@ public abstract class StateStoreFileBaseImpl
     try {
       String line;
       while ((line = reader.readLine()) != null) {
-        if (!line.startsWith("#") && line.length() > 0) {
+        if (!line.startsWith("#") && !line.isEmpty()) {
           try {
             T record = newRecord(line, clazz, false);
             return record;

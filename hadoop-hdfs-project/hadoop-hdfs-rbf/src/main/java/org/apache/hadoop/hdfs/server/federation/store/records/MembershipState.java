@@ -242,20 +242,20 @@ public abstract class MembershipState extends BaseRecord
   @Override
   public void validate() {
     super.validate();
-    if (getNameserviceId() == null || getNameserviceId().length() == 0) {
+    if (getNameserviceId() == null || getNameserviceId().isEmpty()) {
       throw new IllegalArgumentException(
           ERROR_MSG_NO_NS_SPECIFIED + this);
     }
-    if (getWebAddress() == null || getWebAddress().length() == 0) {
+    if (getWebAddress() == null || getWebAddress().isEmpty()) {
       throw new IllegalArgumentException(
           ERROR_MSG_NO_WEB_ADDR_SPECIFIED + this);
     }
-    if (getRpcAddress() == null || getRpcAddress().length() == 0) {
+    if (getRpcAddress() == null || getRpcAddress().isEmpty()) {
       throw new IllegalArgumentException(
           ERROR_MSG_NO_RPC_ADDR_SPECIFIED + this);
     }
     if (!isBadState() &&
-        (getBlockPoolId().isEmpty() || getBlockPoolId().length() == 0)) {
+        (getBlockPoolId().isEmpty() || getBlockPoolId().isEmpty())) {
       throw new IllegalArgumentException(
           ERROR_MSG_NO_BP_SPECIFIED + this);
     }

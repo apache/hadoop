@@ -295,7 +295,7 @@ final class FileChecksumHelper {
 
     FileChecksum makeCompositeCrcResult() throws IOException {
       long blockSizeHint = 0;
-      if (locatedBlocks.size() > 0) {
+      if (!locatedBlocks.isEmpty()) {
         blockSizeHint = locatedBlocks.get(0).getBlockSize();
       }
       CrcComposer crcComposer =
