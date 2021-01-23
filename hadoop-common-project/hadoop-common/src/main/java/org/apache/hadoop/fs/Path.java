@@ -168,7 +168,7 @@ public class Path
       throw new IllegalArgumentException(
           "Can not create a Path from a null string");
     }
-    if( path.length() == 0 ) {
+    if(path.isEmpty()) {
        throw new IllegalArgumentException(
            "Can not create a Path from an empty string");
     }   

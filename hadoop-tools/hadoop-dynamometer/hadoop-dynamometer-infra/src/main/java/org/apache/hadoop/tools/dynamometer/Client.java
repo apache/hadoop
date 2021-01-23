@@ -604,7 +604,7 @@ public class Client extends Configured implements Tool {
       } else {
         Credentials credentials = new Credentials();
         String tokenRenewer = getConf().get(YarnConfiguration.RM_PRINCIPAL);
-        if (tokenRenewer == null || tokenRenewer.length() == 0) {
+        if (tokenRenewer == null || tokenRenewer.isEmpty()) {
           throw new IOException("Can't get Master Kerberos principal for the "
               + "RM to use as renewer");
         }

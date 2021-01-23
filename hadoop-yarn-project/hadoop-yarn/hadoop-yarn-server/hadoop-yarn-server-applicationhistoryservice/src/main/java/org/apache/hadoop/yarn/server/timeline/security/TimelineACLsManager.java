@@ -156,7 +156,7 @@ public class TimelineACLsManager {
     }
 
     String owner = domain.getOwner();
-    if (owner == null || owner.length() == 0) {
+    if (owner == null || owner.isEmpty()) {
       throw new YarnException("Owner information of the timeline domain "
           + domain.getId() + " is corrupted.");
     }

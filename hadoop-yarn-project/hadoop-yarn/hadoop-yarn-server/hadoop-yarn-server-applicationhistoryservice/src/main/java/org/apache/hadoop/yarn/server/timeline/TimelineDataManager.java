@@ -341,7 +341,7 @@ public class TimelineDataManager extends AbstractService {
       // if the domain id is not specified, the entity will be put into
       // the default domain
       if (entity.getDomainId() == null ||
-          entity.getDomainId().length() == 0) {
+          entity.getDomainId().isEmpty()) {
         entity.setDomainId(DEFAULT_DOMAIN_ID);
       }
       if (entity.getEntityId() == null || entity.getEntityType() == null) {

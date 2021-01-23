@@ -233,14 +233,14 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private String setJaasConfiguration(Configuration config) throws Exception {
     String keytabFile =
         config.get(ZK_DTSM_ZK_KERBEROS_KEYTAB, "").trim();
-    if (keytabFile == null || keytabFile.length() == 0) {
+    if (keytabFile == null || keytabFile.isEmpty()) {
       throw new IllegalArgumentException(ZK_DTSM_ZK_KERBEROS_KEYTAB
           + " must be specified");
     }
     String principal =
         config.get(ZK_DTSM_ZK_KERBEROS_PRINCIPAL, "").trim();
     principal = SecurityUtil.getServerPrincipal(principal, "");
-    if (principal == null || principal.length() == 0) {
+    if (principal == null || principal.isEmpty()) {
       throw new IllegalArgumentException(ZK_DTSM_ZK_KERBEROS_PRINCIPAL
           + " must be specified");
     }

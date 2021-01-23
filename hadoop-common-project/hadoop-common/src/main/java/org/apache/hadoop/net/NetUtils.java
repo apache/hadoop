@@ -123,8 +123,9 @@ public class NetUtils {
     String propValue = conf.get(
         CommonConfigurationKeysPublic.HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY,
         CommonConfigurationKeysPublic.HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_DEFAULT);
-    if ((propValue == null) || (propValue.length() == 0))
+    if ((propValue == null) || (propValue.isEmpty())) {
       return SocketFactory.getDefault();
+    }
 
     return getSocketFactoryFromProperty(conf, propValue);
   }

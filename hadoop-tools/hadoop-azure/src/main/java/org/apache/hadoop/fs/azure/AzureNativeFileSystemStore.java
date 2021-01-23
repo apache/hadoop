@@ -1253,7 +1253,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   private boolean matchAsteriskPattern(String pathName, String pattern) {
-    if (pathName == null || pathName.length() == 0) {
+    if (pathName == null || pathName.isEmpty()) {
       return false;
     }
 

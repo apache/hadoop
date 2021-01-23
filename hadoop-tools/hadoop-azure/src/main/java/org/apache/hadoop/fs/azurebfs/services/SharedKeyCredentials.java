@@ -410,7 +410,7 @@ public class SharedKeyCredentials {
       return null;
     }
 
-    if (stringToDecode.length() == 0) {
+    if (stringToDecode.isEmpty()) {
       return "";
     }
 

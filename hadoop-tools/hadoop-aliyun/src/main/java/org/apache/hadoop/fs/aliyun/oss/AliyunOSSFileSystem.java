@@ -260,7 +260,7 @@ public class AliyunOSSFileSystem extends FileSystem {
     String key = pathToKey(qualifiedPath);
 
     // Root always exists
-    if (key.length() == 0) {
+    if (key.isEmpty()) {
       return new OSSFileStatus(0, true, 1, 0, 0, qualifiedPath, username);
     }
 

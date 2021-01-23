@@ -114,8 +114,8 @@ public enum Separator {
     this.value = value;
 
     // validation
-    if (value == null || value.length() == 0 || encodedValue == null
-        || encodedValue.length() == 0) {
+    if (value == null || value.isEmpty() || encodedValue == null
+        || encodedValue.isEmpty()) {
       throw new IllegalArgumentException(
           "Cannot create separator from null or empty string.");
     }
@@ -149,7 +149,7 @@ public enum Separator {
    * @return the token with any occurrences of this separator URLEncoded.
    */
   public String encode(String token) {
-    if (token == null || token.length() == 0) {
+    if (token == null || token.isEmpty()) {
       // Nothing to replace
       return token;
     }
@@ -182,7 +182,7 @@ public enum Separator {
    *         the separator itself.
    */
   public String decode(String token) {
-    if (token == null || token.length() == 0) {
+    if (token == null || token.isEmpty()) {
       // Nothing to replace
       return token;
     }
@@ -218,7 +218,7 @@ public enum Separator {
    *         separators encoded.
    */
   public static byte[] encode(String token, Separator... separators) {
-    if (token == null || token.length() == 0) {
+    if (token == null || token.isEmpty()) {
       return EMPTY_BYTES;
     }
     String result = token;

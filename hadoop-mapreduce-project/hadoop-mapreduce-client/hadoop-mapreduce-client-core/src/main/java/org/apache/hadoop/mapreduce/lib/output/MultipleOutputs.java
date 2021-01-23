@@ -210,7 +210,7 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    * @throws IllegalArgumentException if the output name is not valid.
    */
   private static void checkTokenName(String namedOutput) {
-    if (namedOutput == null || namedOutput.length() == 0) {
+    if (namedOutput == null || namedOutput.isEmpty()) {
       throw new IllegalArgumentException(
         "Name cannot be NULL or emtpy");
     }

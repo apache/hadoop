@@ -48,7 +48,7 @@ public class TestAdlFileContextMainOperationsLive
   public void setUp() throws Exception {
     Configuration conf = AdlStorageConfiguration.getConfiguration();
     String fileSystem = conf.get(KEY_FILE_SYSTEM);
-    if (fileSystem == null || fileSystem.trim().length() == 0) {
+    if (fileSystem == null || fileSystem.trim().isEmpty()) {
       throw new Exception("Default file system not configured.");
     }
     URI uri = new URI(fileSystem);

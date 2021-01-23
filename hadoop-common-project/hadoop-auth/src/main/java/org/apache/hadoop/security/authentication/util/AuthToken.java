@@ -87,7 +87,7 @@ public class AuthToken implements Principal {
    * @param name the parameter name to use in an error message if the value is invalid.
    */
   protected static void checkForIllegalArgument(String value, String name) {
-    if (value == null || value.length() == 0 || value.contains(ATTR_SEPARATOR)) {
+    if (value == null || value.isEmpty() || value.contains(ATTR_SEPARATOR)) {
       throw new IllegalArgumentException(name + ILLEGAL_ARG_MSG);
     }
   }

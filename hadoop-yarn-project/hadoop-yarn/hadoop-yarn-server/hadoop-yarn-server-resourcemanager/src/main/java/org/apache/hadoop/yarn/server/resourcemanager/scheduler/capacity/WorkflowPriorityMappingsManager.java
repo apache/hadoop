@@ -143,8 +143,8 @@ public class WorkflowPriorityMappingsManager {
     String[] mappingArray = StringUtils
         .getTrimmedStringCollection(mappingString, WORKFLOW_PART_SEPARATOR)
             .toArray(new String[] {});
-    if (mappingArray.length != 3 || mappingArray[0].length() == 0
-        || mappingArray[1].length() == 0 || mappingArray[2].length() == 0) {
+    if (mappingArray.length != 3 || mappingArray[0].isEmpty()
+        || mappingArray[1].isEmpty() || mappingArray[2].length() == 0) {
       throw new IllegalArgumentException(
           "Illegal workflow priority mapping " + mappingString);
     }

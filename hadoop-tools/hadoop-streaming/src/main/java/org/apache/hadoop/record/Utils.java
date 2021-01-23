@@ -202,7 +202,10 @@ public class Utils {
    */
   static Buffer fromXMLBuffer(String s)
     throws IOException {
-    if (s.length() == 0) { return new Buffer(); }
+    if (s.isEmpty()) {
+      return new Buffer();
+    }
+
     int blen = s.length()/2;
     byte[] barr = new byte[blen];
     for (int idx = 0; idx < blen; idx++) {

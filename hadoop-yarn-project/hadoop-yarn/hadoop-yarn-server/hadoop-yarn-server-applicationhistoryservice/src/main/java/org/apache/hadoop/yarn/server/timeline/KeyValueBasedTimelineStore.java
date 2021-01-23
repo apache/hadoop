@@ -344,7 +344,7 @@ abstract class KeyValueBasedTimelineStore
         existingEntity.setEntityType(entity.getEntityType());
         existingEntity.setStartTime(entity.getStartTime());
         if (entity.getDomainId() == null ||
-            entity.getDomainId().length() == 0) {
+            entity.getDomainId().isEmpty()) {
           TimelinePutError error = new TimelinePutError();
           error.setEntityId(entityId.getId());
           error.setEntityType(entityId.getType());

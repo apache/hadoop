@@ -1037,7 +1037,7 @@ public class Client {
       // Note: Credentials class is marked as LimitedPrivate for HDFS and MapReduce
       rmCredentials = new Credentials();
       String tokenRenewer = YarnClientUtils.getRmPrincipal(conf);
-      if (tokenRenewer == null || tokenRenewer.length() == 0) {
+      if (tokenRenewer == null || tokenRenewer.isEmpty()) {
         throw new IOException(
           "Can't get Master Kerberos principal for the RM to use as renewer");
       }

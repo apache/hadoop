@@ -1148,7 +1148,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
               char c = v.charAt(i);
               if (c == ':' && i < v.length() - 1 && v.charAt(i + 1) == '-') {
                 val = getenv(v.substring(0, i));
-                if (val == null || val.length() == 0) {
+                if (val == null || val.isEmpty()) {
                   val = v.substring(i + 2);
                 }
                 break;
@@ -2160,7 +2160,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
      */
     private static int convertToInt(String value, int defaultValue) {
       String trim = value.trim();
-      if (trim.length() == 0) {
+      if (trim.isEmpty()) {
         return defaultValue;
       }
       return Integer.parseInt(trim);

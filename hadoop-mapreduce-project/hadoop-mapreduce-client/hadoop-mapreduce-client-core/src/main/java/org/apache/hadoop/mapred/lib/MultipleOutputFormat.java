@@ -207,7 +207,10 @@ extends FileOutputFormat<K, V> {
     for (int i = 1; i < numOfTrailingLegsToUse; i++) {
       if (parent == null) break;
       midName = parent.getName();
-      if (midName.length() == 0) break;
+
+      if (midName.isEmpty()) {
+        break;
+      }
       parent = parent.getParent();
       outPath = new Path(midName, outPath);
     }

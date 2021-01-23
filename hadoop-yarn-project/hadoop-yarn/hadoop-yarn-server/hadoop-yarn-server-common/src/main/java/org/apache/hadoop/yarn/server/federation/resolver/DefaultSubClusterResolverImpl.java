@@ -89,7 +89,7 @@ public class DefaultSubClusterResolverImpl extends AbstractSubClusterResolver
         this.conf.get(YarnConfiguration.FEDERATION_MACHINE_LIST, "");
 
     try {
-      if (fileName == null || fileName.trim().length() == 0) {
+      if (fileName == null || fileName.trim().isEmpty()) {
         LOG.info(
             "The machine list file path is not specified in the configuration");
         return;

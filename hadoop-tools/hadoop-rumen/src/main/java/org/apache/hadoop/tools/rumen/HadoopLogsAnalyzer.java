@@ -643,7 +643,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
         }
 
         while (subjectLine != null
-            && (subjectLine.length() == 0 || subjectLine.charAt(0) != '\f')) {
+            && (subjectLine.isEmpty() || subjectLine.charAt(0) != '\f')) {
           sb.append(subjectLine);
           subjectLine = readCountedLine();
         }
