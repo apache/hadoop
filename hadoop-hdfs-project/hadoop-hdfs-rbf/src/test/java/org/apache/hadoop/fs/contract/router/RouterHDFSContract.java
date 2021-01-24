@@ -29,7 +29,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.junit.Assert;
 
-
 /**
  * The contract of Router-based Federated HDFS.
  */
