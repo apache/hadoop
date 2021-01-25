@@ -261,6 +261,8 @@ public class ConnectionPool {
         // Only pick idle connections to close
         if (removed.size() < targetCount && conn.isUsable()) {
           removed.add(conn);
+        } else {
+          tmpConnections.add(conn);
         }
       }
       this.connections = tmpConnections;
