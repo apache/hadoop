@@ -65,9 +65,6 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
       return true;
     }
     updateCurrentIterator();
-    if (currIterator == null) {
-      return false;
-    }
     return currIterator.hasNext();
   }
 
@@ -90,7 +87,7 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
     fetchBatchesAsync();
     synchronized (this) {
       if (iteratorsQueue.isEmpty() && isIterationComplete) {
-          return null;
+          return Collections.emptyIterator();
       }
     }
     try {
@@ -102,7 +99,7 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.error("Thread got interrupted: {}", e);
-      return null;
+      return Collections.emptyIterator();
     }
   }
 
