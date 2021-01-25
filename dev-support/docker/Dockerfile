@@ -130,7 +130,7 @@ ENV PATH "${PATH}:/opt/protobuf/bin"
 ####
 # Install pylint and python-dateutil
 ####
-RUN pip3 install pylint python-dateutil
+RUN pip3 install pylint=2.6.0 python-dateutil=2.8.1
 
 ####
 # Install bower
