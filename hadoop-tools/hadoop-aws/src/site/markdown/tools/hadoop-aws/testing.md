@@ -974,15 +974,17 @@ using an absolute XInclude reference to it.
 **Warning do not enable any type of failure injection in production.  The
 following settings are for testing only.**
 
-One of the challenges with S3A integration tests is the fact that S3 is an
-eventually-consistent storage system.  In practice, we rarely see delays in
-visibility of recently created objects both in listings (`listStatus()`) and
-when getting a single file's metadata (`getFileStatus()`). Since this behavior
-is rare and non-deterministic, thorough integration testing is challenging.
-
-To address this, S3A supports a shim layer on top of the `AmazonS3Client`
+One of the challenges with S3A integration tests is the fact that S3 was an
+eventually-consistent storage system. To simulate inconsistencies more
+frequently than they would normally surface, S3A supports a shim layer on top of the `AmazonS3Client`
 class which artificially delays certain paths from appearing in listings.
 This is implemented in the class `InconsistentAmazonS3Client`.
+
+Now that S3 is consistent, injecting failures during integration and
+functional testing is less important.
+There's no need to enable it to verify that S3Guard can recover
+from consistencies, given that in production such consistencies
+will never surface.
 
 ## Simulating List Inconsistencies
 
@@ -1062,9 +1064,6 @@ The default is 5000 milliseconds (five seconds).
 </property>
 ```
 
-Future versions of this client will introduce new failure modes,
-with simulation of S3 throttling exceptions the next feature under
-development.
 
 ### Limitations of Inconsistency Injection
 
@@ -1104,8 +1103,12 @@ inconsistent directory listings.
 
 ## <a name="s3guard"></a> Testing S3Guard
 
-[S3Guard](./s3guard.html) is an extension to S3A which adds consistent metadata
-listings to the S3A client. As it is part of S3A, it also needs to be tested.
+[S3Guard](./s3guard.html) is an extension to S3A which added consistent metadata
+listings to the S3A client. 
+
+It has not been needed for applications to work safely with AWS S3 since November
+2020. However, it is currently still part of the codebase, and so something which
+needs to be tested.
 
 The basic strategy for testing S3Guard correctness consists of:
 
