@@ -1813,8 +1813,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private ObjectMetadata getObjectMetadata(Path path,
       ChangeTracker changeTracker, Invoker changeInvoker, String operation)
       throws IOException {
+    checkNotClosed();
     String key = pathToKey(path);
-    return once(operation, key,
+    return once(operation, path.toString(),
         () ->
             // this always does a full HEAD to the object
             getObjectMetadata(
