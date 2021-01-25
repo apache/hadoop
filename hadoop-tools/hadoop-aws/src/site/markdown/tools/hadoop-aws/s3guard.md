@@ -22,24 +22,39 @@
 which can use a (consistent) database as the store of metadata about objects
 in an S3 bucket.
 
+It was written been 2016 and 2020, *when Amazon S3 was eventually consistent.*
+It compensated for the following S3 inconsistencies: 
+* Newly created objects excluded from directory listings.
+* Newly deleted objects retained in directory listings.
+* Deleted objects still visible in existence probes and opening for reading.
+* S3 Load balancer 404 caching when a probe is made for an object before its creation.
+
+It did not compensate for update inconsistency, though by storing the etag
+values of objects in the database, it could detect and report problems.
+
+Now that S3 is consistent, there is no need for S3Guard at all.
+
 S3Guard
 
-1. May improve performance on directory listing/scanning operations,
+1. Permitted a consistent view of the object store.
+
+1. Could improve performance on directory listing/scanning operations.
 including those which take place during the partitioning period of query
 execution, the process where files are listed and the work divided up amongst
 processes.
 
-1. Permits a consistent view of the object store. Without this, changes in
-objects may not be immediately visible, especially in listing operations.
 
-1. Offers a platform for future performance improvements for running Hadoop
-workloads on top of object stores
 
-The basic idea is that, for each operation in the Hadoop S3 client (s3a) that
+The basic idea was that, for each operation in the Hadoop S3 client (s3a) that
 reads or modifies metadata, a shadow copy of that metadata is stored in a
-separate MetadataStore implementation.  Each MetadataStore implementation
-offers HDFS-like consistency for the metadata, and may also provide faster
-lookups for things like file status or directory listings.
+separate MetadataStore implementation. The store was 
+1. Updated after mutating operations on the store
+1. Updated after list operations against S3 discovered changes
+1. Looked up whenever a probe was made for a file/directory existing.
+1. Queried for all objects under a path when a directory listing was made; the results were
+   merged with the S3 listing in a non-authoritative path, used exclusively in
+   authoritative mode.
+ 
 
 For links to early design documents and related patches, see
 [HADOOP-13345](https://issues.apache.org/jira/browse/HADOOP-13345).
@@ -55,6 +70,19 @@ It is essential for all clients writing to an S3Guard-enabled
 S3 Repository to use the feature. Clients reading the data may work directly
 with the S3A data, in which case the normal S3 consistency guarantees apply.
 
+## Moving off S3Guard
+
+How to move off S3Guard, given it is no longer needed.
+
+1. Unset the option `fs.s3a.metadatastore.impl` globally/for all buckets for which it
+   was selected.
+1. If the option `org.apache.hadoop.fs.s3a.s3guard.disabled.warn.level` has been changed from
+the default (`SILENT`), change it back. You no longer need to be warned that S3Guard is disabled.
+1. Restart all applications.
+
+Once you are confident that all applications have been restarted, _Delete the DynamoDB table_.
+This is to avoid paying for a database you no longer need.
+This is best done from the AWS GUI.
 
 ## Setting up S3Guard
 
@@ -70,7 +98,7 @@ without S3Guard. The following values are available:
 * `WARN`: Warn that data may be at risk in workflows.
 * `FAIL`: S3AFileSystem instantiation will fail.
 
-The default setting is INFORM. The setting is case insensitive.
+The default setting is `SILENT`. The setting is case insensitive.
 The required level can be set in the `core-site.xml`.
 
 ---
