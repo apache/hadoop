@@ -476,8 +476,8 @@ public enum Statistic {
   /*
    * Delegation Token Operations.
    */
-  DELEGATION_TOKEN_ISSUED(
-      StoreStatisticNames.DELEGATION_TOKEN_ISSUED,
+  DELEGATION_TOKENS_ISSUED(
+      StoreStatisticNames.DELEGATION_TOKENS_ISSUED,
       "Count of delegation tokens issued",
       TYPE_DURATION),
 
