@@ -44,28 +44,12 @@ public class NetgroupCache {
    * Get netgroups for a given user
    *
    * @param user get groups for this user
-   * @param groups put groups into this List
-   */
-  public static void getNetgroups(final String user,
-      List<String> groups) {
-    Set<String> userGroups = userToNetgroupsMap.get(user);
-    //ConcurrentHashMap does not allow null values; 
-    //So null value check can be used to check if the key exists
-    if (userGroups != null) {
-      groups.addAll(userGroups);
-    }
-  }
-
-  /**
-   * Get netgroups for a given user.
-   *
-   * @param user get groups for this user
    * @param groups put groups into this collection
    */
-  public static void getUserNetgroups(final String user,
+  public static void getNetgroups(final String user,
       Collection<String> groups) {
     Set<String> userGroups = userToNetgroupsMap.get(user);
-    //ConcurrentHashMap does not allow null values;
+    //ConcurrentHashMap does not allow null values; 
     //So null value check can be used to check if the key exists
     if (userGroups != null) {
       groups.addAll(userGroups);

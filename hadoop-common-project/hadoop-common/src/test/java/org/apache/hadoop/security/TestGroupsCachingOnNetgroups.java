@@ -219,7 +219,7 @@ public class TestGroupsCachingOnNetgroups {
         verifyUserInformation(lastUser, false,
             () -> {
               Set<String> lastUsersInNetgroups = new LinkedHashSet<>();
-              NetgroupCache.getUserNetgroups(lastUser, lastUsersInNetgroups);
+              NetgroupCache.getNetgroups(lastUser, lastUsersInNetgroups);
               return lastUsersInNetgroups.isEmpty();
             }));
     Collection<String> lastUsersGroups = groupsStore.getGroupsSet(lastUser);
@@ -227,7 +227,7 @@ public class TestGroupsCachingOnNetgroups {
         getUserGroupsFromLookUp(groupUserLookup, lastUser, false),
         lastUsersGroups);
     Set<String> lastUsersInNetgroups = new LinkedHashSet<>();
-    NetgroupCache.getUserNetgroups(lastUser, lastUsersInNetgroups);
+    NetgroupCache.getNetgroups(lastUser, lastUsersInNetgroups);
     Assert.assertTrue(lastUsersInNetgroups.isEmpty());
     // call refresh
     groupsStore.refresh();
@@ -236,7 +236,7 @@ public class TestGroupsCachingOnNetgroups {
         verifyUserInformation(lastUser, true,
             () -> {
               Set<String> updatedUsersInNetGroups = new LinkedHashSet<>();
-              NetgroupCache.getUserNetgroups(lastUser, updatedUsersInNetGroups);
+              NetgroupCache.getNetgroups(lastUser, updatedUsersInNetGroups);
               return !updatedUsersInNetGroups.isEmpty();
             }));
     Assert.assertTrue(verifyNetgroupCaching(addedNetgroups, groupUserLookup));
@@ -262,7 +262,7 @@ public class TestGroupsCachingOnNetgroups {
     groupsStore.cacheGroupsAdd(currentGroupsList);
     for (String userName: usersList.subList(prevUBound, usersBound.get())) {
       Collection<String> cachedNGrpsForUser = new HashSet<>();
-      NetgroupCache.getUserNetgroups(userName, cachedNGrpsForUser);
+      NetgroupCache.getNetgroups(userName, cachedNGrpsForUser);
       Collection<String> usersGrpFromLookup =
           getUserGroupsFromLookUp(groupUserLookup, userName, true);
       Assert.assertTrue(usersGrpFromLookup.containsAll(cachedNGrpsForUser));
@@ -330,7 +330,7 @@ public class TestGroupsCachingOnNetgroups {
       // verify users are cached correctly
       for (String user : referenceUsers) {
         Set<String> cachedUserNetgroups = new LinkedHashSet<>();
-        NetgroupCache.getUserNetgroups(user, cachedUserNetgroups);
+        NetgroupCache.getNetgroups(user, cachedUserNetgroups);
         result = cachedUserNetgroups.contains(groupName);
         if (result) {
           // verify that the assignment is correct for each group in the set
@@ -387,7 +387,7 @@ public class TestGroupsCachingOnNetgroups {
       // create a new set because parent class may return an immutable set.
       Set<String> groups = new LinkedHashSet<>(super.getGroupsSet(user));
       // append netgroups.
-      NetgroupCache.getUserNetgroups(user, groups);
+      NetgroupCache.getNetgroups(user, groups);
       return groups;
     }
 

@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.util.NativeCodeLoader;
 
-import org.apache.hadoop.security.NetgroupCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +69,7 @@ public class JniBasedUnixGroupsNetgroupMapping
   public List<String> getGroups(String user) throws IOException {
     // parent gets unix groups
     List<String> groups = new LinkedList<String>(super.getGroups(user));
-    NetgroupCache.getUserNetgroups(user, groups);
+    NetgroupCache.getNetgroups(user, groups);
     return groups;
   }
 
@@ -90,7 +89,7 @@ public class JniBasedUnixGroupsNetgroupMapping
     // create a new set because parent class may return an immutable set.
     Set<String> groups = new LinkedHashSet<>(super.getGroupsSet(user));
     // append netgroups.
-    NetgroupCache.getUserNetgroups(user, groups);
+    NetgroupCache.getNetgroups(user, groups);
     return groups;
   }
 

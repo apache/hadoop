@@ -120,13 +120,9 @@ public class TestNetgroupCache {
    * @param group the group that should exist in the user's groups.
    */
   private void verifyGroupMembership(String user, int size, String group) {
-    List<String> groupsList = new ArrayList<>();
     Set<String> groupsSet = new LinkedHashSet<>();
-    // verify membership for list interface.
-    NetgroupCache.getUserNetgroups(user, groupsList);
-    verifyGroupMembership(size, group, groupsList);
     // verify membership for set interface.
-    NetgroupCache.getUserNetgroups(user, groupsSet);
+    NetgroupCache.getNetgroups(user, groupsSet);
     verifyGroupMembership(size, group, groupsSet);
   }
 
