@@ -276,7 +276,7 @@ public class AbfsConfiguration{
   private long sasTokenRenewPeriodForStreamsInSeconds;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ENABLE_FLUSH, DefaultValue = DEFAULT_ENABLE_ABFS_LIST_ITERATOR)
+      FS_AZURE_ENABLE_ABFS_LIST_ITERATOR, DefaultValue = DEFAULT_ENABLE_ABFS_LIST_ITERATOR)
   private boolean enableAbfsListIterator;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)

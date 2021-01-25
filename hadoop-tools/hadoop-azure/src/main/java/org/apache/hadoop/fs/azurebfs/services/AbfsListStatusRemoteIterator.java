@@ -44,7 +44,6 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
   private final FileStatus fileStatus;
   private final ListingSupport listingSupport;
   private final ArrayBlockingQueue<Object> iteratorsQueue;
-  private final Object asyncOpLock = new Object();
 
   private volatile boolean isAsyncInProgress = false;
   private boolean isIterationComplete = false;
@@ -111,7 +110,7 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
     if (isAsyncInProgress) {
       return;
     }
-    synchronized (asyncOpLock) {
+    synchronized (this) {
       if (isAsyncInProgress) {
         return;
       }
@@ -136,7 +135,7 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
       Thread.currentThread().interrupt();
       LOG.error("Thread got interrupted: {}", e);
     } finally {
-      synchronized (asyncOpLock) {
+      synchronized (this  ) {
         isAsyncInProgress = false;
       }
     }
@@ -148,11 +147,12 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
     continuation = listingSupport
         .listStatus(fileStatus.getPath(), null, fileStatuses, FETCH_ALL_FALSE,
             continuation);
+    iteratorsQueue.put(fileStatuses.iterator());
     synchronized (this) {
       if (continuation == null || continuation.isEmpty()) {
         isIterationComplete = true;
+        iteratorsQueue.put(Collections.emptyIterator());
       }
-      iteratorsQueue.put(fileStatuses.iterator());
     }
   }
 
