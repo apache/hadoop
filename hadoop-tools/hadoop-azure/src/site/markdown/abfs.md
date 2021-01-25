@@ -812,6 +812,13 @@ aheads. Specify the value in bytes. The value should be between 16384 to
 104857600 both inclusive (16 KB to 100 MB). The default value will be
 4194304 (4 MB).
 
+`fs.azure.buffered.pread.disable`: By default the positional read API will do a
+seek and read on input stream. This read will fill the buffer cache in
+AbfsInputStream and update the cursor positions. If this optimization is true
+it will skip usage of buffer and do a lock free REST call for reading from blob.
+This optimization is very much helpful for HBase kind of short random read over
+a shared AbfsInputStream instance.
+
 To run under limited memory situations configure the following. Especially
 when there are too many writes from the same process. 
 
