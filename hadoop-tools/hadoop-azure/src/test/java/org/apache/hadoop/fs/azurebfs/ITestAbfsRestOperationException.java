@@ -19,17 +19,21 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Verify the AbfsRestOperationException error message format.
@@ -114,4 +118,19 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
             + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
             + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
   }
-}
+
+  @Test
+  public void testPermissionDenied() throws Throwable {
+    final AzureBlobFileSystem fs = getFileSystem();
+    assumeTrue(fs.getIsNamespaceEnabled());
+    Path dir = new Path("testPermissionDenied");
+    Path path = new Path(dir, "file");
+    ContractTestUtils.writeTextFile(fs, path, "some text", true);
+    // no permissions
+    fs.setPermission(path, new FsPermission((short) 00000));
+    fs.setPermission(dir, new FsPermission((short) 00000));
+    intercept(AccessDeniedException.class, () ->
+        fs.delete(path, false));
+    intercept(AccessDeniedException.class, () ->
+        ContractTestUtils.readUTF8(fs, path, -1));
+  }}
