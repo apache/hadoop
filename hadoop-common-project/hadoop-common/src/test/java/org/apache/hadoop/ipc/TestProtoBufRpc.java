@@ -113,7 +113,7 @@ public class TestProtoBufRpc extends TestRpcBase {
     BlockingService service2 = TestProtobufRpc2Proto
         .newReflectiveBlockingService(server2Impl);
 
-    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, TestRpcService2.class,
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER3, TestRpcService2.class,
         service2);
     server.start();
   }
