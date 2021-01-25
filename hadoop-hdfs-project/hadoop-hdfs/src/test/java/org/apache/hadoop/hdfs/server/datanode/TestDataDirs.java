@@ -19,10 +19,12 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.*;
+import java.net.URI;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.util.Shell;
 import org.junit.AssumptionViolatedException;
@@ -47,16 +49,14 @@ public class TestDataDirs {
     File dir5 = new File("/dir5");
     File dir6 = new File("/dir6");
     File dir7 = new File("/dir7");
-    File dir8 = new File("/dir8");
     // Verify that a valid string is correctly parsed, and that storage
     // type is not case-sensitive and we are able to handle white-space between
     // storage type and URI.
     String locations1 = "[disk]/dir0,[DISK]/dir1,[sSd]/dir2,[disK]/dir3," +
-            "[ram_disk]/dir4,[disk]/dir5, [disk] /dir6, [disk] , [nvdimm]/dir7," +
-            " [ARCHIVE:0.7]/dir8";
+            "[ram_disk]/dir4,[disk]/dir5, [disk] /dir6, [disk] , [nvdimm]/dir7";
     conf.set(DFS_DATANODE_DATA_DIR_KEY, locations1);
     locations = DataNode.getStorageLocations(conf);
-    assertThat(locations.size(), is(10));
+    assertThat(locations.size(), is(9));
     assertThat(locations.get(0).getStorageType(), is(StorageType.DISK));
     assertThat(locations.get(0).getUri(), is(dir0.toURI()));
     assertThat(locations.get(1).getStorageType(), is(StorageType.DISK));
@@ -79,10 +79,6 @@ public class TestDataDirs {
     assertThat(locations.get(8).getStorageType(), is(StorageType.NVDIMM));
     assertThat(locations.get(8).getUri(), is(dir7.toURI()));
 
-    assertThat(locations.get(9).getStorageType(), is(StorageType.ARCHIVE));
-    assertThat(locations.get(9).getUri(), is(dir8.toURI()));
-    assertEquals(locations.get(9).getReserveForArchive(), 0.7, 0.0);
-
     // Verify that an unrecognized storage type result in an exception.
     String locations2 = "[BadMediaType]/dir0,[ssd]/dir1,[disk]/dir2";
     conf.set(DFS_DATANODE_DATA_DIR_KEY, locations2);
@@ -103,16 +99,6 @@ public class TestDataDirs {
     assertThat(locations.get(0).getUri(), is(dir0.toURI()));
     assertThat(locations.get(1).getStorageType(), is(StorageType.DISK));
     assertThat(locations.get(1).getUri(), is(dir1.toURI()));
-
-    // Reserve-for-archive only supported for ARCHIVE
-    String locations4 = "[disk:0.1]/dir2";
-    conf.set(DFS_DATANODE_DATA_DIR_KEY, locations4);
-    try {
-      locations = DataNode.getStorageLocations(conf);
-      fail();
-    } catch (IllegalArgumentException iae) {
-      DataNode.LOG.info("The exception is expected.", iae);
-    }
   }
 
   @Test
@@ -143,5 +129,36 @@ public class TestDataDirs {
     conf.set("dfs.datanode.storagetype.ARCHIVE.filesystem", fsInfo);
     locations = DataNode.getStorageLocations(conf);
     assertEquals(2, locations.size());
+  }
+
+  @Test
+  public void testCapacityRatioForDataDir() {
+    // Good case
+    String config = "[0.9 ]/disk /2, [0.1]/disk2/1";
+    Map<URI, Double> map = StorageLocation.parseCapacityRatio(config);
+    assertEquals(0.9,
+        map.get(new Path("/disk/2").toUri()), 0);
+    assertEquals(0.1,
+        map.get(new Path("/disk2/1").toUri()), 0);
+
+    // config without capacity ratio
+    config = "[0.9 ]/disk /2, /disk2/1";
+    try {
+      StorageLocation.parseCapacityRatio(config);
+      fail("Should fail parsing");
+    } catch (IllegalArgumentException e) {
+      assertTrue(e.getMessage().contains(
+          "Capacity ratio config is not with correct form"));
+    }
+
+    // config with bad capacity ratio
+    config = "[11.1]/disk /2";
+    try {
+      StorageLocation.parseCapacityRatio(config);
+      fail("Should fail parsing");
+    } catch (IllegalArgumentException e) {
+      assertTrue(e.getMessage().contains("is not between 0 to 1"));
+    }
+
   }
 }

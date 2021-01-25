@@ -461,7 +461,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private void activateVolume(
       ReplicaMap replicaMap,
       Storage.StorageDirectory sd, StorageType storageType,
-      FsVolumeReference ref, double reserveForArchival) throws IOException {
+      FsVolumeReference ref) throws IOException {
     try (AutoCloseableLock lock = datasetWriteLock.acquire()) {
       DatanodeStorage dnStorage = storageMap.get(sd.getStorageUuid());
       if (dnStorage != null) {
@@ -493,14 +493,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               storageType));
       asyncDiskService.addVolume(volumeImpl);
       volumes.addVolume(ref);
-      if (storageType == StorageType.ARCHIVE
-          && reserveForArchival >= 0) {
-        MountVolumeMap mountVolumeMap = volumes.getMountVolumeMap();
-        if (mountVolumeMap != null) {
-          mountVolumeMap.updateReserveForArchive(volumeImpl,
-              reserveForArchival);
-        }
-      }
     }
   }
 
@@ -522,8 +514,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         new ReplicaMap(datasetReadLock, datasetWriteLock);
     fsVolume.getVolumeMap(tempVolumeMap, ramDiskReplicaTracker);
 
-    activateVolume(tempVolumeMap, sd, storageLocation.getStorageType(),
-        ref, storageLocation.getReserveForArchive());
+    activateVolume(tempVolumeMap, sd, storageLocation.getStorageType(), ref);
     LOG.info("Added volume - " + storageLocation + ", StorageType: " +
         storageLocation.getStorageType());
   }
@@ -587,8 +578,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     setupAsyncLazyPersistThread(fsVolume);
 
     builder.build();
-    activateVolume(tempVolumeMap, sd, storageType,
-        ref, location.getReserveForArchive());
+    activateVolume(tempVolumeMap, sd, storageType, ref);
     LOG.info("Added volume - " + location + ", StorageType: " + storageType);
   }
 

@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 
+import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -90,11 +91,17 @@ class MountVolumeMap {
     }
   }
 
-  void updateReserveForArchive(FsVolumeImpl target, double capacityRatio) {
+  void setCapacityRatio(FsVolumeImpl target, double capacityRatio)
+      throws IOException {
     String mount = target.getMount();
     if (!mount.isEmpty()) {
       MountVolumeInfo info = mountVolumeMapping.get(mount);
-      info.setReservedForArchive(capacityRatio);
+      if (!info.setCapacityRatio(
+          target.getStorageType(), capacityRatio)) {
+        throw new IOException(
+            "Not enought capacity ratio left on mount: "
+                + mount + ", for " + target);
+      }
     }
   }
 }

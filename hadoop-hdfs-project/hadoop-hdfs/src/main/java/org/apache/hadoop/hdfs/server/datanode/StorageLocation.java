@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import java.io.File;
@@ -55,25 +57,20 @@ public class StorageLocation
                Comparable<StorageLocation> {
   private final StorageType storageType;
   private final URI baseURI;
-  // Customized reserve-for-archive ratio value.
-  // This is only effective when
-  // configuring DISK/ARCHIVE on same disk mount.
-  private double reserveForArchive;
-
   /** Regular expression that describes a storage uri with a storage type.
    *  e.g. [Disk]/storages/storage1/
    */
-  private static final Pattern regex = Pattern.compile("^\\[([\\w.:]*)\\](.+)$");
+  private static final Pattern regex = Pattern.compile("^\\[(\\w*)\\](.+)$");
+  private static final Pattern capacityRatioRegex =
+      Pattern.compile("^\\[([0-9.]*)\\](.+)$");
 
-  private StorageLocation(StorageType storageType,
-      URI uri, double reserveForArchive) {
+  private StorageLocation(StorageType storageType, URI uri) {
     this.storageType = storageType;
     if (uri.getScheme() == null || uri.getScheme().equals("file")) {
       // make sure all URIs that point to a file have the same scheme
       uri = normalizeFileURI(uri);
     }
     baseURI = uri;
-    this.reserveForArchive = reserveForArchive;
   }
 
   public static URI normalizeFileURI(URI uri) {
@@ -100,10 +97,6 @@ public class StorageLocation
 
   public URI getNormalizedUri() {
     return baseURI.normalize();
-  }
-
-  public double getReserveForArchive() {
-    return reserveForArchive;
   }
 
   public boolean matchesStorageDirectory(StorageDirectory sd)
@@ -141,30 +134,44 @@ public class StorageLocation
     Matcher matcher = regex.matcher(rawLocation);
     StorageType storageType = StorageType.DEFAULT;
     String location = rawLocation;
-    double reserveForArchive = -1;
 
     if (matcher.matches()) {
       String classString = matcher.group(1);
       location = matcher.group(2).trim();
       if (!classString.isEmpty()) {
-        if (classString.contains(":")) {
-          String[] classInfo = classString.split(":");
-          storageType = StorageType.valueOf(StringUtils.toUpperCase(classInfo[0]));
-          if (storageType != StorageType.ARCHIVE) {
-            throw new IllegalArgumentException("Reserve-for-archive value " +
-                "is only applicable to [ARCHIVE] storage type.");
-          }
-          reserveForArchive = Double.parseDouble(classInfo[1]);
-        } else {
-          storageType =
-              StorageType.valueOf(StringUtils.toUpperCase(classString));
-        }
+        storageType =
+            StorageType.valueOf(StringUtils.toUpperCase(classString));
       }
     }
     //do Path.toURI instead of new URI(location) as this ensures that
     //"/a/b" and "/a/b/" are represented in a consistent manner
-    return new StorageLocation(storageType,
-        new Path(location).toUri(), reserveForArchive);
+    return new StorageLocation(storageType, new Path(location).toUri());
+  }
+
+  public static Map<URI, Double> parseCapacityRatio(String capacityRatioConf)
+      throws SecurityException {
+    Map<URI, Double> result = new HashMap<>();
+    capacityRatioConf = capacityRatioConf.replaceAll("\\s","");
+    String[] capacityRatios = capacityRatioConf.split(",");
+    for (String ratio : capacityRatios) {
+      Matcher matcher = capacityRatioRegex.matcher(ratio);
+      if (matcher.matches()) {
+        String capacityString = matcher.group(1).trim();
+        String location = matcher.group(2).trim();
+        double capacityRatio = Double.parseDouble(capacityString);
+        if (capacityRatio > 1 || capacityRatio < 0) {
+          throw new IllegalArgumentException("Capacity ratio" + capacityRatio
+              + " is not between 0 to 1: " + ratio);
+        }
+        result.put(new Path(location).toUri(), capacityRatio);
+      } else {
+        throw new IllegalArgumentException(
+            "Capacity ratio config is not with correct format: "
+                + capacityRatioConf
+        );
+      }
+    }
+    return result;
   }
 
   @Override

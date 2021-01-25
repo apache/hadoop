@@ -6094,6 +6094,21 @@
   </property>
 
   <property>
+    <name>dfs.datanode.capacity-ratio.percentage</name>
+    <value></value>
+    <description>
+      Disk capacity ratio of DISK or ARCHIVE volume
+      when dfs.datanode.same-disk-tiering is turned on
+      This will override the value of
+      dfs.datanode.reserve-for-archive.default.percentage .
+      Example value:
+      [0.3]/disk1/archive,[0.7]/disk1/disk,[0.4]/disk2/archive,[0.6]/disk2/disk
+      This is only effective for configured
+      DISK/ARCHIVE volumes in dfs.datanode.data.dir.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.balancer.getBlocks.hot-time-interval</name>
     <value>0</value>
     <description>

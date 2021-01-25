@@ -191,27 +191,6 @@ public class TestFsDatasetImpl {
     return loc;
   }
 
-  private static StorageLocation createArchivalStorageWithReservedRatio(
-      String subDir, double reserveForArchive,
-      Configuration conf, DataStorage storage,
-      DataNode dataNode) throws IOException {
-    String archiveStorageType = "[ARCHIVE:" + reserveForArchive + "]";
-    String path = BASE_DIR + subDir;
-    new File(path).mkdirs();
-    String pathUri = new Path(path).toUri().toString();
-    StorageLocation loc = StorageLocation.parse(archiveStorageType + pathUri);
-    Storage.StorageDirectory sd = new Storage.StorageDirectory(
-        loc);
-    DataStorage.createStorageID(sd, false, conf);
-
-    DataStorage.VolumeBuilder builder =
-        new DataStorage.VolumeBuilder(storage, sd);
-    when(storage.prepareVolume(eq(dataNode), eq(loc),
-        anyList()))
-        .thenReturn(builder);
-    return loc;
-  }
-
   private int getNumVolumes() {
     try (FsDatasetSpi.FsVolumeReferences volumes =
         dataset.getFsVolumeReferences()) {
@@ -419,7 +398,7 @@ public class TestFsDatasetImpl {
         true);
     conf.setDouble(DFSConfigKeys
             .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
-        0.4);
+        0.5);
 
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
@@ -464,7 +443,7 @@ public class TestFsDatasetImpl {
   }
 
   @Test
-  public void testAddVolumeWithCustomizedArchiveRatio()
+  public void testAddVolumeWithCustomizedCapacityRatio()
       throws IOException {
     datanode = mock(DataNode.class);
     storage = mock(DataStorage.class);
@@ -478,6 +457,16 @@ public class TestFsDatasetImpl {
             .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         0.5);
 
+    // 1) Normal case, get capacity should return correct value.
+    String archivedir = "/archive1";
+    String diskdir = "/disk1";
+    String configStr = "[0.3]file:" + BASE_DIR + archivedir
+        + ", " + "[0.6]file:" + BASE_DIR + diskdir;
+
+    conf.set(DFSConfigKeys
+            .DFS_DATANODE_CAPACITY_RATIO_PERCENTAGE, configStr
+        );
+
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
     when(datanode.getDnConf()).thenReturn(dnConf);
@@ -487,27 +476,71 @@ public class TestFsDatasetImpl {
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
 
-    createStorageDirs(storage, conf, 1);
-    dataset = new FsDatasetImpl(datanode, storage, conf);
+    createStorageDirs(storage, conf, 0);
 
-    List<NamespaceInfo> nsInfos = Lists.newArrayList();
-    for (String bpid : BLOCK_POOL_IDS) {
-      nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, bpid, 1));
-    }
+    dataset = createStorageWithCapacityRatioConfig(
+        configStr, archivedir, diskdir);
 
-    StorageLocation archive = createArchivalStorageWithReservedRatio(
-        "archive1", 0.3, conf, storage, datanode);
-
-    dataset.addVolume(archive, nsInfos);
-    assertEquals(2, dataset.getVolumeCount());
-
-    String mount = new DF(new File(archive.getUri()), conf).getMount();
+    Path p = new Path("file:" + BASE_DIR);
+    String mount = new DF(new File(p.toUri()), conf).getMount();
     double archiveRatio = dataset.getMountVolumeMap()
         .getCapacityRatioByMountAndStorageType(mount, StorageType.ARCHIVE);
     double diskRatio = dataset.getMountVolumeMap()
         .getCapacityRatioByMountAndStorageType(mount, StorageType.DISK);
     assertEquals(0.3, archiveRatio, 0);
+    assertEquals(0.6, diskRatio, 0);
+
+    // 2) Counter part volume should get rest of the capacity
+    // wihtout explicit config
+    configStr = "[0.3]file:" + BASE_DIR + archivedir;
+    dataset = createStorageWithCapacityRatioConfig(
+        configStr, archivedir, diskdir);
+    mount = new DF(new File(p.toUri()), conf).getMount();
+    archiveRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.ARCHIVE);
+    diskRatio = dataset.getMountVolumeMap()
+        .getCapacityRatioByMountAndStorageType(mount, StorageType.DISK);
+    assertEquals(0.3, archiveRatio, 0);
     assertEquals(0.7, diskRatio, 0);
+
+    // 3) Add volume will fail if capacity ratio is > 1
+    dataset = new FsDatasetImpl(datanode, storage, conf);
+    configStr = "[0.3]file:" + BASE_DIR + archivedir
+        + ", " + "[0.8]file:" + BASE_DIR + diskdir;
+
+    try {
+      createStorageWithCapacityRatioConfig(
+          configStr, archivedir, diskdir);
+      fail("Should fail add volume as capacity ratio sum is > 1");
+    } catch (IOException e) {
+      System.out.println(e.getLocalizedMessage());
+      assertTrue(e.getMessage()
+          .contains("Not enought capacity ratio left on mount"));
+    }
+  }
+
+  private FsDatasetImpl createStorageWithCapacityRatioConfig(
+      String configStr, String archivedir, String diskdir)
+      throws IOException {
+    conf.set(DFSConfigKeys
+        .DFS_DATANODE_CAPACITY_RATIO_PERCENTAGE, configStr
+    );
+    dataset = new FsDatasetImpl(datanode, storage, conf);
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    for (String bpid : BLOCK_POOL_IDS) {
+      nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, bpid, 1));
+    }
+
+    StorageLocation archive = createStorageWithStorageType(
+        archivedir, StorageType.ARCHIVE, conf, storage, datanode);
+
+    StorageLocation disk = createStorageWithStorageType(
+        diskdir, StorageType.DISK, conf, storage, datanode);
+
+    dataset.addVolume(archive, nsInfos);
+    dataset.addVolume(disk, nsInfos);
+    assertEquals(2, dataset.getVolumeCount());
+    return dataset;
   }
 
   @Test

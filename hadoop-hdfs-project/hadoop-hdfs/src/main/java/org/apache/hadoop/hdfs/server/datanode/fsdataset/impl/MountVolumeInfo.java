@@ -35,23 +35,26 @@ import java.util.concurrent.ConcurrentMap;
 class MountVolumeInfo {
   private final ConcurrentMap<StorageType, FsVolumeImpl>
       storageTypeVolumeMap;
-  private double reservedForArchive;
+  private final ConcurrentMap<StorageType, Double>
+      capacityRatioMap;
+  private double reservedForArchiveDefault;
 
   MountVolumeInfo(Configuration conf) {
     storageTypeVolumeMap = new ConcurrentHashMap<>();
-    reservedForArchive = conf.getDouble(
+    capacityRatioMap = new ConcurrentHashMap<>();
+    reservedForArchiveDefault = conf.getDouble(
         DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         DFSConfigKeys
             .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE_DEFAULT);
-    if (reservedForArchive > 1) {
+    if (reservedForArchiveDefault > 1) {
       FsDatasetImpl.LOG.warn("Value of reserve-for-archival is > 100%." +
           " Setting it to 100%.");
-      reservedForArchive = 1;
+      reservedForArchiveDefault = 1;
     }
-    if (reservedForArchive < 0) {
+    if (reservedForArchiveDefault < 0) {
       FsDatasetImpl.LOG.warn("Value of reserve-for-archival is < 0." +
-          " Setting it to 0%");
-      reservedForArchive = 0;
+          " Setting it to 0.0");
+      reservedForArchiveDefault = 0;
     }
   }
 
@@ -71,27 +74,31 @@ class MountVolumeInfo {
 
   /**
    * Return configured capacity ratio.
-   * If the volume is the only one on the mount,
-   * return 1 to avoid unnecessary allocation.
-   *
-   * TODO: We should support customized capacity ratio for volumes.
    */
   double getCapacityRatio(StorageType storageType) {
+    // If capacity ratio is set, return the val.
+    if (capacityRatioMap.containsKey(storageType)) {
+      return capacityRatioMap.get(storageType);
+    }
+    // If capacity ratio is set for counterpart,
+    // use the rest of capacity of the mount for it.
+    if (!capacityRatioMap.keySet().isEmpty()) {
+      double leftOver = 1;
+      for (StorageType key : capacityRatioMap.keySet()) {
+        leftOver -= capacityRatioMap.get(key);
+      }
+      return leftOver;
+    }
+    // Use reservedForArchiveDefault by default.
     if (storageTypeVolumeMap.containsKey(storageType)
         && storageTypeVolumeMap.size() > 1) {
       if (storageType == StorageType.ARCHIVE) {
-        return reservedForArchive;
+        return reservedForArchiveDefault;
       } else if (storageType == StorageType.DISK) {
-        return 1 - reservedForArchive;
+        return 1 - reservedForArchiveDefault;
       }
     }
     return 1;
-  }
-
-  void setReservedForArchive(double capacityRatio) {
-    if (capacityRatio >= 0 && capacityRatio <= 1) {
-      reservedForArchive = capacityRatio;
-    }
   }
 
   /**
@@ -108,9 +115,28 @@ class MountVolumeInfo {
     return true;
   }
 
-
   void removeVolume(FsVolumeImpl target) {
     storageTypeVolumeMap.remove(target.getStorageType());
+    capacityRatioMap.remove(target.getStorageType());
+  }
+
+  /**
+   * Set customize capacity ratio for a storage type.
+   * Return false if the value is too big.
+   */
+  boolean setCapacityRatio(StorageType storageType,
+      double capacityRatio) {
+    double leftover = 1;
+    for (StorageType key : capacityRatioMap.keySet()) {
+      if (key != storageType) {
+        leftover -= capacityRatioMap.get(key);
+      }
+    }
+    if (leftover < capacityRatio) {
+      return false;
+    }
+    capacityRatioMap.put(storageType, capacityRatio);
+    return true;
   }
 
   int size() {
