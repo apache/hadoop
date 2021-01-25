@@ -398,7 +398,7 @@ public class TestFsDatasetImpl {
         true);
     conf.setDouble(DFSConfigKeys
             .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
-        0.5);
+        0.4);
 
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
@@ -464,8 +464,7 @@ public class TestFsDatasetImpl {
         + ", " + "[0.6]file:" + BASE_DIR + diskdir;
 
     conf.set(DFSConfigKeys
-            .DFS_DATANODE_CAPACITY_RATIO_PERCENTAGE, configStr
-        );
+            .DFS_DATANODE_CAPACITY_RATIO_PERCENTAGE, configStr);
 
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);

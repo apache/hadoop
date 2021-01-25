@@ -66,7 +66,7 @@ class FsVolumeList {
 
   private final boolean enableSameDiskTiering;
   private final MountVolumeMap mountVolumeMap;
-  private Map<URI, Double> capacityRatioConfig;
+  private Map<URI, Double> capacityRatioMap;
 
   FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
       BlockScanner blockScanner,
@@ -84,7 +84,7 @@ class FsVolumeList {
         DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
         DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
     mountVolumeMap = new MountVolumeMap(config);
-    initializeCapacityRatioConfig(config);
+    initializeCapacityRatio(config);
   }
 
   MountVolumeMap getMountVolumeMap() {
@@ -138,14 +138,14 @@ class FsVolumeList {
     return null;
   }
 
-  private void initializeCapacityRatioConfig(Configuration config) {
-    if (capacityRatioConfig == null) {
+  private void initializeCapacityRatio(Configuration config) {
+    if (capacityRatioMap == null) {
       String capacityRatioConfig = config.get(
           DFSConfigKeys.DFS_DATANODE_CAPACITY_RATIO_PERCENTAGE,
           DFSConfigKeys.DFS_DATANODE_CAPACITY_RATIO_PERCENTAGE_DEFAULT
       );
 
-      this.capacityRatioConfig = StorageLocation
+      this.capacityRatioMap = StorageLocation
           .parseCapacityRatio(capacityRatioConfig);
     }
   }
@@ -346,8 +346,8 @@ class FsVolumeList {
     if (isSameDiskTieringApplied(volume)) {
       mountVolumeMap.addVolume(volume);
       URI uri = volume.getStorageLocation().getUri();
-      if (capacityRatioConfig.containsKey(uri)) {
-        mountVolumeMap.setCapacityRatio(volume, capacityRatioConfig.get(uri));
+      if (capacityRatioMap.containsKey(uri)) {
+        mountVolumeMap.setCapacityRatio(volume, capacityRatioMap.get(uri));
       }
     }
     if (blockScanner != null) {

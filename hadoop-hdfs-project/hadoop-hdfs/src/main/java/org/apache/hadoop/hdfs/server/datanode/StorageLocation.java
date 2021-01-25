@@ -61,7 +61,7 @@ public class StorageLocation
    *  e.g. [Disk]/storages/storage1/
    */
   private static final Pattern regex = Pattern.compile("^\\[(\\w*)\\](.+)$");
-  private static final Pattern capacityRatioRegex =
+  private static final Pattern CAPACITY_RATIO_REGEX =
       Pattern.compile("^\\[([0-9.]*)\\](.+)$");
 
   private StorageLocation(StorageType storageType, URI uri) {
@@ -151,10 +151,13 @@ public class StorageLocation
   public static Map<URI, Double> parseCapacityRatio(String capacityRatioConf)
       throws SecurityException {
     Map<URI, Double> result = new HashMap<>();
-    capacityRatioConf = capacityRatioConf.replaceAll("\\s","");
+    capacityRatioConf = capacityRatioConf.replaceAll("\\s", "");
+    if (capacityRatioConf.isEmpty()) {
+      return result;
+    }
     String[] capacityRatios = capacityRatioConf.split(",");
     for (String ratio : capacityRatios) {
-      Matcher matcher = capacityRatioRegex.matcher(ratio);
+      Matcher matcher = CAPACITY_RATIO_REGEX.matcher(ratio);
       if (matcher.matches()) {
         String capacityString = matcher.group(1).trim();
         String location = matcher.group(2).trim();

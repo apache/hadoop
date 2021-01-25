@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -82,10 +83,10 @@ class MountVolumeInfo {
     }
     // If capacity ratio is set for counterpart,
     // use the rest of capacity of the mount for it.
-    if (!capacityRatioMap.keySet().isEmpty()) {
+    if (!capacityRatioMap.isEmpty()) {
       double leftOver = 1;
-      for (StorageType key : capacityRatioMap.keySet()) {
-        leftOver -= capacityRatioMap.get(key);
+      for (Map.Entry<StorageType, Double> e : capacityRatioMap.entrySet()) {
+        leftOver -= e.getValue();
       }
       return leftOver;
     }
@@ -127,9 +128,9 @@ class MountVolumeInfo {
   boolean setCapacityRatio(StorageType storageType,
       double capacityRatio) {
     double leftover = 1;
-    for (StorageType key : capacityRatioMap.keySet()) {
-      if (key != storageType) {
-        leftover -= capacityRatioMap.get(key);
+    for (Map.Entry<StorageType, Double> e : capacityRatioMap.entrySet()) {
+      if (e.getKey() != storageType) {
+        leftover -= e.getValue();
       }
     }
     if (leftover < capacityRatio) {
