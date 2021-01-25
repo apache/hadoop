@@ -124,7 +124,7 @@ public class TestNamenodeRetryCache {
     private UserGroupInformation ugi;
 
     DummyCall(int callId, byte[] clientId) {
-      super(callId, 1, null, null, RpcKind.RPC_PROTOCOL_BUFFER, clientId);
+      super(callId, 1, null, null, RpcKind.RPC_PROTOCOL_BUFFER3, clientId);
       try {
         ugi = UserGroupInformation.getCurrentUser();
       } catch (IOException ioe) {

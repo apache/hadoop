@@ -108,7 +108,7 @@ public class JournalProtocolTranslatorPB implements ProtocolMetaInterface,
   @Override
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy, JournalProtocolPB.class,
-        RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(JournalProtocolPB.class), methodName);
   }
 }

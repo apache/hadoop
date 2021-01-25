@@ -49,6 +49,7 @@ enum RpcKindProto {
   RPC_BUILTIN          = 0;  // Used for built in calls by tests
   RPC_WRITABLE         = 1;  // Use WritableRpcEngine 
   RPC_PROTOCOL_BUFFER  = 2;  // Use ProtobufRpcEngine
+  RPC_PROTOCOL_BUFFER3 = 3;  // Use ProtobufRpcEngine2
 }
 
 

@@ -97,7 +97,7 @@ public class SaslRpcClient {
   private static SaslClientFactory saslFactory;
   
   private static final RpcRequestHeaderProto saslHeader = ProtoUtil
-      .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+      .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER3,
           OperationProto.RPC_FINAL_PACKET, AuthProtocol.SASL.callId,
           RpcConstants.INVALID_RETRY_COUNT, RpcConstants.DUMMY_CLIENT_ID);
   private static final RpcSaslProto negotiateRequest =

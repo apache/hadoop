@@ -149,6 +149,7 @@ public abstract class ProtoUtil {
     case RPC_BUILTIN: return RpcKindProto.RPC_BUILTIN;
     case RPC_WRITABLE: return RpcKindProto.RPC_WRITABLE;
     case RPC_PROTOCOL_BUFFER: return RpcKindProto.RPC_PROTOCOL_BUFFER;
+    case RPC_PROTOCOL_BUFFER3: return RpcKindProto.RPC_PROTOCOL_BUFFER3;
     }
     return null;
   }
@@ -159,6 +160,7 @@ public abstract class ProtoUtil {
     case RPC_BUILTIN: return RPC.RpcKind.RPC_BUILTIN;
     case RPC_WRITABLE: return RPC.RpcKind.RPC_WRITABLE;
     case RPC_PROTOCOL_BUFFER: return RPC.RpcKind.RPC_PROTOCOL_BUFFER;
+    case RPC_PROTOCOL_BUFFER3: return RPC.RpcKind.RPC_PROTOCOL_BUFFER3;
     }
     return null;
   }

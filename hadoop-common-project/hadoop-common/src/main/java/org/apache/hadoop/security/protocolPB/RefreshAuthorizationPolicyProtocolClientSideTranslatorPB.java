@@ -67,7 +67,7 @@ public class RefreshAuthorizationPolicyProtocolClientSideTranslatorPB implements
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
         RefreshAuthorizationPolicyProtocolPB.class,
-        RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(RefreshAuthorizationPolicyProtocolPB.class),
         methodName);
   }

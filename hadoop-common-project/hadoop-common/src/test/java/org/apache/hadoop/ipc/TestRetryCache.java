@@ -92,7 +92,7 @@ public class TestRetryCache {
 
   public static Server.Call newCall() {
     return new Server.Call(++callId, 1, null, null,
-        RpcKind.RPC_PROTOCOL_BUFFER, CLIENT_ID);
+        RpcKind.RPC_PROTOCOL_BUFFER3, CLIENT_ID);
   }
 
   /**

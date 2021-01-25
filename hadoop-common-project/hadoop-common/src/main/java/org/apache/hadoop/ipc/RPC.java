@@ -89,8 +89,9 @@ public class RPC {
   public enum RpcKind {
     RPC_BUILTIN ((short) 1),         // Used for built in calls by tests
     RPC_WRITABLE ((short) 2),        // Use WritableRpcEngine 
-    RPC_PROTOCOL_BUFFER ((short) 3); // Use ProtobufRpcEngine
-    final static short MAX_INDEX = RPC_PROTOCOL_BUFFER.value; // used for array size
+    RPC_PROTOCOL_BUFFER ((short) 3), // Use ProtobufRpcEngine
+    RPC_PROTOCOL_BUFFER3 ((short) 4); // Use ProtobufRpcEngine2
+    final static short MAX_INDEX = RPC_PROTOCOL_BUFFER3.value; // used for array size
     private final short value;
 
     RpcKind(short val) {
@@ -1064,7 +1065,7 @@ public class RPC {
           new ProtocolMetaInfoServerSideTranslatorPB(this);
       BlockingService protocolInfoBlockingService = ProtocolInfoService
           .newReflectiveBlockingService(xlator);
-      addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, ProtocolMetaInfoPB.class,
+      addProtocol(RpcKind.RPC_PROTOCOL_BUFFER3, ProtocolMetaInfoPB.class,
           protocolInfoBlockingService);
     }
     

@@ -81,7 +81,7 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil
         .isMethodSupported(rpcProxy, RefreshUserMappingsProtocolPB.class,
-            RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+            RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
             RPC.getProtocolVersion(RefreshUserMappingsProtocolPB.class),
             methodName);
   }

@@ -84,12 +84,12 @@ public class TestIsMethodSupported {
             true).getProxy();
 
     boolean exists = RpcClientUtil.isMethodSupported(np,
-        NamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        NamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(NamenodeProtocolPB.class), "rollEditLog");
 
     assertTrue(exists);
     exists = RpcClientUtil.isMethodSupported(np,
-        NamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        NamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(NamenodeProtocolPB.class), "bogusMethod");
     assertFalse(exists);
   }
@@ -123,7 +123,7 @@ public class TestIsMethodSupported {
             conf, nnAddress, ClientProtocol.class,
             UserGroupInformation.getCurrentUser(), true).getProxy();
     RpcClientUtil.isMethodSupported(cp,
-        ClientNamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        ClientNamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(ClientNamenodeProtocolPB.class), "mkdirs");
   }
 

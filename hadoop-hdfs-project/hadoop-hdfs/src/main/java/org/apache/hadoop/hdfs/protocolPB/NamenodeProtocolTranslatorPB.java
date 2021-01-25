@@ -236,7 +236,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   @Override
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy, NamenodeProtocolPB.class,
-        RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(NamenodeProtocolPB.class), methodName);
   }
 

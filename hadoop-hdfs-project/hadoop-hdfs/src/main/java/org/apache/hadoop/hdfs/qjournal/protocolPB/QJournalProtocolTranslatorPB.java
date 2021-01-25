@@ -334,7 +334,7 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
 
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
-        QJournalProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        QJournalProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(QJournalProtocolPB.class), methodName);
   }
 

@@ -107,7 +107,7 @@ public class DatanodeLifelineProtocolClientSideTranslatorPB implements
   public boolean isMethodSupported(String methodName)
       throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
-        DatanodeLifelineProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        DatanodeLifelineProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(DatanodeLifelineProtocolPB.class), methodName);
   }
 }

@@ -51,7 +51,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * RPC Engine for for protobuf based RPCs.
+ * RPC Engine for for protobuf based RPCs. The naming is a bit confusing, but
+ * this is the <i>second</i> version of the ProtobufRpcEngine class, but it uses
+ * protobuf version 3.x.
  */
 @InterfaceStability.Evolving
 public class ProtobufRpcEngine2 implements RpcEngine {
@@ -62,7 +64,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
 
   static { // Register the rpcRequest deserializer for ProtobufRpcEngine
     org.apache.hadoop.ipc.Server.registerProtocolEngine(
-        RPC.RpcKind.RPC_PROTOCOL_BUFFER, RpcProtobufRequest.class,
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER3, RpcProtobufRequest.class,
         new Server.ProtoBufRpcInvoker());
   }
 
@@ -231,7 +233,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       final Message theRequest = (Message) args[1];
       final RpcWritable.Buffer val;
       try {
-        val = (RpcWritable.Buffer) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        val = (RpcWritable.Buffer) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
             new RpcProtobufRequest(rpcRequestHeader, theRequest), remoteId,
             fallbackToSimpleAuth, alignmentContext);
 
@@ -438,7 +440,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
           portRangeConfig);
       setAlignmentContext(alignmentContext);
       this.verbose = verbose;
-      registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
+      registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER3, protocolClass,
           protocolImpl);
     }
 
@@ -450,10 +452,10 @@ public class ProtobufRpcEngine2 implements RpcEngine {
           String protoName, long clientVersion) throws RpcServerException {
         ProtoNameVer pv = new ProtoNameVer(protoName, clientVersion);
         ProtoClassProtoImpl impl =
-            server.getProtocolImplMap(RPC.RpcKind.RPC_PROTOCOL_BUFFER).get(pv);
+            server.getProtocolImplMap(RPC.RpcKind.RPC_PROTOCOL_BUFFER3).get(pv);
         if (impl == null) { // no match for Protocol AND Version
           VerProtocolImpl highest = server.getHighestSupportedProtocol(
-              RPC.RpcKind.RPC_PROTOCOL_BUFFER, protoName);
+              RPC.RpcKind.RPC_PROTOCOL_BUFFER3, protoName);
           if (highest == null) {
             throw new RpcNoSuchProtocolException(
                 "Unknown protocol: " + protoName);

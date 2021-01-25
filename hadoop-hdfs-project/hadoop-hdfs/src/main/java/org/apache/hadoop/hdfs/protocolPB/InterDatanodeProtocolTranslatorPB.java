@@ -119,7 +119,7 @@ public class InterDatanodeProtocolTranslatorPB implements
   @Override
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
-        InterDatanodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        InterDatanodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(InterDatanodeProtocolPB.class), methodName);
   }
 }

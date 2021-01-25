@@ -89,7 +89,7 @@ public class InterQJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   @Override
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
-        InterQJournalProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        InterQJournalProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(InterQJournalProtocolPB.class), methodName);
   }
 }

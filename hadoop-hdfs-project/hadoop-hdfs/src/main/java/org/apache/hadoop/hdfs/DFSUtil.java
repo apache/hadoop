@@ -1296,7 +1296,7 @@ public class DFSUtil {
   public static void addPBProtocol(Configuration conf, Class<?> protocol,
       BlockingService service, RPC.Server server) throws IOException {
     RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine2.class);
-    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER3, protocol, service);
   }
 
   /**

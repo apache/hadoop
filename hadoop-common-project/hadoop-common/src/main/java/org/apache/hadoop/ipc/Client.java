@@ -466,7 +466,7 @@ public class Client implements AutoCloseable {
         // construct a RPC header with the callId as the ping callId
         ResponseBuffer buf = new ResponseBuffer();
         RpcRequestHeaderProto pingHeader = ProtoUtil
-            .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+            .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER3,
                 OperationProto.RPC_FINAL_PACKET, PING_CALL_ID,
                 RpcConstants.INVALID_RETRY_COUNT, clientId);
         try {
@@ -1024,7 +1024,7 @@ public class Client implements AutoCloseable {
           remoteId.getTicket(),
           authMethod);
       RpcRequestHeaderProto connectionContextHeader = ProtoUtil
-          .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
+          .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER3,
               OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID,
               RpcConstants.INVALID_RETRY_COUNT, clientId);
       // do not flush.  the context and first ipc call request must be sent

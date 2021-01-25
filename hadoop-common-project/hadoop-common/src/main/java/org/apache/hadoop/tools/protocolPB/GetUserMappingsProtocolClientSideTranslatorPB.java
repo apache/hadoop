@@ -64,7 +64,7 @@ public class GetUserMappingsProtocolClientSideTranslatorPB implements
   @Override
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
-        GetUserMappingsProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        GetUserMappingsProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(GetUserMappingsProtocolPB.class), methodName);
   }
 }

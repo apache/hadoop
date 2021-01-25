@@ -112,7 +112,7 @@ public class GenericRefreshProtocolClientSideTranslatorPB implements
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
       GenericRefreshProtocolPB.class,
-      RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+      RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
       RPC.getProtocolVersion(GenericRefreshProtocolPB.class),
       methodName);
   }

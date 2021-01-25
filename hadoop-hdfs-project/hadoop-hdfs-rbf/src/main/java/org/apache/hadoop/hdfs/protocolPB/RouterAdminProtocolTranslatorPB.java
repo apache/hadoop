@@ -135,7 +135,7 @@ public class RouterAdminProtocolTranslatorPB
   @Override
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
-        RouterAdminProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RouterAdminProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(RouterAdminProtocolPB.class), methodName);
   }
 

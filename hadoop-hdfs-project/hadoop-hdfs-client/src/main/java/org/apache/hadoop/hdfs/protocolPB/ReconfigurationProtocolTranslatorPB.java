@@ -139,7 +139,7 @@ public class ReconfigurationProtocolTranslatorPB implements
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy,
         ReconfigurationProtocolPB.class,
-        RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
         RPC.getProtocolVersion(ReconfigurationProtocolPB.class),
         methodName);
   }

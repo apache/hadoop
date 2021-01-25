@@ -237,7 +237,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       final Message theRequest = (Message) args[1];
       final RpcWritable.Buffer val;
       try {
-        val = (RpcWritable.Buffer) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        val = (RpcWritable.Buffer) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER3,
             new RpcProtobufRequest(rpcRequestHeader, theRequest), remoteId,
             fallbackToSimpleAuth, alignmentContext);
 
@@ -438,13 +438,13 @@ public class ProtobufRpcEngine implements RpcEngine {
           portRangeConfig);
       setAlignmentContext(alignmentContext);
       this.verbose = verbose;  
-      registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
+      registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER3, protocolClass,
           protocolImpl);
     }
 
     @Override
     protected RpcInvoker getServerRpcInvoker(RpcKind rpcKind) {
-      if (rpcKind == RpcKind.RPC_PROTOCOL_BUFFER) {
+      if (rpcKind == RpcKind.RPC_PROTOCOL_BUFFER3) {
         return RPC_INVOKER;
       }
       return super.getServerRpcInvoker(rpcKind);
@@ -458,10 +458,10 @@ public class ProtobufRpcEngine implements RpcEngine {
           String protoName, long clientVersion) throws RpcServerException {
         ProtoNameVer pv = new ProtoNameVer(protoName, clientVersion);
         ProtoClassProtoImpl impl = 
-            server.getProtocolImplMap(RPC.RpcKind.RPC_PROTOCOL_BUFFER).get(pv);
+            server.getProtocolImplMap(RPC.RpcKind.RPC_PROTOCOL_BUFFER3).get(pv);
         if (impl == null) { // no match for Protocol AND Version
           VerProtocolImpl highest = 
-              server.getHighestSupportedProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, 
+              server.getHighestSupportedProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER3, 
                   protoName);
           if (highest == null) {
             throw new RpcNoSuchProtocolException(
