@@ -45,6 +45,7 @@ RUN apt-get -q update \
         build-essential \
         bzip2 \
         clang \
+        cmake \
         curl \
         doxygen \
         findbugs \
