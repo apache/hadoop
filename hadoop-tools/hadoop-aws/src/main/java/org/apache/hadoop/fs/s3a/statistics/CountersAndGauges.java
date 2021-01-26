@@ -21,11 +21,12 @@ package org.apache.hadoop.fs.s3a.statistics;
 import java.time.Duration;
 
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 
 /**
  * This is the foundational API for collecting S3A statistics.
  */
-public interface CountersAndGauges {
+public interface CountersAndGauges extends DurationTrackerFactory {
 
   /**
    * Increment a specific counter.

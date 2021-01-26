@@ -1337,6 +1337,16 @@ On `close()`, summary data would be written to the file
 `/results/latest/__magic/job400_1/task_01_01/latest.orc.lzo.pending`.
 This would contain the upload ID and all the parts and etags of uploaded data.
 
+A marker file is also created, so that code which verifies that a newly created file
+exists does not fail.
+1. These marker files are zero bytes long.
+1. They declare the full length of the final file in the HTTP header
+   `x-hadoop-s3a-magic-data-length`.
+1. A call to `getXAttr("header.x-hadoop-s3a-magic-data-length")` will return a
+  string containing the number of bytes in the data uploaded.
+
+This is needed so that the Spark write-tracking code can report how much data
+has been created.
 
 #### Task commit
 

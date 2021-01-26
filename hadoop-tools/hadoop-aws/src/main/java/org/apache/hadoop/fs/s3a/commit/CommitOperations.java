@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -50,6 +52,7 @@ import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -604,6 +607,29 @@ public class CommitOperations implements IOStatisticsSource {
    */
   public CommitContext initiateCommitOperation(Path path) throws IOException {
     return new CommitContext(writeOperations.initiateCommitOperation(path));
+  }
+
+  /**
+   * Get the magic file length of a file.
+   * If the FS doesn't support the API, the attribute is missing or
+   * the parse to long fails, then Optional.empty() is returned.
+   * Static for some easier testability.
+   * @param fs filesystem
+   * @param path path
+   * @return either a length or None.
+   * @throws IOException on error
+   * */
+  public static Optional<Long> extractMagicFileLength(FileSystem fs, Path path)
+      throws IOException {
+    byte[] bytes;
+    try {
+      bytes = fs.getXAttr(path, XA_MAGIC_MARKER);
+    } catch (UnsupportedOperationException e) {
+      // FS doesn't support xattr.
+      LOG.debug("Filesystem {} doesn't support XAttr API", fs);
+      return Optional.empty();
+    }
+    return HeaderProcessing.extractXAttrLongValue(bytes);
   }
 
   /**

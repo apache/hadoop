@@ -1048,4 +1048,10 @@ public final class Constants {
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE
       = "fs.s3a.capability.directory.marker.action.delete";
 
+  /**
+   * To comply with the XAttr rules, all headers of the object retrieved
+   * through the getXAttr APIs have the prefix: {@value}.
+   */
+  public static final String XA_HEADER_PREFIX = "header.";
+
 }
