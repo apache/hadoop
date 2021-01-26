@@ -30,6 +30,9 @@ import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 /**
  * Factory for creation of {@link AmazonS3} client instances.
+ * Important: HBase's HBoss module implements this interface in its
+ * test. If changing the signature use default implementations to avoid
+ * breaking things.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -46,10 +49,32 @@ public interface S3ClientFactory {
    * @return S3 client
    * @throws IOException IO problem
    */
-  AmazonS3 createS3Client(URI name,
+  default AmazonS3 createS3Client(URI name,
       String bucket,
       AWSCredentialsProvider credentialSet,
       String userAgentSuffix,
-      StatisticsFromAwsSdk statisticsFromAwsSdk) throws IOException;
+      StatisticsFromAwsSdk statisticsFromAwsSdk) throws IOException {
+    return createS3Client(name, bucket, credentialSet, userAgentSuffix);
+  }
+
+  /**
+   * Creates a new {@link AmazonS3} client.
+   * Obsolete and never directly called in the s3 code.
+   * It exists to keep HBoss builds compiling: they do implement it
+   * and want to build/run across Hadoop versions.
+   * @param name raw input S3A file system URI
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @param credentialSet credentials to use
+   * @param userAgentSuffix optional suffix for the UA field.
+   * @return S3 client
+   * @throws IOException IO problem
+   * @deprecated this is only here to stop hboss builds breaking.
+   */
+  default AmazonS3 createS3Client(URI name,
+      String bucket,
+      AWSCredentialsProvider credentialSet,
+      String userAgentSuffix) throws IOException {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
 }
