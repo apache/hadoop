@@ -507,8 +507,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       if (enableAqc) {
         conf.put("yarn.scheduler.capacity.root.auto-queue-creation-v2.enabled",
             "true");
-        conf.put("yarn.scheduler.capacity.root.default." +
-                "auto-queue-creation-v2.enabled", "true");
       }
       return createConfiguration(conf);
     }

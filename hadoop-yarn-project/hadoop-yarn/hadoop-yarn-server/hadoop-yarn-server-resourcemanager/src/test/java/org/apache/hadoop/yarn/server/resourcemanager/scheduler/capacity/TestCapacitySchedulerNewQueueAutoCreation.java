@@ -422,6 +422,46 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertTrue(user0.isDynamicQueue());
   }
 
+  @Test
+  public void testChildlessParentQueueWhenAutoQueueCreationEnabled()
+      throws Exception {
+    startScheduler();
+    csConf.setQueues("root", new String[]{"a", "b", "empty-auto-parent"});
+    csConf.setNonLabeledQueueWeight("root", 1f);
+    csConf.setNonLabeledQueueWeight("root.a", 1f);
+    csConf.setNonLabeledQueueWeight("root.b", 1f);
+    csConf.setQueues("root.a", new String[]{"a1"});
+    csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
+    csConf.setAutoQueueCreationV2Enabled("root", true);
+    csConf.setAutoQueueCreationV2Enabled("root.a", true);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+
+    CSQueue empty = cs.getQueue("root.empty-auto-parent");
+    Assert.assertTrue("empty-auto-parent is not a LeafQueue",
+        empty instanceof LeafQueue);
+    empty.stopQueue();
+
+    csConf.setQueues("root", new String[]{"a", "b", "empty-auto-parent"});
+    csConf.setNonLabeledQueueWeight("root", 1f);
+    csConf.setNonLabeledQueueWeight("root.a", 1f);
+    csConf.setNonLabeledQueueWeight("root.b", 1f);
+    csConf.setQueues("root.a", new String[]{"a1"});
+    csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
+    csConf.setAutoQueueCreationV2Enabled("root", true);
+    csConf.setAutoQueueCreationV2Enabled("root.a", true);
+    csConf.setAutoQueueCreationV2Enabled("root.empty-auto-parent", true);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+
+    empty = cs.getQueue("root.empty-auto-parent");
+    Assert.assertTrue("empty-auto-parent is not a ParentQueue",
+        empty instanceof ParentQueue);
+    Assert.assertEquals("empty-auto-parent has children",
+        0, empty.getChildQueues().size());
+    Assert.assertTrue("empty-auto-parent is not eligible " +
+            "for auto queue creation",
+        ((ParentQueue)empty).isEligibleForAutoQueueCreation());
+  }
+
   private LeafQueue createQueue(String queuePath) throws YarnException {
     return autoQueueHandler.autoCreateQueue(
         CSQueueUtils.extractQueuePath(queuePath));
