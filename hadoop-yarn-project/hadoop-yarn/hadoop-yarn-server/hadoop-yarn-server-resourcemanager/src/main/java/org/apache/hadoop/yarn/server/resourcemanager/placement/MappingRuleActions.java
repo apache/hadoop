@@ -96,8 +96,9 @@ public final class MappingRuleActions {
     @Override
     public String toString() {
       return "PlaceToQueueAction{" +
-          "queueName='" + queuePattern + '\'' +
-          '}';
+          "queueName='" + queuePattern + "'," +
+          "allowCreate=" + allowCreate +
+          "}";
     }
   }
 
