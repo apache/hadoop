@@ -360,6 +360,7 @@ However, it has extra requirements of the filesystem
 1. The S3A client must be configured to recognize interactions
 with the magic directories and treat them specially.
 
+Now that Amazon S3 is consistent, the magic committer is enabled by default.
 
 It's also not been field tested to the extent of Netflix's committer; consider
 it the least mature of the committers.
