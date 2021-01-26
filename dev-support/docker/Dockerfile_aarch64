@@ -117,10 +117,10 @@ RUN mkdir -p /opt/boost-library \
 ####
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/pip \
-    && curl -L https://bootstrap.pypa.io/get-pip.py > get-pip.py \
+    && curl -L https://bootstrap.pypa.io/2.7/get-pip.py > get-pip.py \
     && mv get-pip.py /opt/pip \
     && cd /opt/pip \
-    && python2.7 get-pip.py \
+    && python2.7 get-pip.py "pip < 21.0" \
     && cd /root \
     && rm -rf /opt/pip
 
