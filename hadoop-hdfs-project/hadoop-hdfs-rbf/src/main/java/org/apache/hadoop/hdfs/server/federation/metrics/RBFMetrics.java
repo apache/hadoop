@@ -698,6 +698,16 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
+  public int getRouterFederationRenameCount() {
+    return this.router.getRpcServer().getRouterFederationRenameCount();
+  }
+
+  @Override
+  public int getSchedulerJobCount() {
+    return this.router.getRpcServer().getSchedulerJobCount();
+  }
+
+  @Override
   public String getSafemode() {
     if (this.router.isRouterState(RouterServiceState.SAFEMODE)) {
       return "Safe mode is ON. " + this.getSafeModeTip();
