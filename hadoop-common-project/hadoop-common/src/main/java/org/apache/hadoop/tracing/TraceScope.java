@@ -54,6 +54,8 @@ public class TraceScope implements Closeable {
   }
 
   public void close() {
-    span.close();
+    if (span != null) {
+      span.close();
+    }
   }
 }
