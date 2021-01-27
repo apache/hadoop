@@ -57,7 +57,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   }
 
   @Test
-  public void testListStatusRemoteIterator() throws Exception {
+  public void testAbfsIteratorWithHasNext() throws Exception {
     Path testDir = createTestDirectory();
     setPageSize(10);
     final List<String> fileNames = createFilesUnderDirectory(TEST_FILES_NUMBER,
@@ -85,14 +85,15 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
         .describedAs("After removing every iterm found from the iterator, "
             + "there should be no more elements in the fileNames")
         .isEqualTo(0);
-    verify(listngSupport, Mockito.atLeast(100))
+    int minNumberOfInvokations = TEST_FILES_NUMBER / 10;
+    verify(listngSupport, Mockito.atLeast(minNumberOfInvokations))
         .listStatus(any(Path.class), nullable(String.class),
             anyList(), anyBoolean(),
             nullable(String.class));
   }
 
   @Test
-  public void testListStatusRemoteIteratorWithoutHasNext() throws Exception {
+  public void testAbfsIteratorWithoutHasNext() throws Exception {
     Path testDir = createTestDirectory();
     setPageSize(10);
     final List<String> fileNames = createFilesUnderDirectory(TEST_FILES_NUMBER,
@@ -125,7 +126,8 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
         .describedAs("After removing every iterm found from the iterator, "
             + "there should be no more elements in the fileNames")
         .isEqualTo(0);
-    verify(listngSupport, Mockito.atLeast(100))
+    int minNumberOfInvokations = TEST_FILES_NUMBER / 10;
+    verify(listngSupport, Mockito.atLeast(minNumberOfInvokations))
         .listStatus(any(Path.class), nullable(String.class),
             anyList(), anyBoolean(),
             nullable(String.class));
@@ -163,7 +165,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   }
 
   @Test
-  public void testWithAbfsIteratorDisabledWithutHasNext() throws Exception {
+  public void testWithAbfsIteratorDisabledWithoutHasNext() throws Exception {
     Path testDir = createTestDirectory();
     setPageSize(10);
     setEnableAbfsIterator(false);

@@ -31,7 +31,7 @@ public interface ListingSupport {
    * @param path The list path.
    * @return the entries in the path.
    */
-  FileStatus[] listStatus(final Path path) throws IOException;
+  FileStatus[] listStatus(Path path) throws IOException;
 
   /**
    * @param path      Path the list path.
@@ -48,8 +48,7 @@ public interface ListingSupport {
    * @return the entries in the path start from  "startFrom" in lexical order.
    */
   @InterfaceStability.Unstable
-  FileStatus[] listStatus(final Path path, final String startFrom)
-      throws IOException;
+  FileStatus[] listStatus(Path path, String startFrom) throws IOException;
 
   /**
    * @param path         The list path

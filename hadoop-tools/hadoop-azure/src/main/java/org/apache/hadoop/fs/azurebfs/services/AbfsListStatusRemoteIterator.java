@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import javax.activation.UnsupportedDataTypeException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,13 +35,15 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
 
-public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> {
+public class AbfsListStatusRemoteIterator
+    implements RemoteIterator<FileStatus> {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(AbfsListStatusRemoteIterator.class);
 
   private static final boolean FETCH_ALL_FALSE = false;
   private static final int MAX_QUEUE_SIZE = 10;
+  private static final long POLL_WAIT_TIME_IN_MS = 250;
 
   private final FileStatus fileStatus;
   private final ListingSupport listingSupport;
@@ -64,7 +68,7 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
     if (currIterator.hasNext()) {
       return true;
     }
-    updateCurrentIterator();
+    currIterator = getNextIterator();
     return currIterator.hasNext();
   }
 
@@ -76,39 +80,36 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
     return currIterator.next();
   }
 
-  private void updateCurrentIterator() throws IOException {
-    do {
-      currIterator = getNextIterator();
-    } while (currIterator != null && !currIterator.hasNext()
-        && !isIterationComplete);
-  }
-
   private Iterator<FileStatus> getNextIterator() throws IOException {
     fetchBatchesAsync();
-    synchronized (this) {
-      if (iteratorsQueue.isEmpty() && isIterationComplete) {
-          return Collections.emptyIterator();
-      }
-    }
     try {
-      Object obj = iteratorsQueue.take();
-      if(obj instanceof Iterator){
-        return (Iterator<FileStatus>) obj;
+      Object obj = null;
+      while (obj == null
+          && (!isIterationComplete || !iteratorsQueue.isEmpty())) {
+        obj = iteratorsQueue.poll(POLL_WAIT_TIME_IN_MS, TimeUnit.MILLISECONDS);
       }
-      throw (IOException) obj;
+      if (obj == null) {
+        return Collections.emptyIterator();
+      } else if (obj instanceof Iterator) {
+        return (Iterator<FileStatus>) obj;
+      } else if (obj instanceof IOException) {
+        throw (IOException) obj;
+      } else {
+        throw new UnsupportedDataTypeException();
+      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.error("Thread got interrupted: {}", e);
-      return Collections.emptyIterator();
+      throw new IOException(e);
     }
   }
 
   private void fetchBatchesAsync() {
-    if (isAsyncInProgress) {
+    if (isAsyncInProgress || isIterationComplete) {
       return;
     }
     synchronized (this) {
-      if (isAsyncInProgress) {
+      if (isAsyncInProgress || isIterationComplete) {
         return;
       }
       isAsyncInProgress = true;
@@ -121,9 +122,10 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
       while (!isIterationComplete && iteratorsQueue.size() <= MAX_QUEUE_SIZE) {
         addNextBatchIteratorToQueue();
       }
-    } catch (IOException e) {
+    } catch (IOException ioe) {
+      LOG.error("Fetching filestatuses failed", ioe);
       try {
-        iteratorsQueue.put(e);
+        iteratorsQueue.put(ioe);
       } catch (InterruptedException interruptedException) {
         Thread.currentThread().interrupt();
         LOG.error("Thread got interrupted: {}", interruptedException);
@@ -132,7 +134,7 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
       Thread.currentThread().interrupt();
       LOG.error("Thread got interrupted: {}", e);
     } finally {
-      synchronized (this  ) {
+      synchronized (this) {
         isAsyncInProgress = false;
       }
     }
@@ -144,11 +146,12 @@ public class AbfsListStatusRemoteIterator implements RemoteIterator<FileStatus> 
     continuation = listingSupport
         .listStatus(fileStatus.getPath(), null, fileStatuses, FETCH_ALL_FALSE,
             continuation);
-    iteratorsQueue.put(fileStatuses.iterator());
+    if(!fileStatuses.isEmpty()) {
+      iteratorsQueue.put(fileStatuses.iterator());
+    }
     synchronized (this) {
       if (continuation == null || continuation.isEmpty()) {
         isIterationComplete = true;
-        iteratorsQueue.put(Collections.emptyIterator());
       }
     }
   }
