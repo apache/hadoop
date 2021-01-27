@@ -18,17 +18,44 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper;
 
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
+/**
+ * Helper class to describe a queue's type, its creation method and its
+ * eligibility of having auto created children.
+ *
+ * queueType: a queue can be a parent or a leaf.
+ *
+ * creationMethod: the creation method of the queue. Can be: static,
+ * dynamicLegacy or dynamicFlexible. When the legacy way of queue auto-creation
+ * (before YARN-10506) is used, a parent can only be static (ManagedParent)
+ * and a leaf queue can only be dynamicLegacy (no static child queues are
+ * allowed under ManagedParents). When the flexible auto queue creation is used
+ * both a parent and a leaf can be either static or dynamicFlexible.
+ *
+ * autoCreationEligibility: describes whether a queue can have dynamically
+ * created children. Can be: off, legacy or flexible. Every leaf will have this
+ * field with the value off, as they can't have children. When the legacy way
+ * of queue auto-creation (before YARN-10506) is used a ManagedParent will have
+ * the legacy value. When the flexible auto queue creation is used a static
+ * parent can have the value flexible if it is configured to allow auto queue
+ * creation, or off if it is not. A dynamic parent implicitly will have the
+ * value flexible, as a dynamically created parent cannot have static children.
+ */
 public class CapacitySchedulerInfoHelper {
-  private static final String AUTO_CREATED_LEAF = "autoCreatedLeaf";
-  private static final String STATIC_LEAF = "staticLeaf";
-  private static final String AUTO_CREATED_PARENT = "autoCreatedParent";
-  private static final String STATIC_PARENT = "staticParent";
+  private static final String PARENT_QUEUE = "parent";
+  private static final String LEAF_QUEUE = "leaf";
   private static final String UNKNOWN_QUEUE = "unknown";
+  private static final String STATIC_QUEUE = "static";
+  private static final String LEGACY_DYNAMIC_QUEUE = "dynamicLegacy";
+  private static final String FLEXIBLE_DYNAMIC_QUEUE = "dynamicFlexible";
+  private static final String AUTO_CREATION_OFF = "off";
+  private static final String AUTO_CREATION_LEGACY = "legacy";
+  private static final String AUTO_CREATION_FLEXIBLE = "flexible";
 
   private CapacitySchedulerInfoHelper() {}
 
@@ -52,19 +79,31 @@ public class CapacitySchedulerInfoHelper {
 
   public static String getQueueType(CSQueue queue) {
     if (queue instanceof LeafQueue) {
-      if (((AbstractCSQueue)queue).isDynamicQueue()) {
-        return AUTO_CREATED_LEAF;
-      } else {
-        return STATIC_LEAF;
-      }
+      return LEAF_QUEUE;
     } else if (queue instanceof ParentQueue) {
-      if (((AbstractCSQueue)queue).isDynamicQueue()) {
-        return AUTO_CREATED_PARENT;
-      } else {
-        //A ParentQueue with isDynamic=false or an AbstractManagedParentQueue
-        return STATIC_PARENT;
-      }
+      return PARENT_QUEUE;
     }
     return UNKNOWN_QUEUE;
+  }
+
+  public static String getCreationMethod(CSQueue queue) {
+    if (queue instanceof AutoCreatedLeafQueue) {
+      return LEGACY_DYNAMIC_QUEUE;
+    } else if (((AbstractCSQueue)queue).isDynamicQueue()) {
+      return FLEXIBLE_DYNAMIC_QUEUE;
+    } else {
+      return STATIC_QUEUE;
+    }
+  }
+
+  public static String getAutoCreationEligibility(CSQueue queue) {
+    if (queue instanceof ManagedParentQueue) {
+      return AUTO_CREATION_LEGACY;
+    } else if (queue instanceof ParentQueue &&
+        ((ParentQueue)queue).isEligibleForAutoQueueCreation()) {
+      return AUTO_CREATION_FLEXIBLE;
+    } else {
+      return AUTO_CREATION_OFF;
+    }
   }
 }

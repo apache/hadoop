@@ -91,6 +91,8 @@ public class CapacitySchedulerQueueInfo {
   protected LeafQueueTemplateInfo leafQueueTemplate;
   protected String mode;
   protected String queueType;
+  protected String creationMethod;
+  protected String autoCreationEligibility;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -137,6 +139,9 @@ public class CapacitySchedulerQueueInfo {
 
     mode = CapacitySchedulerInfoHelper.getMode(q);
     queueType = CapacitySchedulerInfoHelper.getQueueType(q);
+    creationMethod = CapacitySchedulerInfoHelper.getCreationMethod(q);
+    autoCreationEligibility = CapacitySchedulerInfoHelper
+        .getAutoCreationEligibility(q);
 
     ResourceUsage queueResourceUsage = q.getQueueResourceUsage();
     populateQueueResourceUsage(queueResourceUsage);

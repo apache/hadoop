@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils;
@@ -73,11 +75,14 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   private static final float EXP_ROOT_WEIGHT_IN_WEIGHT_MODE = 1.0F;
   private static final float EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE = 1.0F;
   private static final double DELTA = 0.00001;
-  private static final String STATIC_PARENT = "staticParent";
-  private static final String STATIC_LEAF = "staticLeaf";
+  private static final String PARENT_QUEUE = "parent";
+  private static final String LEAF_QUEUE = "leaf";
+  private static final String STATIC_QUEUE = "static";
+  private static final String FLEXIBLE_DYNAMIC_QUEUE = "dynamicFlexible";
+  private static final String AUTO_CREATION_OFF = "off";
+  private static final String AUTO_CREATION_LEGACY = "legacy";
+  private static final String AUTO_CREATION_FLEXIBLE = "flexible";
   private static final int GB = 1024;
-  private static final String AUTO_CREATED_LEAF = "autoCreatedLeaf";
-  private static final String AUTO_CREATED_PARENT = "autoCreatedParent";
   protected static MockRM RM;
 
   private CapacitySchedulerAutoQueueHandler autoQueueHandler;
@@ -88,13 +93,18 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     public final float weight;
     public final float normalizedWeight;
     private String queueType;
+    private String creationMethod;
+    private String autoCreationEligibility;
 
     public ExpectedQueueWithProperties(String path, float weight,
-        float normalizedWeight, String queueType) {
+        float normalizedWeight, String queueType, String creationMethod,
+        String autoCreationEligibility) {
       this.path = path;
       this.weight = weight;
       this.normalizedWeight = normalizedWeight;
       this.queueType = queueType;
+      this.creationMethod = creationMethod;
+      this.autoCreationEligibility = autoCreationEligibility;
     }
   }
 
@@ -161,16 +171,41 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     validateSchedulerInfo(json, "percentage",
         new ExpectedQueueWithProperties("root",
             EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
-            STATIC_PARENT),
+            PARENT_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.default",
             EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test1",
             EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test2",
             EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
-            STATIC_LEAF));
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF));
+  }
+
+  @Test
+  public void testSchedulerResponsePercentageModeLegacyAutoCreation()
+      throws Exception {
+    Configuration config = CSConfigGenerator
+        .createPercentageConfigLegacyAutoCreation();
+    config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+
+    initResourceManager(config);
+    JSONObject json = sendRequestToSchedulerEndpoint();
+    validateSchedulerInfo(json, "percentage",
+        new ExpectedQueueWithProperties("root",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
+            PARENT_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
+        new ExpectedQueueWithProperties("root.default",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
+        new ExpectedQueueWithProperties("root.test1",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
+        new ExpectedQueueWithProperties("root.managedtest2",
+            EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
+            PARENT_QUEUE, STATIC_QUEUE, AUTO_CREATION_LEGACY));
   }
 
   @Test
@@ -186,16 +221,16 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     validateSchedulerInfo(json, "absolute",
         new ExpectedQueueWithProperties("root",
             EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
-            STATIC_PARENT),
+            PARENT_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.default",
             EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test1",
             EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test2",
             EXP_WEIGHT_NON_WEIGHT_MODE, EXP_NORM_WEIGHT_NON_WEIGHT_MODE,
-            STATIC_LEAF));
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF));
   }
 
   @Test
@@ -211,13 +246,13 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     validateSchedulerInfo(json, "weight",
         new ExpectedQueueWithProperties("root",
             EXP_ROOT_WEIGHT_IN_WEIGHT_MODE, EXP_ROOT_WEIGHT_IN_WEIGHT_MODE,
-            STATIC_PARENT),
+            PARENT_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.default", 10.0f, 0.5f,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test1", 4.0f, 0.2f,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test2", 6.0f, 0.3f,
-            STATIC_LEAF));
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF));
   }
 
   @Test
@@ -234,13 +269,13 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     validateSchedulerInfo(json, "weight",
         new ExpectedQueueWithProperties("root",
             EXP_ROOT_WEIGHT_IN_WEIGHT_MODE, EXP_ROOT_WEIGHT_IN_WEIGHT_MODE,
-            STATIC_PARENT),
+            PARENT_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.default", 10.0f, 0.5f,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test1", 4.0f, 0.2f,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test2", 6.0f, 0.3f,
-            STATIC_LEAF));
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF));
 
     //Now create some auto created queues
     createQueue("root.auto1");
@@ -255,42 +290,42 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     int sumOfWeights = 24;
     ExpectedQueueWithProperties expectedRootQ =
         new ExpectedQueueWithProperties("root",
-        EXP_ROOT_WEIGHT_IN_WEIGHT_MODE, EXP_ROOT_WEIGHT_IN_WEIGHT_MODE,
-        STATIC_PARENT);
+            EXP_ROOT_WEIGHT_IN_WEIGHT_MODE, EXP_ROOT_WEIGHT_IN_WEIGHT_MODE,
+            PARENT_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF);
     validateSchedulerInfo(json, "weight",
         expectedRootQ,
         new ExpectedQueueWithProperties("root.auto1",
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE,
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE / sumOfWeights,
-            AUTO_CREATED_LEAF),
+            LEAF_QUEUE, FLEXIBLE_DYNAMIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.auto2",
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE,
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE / sumOfWeights,
-            AUTO_CREATED_LEAF),
+            LEAF_QUEUE, FLEXIBLE_DYNAMIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.auto3",
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE,
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE / sumOfWeights,
-            AUTO_CREATED_LEAF),
+            LEAF_QUEUE, FLEXIBLE_DYNAMIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.autoParent1",
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE,
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE / sumOfWeights,
-            AUTO_CREATED_PARENT),
+            PARENT_QUEUE, FLEXIBLE_DYNAMIC_QUEUE, AUTO_CREATION_FLEXIBLE),
         new ExpectedQueueWithProperties("root.default", 10.0f,
             10.0f / sumOfWeights,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test1", 4.0f,
             4.0f / sumOfWeights,
-            STATIC_LEAF),
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
         new ExpectedQueueWithProperties("root.test2", 6.0f,
             6.0f / sumOfWeights,
-            STATIC_LEAF));
+            LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF));
 
     validateChildrenOfParent(json, "root.autoParent1", "weight",
         expectedRootQ,
         new ExpectedQueueWithProperties("root.autoParent1.auto4",
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE,
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE,
-            AUTO_CREATED_LEAF));
+            LEAF_QUEUE, FLEXIBLE_DYNAMIC_QUEUE, AUTO_CREATION_OFF));
   }
 
   private void initAutoQueueHandler() throws Exception {
@@ -433,9 +468,18 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
           Float.parseFloat(obj.getString("normalizedWeight")), DELTA);
 
       //validate queue creation type
-      Assert.assertEquals("Queue creation type does not match for queue " +
+      Assert.assertEquals("Queue type does not match for queue " +
               queuePath,
           expectedQueue.queueType, obj.getString("queueType"));
+
+      Assert.assertEquals("Queue creation type does not match for queue " +
+              queuePath,
+          expectedQueue.creationMethod, obj.getString("creationMethod"));
+
+      Assert.assertEquals("Queue auto creation eligibility does not " +
+              "match for queue " + queuePath,
+          expectedQueue.autoCreationEligibility,
+          obj.getString("autoCreationEligibility"));
     }
 
     //Validate queue paths and modes
@@ -467,6 +511,20 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
       conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
       conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
+      return createConfiguration(conf);
+    }
+
+    public static Configuration createPercentageConfigLegacyAutoCreation() {
+      Map<String, String> conf = new HashMap<>();
+      conf.put("yarn.scheduler.capacity.root.queues", "default, test1, " +
+          "managedtest2");
+      conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
+      conf.put("yarn.scheduler.capacity.root.managedtest2.capacity", "50");
+      conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
+      conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
+      conf.put("yarn.scheduler.capacity.root.managedtest2.state", "RUNNING");
+      conf.put("yarn.scheduler.capacity.root.managedtest2." +
+          "auto-create-child-queue.enabled", "true");
       return createConfiguration(conf);
     }
 

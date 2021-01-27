@@ -362,7 +362,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements in: " + info, 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements in: " + info, 16, info.length());
+    assertEquals("incorrect number of elements in: " + info, 18, info.length());
     verifyClusterSchedulerGeneric(info.getString("type"),
         (float) info.getDouble("usedCapacity"),
         (float) info.getDouble("capacity"),
@@ -413,10 +413,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   private void verifySubQueue(JSONObject info, String q,
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 31;
+    int numExpectedElements = 33;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 49;
+      numExpectedElements = 51;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
