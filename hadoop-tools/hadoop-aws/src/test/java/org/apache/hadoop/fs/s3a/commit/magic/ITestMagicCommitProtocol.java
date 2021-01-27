@@ -67,13 +67,6 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
-    return conf;
-  }
-
-  @Override
   protected String getCommitterFactoryName() {
     return CommitConstants.S3A_COMMITTER_FACTORY;
   }
