@@ -526,13 +526,17 @@ public abstract class AbstractContractCreateTest extends
           LOG.info("Successfully read synced data on a new reader {}", in);
         }
       } else {
+        // np sync. Let's do a flush and see what happens.
         out.flush();
-        // no sync. let's see what's there
+        // Now look at the filesystem.
         try (FSDataInputStream in = fs.open(path)) {
 
           int c = in.read();
           if (c == -1) {
             // nothing was synced; sync and flush really aren't there.
+            LOG.info("sync and flush are declared unsupported"
+                + " -flushed changes were not saved");
+
           } else {
             LOG.info("sync and flush are declared unsupported"
                 + " - but the stream does offer some sync/flush semantics");

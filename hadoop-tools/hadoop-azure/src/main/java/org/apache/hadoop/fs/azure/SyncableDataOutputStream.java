@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 
 /**
