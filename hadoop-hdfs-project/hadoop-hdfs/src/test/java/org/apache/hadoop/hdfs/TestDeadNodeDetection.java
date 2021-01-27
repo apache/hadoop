@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -43,6 +44,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for dead node detection in DFSClient.
@@ -51,10 +53,17 @@ public class TestDeadNodeDetection {
 
   private MiniDFSCluster cluster;
   private Configuration conf;
+  private ErasureCodingPolicy ecPolicy;
+  private int dataBlocks;
+  private int parityBlocks;
 
   @Before
   public void setUp() {
     cluster = null;
+    ecPolicy = StripedFileTestUtil.getDefaultECPolicy();
+    dataBlocks = ecPolicy.getNumDataUnits();
+    parityBlocks = ecPolicy.getNumParityUnits();
+
     conf = new HdfsConfiguration();
     conf.setBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY, true);
     conf.setLong(
@@ -315,6 +324,64 @@ public class TestDeadNodeDetection {
       assertEquals(0, dfsClient.getDeadNodes(din).size());
       assertEquals(0, dfsClient.getClientContext().getDeadNodeDetector()
           .clearAndGetDetectedDeadNodes().size());
+      // reset disabledProbeThreadForTest
+      DeadNodeDetector.setDisabledProbeThreadForTest(false);
+    }
+  }
+
+  /* TODO: Delete when done
+   * 1. Use DFSStripedInputStream to read ec block
+   * 2. Let datanode dead/suspend to make read timed out
+   * 3. Assert deadnode detector could catch the dn & clear it after turns OK
+   * */
+  @Test
+  public void testDeadNodeDetectionUnderStripedStream() throws Exception {
+    conf.setInt(DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY,
+            parityBlocks + 1);
+    DeadNodeDetector.setDisabledProbeThreadForTest(true);
+    // EC need 9(6+3) DNs? or just one is OK?
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
+        dataBlocks + parityBlocks).build();
+    cluster.waitActive();
+
+    Path filePath = new Path("/testDeadNodeDetection4ECFile");
+    DistributedFileSystem fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
+    DFSTestUtil.createStripedFile(cluster, filePath, null, 3, 2, false,
+            ecPolicy);
+    DFSInputStream in = fs.getClient().open(filePath.toString());
+    assertTrue(in instanceof DFSStripedInputStream);
+
+    for (int i = 0; i <= parityBlocks; i++) {
+      cluster.stopDataNode(i);
+    }
+    DFSClient dfsClient = in.getDFSClient();
+    DeadNodeDetector deadNodeDetector =
+            dfsClient.getClientContext().getDeadNodeDetector();
+    try {
+      try {
+        in.read();
+      } catch (IOException e) {
+        // Throw an exception when the missing block > parityBlocks
+      }
+
+      waitForSuspectNode(in.getDFSClient());
+      for (int i = 0; i <= parityBlocks; i++) {
+        cluster.restartDataNode(i, true);
+      }
+      assertEquals(parityBlocks + 1,
+              deadNodeDetector.getSuspectNodesProbeQueue().size());
+      assertEquals(0, deadNodeDetector.clearAndGetDetectedDeadNodes().size());
+      deadNodeDetector.startProbeScheduler();
+      Thread.sleep(1000 * parityBlocks);
+      assertEquals(0, deadNodeDetector.getSuspectNodesProbeQueue().size());
+      assertEquals(0, deadNodeDetector.clearAndGetDetectedDeadNodes().size());
+    } finally {
+      in.close();
+      assertEquals(0, dfsClient.getDeadNodes(in).size());
+      assertEquals(0, dfsClient.getClientContext().
+              getDeadNodeDetector().clearAndGetDetectedDeadNodes().size());
+      deleteFile(fs, filePath);
       // reset disabledProbeThreadForTest
       DeadNodeDetector.setDisabledProbeThreadForTest(false);
     }
