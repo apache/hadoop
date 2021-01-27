@@ -261,7 +261,7 @@ public class TestFileOutputCommitter {
     assert(dataFileFound && indexFileFound);
   }
 
-  private void testCommitterInternal(int version, boolean taskCleanup)
+  private void testCommitterInternal(int version, boolean taskCleanup, int mergeThreadNum)
       throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -273,6 +273,9 @@ public class TestFileOutputCommitter {
     conf.setBoolean(
         FileOutputCommitter.FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED,
         taskCleanup);
+    conf.setInt(
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_MERGE_THREADS,
+        mergeThreadNum);
     JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
     FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
@@ -318,17 +321,20 @@ public class TestFileOutputCommitter {
 
   @Test
   public void testCommitterV1() throws Exception {
-    testCommitterInternal(1, false);
+    testCommitterInternal(1, false, 1);
+    testCommitterInternal(1, false, 5);
   }
 
   @Test
   public void testCommitterV2() throws Exception {
-    testCommitterInternal(2, false);
+    testCommitterInternal(2, false, 1);
+    testCommitterInternal(2, false, 5);
   }
 
   @Test
   public void testCommitterV2TaskCleanupEnabled() throws Exception {
-    testCommitterInternal(2, true);
+    testCommitterInternal(2, true, 1);
+    testCommitterInternal(2, true, 5);
   }
 
   @Test

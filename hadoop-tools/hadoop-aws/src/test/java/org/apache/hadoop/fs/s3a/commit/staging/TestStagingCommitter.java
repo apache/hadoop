@@ -67,6 +67,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
@@ -801,5 +802,14 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
    */
   private void setMockLogLevel(int level) {
     wrapperFS.setLogEvents(level);
+  }
+
+  @Test
+  public void testJobCommitWithMultiMergeThreadsConfiguration() throws Exception {
+    getConfiguration().setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_MERGE_THREADS, 5);
+    setupCommitter();
+    testJobCommit();
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_MERGE_THREADS,
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_MERGE_THREADS_DEFAULT);
   }
 }

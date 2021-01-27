@@ -360,13 +360,15 @@ public class TestFileOutputCommitter {
     testCommitterInternal(2);
   }
 
-  private void testMapFileOutputCommitterInternal(int version)
+  private void testMapFileOutputCommitterInternal(int version, int mergeThreadNum)
       throws Exception {
     JobConf conf = new JobConf();
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.set(JobContext.TASK_ATTEMPT_ID, attempt);
     conf.setInt(org.apache.hadoop.mapreduce.lib.output.
         FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, version);
+    conf.setInt(org.apache.hadoop.mapreduce.lib.output.
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_MERGE_THREADS, mergeThreadNum);
     JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
     FileOutputCommitter committer = new FileOutputCommitter();
@@ -394,12 +396,14 @@ public class TestFileOutputCommitter {
 
   @Test
   public void testMapFileOutputCommitterV1() throws Exception {
-    testMapFileOutputCommitterInternal(1);
+    testMapFileOutputCommitterInternal(1, 1);
+    testMapFileOutputCommitterInternal(1, 5);
   }
 
   @Test
   public void testMapFileOutputCommitterV2() throws Exception {
-    testMapFileOutputCommitterInternal(2);
+    testMapFileOutputCommitterInternal(2, 1);
+    testMapFileOutputCommitterInternal(2, 5);
   }
 
   @Test
