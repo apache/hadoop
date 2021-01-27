@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -39,6 +38,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -455,52 +455,49 @@ public class FileOutputCommitter extends PathOutputCommitter {
    */
   private void mergePaths(FileSystem fs, final FileStatus from,
       final Path to, JobContext context) throws IOException {
-    long timeStartNs = -1L;
-    if (LOG.isDebugEnabled()) {
-      timeStartNs = System.nanoTime();
-      LOG.debug("Merging data from " + from + " to " + to);
-    }
-    reportProgress(context);
-    FileStatus toStat;
-    try {
-      toStat = fs.getFileStatus(to);
-    } catch (FileNotFoundException fnfe) {
-      toStat = null;
-    }
-
-    if (from.isFile()) {
-      if (toStat != null) {
-        if (!fs.delete(to, true)) {
-          throw new IOException("Failed to delete " + to);
-        }
+    try (DurationInfo d = new DurationInfo(LOG,
+        false,
+        "Merged data from %s to %s", from.getPath(), to)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Merging data from " + from + " to " + to);
       }
 
-      if (!fs.rename(from.getPath(), to)) {
-        throw new IOException("Failed to rename " + from + " to " + to);
+      reportProgress(context);
+      FileStatus toStat;
+      try {
+        toStat = fs.getFileStatus(to);
+      } catch (FileNotFoundException fnfe) {
+        toStat = null;
       }
-    } else if (from.isDirectory()) {
-      if (toStat != null) {
-        if (!toStat.isDirectory()) {
+
+      if (from.isFile()) {
+        if (toStat != null) {
           if (!fs.delete(to, true)) {
             throw new IOException("Failed to delete " + to);
           }
-          renameOrMerge(fs, from, to, context);
-        } else {
-          //It is a directory so merge everything in the directories
-          for (FileStatus subFrom : fs.listStatus(from.getPath())) {
-            Path subTo = new Path(to, subFrom.getPath().getName());
-            mergePaths(fs, subFrom, subTo, context);
-          }
         }
-      } else {
-        renameOrMerge(fs, from, to, context);
+
+        if (!fs.rename(from.getPath(), to)) {
+          throw new IOException("Failed to rename " + from + " to " + to);
+        }
+      } else if (from.isDirectory()) {
+        if (toStat != null) {
+          if (!toStat.isDirectory()) {
+            if (!fs.delete(to, true)) {
+              throw new IOException("Failed to delete " + to);
+            }
+            renameOrMerge(fs, from, to, context);
+          } else {
+            //It is a directory so merge everything in the directories
+            for (FileStatus subFrom : fs.listStatus(from.getPath())) {
+              Path subTo = new Path(to, subFrom.getPath().getName());
+              mergePaths(fs, subFrom, subTo, context);
+            }
+          }
+        } else {
+          renameOrMerge(fs, from, to, context);
+        }
       }
-    }
-    if (LOG.isDebugEnabled() && timeStartNs > 0) {
-      long elapsedMs = TimeUnit.MILLISECONDS.convert(
-          System.nanoTime() - timeStartNs, TimeUnit.NANOSECONDS);
-      LOG.debug("Merged data from " + from.getPath() + " to " + to + " in " +
-          elapsedMs + " ms");
     }
   }
 
