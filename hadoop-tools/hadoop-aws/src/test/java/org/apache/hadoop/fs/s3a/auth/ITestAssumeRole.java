@@ -555,7 +555,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void testRestrictedCommitActions() throws Throwable {
     describe("Attempt commit operations against a path with restricted rights");
     Configuration conf = createAssumedRoleConfig();
-    conf.setBoolean(CommitConstants.MAGIC_COMMITTER_ENABLED, true);
     final int uploadPartSize = 5 * 1024 * 1024;
 
     ProgressCounter progress = new ProgressCounter();
