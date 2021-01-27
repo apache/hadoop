@@ -457,11 +457,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
       final Path to, JobContext context) throws IOException {
     try (DurationInfo d = new DurationInfo(LOG,
         false,
-        "Merged data from %s to %s", from.getPath(), to)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Merging data from " + from + " to " + to);
-      }
-
+        "Merging data from %s to %s", from, to)) {
       reportProgress(context);
       FileStatus toStat;
       try {
