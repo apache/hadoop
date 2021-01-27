@@ -489,7 +489,7 @@ Requirements:
 * Maven 3.0 or later
 * Boost 1.72
 * Protocol Buffers 3.7.1
-* CMake 3.1 or newer
+* CMake 3.19 or newer
 * Visual Studio 2010 Professional or Higher
 * Windows SDK 8.1 (if building CPU rate control for the container executor)
 * zlib headers (if building native code bindings for zlib)
