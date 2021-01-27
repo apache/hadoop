@@ -685,6 +685,27 @@ Conflict management is left to the execution engine itself.
 
 ```
 
+### Disabling magic committer path rewriting
+
+The magic committer recognizes when files are created under paths with `__magic/` as a parent directory
+and redirects the upload to a different location, adding the information needed to complete the upload
+in the job commit operation.
+
+If, for some reason, you *do not* want these paths to be redirected and not manifest until later,
+the feature can be disabled by setting `fs.s3a.committer.magic.enabled` to false.
+
+By default it is true.
+
+```xml
+<property>
+  <name>fs.s3a.committer.magic.enabled</name>
+  <value>true</value>
+  <description>
+    Enable support in the S3A filesystem for the "Magic" committer.
+  </description>
+</property>
+```
+
 ## <a name="concurrent-jobs"></a> Concurrent Jobs writing to the same destination
 
 It is sometimes possible for multiple jobs to simultaneously write to the same destination path.

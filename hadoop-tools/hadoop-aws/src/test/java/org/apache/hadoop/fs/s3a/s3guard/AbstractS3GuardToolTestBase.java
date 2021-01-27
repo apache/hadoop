@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
@@ -61,7 +60,6 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo.IS_MARKER_AWARE;
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
@@ -590,16 +588,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     String name = fs.getUri().toString();
     S3GuardTool.BucketInfo cmd = new S3GuardTool.BucketInfo(
         getConfiguration());
-    if (fs.hasPathCapability(fs.getWorkingDirectory(),
-        CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER)) {
-      // if the FS is magic, expect this to work
+    // this must always work
       exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name);
-    } else {
-      // if the FS isn't magic, expect the probe to fail
-      assertExitCode(E_BAD_STATE,
-          intercept(ExitUtil.ExitException.class,
-              () -> exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name)));
-    }
   }
 
   /**
