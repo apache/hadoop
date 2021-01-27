@@ -699,7 +699,7 @@ class DataStreamer extends Daemon {
             }
             one = dataQueue.getFirst(); // regular data packet
             SpanContext[] parents = one.getTraceParents();
-            if (parents.length > 0) {
+            if (parents != null && parents.length > 0) {
               // The original code stored multiple parents in the DFSPacket, and
               // use them ALL here when creating a new Span. We only use the
               // last one FOR NOW. Moreover, we don't activate the Span for now.
