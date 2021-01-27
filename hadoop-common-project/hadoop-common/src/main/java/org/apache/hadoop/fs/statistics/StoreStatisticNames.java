@@ -325,9 +325,6 @@ public final class StoreStatisticNames {
   public static final String STORE_IO_THROTTLE_RATE
       = "store_io_throttle_rate";
 
-  public static final String DELEGATION_TOKEN_ISSUED
-      = "delegation_token_issued";
-
   public static final String MULTIPART_UPLOAD_INSTANTIATED
       = "multipart_instantiated";
 
