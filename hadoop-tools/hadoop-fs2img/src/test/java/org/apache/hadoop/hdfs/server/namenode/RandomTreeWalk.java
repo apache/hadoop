@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.TreePath;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.TreeWalk;
 
 /**
  * Random, repeatable hierarchy generator.
@@ -81,8 +83,13 @@ public class RandomTreeWalk extends TreeWalk {
   }
 
   @Override
+  public Path getRoot() {
+    return root;
+  }
+
+  @Override
   protected Iterable<TreePath> getChildren(TreePath p, long id,
-      TreeIterator walk) {
+                                           TreeIterator walk) {
     final FileStatus pFs = p.getFileStatus();
     if (pFs.isFile()) {
       return Collections.emptyList();

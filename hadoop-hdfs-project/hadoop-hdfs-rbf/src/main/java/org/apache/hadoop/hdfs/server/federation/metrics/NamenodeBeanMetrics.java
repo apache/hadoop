@@ -628,6 +628,22 @@ public class NamenodeBeanMetrics
     return getProvidedCapacity();
   }
 
+  /**
+   * Unsupported in RBF.
+   */
+  @Override
+  public long getProvidedCacheUsed() {
+    return 0;
+  }
+
+  /**
+   * Unsupported in RBF.
+   */
+  @Override
+  public long getProvidedCacheCapacity() {
+    return 0;
+  }
+
   @Override
   public long getFilesTotal() {
     try {

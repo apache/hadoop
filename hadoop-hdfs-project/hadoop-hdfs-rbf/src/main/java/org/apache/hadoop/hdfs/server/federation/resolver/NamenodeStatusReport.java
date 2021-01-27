@@ -504,6 +504,7 @@ public class NamenodeStatusReport {
   public long getProvidedSpace() {
     return this.providedSpace;
   }
+
   /**
    * Get the number of missing blocks.
    *

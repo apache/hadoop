@@ -64,6 +64,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Mockito.mock;
 
 /**
  * This tests InterDataNodeProtocol for block handling. 
@@ -73,7 +74,7 @@ public class TestInterDatanodeProtocol {
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
   private static final Configuration conf = new HdfsConfiguration();
-
+  private static final FsVolumeImpl mockFsVolume = mock(FsVolumeImpl.class);
 
   private static class TestServer extends Server {
     private boolean sleep;
@@ -218,7 +219,7 @@ public class TestInterDatanodeProtocol {
   }
 
   private static ReplicaInfo createReplicaInfo(Block b) {
-    return new FinalizedReplica(b, null, null);
+    return new FinalizedReplica(b, mockFsVolume, null);
   }
 
   private static void assertEquals(ReplicaInfo originalInfo, ReplicaRecoveryInfo recoveryInfo) {

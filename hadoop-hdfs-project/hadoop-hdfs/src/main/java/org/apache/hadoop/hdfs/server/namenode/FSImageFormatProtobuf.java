@@ -43,10 +43,14 @@ import java.util.Set;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.server.common.ProvidedVolumeInfo;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +59,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ProvidedVolumeInfoProto;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -64,6 +69,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.ErasureCodingSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.ProvidedMountsSection;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FSImageFormatPBSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
@@ -473,11 +479,19 @@ public final class FSImageFormatProtobuf {
           prog.endStep(Phase.LOADING_FSIMAGE, step);
         }
           break;
-        case ERASURE_CODING:
+        case ERASURE_CODING: {
           Step step = new Step(StepType.ERASURE_CODING_POLICIES);
           prog.beginStep(Phase.LOADING_FSIMAGE, step);
           loadErasureCodingSection(in);
           prog.endStep(Phase.LOADING_FSIMAGE, step);
+        }
+          break;
+        case MOUNTS: {
+          Step step = new Step(StepType.PROVIDED_MOUNTS);
+          prog.beginStep(Phase.LOADING_FSIMAGE, step);
+          loadProvidedMounts(in);
+          prog.endStep(Phase.LOADING_FSIMAGE, step);
+        }
           break;
         default:
           LOG.warn("Unrecognized section {}", n);
@@ -572,6 +586,19 @@ public final class FSImageFormatProtobuf {
             s.getPolicies(i)));
       }
       fsn.getErasureCodingPolicyManager().loadPolicies(ecPolicies, conf);
+    }
+
+    private void loadProvidedMounts(InputStream in) throws IOException {
+      ProvidedMountsSection s = ProvidedMountsSection.parseDelimitedFrom(in);
+      List<ProvidedVolumeInfo> providedVolumeInfos =
+          s.getMountInfosList().stream()
+              .map(info -> PBHelper.convert(info))
+              .collect(Collectors.toList());
+      for (ProvidedVolumeInfo volumeInfo : providedVolumeInfos) {
+        // add the mounts to the mount manager.
+        fsn.getMountManager()
+            .startMount(new Path(volumeInfo.getMountPath()), volumeInfo);
+      }
     }
   }
 
@@ -870,6 +897,11 @@ public final class FSImageFormatProtobuf {
       saveCacheManagerSection(b);
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
 
+      step = new Step(StepType.PROVIDED_MOUNTS, filePath);
+      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      saveProvidedMounts(b);
+      prog.endStep(Phase.SAVING_CHECKPOINT, step);
+
       saveStringTableSection(b);
 
       // We use the underlyingOutputStream to write the header. Therefore flush
@@ -975,6 +1007,19 @@ public final class FSImageFormatProtobuf {
       }
       commitSection(summary, SectionName.STRING_TABLE);
     }
+
+    private void saveProvidedMounts(FileSummary.Builder summary)
+        throws IOException {
+      final FSNamesystem fsn = context.getSourceNamesystem();
+      List<ProvidedVolumeInfo> mounts =
+          new ArrayList<>(fsn.getMountManager().getMountPoints().values());
+      List<ProvidedVolumeInfoProto> mountProtos = mounts.stream()
+          .map(mount -> PBHelper.convert(mount)).collect(Collectors.toList());
+      ProvidedMountsSection section = ProvidedMountsSection.newBuilder()
+          .addAllMountInfos(mountProtos).build();
+      section.writeDelimitedTo(sectionOutputStream);
+      commitSection(summary, SectionName.MOUNTS);
+    }
   }
 
   /**
@@ -997,7 +1042,8 @@ public final class FSImageFormatProtobuf {
     SNAPSHOT_DIFF("SNAPSHOT_DIFF"),
     SNAPSHOT_DIFF_SUB("SNAPSHOT_DIFF_SUB"),
     SECRET_MANAGER("SECRET_MANAGER"),
-    CACHE_MANAGER("CACHE_MANAGER");
+    CACHE_MANAGER("CACHE_MANAGER"),
+    MOUNTS("MOUNTS");
 
     private static final SectionName[] values = SectionName.values();
 

@@ -214,7 +214,7 @@ public class NameNodeProxies {
     return new ProxyAndInfo<T>(proxy, dtService, nnAddr);
   }
 
-  private static InMemoryAliasMapProtocol createNNProxyWithInMemoryAliasMapProtocol(
+  public static InMemoryAliasMapProtocol createNNProxyWithInMemoryAliasMapProtocol(
       InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
       AlignmentContext alignmentContext) throws IOException {
     AliasMapProtocolPB proxy = createNameNodeProxy(

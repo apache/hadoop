@@ -77,13 +77,13 @@ public interface InMemoryAliasMapProtocol {
   /**
    * Gets the {@link ProvidedStorageLocation} associated with the
    * specified block.
-   * @param block the block to lookup
-   * @return the associated {@link ProvidedStorageLocation}.
+   * @param blockId the id of the block to lookup.
+   * @return the associated {@link FileRegion}.
    * @throws IOException
    */
   @Nonnull
   @Idempotent
-  Optional<ProvidedStorageLocation> read(@Nonnull Block block)
+  Optional<FileRegion> read(long blockId)
       throws IOException;
 
   /**
@@ -99,6 +99,15 @@ public interface InMemoryAliasMapProtocol {
       throws IOException;
 
   /**
+   * Removed the block and it's associated {@link ProvidedStorageLocation}
+   * from the alias map.
+   * As this is for in memory alias map, we do not require the bpid.
+   * @param block
+   * @throws IOException
+   */
+  void remove(@Nonnull Block block) throws IOException;
+
+   /**
    * Get the associated block pool id.
    * @return the block pool id associated with the Namenode running
    * the in-memory alias map.

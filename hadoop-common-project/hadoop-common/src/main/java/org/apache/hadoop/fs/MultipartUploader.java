@@ -108,4 +108,5 @@ public interface MultipartUploader extends Closeable,
    */
   CompletableFuture<Integer> abortUploadsUnderPath(Path path) throws IOException;
 
+  int getPartNumber(PartHandle partHandle) throws IOException;
 }

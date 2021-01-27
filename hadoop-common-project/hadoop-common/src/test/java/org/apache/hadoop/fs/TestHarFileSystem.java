@@ -250,6 +250,11 @@ public class TestHarFileSystem {
 
     MultipartUploaderBuilder createMultipartUploader(Path basePath)
         throws IOException;
+
+    public boolean addMount(String remote, String mount, MountMode mountMode,
+        Map<String, String> remoteConfig) throws IOException;
+    public boolean removeMount(String mountPath) throws IOException;
+    public List<MountInfo> listMounts(boolean requireStats) throws IOException;
   }
 
   @Test

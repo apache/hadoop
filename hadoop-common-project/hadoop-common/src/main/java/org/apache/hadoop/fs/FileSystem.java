@@ -4789,4 +4789,45 @@ public abstract class FileSystem extends Configured
     methodNotSupported();
     return null;
   }
+
+  /**
+   * Add a PROVIDED mount point to the FSImage.
+   * 
+   * @param remote Remote location.
+   * @param mountPath Path in HDFS to mount the path in.
+   * @param mountMode Mount mode.
+   * @param remoteConfig remote config needed to connect to remote fs. For e.g.
+   *          if the desired remote connection requires a user=foo and a
+   *          token=bar configuration, then the config map should contain these
+   *          two pairs.
+   * @return true if the mount is successful.
+   * @throws IOException If there is an error adding the mount point.
+   */
+  public boolean addMount(String remote, String mountPath, MountMode mountMode,
+      Map<String, String> remoteConfig) throws IOException {
+    throw new UnsupportedOperationException("Adding mounts not supported");
+  }
+
+  /**
+   * Unmount (delete) a PROVIDED mount point.
+   * 
+   * @param mountPath mount path to remove
+   * @return true if the removeMount is unsuccessful
+   * @throws IOException
+   */
+  public boolean removeMount(String mountPath) throws IOException {
+    throw new UnsupportedOperationException("Removing mounts not supported");
+  }
+
+  /**
+   * Returns mount info, and mount metrics if requireStats is true, for all
+   * mount points. Does not guarantee to return the mount points in a specific
+   * order.
+   *
+   * @throws IOException
+   */
+  public ProvidedStorageSummary listMounts(boolean requireStats)
+      throws IOException {
+    throw new UnsupportedOperationException("Listing mounts not supported");
+  }
 }

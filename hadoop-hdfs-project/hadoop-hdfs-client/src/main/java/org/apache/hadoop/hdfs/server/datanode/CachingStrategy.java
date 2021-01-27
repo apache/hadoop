@@ -24,6 +24,10 @@ public class CachingStrategy {
   private final Boolean dropBehind; // null = use server defaults
   private final Long readahead; // null = use server defaults
 
+  /** flag to indicate if a Provided block is to be read using
+  a read through strategy. **/
+  private final Boolean readThrough;
+
   public static CachingStrategy newDefaultStrategy() {
     return new CachingStrategy(null, null);
   }
@@ -35,10 +39,12 @@ public class CachingStrategy {
   public static class Builder {
     private Boolean dropBehind;
     private Long readahead;
+    private Boolean readThrough;
 
     public Builder(CachingStrategy prev) {
       this.dropBehind = prev.dropBehind;
       this.readahead = prev.readahead;
+      this.readThrough = prev.readThrough;
     }
 
     public Builder setDropBehind(Boolean dropBehind) {
@@ -51,14 +57,25 @@ public class CachingStrategy {
       return this;
     }
 
+    public Builder setReadThrough(boolean readThrough) {
+      this.readThrough = readThrough;
+      return this;
+    }
+
     public CachingStrategy build() {
-      return new CachingStrategy(dropBehind, readahead);
+      return new CachingStrategy(dropBehind, readahead, readThrough);
     }
   }
 
   public CachingStrategy(Boolean dropBehind, Long readahead) {
+    this(dropBehind, readahead, false);
+  }
+
+  public CachingStrategy(Boolean dropBehind, Long readahead,
+      Boolean readThrough) {
     this.dropBehind = dropBehind;
     this.readahead = readahead;
+    this.readThrough = readThrough;
   }
 
   public Boolean getDropBehind() {
@@ -69,8 +86,12 @@ public class CachingStrategy {
     return readahead;
   }
 
+  public Boolean getReadThrough() {
+    return readThrough;
+  }
+
   public String toString() {
     return "CachingStrategy(dropBehind=" + dropBehind +
-        ", readahead=" + readahead + ")";
+        ", readahead=" + readahead + ", readThrough=" + readThrough + ")";
   }
 }

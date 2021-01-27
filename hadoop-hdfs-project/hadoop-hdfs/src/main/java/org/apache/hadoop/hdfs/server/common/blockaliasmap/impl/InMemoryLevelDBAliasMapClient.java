@@ -21,13 +21,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.protocolPB.InMemoryAliasMapProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMapProtocol;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,8 +51,8 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
 
   private static final Logger LOG =
       LoggerFactory.getLogger(InMemoryLevelDBAliasMapClient.class);
-  private Configuration conf;
-  private Collection<InMemoryAliasMapProtocol> aliasMaps;
+  protected Configuration conf;
+  protected Collection<InMemoryAliasMapProtocol> aliasMaps;
 
   @Override
   public void close() {
@@ -72,9 +72,8 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
     }
 
     @Override
-    public Optional<FileRegion> resolve(Block block) throws IOException {
-      Optional<ProvidedStorageLocation> read = aliasMap.read(block);
-      return read.map(psl -> new FileRegion(block, psl));
+    public Optional<FileRegion> resolve(long blockId) throws IOException {
+      return aliasMap.read(blockId);
     }
 
     @Override
@@ -144,11 +143,20 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
     }
 
     @Override
+    public void remove(Block block) throws IOException {
+      aliasMap.remove(block);
+    }
+
+    @Override
     public void close() throws IOException {
     }
   }
 
-  InMemoryLevelDBAliasMapClient() {
+  public InMemoryLevelDBAliasMapClient() {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      throw new UnsupportedOperationException("Unable to start "
+          + "InMemoryLevelDBAliasMapClient as security is enabled");
+    }
     aliasMaps = new ArrayList<>();
   }
 
@@ -167,7 +175,7 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
           return aliasMap;
         }
       } catch (IOException e) {
-        LOG.error("Exception in retrieving block pool id {}", e);
+        LOG.error("Exception in retrieving block pool, id: {}", blockPoolID, e);
       }
     }
     throw new IOException(
@@ -178,8 +186,6 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
   public Reader<FileRegion> getReader(Reader.Options opts, String blockPoolID)
       throws IOException {
     InMemoryAliasMapProtocol aliasMap = getAliasMap(blockPoolID);
-    LOG.info("Loading InMemoryAliasMapReader for block pool id {}",
-        blockPoolID);
     return new LevelDbReader(aliasMap);
   }
 
@@ -187,8 +193,6 @@ public class InMemoryLevelDBAliasMapClient extends BlockAliasMap<FileRegion>
   public Writer<FileRegion> getWriter(Writer.Options opts, String blockPoolID)
       throws IOException {
     InMemoryAliasMapProtocol aliasMap = getAliasMap(blockPoolID);
-    LOG.info("Loading InMemoryAliasMapWriter for block pool id {}",
-        blockPoolID);
     return new LevelDbWriter(aliasMap);
   }
 

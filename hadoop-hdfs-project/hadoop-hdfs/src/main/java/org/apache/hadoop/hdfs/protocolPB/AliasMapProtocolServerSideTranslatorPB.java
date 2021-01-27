@@ -21,7 +21,6 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos.KeyValueProto;
 import org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos.ReadResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos.WriteRequestProto;
@@ -57,15 +56,33 @@ public class AliasMapProtocolServerSideTranslatorPB
   private static final WriteResponseProto VOID_WRITE_RESPONSE =
       WriteResponseProto.newBuilder().build();
 
+  private static final RemoveResponseProto VOID_REMOVE_RESPONSE =
+      RemoveResponseProto.newBuilder().build();
+
   @Override
   public WriteResponseProto write(RpcController controller,
       WriteRequestProto request) throws ServiceException {
     try {
       FileRegion toWrite =
           PBHelper.convert(request.getKeyValuePair());
-
-      aliasMap.write(toWrite.getBlock(), toWrite.getProvidedStorageLocation());
+      if (toWrite != null) {
+        aliasMap.write(toWrite.getBlock(),
+            toWrite.getProvidedStorageLocation());
+      }
       return VOID_WRITE_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RemoveResponseProto remove(RpcController controller,
+      RemoveRequestProto request) throws ServiceException {
+    try {
+      Block toRemove =
+          PBHelperClient.convert(request.getKey());
+      aliasMap.remove(toRemove);
+      return VOID_REMOVE_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -75,15 +92,14 @@ public class AliasMapProtocolServerSideTranslatorPB
   public ReadResponseProto read(RpcController controller,
       ReadRequestProto request) throws ServiceException {
     try {
-      Block toRead =  PBHelperClient.convert(request.getKey());
+      long blockId =  request.getKey();
 
-      Optional<ProvidedStorageLocation> optionalResult =
-          aliasMap.read(toRead);
+      Optional<FileRegion> optionalResult = aliasMap.read(blockId);
 
       ReadResponseProto.Builder builder = ReadResponseProto.newBuilder();
       if (optionalResult.isPresent()) {
-        ProvidedStorageLocation providedStorageLocation = optionalResult.get();
-        builder.setValue(PBHelperClient.convert(providedStorageLocation));
+        FileRegion result = optionalResult.get();
+        builder.setValue(PBHelper.convert(result));
       }
 
       return builder.build();

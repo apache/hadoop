@@ -18,13 +18,18 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
+import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -34,10 +39,15 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.junit.After;
 import org.junit.Test;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROVIDED_ENABLED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -47,7 +57,6 @@ public class TestDFSAdminWithHA {
   private final ByteArrayOutputStream out = new ByteArrayOutputStream();
   private final ByteArrayOutputStream err = new ByteArrayOutputStream();
   private MiniQJMHACluster cluster;
-  private Configuration conf;
   private DFSAdmin admin;
   private static final PrintStream oldOut = System.out;
   private static final PrintStream oldErr = System.err;
@@ -84,7 +93,11 @@ public class TestDFSAdminWithHA {
   }
 
   private void setUpHaCluster(boolean security) throws Exception {
-    conf = new Configuration();
+    setUpHaCluster(security, new Configuration());
+  }
+
+  private void setUpHaCluster(boolean security, Configuration conf)
+      throws Exception {
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         security);
     String baseDir = GenericTestUtils.getRandomizedTempPath();
@@ -782,13 +795,107 @@ public class TestDFSAdminWithHA {
   }
 
   @Test
-  public void testListOpenFilesNN1DownNN2Down() throws Exception{
+  public void testListOpenFilesNN1DownNN2Down() throws Exception {
     setUpHaCluster(false);
     cluster.getDfsCluster().shutdownNameNode(0);
     cluster.getDfsCluster().shutdownNameNode(1);
-    int exitCode = admin.run(new String[] {"-listOpenFiles"});
+    int exitCode = admin.run(new String[]{"-listOpenFiles"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
     String message = ".*" + newLine + "List open files failed." + newLine;
     assertOutputMatches(message);
+  }
+
+  @Test (timeout = 50000)
+  public void testAddMountWithoutProvided() throws Exception {
+    setUpHaCluster(false);
+
+    MiniDFSCluster dfsCluster = cluster.getDfsCluster();
+    dfsCluster.transitionToActive(0);
+    NameNode nn = dfsCluster.getNameNode(0);
+    // We mount the test FSImage directory as remote
+    File file = nn.getFSImage().getStorage().getHighestFsImageName();
+
+    String mountPath = "/remote";
+    // this command should fail as there are not PROVIDED DNs.
+    int exitCode = admin.run(new String[]{
+        "-addMount", file.toURI().toString(), mountPath});
+    assertNotEquals(err.toString().trim(), 0, exitCode);
+    String message = "Mount failed";
+    assertTrue(err.toString().contains(message));
+  }
+
+  @Test (timeout = 50000)
+  public void testAddMount() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED, true);
+
+    conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
+            TextFileRegionAliasMap.class, BlockAliasMap.class);
+    setUpHaCluster(false, conf);
+
+    MiniDFSCluster dfsCluster = cluster.getDfsCluster();
+    dfsCluster.transitionToActive(0);
+    NameNode nn = dfsCluster.getNameNode(0);
+    // We mount the test FSImage directory as remote
+    File file = nn.getFSImage().getStorage().getHighestFsImageName();
+
+    String mountPath = "/remote";
+    // this command should fail as there are not PROVIDED DNs.
+    int exitCode = admin.run(new String[]{
+        "-addMount", file.toURI().toString(), mountPath});
+    assertNotEquals(err.toString().trim(), 0, exitCode);
+    String message = "Mount failed";
+    assertTrue(err.toString().contains(message));
+
+    // add one PROVIDED DN.
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, true);
+    StorageType[] storages =
+        new StorageType[] {StorageType.DISK};
+    int numDNs = dfsCluster.getDataNodes().size();
+    dfsCluster.startDataNodes(conf, 1,
+        new StorageType[][] {storages}, true,
+        HdfsServerConstants.StartupOption.REGULAR,
+        null, null, null, null, false, false, false, null);
+    dfsCluster.waitFirstBRCompleted(0, 10000);
+    dfsCluster.waitFirstBRCompleted(1, 10000);
+    assertEquals(numDNs + 1, dfsCluster.getDataNodes().size());
+    // mount should succeed now!
+    exitCode = admin.run(new String[]{
+        "-addMount", file.toURI().toString(), mountPath});
+    assertEquals(err.toString().trim(), 0, exitCode);
+    message = "Add mount successful for.*";
+    assertOutputMatches(message + newLine);
+    assertTrue(dfsCluster.getFileSystem(0).exists(new Path(mountPath)));
+
+    DistributedFileSystem fs = dfsCluster.getFileSystem(0);
+    Map<String, byte[]> xattrs = fs.getXAttrs(new Path(mountPath));
+    assertEquals(1, xattrs.size());
+    assertEquals("true", new String(xattrs.get("user.isMount")));
+
+    // remove the mount now.
+    exitCode = admin.run(new String[]{"-removeMount", mountPath});
+    assertEquals(err.toString().trim(), 0, exitCode);
+    assertFalse(dfsCluster.getFileSystem(0).exists(new Path(mountPath)));
+    message = "Remove mount successful for.*";
+    assertOutputMatches(message + newLine);
+
+    // mount with remote config
+    exitCode = admin.run(new String[]{
+        "-addMount", file.toURI().toString(), mountPath, "a=b,c=d"});
+    assertEquals(err.toString().trim(), 0, exitCode);
+    message = "Add mount successful for.*";
+    assertOutputMatches(message + newLine);
+    assertTrue(dfsCluster.getFileSystem(0).exists(new Path(mountPath)));
+
+    xattrs = dfsCluster.getFileSystem(0).getXAttrs(new Path(mountPath));
+    assertEquals(3, xattrs.size());
+    assertEquals("true", new String(xattrs.get("user.isMount")));
+    assertEquals("b", new String(xattrs.get("trusted.mount.config.a")));
+    assertEquals("d", new String(xattrs.get("trusted.mount.config.c")));
+
+    // remove the mount now.
+    exitCode = admin.run(new String[]{"-removeMount", mountPath});
+    assertEquals(err.toString().trim(), 0, exitCode);
+    assertFalse(dfsCluster.getFileSystem(0).exists(new Path(mountPath)));
   }
 }

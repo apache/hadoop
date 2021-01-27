@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormat.renameReservedPathsOnUpgrade;
 
+import java.io.Closeable;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,11 +28,15 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -46,16 +51,21 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.ProvidedStorageMap;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddBlockOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCachePoolOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddMountOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AppendOp;
@@ -74,6 +84,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyCachePoolOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCachePoolOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveMountOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
@@ -124,7 +135,7 @@ import static org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class FSEditLogLoader {
+public class FSEditLogLoader implements Closeable {
   static final Logger LOG =
       LoggerFactory.getLogger(FSEditLogLoader.class.getName());
   static final long REPLAY_TRANSACTION_LOG_INTERVAL = 1000; // 1sec
@@ -141,19 +152,52 @@ public class FSEditLogLoader {
   private long lastAppliedTxId;
   /** Total number of end transactions loaded. */
   private int totalEdits = 0;
-  
+
+  private BlockAliasMap.Writer aliasMapWriter;
+  private MountManager mountManager;
+
   public FSEditLogLoader(FSNamesystem fsNamesys, long lastAppliedTxId) {
-    this(fsNamesys, lastAppliedTxId, new Timer());
+    this(fsNamesys, lastAppliedTxId, false, new Timer());
+  }
+
+  /**
+   * @param fsNamesys
+   * @param lastAppliedTxId
+   * @param trailEdits indicates whether this FSEditLogLoader is being created
+   *        to trail edits from a primary Namenode.
+   */
+  public FSEditLogLoader(FSNamesystem fsNamesys, long lastAppliedTxId,
+      boolean trailEdits) {
+    this(fsNamesys, lastAppliedTxId, trailEdits, new Timer());
   }
 
   @VisibleForTesting
-  FSEditLogLoader(FSNamesystem fsNamesys, long lastAppliedTxId, Timer timer) {
+  FSEditLogLoader(FSNamesystem fsNamesys, long lastAppliedTxId,
+      boolean trailEdits, Timer timer) {
     this.fsNamesys = fsNamesys;
     this.blockManager = fsNamesys.getBlockManager();
     this.lastAppliedTxId = lastAppliedTxId;
     this.timer = timer;
+    this.mountManager = fsNamesys.getMountManager();
+    if (trailEdits) {
+      try {
+        ProvidedStorageMap providedStorageMap =
+            blockManager.getProvidedStorageMap();
+        if (providedStorageMap != null &&
+            providedStorageMap.getAliasMap() != null) {
+          aliasMapWriter = providedStorageMap.getAliasMap()
+              .getWriter(null, fsNamesys.getBlockPoolId());
+        }
+      } catch (IOException e) {
+        LOG.warn("Unable to get AliasMap writer for block pool " +
+            fsNamesys.getBlockPoolId());
+        aliasMapWriter = null;
+      }
+    } else {
+      aliasMapWriter = null;
+    }
   }
-  
+
   long loadFSEdits(EditLogInputStream edits, long expectedStartingTxId)
       throws IOException {
     return loadFSEdits(edits, expectedStartingTxId, Long.MAX_VALUE, null, null);
@@ -389,6 +433,10 @@ public class FSEditLogLoader {
     }
     final boolean toAddRetryCache = fsNamesys.hasRetryCache() && op.hasRpcIds();
 
+    final boolean trailEdits = aliasMapWriter != null;
+    final ProvidedStorageMap providedStorageMap =
+        blockManager.getProvidedStorageMap();
+
     switch (op.opCode) {
     case OP_ADD: {
       AddCloseOp addCloseOp = (AddCloseOp)op;
@@ -410,7 +458,8 @@ public class FSEditLogLoader {
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path, true);
       if (oldFile != null && addCloseOp.overwrite) {
         // This is OP_ADD with overwrite
-        FSDirDeleteOp.deleteForEditLog(fsDir, iip, addCloseOp.mtime);
+        FSDirDeleteOp.deleteForEditLog(fsDir, iip, addCloseOp.mtime,
+            mountManager, providedStorageMap, trailEdits);
         iip = INodesInPath.replace(iip, iip.length() - 1, null);
         oldFile = null;
       }
@@ -626,7 +675,8 @@ public class FSEditLogLoader {
       final String src = renameReservedPathsOnUpgrade(
           deleteOp.path, logVersion);
       final INodesInPath iip = fsDir.getINodesInPath(src, DirOp.WRITE_LINK);
-      FSDirDeleteOp.deleteForEditLog(fsDir, iip, deleteOp.timestamp);
+      FSDirDeleteOp.deleteForEditLog(fsDir, iip, deleteOp.timestamp,
+          mountManager, providedStorageMap, trailEdits);
 
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(deleteOp.rpcClientId, deleteOp.rpcCallId);
@@ -1049,6 +1099,17 @@ public class FSEditLogLoader {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
       }
       break;
+    case OP_ADD_MOUNT: {
+      AddMountOp addMountOp = (AddMountOp) op;
+      mountManager.startMount(new Path(addMountOp.mountPoint),
+          addMountOp.providedVol);
+      break;
+    }
+    case OP_RM_MOUNT: {
+      RemoveMountOp removeMountOp = (RemoveMountOp) op;
+      mountManager.removeMountPoint(new Path(removeMountOp.mountPoint));
+      break;
+    }
     default:
       throw new IOException("Invalid operation read " + op.opCode);
     }
@@ -1115,8 +1176,32 @@ public class FSEditLogLoader {
     fsNamesys.getBlockManager().addBlockCollectionWithCheck(newBlockInfo, file);
     file.addBlock(newBlockInfo);
     fsNamesys.getBlockManager().processQueuedMessagesForBlock(newBlock);
+    if (blockManager.getProvidedStorageMap().isProvidedEnabled()) {
+      createIBRForPathsUnderMount(file, newBlock);
+    }
   }
-  
+
+  private void createIBRForPathsUnderMount(INodeFile file, Block newBlock)
+      throws IOException {
+    Path remoteFilePath = mountManager.getRemotePathUnderMount(file);
+    if (remoteFilePath != null && aliasMapWriter != null) {
+    // if block under mount and this is trailing edits, fake IBR!
+      ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(
+          newBlock, ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
+          null);
+      DatanodeStorageInfo providedStorageInfo = fsNamesys.getBlockManager()
+          .getProvidedStorageMap().getProvidedStorageInfo();
+      DatanodeStorage providedDatanodeStorage = new DatanodeStorage(
+          providedStorageInfo.getStorageID(), DatanodeStorage.State.NORMAL,
+          providedStorageInfo.getStorageType());
+      StorageReceivedDeletedBlocks receivedDeletedBlocks =
+          new StorageReceivedDeletedBlocks(providedDatanodeStorage,
+              new ReceivedDeletedBlockInfo[]{bInfo});
+      fsNamesys.getBlockManager().processIncrementalBlockReport(
+          providedStorageInfo.getDatanodeDescriptor(), receivedDeletedBlocks);
+    }
+  }
+
   /**
    * Update in-memory data structures with new block information.
    * @throws IOException
@@ -1131,7 +1216,7 @@ public class FSEditLogLoader {
     
     // Are we only updating the last block's gen stamp.
     boolean isGenStampUpdate = oldBlocks.length == newBlocks.length;
-    
+    long offset = 0L;
     // First, update blocks in common
     for (int i = 0; i < oldBlocks.length && i < newBlocks.length; i++) {
       BlockInfo oldBlock = oldBlocks[i];
@@ -1167,6 +1252,21 @@ public class FSEditLogLoader {
         // were unable to process.
         fsNamesys.getBlockManager().processQueuedMessagesForBlock(newBlock);
       }
+      Path remoteFilePath = mountManager.getRemotePathUnderMount(file);
+      if (remoteFilePath != null) {
+        FileRegion region = new FileRegion(oldBlock.getBlockId(),
+            remoteFilePath, offset, oldBlock.getNumBytes(),
+            oldBlock.getGenerationStamp());
+        if (aliasMapWriter != null) {
+          aliasMapWriter.store(region);
+        } else {
+          // aliasMapWriter will not be initialized when a NN is loading the
+          // edits. So queue the blocks so that they can be written
+          // to the aliasmap.
+          blockManager.getProvidedStorageMap().queueBlocksForAliasMap(region);
+        }
+      }
+      offset += oldBlock.getNumBytes();
     }
     
     if (newBlocks.length < oldBlocks.length) {
@@ -1309,6 +1409,13 @@ public class FSEditLogLoader {
       numValid++;
     }
     return new EditLogValidation(lastPos, lastTxId, false);
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (aliasMapWriter != null) {
+      aliasMapWriter.close();
+    }
   }
 
   static class EditLogValidation {

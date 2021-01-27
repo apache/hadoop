@@ -295,13 +295,13 @@ public class TextFileRegionAliasMap
     }
 
     @Override
-    public Optional<FileRegion> resolve(Block ident) throws IOException {
+    public Optional<FileRegion> resolve(long blockId) throws IOException {
       // consider layering index w/ composable format
       Iterator<FileRegion> i = iterator();
       try {
         while (i.hasNext()) {
           FileRegion f = i.next();
-          if (f.getBlock().equals(ident)) {
+          if (f.getBlock().getBlockId() == blockId) {
             return Optional.of(f);
           }
         }
@@ -455,6 +455,12 @@ public class TextFileRegionAliasMap
             .append(Base64.getEncoder().encodeToString(psl.getNonce()));
       }
       out.append("\n");
+    }
+
+    @Override
+    public void remove(Block block) throws IOException {
+      throw new RuntimeException("TextFileWriter does not support " +
+          "block removal");
     }
 
     @Override

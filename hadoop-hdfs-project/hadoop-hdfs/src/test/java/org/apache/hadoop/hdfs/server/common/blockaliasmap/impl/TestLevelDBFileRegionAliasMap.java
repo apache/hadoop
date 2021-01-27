@@ -57,7 +57,7 @@ public class TestLevelDBFileRegionAliasMap {
       writer.close();
 
       BlockAliasMap.Reader<FileRegion> reader = frf.getReader(opts, BPID);
-      FileRegion fr2 = reader.resolve(new Block(1, 1, 1)).get();
+      FileRegion fr2 = reader.resolve(1).get();
       assertEquals(fr, fr2);
       reader.close();
     } finally {

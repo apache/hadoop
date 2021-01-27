@@ -140,6 +140,18 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
    */
   private long scannedBlocks;
 
+  public CacheReplicationMonitor(FSNamesystem namesystem, long intervalMs,
+      ReentrantLock lock) {
+    this.namesystem = namesystem;
+    this.blockManager = namesystem.getBlockManager();
+    this.intervalMs = intervalMs;
+    this.lock = lock;
+    this.doRescan = this.lock.newCondition();
+    this.scanFinished = this.lock.newCondition();
+    this.cacheManager = null;
+    this.cachedBlocks = null;
+  }
+
   public CacheReplicationMonitor(FSNamesystem namesystem,
       CacheManager cacheManager, long intervalMs, ReentrantLock lock) {
     this.namesystem = namesystem;
@@ -281,7 +293,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
     }
   }
 
-  private void rescan() throws InterruptedException {
+  protected void rescan() throws InterruptedException {
     scannedDirectives = 0;
     scannedBlocks = 0;
     try {
@@ -292,7 +304,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
           throw new InterruptedException("CacheReplicationMonitor was " +
               "shut down.");
         }
-        curScanCount = completedScanCount + 1;
+        incrCurrentScanCount();
       } finally {
         lock.unlock();
       }
@@ -304,6 +316,22 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
     } finally {
       namesystem.writeUnlock();
     }
+  }
+
+  /**
+   * @return true if the monitor should terminate.
+   */
+  protected boolean doShutdown() {
+    return this.shutdown;
+  }
+
+  /**
+   * Increment the number of scans done.
+   */
+  protected void incrCurrentScanCount() {
+    assert namesystem.hasWriteLock();
+    Preconditions.checkArgument(lock.isHeldByCurrentThread());
+    curScanCount = completedScanCount + 1;
   }
 
   private void resetStatistics() {

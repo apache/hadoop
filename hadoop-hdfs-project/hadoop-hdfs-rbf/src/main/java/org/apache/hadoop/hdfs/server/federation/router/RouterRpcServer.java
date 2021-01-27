@@ -66,7 +66,9 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.MountMode;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.ProvidedStorageSummary;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
@@ -1887,6 +1889,26 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
     return routerProto.getGroupsForUser(user);
+  }
+
+  // ClientProtocol
+  @Override
+  public boolean addMount(String remotePath, String mountPath, MountMode mountMode,
+      Map<String, String> config) throws IOException {
+    throw new IOException("Unsupported operation: addMount.");
+  }
+
+  // ClientProtocol
+  @Override
+  public boolean removeMount(String mountPath)
+      throws IOException {
+    throw new IOException("Unsupported operation: removeMount.");
+  }
+
+  // ClientProtocol
+  @Override
+  public ProvidedStorageSummary listMounts(boolean requireStats) throws IOException {
+    throw new IOException("Unsupported operation: listMounts.");
   }
 
   /**

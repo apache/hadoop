@@ -60,6 +60,8 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap.toBytes;
+
 /**
  * InMemoryAliasMap is an implementation of the InMemoryAliasMapProtocol for
  * use with LevelDB.
@@ -104,6 +106,7 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
     } else {
       levelDBpath = new File(directory);
     }
+    LOG.info("Attempting to load InMemoryAliasMap from \"{}\"", levelDBpath);
     if (!levelDBpath.exists()) {
       LOG.warn("InMemoryAliasMap location {} is missing. Creating it.",
           levelDBpath);
@@ -113,14 +116,13 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
       }
     }
     DB levelDb = JniDBFactory.factory.open(levelDBpath, options);
-    InMemoryAliasMap aliasMap =  new InMemoryAliasMap(levelDBpath.toURI(),
+    InMemoryAliasMap aliasMap = new InMemoryAliasMap(levelDBpath.toURI(),
         levelDb, blockPoolID);
     aliasMap.setConf(conf);
     return aliasMap;
   }
 
-  @VisibleForTesting
-  InMemoryAliasMap(URI aliasMapURI, DB levelDb, String blockPoolID) {
+  private InMemoryAliasMap(URI aliasMapURI, DB levelDb, String blockPoolID) {
     this.aliasMapURI = aliasMapURI;
     this.levelDb = levelDb;
     this.blockPoolID = blockPoolID;
@@ -133,7 +135,7 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
           conf.getInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_BATCH_SIZE,
               DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_BATCH_SIZE_DEFAULT);
       if (marker.isPresent()) {
-        iterator.seek(toProtoBufBytes(marker.get()));
+        iterator.seek(toBytes(marker.get().getBlockId()));
       } else {
         iterator.seekToFirst();
       }
@@ -142,14 +144,12 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
           Lists.newArrayListWithExpectedSize(batchSize);
       while (iterator.hasNext() && i < batchSize) {
         Map.Entry<byte[], byte[]> entry = iterator.next();
-        Block block = fromBlockBytes(entry.getKey());
-        ProvidedStorageLocation providedStorageLocation =
-            fromProvidedStorageLocationBytes(entry.getValue());
-        batch.add(new FileRegion(block, providedStorageLocation));
+        batch.add(FileRegion.fromProtoBufBytes(entry.getValue()));
         ++i;
       }
       if (iterator.hasNext()) {
-        Block nextMarker = fromBlockBytes(iterator.next().getKey());
+        Block nextMarker =
+            FileRegion.fromProtoBufBytes(iterator.next().getValue()).getBlock();
         return new IterationResult(batch, Optional.of(nextMarker));
       } else {
         return new IterationResult(batch, Optional.empty());
@@ -157,27 +157,26 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
     }
   }
 
-  public @Nonnull Optional<ProvidedStorageLocation> read(@Nonnull Block block)
+  @Nonnull
+  @Override
+  public Optional<FileRegion> read(long blockId)
       throws IOException {
-
-    byte[] extendedBlockDbFormat = toProtoBufBytes(block);
-    byte[] providedStorageLocationDbFormat = levelDb.get(extendedBlockDbFormat);
-    if (providedStorageLocationDbFormat == null) {
+    byte[] key = toBytes(blockId);
+    byte[] fileRegionBytes = levelDb.get(key);
+    if (fileRegionBytes == null) {
       return Optional.empty();
     } else {
-      ProvidedStorageLocation providedStorageLocation =
-          fromProvidedStorageLocationBytes(providedStorageLocationDbFormat);
-      return Optional.of(providedStorageLocation);
+      return Optional.of(FileRegion.fromProtoBufBytes(fileRegionBytes));
     }
   }
 
   public void write(@Nonnull Block block,
       @Nonnull ProvidedStorageLocation providedStorageLocation)
       throws IOException {
-    byte[] extendedBlockDbFormat = toProtoBufBytes(block);
-    byte[] providedStorageLocationDbFormat =
-        toProtoBufBytes(providedStorageLocation);
-    levelDb.put(extendedBlockDbFormat, providedStorageLocationDbFormat);
+    byte[] key = toBytes(block.getBlockId());
+    byte[] fileRegionBytes = FileRegion.toProtoBufBytes(
+        new FileRegion(block, providedStorageLocation));
+    levelDb.put(key, fileRegionBytes);
   }
 
   @Override
@@ -185,18 +184,26 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
     return blockPoolID;
   }
 
+  @Override
+  public void remove(@Nonnull Block block) throws IOException {
+    byte[] key = toBytes(block.getBlockId());
+    levelDb.delete(key);
+  }
+
   public void close() throws IOException {
     levelDb.close();
   }
 
-  @Nonnull
-  public static ProvidedStorageLocation fromProvidedStorageLocationBytes(
-      @Nonnull byte[] providedStorageLocationDbFormat)
-      throws InvalidProtocolBufferException {
-    ProvidedStorageLocationProto providedStorageLocationProto =
-        ProvidedStorageLocationProto
-            .parseFrom(providedStorageLocationDbFormat);
-    return PBHelperClient.convert(providedStorageLocationProto);
+  /**
+   * CheckedFunction is akin to {@link java.util.function.Function} but
+   * specifies an IOException.
+   * @param <T1> First argument type.
+   * @param <T2> Second argument type.
+   * @param <R> Return type.
+   */
+  @FunctionalInterface
+  public interface CheckedFunction2<T1, T2, R> {
+    R apply(T1 t1, T2 t2) throws IOException;
   }
 
   @Nonnull
@@ -218,8 +225,7 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
 
   public static byte[] toProtoBufBytes(@Nonnull Block block)
       throws IOException {
-    BlockProto blockProto =
-        PBHelperClient.convert(block);
+    BlockProto blockProto = PBHelperClient.convert(block);
     ByteArrayOutputStream blockOutputStream = new ByteArrayOutputStream();
     blockProto.writeTo(blockOutputStream);
     return blockOutputStream.toByteArray();
@@ -395,17 +401,5 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
         LOG.warn("Failed to fully delete aliasmap archive: " + tarname);
       }
     }
-  }
-
-  /**
-   * CheckedFunction is akin to {@link java.util.function.Function} but
-   * specifies an IOException.
-   * @param <T1> First argument type.
-   * @param <T2> Second argument type.
-   * @param <R> Return type.
-   */
-  @FunctionalInterface
-  public interface CheckedFunction2<T1, T2, R> {
-    R apply(T1 t1, T2 t2) throws IOException;
   }
 }

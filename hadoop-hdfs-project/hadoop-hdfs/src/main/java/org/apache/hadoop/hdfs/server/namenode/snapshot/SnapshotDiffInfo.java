@@ -27,6 +27,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.INodeType;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -238,7 +239,8 @@ class SnapshotDiffInfo {
     for (Map.Entry<INode,byte[][]> drEntry : diffMap.entrySet()) {
       INode node = drEntry.getKey();
       byte[][] path = drEntry.getValue();
-      diffReportList.add(new DiffReportEntry(DiffType.MODIFY, path, null));
+      diffReportList.add(new DiffReportEntry(determineINodeType(node),
+          DiffType.MODIFY, path, null));
       if (node.isDirectory()) {
         List<DiffReportEntry> subList = generateReport(dirDiffMap.get(node),
             path, isFromEarlier(), renameMap);
@@ -274,22 +276,34 @@ class SnapshotDiffInfo {
       RenameEntry entry = renameMap.get(cnode.getId());
       if (entry == null || !entry.isRename()) {
         fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
-        list.add(new DiffReportEntry(fromEarlier ? DiffType.CREATE
-            : DiffType.DELETE, fullPath));
+        list.add(new DiffReportEntry(determineINodeType(cnode),
+            fromEarlier ? DiffType.CREATE : DiffType.DELETE, fullPath));
       }
     }
     for (INode dnode : dirDiff.getDeletedUnmodifiable()) {
       RenameEntry entry = renameMap.get(dnode.getId());
       if (entry != null && entry.isRename()) {
-        list.add(new DiffReportEntry(DiffType.RENAME,
+        list.add(new DiffReportEntry(determineINodeType(dnode), DiffType.RENAME,
             fromEarlier ? entry.getSourcePath() : entry.getTargetPath(),
             fromEarlier ? entry.getTargetPath() : entry.getSourcePath()));
       } else {
         fullPath[fullPath.length - 1] = dnode.getLocalNameBytes();
-        list.add(new DiffReportEntry(fromEarlier ? DiffType.DELETE
-            : DiffType.CREATE, fullPath));
+        list.add(new DiffReportEntry(determineINodeType(dnode),
+            fromEarlier ? DiffType.DELETE : DiffType.CREATE, fullPath));
       }
     }
     return list;
+  }
+
+  private static INodeType determineINodeType(INode node) {
+    if (node.isDirectory()) {
+      return INodeType.DIRECTORY;
+    } else if (node.isFile()) {
+      return INodeType.FILE;
+    } else if (node.isSymlink()) {
+      return INodeType.SYMLINK;
+    } else {
+      throw new IllegalArgumentException("This type of INode is not supported");
+    }
   }
 }

@@ -26,6 +26,8 @@ import java.util.Set;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.TreePath;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.TreeWalk;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

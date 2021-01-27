@@ -70,6 +70,7 @@ message ClientOperationHeaderProto {
 message CachingStrategyProto {
   optional bool dropBehind = 1;
   optional int64 readahead = 2;
+  optional bool readThrough = 3;
 }
 
 message OpReadBlockProto {

@@ -18,9 +18,13 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsAction;
+
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.ProvidedStorageMap;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode.ReclaimContext;
@@ -127,9 +131,12 @@ class FSDirDeleteOp {
    * @param fsd the FSDirectory instance
    * @param iip inodes of a path to be deleted
    * @param mtime the time the inode is removed
+   * @param mountManager
+   * @param trailEdits
    */
-  static void deleteForEditLog(FSDirectory fsd, INodesInPath iip, long mtime)
-      throws IOException {
+  static void deleteForEditLog(FSDirectory fsd, INodesInPath iip, long mtime,
+      MountManager mountManager, ProvidedStorageMap providedStorageMap,
+      boolean trailEdits) throws IOException {
     assert fsd.hasWriteLock();
     FSNamesystem fsn = fsd.getFSNamesystem();
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
@@ -149,6 +156,18 @@ class FSDirDeleteOp {
       fsn.removeSnapshottableDirs(snapshottableDirs);
       fsn.removeLeasesAndINodes(removedUCFiles, removedINodes, false);
       fsn.getBlockManager().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
+      String path = iip.getPath();
+      if (mountManager.getMountFromTemporaryPath(path) != null ||
+          mountManager.getMountPath(new Path(path)) != null) {
+        List<BlockInfo> blocksToDelete = collectedBlocks.getToDeleteList();
+        // if this is a mount under progress or a mount being removed.
+        if (trailEdits) {
+          providedStorageMap.deleteBlocksFromAliasMap(blocksToDelete);
+        } else {
+          // edits being loaded by Namenode -- alias map not active
+          providedStorageMap.queueDeleteBlocksFromAliasMap(blocksToDelete);
+        }
+      }
     }
   }
 

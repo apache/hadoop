@@ -133,6 +133,12 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
+  public InputStream getBlockInputStream(ExtendedBlock b, long seekOffset,
+      boolean readThrough) throws IOException {
+    return null;
+  }
+
+  @Override
   public ReplicaInputStreams getTmpInputStreams(ExtendedBlock b, long blkoff,
       long ckoff) throws IOException {
     return new ReplicaInputStreams(null, null, null, null);

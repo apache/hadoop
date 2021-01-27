@@ -293,6 +293,11 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
                 context.pathToKey(path)));
   }
 
+  @Override
+  public int getPartNumber(PartHandle partHandle) throws IOException {
+    return parsePartHandlePayload(partHandle.toByteArray()).getPartNumber();
+  }
+
   /**
    * Build the payload for marshalling.
    *

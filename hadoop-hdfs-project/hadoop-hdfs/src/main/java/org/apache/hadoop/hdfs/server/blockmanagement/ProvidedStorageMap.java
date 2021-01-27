@@ -20,9 +20,11 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
@@ -42,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap;
 import org.apache.hadoop.hdfs.server.common.BlockAlias;
@@ -77,6 +80,16 @@ public class ProvidedStorageMap {
   private boolean providedEnabled;
   private long capacity;
   private int defaultReplication;
+
+  /**
+   * List of blocks that have to be deleted from the aliasmap.
+   */
+  private List<BlockInfo> blocksToDelete = new ArrayList<>();
+
+  /**
+   * Map of blocks to FileRegions that have to be added to the aliasmap.
+   */
+  private Map<Block, FileRegion> blocksToAdd = new HashMap<>();
 
   ProvidedStorageMap(RwLock lock, BlockManager bm, Configuration conf)
       throws IOException {
@@ -152,11 +165,117 @@ public class ProvidedStorageMap {
       LOG.info("Calling process first blk report from storage: "
           + providedStorageInfo);
       // first pass; periodic refresh should call bm.processReport
-      BlockAliasMap.Reader<BlockAlias> reader =
-          aliasMap.getReader(null, bm.getBlockPoolId());
-      if (reader != null) {
-        bm.processFirstBlockReport(providedStorageInfo,
-                new ProvidedBlockList(reader.iterator()));
+      processQueuedBlocks();
+      try (BlockAliasMap.Reader<BlockAlias> reader =
+          aliasMap.getReader(null, bm.getBlockPoolId())) {
+        if (reader != null) {
+          bm.processFirstBlockReport(providedStorageInfo,
+              new ProvidedBlockList(reader.iterator()));
+        }
+      }
+    }
+  }
+
+  /**
+   * Queue blocks that need to be deleted from the alias map before loading
+   * blocks from the alias map for the first time after the Namenode started.
+   *
+   * @param toDeleteList blocks to delete
+   */
+  public void queueDeleteBlocksFromAliasMap(List<BlockInfo> toDeleteList) {
+    if (toDeleteList != null && !toDeleteList.isEmpty()) {
+      blocksToDelete.addAll(toDeleteList);
+    }
+  }
+
+  /**
+   * Queue FileRegions that need to be added to the alias map before loading
+   * blocks from the alias map for the first time after the Namenode started.
+   *
+   * @param region FileRegion to add.
+   */
+  public void queueBlocksForAliasMap(FileRegion region) {
+    if (region != null) {
+      blocksToAdd.put(region.getBlock(), region);
+    }
+  }
+
+  /**
+   * Get the {@link Block} from the given {@link BlockInfo}.
+   *
+   * @param blockInfo the {@link BlockInfo}.
+   * @return the corresponding {@link Block}.
+   */
+  private static Block getBlockFromInfo(BlockInfo blockInfo) {
+    return blockInfo == null ? null
+        : new Block(blockInfo.getBlockId(), blockInfo.getNumBytes(),
+            blockInfo.getGenerationStamp());
+  }
+
+  /**
+   * Remove the blocks that are common to {@code blocksToAdd} and
+   * {@code blocksToDelete}. The objects passed to this method are modified.
+   *
+   * @param blocksToFileRegion map of Blocks to corresponding FileRegions.
+   * @param blocksToDelete list of blocks to delete.
+   */
+  static void removeIntersection(Map<Block, FileRegion> blocksToFileRegion,
+      List<BlockInfo> blocksToDelete) {
+    for (Iterator<BlockInfo> it = blocksToDelete.iterator(); it.hasNext();) {
+      BlockInfo blockInfo = it.next();
+      Block block = getBlockFromInfo(blockInfo);
+      if (blocksToFileRegion.containsKey(block)) {
+        // remove from both
+        blocksToFileRegion.remove(block);
+        it.remove();
+      }
+    }
+  }
+
+  private void processQueuedBlocks() throws IOException {
+    // remove intersection between the lists of blocks to add and delete.
+    removeIntersection(blocksToAdd, blocksToDelete);
+
+    if (!blocksToAdd.isEmpty()) {
+      addBlocksToAliasMap(blocksToAdd);
+      blocksToAdd.clear();
+    }
+
+    if (!blocksToDelete.isEmpty()) {
+      deleteBlocksFromAliasMap(blocksToDelete);
+      blocksToDelete.clear();
+    }
+  }
+
+  public void deleteBlocksFromAliasMap(List<BlockInfo> toRemovedBlocks)
+      throws IOException {
+    // remove all blocks from the aliasmap.
+    try (BlockAliasMap.Writer<FileRegion> aliasMapWriter =
+        aliasMap.getWriter(null, bm.getBlockPoolId())) {
+      if (aliasMapWriter != null) {
+        for (BlockInfo blockInfo : toRemovedBlocks) {
+          LOG.debug("Removing block {} from AliasMap", blockInfo);
+          aliasMapWriter.remove(getBlockFromInfo(blockInfo));
+        }
+      } else {
+        throw new IOException("Aliasmap writer is null; skipping removing of "
+            + toRemovedBlocks.size() + " blocks");
+      }
+    }
+  }
+
+  private void addBlocksToAliasMap(Map<Block, FileRegion> blocksToFileRegion)
+      throws IOException {
+    try (BlockAliasMap.Writer<FileRegion> aliasMapWriter =
+        aliasMap.getWriter(null, bm.getBlockPoolId())) {
+      if (aliasMapWriter != null) {
+        for (Block block : blocksToFileRegion.keySet()) {
+          LOG.debug("Adding fileregion for block {} to AliasMap", block);
+          aliasMapWriter.store(blocksToFileRegion.get(block));
+        }
+      } else {
+        throw new IOException("Aliasmap writer is null; skip adding "
+            + blocksToFileRegion.size() + " blocks to it");
       }
     }
   }
@@ -209,6 +328,13 @@ public class ProvidedStorageMap {
   }
 
   /**
+   * @return true if mounting of provided volumes is enabled
+   */
+  public boolean isProvidedEnabled() {
+    return providedEnabled;
+  }
+
+  /**
    * Choose a datanode that reported a volume of {@link StorageType} PROVIDED.
    *
    * @return the {@link DatanodeDescriptor} corresponding to a datanode that
@@ -220,9 +346,22 @@ public class ProvidedStorageMap {
     return providedDescriptor.chooseRandom();
   }
 
-  @VisibleForTesting
+  /**
+   *
+   * @return the {@link BlockAliasMap} used to read/write block aliases for
+   * provided blocks.
+   */
   public BlockAliasMap getAliasMap() {
     return aliasMap;
+  }
+
+  /**
+   * Check if Datanodes with PROVIDED storages exist.
+   * @return true if there exists a Datanode with a PROVIDED volume configured.
+   */
+  public boolean containsActiveProvidedNodes() {
+    return providedDescriptor!= null &&
+        providedDescriptor.activeProvidedDatanodes() > 0;
   }
 
   /**
@@ -245,7 +384,8 @@ public class ProvidedStorageMap {
 
     @Override
     LocatedBlock newLocatedBlock(ExtendedBlock eb,
-        DatanodeStorageInfo[] storages, long pos, boolean isCorrupt) {
+        DatanodeStorageInfo[] storages, long pos, boolean isCorrupt)
+        throws IOException {
 
       List<DatanodeInfoWithStorage> locs = new ArrayList<>();
       List<String> sids = new ArrayList<>();
@@ -259,8 +399,15 @@ public class ProvidedStorageMap {
         sids.add(currInfo.getStorageID());
         types.add(storageType);
         if (StorageType.PROVIDED.equals(storageType)) {
-          // Provided location will be added to the list of locations after
-          // examining all local locations.
+          DatanodeDescriptor dn = chooseProvidedDatanode(excludedUUids);
+          if (dn == null) {
+            throw new IOException("No Datanodes exist for storage of type " +
+                StorageType.PROVIDED + " for block " + eb);
+          }
+          locs.add(
+              new DatanodeInfoWithStorage(
+                  dn, currInfo.getStorageID(), currInfo.getStorageType()));
+          excludedUUids.add(dn.getDatanodeUuid());
           isProvidedBlock = true;
         } else {
           locs.add(new DatanodeInfoWithStorage(
@@ -270,19 +417,16 @@ public class ProvidedStorageMap {
         }
       }
 
-      int numLocations = locs.size();
       if (isProvidedBlock) {
         // add the first datanode here
-        DatanodeDescriptor dn = chooseProvidedDatanode(excludedUUids);
-        locs.add(
-            new DatanodeInfoWithStorage(dn, storageId, StorageType.PROVIDED));
-        excludedUUids.add(dn.getDatanodeUuid());
-        numLocations++;
         // add more replicas until we reach the defaultReplication
-        for (int count = numLocations + 1;
-            count <= defaultReplication && count <= providedDescriptor
+        for (int count = locs.size();
+            count < defaultReplication && count < providedDescriptor
                 .activeProvidedDatanodes(); count++) {
-          dn = chooseProvidedDatanode(excludedUUids);
+          DatanodeDescriptor dn = chooseProvidedDatanode(excludedUUids);
+          if (dn == null) {
+            break;
+          }
           locs.add(new DatanodeInfoWithStorage(
               dn, storageId, StorageType.PROVIDED));
           sids.add(storageId);
@@ -489,6 +633,11 @@ public class ProvidedStorageMap {
       } else {
         super.setState(state);
       }
+    }
+
+    @Override
+    public long getRemaining() {
+      return Long.MAX_VALUE;
     }
 
     @Override

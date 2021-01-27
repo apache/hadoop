@@ -92,6 +92,9 @@ public class Sender implements DataTransferProtocol {
     if (cachingStrategy.getDropBehind() != null) {
       builder.setDropBehind(cachingStrategy.getDropBehind());
     }
+    if (cachingStrategy.getReadThrough() != null) {
+      builder.setReadThrough(cachingStrategy.getReadThrough());
+    }
     return builder.build();
   }
 

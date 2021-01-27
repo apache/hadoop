@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -40,24 +40,36 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.MountInfo;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMapProtocol;
@@ -65,6 +77,7 @@ import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
@@ -75,19 +88,43 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.InMemoryLevelDBAliasMapClient;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.NamenodeInMemoryAliasMapClient;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
+import static org.apache.hadoop.fs.Path.getPathWithoutSchemeAndAuthority;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROVIDED_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROVIDED_VOLUME_READ_THROUGH;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_WRITER_UGI_CLASS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_READ_MOUNT_INODES_MAX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.BlockResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.FSTreeWalk;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.FixedBlockResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.FsUGIResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.SimpleReadCacheManager;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.SingleUGIResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.TreePath;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.TreeWalk;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.UGIResolver;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.util.RemoteMountUtils;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -96,12 +133,19 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LEVELDB_PATH;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_READ_CACHE_CAPACITY_FRACTION;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_READ_CACHE_CAPACITY_THRESHOLD;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_OVERREPLICATION_FACTOR_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
+import static org.apache.hadoop.hdfs.MiniDFSCluster.configureInMemoryAliasMapAddresses;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_READTHROUGH;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import static org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap.fileNameFromBlockPoolID;
 import static org.apache.hadoop.net.NodeBase.PATH_SEPARATOR_STR;
@@ -117,7 +161,7 @@ public class ITestProvidedImplementation {
       LoggerFactory.getLogger(ITestProvidedImplementation.class);
 
   private final Random r = new Random();
-  private final File fBASE = new File(MiniDFSCluster.getBaseDirectory());
+  private final File fBASE = GenericTestUtils.getRandomizedTestDir();
   private final Path pBASE = new Path(fBASE.toURI().toString());
   private final Path providedPath = new Path(pBASE, "providedDir");
   private final Path nnDirPath = new Path(pBASE, "nnDir");
@@ -143,12 +187,14 @@ public class ITestProvidedImplementation {
     r.setSeed(seed);
     System.out.println(name.getMethodName() + " seed: " + seed);
     conf = new HdfsConfiguration();
+    conf.set(HDFS_MINIDFS_BASEDIR, fBASE.getAbsolutePath());
     conf.set(SingleUGIResolver.USER, singleUser);
     conf.set(SingleUGIResolver.GROUP, singleGroup);
 
     conf.set(DFSConfigKeys.DFS_PROVIDER_STORAGEUUID,
         DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED, true);
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, true);
 
     conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
         TextFileRegionAliasMap.class, BlockAliasMap.class);
@@ -160,6 +206,8 @@ public class ITestProvidedImplementation {
 
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR_PROVIDED,
         new File(providedPath.toUri()).toString());
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_PROVIDED_VOLUME_LAZY_LOAD, true);
+
     File imageDir = new File(providedPath.toUri());
     if (!imageDir.exists()) {
       LOG.info("Creating directory: " + imageDir);
@@ -171,27 +219,48 @@ public class ITestProvidedImplementation {
       nnDir.mkdirs();
     }
 
-    // create 10 random files under pBASE
-    for (int i=0; i < numFiles; i++) {
+    providedDataSize = createFiles(providedPath, numFiles, baseFileLen,
+        filePrefix, fileSuffix);
+  }
+
+  /**
+   * Create the specified number of files in the specified path. Files are
+   * created with the name that is a concatenation of {@code filePrefix}, the
+   * file index (0 to {@code numFiles} -1) and the {@code fileSuffix}, in that
+   * order.
+   *
+   * @param dir the path to create the files in (assumes that path exists).
+   * @param numFiles number of files to create.
+   * @param baseFileLen base length of each file.
+   * @param filePrefix file name prefix.
+   * @param fileSuffix file name suffix.
+   */
+  static long createFiles(Path dir, int numFiles, long baseFileLen,
+      String filePrefix, String fileSuffix) throws IOException {
+    long totalDataSize = 0;
+    for (int i = 0; i < numFiles; i++) {
       File newFile = new File(
-          new Path(providedPath, filePrefix + i + fileSuffix).toUri());
-      if(!newFile.exists()) {
-        try {
-          LOG.info("Creating " + newFile.toString());
-          newFile.createNewFile();
-          Writer writer = new OutputStreamWriter(
-              new FileOutputStream(newFile.getAbsolutePath()), "utf-8");
-          for(int j=0; j < baseFileLen*i; j++) {
-            writer.write("0");
-          }
-          writer.flush();
-          writer.close();
-          providedDataSize += newFile.length();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
+          new Path(dir, filePrefix + i + fileSuffix).toUri());
+      long currFileSize = baseFileLen * i;
+      totalDataSize += currFileSize;
+      if (!newFile.exists()) {
+        createLocalFile(newFile, currFileSize);
       }
     }
+    return totalDataSize;
+  }
+
+  private static void createLocalFile(File file, long lengthInBytes)
+      throws IOException {
+    LOG.info("Creating {}", file);
+    file.createNewFile();
+    DataOutputStream writer =
+        new DataOutputStream(new FileOutputStream(file.getAbsolutePath()));
+    for (int j = 0; j < lengthInBytes; j++) {
+      writer.writeByte(j);
+    }
+    writer.flush();
+    writer.close();
   }
 
   @After
@@ -202,65 +271,101 @@ public class ITestProvidedImplementation {
       }
     } finally {
       cluster = null;
+      try {
+        FileUtils.deleteDirectory(fBASE);
+      } catch (IOException e) {
+        LOG.warn("Cleanup failed for {}; Exception: {}", fBASE.getPath(), e);
+      }
     }
   }
 
   void createImage(TreeWalk t, Path out,
       Class<? extends BlockResolver> blockIdsClass) throws Exception {
-    createImage(t, out, blockIdsClass, "", TextFileRegionAliasMap.class);
+    createImage(t, out, blockIdsClass, "", TextFileRegionAliasMap.class,
+        bpid, conf);
   }
 
-  void createImage(TreeWalk t, Path out,
+  static void createImage(TreeWalk t, Path out,
       Class<? extends BlockResolver> blockIdsClass, String clusterID,
-      Class<? extends BlockAliasMap> aliasMapClass) throws Exception {
+      Class<? extends BlockAliasMap> aliasMapClass, String blockPoolID,
+      Configuration config) throws Exception {
     ImageWriter.Options opts = ImageWriter.defaults();
-    opts.setConf(conf);
+    opts.setConf(config);
     opts.output(out.toString())
         .blocks(aliasMapClass)
         .blockIds(blockIdsClass)
         .clusterID(clusterID)
-        .blockPoolID(bpid);
+        .blockPoolID(blockPoolID);
     try (ImageWriter w = new ImageWriter(opts)) {
       for (TreePath e : t) {
         w.accept(e);
       }
     }
   }
-  void startCluster(Path nspath, int numDatanodes,
+
+  static MiniDFSCluster startCluster(Path nspath, int numDatanodes,
       StorageType[] storageTypes,
       StorageType[][] storageTypesPerDatanode,
-      boolean doFormat) throws IOException {
-    startCluster(nspath, numDatanodes, storageTypes, storageTypesPerDatanode,
-        doFormat, null);
+      boolean doFormat, Configuration conf) throws IOException {
+    return startCluster(nspath, numDatanodes, storageTypes,
+        storageTypesPerDatanode, doFormat, conf, null);
   }
 
-  void startCluster(Path nspath, int numDatanodes,
+  static MiniDFSCluster startCluster(Path nspath, int numDatanodes,
       StorageType[] storageTypes,
       StorageType[][] storageTypesPerDatanode,
-      boolean doFormat, String[] racks) throws IOException {
-    startCluster(nspath, numDatanodes,
+      boolean doFormat, Configuration conf,
+      String[] racks) throws IOException {
+    return startCluster(nspath, numDatanodes,
         storageTypes, storageTypesPerDatanode,
-        doFormat, racks, null,
+        doFormat, conf, racks, null,
         new MiniDFSCluster.Builder(conf));
   }
 
-  void startCluster(Path nspath, int numDatanodes,
+  static MiniDFSCluster startCluster(Path nspath, int numDatanodes,
       StorageType[] storageTypes,
       StorageType[][] storageTypesPerDatanode,
-      boolean doFormat, String[] racks,
+      boolean doFormat, Configuration conf, String[] racks,
       MiniDFSNNTopology topo,
       MiniDFSCluster.Builder builder) throws IOException {
+    return startCluster(nspath, numDatanodes,
+        storageTypes, storageTypesPerDatanode,
+        doFormat, conf, racks, topo,
+        builder, providedNameservice);
+  }
+
+  static MiniDFSCluster startCluster(Path nspath, int numDatanodes,
+      StorageType[] storageTypes,
+      StorageType[][] storageTypesPerDatanode,
+      boolean doFormat, Configuration conf, String[] racks,
+      MiniDFSNNTopology topo,
+      MiniDFSCluster.Builder builder, String providedNameservice)
+      throws IOException {
+    return startCluster(nspath, numDatanodes, storageTypes,
+        storageTypesPerDatanode, null, doFormat, conf, racks, topo, builder,
+        providedNameservice);
+  }
+
+  static MiniDFSCluster startCluster(Path nspath, int numDatanodes,
+      StorageType[] storageTypes,
+      StorageType[][] storageTypesPerDatanode,
+      long[] storageCapacities,
+      boolean doFormat, Configuration conf, String[] racks,
+      MiniDFSNNTopology topo,
+      MiniDFSCluster.Builder builder, String providedNameservice)
+      throws IOException {
     conf.set(DFS_NAMENODE_NAME_DIR_KEY, nspath.toString());
 
-    builder.format(doFormat)
-        .manageNameDfsDirs(doFormat)
-        .numDataNodes(numDatanodes)
-        .racks(racks);
+    builder.format(doFormat).manageNameDfsDirs(doFormat)
+        .numDataNodes(numDatanodes).racks(racks);
     if (storageTypesPerDatanode != null) {
       builder.storageTypes(storageTypesPerDatanode);
     } else if (storageTypes != null) {
       builder.storagesPerDatanode(storageTypes.length)
           .storageTypes(storageTypes);
+    }
+    if (storageCapacities != null) {
+      builder.storageCapacities(storageCapacities);
     }
     if (topo != null) {
       builder.nnTopology(topo);
@@ -270,22 +375,26 @@ public class ITestProvidedImplementation {
         builder.manageNameDfsDirs(true);
         builder.enableManagedDfsDirsRedundancy(false);
         builder.manageNameDfsSharedDirs(true);
-        List<File> nnDirs =
-            getProvidedNamenodeDirs(conf.get(HDFS_MINIDFS_BASEDIR), topo);
+        List<File> nnDirs = getProvidedNamenodeDirs(
+            conf.get(HDFS_MINIDFS_BASEDIR), topo, providedNameservice);
         for (File nnDir : nnDirs) {
-          MiniDFSCluster.copyNameDirs(
-              Collections.singletonList(nspath.toUri()),
-              Collections.singletonList(fileAsURI(nnDir)),
-              conf);
+          MiniDFSCluster.copyNameDirs(Collections.singletonList(nspath.toUri()),
+              Collections.singletonList(fileAsURI(nnDir)), conf);
         }
       }
     }
-    cluster = builder.build();
+    MiniDFSCluster cluster = builder.build();
     cluster.waitActive();
+    return cluster;
   }
 
   private static List<File> getProvidedNamenodeDirs(String baseDir,
-      MiniDFSNNTopology topo) {
+      MiniDFSNNTopology topo, String providedNameservice) {
+
+    if (providedNameservice == null || providedNameservice.length() == 0) {
+      throw new IllegalArgumentException("Provided namespace is invalid");
+    }
+
     List<File> nnDirs = new ArrayList<>();
     int nsCounter = 0;
     for (MiniDFSNNTopology.NSConf nsConf : topo.getNameservices()) {
@@ -293,9 +402,8 @@ public class ITestProvidedImplementation {
       for (MiniDFSNNTopology.NNConf nnConf : nsConf.getNNs()) {
         if (providedNameservice.equals(nsConf.getId())) {
           // only add the first one
-          File[] nnFiles =
-              MiniDFSCluster.getNameNodeDirectory(
-                  baseDir, nsCounter, nnCounter);
+          File[] nnFiles = MiniDFSCluster.getNameNodeDirectory(baseDir,
+              nsCounter, nnCounter);
           if (nnFiles == null || nnFiles.length == 0) {
             throw new RuntimeException("Failed to get a location for the"
                 + "Namenode directory for namespace: " + nsConf.getId()
@@ -315,9 +423,10 @@ public class ITestProvidedImplementation {
     final long seed = r.nextLong();
     LOG.info("providedPath: " + providedPath);
     createImage(new RandomTreeWalk(seed), nnDirPath, FixedBlockResolver.class);
-    startCluster(nnDirPath, 0,
-        new StorageType[] {StorageType.PROVIDED, StorageType.DISK}, null,
-        false);
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, true);
+    cluster = startCluster(nnDirPath, 0,
+        new StorageType[] {StorageType.DISK}, null,
+        false, conf);
 
     FileSystem fs = cluster.getFileSystem();
     for (TreePath e : new RandomTreeWalk(seed)) {
@@ -338,14 +447,18 @@ public class ITestProvidedImplementation {
 
   @Test(timeout=30000)
   public void testProvidedReporting() throws Exception {
-    conf.setClass(ImageWriter.Options.UGI_CLASS,
+    // set this to false to keep track of capacity.
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_PROVIDED_VOLUME_LAZY_LOAD,
+        false);
+    conf.setClass(DFS_IMAGE_WRITER_UGI_CLASS,
         SingleUGIResolver.class, UGIResolver.class);
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     int numDatanodes = 10;
-    startCluster(nnDirPath, numDatanodes,
-        new StorageType[] {StorageType.PROVIDED, StorageType.DISK}, null,
-        false);
+    cluster = startCluster(nnDirPath, numDatanodes,
+        new StorageType[] {StorageType.DISK}, null,
+        false, conf);
+
     long diskCapacity = 1000;
     // set the DISK capacity for testing
     for (DataNode dn: cluster.getDataNodes()) {
@@ -375,6 +488,8 @@ public class ITestProvidedImplementation {
         .get(StorageType.PROVIDED).getCapacityTotal());
     assertEquals(providedDataSize, dnStats.getStorageTypeStats()
         .get(StorageType.PROVIDED).getCapacityUsed());
+    assertEquals(0, dnStats.getStorageTypeStats()
+        .get(StorageType.PROVIDED).getCapacityRemaining());
 
     // verify datanode stats
     for (DataNode dn: cluster.getDataNodes()) {
@@ -418,16 +533,18 @@ public class ITestProvidedImplementation {
   @Test(timeout=500000)
   public void testDefaultReplication() throws Exception {
     int targetReplication = 2;
+    conf.setInt(DFS_REPLICATION_KEY, targetReplication);
     conf.setInt(FixedBlockMultiReplicaResolver.REPLICATION, targetReplication);
+    conf.setInt(DFS_PROVIDED_OVERREPLICATION_FACTOR_KEY, 0);
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockMultiReplicaResolver.class);
     // make the last Datanode with only DISK
-    startCluster(nnDirPath, 3, null,
+    cluster = startCluster(nnDirPath, 3, null,
         new StorageType[][] {
-            {StorageType.PROVIDED, StorageType.DISK},
-            {StorageType.PROVIDED, StorageType.DISK},
+            {StorageType.DISK},
+            {StorageType.DISK},
             {StorageType.DISK}},
-        false);
+        false, conf);
     // wait for the replication to finish
     Thread.sleep(50000);
 
@@ -455,6 +572,10 @@ public class ITestProvidedImplementation {
 
 
   static Path removePrefix(Path base, Path walk) {
+    return removePrefix(base, walk, new Path("/"));
+  }
+
+  static Path removePrefix(Path base, Path walk, Path mount) {
     Path wpath = new Path(walk.toUri().getPath());
     Path bpath = new Path(base.toUri().getPath());
     Path ret = new Path("/");
@@ -468,16 +589,39 @@ public class ITestProvidedImplementation {
     if (!bpath.equals(wpath)) {
       throw new IllegalArgumentException(base + " not a prefix of " + walk);
     }
+    if (!ret.equals(new Path("/"))) {
+      ret = new Path(mount, new Path(ret.toString().substring(1)));
+    } else {
+      ret = mount;
+    }
     return ret;
   }
 
   private void verifyFileSystemContents(int nnIndex) throws Exception {
+    verifyPaths(cluster, conf, new Path("/"), providedPath, nnIndex);
+  }
+
+  static void verifyPaths(MiniDFSCluster cluster, Configuration conf,
+      Path mountPath, Path remotePath) throws Exception {
+    verifyPaths(cluster, conf, mountPath, remotePath, 0);
+  }
+
+  static void verifyPaths(MiniDFSCluster cluster, Configuration conf,
+      Path mountPath, Path remotePath, int nnIndex) throws Exception {
+    verifyPaths(cluster, conf, mountPath, remotePath, nnIndex, true);
+  }
+
+  static void verifyPaths(MiniDFSCluster cluster, Configuration conf,
+      Path mountPath, Path remotePath, int nnIndex, boolean verifyFileContents)
+      throws Exception {
     FileSystem fs = cluster.getFileSystem(nnIndex);
+    assertTrue(fs.exists(mountPath));
+
     int count = 0;
     // read NN metadata, verify contents match
-    for (TreePath e : new FSTreeWalk(providedPath, conf)) {
+    for (TreePath e : new FSTreeWalk(remotePath, conf)) {
       FileStatus rs = e.getFileStatus();
-      Path hp = removePrefix(providedPath, rs.getPath());
+      Path hp = removePrefix(remotePath, rs.getPath(), mountPath);
       LOG.info("path: " + hp.toUri().getPath());
       e.accept(count++);
       assertTrue(fs.exists(hp));
@@ -487,32 +631,36 @@ public class ITestProvidedImplementation {
       assertEquals(rs.getOwner(), hs.getOwner());
       assertEquals(rs.getGroup(), hs.getGroup());
 
-      if (rs.isFile()) {
-        assertEquals(rs.getLen(), hs.getLen());
-        try (ReadableByteChannel i = Channels.newChannel(
-              new FileInputStream(new File(rs.getPath().toUri())))) {
-          try (ReadableByteChannel j = Channels.newChannel(
-                fs.open(hs.getPath()))) {
-            ByteBuffer ib = ByteBuffer.allocate(4096);
-            ByteBuffer jb = ByteBuffer.allocate(4096);
-            while (true) {
-              int il = i.read(ib);
-              int jl = j.read(jb);
-              if (il < 0 || jl < 0) {
-                assertEquals(il, jl);
-                break;
-              }
-              ib.flip();
-              jb.flip();
-              int cmp = Math.min(ib.remaining(), jb.remaining());
-              for (int k = 0; k < cmp; ++k) {
-                assertEquals(ib.get(), jb.get());
-              }
-              ib.compact();
-              jb.compact();
-            }
+      if (rs.isFile() && verifyFileContents) {
+        verifyFileContents(fs, rs, hs);
+      }
+    }
+  }
 
+  static void verifyFileContents(FileSystem fs, FileStatus local,
+      FileStatus remote) throws Exception {
+    assertEquals(local.getLen(), remote.getLen());
+    try (ReadableByteChannel i = Channels
+        .newChannel(new FileInputStream(new File(local.getPath().toUri())))) {
+      try (ReadableByteChannel j =
+          Channels.newChannel(fs.open(remote.getPath()))) {
+        ByteBuffer ib = ByteBuffer.allocate(4096);
+        ByteBuffer jb = ByteBuffer.allocate(4096);
+        while (true) {
+          int il = i.read(ib);
+          int jl = j.read(jb);
+          if (il < 0 || jl < 0) {
+            assertEquals(il, jl);
+            break;
           }
+          ib.flip();
+          jb.flip();
+          int cmp = Math.min(ib.remaining(), jb.remaining());
+          for (int k = 0; k < cmp; ++k) {
+            assertEquals(ib.get(), jb.get());
+          }
+          ib.compact();
+          jb.compact();
         }
       }
     }
@@ -530,11 +678,12 @@ public class ITestProvidedImplementation {
   @Test(timeout=30000)
   public void testClusterWithEmptyImage() throws IOException {
     // start a cluster with 2 datanodes without any provided storage
-    startCluster(nnDirPath, 2, null,
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, false);
+    cluster = startCluster(nnDirPath, 2, null,
         new StorageType[][] {
             {StorageType.DISK},
             {StorageType.DISK}},
-        true);
+        true, conf);
     assertTrue(cluster.isClusterUp());
     assertTrue(cluster.isDataNodeUp());
 
@@ -554,21 +703,7 @@ public class ITestProvidedImplementation {
     DatanodeInfo[] locations =
         locatedBlocks.getLocatedBlocks().get(0).getLocations();
     assertEquals(expectedLocations, locations.length);
-    checkUniqueness(locations);
     return locations;
-  }
-
-  /**
-   * verify that the given locations are all unique.
-   * @param locations
-   */
-  private void checkUniqueness(DatanodeInfo[] locations) {
-    Set<String> set = new HashSet<>();
-    for (DatanodeInfo info: locations) {
-      assertFalse("All locations should be unique",
-          set.contains(info.getDatanodeUuid()));
-      set.add(info.getDatanodeUuid());
-    }
   }
 
   /**
@@ -577,20 +712,38 @@ public class ITestProvidedImplementation {
    */
   @Test(timeout=50000)
   public void testSetReplicationForProvidedFiles() throws Exception {
+    final int replicationLimit = 2;
+    conf.setInt(DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, replicationLimit);
+    conf.setInt(FixedBlockResolver.BLOCKSIZE, baseFileLen);
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     // 10 Datanodes with both DISK and PROVIDED storage
-    startCluster(nnDirPath, 10,
-        new StorageType[]{
-            StorageType.PROVIDED, StorageType.DISK},
+    cluster = startCluster(nnDirPath, 10,
+        new StorageType[]{StorageType.DISK},
         null,
-        false);
+        false, conf);
     setAndUnsetReplication("/" + filePrefix + (numFiles - 1) + fileSuffix);
   }
 
   private void setAndUnsetReplication(String filename) throws Exception {
     Path file = new Path(filename);
     FileSystem fs = cluster.getFileSystem();
+    // thread to make sure that the replication limit is always satisfied
+    // for the datanodes.
+    final int replicationLimit =
+        conf.getInt(DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
+    Thread thread = new Thread(() -> {
+      Set<DatanodeDescriptor> dns =
+          cluster.getNamesystem(0).getBlockManager()
+          .getDatanodeManager().getDatanodes();
+      while (true) {
+        for (DatanodeDescriptor dn : dns) {
+          assertTrue(
+              dn.getNumberOfBlocksToBeReplicated() <= replicationLimit);
+        }
+      }
+    });
+    thread.start();
     // set the replication to 4, and test that the file has
     // the required replication.
     short newReplication = 4;
@@ -608,24 +761,26 @@ public class ITestProvidedImplementation {
         filename, newReplication);
     fs.setReplication(file, newReplication);
     // defaultReplication number of replicas should be returned
-    int defaultReplication = conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+    int defaultReplication = conf.getInt(DFS_REPLICATION_KEY,
         DFSConfigKeys.DFS_REPLICATION_DEFAULT);
     DFSTestUtil.waitForReplication((DistributedFileSystem) fs,
         file, (short) defaultReplication, 10000);
     getAndCheckBlockLocations(client, filename, baseFileLen, 1,
         defaultReplication);
+    thread.interrupt();
   }
 
   @Test(timeout=30000)
   public void testProvidedDatanodeFailures() throws Exception {
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
-            FixedBlockResolver.class);
-    startCluster(nnDirPath, 3, null,
+        FixedBlockResolver.class);
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, false);
+    cluster = startCluster(nnDirPath, 3, null,
         new StorageType[][] {
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.DISK}},
-        false);
+        false, conf);
 
     DataNode providedDatanode1 = cluster.getDataNodes().get(0);
     DataNode providedDatanode2 = cluster.getDataNodes().get(1);
@@ -692,12 +847,13 @@ public class ITestProvidedImplementation {
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
             FixedBlockResolver.class);
     // 3 Datanodes, 2 PROVIDED and other DISK
-    startCluster(nnDirPath, 3, null,
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, false);
+    cluster = startCluster(nnDirPath, 3, null,
         new StorageType[][] {
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.DISK}},
-        false);
+        false, conf);
 
     DataNode providedDatanode = cluster.getDataNodes().get(0);
     DatanodeStorageInfo providedDNInfo = getProvidedDatanodeStorageInfo();
@@ -729,13 +885,14 @@ public class ITestProvidedImplementation {
   public void testNamenodeRestart() throws Exception {
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, false);
     // 3 Datanodes, 2 PROVIDED and other DISK
-    startCluster(nnDirPath, 3, null,
+    cluster = startCluster(nnDirPath, 3, null,
         new StorageType[][] {
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.PROVIDED, StorageType.DISK},
             {StorageType.DISK}},
-        false);
+        false, conf);
 
     verifyFileLocation(numFiles - 1, 2);
     cluster.restartNameNodes();
@@ -770,13 +927,14 @@ public class ITestProvidedImplementation {
   public void testSetClusterID() throws Exception {
     String clusterID = "PROVIDED-CLUSTER";
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
-        FixedBlockResolver.class, clusterID, TextFileRegionAliasMap.class);
+        FixedBlockResolver.class, clusterID, TextFileRegionAliasMap.class,
+        bpid, conf);
     // 2 Datanodes, 1 PROVIDED and other DISK
-    startCluster(nnDirPath, 2, null,
+    cluster = startCluster(nnDirPath, 2, null,
         new StorageType[][] {
-            {StorageType.PROVIDED, StorageType.DISK},
+            {StorageType.DISK},
             {StorageType.DISK}},
-        false);
+        false, conf);
     NameNode nn = cluster.getNameNode();
     assertEquals(clusterID, nn.getNamesystem().getClusterId());
   }
@@ -784,15 +942,14 @@ public class ITestProvidedImplementation {
   @Test(timeout=30000)
   public void testNumberOfProvidedLocations() throws Exception {
     // set default replication to 4
-    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 4);
+    conf.setInt(DFS_REPLICATION_KEY, 4);
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     // start with 4 PROVIDED location
-    startCluster(nnDirPath, 4,
-        new StorageType[]{
-            StorageType.PROVIDED, StorageType.DISK},
+    cluster = startCluster(nnDirPath, 4,
+        new StorageType[]{StorageType.DISK},
         null,
-        false);
+        false, conf);
     int expectedLocations = 4;
     for (int i = 0; i < numFiles; i++) {
       verifyFileLocation(i, expectedLocations);
@@ -817,15 +974,14 @@ public class ITestProvidedImplementation {
     // increase number of blocks per file to at least 10 blocks per file
     conf.setLong(FixedBlockResolver.BLOCKSIZE, baseFileLen/10);
     // set default replication to 4
-    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 4);
+    conf.setInt(DFS_REPLICATION_KEY, 4);
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
     // start with 4 PROVIDED location
-    startCluster(nnDirPath, 4,
-        new StorageType[]{
-            StorageType.PROVIDED, StorageType.DISK},
+    cluster = startCluster(nnDirPath, 4,
+        new StorageType[]{StorageType.DISK},
         null,
-        false);
+        false, conf);
     int expectedLocations = 4;
     for (int i = 0; i < numFiles; i++) {
       verifyFileLocation(i, expectedLocations);
@@ -833,7 +989,19 @@ public class ITestProvidedImplementation {
   }
 
   private File createInMemoryAliasMapImage() throws Exception {
-    conf.setClass(ImageWriter.Options.UGI_CLASS, FsUGIResolver.class,
+    return createInMemoryAliasMapImage(new FSTreeWalk(providedPath, conf));
+  }
+
+  private File createInMemoryAliasMapImage(FSTreeWalk treewalk)
+      throws Exception {
+    return createInMemoryAliasMapImage(
+        conf, nnDirPath, bpid, clusterID, treewalk);
+  }
+
+  public static File createInMemoryAliasMapImage(Configuration conf,
+      Path nnDirPath, String bpid, String clusterID,
+      FSTreeWalk treewalk) throws Exception {
+    conf.setClass(DFS_IMAGE_WRITER_UGI_CLASS, FsUGIResolver.class,
         UGIResolver.class);
     conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
         InMemoryLevelDBAliasMapClient.class, BlockAliasMap.class);
@@ -848,11 +1016,10 @@ public class ITestProvidedImplementation {
     conf.set(DFS_PROVIDED_ALIASMAP_LEVELDB_PATH,
         tempDirectory.getAbsolutePath());
 
-    createImage(new FSTreeWalk(providedPath, conf),
+    createImage(treewalk,
         nnDirPath,
         FixedBlockResolver.class, clusterID,
-        LevelDBFileRegionAliasMap.class);
-
+        LevelDBFileRegionAliasMap.class,  bpid, conf);
     return tempDirectory;
   }
 
@@ -863,11 +1030,17 @@ public class ITestProvidedImplementation {
     // each with 1 PROVIDED volume and other DISK volume
     conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
     conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
-    startCluster(nnDirPath, 2,
-        new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
-        null, false);
+    cluster = startCluster(nnDirPath, 2,
+        new StorageType[] {StorageType.DISK},
+        null, false, conf);
     verifyFileSystemContents(0);
     FileUtils.deleteDirectory(aliasMapImage);
+  }
+
+  @Test
+  public void testHigherDefaultReplication() throws Exception {
+    conf.setInt(DFS_REPLICATION_KEY, 10);
+    testInMemoryAliasMap();
   }
 
   /**
@@ -896,11 +1069,13 @@ public class ITestProvidedImplementation {
    * Extends the {@link MiniDFSCluster.Builder} to create instances of
    * {@link MiniDFSClusterBuilderAliasMap}.
    */
-  private static class MiniDFSClusterBuilderAliasMap
-      extends MiniDFSCluster.Builder {
+  public static class MiniDFSClusterBuilderAliasMap
+          extends MiniDFSCluster.Builder {
 
-    MiniDFSClusterBuilderAliasMap(Configuration conf) {
+    MiniDFSClusterBuilderAliasMap(Configuration conf,
+        String providedNS) {
       super(conf);
+      providedNameservice = providedNS;
     }
 
     @Override
@@ -912,7 +1087,7 @@ public class ITestProvidedImplementation {
   /**
    * Extends {@link MiniDFSCluster} to correctly configure the InMemoryAliasMap.
    */
-  private static class MiniDFSClusterAliasMap extends MiniDFSCluster {
+  public static class MiniDFSClusterAliasMap extends MiniDFSCluster {
 
     private Map<String, Collection<URI>> formattedDirsByNamespaceId;
     private Set<Integer> completedNNs;
@@ -935,7 +1110,8 @@ public class ITestProvidedImplementation {
       super.initNameNodeConf(conf, nameserviceId, nsIndex, nnId,
           manageNameDfsDirs, enableManagedDfsDirsRedundancy, nnIndex);
 
-      if (providedNameservice.equals(nameserviceId)) {
+      if (providedNameservice == null
+          || providedNameservice.equals(nameserviceId)) {
         // configure the InMemoryAliasMp.
         conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
         String directory = conf.get(DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR);
@@ -981,6 +1157,17 @@ public class ITestProvidedImplementation {
           completedNNs.add(nnIndex);
         }
       }
+    }
+
+    @Override
+    protected void createNameNode(Configuration hdfsConf, boolean format,
+        HdfsServerConstants.StartupOption operation, String clusterId,
+        String nameserviceId, String nnId) throws IOException {
+      hdfsConf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
+          NamenodeInMemoryAliasMapClient.class, BlockAliasMap.class);
+      // create the NN with the new config
+      super.createNameNode(hdfsConf, format, operation, clusterId,
+          nameserviceId, nnId);
     }
   }
 
@@ -1060,11 +1247,9 @@ public class ITestProvidedImplementation {
   @Test
   public void testInMemoryAliasMapMultiTopologies() throws Exception {
     MiniDFSNNTopology[] topologies =
-        new MiniDFSNNTopology[] {
-            MiniDFSNNTopology.simpleHATopology(),
+        new MiniDFSNNTopology[] {MiniDFSNNTopology.simpleHATopology(),
             MiniDFSNNTopology.simpleFederatedTopology(3),
-            MiniDFSNNTopology.simpleHAFederatedTopology(3)
-        };
+            MiniDFSNNTopology.simpleHAFederatedTopology(3)};
 
     for (MiniDFSNNTopology topology : topologies) {
       LOG.info("Starting test with topology with HA = {}, federation = {}",
@@ -1075,11 +1260,12 @@ public class ITestProvidedImplementation {
       conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
       providedNameservice = topology.getNameservices().get(0).getId();
       // configure the AliasMap addresses
-      configureAliasMapAddresses(topology, providedNameservice);
-      startCluster(nnDirPath, 2,
-          new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
-          null, false, null, topology,
-          new MiniDFSClusterBuilderAliasMap(conf));
+      configureInMemoryAliasMapAddresses(topology, conf, providedNameservice);
+      cluster =
+          startCluster(nnDirPath, 2,
+              new StorageType[] {StorageType.DISK}, null, false, conf,
+              null, topology,
+              new MiniDFSClusterBuilderAliasMap(conf, providedNameservice));
 
       verifyPathsWithHAFailoverIfNecessary(topology, providedNameservice);
       shutdown();
@@ -1119,9 +1305,10 @@ public class ITestProvidedImplementation {
   public void testDatanodeLifeCycle() throws Exception {
     createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
         FixedBlockResolver.class);
-    startCluster(nnDirPath, 3,
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, false);
+    cluster = startCluster(nnDirPath, 3,
         new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
-        null, false);
+        null, false, conf);
 
     int fileIndex = numFiles - 1;
 
@@ -1183,7 +1370,7 @@ public class ITestProvidedImplementation {
 
   @Test
   public void testProvidedWithHierarchicalTopology() throws Exception {
-    conf.setClass(ImageWriter.Options.UGI_CLASS, FsUGIResolver.class,
+    conf.setClass(DFS_IMAGE_WRITER_UGI_CLASS, FsUGIResolver.class,
         UGIResolver.class);
     String packageName = "org.apache.hadoop.hdfs.server.blockmanagement";
     String[] policies = new String[] {
@@ -1199,9 +1386,9 @@ public class ITestProvidedImplementation {
     for (String policy: policies) {
       LOG.info("Using policy: " + packageName + "." + policy);
       conf.set(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, packageName + "." + policy);
-      startCluster(nnDirPath, racks.length,
+      cluster = startCluster(nnDirPath, racks.length,
           new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
-          null, false, racks);
+          null, false, conf, racks);
       verifyFileSystemContents(0);
       setAndUnsetReplication("/" + filePrefix + (numFiles - 1) + fileSuffix);
       cluster.shutdown();
@@ -1209,20 +1396,355 @@ public class ITestProvidedImplementation {
   }
 
   @Test
+  public void testBlockReadWithClientCache() throws Exception {
+    // set read through to be true!
+    conf.setBoolean(DFS_CLIENT_CACHE_READTHROUGH, true);
+    testBlockReadWithCaching();
+  }
+
+  @Test
+  public void testBlockReadWithoutClientCache() throws Exception {
+    // set client read through to be false!
+    conf.setBoolean(DFS_CLIENT_CACHE_READTHROUGH, false);
+    // we should still be caching it.
+    testBlockReadWithCaching();
+  }
+
+  private void testBlockReadWithCaching() throws Exception {
+    conf.setClass(DFS_IMAGE_WRITER_UGI_CLASS, FsUGIResolver.class,
+        UGIResolver.class);
+    // test default replication to 1, to test caching.
+    conf.setInt(DFS_REPLICATION_KEY, 1);
+    int defaultReplication = 1;
+    conf.setInt(FixedBlockMultiReplicaResolver.REPLICATION, defaultReplication);
+    short overRep = 1;
+    conf.setInt(DFS_PROVIDED_OVERREPLICATION_FACTOR_KEY, overRep);
+    conf.setBoolean(DFS_DATANODE_PROVIDED_VOLUME_READ_THROUGH, true);
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
+        FixedBlockResolver.class);
+    cluster = startCluster(nnDirPath, 3, new StorageType[] {StorageType.DISK},
+        null, false, conf);
+    FileSystem fs = cluster.getFileSystem();
+    Thread.sleep(2000);
+    int count = 0;
+
+    for (TreePath e : new FSTreeWalk(providedPath, conf)) {
+      FileStatus rs = e.getFileStatus();
+      Path hp = removePrefix(providedPath, rs.getPath());
+      // skip HDFS specific files, which may have been created later on
+      if (hp.toString().contains("in_use.lock")
+          || hp.toString().contains("current")) {
+        continue;
+      }
+      e.accept(count++);
+      FileStatus hs = fs.getFileStatus(hp);
+
+      // read the file causing it to get cached!
+      int bufferLength = 1024;
+      byte[] buf = new byte[bufferLength];
+      if (rs.isFile() && rs.getLen() > 0) {
+        IOUtils.readFully(fs.open(hs.getPath()), buf, 0, bufferLength);
+        LOG.info("Finished reading file: " + rs.getPath());
+      }
+    }
+    // wait for read throughs to finish
+    Thread.sleep(10000);
+    DFSClient client = new DFSClient(
+        new InetSocketAddress("localhost", cluster.getNameNodePort()),
+        cluster.getConfiguration(0));
+
+    for (TreePath e : new FSTreeWalk(providedPath, conf)) {
+      FileStatus rs = e.getFileStatus();
+      Path hp = removePrefix(providedPath, rs.getPath());
+      // skip HDFS specific files, which may have been created later on.
+      if (hp.toString().contains("in_use.lock")
+          || hp.toString().contains("current")) {
+        continue;
+      }
+      e.accept(count++);
+      FileStatus hs = fs.getFileStatus(hp);
+      if (rs.isFile() && rs.getLen() > 0) {
+        getAndCheckBlockLocations(client, hp.toString(), baseFileLen, 1,
+            (short) (hs.getReplication() + overRep));
+      }
+    }
+  }
+
+  @Test
+  public void testDynamicImageMountNamespace() throws Exception {
+    conf.setInt(FixedBlockResolver.BLOCKSIZE, baseFileLen);
+    createInMemoryAliasMapImage();
+    conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, true);
+    cluster = startCluster(nnDirPath, 3,
+        new StorageType[] {StorageType.DISK},
+        null, false, conf);
+
+    File newDir = new File(new File(providedPath.toUri()), "newDir");
+    String remotePath = newDir.toURI().toString();
+    String mountpoint = "/mounts/mount1";
+    // call mount
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), conf);
+    // mount when the remote path doesn't exist.
+    LambdaTestUtils.intercept(RemoteException.class,
+        "File " + remotePath + " does not exist",
+        () -> client.addMount(remotePath, mountpoint, null));
+
+    // create the new files to mount
+    newDir.mkdirs();
+    createFiles(new Path(newDir.toURI()), 10, baseFileLen, "newFile",
+        fileSuffix);
+    assertTrue(client.addMount(remotePath, mountpoint,
+        RemoteMountUtils.decodeConfig("a=b,c=d")));
+    // verify new image!!
+    verifyPaths(cluster, conf, new Path(mountpoint), new Path(newDir.toURI()),
+        0, true);
+    verifyMountXAttrs(cluster, 0, new Path(mountpoint), "a=b,c=d");
+    verifyUpdatedAliasMap(cluster.getNameNode(), cluster.getFileSystem(),
+        new Path(mountpoint));
+
+    LambdaTestUtils.intercept(RemoteException.class,
+        "Mount path " + mountpoint + " already exists",
+        () -> client.addMount(remotePath, mountpoint, null));
+
+    String newMountPoint = mountpoint + "/new-mount";
+    LambdaTestUtils.intercept(RemoteException.class,
+        "Mount point " + newMountPoint +
+            " cannot belong to the existing mount " + mountpoint,
+        () -> client.addMount(remotePath, newMountPoint, null));
+
+    // create directories, files, and delete should all fail on a mount.
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "No modifications allowed within mount: " + mountpoint, () -> client
+            .mkdirs(mountpoint + "/newDir", FsPermission.getDefault(),
+                false));
+
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "No modifications allowed within mount: " + mountpoint,
+        () -> client.create(mountpoint + "/newFile.dat", true));
+
+    assertTrue(client.exists(mountpoint + "/newFile0" + fileSuffix));
+
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "No modifications allowed within mount: " + mountpoint,
+        () -> client.delete(mountpoint, true));
+
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "No modifications allowed within mount: " + mountpoint,
+        () -> client.delete("/mounts", true));
+
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "No modifications allowed within mount: " + mountpoint,
+        () -> client.rename("/mounts", "/target", Options.Rename.NONE));
+
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "No modifications allowed within mount: " + mountpoint,
+        () -> client.rename("/target", "/mounts", Options.Rename.NONE));
+
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "No modifications allowed within mount: " + mountpoint,
+        () -> client.rename("/target", mountpoint, Options.Rename.NONE));
+
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "No modifications allowed within mount: " + mountpoint,
+        () -> client.rename(mountpoint, "/target", Options.Rename.NONE));
+
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "No modifications allowed within mount: " + mountpoint,
+        () -> client.rename(mountpoint, "/target"));
+
+  }
+
+  private void verifyMountXAttrs(MiniDFSCluster cluster, int nnIndex,
+      Path mountPath, String attrString) throws IOException {
+    Map<String, byte[]> xAttrs =
+        cluster.getFileSystem(nnIndex).getXAttrs(mountPath);
+    assertEquals(3, xAttrs.size());
+    assertEquals("true", new String(xAttrs.get("user.isMount")));
+    Map<String, String> attrs = RemoteMountUtils.decodeConfig(attrString);
+    for (Map.Entry<String, String> attr : attrs.entrySet()) {
+      String key = "trusted.mount.config." + attr.getKey();
+      assertEquals(attr.getValue(), new String(xAttrs.get(key)));
+    }
+  }
+
+  private void verifyUpdatedAliasMap(NameNode nn, FileSystem fs, Path rootPath)
+      throws Exception {
+    FSNamesystem fsNamesystem = nn.getNamesystem();
+    // verify that alias map is updated, and we can find the new block ids.
+    BlockAliasMap aliasMap =
+        fsNamesystem.getBlockManager().getProvidedStorageMap().getAliasMap();
+    BlockAliasMap.Reader reader = aliasMap.getReader(null, bpid);
+    assertNotNull(reader);
+    for (FileStatus status : fs.listStatus(rootPath)) {
+      String path =
+          getPathWithoutSchemeAndAuthority(status.getPath()).toString();
+      LocatedBlocks blocks =
+          fsNamesystem.getBlockLocations("test", path, 0, status.getLen());
+      for (LocatedBlock block : blocks.getLocatedBlocks()) {
+        LOG.info("Checking " + path + " block " + block.getBlock());
+        assertNotNull(reader.resolve(block.getBlock().getBlockId()));
+      }
+    }
+  }
+
+  @Test
+  public void testDynamicImageMountNamespaceHA() throws Exception {
+    conf.setInt(FixedBlockResolver.BLOCKSIZE, baseFileLen);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY, 100);
+    HAUtil.setAllowStandbyReads(conf, true);
+
+    MiniDFSNNTopology topology = MiniDFSNNTopology.simpleHATopology();
+    createInMemoryAliasMapImage();
+    providedNameservice = topology.getNameservices().get(0).getId();
+    // configure the AliasMap addresses
+    configureInMemoryAliasMapAddresses(topology, conf, providedNameservice);
+
+    cluster = startCluster(nnDirPath, 3, new StorageType[] {StorageType.DISK},
+        null, false, conf, null, topology,
+        new MiniDFSClusterBuilderAliasMap(conf, providedNameservice));
+
+    List<Integer> nnIndexes = cluster.getNNIndexes(providedNameservice);
+    int nn1 = nnIndexes.get(0);
+    int nn2 = nnIndexes.get(1);
+    cluster.transitionToActive(nn1);
+
+    verifyPaths(cluster, conf, new Path("/"), providedPath, nn1, true);
+    LOG.info("Verified initial mount. Created new files");
+
+    // create the new files to mount
+    File newDir = new File(new File(providedPath.toUri()), "newDir");
+    newDir.mkdirs();
+    createFiles(new Path(newDir.toURI()), 10, baseFileLen, "newFile",
+        fileSuffix);
+
+    String newMountPoint = "/mount1";
+    LOG.info("Calling createMount with mountpoint " + newMountPoint);
+    // call mount
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(nn1).getNameNodeAddress(), conf);
+    client.addMount(newDir.toURI().toString(), newMountPoint,
+        RemoteMountUtils.decodeConfig("a=b,c=d"));
+
+    LOG.info("Verifying data on new mount with 1st NN");
+    verifyPaths(cluster, conf, new Path(newMountPoint),
+        new Path(newDir.toURI()), nn1, true);
+    verifyMountXAttrs(cluster, nn1, new Path(newMountPoint), "a=b,c=d");
+    verifyUpdatedAliasMap(cluster.getNameNode(nn1), cluster.getFileSystem(nn1),
+        new Path(newMountPoint));
+
+    LOG.info("Transitioning to next NN");
+    HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(nn1),
+        cluster.getNameNode(nn2));
+    cluster.transitionToStandby(nn1);
+    cluster.transitionToActive(nn2);
+    // trigger heartbeats to update the datanodes
+    cluster.triggerHeartbeats();
+    Thread.sleep(1000);
+    // verify on the 2nd namenode
+    LOG.info("Verifying data on new mount with 2nd NN");
+    verifyPaths(cluster, conf, new Path(newMountPoint),
+        new Path(newDir.toURI()), nn2, true);
+    verifyUpdatedAliasMap(cluster.getNameNode(nn2), cluster.getFileSystem(nn2),
+        new Path(newMountPoint));
+
+    client = new DFSClient(cluster.getNameNode(nn2).getNameNodeAddress(), conf);
+
+    // mount on the same path should fail
+    try {
+      client.addMount(newDir.toURI().toString(), newMountPoint, null);
+      fail("addMount should fail when mounting on the same path");
+    } catch (RemoteException e) {
+      assertTrue(e.getMessage()
+          .contains("Mount path " + newMountPoint + " already exists"));
+      LOG.info("Expected exception: {}", e);
+    }
+    // now call removeMount and transition to the other NN.
+    assertTrue(client.removeMount(newMountPoint));
+    HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(nn2),
+        cluster.getNameNode(nn1));
+    cluster.transitionToStandby(nn2);
+    cluster.transitionToActive(nn1);
+    client = new DFSClient(cluster.getNameNode(nn1).getNameNodeAddress(), conf);
+    // nothing should exist under the mount point.
+    assertNull(client.getFileInfo(newMountPoint));
+    // mount should succeed now.
+    assertTrue(client.addMount(newDir.toURI().toString(), newMountPoint,
+        RemoteMountUtils.decodeConfig("a=b,c=d")));
+    verifyPaths(cluster, conf, new Path(newMountPoint),
+        new Path(newDir.toURI()), nn1, true);
+    verifyMountXAttrs(cluster, nn1, new Path(newMountPoint), "a=b,c=d");
+  }
+
+  @Test
+  public void testAbsentFiles() throws Exception {
+    conf.setClass(DFS_IMAGE_WRITER_UGI_CLASS, FsUGIResolver.class,
+        UGIResolver.class);
+    createImage(new FSTreeWalk(providedPath, conf), nnDirPath,
+        FixedBlockResolver.class);
+    cluster = startCluster(nnDirPath, 3, new StorageType[] {StorageType.DISK},
+        null, false, conf);
+    FileSystem fs = cluster.getFileSystem();
+    String fileToDelete = filePrefix + (numFiles - 1) + fileSuffix;
+    new File(new File(providedPath.toUri()), fileToDelete).delete();
+    FSDataInputStream ins = fs.open(new Path("/" + fileToDelete));
+    try {
+      ins.read();
+      fail("Expected to fail on reading file " + fileToDelete);
+    } catch (IOException e) {
+      assertTrue(e.getMessage().contains("Could not obtain block"));
+    }
+  }
+
+  @Test
+  public void testMountLimits() throws Exception {
+    createInMemoryAliasMapImage();
+    conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+    // set limit on inodes to 5
+    int maxInodes = 10;
+    int maxMounts = 1;
+    conf.setInt(DFS_PROVIDED_READ_MOUNT_INODES_MAX, maxInodes);
+    cluster = startCluster(nnDirPath, 3, new StorageType[] {StorageType.DISK},
+        null, false, conf);
+
+    // create the new files to mount
+    final File dir1 = new File(new File(providedPath.toUri()), "dir1");
+    dir1.mkdirs();
+    createFiles(new Path(dir1.toURI()), maxInodes * 2, baseFileLen, "file",
+        fileSuffix);
+    // call mount -- this should fail as we are mounting too many files.
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), conf);
+    LambdaTestUtils.intercept(IOException.class,
+        "Number of inodes in remote path (24) exceed the maximum allowed of 10",
+        () -> client.addMount(dir1.toURI().toString(), "/mount1", null));
+
+    File dir2 = new File(new File(providedPath.toUri()), "dir2");
+    dir2.mkdirs();
+    createFiles(new Path(dir2.toURI()), maxInodes - 5, baseFileLen, "file",
+        fileSuffix);
+    // this mount should succeed as we are mounting fewer inodes than max value.
+    assertTrue(client.addMount(dir2.toURI().toString(), "/mount1", null));
+  }
+
+  @Test
   public void testBootstrapAliasMap() throws Exception {
     int numNamenodes = 3;
     MiniDFSNNTopology topology =
         MiniDFSNNTopology.simpleHATopology(numNamenodes);
-
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, false);
     createInMemoryAliasMapImage();
     conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
     conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
     providedNameservice = topology.getNameservices().get(0).getId();
     // configure the AliasMap addresses
-    configureAliasMapAddresses(topology, providedNameservice);
-    startCluster(nnDirPath, 2,
+    configureInMemoryAliasMapAddresses(topology, conf, providedNameservice);
+    cluster = startCluster(nnDirPath, 2,
         new StorageType[] {StorageType.PROVIDED, StorageType.DISK}, null,
-        false, null, topology, new MiniDFSClusterBuilderAliasMap(conf));
+        false, conf, null, topology,
+        new MiniDFSClusterBuilderAliasMap(conf, providedNameservice));
 
     // make NN with index 0 the active, shutdown and delete the directories
     // of others. This will delete the aliasmap on these namenodes as well.
@@ -1298,7 +1820,7 @@ public class ITestProvidedImplementation {
 
   /**
    * Verify that the contents of the aliasmaps are the same.
-   *
+   * 
    * @param aliasMap1
    * @param aliasMap2
    */
@@ -1311,7 +1833,7 @@ public class ITestProvidedImplementation {
 
   /**
    * Get all the aliases the aliasmap contains.
-   *
+   * 
    * @param aliasMap aliasmap to explore.
    * @return set of all aliases.
    * @throws IOException
@@ -1319,15 +1841,443 @@ public class ITestProvidedImplementation {
   private Set<FileRegion> getFileRegions(InMemoryLevelDBAliasMapServer aliasMap)
       throws IOException {
     Set<FileRegion> fileRegions = new HashSet<>();
-    Optional<Block> marker = Optional.empty();
+    Block marker = null;
     while (true) {
-      InMemoryAliasMapProtocol.IterationResult result = aliasMap.list(marker);
+      InMemoryAliasMapProtocol.IterationResult result =
+          aliasMap.list(Optional.ofNullable(marker));
       fileRegions.addAll(result.getFileRegions());
-      marker = result.getNextBlock();
-      if (!marker.isPresent()) {
+      marker = result.getNextBlock().orElse(null);
+      if (marker == null) {
         break;
       }
     }
     return fileRegions;
+  }
+
+  private MiniDFSCluster createRemoteHDFSClusterWithAcls(Path testFile)
+      throws Exception {
+    // create a second HDFS cluster to act as remote.
+    Configuration remoteConf = new HdfsConfiguration();
+    remoteConf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+
+    MiniDFSCluster remoteCluster =
+        new MiniDFSCluster.Builder(remoteConf).numDataNodes(3).build();
+    try {
+      FileSystem remoteFS = remoteCluster.getFileSystem();
+      // create directory on remote
+      Path remoteDir = testFile.getParent();
+      remoteFS.mkdirs(remoteDir);
+      List<AclEntry> acls =
+          Lists.newArrayList(AclTestHelpers.aclEntry(AclEntryScope.DEFAULT,
+              AclEntryType.USER, "hdfs", FsAction.ALL));
+      remoteFS.setAcl(remoteDir, acls);
+      // create file in the remote path
+      OutputStream out = remoteFS.create(testFile);
+      for (int i = 0; i < 10; ++i) {
+        out.write(i);
+      }
+      out.close();
+      return remoteCluster;
+    } catch (IOException e) {
+      remoteCluster.shutdown();
+      throw e;
+    }
+  }
+
+  private void testAclsEqual(Path file, FileSystem remoteFS, FileSystem localFS)
+      throws Exception {
+    // acls on the file and it's parent should be the same.
+    assertEquals(remoteFS.getAclStatus(file), localFS.getAclStatus(file));
+    Path parent = file.getParent();
+    if (parent != null) {
+      assertEquals(remoteFS.getAclStatus(parent), localFS.getAclStatus(parent));
+    }
+  }
+
+  @Test
+  public void testDynamicMountACLs() throws Exception {
+    conf.setInt(FixedBlockResolver.BLOCKSIZE, baseFileLen);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_MOUNT_ACLS_ENABLED, true);
+    conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+    conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, false);
+    createInMemoryAliasMapImage();
+    cluster = startCluster(nnDirPath, 3,
+        new StorageType[] {StorageType.PROVIDED, StorageType.DISK}, null,
+        false, conf);
+
+    Path remoteDir = new Path("/data/");
+    String testFileName = "test1.dat";
+    Path testFile = new Path(remoteDir, testFileName);
+    MiniDFSCluster remoteCluster = createRemoteHDFSClusterWithAcls(testFile);
+    try {
+      FileSystem remoteFS = remoteCluster.getFileSystem();
+      // mount the remote path on cluster.
+      String mountpoint = "/data";
+      DFSClient client =
+          new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), conf);
+      String pathToMount = remoteFS.getUri().toString() + remoteDir.toString();
+      assertTrue(client.addMount(pathToMount, mountpoint, null));
+      // verify that the acls mirrored during mount.
+      testAclsEqual(testFile, remoteFS, cluster.getFileSystem());
+    } finally {
+      remoteCluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testImageWriterAcls() throws Exception {
+    Path remoteDir = new Path("/data/");
+    String testFileName = "test1.dat";
+    Path testFile = new Path(remoteDir, testFileName);
+    MiniDFSCluster remoteCluster = createRemoteHDFSClusterWithAcls(testFile);
+    try {
+      conf.setInt(FixedBlockResolver.BLOCKSIZE, baseFileLen);
+      conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+      conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_MOUNT_ACLS_ENABLED, true);
+      conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+      conf.setBoolean(DFS_DATANODE_PROVIDED_ENABLED, false);
+      conf.setClass(DFS_IMAGE_WRITER_UGI_CLASS, FsUGIResolver.class,
+          UGIResolver.class);
+      // create the FSImage from remoteCluster
+      FileSystem remoteFS = remoteCluster.getFileSystem();
+      // this should fail -- TODO fix Acls for ImageWriter in 2.9.2
+      createInMemoryAliasMapImage(
+          new FSTreeWalk(new Path(remoteFS.getUri() + "/"), conf));
+      cluster = startCluster(nnDirPath, 3,
+          new StorageType[] {StorageType.PROVIDED, StorageType.DISK}, null,
+          false, conf);
+      // verify that the acls mirrored during mount.
+      testAclsEqual(testFile, remoteFS, cluster.getFileSystem());
+    } catch (UnsupportedOperationException e) {
+      LOG.info("Expected exception: ", e);
+    } finally {
+      assertNull(cluster);
+      remoteCluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testNamenodeRestartDynamicMounts() throws Exception {
+    MiniDFSNNTopology topology = MiniDFSNNTopology.simpleSingleNN(0, 0);
+
+    createInMemoryAliasMapImage();
+    conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+    conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
+    providedNameservice = topology.getNameservices().get(0).getId();
+    // configure the AliasMap addresses
+    configureInMemoryAliasMapAddresses(topology, conf, providedNameservice);
+    cluster = startCluster(nnDirPath, 2, new StorageType[] {StorageType.DISK},
+        null, false, conf, null, topology,
+        new MiniDFSClusterBuilderAliasMap(conf, providedNameservice));
+    // create the new files to mount
+    final File dir1 = new File(new File(providedPath.toUri()), "dir1");
+    dir1.mkdirs();
+    createFiles(new Path(dir1.toURI()), 10, baseFileLen, "file", fileSuffix);
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), conf);
+    // this mount should succeed even though there is no capacity in the
+    // cluster.
+    String mountPath1 = "/mount1";
+    String mountPath2 = "/mount2";
+    assertTrue(client.addMount(dir1.toURI().toString(), mountPath1, null));
+    assertTrue(client.addMount(dir1.toURI().toString(), mountPath2, null));
+
+    // verify files in mounts.
+    verifyPaths(cluster, conf, new Path(mountPath1), new Path(dir1.toURI()), 0,
+        true);
+    verifyPaths(cluster, conf, new Path(mountPath2), new Path(dir1.toURI()), 0,
+        true);
+    LOG.info("Restarting Namenode");
+    cluster.restartNameNodes();
+    // verify again!
+    verifyPaths(cluster, conf, new Path(mountPath1), new Path(dir1.toURI()), 0,
+        true);
+    verifyPaths(cluster, conf, new Path(mountPath2), new Path(dir1.toURI()), 0,
+        true);
+  }
+
+  @Test
+  public void testMountWithoutLocalSpace() throws Exception {
+    createInMemoryAliasMapImage();
+    conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+
+    // start cluster with two Datanode.
+    cluster = startCluster(nnDirPath, 2, new StorageType[] {StorageType.DISK},
+        null, false, conf);
+
+    // set the remaining capacity of the Datanode to 0.
+    final DatanodeRegistration nodeReg = InternalDataNodeTestUtils
+        .getDNRegistrationForBP(cluster.getDataNodes().get(0), bpid);
+    final DatanodeDescriptor dd =
+        NameNodeAdapter.getDatanode(cluster.getNamesystem(), nodeReg);
+    for (DatanodeStorageInfo storage : dd.getStorageInfos()) {
+      if (storage.getStorageType() != StorageType.PROVIDED) {
+        storage.setUtilizationForTesting(0, 0, 0, 0);
+      }
+    }
+    // create the new files to mount
+    final File dir1 = new File(new File(providedPath.toUri()), "dir1");
+    dir1.mkdirs();
+    createFiles(new Path(dir1.toURI()), 10, baseFileLen, "file", fileSuffix);
+    // create another directory inside the first one.
+    final File dir2 = new File(dir1, "dir2");
+    dir2.mkdirs();
+    createFiles(new Path(dir2.toURI()), 10, baseFileLen, "file", fileSuffix);
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), conf);
+    String mount = "/remotes/path/to/mount";
+    // this mount should succeed even though there is no capacity in the
+    // cluster.
+    assertTrue(client.addMount(dir1.toURI().toString(), mount, null));
+    verifyPaths(cluster, conf, new Path(mount), new Path(dir1.toURI()), 0,
+        true);
+
+    // check that storage policy is set correctly.
+    final BlockStoragePolicySuite suite =
+        BlockStoragePolicySuite.createDefaultSuite();
+
+    assertEquals(suite.getDefaultPolicy(), client.getStoragePolicy("/"));
+    assertEquals(suite.getDefaultPolicy(), client.getStoragePolicy("/remotes"));
+    // policy of the mount and directories below it should be PROVIDED.
+    assertEquals(suite.getPolicy(HdfsConstants.PROVIDED_STORAGE_POLICY_NAME),
+        client.getStoragePolicy(mount));
+    assertEquals(suite.getPolicy(HdfsConstants.PROVIDED_STORAGE_POLICY_NAME),
+        client.getStoragePolicy(mount + "/dir2"));
+
+    // set the capacity of Datanode back.
+    for (DatanodeStorageInfo storage : dd.getStorageInfos()) {
+      if (storage.getStorageType() != StorageType.PROVIDED) {
+        storage.setUtilizationForTesting(10 * baseFileLen, 0L, 10 * baseFileLen,
+            0L);
+      }
+    }
+    // test that creating other files still succeeds.
+    BlockLocation[] locations = createFile(new Path("/local/testFile1.dat"),
+        (short) 2, 2 * baseFileLen, 2 * baseFileLen);
+    assertEquals(1, locations.length);
+    assertEquals(2, locations[0].getHosts().length);
+  }
+
+  @Test
+  public void testLimitedCacheSpace() throws Exception {
+    createInMemoryAliasMapImage();
+    conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+    // enable read-through
+    conf.setBoolean(DFS_DATANODE_PROVIDED_VOLUME_READ_THROUGH, true);
+    // set block len.
+    conf.setInt(FixedBlockResolver.BLOCKSIZE, baseFileLen / 10);
+    // fraction of space allowed as cache
+    double cacheFraction = 0.1;
+    conf.setDouble(DFS_PROVIDED_READ_CACHE_CAPACITY_FRACTION, cacheFraction);
+    // eviction threshold is at 100% usage.
+    conf.setDouble(DFS_PROVIDED_READ_CACHE_CAPACITY_THRESHOLD, 1);
+
+    // set over-replication
+    short overRep = 1;
+    conf.setInt(DFS_PROVIDED_OVERREPLICATION_FACTOR_KEY, overRep);
+    long diskCapacity = baseFileLen * 100;
+    // start cluster with one DN.
+    cluster = startCluster(nnDirPath, 1, new StorageType[] {StorageType.DISK},
+        null, false, conf, null, null, new MiniDFSCluster.Builder(conf), null);
+
+    try (FsDatasetSpi.FsVolumeReferences volumes =
+        cluster.getDataNodes().get(0).getFSDataset().getFsVolumeReferences()) {
+      for (FsVolumeSpi volume : volumes) {
+        if (volume.getStorageType() == StorageType.DISK) {
+          ((FsVolumeImpl) volume).setCapacityForTesting(diskCapacity);
+        }
+      }
+
+    }
+    // create the new files to mount
+    final File dir1 = new File(new File(providedPath.toUri()), "dir1");
+    dir1.mkdirs();
+    int numFiles = 10;
+    createFiles(new Path(dir1.toURI()), numFiles, baseFileLen, filePrefix,
+        fileSuffix);
+    // call mount -- this should fail as we are mounting too many files.
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), conf);
+    // mount the files.
+    String mount = "/mounts/dir1/";
+    assertTrue(client.addMount(dir1.toURI().toString(), mount, null));
+    cluster.triggerHeartbeats();
+    verifyPaths(cluster, conf, new Path(mount), new Path(dir1.toURI()), 0,
+        true);
+    // allow for cache manager to kick in
+    Thread.sleep(1000);
+    cluster.triggerHeartbeats();
+    FSNamesystem namesystem = cluster.getNamesystem();
+    SimpleReadCacheManager cacheManager = (SimpleReadCacheManager) namesystem
+        .getMountManager().getReadCacheManager();
+    // blocks have to be evicted due to the space constraints
+    assertTrue(cacheManager.getNumBlocksEvicted() > 0);
+    LOG.info("Blocks evicted " + cacheManager.getNumBlocksEvicted());
+
+    DatanodeStatistics dnStats = namesystem.getBlockManager()
+        .getDatanodeManager().getDatanodeStatistics();
+    assertTrue(
+        cacheManager.getCacheUsedForProvided() <= dnStats.getCapacityTotal()
+            * cacheFraction);
+    // check the DN capacities
+    final DatanodeRegistration nodeReg = InternalDataNodeTestUtils
+        .getDNRegistrationForBP(cluster.getDataNodes().get(0), bpid);
+
+    final DatanodeDescriptor dd =
+        NameNodeAdapter.getDatanode(cluster.getNamesystem(), nodeReg);
+    for (DatanodeStorageInfo storage : dd.getStorageInfos()) {
+      if (storage.getStorageType() == StorageType.DISK) {
+        // the remaining capacity needs to be higher than false
+        assertTrue(storage.getDatanodeDescriptor()
+            .getRemaining() >= diskCapacity * cacheFraction);
+      }
+    }
+
+    // space check on the DN as well
+    for (DataNode dn : cluster.getDataNodes()) {
+      for (StorageReport report : dn.getFSDataset()
+          .getStorageReports(namesystem.getBlockPoolId())) {
+        if (report.getStorage().getStorageType() == StorageType.DISK) {
+          assertTrue(report.getRemaining() >= diskCapacity * cacheFraction);
+        }
+      }
+    }
+
+    // restart the NN and make sure the cache used is tracked correctly.
+    long cacheUsed = cacheManager.getCacheUsedForProvided();
+    assertTrue(cacheUsed > 0);
+    cluster.restartNameNode();
+    namesystem = cluster.getNamesystem();
+    cacheManager = (SimpleReadCacheManager) namesystem.getMountManager()
+        .getReadCacheManager();
+    cluster.triggerHeartbeats();
+    Thread.sleep(1000);
+    assertEquals(cacheUsed, cacheManager.getCacheUsedForProvided());
+
+    client = new DFSClient(cluster.getNameNode(0).getNameNodeAddress(), conf);
+    // mount new directory with 0 cache capacity.
+    Map<String, String> config = new HashMap<>();
+    config.put(DFS_PROVIDED_READ_CACHE_CAPACITY_FRACTION, "0");
+    assertTrue(
+        client.addMount(dir1.toURI().toString(), "/mounts/dir2", config));
+    Thread.sleep(1000);
+    assertEquals(0, cacheManager.getCacheUsedForProvided());
+
+    namesystem.removeMount(mount);
+    cluster.triggerHeartbeats();
+    Thread.sleep(1000);
+    assertEquals(0, cacheManager.getCacheUsedForProvided());
+  }
+
+  @Test
+  public void testDynamicMountsCheckpoint() throws Exception {
+    conf.setInt(FixedBlockResolver.BLOCKSIZE, baseFileLen);
+    conf.setInt(FixedBlockResolver.BLOCKSIZE, baseFileLen);
+    createInMemoryAliasMapImage();
+    conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+        "0.0.0.0:0");
+    cluster = startCluster(nnDirPath, 3, new StorageType[] {StorageType.DISK},
+        null, false, conf);
+
+    File newDir = new File(new File(providedPath.toUri()), "newDir");
+    String remotePath = newDir.toURI().toString();
+    String mountpoint = "/mount1";
+    // call mount
+    DFSClient client =
+        new DFSClient(cluster.getNameNode().getNameNodeAddress(), conf);
+
+    // create the new files to mount
+    newDir.mkdirs();
+    createFiles(new Path(newDir.toURI()), 10, baseFileLen, "newFile",
+        fileSuffix);
+    assertTrue(client.addMount(remotePath, mountpoint, null));
+    // verify new image!!
+    verifyPaths(cluster, conf, new Path(mountpoint), new Path(newDir.toURI()),
+        0, true);
+    SecondaryNameNode.CommandLineOpts opts =
+        new SecondaryNameNode.CommandLineOpts();
+    opts.parse("-format");
+    SecondaryNameNode secondary = new SecondaryNameNode(conf, opts);
+    secondary.doCheckpoint();
+    secondary.shutdown();
+
+    // re-start the namenode.
+    cluster.restartNameNodes();
+    client = new DFSClient(cluster.getNameNode().getNameNodeAddress(), conf);
+
+    List<MountInfo> mountInfos =
+        client.listMounts(false).getMountInfos();
+    assertEquals(1, mountInfos.size());
+    assertEquals(MountInfo.MountStatus.CREATED,
+        mountInfos.get(0).getMountStatus());
+  }
+
+  @Test
+  public void testDynamicMountsCheckpointHA() throws Exception {
+    conf.setInt(FixedBlockResolver.BLOCKSIZE, baseFileLen);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY, 100);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
+
+    MiniDFSNNTopology topology =
+        MiniDFSNNTopology.simpleHATopology(2, NetUtils.getFreeSocketPort());
+    createInMemoryAliasMapImage();
+    providedNameservice = topology.getNameservices().get(0).getId();
+    // configure the AliasMap addresses
+    configureInMemoryAliasMapAddresses(topology, conf, providedNameservice);
+
+    cluster = startCluster(nnDirPath, 3, new StorageType[] {StorageType.DISK},
+        null, false, conf, null, topology,
+        new MiniDFSClusterBuilderAliasMap(conf, providedNameservice));
+
+    cluster.waitActive();
+
+    List<Integer> nnIndexes = cluster.getNNIndexes(providedNameservice);
+    int nn0 = nnIndexes.get(0);
+    cluster.transitionToActive(nn0);
+
+    // create the new files to mount
+    File newDir = new File(new File(providedPath.toUri()), "newDir");
+    newDir.mkdirs();
+    createFiles(new Path(newDir.toURI()), 10, baseFileLen, "newFile",
+        fileSuffix);
+
+    String mountPath = "/mount1";
+    LOG.info("Calling createMount with mountpoint " + mountPath);
+    // call mount
+    DFSClient client =
+        new DFSClient(cluster.getNameNode(nn0).getNameNodeAddress(), conf);
+    client.addMount(newDir.toURI().toString(), mountPath, null);
+
+    LOG.info("Verifying data on new mount with 1st NN");
+    verifyPaths(cluster, conf, new Path(mountPath), new Path(newDir.toURI()),
+        nn0, true);
+
+    List<MountInfo> mountInfos =
+        client.listMounts(false).getMountInfos();
+    assertEquals(1, mountInfos.size());
+    assertEquals(MountInfo.MountStatus.CREATED,
+        mountInfos.get(0).getMountStatus());
+    HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),
+        cluster.getNameNode(1));
+
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(170));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(170));
+
+    cluster.restartNameNodes();
+    cluster.transitionToActive(nn0);
+    client = new DFSClient(cluster.getNameNode(nn0).getNameNodeAddress(), conf);
+    mountInfos = client.listMounts(false).getMountInfos();
+    assertEquals(1, mountInfos.size());
+    assertEquals(MountInfo.MountStatus.CREATED,
+        mountInfos.get(0).getMountStatus());
+    verifyPaths(cluster, conf, new Path(mountPath), new Path(newDir.toURI()),
+        nn0, true);
   }
 }

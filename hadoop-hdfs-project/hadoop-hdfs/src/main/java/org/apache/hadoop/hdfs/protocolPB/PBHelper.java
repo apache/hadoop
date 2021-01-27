@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.protocolPB;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -24,9 +27,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
+import org.apache.hadoop.fs.MountMode;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -43,23 +50,32 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommand
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockECReconstructionCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockSyncTaskProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BulkSyncTaskExecutionFeedbackProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProvidedVolCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos
-    .SlowDiskReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SlowDiskReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SlowPeerReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncTaskExecutionFeedbackProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncTaskExecutionOutcomeProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncTaskExecutionResultProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.SyncTaskIdProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECReconstructionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ProvidedStorageLocationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageUuidsProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ProvidedMountConfigProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ProvidedVolumeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
@@ -70,11 +86,11 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.BlocksWithLocation
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.CheckpointCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.CheckpointSignatureProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.ExportedBlockKeysProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeRegistrationProto.NamenodeRoleProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamespaceInfoProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.RemoteEditLogProto;
@@ -87,20 +103,26 @@ import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.ProvidedVolumeInfo;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.protocol.BlockSyncTask;
+import org.apache.hadoop.hdfs.server.protocol.BlockSyncTaskExecutionFeedback;
+import org.apache.hadoop.hdfs.server.protocol.SyncTaskExecutionOutcome;
+import org.apache.hadoop.hdfs.server.protocol.SyncTaskExecutionResult;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStripedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BulkSyncTaskExecutionFeedback;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -112,6 +134,7 @@ import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.ProvidedVolumeCommand;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
@@ -119,7 +142,9 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
+import org.apache.hadoop.hdfs.server.protocol.SyncCommand;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.ipc.ClientId;
 
 /**
  * Utilities for converting protobuf classes to and from implementation classes
@@ -469,11 +494,57 @@ public class PBHelper {
       return PBHelper.convert(proto.getBlkIdCmd());
     case BlockECReconstructionCommand:
       return PBHelper.convert(proto.getBlkECReconstructionCmd());
+    case ProvidedVolCommand:
+      return PBHelper.convert(proto.getProvidedVolCmd());
+    case SyncCommand:
+      return PBHelper.convert(proto.getSyncCommand());
     default:
       return null;
     }
   }
-  
+
+  private static SyncCommand convert(SyncCommandProto backupCommand) {
+    List<BlockSyncTaskProto> syncTasksProtoList =
+        backupCommand.getSyncTasksList();
+    List<BlockSyncTask> syncTasksList =
+        new ArrayList(syncTasksProtoList.size());
+    for (BlockSyncTaskProto syncTaskProto : syncTasksProtoList) {
+      syncTasksList.add(convertSyncTask(syncTaskProto));
+    }
+
+    return new SyncCommand(DatanodeProtocol.DNA_BACKUP, syncTasksList);
+  }
+
+  private static BlockSyncTask convertSyncTask(
+      BlockSyncTaskProto syncTaskProto) {
+    SyncTaskIdProto syncTaskIdProto = syncTaskProto.getSyncTaskId();
+    UUID syncTaskId = convert(syncTaskIdProto);
+    ByteBuffer uploadHandle =
+        ByteBuffer.allocate(syncTaskProto.getUploadHandle().size());
+    syncTaskProto.getUploadHandle().copyTo(uploadHandle);
+    uploadHandle.flip();
+    try {
+      return new BlockSyncTask(syncTaskId,
+          new URI(syncTaskProto.getUri()),
+          PBHelperClient.convertLocatedBlocks(
+              syncTaskProto.getLocatedBlocksList()),
+          syncTaskProto.getPartNumber(),
+          uploadHandle,
+          syncTaskProto.getOffset(),
+          syncTaskProto.getLength(),
+          syncTaskIdProto.getSyncMountId());
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException();
+    }
+  }
+
+  public static UUID convert(SyncTaskIdProto syncTaskIdProto) {
+    byte[] clientId = syncTaskIdProto.getSyncTaskId().toByteArray();
+    long syncTaskIdMsb = ClientId.getMsb(clientId);
+    long syncTaskIdLsb = ClientId.getLsb(clientId);
+    return new UUID(syncTaskIdMsb, syncTaskIdLsb);
+  }
+
   public static BalancerBandwidthCommandProto convert(
       BalancerBandwidthCommand bbCmd) {
     return BalancerBandwidthCommandProto.newBuilder()
@@ -548,6 +619,36 @@ public class PBHelper {
     return builder.build();
   }
 
+  private static ProvidedVolCommandProto convert(ProvidedVolumeCommand
+      providedVolumeCommand) {
+    ProvidedVolumeInfo vol = providedVolumeCommand.getProvidedVolume();
+
+    ProvidedVolCommandProto.Builder builder =
+        ProvidedVolCommandProto.newBuilder()
+            .setVolumeId(vol.getId())
+            .setRemotePath(vol.getRemotePath())
+            .setMountMode(PBHelperClient.convert(vol.getMountMode()));
+    Map<String, String> configs = vol.getConfig();
+    if (configs != null) {
+      for (Entry<String, String> config : configs.entrySet()) {
+        ProvidedMountConfigProto configProto =
+            ProvidedMountConfigProto.newBuilder().setKey(config.getKey())
+            .setValue(config.getValue()).build();
+        builder.addConfig(configProto);
+      }
+    }
+    switch (providedVolumeCommand.getAction()) {
+    case DatanodeProtocol.DNA_PROVIDEDVOLADD:
+      builder.setAction(ProvidedVolCommandProto.Action.ADD);
+      break;
+    case DatanodeProtocol.DNA_PROVIDEDVOLREMOVE:
+      builder.setAction(ProvidedVolCommandProto.Action.REMOVE);
+      break;
+    }
+
+    return builder.build();
+  }
+
   private static List<StorageUuidsProto> convert(String[][] targetStorageUuids) {
     StorageUuidsProto[] ret = new StorageUuidsProto[targetStorageUuids.length];
     for (int i = 0; i < targetStorageUuids.length; i++) {
@@ -602,6 +703,16 @@ public class PBHelper {
       builder.setCmdType(DatanodeCommandProto.Type.BlockECReconstructionCommand)
           .setBlkECReconstructionCmd(
               convert((BlockECReconstructionCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_PROVIDEDVOLADD:
+    case DatanodeProtocol.DNA_PROVIDEDVOLREMOVE:
+      builder.setCmdType(DatanodeCommandProto.Type.ProvidedVolCommand).
+          setProvidedVolCmd(
+              PBHelper.convert((ProvidedVolumeCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_BACKUP:
+      builder.setCmdType(DatanodeCommandProto.Type.SyncCommand)
+          .setSyncCommand(convert((SyncCommand) datanodeCommand));
       break;
     case DatanodeProtocol.DNA_UNKNOWN: //Not expected
     default:
@@ -699,6 +810,36 @@ public class PBHelper {
       throw new AssertionError("Unknown action type: " + blkIdCmd.getAction());
     }
     return new BlockIdCommand(action, blkIdCmd.getBlockPoolId(), blockIds);
+  }
+
+  public static ProvidedVolumeCommand convert(ProvidedVolCommandProto
+      volCommandProto) {
+    UUID id = UUID.fromString(volCommandProto.getVolumeId());
+    List<ProvidedMountConfigProto> configList =
+        volCommandProto.getConfigList();
+    Map<String, String> configMap = new HashMap<>();
+    if (configList != null) {
+      for (ProvidedMountConfigProto config : configList) {
+        configMap.put(config.getKey(), config.getValue());
+      }
+    }
+    String remote = volCommandProto.getRemotePath();
+    MountMode mountMode =
+        PBHelperClient.convert(volCommandProto.getMountMode());
+    ProvidedVolumeInfo volInfo
+        = new ProvidedVolumeInfo(id, remote, mountMode, configMap);
+
+    ProvidedVolumeCommand cmd = null;
+    switch (volCommandProto.getAction()) {
+    case ADD:
+      cmd = ProvidedVolumeCommand.buildAddCmd(volInfo);
+      break;
+    case REMOVE:
+      cmd = ProvidedVolumeCommand.buildRemoveCmd(volInfo);
+      break;
+    }
+
+    return cmd;
   }
 
   public static BalancerBandwidthCommand convert(
@@ -1125,7 +1266,170 @@ public class PBHelper {
         PBHelperClient.convert(blockProto);
     ProvidedStorageLocation providedStorageLocation =
         PBHelperClient.convert(providedStorageLocationProto);
-
+    if (providedStorageLocation == null) {
+      return null;
+    }
     return new FileRegion(block, providedStorageLocation);
+  }
+
+  public static ProvidedVolumeInfoProto convert(ProvidedVolumeInfo volInfo) {
+    ProvidedVolumeInfoProto.Builder builder =
+        ProvidedVolumeInfoProto.newBuilder();
+    builder.setMountPath(volInfo.getMountPath());
+    builder.setRemotePath(volInfo.getRemotePath());
+    builder.setMountMode(PBHelperClient.convert(volInfo.getMountMode()));
+    builder.setUuid(volInfo.getId());
+    Map<String, String> configs = volInfo.getConfig();
+    if (configs != null) {
+      for (Entry<String, String> config : configs.entrySet()) {
+        ProvidedMountConfigProto configProto =
+            ProvidedMountConfigProto.newBuilder().setKey(config.getKey())
+                .setValue(config.getValue()).build();
+        builder.addConfig(configProto);
+      }
+    }
+    return builder.build();
+  }
+
+  public static ProvidedVolumeInfo convert(ProvidedVolumeInfoProto proto) {
+    List<ProvidedMountConfigProto> configList = proto.getConfigList();
+    Map<String, String> configMap = new HashMap<>();
+    if (configList != null) {
+      for (ProvidedMountConfigProto config : configList) {
+        configMap.put(config.getKey(), config.getValue());
+      }
+    }
+    return new ProvidedVolumeInfo(UUID.fromString(proto.getUuid()),
+        proto.getMountPath(), proto.getRemotePath(),
+        PBHelperClient.convert(proto.getMountMode()), configMap);
+  }
+
+  private static SyncCommandProto convert(SyncCommand syncCommand) {
+    SyncCommandProto.Builder builder = SyncCommandProto.newBuilder();
+
+    List<BlockSyncTaskProto> syncTaskProtos = syncCommand.getSyncTasks()
+        .stream()
+        .map(syncTask -> convert(syncTask))
+        .collect(Collectors.toList());
+
+    builder.addAllSyncTasks(syncTaskProtos);
+
+    return builder.build();
+  }
+
+  private static BlockSyncTaskProto convert(BlockSyncTask blockSyncTask) {
+    BlockSyncTaskProto.Builder builder = BlockSyncTaskProto.newBuilder();
+    builder.addAllLocatedBlocks(PBHelperClient.convertLocatedBlocks2(
+            blockSyncTask.getLocatedBlocks()));
+    builder.setUploadHandle(
+        ByteString.copyFrom(blockSyncTask.getUploadHandle().array()));
+    builder.setPartNumber(blockSyncTask.getPartNumber());
+    builder.setUri(blockSyncTask.getRemoteURI().toString());
+    builder.setOffset(blockSyncTask.getOffset());
+    builder.setLength(blockSyncTask.getLength());
+    builder.setSyncTaskId(convert(blockSyncTask.getSyncTaskId(),
+        blockSyncTask.getSyncMountId()));
+
+    return builder.build();
+  }
+
+  public static SyncTaskIdProto convert(UUID syncTaskId, String syncMountId) {
+    SyncTaskIdProto.Builder builder = SyncTaskIdProto.newBuilder();
+    ByteBuffer syncTaskIdBytes = ByteBuffer.wrap(new byte[16]);
+    syncTaskIdBytes.putLong(syncTaskId.getMostSignificantBits());
+    syncTaskIdBytes.putLong(syncTaskId.getLeastSignificantBits());
+    builder.setSyncTaskId(ByteString.copyFrom(syncTaskIdBytes.array()));
+    builder.setSyncMountId(syncMountId);
+    return builder.build();
+  }
+
+
+  public static BulkSyncTaskExecutionFeedbackProto convert(
+      BulkSyncTaskExecutionFeedback bulkFeedback) {
+    return BulkSyncTaskExecutionFeedbackProto.newBuilder()
+        .addAllFeedbacks(bulkFeedback.getFeedbacks().stream()
+            .map(f -> convert(f)).collect(Collectors.toList()))
+        .build();
+  }
+
+  public static SyncTaskExecutionFeedbackProto convert(
+      BlockSyncTaskExecutionFeedback feedback) {
+    SyncTaskExecutionFeedbackProto.Builder builder =
+        SyncTaskExecutionFeedbackProto.newBuilder()
+            .setSyncTaskId(
+                convert(feedback.getSyncTaskId(), feedback.getSyncMountId()))
+            .setOutcome(convert(feedback.getOutcome()));
+    if (feedback.getResult() != null) {
+      builder.setResult(convert(feedback.getResult()));
+    }
+    return builder.build();
+  }
+
+  public static SyncTaskExecutionOutcomeProto convert(
+      SyncTaskExecutionOutcome outcome) {
+    switch (outcome) {
+    case FINISHED_SUCCESSFULLY:
+      return SyncTaskExecutionOutcomeProto.FINISHED_SUCCESSFULLY;
+    case EXCEPTION:
+      return SyncTaskExecutionOutcomeProto.EXCEPTION;
+    default:
+      throw new IllegalArgumentException(
+          "Unknown SyncTaskExecutionOutcome: " + outcome);
+    }
+  }
+
+  public static SyncTaskExecutionResultProto convert(
+      SyncTaskExecutionResult result) {
+    SyncTaskExecutionResultProto.Builder builder =
+        SyncTaskExecutionResultProto.newBuilder();
+    if (result.getResult() != null) {
+      builder.setResult(ByteString.copyFrom(result.getResult()));
+    }
+    if (result.getNumberOfBytes() != null) {
+      builder.setNumberOfBytes(result.getNumberOfBytes());
+    }
+    return builder.build();
+  }
+
+  public static BulkSyncTaskExecutionFeedback
+      convertBulkSyncTaskExecutionFeedback(
+      BulkSyncTaskExecutionFeedbackProto bulkSyncTaskExecutionFeedback) {
+    return new BulkSyncTaskExecutionFeedback(
+        bulkSyncTaskExecutionFeedback.getFeedbacksList().stream()
+            .map(feedback -> convert(feedback)).collect(Collectors.toList()));
+  }
+
+  public static BlockSyncTaskExecutionFeedback convert(
+      SyncTaskExecutionFeedbackProto feedback) {
+    return new BlockSyncTaskExecutionFeedback(
+        convert(feedback.getSyncTaskId()),
+        convert(feedback.getOutcome()),
+        feedback.hasResult() ? convert(feedback.getResult()) : null,
+        feedback.getSyncTaskId().getSyncMountId());
+  }
+
+  public static SyncTaskExecutionOutcome convert(
+      SyncTaskExecutionOutcomeProto outcome) {
+    switch (outcome) {
+    case FINISHED_SUCCESSFULLY:
+      return SyncTaskExecutionOutcome.FINISHED_SUCCESSFULLY;
+    case EXCEPTION:
+      return SyncTaskExecutionOutcome.EXCEPTION;
+    default:
+      throw new IllegalArgumentException(
+          "Unknown SyncTaskExecutionOutcomeProto: " + outcome);
+    }
+  }
+
+  public static SyncTaskExecutionResult convert(
+      SyncTaskExecutionResultProto result) {
+    byte[] bytes = null;
+    if (result.getResult() != null) {
+      bytes = result.getResult().toByteArray();
+    }
+
+    ByteBuffer byteBuffer =
+        (bytes == null) ? null : ByteBuffer.wrap(bytes);
+    return new SyncTaskExecutionResult(byteBuffer, result.getNumberOfBytes());
   }
 }

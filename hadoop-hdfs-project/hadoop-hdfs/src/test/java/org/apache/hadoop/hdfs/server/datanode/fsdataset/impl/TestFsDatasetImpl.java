@@ -634,7 +634,7 @@ public class TestFsDatasetImpl {
     badDir.mkdirs();
     doReturn(mockVolume).when(spyDataset)
         .createFsVolume(anyString(), any(StorageDirectory.class),
-            any(StorageLocation.class));
+            any(Configuration.class));
     doThrow(new IOException("Failed to getVolumeMap()"))
       .when(mockVolume).getVolumeMap(
         anyString(),

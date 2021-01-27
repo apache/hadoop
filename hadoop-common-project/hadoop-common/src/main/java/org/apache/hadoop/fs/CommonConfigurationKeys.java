@@ -232,6 +232,8 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String
   SECURITY_DATANODE_PROTOCOL_ACL = "security.datanode.protocol.acl";
   public static final String
+  SECURITY_ALIASMAP_PROTOCOL_ACL = "security.aliasmap.protocol.acl";
+  public static final String
   SECURITY_INTER_DATANODE_PROTOCOL_ACL = "security.inter.datanode.protocol.acl";
   public static final String
   SECURITY_NAMENODE_PROTOCOL_ACL = "security.namenode.protocol.acl";

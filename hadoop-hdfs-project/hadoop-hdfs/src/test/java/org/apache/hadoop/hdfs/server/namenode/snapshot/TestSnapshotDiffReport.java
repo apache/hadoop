@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.apache.hadoop.hdfs.DFSUtil.string2Bytes;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.INodeType.DIRECTORY;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.INodeType.FILE;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.INodeType.SYMLINK;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -247,72 +251,72 @@ public class TestSnapshotDiffReport {
     assertEquals(0, report.getDiffList().size());
 
     verifyDiffReport(sub1, "s0", "s2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file15")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file12")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("file13")),
+        new DiffReportEntry(SYMLINK, DiffType.DELETE, string2Bytes("link13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE, string2Bytes("link13")));
 
     verifyDiffReport(sub1, "s0", "s5",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file15")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file12")),
+        new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("file10")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("file13")),
+        new DiffReportEntry(SYMLINK, DiffType.DELETE, string2Bytes("link13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE, string2Bytes("link13")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file15")));
 
     verifyDiffReport(sub1, "s2", "s5",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
+        new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("file10")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file15")));
 
     verifyDiffReport(sub1, "s3", "",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file12")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file15")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("subsub1/subsubsub1/file12")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(SYMLINK, DiffType.DELETE,
+            string2Bytes("subsub1/subsubsub1/link13")));
   }
 
   @Test(timeout = 60000)
@@ -380,200 +384,189 @@ public class TestSnapshotDiffReport {
       final Path snapSubDir, final Path snapSubSubDir) throws
       IOException {
     verifyDiffReport(snapDir, "s0", "s2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file15")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file12")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("file13")),
+        new DiffReportEntry(SYMLINK, DiffType.DELETE, string2Bytes("link13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE, string2Bytes("link13")));
     verifyDiffReport(snapSubDir, "s0", "s2", new DiffReportEntry[]{});
     verifyDiffReport(snapSubSubDir, "s0", "s2", new DiffReportEntry[]{});
 
     verifyDiffReport(snapDir, "s0", "s8",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file15")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file15")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file15")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file12")),
+        new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("file10")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("file13")),
+        new DiffReportEntry(SYMLINK, DiffType.DELETE, string2Bytes("link13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE, string2Bytes("link13")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsub1/link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file15")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file15")));
 
     verifyDiffReport(snapSubDir, "s0", "s8",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file15")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsubsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/file15")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file15")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsubsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsubsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsubsub1/link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsubsub1/file15")));
 
     verifyDiffReport(snapSubSubDir, "s0", "s8",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file15")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE, string2Bytes("link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file15")));
 
     verifyDiffReport(snapDir, "s2", "s5",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file15")));
+        new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("file10")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsub1/link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file15")));
 
     verifyDiffReport(snapSubDir, "s2", "s5",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file15")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE, string2Bytes("link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file15")));
     verifyDiffReport(snapSubSubDir, "s2", "s5",
         new DiffReportEntry[]{});
 
     verifyDiffReport(snapDir, "s3", "",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file15")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/file12")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/file10")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/file11")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/link13")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/link13")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file15")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("subsub1/file12")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes("subsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("subsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes("subsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsub1/link13")),
+        new DiffReportEntry(SYMLINK, DiffType.DELETE,
+            string2Bytes("subsub1/link13")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file15")));
 
     verifyDiffReport(snapSubDir, "s3", "",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file15")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("file12")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsubsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsubsub1/file15")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file15")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("file12")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes("file10")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes("file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("link13")),
+        new DiffReportEntry(SYMLINK, DiffType.DELETE,
+            string2Bytes("link13")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsubsub1/file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsubsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsubsub1/link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsubsub1/file15")));
 
     verifyDiffReport(snapSubSubDir, "s3", "",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file10")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("link13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file15")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file10")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("link13")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("file15")));
   }
 
   @Test
@@ -602,33 +595,30 @@ public class TestSnapshotDiffReport {
     // The snapshot diff for the snap root detects the change as file rename
     // as the file move happened within the snap root.
     verifyDiffReport(sub1, "s1", "s2",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")),
-        new DiffReportEntry(DiffType.RENAME,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file20"),
-            DFSUtil.string2Bytes("subsub1/file20")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            string2Bytes("subsub1/subsubsub1/file20"),
+            string2Bytes("subsub1/file20")));
 
     // The snapshot diff for the descendant dir <subsub> still detects the
     // change as file rename as the file move happened under the snap root
     // descendant dir.
     verifyDiffReport(subSub, "s1", "s2",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsubsub1")),
-        new DiffReportEntry(DiffType.RENAME,
-            DFSUtil.string2Bytes("subsubsub1/file20"),
-            DFSUtil.string2Bytes("file20")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            string2Bytes("subsubsub1/file20"),
+            string2Bytes("file20")));
 
     // The snapshot diff for the descendant dir <subsubsub> detects the
     // change as file delete as the file got moved from its scope.
     verifyDiffReport(subSubSub, "s1", "s2",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("file20")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file20")));
 
     // Case 2: Move the file from the snap root descendant dir to any
     // non snap root dir. mv <snaproot>/<subsub>/file20 <nonsnaproot>/file20.
@@ -640,19 +630,18 @@ public class TestSnapshotDiffReport {
     // as the file got moved away from the snap root dir to some non snap
     // root dir.
     verifyDiffReport(sub1, "s2", "s3",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/file20")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("subsub1/file20")));
 
     // The snapshot diff for the snap root descendant <subsub> detects the
     // change as file delete as the file was previously under its scope and
     // got moved away from its scope.
     verifyDiffReport(subSub, "s2", "s3",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("file20")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("file20")));
 
     // The file was already not under the descendant dir <subsubsub> scope.
     // So, the snapshot diff report for the descendant dir doesn't
@@ -668,10 +657,8 @@ public class TestSnapshotDiffReport {
 
     // Snap root directory should show the file moved in as a new file.
     verifyDiffReport(sub1, "s3", "s4",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file20")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file20")));
 
     // Snap descendant directories don't have visibility to the moved in file.
     verifyDiffReport(subSub, "s3", "s4",
@@ -686,21 +673,18 @@ public class TestSnapshotDiffReport {
     // Snap root directory now shows the rename as both source and
     // destination paths are under the snap root.
     verifyDiffReport(sub1, "s4", "s5",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.RENAME,
-            DFSUtil.string2Bytes("file20"),
-            DFSUtil.string2Bytes("subsub1/file20")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            string2Bytes("file20"),
+            string2Bytes("subsub1/file20")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1")));
 
     // For the descendant directory under the snap root, the file
     // moved in shows up as a new file created.
     verifyDiffReport(subSub, "s4", "s5",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("file20")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("file20")));
 
     verifyDiffReport(subSubSub, "s4", "s5",
         new DiffReportEntry[]{});
@@ -714,10 +698,10 @@ public class TestSnapshotDiffReport {
     hdfs.createSnapshot(sub1, genSnapshotName(sub1));
 
     verifyDiffReport(sub1, "s5", "s6",
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub2")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1")),
+        new DiffReportEntry(DIRECTORY, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub2")));
 
     verifyDiffReport(subSubSub2, "s5", "s6",
         new DiffReportEntry[]{});
@@ -791,26 +775,27 @@ public class TestSnapshotDiffReport {
     hdfs.delete(subsub1, true);
     // check diff report between s0 and s2
     verifyDiffReport(sub1, "s0", "s2", 
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1")), 
-        new DiffReportEntry(DiffType.CREATE, 
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file15")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file12")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file15")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("subsub1/subsubsub1/file12")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/file11")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(SYMLINK, DiffType.CREATE,
+            string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(SYMLINK, DiffType.DELETE,
+            string2Bytes("subsub1/subsubsub1/link13")));
     // check diff report between s0 and the current status
     verifyDiffReport(sub1, "s0", "", 
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("subsub1")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.DELETE,
+            string2Bytes("subsub1")));
   }
 
   /**
@@ -842,16 +827,17 @@ public class TestSnapshotDiffReport {
     hdfs.delete(sdir2, true);
 
     verifyDiffReport(root, "s1", "s2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/foo"),
-            DFSUtil.string2Bytes("dir2/bar/foo")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("dir1/foo/bar")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1/foo")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil
-            .string2Bytes("dir1/foo/bar"), DFSUtil.string2Bytes("dir2/bar")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir1")),
+        new DiffReportEntry(DIRECTORY, DiffType.RENAME,
+            string2Bytes("dir1/foo"), string2Bytes("dir2/bar/foo")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir2")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("dir1/foo/bar")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("dir1/foo")),
+        new DiffReportEntry(DIRECTORY, DiffType.RENAME,
+            string2Bytes("dir1/foo/bar"), string2Bytes("dir2/bar")));
   }
 
   /**
@@ -882,11 +868,11 @@ public class TestSnapshotDiffReport {
 
     SnapshotTestHelper.createSnapshot(hdfs, dir1, "s1");
     verifyDiffReport(dir1, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes(newBar
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.CREATE, string2Bytes(newBar
             .getName())),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes(foo.getName())));
+        new DiffReportEntry(DIRECTORY, DiffType.DELETE,
+            string2Bytes(foo.getName())));
   }
 
   /**
@@ -909,25 +895,29 @@ public class TestSnapshotDiffReport {
     hdfs.rename(fileInFoo, fileInBar, Rename.OVERWRITE);
     SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
     verifyDiffReport(root, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1/foo")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2/bar")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil
-            .string2Bytes("dir2/bar/file")),
-        new DiffReportEntry(DiffType.RENAME,
-            DFSUtil.string2Bytes("dir1/foo/file"),
-            DFSUtil.string2Bytes("dir2/bar/file")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("dir1/foo")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("dir2/bar")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("dir2/bar/file")),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            string2Bytes("dir1/foo/file"),
+            string2Bytes("dir2/bar/file")));
 
     // delete bar
     hdfs.delete(bar, true);
     SnapshotTestHelper.createSnapshot(hdfs, root, "s2");
     verifyDiffReport(root, "s0", "s2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1/foo")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("dir2/bar")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("dir1/foo/file")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            string2Bytes("dir1/foo")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir2")),
+        new DiffReportEntry(DIRECTORY, DiffType.DELETE,
+            string2Bytes("dir2/bar")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            string2Bytes("dir1/foo/file")));
   }
 
   @Test
@@ -945,11 +935,11 @@ public class TestSnapshotDiffReport {
     SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
 
     verifyDiffReport(root, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("bar")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo/file"),
-            DFSUtil.string2Bytes("bar/file")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("foo")),
+        new DiffReportEntry(DIRECTORY, DiffType.CREATE, string2Bytes("bar")),
+        new DiffReportEntry(DIRECTORY, DiffType.RENAME,
+            string2Bytes("foo/file"), string2Bytes("bar/file")));
   }
 
   /**
@@ -969,10 +959,10 @@ public class TestSnapshotDiffReport {
 
     // we always put modification on the file before rename
     verifyDiffReport(root, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo"),
-            DFSUtil.string2Bytes("bar")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.MODIFY, string2Bytes("foo")),
+        new DiffReportEntry(FILE, DiffType.RENAME, string2Bytes("foo"),
+            string2Bytes("bar")));
   }
 
   /**
@@ -1005,10 +995,10 @@ public class TestSnapshotDiffReport {
 
     // we always put modification on the file before rename
     verifyDiffReport(root, "s1", "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo2")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo2/bar"),
-            DFSUtil.string2Bytes("foo2/bar-new")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("foo2")),
+        new DiffReportEntry(FILE, DiffType.RENAME, string2Bytes("foo2/bar"),
+            string2Bytes("foo2/bar-new")));
   }
 
   private void createFile(final Path filePath) throws IOException {
@@ -1062,7 +1052,7 @@ public class TestSnapshotDiffReport {
         hdfs.getFileStatus(flumeS1Path).getLen());
 
     verifyDiffReport(level0A, flumeSnap1Name, "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")));
 
     long flumeFileWrittenDataLength = flumeFileLengthAfterS1;
     int newWriteLength = (int) (BLOCKSIZE * 1.5);
@@ -1087,17 +1077,17 @@ public class TestSnapshotDiffReport {
         hdfs.getFileStatus(flumeS2Path).getLen());
 
     verifyDiffReport(level0A, flumeSnap1Name, "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes(flumeFileName)));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes(flumeFileName)));
 
     verifyDiffReport(level0A, flumeSnap2Name, "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")));
 
     verifyDiffReport(level0A, flumeSnap1Name, flumeSnap2Name,
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes(flumeFileName)));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes(flumeFileName)));
 
     // Write more data to flume file
     flumeFileWrittenDataLength += writeToStream(flumeOutputStream, buf);
@@ -1123,26 +1113,26 @@ public class TestSnapshotDiffReport {
         hdfs.getFileStatus(flumeS2Path).getLen());
 
     verifyDiffReport(level0A, flumeSnap1Name, "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes(flumeFileName)));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes(flumeFileName)));
 
     verifyDiffReport(level0A, flumeSnap2Name, "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes(flumeFileName)));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes(flumeFileName)));
 
     verifyDiffReport(level0A, flumeSnap1Name, flumeSnap2Name,
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes(flumeFileName)));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes(flumeFileName)));
 
     restartNameNode();
 
     verifyDiffReport(level0A, flumeSnap1Name, flumeSnap2Name,
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes(flumeFileName)));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.MODIFY,
+            string2Bytes(flumeFileName)));
 
   }
 
@@ -1309,28 +1299,19 @@ public class TestSnapshotDiffReport {
 
     SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
     verifyDiffReport(root, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir1/file1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir1/file2")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir1/file3")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir2/file1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir2/file2")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir2/file3")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir3")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir3/file1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir3/file2")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir3/file3")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir1")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("dir1/file1")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("dir1/file2")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("dir1/file3")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir2")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("dir2/file1")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("dir2/file2")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("dir2/file3")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir3")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("dir3/file1")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("dir3/file2")),
+        new DiffReportEntry(FILE, DiffType.CREATE, string2Bytes("dir3/file3")));
   }
 
   @Test
@@ -1372,32 +1353,29 @@ public class TestSnapshotDiffReport {
     hdfs.rename(pathToRename, targetDir);
     SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
     verifyDiffReport(root, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir4")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2"),
-            DFSUtil.string2Bytes("dir3/dir2")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/file1"),
-            DFSUtil.string2Bytes("dir4/file1")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/file2"),
-            DFSUtil.string2Bytes("dir4/file2")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/file3"),
-            DFSUtil.string2Bytes("dir4/file3")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2/file1"),
-            DFSUtil.string2Bytes("dir3/file1")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2/file2"),
-            DFSUtil.string2Bytes("dir3/file2")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2/file3"),
-            DFSUtil.string2Bytes("dir3/file3")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir3")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("dir3/file1")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("dir3/file1")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("dir3/file3")));
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.CREATE,
+            string2Bytes("dir4")),
+        new DiffReportEntry(DIRECTORY, DiffType.RENAME, string2Bytes("dir2"),
+            string2Bytes("dir3/dir2")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir1")),
+        new DiffReportEntry(FILE, DiffType.RENAME, string2Bytes("dir1/file1"),
+            string2Bytes("dir4/file1")),
+        new DiffReportEntry(FILE, DiffType.RENAME, string2Bytes("dir1/file2"),
+            string2Bytes("dir4/file2")),
+        new DiffReportEntry(FILE, DiffType.RENAME, string2Bytes("dir1/file3"),
+            string2Bytes("dir4/file3")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir2")),
+        new DiffReportEntry(FILE, DiffType.RENAME, string2Bytes("dir2/file1"),
+            string2Bytes("dir3/file1")),
+        new DiffReportEntry(FILE, DiffType.RENAME, string2Bytes("dir2/file2"),
+            string2Bytes("dir3/file2")),
+        new DiffReportEntry(FILE, DiffType.RENAME, string2Bytes("dir2/file3"),
+            string2Bytes("dir3/file3")),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY, string2Bytes("dir3")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("dir3/file1")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("dir3/file1")),
+        new DiffReportEntry(FILE, DiffType.DELETE, string2Bytes("dir3/file3")));
   }
 
   private void verifyDiffReportForGivenReport(Path dirPath, String from,
@@ -1419,11 +1397,13 @@ public class TestSnapshotDiffReport {
       } else if (entry.getType() == DiffType.DELETE) {
         assertTrue(report.getDiffList().contains(entry));
         assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.CREATE, entry.getSourcePath())));
+            new DiffReportEntry(DIRECTORY,
+                DiffType.CREATE, entry.getSourcePath())));
       } else if (entry.getType() == DiffType.CREATE) {
         assertTrue(report.getDiffList().contains(entry));
         assertTrue(inverseReport.getDiffList().contains(
-            new DiffReportEntry(DiffType.DELETE, entry.getSourcePath())));
+            new DiffReportEntry(DIRECTORY,
+                DiffType.DELETE, entry.getSourcePath())));
       }
     }
   }
@@ -1496,30 +1476,42 @@ public class TestSnapshotDiffReport {
         report.getIsFromEarlier(), modifiedList, createdList, deletedList);
     verifyDiffReportForGivenReport(root, "s0", "s1",
         snapshotDiffReport.generateReport(),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("dir4")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2"),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DIRECTORY, DiffType.CREATE,
+            DFSUtil.string2Bytes("dir4")),
+        new DiffReportEntry(DIRECTORY, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir2"),
             DFSUtil.string2Bytes("dir3/dir2")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/file1"),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            DFSUtil.string2Bytes("dir1")),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir1/file1"),
             DFSUtil.string2Bytes("dir4/file1")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/file2"),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir1/file2"),
             DFSUtil.string2Bytes("dir4/file2")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir1/file3"),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir1/file3"),
             DFSUtil.string2Bytes("dir4/file3")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir2")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2/file1"),
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            DFSUtil.string2Bytes("dir2")),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir2/file1"),
             DFSUtil.string2Bytes("dir3/file1")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2/file2"),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir2/file2"),
             DFSUtil.string2Bytes("dir3/file2")),
-        new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("dir2/file3"),
+        new DiffReportEntry(FILE, DiffType.RENAME,
+            DFSUtil.string2Bytes("dir2/file3"),
             DFSUtil.string2Bytes("dir3/file3")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir3")),
-        new DiffReportEntry(DiffType.DELETE,
+        new DiffReportEntry(DIRECTORY, DiffType.MODIFY,
+            DFSUtil.string2Bytes("dir3")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
             DFSUtil.string2Bytes("dir3/file1")),
-        new DiffReportEntry(DiffType.DELETE,
+        new DiffReportEntry(FILE, DiffType.DELETE,
             DFSUtil.string2Bytes("dir3/file1")),
-        new DiffReportEntry(DiffType.DELETE,
+        new DiffReportEntry(FILE, DiffType.DELETE,
             DFSUtil.string2Bytes("dir3/file3")));
   }
 

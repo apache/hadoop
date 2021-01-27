@@ -77,6 +77,18 @@ public interface FSNamesystemMBean {
   public long getProvidedCapacityTotal();
 
   /**
+   * Total space used for caching PROVIDED data.
+   * @return space used for caching PROVIDED data.
+   */
+  public long getProvidedCacheUsed();
+
+  /**
+   * Total space available for caching PROVIDED data.
+   * @return
+   */
+  public long getProvidedCacheCapacity();
+
+  /**
    * Total number of files and directories
    * @return -  num of files and directories
    */

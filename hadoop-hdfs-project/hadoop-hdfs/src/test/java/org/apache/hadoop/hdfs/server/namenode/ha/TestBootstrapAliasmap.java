@@ -92,8 +92,8 @@ public class TestBootstrapAliasmap {
     newServer.start();
     // the server should have only 2 blocks.
     assertEquals(2, newServer.list(Optional.empty()).getFileRegions().size());
-    assertNotNull(newServer.read(block1));
-    assertNotNull(newServer.read(block2));
+    assertNotNull(newServer.read(block1.getBlockId()));
+    assertNotNull(newServer.read(block2.getBlockId()));
     assertEquals(blockPoolId, newServer.getBlockPoolId());
   }
 }

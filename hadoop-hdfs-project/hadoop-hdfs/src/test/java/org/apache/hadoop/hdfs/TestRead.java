@@ -166,6 +166,12 @@ public class TestRead {
     @Override
     public synchronized InputStream getBlockInputStream(ExtendedBlock b,
         long seekOffset) throws IOException {
+      return getBlockInputStream(b, seekOffset, false);
+    }
+
+    @Override
+    public synchronized InputStream getBlockInputStream(ExtendedBlock b,
+        long seekOffset, boolean readThrough) throws IOException {
       while (isDelayed) {
         try {
           this.wait();

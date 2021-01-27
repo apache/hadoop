@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -66,7 +67,7 @@ class LocatedBlockBuilder {
   // return new block so tokens can be set
   LocatedBlock newLocatedBlock(ExtendedBlock eb,
       DatanodeStorageInfo[] storage,
-      long pos, boolean isCorrupt) {
+      long pos, boolean isCorrupt) throws IOException {
     LocatedBlock blk =
         BlockManager.newLocatedBlock(eb, storage, pos, isCorrupt);
     return blk;

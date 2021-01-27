@@ -20,6 +20,12 @@ import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.HDFSPolicyProvider;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.net.NetUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configurable;
@@ -33,14 +39,17 @@ import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSUtil.getBindAddress;
+import static org.apache.hadoop.hdfs.DFSUtilClient.getAddressesForNameserviceId;
 import static org.apache.hadoop.hdfs.protocol.proto.AliasMapProtocolProtos.*;
 import static org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap.CheckedFunction2;
 
@@ -61,6 +70,7 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
   private Configuration conf;
   private InMemoryAliasMap aliasMap;
   private String blockPoolId;
+  private boolean serviceAuthEnabled;
 
   public InMemoryLevelDBAliasMapServer(
           CheckedFunction2<Configuration, String, InMemoryAliasMap> initFun,
@@ -79,26 +89,64 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
         AliasMapProtocolService
             .newReflectiveBlockingService(aliasMapProtocolXlator);
 
-    InetSocketAddress rpcAddress = getBindAddress(conf,
-        DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
-        DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT,
-        DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST);
-
+    InetSocketAddress rpcAddress = getBindAddress(conf);
+    int handlerCount = conf.getInt(
+        DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_HANDLER_COUNT_KEY,
+        DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_HANDLER_COUNT_DEFAULT);
     boolean setVerbose = conf.getBoolean(
         DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG,
         DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG_DEFAULT);
-
     aliasMapServer = new RPC.Builder(conf)
         .setProtocol(AliasMapProtocolPB.class)
         .setInstance(aliasMapProtocolService)
         .setBindAddress(rpcAddress.getHostName())
         .setPort(rpcAddress.getPort())
-        .setNumHandlers(1)
+        .setNumHandlers(handlerCount)
         .setVerbose(setVerbose)
         .build();
 
+    //TODO Delegation token handling See NameNodeRPCSerer#L441
+    // set service-level authorization security policy
+    serviceAuthEnabled = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+    if (serviceAuthEnabled) {
+      aliasMapServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
+    }
+
     LOG.info("Starting InMemoryLevelDBAliasMapServer on {}", rpcAddress);
     aliasMapServer.start();
+  }
+
+  private static InetSocketAddress getBindAddress(Configuration conf) {
+    return DFSUtil.getBindAddress(conf,
+        DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
+        DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT,
+        DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST);
+  }
+
+  public static InetSocketAddress getServerAddress(Configuration conf) {
+    InetSocketAddress address = null;
+    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    if (nsId != null) {
+      String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+      Map<String, InetSocketAddress> nsAddresses =
+          getAddressesForNameserviceId(conf, nsId,
+              DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT,
+              DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS);
+      address = nsAddresses.get(namenodeId);
+    } else {
+      String addressString = conf.get(
+          DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
+          DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT);
+      if (addressString != null) {
+        address = NetUtils.createSocketAddr(addressString);
+      }
+    }
+    if (address == null) {
+      throw new IllegalArgumentException(
+          "No valid address found for Alias map server");
+    }
+    return address;
   }
 
   @Override
@@ -109,9 +157,8 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
 
   @Nonnull
   @Override
-  public Optional<ProvidedStorageLocation> read(@Nonnull Block block)
-      throws IOException {
-    return aliasMap.read(block);
+  public Optional<FileRegion> read(long blockId) throws IOException {
+    return aliasMap.read(blockId);
   }
 
   @Override
@@ -119,6 +166,11 @@ public class InMemoryLevelDBAliasMapServer implements InMemoryAliasMapProtocol,
       @Nonnull ProvidedStorageLocation providedStorageLocation)
       throws IOException {
     aliasMap.write(block, providedStorageLocation);
+  }
+
+  @Override
+  public void remove(@Nonnull Block block) throws IOException {
+    aliasMap.remove(block);
   }
 
   @Override

@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.InvalidPathHandleException;
 import org.apache.hadoop.fs.PartialListing;
 import org.apache.hadoop.fs.MultipartUploaderBuilder;
+import org.apache.hadoop.fs.MountMode;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
@@ -61,6 +62,7 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.ProvidedStorageSummary;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
@@ -3879,5 +3881,44 @@ public class DistributedFileSystem extends FileSystem
   public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
       throws IOException {
     return new FileSystemMultipartUploaderBuilder(this, basePath);
+  }
+
+  /**
+   * Add a PROVIDED mount point to the FSImage.
+   * @param remote Remote location.
+   * @param mountPath Path in HDFS to mount remote path in.
+   * @param mountMode mount mode.
+   * @param remoteConfig config needed to connect to remote fs
+   * @return true if the mount is successful.
+   * @throws IOException If there is an error adding the mount point.
+   */
+  @Override
+  public boolean addMount(String remote, String mountPath, MountMode mountMode,
+      Map<String, String> remoteConfig)
+      throws IOException {
+    return dfs.addMount(remote, mountPath, mountMode, remoteConfig);
+  }
+
+  /**
+   * Unmount (delete) a PROVIDED mount point.
+   * @param mountPath mount path to remove
+   * @return true if the removeMount is unsuccessful
+   * @throws IOException
+   */
+  @Override
+  public boolean removeMount(String mountPath) throws IOException {
+    return dfs.removeMount(mountPath);
+  }
+
+  /**
+   * List provided storage mounts.
+   * @param requireStats whether stats for metrics are required.
+   * @return Mount info and metrics summary for provided storage.
+   * @throws IOException
+   */
+  @Override
+  public ProvidedStorageSummary listMounts(boolean requireStats)
+      throws IOException {
+    return dfs.listMounts(requireStats);
   }
 }

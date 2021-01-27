@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.FixedBlockResolver;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

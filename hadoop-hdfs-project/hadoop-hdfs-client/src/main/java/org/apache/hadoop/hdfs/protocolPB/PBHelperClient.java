@@ -40,12 +40,15 @@ import org.apache.hadoop.thirdparty.protobuf.CodedInputStream;
 import org.apache.hadoop.crypto.CipherOption;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.MountInfo;
+import org.apache.hadoop.fs.MountMode;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.MountInfo.MountStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
@@ -138,6 +141,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEdi
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MountInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MountStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.OpenFilesBatchResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.OpenFilesTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
@@ -176,6 +181,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto.File
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.MountModeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.QuotaUsageProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
@@ -1578,9 +1584,26 @@ public class PBHelperClient {
     }
     DiffType type = DiffType.getTypeFromLabel(entry
         .getModificationLabel());
-    return type == null ? null : new DiffReportEntry(type, entry.getFullpath()
-        .toByteArray(), entry.hasTargetPath() ? entry.getTargetPath()
-        .toByteArray() : null);
+    SnapshotDiffReport.INodeType inodeType = null;
+    if (entry.hasFileType()) {
+      switch (entry.getFileType()) {
+      case IS_FILE:
+        inodeType = SnapshotDiffReport.INodeType.FILE;
+        break;
+      case IS_DIR:
+        inodeType = SnapshotDiffReport.INodeType.DIRECTORY;
+        break;
+      case IS_SYMLINK:
+        inodeType = SnapshotDiffReport.INodeType.SYMLINK;
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown INodeType: " +
+            entry.getFileType());
+      }
+    }
+    return type == null ? null : new DiffReportEntry(inodeType, type,
+        entry.getFullpath().toByteArray(), entry.hasTargetPath() ?
+        entry.getTargetPath().toByteArray() : null);
   }
 
   public static SnapshotDiffReportListing convert(
@@ -1628,14 +1651,29 @@ public class PBHelperClient {
     if (entry == null) {
       return null;
     }
+    DiffReportListingEntry.INodeType inodeType = null;
+    switch(entry.getFileType()) {
+    case IS_FILE:
+      inodeType = DiffReportListingEntry.INodeType.FILE;
+      break;
+    case IS_DIR:
+      inodeType = DiffReportListingEntry.INodeType.DIRECTORY;
+      break;
+    case IS_SYMLINK:
+      inodeType = DiffReportListingEntry.INodeType.SYMLINK;
+      break;
+    default:
+      throw new IllegalArgumentException("Unknown entry file type: "
+          + entry.getFileType());
+    }
     long dirId = entry.getDirId();
     long fileId = entry.getFileId();
     boolean isReference = entry.getIsReference();
     byte[] sourceName = entry.getFullpath().toByteArray();
     byte[] targetName =
         entry.hasTargetPath() ? entry.getTargetPath().toByteArray() : null;
-    return new DiffReportListingEntry(dirId, fileId, sourceName, isReference,
-        targetName);
+    return new DiffReportListingEntry(inodeType, dirId, fileId, sourceName,
+        isReference, targetName);
   }
 
   public static SnapshottableDirectoryStatus[] convert(
@@ -2749,6 +2787,20 @@ public class PBHelperClient {
     SnapshotDiffReportEntryProto.Builder builder = SnapshotDiffReportEntryProto
         .newBuilder().setFullpath(sourcePath)
         .setModificationLabel(modification);
+    switch(entry.getInodeType()){
+    case FILE:
+      builder.setFileType(FileType.IS_FILE);
+      break;
+    case DIRECTORY:
+      builder.setFileType(FileType.IS_DIR);
+      break;
+    case SYMLINK:
+      builder.setFileType(FileType.IS_SYMLINK);
+      break;
+    default:
+      throw new IllegalArgumentException("Unknown INodeType: " +
+          entry.getInodeType());
+    }
     if (entry.getType() == DiffType.RENAME) {
       ByteString targetPath =
           getByteString(entry.getTargetPath() == null ?
@@ -2766,6 +2818,21 @@ public class PBHelperClient {
     ByteString sourcePath = getByteString(
         entry.getSourcePath() == null ? DFSUtilClient.EMPTY_BYTES :
             DFSUtilClient.byteArray2bytes(entry.getSourcePath()));
+    HdfsFileStatusProto.FileType fileType = null;
+    switch(entry.getINodeType()){
+    case FILE:
+      fileType = FileType.IS_FILE;
+      break;
+    case DIRECTORY:
+      fileType = FileType.IS_DIR;
+      break;
+    case SYMLINK:
+      fileType = FileType.IS_SYMLINK;
+      break;
+    default:
+      throw new IllegalArgumentException("Unknown INodeType: " +
+          entry.getINodeType());
+    }
     long dirId = entry.getDirId();
     long fileId = entry.getFileId();
     boolean isReference = entry.isReference();
@@ -2773,7 +2840,9 @@ public class PBHelperClient {
         entry.getTargetPath() == null ? DFSUtilClient.EMPTY_BYTES :
             DFSUtilClient.byteArray2bytes(entry.getTargetPath()));
     SnapshotDiffReportListingEntryProto.Builder builder =
-        SnapshotDiffReportListingEntryProto.newBuilder().setFullpath(sourcePath)
+        SnapshotDiffReportListingEntryProto.newBuilder()
+            .setFileType(fileType)
+            .setFullpath(sourcePath)
             .setDirId(dirId).setFileId(fileId).setIsReference(isReference)
             .setTargetPath(targetPath);
     return builder.build();
@@ -3459,7 +3528,8 @@ public class PBHelperClient {
     long offset = providedStorageLocationProto.getOffset();
     ByteString nonce = providedStorageLocationProto.getNonce();
 
-    if (path == null || length == -1 || offset == -1 || nonce == null) {
+    if (path == null || length == -1 || offset == -1 || nonce == null ||
+        path.length() == 0) {
       return null;
     } else {
       return new ProvidedStorageLocation(new Path(path), offset, length,
@@ -3501,5 +3571,73 @@ public class PBHelperClient {
       }
     }
     return typeProtos;
+  }
+
+  public static MountModeProto convert(MountMode mountMode) {
+    switch (mountMode) {
+    case READONLY:
+      return MountModeProto.READONLY;
+    case BACKUP:
+      return MountModeProto.BACKUP;
+    case WRITEBACK:
+      return MountModeProto.WRITEBACK;
+    default:
+      throw new IllegalArgumentException("Unknown mount mode: " + mountMode);
+    }
+  }
+
+  public static MountMode convert(MountModeProto mountModeProto) {
+    switch (mountModeProto) {
+    case READONLY:
+      return MountMode.READONLY;
+    case BACKUP:
+      return MountMode.BACKUP;
+    case WRITEBACK:
+      return MountMode.WRITEBACK;
+    default:
+      throw new IllegalArgumentException("Unknown mount mode: " +
+            mountModeProto);
+    }
+  }
+
+  public static MountStatusProto convert(MountInfo.MountStatus status) {
+    switch (status) {
+    case CREATING:
+      return MountStatusProto.CREATING;
+    case CREATED:
+      return MountStatusProto.CREATED;
+    default:
+      throw new IllegalArgumentException("Unknown status: " + status);
+    }
+  }
+
+  public static MountInfo.MountStatus convert(MountStatusProto status) {
+    switch (status) {
+    case CREATING:
+      return MountStatus.CREATING;
+    case CREATED:
+      return MountStatus.CREATED;
+    default:
+      throw new IllegalArgumentException("Unknown status: " + status);
+    }
+  }
+
+  public static MountInfoProto convert(MountInfo mountInfo) {
+    return MountInfoProto.newBuilder()
+        .setMountPath(mountInfo.getMountPath())
+        .setRemotePath(mountInfo.getRemotePath())
+        .setMountMode(convert(mountInfo.getMountMode()))
+        .setMountStatus(convert(mountInfo.getMountStatus()))
+        .setMetrics(mountInfo.getMetrics())
+        .build();
+  }
+
+  public static MountInfo convert(MountInfoProto proto) {
+    return new MountInfo(
+        proto.getMountPath(),
+        proto.getRemotePath(),
+        convert(proto.getMountMode()),
+        convert(proto.getMountStatus()),
+        proto.getMetrics());
   }
 }

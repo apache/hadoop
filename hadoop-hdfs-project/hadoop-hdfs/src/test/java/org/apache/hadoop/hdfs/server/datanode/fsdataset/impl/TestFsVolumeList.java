@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -214,6 +215,16 @@ public class TestFsVolumeList {
         .setConf(conf)
         .build();
     assertEquals(3L, volume5.getReserved());
+    FsVolumeImpl volume6 = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation.parse(
+                "[PROVIDED]hdfs://10.0.0.1:2000/dirname1/dir2")))
+        .build();
+    assertEquals("Provided volumes should have 0 reserved capacity",
+        0, volume6.getReserved());
   }
 
   @Test
@@ -397,14 +408,14 @@ public class TestFsVolumeList {
     fs.close();
     FsDatasetImpl fsDataset = (FsDatasetImpl) cluster.getDataNodes().get(0)
         .getFSDataset();
-    ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
+    VolumeReplicaMap volumeMap = new VolumeReplicaMap(new AutoCloseableLock());
     RamDiskReplicaTracker ramDiskReplicaMap = RamDiskReplicaTracker
         .getInstance(conf, fsDataset);
     FsVolumeImpl vol = (FsVolumeImpl) fsDataset.getFsVolumeReferences().get(0);
     String bpid = cluster.getNamesystem().getBlockPoolId();
     // It will create BlockPoolSlice.AddReplicaProcessor task's and lunch in
     // ForkJoinPool recursively
-    vol.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
+    volumeMap = vol.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
     assertTrue("Failed to add all the replica to map", volumeMap.replicas(bpid)
         .size() == 1000);
     assertEquals("Fork pool should be initialize with configured pool size",

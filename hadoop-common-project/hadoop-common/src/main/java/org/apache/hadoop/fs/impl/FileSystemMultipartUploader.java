@@ -17,6 +17,10 @@
 
 package org.apache.hadoop.fs.impl;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -36,6 +40,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BBPartHandle;
@@ -74,6 +80,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
       FileSystemMultipartUploader.class);
 
   private final FileSystem fs;
+  public static final String HEADER = "FileSystem-part01";
 
   private final FileSystemMultipartUploaderBuilder builder;
 
@@ -148,7 +155,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
       cleanupWithLogger(LOG, inputStream);
     }
     return BBPartHandle.from(ByteBuffer.wrap(
-        partPath.toString().getBytes(Charsets.UTF_8)));
+            buildPartHandlePayload(partNumber, partPath.toString())));
   }
 
   private Path createCollectorPath(Path filePath) {
@@ -207,7 +214,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
     List<Path> partHandles = handles
         .stream()
         .map(pair -> {
-          byte[] byteArray = pair.getValue().toByteArray();
+          byte[] byteArray = pair.getValue().toString().getBytes();
           return new Path(new String(byteArray, 0, byteArray.length,
               Charsets.UTF_8));
         })
@@ -259,4 +266,41 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
     });
   }
 
+  public int getPartNumber(PartHandle partHandle) throws IOException {
+    return parsePartHandle(partHandle).getLeft();
+  }
+
+  public static byte[] buildPartHandlePayload(int partNumber, String partPath)
+          throws IOException {
+    Preconditions.checkArgument(partNumber > 0,
+            "Invalid partNumber");
+    Preconditions.checkArgument(StringUtils.isNotEmpty(partPath),
+            "Invalid partPath");
+
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    try(DataOutputStream output = new DataOutputStream(bytes)) {
+      output.writeUTF(HEADER);
+      output.writeInt(partNumber);
+      output.writeUTF(partPath);
+    }
+    return bytes.toByteArray();
+  }
+
+  public static Pair<Integer, Path> parsePartHandle(PartHandle partHandle)
+      throws IOException {
+    byte[] data = partHandle.toByteArray();
+    try(DataInputStream input =
+                new DataInputStream(new ByteArrayInputStream(data))) {
+      final String header = input.readUTF();
+      if (!HEADER.equals(header)) {
+        throw new IOException("Wrong header string: \"" + header + "\"");
+      }
+      final int partNumber = input.readInt();
+      if (partNumber < 0) {
+        throw new IOException("Negative part number is not allowed!");
+      }
+      final String partPath = input.readUTF();
+      return Pair.of(partNumber, new Path(partPath));
+    }
+  }
 }

@@ -603,6 +603,7 @@ message SnapshotDiffReportEntryProto {
   required bytes fullpath = 1;
   required string modificationLabel = 2;
   optional bytes targetPath = 3;
+  optional HdfsFileStatusProto.FileType fileType = 4;
 }
 
 /**
@@ -625,6 +626,7 @@ message SnapshotDiffReportListingEntryProto {
   required bool isReference = 3;
   optional bytes targetPath = 4;
   optional uint64 fileId = 5;
+  optional HdfsFileStatusProto.FileType fileType = 6;
 }
 
 message SnapshotDiffReportCursorProto {
@@ -679,7 +681,6 @@ message RollingUpgradeStatusProto {
   optional bool finalized = 2 [default = false];
 }
 
-
 /**
  * A list of storage IDs.
  */
@@ -721,4 +722,23 @@ message BlockTokenSecretProto {
   repeated StorageTypeProto storageTypes = 7;
   repeated string storageIds = 8;
   optional bytes handshakeSecret = 9;
+}
+
+enum MountModeProto {
+  READONLY = 1;
+  BACKUP = 2;
+  WRITEBACK = 3;
+}
+
+message ProvidedMountConfigProto {
+  required string key = 1;
+  required string value = 2;
+}
+
+message ProvidedVolumeInfoProto {
+  required string uuid = 1;
+  required string mountPath = 2;
+  required string remotePath = 3;
+  required MountModeProto mountMode = 4;
+  repeated ProvidedMountConfigProto config = 5;
 }

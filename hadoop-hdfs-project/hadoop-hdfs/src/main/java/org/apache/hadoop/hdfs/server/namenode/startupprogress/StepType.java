@@ -57,7 +57,12 @@ public enum StepType {
   /**
    * The namenode is performing an operation related to erasure coding policies.
    */
-  ERASURE_CODING_POLICIES("ErasureCodingPolicies", "erasure coding policies");
+  ERASURE_CODING_POLICIES("ErasureCodingPolicies", "erasure coding policies"),
+
+  /**
+   * The namenode is performing an operation related to provided mounts.
+   */
+  PROVIDED_MOUNTS("ProvidedMounts", "provided mounts");
 
   private final String name, description;
 

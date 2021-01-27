@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
+import org.apache.hadoop.hdfs.server.common.ProvidedVolumeInfo;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -180,6 +181,12 @@ public class DatanodeManager {
   private boolean shouldSendCachingCommands = false;
 
   /**
+   * Whether we should tell datanodes about any provided volumes using
+   * heartbeat message response.
+   */
+  private boolean shouldSendProvidedVolumeCommands = false;
+
+  /**
    * The number of datanodes for each software version. This list should change
    * during rolling upgrades.
    * Software version -> Number of datanodes with this version
@@ -205,7 +212,7 @@ public class DatanodeManager {
   private final SlowPeerTracker slowPeerTracker;
   @Nullable
   private final SlowDiskTracker slowDiskTracker;
-  
+
   /**
    * The minimum time between resending caching directives to Datanodes,
    * in milliseconds.
@@ -1672,6 +1679,54 @@ public class DatanodeManager {
     }
   }
 
+  /**
+   * Enables transfer of provided volume management commands between DNs and
+   * NN. If disabled
+   * @param activate to enable
+   */
+  public void setShouldSendProvidedVolumeCommands(boolean activate) {
+    this.shouldSendProvidedVolumeCommands = activate;
+  }
+
+  private void addProvidedVolumeCommands(DatanodeDescriptor nodeDescriptor,
+      List<DatanodeCommand> cmds) {
+    if (shouldSendProvidedVolumeCommands) {
+      ProvidedVolumeInfo providedVol =
+          nodeDescriptor.pollPendingAddProvidedVolume();
+      while (providedVol != null) {
+        DatanodeCommand cmd = ProvidedVolumeCommand.buildAddCmd(providedVol);
+        cmds.add(cmd);
+        providedVol = nodeDescriptor.pollPendingAddProvidedVolume();
+      }
+
+      providedVol = nodeDescriptor.pollPendingRemoveProvidedVolume();
+      while (providedVol != null) {
+        DatanodeCommand cmd =
+            ProvidedVolumeCommand.buildRemoveCmd(providedVol);
+        cmds.add(cmd);
+        providedVol = nodeDescriptor.pollPendingRemoveProvidedVolume();
+      }
+    }
+  }
+
+  /**
+   * Enqueues the given volume to the list of volumes to be added on all
+   * datanodes.
+   * @param vol The provided volume to be added.
+   */
+  public synchronized void addProvidedVolume(ProvidedVolumeInfo vol) {
+    datanodeMap.values().forEach(dn -> dn.addProvidedVolume(vol));
+  }
+
+  /**
+   * Enqueues the given volume to the list of volumes to be removed from all
+   * DNs.
+   * @param vol The provided volume to be removed.
+   */
+  public synchronized void removeProvidedVolume(ProvidedVolumeInfo vol) {
+    datanodeMap.values().forEach(dn -> dn.removeProvidedVolume(vol));
+  }
+
   /** Handle heartbeat from datanodes. */
   public DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
       StorageReport[] reports, final String blockPoolId,
@@ -1679,7 +1734,8 @@ public class DatanodeManager {
       int maxTransfers, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks) throws IOException {
+      @Nonnull SlowDiskReports slowDisks)
+      throws IOException {
     final DatanodeDescriptor nodeinfo;
     try {
       nodeinfo = getDatanode(nodeReg);
@@ -1770,6 +1826,8 @@ public class DatanodeManager {
     addCacheCommands(blockPoolId, nodeinfo, cmds);
     // key update command
     blockManager.addKeyUpdateCommand(cmds, nodeinfo);
+    // provided volume commands
+    addProvidedVolumeCommands(nodeinfo, cmds);
 
     // check for balancer bandwidth update
     if (nodeinfo.getBalancerBandwidth() > 0) {
@@ -1800,6 +1858,14 @@ public class DatanodeManager {
         slowDiskTracker.addSlowDiskReport(nodeReg.getIpcAddr(false), slowDisks);
       }
       slowDiskTracker.checkAndUpdateReportIfNecessary();
+    }
+
+    // add synctask commands
+    List<BlockSyncTask> syncTasksToDispatch =
+        nodeinfo.getBlockSyncTasksToDispatch();
+    if (!syncTasksToDispatch.isEmpty()) {
+      cmds.add(new SyncCommand(
+          DatanodeProtocol.DNA_BACKUP, syncTasksToDispatch));
     }
 
     if (!cmds.isEmpty()) {

@@ -73,7 +73,7 @@ public class TestDFSInotifyEventInputStream {
    */
   @Test
   public void testOpcodeCount() {
-    Assert.assertEquals(54, FSEditLogOpCodes.values().length);
+    Assert.assertEquals(56, FSEditLogOpCodes.values().length);
   }
 
 

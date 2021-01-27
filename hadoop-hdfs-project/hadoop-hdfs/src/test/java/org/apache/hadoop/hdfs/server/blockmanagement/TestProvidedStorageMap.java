@@ -22,6 +22,8 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestProvidedImpl;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -29,7 +31,12 @@ import org.apache.hadoop.hdfs.util.RwLock;
 import org.junit.Before;
 import org.junit.Test;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -116,5 +123,47 @@ public class TestProvidedStorageMap {
         dns2Provided == providedMapStorage);
     assertTrue("The DatanodeDescriptor should contain the provided storage",
         dn2.getStorageInfo(providedStorageID) == providedMapStorage);
+  }
+
+  @Test
+  public void testRemoveIntersection() {
+    Block block1 = new Block(10, 100, 1000);
+    Block block2 = new Block(20, 100, 1000);
+    Block block3 = new Block(30, 100, 1000L);
+
+    Map<Block, FileRegion> blocksToAdd = new HashMap<>();
+    blocksToAdd.put(block1, mock(FileRegion.class));
+    blocksToAdd.put(block2, mock(FileRegion.class));
+    blocksToAdd.put(block3, mock(FileRegion.class));
+
+    List<BlockInfo> blocksToDelete = new ArrayList<>();
+    // call remove Intersection; nothing will be removed.
+    ProvidedStorageMap.removeIntersection(blocksToAdd, blocksToDelete);
+    assertEquals(3, blocksToAdd.size());
+
+    blocksToDelete
+        .add(new BlockInfoContiguous(new Block(40, 10, 1000), (short) 0));
+    // call remove Intersection; nothing will be removed.
+    ProvidedStorageMap.removeIntersection(blocksToAdd, blocksToDelete);
+    assertEquals(3, blocksToAdd.size());
+    assertEquals(1, blocksToDelete.size());
+
+    blocksToDelete.add(new BlockInfoContiguous(block3, (short) 0));
+    // call remove intersection; one block should be removed.
+    ProvidedStorageMap.removeIntersection(blocksToAdd, blocksToDelete);
+    assertEquals(2, blocksToAdd.size());
+    assertEquals(1, blocksToDelete.size());
+
+    blocksToDelete.add(new BlockInfoContiguous(block2, (short) 0));
+    // call remove intersection; one block should be removed.
+    ProvidedStorageMap.removeIntersection(blocksToAdd, blocksToDelete);
+    assertEquals(1, blocksToAdd.size());
+    assertEquals(1, blocksToDelete.size());
+
+    blocksToDelete.add(new BlockInfoContiguous(block1, (short) 0));
+    // call remove intersection; one block should be removed.
+    ProvidedStorageMap.removeIntersection(blocksToAdd, blocksToDelete);
+    assertEquals(0, blocksToAdd.size());
+    assertEquals(1, blocksToDelete.size());
   }
 }

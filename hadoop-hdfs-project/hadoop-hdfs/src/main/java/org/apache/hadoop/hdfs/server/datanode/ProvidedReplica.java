@@ -33,12 +33,18 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.ScanInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ProvidedVolumeImpl;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReadThroughInputStream;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.SynchronousReadThroughInputStream;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,7 +93,7 @@ public abstract class ProvidedReplica extends ReplicaInfo {
     this.fileOffset = fileOffset;
     this.conf = conf;
     this.pathHandle = pathHandle;
-    if (remoteFS != null) {
+    if (remoteFS != null && containsBlock(remoteFS.getUri(), fileURI)) {
       this.remoteFS = remoteFS;
     } else {
       LOG.warn(
@@ -129,7 +135,8 @@ public abstract class ProvidedReplica extends ReplicaInfo {
     this.fileOffset = fileOffset;
     this.conf = conf;
     this.pathHandle = pathHandle;
-    if (remoteFS != null) {
+    if (remoteFS != null &&
+        containsBlock(remoteFS.getUri(), pathPrefix.toUri())) {
       this.remoteFS = remoteFS;
     } else {
       LOG.warn(
@@ -152,6 +159,41 @@ public abstract class ProvidedReplica extends ReplicaInfo {
     this.pathHandle = r.pathHandle;
     this.pathPrefix = r.pathPrefix;
     this.pathSuffix = r.pathSuffix;
+  }
+
+
+  private static URI getAbsoluteURI(URI uri) {
+    if (!uri.isAbsolute() || uri.getScheme().equals("file")) {
+      // URI is not absolute implies it is for a local file
+      // normalize the URI
+      return StorageLocation.normalizeFileURI(uri);
+    } else {
+      return uri;
+    }
+  }
+
+  /**
+   * Checks if the {@code blockURI} is contained in the {@code volumeURI}.
+   * @param volumeURI
+   * @param blockURI
+   * @return true if the block URI is contained within the volume URI.
+   */
+  @VisibleForTesting
+  static boolean containsBlock(URI volumeURI, URI blockURI) {
+    if (volumeURI == null && blockURI == null){
+      return true;
+    }
+    if (volumeURI == null || blockURI == null) {
+      return false;
+    }
+    volumeURI = getAbsoluteURI(volumeURI);
+    blockURI = getAbsoluteURI(blockURI);
+    return !volumeURI.relativize(blockURI).equals(blockURI);
+  }
+
+  @VisibleForTesting
+  FileSystem getRemoteFS() {
+    return remoteFS;
   }
 
   @Override
@@ -179,12 +221,44 @@ public abstract class ProvidedReplica extends ReplicaInfo {
     }
   }
 
+  static InputStream createInputStream(ProvidedReplica replica,
+      FSDataInputStream fsIns, String bpid, boolean readThough,
+      long fileOffset, long seekOffset, Configuration conf)
+      throws IOException {
+    if (readThough) {
+      ReadThroughInputStream readThroughIns = ReflectionUtils.newInstance(
+          conf.getClass(
+              DFSConfigKeys.DFS_DATANODE_PROVIDED_READ_CACHE_TASK_CLASS,
+              SynchronousReadThroughInputStream.class,
+              ReadThroughInputStream.class),
+          conf);
+      try {
+        ExtendedBlock eb = new ExtendedBlock(bpid, replica);
+        readThroughIns.init(eb, conf,
+            replica.getVolume().getDataset(), fsIns, fileOffset,
+            seekOffset, replica.getNumBytes());
+        return readThroughIns;
+      } catch (IOException e) {
+        LOG.warn("Caching task initialization failed; Error " + e);
+      }
+    }
+    return new BoundedInputStream(new FSDataInputStream(fsIns),
+        replica.getNumBytes());
+  }
+
   @Override
   public InputStream getDataInputStream(long seekOffset) throws IOException {
+    return getDataInputStream(seekOffset, false, null);
+  }
+
+  @Override
+  public InputStream getDataInputStream(long seekOffset, boolean readThrough,
+      String bpid) throws IOException {
     if (remoteFS != null) {
+      getProvidedVolume().incrProvidedOpenCalls();
       FSDataInputStream ins;
       try {
-        if (pathHandle != null) {
+        if (pathHandle != null && pathHandle.toByteArray().length > 0) {
           ins = remoteFS.open(pathHandle, conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
               IO_FILE_BUFFER_SIZE_DEFAULT));
         } else {
@@ -195,8 +269,8 @@ public abstract class ProvidedReplica extends ReplicaInfo {
       }
 
       ins.seek(fileOffset + seekOffset);
-      return new BoundedInputStream(
-          new FSDataInputStream(ins), getBlockDataLength());
+      return createInputStream(this, ins, bpid, readThrough, fileOffset,
+          seekOffset, conf);
     } else {
       throw new IOException("Remote filesystem for provided replica " + this +
           " does not exist");
@@ -224,7 +298,13 @@ public abstract class ProvidedReplica extends ReplicaInfo {
   public boolean blockDataExists() {
     if(remoteFS != null) {
       try {
-        return remoteFS.exists(new Path(getRemoteURI()));
+        URI remoteURI = getRemoteURI();
+        if (remoteURI == null) {
+          LOG.warn("URI of provided replica {} is null", this);
+          return false;
+        }
+        getProvidedVolume().incrProvidedExistsChecks();
+        return remoteFS.exists(new Path(remoteURI));
       } catch (IOException e) {
         return false;
       }
@@ -346,5 +426,9 @@ public abstract class ProvidedReplica extends ReplicaInfo {
   @VisibleForTesting
   public void setPathHandle(PathHandle pathHandle) {
     this.pathHandle = pathHandle;
+  }
+
+  private ProvidedVolumeImpl getProvidedVolume() {
+    return (ProvidedVolumeImpl) getVolume();
   }
 }

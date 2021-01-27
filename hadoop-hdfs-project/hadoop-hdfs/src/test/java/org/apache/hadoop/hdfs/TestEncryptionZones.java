@@ -136,6 +136,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_C
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.INodeType.FILE;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -1610,12 +1611,14 @@ public class TestEncryptionZones {
     fsWrapper.delete(zoneFile, true);
     fs.createSnapshot(zone, "snap2");
     verifyDiffReport(zone, "snap1", "snap2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
+        new DiffReportEntry(FILE, DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            DFSUtil.string2Bytes("zoneFile")));
 
     verifyDiffReport(rawZone, "snap1", "snap2",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("zoneFile")));
+        new DiffReportEntry(FILE, DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(FILE, DiffType.DELETE,
+            DFSUtil.string2Bytes("zoneFile")));
   }
 
   /**

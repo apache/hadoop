@@ -78,6 +78,10 @@ public class TestOfflineEditsViewer {
 
     // Skip invalid opcode
     b.add(FSEditLogOpCodes.OP_INVALID);
+    // Skip mount opcode
+    b.add(FSEditLogOpCodes.OP_ADD_MOUNT);
+    // Skip removeMount opcode
+    b.add(FSEditLogOpCodes.OP_RM_MOUNT);
     return b.build();
   }
 

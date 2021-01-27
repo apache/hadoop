@@ -74,18 +74,17 @@ public class MiniDFSNNTopology {
 
   /**
    * Set up an HA topology with a single HA nameservice.
+   *
    * @param nnCount of namenodes to use with the nameservice
    * @param basePort for IPC and Http ports of namenodes.
    */
   public static MiniDFSNNTopology simpleHATopology(int nnCount, int basePort) {
     MiniDFSNNTopology.NSConf ns = new MiniDFSNNTopology.NSConf("minidfs-ns");
     for (int i = 0; i < nnCount; i++) {
-      ns.addNN(new MiniDFSNNTopology.NNConf("nn" + i)
-          .setIpcPort(basePort++)
+      ns.addNN(new MiniDFSNNTopology.NNConf("nn" + i).setIpcPort(basePort++)
           .setHttpPort(basePort++));
     }
-    MiniDFSNNTopology topology = new MiniDFSNNTopology()
-        .addNameservice(ns);
+    MiniDFSNNTopology topology = new MiniDFSNNTopology().addNameservice(ns);
     return topology;
   }
 

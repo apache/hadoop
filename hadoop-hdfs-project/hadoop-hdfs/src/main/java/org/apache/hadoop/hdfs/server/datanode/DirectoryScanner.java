@@ -582,6 +582,11 @@ public class DirectoryScanner implements Runnable {
    */
   private void addDifference(Collection<ScanInfo> diffRecord, Stats statsRecord,
       long blockId, FsVolumeSpi vol) {
+    // The block is stored in provided storage, so ignore the finding that this
+    // block is no found in disk.
+    if (vol.getStorageType() == StorageType.PROVIDED) {
+      return;
+    }
     statsRecord.missingBlockFile++;
     statsRecord.missingMetaFile++;
     diffRecord.add(new ScanInfo(blockId, null, null, vol));

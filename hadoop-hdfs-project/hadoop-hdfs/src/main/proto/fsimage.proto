@@ -351,3 +351,7 @@ message CacheManagerSection {
 message ErasureCodingSection {
   repeated ErasureCodingPolicyProto policies = 1;
 }
+
+message ProvidedMountsSection {
+  repeated ProvidedVolumeInfoProto mountInfos = 1;
+}

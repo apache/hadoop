@@ -17,8 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,15 +32,27 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathHandle;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ProvidedVolumeImpl;
+import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -56,6 +74,7 @@ public class TestProvidedReplicaImpl {
   private static final long BLK_LEN = 128 * 1024L;
 
   private static List<ProvidedReplica> replicas;
+  private static ProvidedVolumeImpl mockFsVolume;
 
   private static void createFileIfNotExists(String baseDir) throws IOException {
     File newFile = new File(baseDir, FILE_NAME);
@@ -75,23 +94,25 @@ public class TestProvidedReplicaImpl {
     }
   }
 
-  private static void createProvidedReplicas(Configuration conf) {
+  private static void createProvidedReplicas(Configuration conf)
+      throws IOException {
     long numReplicas = (long) Math.ceil((double) FILE_LEN/BLK_LEN);
     File providedFile = new File(BASE_DIR, FILE_NAME);
     replicas = new ArrayList<ProvidedReplica>();
-
+    FileSystem localFS = FileSystem.get(providedFile.toURI(), conf);
     LOG.info("Creating " + numReplicas + " provided replicas");
     for (int i=0; i<numReplicas; i++) {
       long currentReplicaLength =
           FILE_LEN >= (i+1)*BLK_LEN ? BLK_LEN : FILE_LEN - i*BLK_LEN;
       replicas.add(
           new FinalizedProvidedReplica(i, providedFile.toURI(), i*BLK_LEN,
-          currentReplicaLength, 0, null, null, conf, null));
+          currentReplicaLength, 0, null, mockFsVolume, conf, localFS));
     }
   }
 
   @Before
   public void setUp() throws IOException {
+    mockFsVolume = mock(ProvidedVolumeImpl.class);
     createFileIfNotExists(new File(BASE_DIR).getAbsolutePath());
     createProvidedReplicas(new Configuration());
   }
@@ -159,4 +180,134 @@ public class TestProvidedReplicaImpl {
     }
   }
 
+  @Test
+  public void testContainsBlock() throws URISyntaxException {
+    // containsBlock() returns true if both URIs are null, or if the
+    // first argument is a prefix of the second.
+    assertTrue(ProvidedReplica.containsBlock(null, null));
+    assertTrue(ProvidedReplica.containsBlock(new URI("file:/a/b/c/"),
+        new URI("file:/a/b/c/d/e.file")));
+    assertTrue(ProvidedReplica.containsBlock(new URI("/a/b/c/"),
+        new URI("file:/a/b/c/d/e.file")));
+    assertTrue(ProvidedReplica.containsBlock(new URI("/a/b/c"),
+        new URI("file:/a/b/c/d/e.file")));
+    assertTrue(ProvidedReplica.containsBlock(new URI("/a/b/c/"),
+        new URI("/a/b/c/d/e.file")));
+    assertTrue(ProvidedReplica.containsBlock(new URI("file:/a/b/c/"),
+        new URI("/a/b/c/d/e.file")));
+    assertTrue(ProvidedReplica.containsBlock(new URI("s3a:/bucket1/dir1/"),
+        new URI("s3a:/bucket1/dir1/temp.txt")));
+
+    // it returns false otherwise.
+    assertFalse(ProvidedReplica.containsBlock(new URI("file:/a"), null));
+    assertFalse(ProvidedReplica.containsBlock(new URI("/a/b/e"),
+        new URI("file:/a/b/c/d/e.file")));
+    assertFalse(ProvidedReplica.containsBlock(new URI("file:/a/b/e"),
+        new URI("file:/a/b/c/d/e.file")));
+    assertFalse(ProvidedReplica.containsBlock(new URI("s3a:/bucket2/dir1/"),
+        new URI("s3a:/bucket1/dir1/temp.txt")));
+    assertFalse(ProvidedReplica.containsBlock(new URI("s3a:/bucket1/dir1/"),
+        new URI("s3a:/bucket1/temp.txt")));
+    assertFalse(ProvidedReplica.containsBlock(new URI("/bucket1/dir1/"),
+        new URI("s3a:/bucket1/dir1/temp.txt")));
+  }
+
+  /**
+   * Tests if a ProvidedReplica uses the correct FileSystem to access
+   * remote paths.
+   * @throws Exception
+   */
+  @Test
+  public void testRemoteFS() throws Exception {
+    Configuration conf = new Configuration();
+    // a FS ref for the local FileSystem
+    FileSystem localFS = FileSystem.get(new File(BASE_DIR).toURI(), conf);
+    int blockId = 1001;
+    File blockFile1 = new File(BASE_DIR, String.valueOf(blockId));
+    blockFile1.createNewFile();
+    blockFile1.deleteOnExit();
+    // create a PROVIDED replica for a local file.
+    ProvidedReplica r = new FinalizedProvidedReplica(blockId,
+        blockFile1.toURI(), 0, 1024, 1, null, mockFsVolume, conf, localFS);
+    // it should use the FS passed in.
+    assertEquals(localFS, r.getRemoteFS());
+    assertNotNull(r.getDataInputStream(0));
+
+    // same test as above but with a file in a different directory.
+    File blockFile2 = new File(new File(BASE_DIR).getParentFile(),
+        "newBlockFile.dat");
+    blockFile2.createNewFile();
+    blockFile2.deleteOnExit();
+    r = new FinalizedProvidedReplica(blockId,
+        blockFile2.toURI(), 0, 1024, 1, null, mockFsVolume, conf, localFS);
+    // the FS passed in should be used.
+    assertEquals(localFS, r.getRemoteFS());
+    assertNotNull(r.getDataInputStream(0));
+
+    // test with a remote hdfs:// URI
+    URI remoteBlockURI = new URI("hdfs://localhost/path/to/file.dat");
+    r = new FinalizedProvidedReplica(blockId, remoteBlockURI,
+        0, 1024, 1, null, mockFsVolume, conf, localFS);
+    // the FS used cannot be the same as the local FS.
+    assertNotEquals(localFS, r.getRemoteFS());
+
+    // test the other constructor of ProvidedReplica for the hdfs:// URI.
+    r = new FinalizedProvidedReplica(blockId, new Path(remoteBlockURI),
+        "pathSuffix.dat", 0, 1024, 1, null, mockFsVolume, conf, localFS);
+    assertNotEquals(localFS, r.getRemoteFS());
+  }
+
+  /**
+   * Tests that a ProvidedReplica supports path handles.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testProvidedReplicaWithPathHandle() throws Exception {
+
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      // generate random data
+      int chunkSize = 512;
+      Random r = new Random(12345L);
+      byte[] data = new byte[chunkSize];
+      r.nextBytes(data);
+
+      Path file = new Path("/testfile");
+      try (FSDataOutputStream fout = fs.create(file)) {
+        fout.write(data);
+      }
+
+      ProvidedVolumeImpl volume = mock(ProvidedVolumeImpl.class);
+
+      PathHandle pathHandle = fs.getPathHandle(fs.getFileStatus(file),
+          Options.HandleOpt.changed(true), Options.HandleOpt.moved(true));
+      FinalizedProvidedReplica replica = new FinalizedProvidedReplica(0,
+          file.toUri(), 0, chunkSize, 0, pathHandle, volume, conf, fs);
+      byte[] content = new byte[chunkSize];
+      IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
+      assertArrayEquals(data, content);
+
+      fs.rename(file, new Path("/testfile.1"));
+      // read should continue succeeding after the rename operation
+      IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
+      assertArrayEquals(data, content);
+
+      replica.setPathHandle(null);
+      try {
+        // expected to fail as URI of the provided replica is no longer valid.
+        replica.getDataInputStream(0);
+        fail("Expected an exception");
+      } catch (IOException e) {
+        LOG.info("Expected exception " + e);
+      }
+    } catch (Exception e) {
+      cluster.shutdown();
+    }
+  }
 }

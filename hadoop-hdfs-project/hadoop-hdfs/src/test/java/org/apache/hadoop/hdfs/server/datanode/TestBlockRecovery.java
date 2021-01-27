@@ -232,6 +232,7 @@ public class TestBlockRecovery {
             Mockito.any(),
             Mockito.anyBoolean(),
             Mockito.any(),
+            Mockito.any(),
             Mockito.any()))
         .thenReturn(new HeartbeatResponse(
             new DatanodeCommand[0],

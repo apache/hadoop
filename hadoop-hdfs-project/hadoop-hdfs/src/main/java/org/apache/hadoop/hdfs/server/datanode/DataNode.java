@@ -388,6 +388,8 @@ public class DataNode extends ReconfigurableBase
   private String dnUserName = null;
   private BlockRecoveryWorker blockRecoveryWorker;
   private ErasureCodingWorker ecWorker;
+  private SyncServiceSatisfierDatanodeWorker
+      syncServiceSatisfierDatanodeWorker;
   private final Tracer tracer;
   private final TracerConfigurationManager tracerConfigurationManager;
   private static final int NUM_CORES = Runtime.getRuntime()
@@ -1452,6 +1454,11 @@ public class DataNode extends ReconfigurableBase
 
     ecWorker = new ErasureCodingWorker(getConf(), this);
     blockRecoveryWorker = new BlockRecoveryWorker(this);
+    if (isProvidedStorageEnabled(getConf())) {
+      syncServiceSatisfierDatanodeWorker =
+          new SyncServiceSatisfierDatanodeWorker(getConf(), this);
+      syncServiceSatisfierDatanodeWorker.start();
+    }
 
     blockPoolManager = new BlockPoolManager(this);
     blockPoolManager.refreshNamenodes(getConf());
@@ -1468,6 +1475,11 @@ public class DataNode extends ReconfigurableBase
       diskMetrics = new DataNodeDiskMetrics(this,
           dnConf.outliersReportIntervalMs);
     }
+  }
+
+  public boolean isProvidedStorageEnabled(Configuration conf) {
+    return conf.getBoolean(DFSConfigKeys.DFS_DATANODE_PROVIDED_ENABLED,
+        DFSConfigKeys.DFS_DATANODE_PROVIDED_ENABLED_DEFAULT);
   }
 
   /**
@@ -1990,12 +2002,17 @@ public class DataNode extends ReconfigurableBase
     }
     metrics.incrBlocksGetLocalPathInfo();
     FileInputStream fis[] = new FileInputStream[2];
-    
+
+    InputStream inputStream = null;
     try {
-      fis[0] = (FileInputStream)data.getBlockInputStream(blk, 0);
+      inputStream = data.getBlockInputStream(blk, 0);
+      fis[0] = (FileInputStream)inputStream;
       fis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
     } catch (ClassCastException e) {
       LOG.debug("requestShortCircuitFdsForRead failed", e);
+      if (inputStream != null) {
+        inputStream.close();
+      }
       throw new ShortCircuitFdsUnsupportedException("This DataNode's " +
           "FsDatasetSpi does not support short-circuit local reads");
     }
@@ -2033,6 +2050,11 @@ public class DataNode extends ReconfigurableBase
           LOG.warn("ServicePlugin {} could not be stopped", p, t);
         }
       }
+    }
+
+    // stop syncServiceSatisfierDatanodeWorker
+    if (syncServiceSatisfierDatanodeWorker != null) {
+      syncServiceSatisfierDatanodeWorker.stop();
     }
 
     List<BPOfferService> bposArray = (this.blockPoolManager == null)
@@ -2192,6 +2214,10 @@ public class DataNode extends ReconfigurableBase
       notifyAll();
     }
     tracer.close();
+
+    if (syncServiceSatisfierDatanodeWorker != null) {
+      syncServiceSatisfierDatanodeWorker.waitToFinishWorkerThread();
+    }
   }
 
   /**
@@ -3830,5 +3856,10 @@ public class DataNode extends ReconfigurableBase
   private static boolean isWrite(BlockConstructionStage stage) {
     return (stage == PIPELINE_SETUP_STREAMING_RECOVERY
         || stage == PIPELINE_SETUP_APPEND_RECOVERY);
+  }
+
+  public SyncServiceSatisfierDatanodeWorker
+      getSyncServiceSatisfierDatanodeWorker() {
+    return syncServiceSatisfierDatanodeWorker;
   }
 }

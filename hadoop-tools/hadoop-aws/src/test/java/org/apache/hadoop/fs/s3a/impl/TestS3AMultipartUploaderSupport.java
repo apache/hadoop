@@ -22,7 +22,6 @@ import java.io.EOFException;
 import java.io.IOException;
 
 import org.junit.Test;
-
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.PartHandlePayload;

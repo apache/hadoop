@@ -27,6 +27,8 @@ import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
@@ -143,6 +145,11 @@ public class TestFilterFileSystem {
     of the filter such as checksums.
      */
     MultipartUploaderBuilder createMultipartUploader(Path basePath);
+
+    public boolean addMount(String remote, String mount, MountMode mountMode,
+        Map<String, String> remoteConfig) throws IOException;
+    public boolean removeMount(String mountPath) throws IOException;
+    public List<MountInfo> listMounts(boolean requireStats) throws IOException;
   }
 
   @Test

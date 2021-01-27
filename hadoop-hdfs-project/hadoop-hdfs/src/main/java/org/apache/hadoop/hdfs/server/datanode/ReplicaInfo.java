@@ -144,6 +144,19 @@ abstract public class ReplicaInfo extends Block
       throws IOException;
 
   /**
+   * Returns an {@link InputStream} to the replica's data.
+   *
+   * @param seekOffset the offset at which the read is started from.
+   * @param readThrough indicates if the data has be cached using read-through
+   *                    caching.
+   * @param bpid the block pool id this replica is associated with.
+   * @return the {@link InputStream} to read the replica data.
+   * @throws IOException if an error occurs in opening a stream to the data.
+   */
+  abstract public InputStream getDataInputStream(long seekOffset,
+      boolean readThrough, String bpid) throws IOException;
+
+  /**
    * @return true if the replica's data exists.
    */
   abstract public boolean blockDataExists();

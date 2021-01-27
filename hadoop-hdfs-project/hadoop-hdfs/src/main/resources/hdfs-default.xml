@@ -5662,6 +5662,14 @@
   </property>
 
   <property>
+    <name>dfs.datanode.provided.enabled</name>
+    <value>false</value>
+    <description>
+      Enables the Datanode to handle provided storages.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.provided.storage.id</name>
     <value>DS-PROVIDED</value>
     <description>
@@ -5693,7 +5701,7 @@
   </property>
 
   <property>
-    <name>dfs.provided.aliasmap.inmemory.dnrpc-address</name>
+    <name>dfs.provided.aliasmap.inmemory.rpc.address</name>
     <value></value>
     <description>
       The address where the aliasmap server will be running. In the case of
@@ -5742,6 +5750,14 @@
     <description>
       Ensures that InMemoryAliasMap server logs every call to it.
       Set to false by default.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.aliasmap.inmemory.handler.count</name>
+    <value>10</value>
+    <description>
+      Number of threads to handle the RPCs to the in-memory aliasmap.
     </description>
   </property>
 
@@ -5807,6 +5823,288 @@
     <description>
       The number of retries on the Datanode to load the provided aliasmap;
       defaults to 0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.overreplication.factor</name>
+    <value>0</value>
+    <description>
+      The allowed over-replication for blocks belong to Provided (external)
+      stores. Replicas are not deleted if the total number are fewer than
+      the replication factor + the over-replication factor. The Namenode does
+      not actively satify this over-replication factor.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.cache.readthrough</name>
+    <value>false</value>
+    <description>
+      Parameter to enable read-through of blocks in Provided storage. If this
+      parameter is set to true, when a provided block is read from the provided
+      (remote) store, a local replica of it is cached on datanode. The number
+      of such local replicas allowed for a Provided block is determined based
+      on the replication factor of the file, and the allowed over-replication
+      factor (set using dfs.provided.overreplication.factor).
+      See dfs.datanode.provided.volume.readthrough for additional details.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.provided.volume.choosing.policy</name>
+    <value>org.apache.hadoop.hdfs.server.datanode.fsdataset.AvailableSpaceVolumeChoosingPolicy</value>
+    <description>
+      The policy used to determine which local volume to use to cache a
+      read-through copy of a provided replica. The default policy prefers
+      volumes available with more free space.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.read.cache.manager.factory</name>
+    <value>org.apache.hadoop.hdfs.server.namenode.mountmanager.ReadCacheManagerFactory</value>
+    <description>
+      The cache manager factory for provided mounts. The default one
+      caches and evicts at the block-level.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.read.cache.capacity.fraction</name>
+    <value>0.01</value>
+    <description>
+      The fraction of the total capacity in the cluster that can be used to
+      cache data from Provided stores.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.read.cache.capacity.bytes</name>
+    <value>-1</value>
+    <description>
+      Cluster capacity to use as cache space for Provided blocks, in bytes.
+      Default is -1 where this is ignored.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.read.cache.capacity.threshold</name>
+    <value>0.90</value>
+    <description>
+      The threshold above which cached data from Provided stores has to be evicted,
+      expressed as a fraction. Cached data starts to get evicted once the total space
+      used by it exceeds dfs.provided.cache.capacity.threshold * avaible cache space.
+      The availabe cache space is determined as the minimum of
+      (dfs.provided.cache.capacity.fraction * total cluster capacity)
+      and dfs.provided.cache.capacity.bytes. If one of these values is negative,
+      the other is considered. If both are negative, the available cache space is set to 0.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.read.cache.scan.interval.millis</name>
+    <value>1000</value>
+    <description>
+      Duration in milliseconds between subsequent scans for evicting data
+      cached for provided stores, when necessary.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.read.cache.storage.type</name>
+    <value>DISK</value>
+    <description>
+      The storage type of provided storage read cache. Supported types are SSD,
+      DISK, ARCHIVE. By default, DISK type is used.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.provided.readthrough.threads.max</name>
+    <value>20</value>
+    <description>
+      The maximum number of threads used for read-through caching of PROVIDED
+      replicas. The default is set to 20.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.provided.read.cache.task.class</name>
+    <value>org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.SynchronousReadThroughInputStream</value>
+    <description>
+      The type of task used to cache data being read from PROVIDED replicas.
+      The default task synchronously writes the data to a local copy
+      before streaming it back to the client.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.provided.volume.lazy.load</name>
+    <value>false</value>
+    <description>
+      Specifies whether the replicas on a PROVIDED volume should be loaded
+      lazily or not. The default value is false, which results in all Provided
+      replicas being loaded on start-up, i.e., when the DataNode successfully
+      heartbeats to the Namenode which supports PROVIDED.
+      When set to true, replicas are loaded into the volume only when a request
+      for the corresponding block id is received. Once loaded, the information
+      of the replicas are cached. The number of replicas whose information is
+      to be cached can be controlled by dfs.provided.replicamap.cache.size.
+      The statistics of the cache can be enabled in the DataNodeMetrics using
+      dfs.provided.replicamap.cache.enable.stats. The eviction policy for the
+      cache is approximately-LRU.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.replicamap.cache.size</name>
+    <value>10000</value>
+    <description>
+      The number of replicas whose details are cached in the Datanode.
+      This parameter is relevant only when dfs.datanode.provided.volume.lazy.load
+      is set to true. The eviction policy for this cache is approximately-LRU.
+      For PROVIDED volumes with many replicas, this parameter helps limit
+      how many replicas are held in memory. If the information of a
+      replica is not in memory, it has to be loaded from the AliasMap (configured
+      using dfs.provided.aliasmap.class).
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.replicamap.cache.enable.stats</name>
+    <value>false</value>
+    <description>
+      Specifies whether the cache used to load PROVIDED replicas has statistics
+      turned on. The default value is false. To turn on these statistics, set
+      this parameter to true. The statistics (cache hit rate, number of look-ups)
+      will be made available through the DataNodeMetrics. This parameter
+      is relevant only if dfs.datanode.provided.volume.lazy.load is set to true.
+    </description>
+  </property>
+
+  <property>
+    <name>hdfs.image.writer.ugi.class</name>
+    <value>org.apache.hadoop.hdfs.server.namenode.mountmanager.SingleUGIResolver</value>
+    <description>
+      The UGI resolver class used when mounting remote storages to HDFS
+      (as PROVIDED storage). This class determines how users and groups on the
+      remote store maps to users and groups in HDFS. When using the
+      SingleUGIResolver, all remote users and groups are mapped to one user
+      and group which can be specified using the configuration parameters
+      hdfs.image.writer.ugi.single.user and hdfs.image.writer.ugi.single.group,
+      respectively. The UID and GID of these can be specified using the
+      parameters hdfs.image.writer.ugi.single.uid and
+      hdfs.image.writer.ugi.single.gid, respectively.
+    </description>
+  </property>
+
+  <property>
+    <name>hdfs.image.writer.blockresolver.class</name>
+    <value>org.apache.hadoop.hdfs.server.namenode.mountmanager.FixedBlockResolver</value>
+    <description>
+      The Block resolver class used when mounting remote storages to HDFS.
+      This class is used to determine how to map files on remote to blocks in
+      HDFS. The default resolver, i.e., the FixedBlockResolver, uses a fixed
+      block size (specified using hdfs.image.writer.resolver.fixed.block.size)
+      and divides a file into contiguous blocks of this size. The starting
+      block-id can be specified using the parameter
+      hdfs.image.writer.resolver.fixed.block.start.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.mount.lock.duration</name>
+    <value>1000</value>
+    <description>
+      The time, in milliseconds, for which the FSNamesystem lock can be held
+      while mounting a remote store. While the mount is being created, the
+      lock is released after this time period has passed, and has to be
+      re-acquired to continue the mounting process.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.read.mount.inodes.max</name>
+    <value>-1</value>
+    <description>
+      The number of maximum inodes (directories + files) allowed per read only
+      mount. The default value of -1 indicates that there is no limit.
+    </description>
+  </property>
+
+  <property>
+  <name>dfs.provided.mount.acls.enabled</name>
+    <value>false</value>
+    <description>
+      Set to true to inherit ACLs (Access Control Lists) from remote stores
+      during mount. Disabled by default, i.e., ACLs are not inherited from
+      remote stores. Note that HDFS ACLs have to be enabled
+      (dfs.namenode.acls.enabled must be set to true) for this to take effect.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.provided.volume.readthrough</name>
+    <value>false</value>
+    <description>
+      Enable read-through caching for data addressed through Provided storages.
+      This is a datanode level configuration and determines if the Provided data
+      read through the datanode is cached or not. Set to false by default, which
+      disables the caching. This parameter can override dfs.client.cache.readthrough.
+      Provided data is cached if dfs.client.cache.readthrough *or*
+      dfs.datanode.provided.volume.readthrough is set to true.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.write.cache.evictor.class</name>
+    <value>org.apache.hadoop.hdfs.server.namenode.syncservice.FIFOWriteCacheEvictor</value>
+    <description>
+      Specify a cache evictor class for provided storage write back cache. If this
+      default FIFOCacheEvictor is used, HDFS local cache will be evicted according
+      to FIFO policy in synced order, The actual eviction behavior also depends on
+      the config for write cache high watermark, low watermark and quota size.
+      The currently supported evictors include SimpleCacheEvictor, FIFOCacheEvictor,
+      and LRUCacheEvictor.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.write.cache.high.watermark</name>
+    <value>0.8</value>
+    <description>
+      If this watermark is reached, cache eviction action will be
+      taken in policy based evictor. This value is the ratio of
+      provided storage write cache used size to quota size (See
+      dfs.provided.write.cache.quota.size).
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.write.cache.low.watermark</name>
+    <value>0.5</value>
+    <description>
+      Cache eviction will work until this low watermark is reached.
+      This value is the ratio of provided storage write cache used
+      size to quota size (see dfs.provided.write.cache.quota.size).
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.write.cache.quota.size</name>
+    <value>107374182400</value>
+    <description>
+      Specify capacity in byte for provided write cache. The default
+      value is the number of bytes for 100GB.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.provided.sync.task.timeout.sec</name>
+    <value>1200</value>
+    <description>
+      Block sync task time out in second.
     </description>
   </property>
 

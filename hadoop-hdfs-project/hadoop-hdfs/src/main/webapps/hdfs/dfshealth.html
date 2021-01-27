@@ -178,6 +178,8 @@
   <tr><th> Block Pool Used:</th><td>{BlockPoolUsedSpace|fmt_bytes} ({PercentBlockPoolUsed|fmt_percentage})</td></tr>
   <tr><th> DataNodes usages% (Min/Median/Max/stdDev): </th>
 	<td>{#NodeUsage.nodeUsage}{min} / {median} / {max} / {stdDev}{/NodeUsage.nodeUsage}</td></tr>
+  <tr><th> Provided Cache Capacity:</th><td>{ProvidedCacheCapacityTotal|fmt_bytes}</td></tr>
+  <tr><th> Provided Cache Used:</th><td>{ProvidedCacheUsedTotal|fmt_bytes}</td></tr>
 {/nn}
 
 {#fs}

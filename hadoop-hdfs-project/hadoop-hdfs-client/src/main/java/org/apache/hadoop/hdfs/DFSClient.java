@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_DROP_BEHIND_READS;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_DROP_BEHIND_WRITES;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_READAHEAD;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_READTHROUGH;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHE_READTHROUGH_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_LOCAL_INTERFACES;
@@ -79,12 +81,14 @@ import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.HdfsBlockLocation;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.MountMode;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.ChecksumCombineMode;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.fs.ProvidedStorageSummary;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
@@ -394,8 +398,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     Boolean writeDropBehind =
         (conf.get(DFS_CLIENT_CACHE_DROP_BEHIND_WRITES) == null) ?
             null : conf.getBoolean(DFS_CLIENT_CACHE_DROP_BEHIND_WRITES, false);
+    Boolean readThrough =
+        (conf.get(DFS_CLIENT_CACHE_READTHROUGH) == null)
+        ? null : conf.getBoolean(DFS_CLIENT_CACHE_READTHROUGH,
+            DFS_CLIENT_CACHE_READTHROUGH_DEFAULT);
     this.defaultReadCachingStrategy =
-        new CachingStrategy(readDropBehind, readahead);
+        new CachingStrategy(readDropBehind, readahead, readThrough);
     this.defaultWriteCachingStrategy =
         new CachingStrategy(writeDropBehind, readahead);
     this.clientContext = ClientContext.get(
@@ -1786,6 +1794,70 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
           UnresolvedPathException.class);
+    }
+  }
+
+  /**
+   * add mount for external storage without mount mode specified.
+   * The default READONLY mount is used then.
+   */
+  public boolean addMount(String remote, String mountPath,
+      Map<String, String> config) throws IOException {
+    return addMount(remote, mountPath, MountMode.READONLY, config);
+  }
+
+  /**
+   * Add a PROVIDED mount point to the FSImage.
+   *
+   * @param remote Remote location.
+   * @param mountPath HDFS path to mount external storage.
+   * @param mountMode Mount mode, readOnly, backup & writeBack are supported.
+   * @param config remote config needed to connect to remote fs. For e.g. if
+   *               the desired remote connection requires a user=foo and a
+   *               token=bar configuration, then the config map should
+   *               contain these two pairs.
+   * @return true if the mount is successful.
+   * @throws IOException If there is an error adding the mount point.
+   */
+  public boolean addMount(String remote, String mountPath, MountMode mountMode,
+      Map<String, String> config) throws IOException {
+    checkOpen();
+    try (TraceScope ignored = newPathTraceScope("getFileLinkInfo",
+        mountPath)) {
+      return namenode.addMount(remote, mountPath, mountMode, config);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(FileNotFoundException.class,
+          AccessControlException.class, UnresolvedPathException.class);
+    }
+  }
+
+  /**
+   * Provide a list of all the mount points, and stats summary if
+   * {@code requireStats} is true, in the cluster.
+   * @return Mount info and metrics summary for provided storage.
+   * @throws IOException
+   */
+  public ProvidedStorageSummary listMounts(boolean requireStats)
+      throws IOException {
+    return namenode.listMounts(requireStats);
+  }
+
+  /**
+   * Remove a PROVIDED mount point.
+   * @param mount Path in HDFS to mount the path in.
+   * @return true if the mount is successful.
+   * @throws IOException If there is an error adding the mount point.
+   */
+  public boolean removeMount(String mount) throws IOException {
+    checkOpen();
+    TraceScope scope = newPathTraceScope("removeMount", mount);
+    try {
+      return namenode.removeMount(mount);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(FileNotFoundException.class,
+          AccessControlException.class, UnresolvedPathException.class);
+    } finally {
+      scope.close();
     }
   }
 
