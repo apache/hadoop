@@ -23,6 +23,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 
 public class WeightToWeightConverter
@@ -33,12 +34,19 @@ public class WeightToWeightConverter
       Configuration csConfig) {
     List<FSQueue> children = queue.getChildQueues();
 
-    children.forEach(fsQueue -> csConfig.set(
-        getProperty(fsQueue), getWeightString(fsQueue)));
+    if (queue instanceof FSParentQueue || !children.isEmpty()) {
+      children.forEach(fsQueue -> csConfig.set(
+          getProperty(fsQueue), getWeightString(fsQueue)));
+      csConfig.setBoolean(getAutoCreateV2EnabledProperty(queue), true);
+    }
   }
 
   private String getProperty(FSQueue queue) {
     return PREFIX + queue.getName() + ".capacity";
+  }
+
+  private String getAutoCreateV2EnabledProperty(FSQueue queue) {
+    return PREFIX + queue.getName() + ".auto-queue-creation-v2.enabled";
   }
 
   private String getWeightString(FSQueue queue) {
