@@ -26,7 +26,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.*;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -181,6 +186,11 @@ public class CSMappingPlacementRule extends PlacementRule {
       return;
     }
     Set<String> groupsSet = groups.getGroupsSet(user);
+    if (groupsSet.isEmpty()) {
+      LOG.warn("There are no groups for user {}", user);
+      vctx.putExtraDataset("groups", groupsSet);
+      return;
+    }
     String secondaryGroup = null;
     Iterator<String> it = groupsSet.iterator();
     String primaryGroup = it.next();
@@ -245,46 +255,47 @@ public class CSMappingPlacementRule extends PlacementRule {
 
   private String validateAndNormalizeQueueWithParent(
       String parent, String leaf, boolean allowCreate) throws YarnException {
-    CSQueue parentQueue = queueManager.getQueue(parent);
-    //we don't find the specified parent, so the placement rule is invalid
-    //for this case
-    if (parentQueue == null) {
-      if (queueManager.isAmbiguous(parent)) {
-        throw new YarnException("Mapping rule specified a parent queue '" +
-            parent + "', but it is ambiguous.");
-      } else {
-        throw new YarnException("Mapping rule specified a parent queue '" +
-            parent + "', but it does not exist.");
-      }
-    }
+    String normalizedPath =
+        MappingRuleValidationHelper.normalizeQueuePathRoot(
+            queueManager, parent + DOT + leaf);
+    MappingRuleValidationHelper.ValidationResult validity =
+        MappingRuleValidationHelper.validateQueuePathAutoCreation(
+            queueManager, normalizedPath);
 
-    //normalizing parent path
-    String parentPath = parentQueue.getQueuePath();
-    String fullPath = parentPath + DOT + leaf;
-
-    //checking if the queue actually exists
-    CSQueue queue = queueManager.getQueue(fullPath);
-    //if we have a parent which is not a managed parent and the queue doesn't
-    //then it is an invalid target, since the queue won't be auto-created
-    if (!(parentQueue instanceof ManagedParentQueue) && queue == null) {
+    switch (validity) {
+    case AMBIGUOUS_PARENT:
       throw new YarnException("Mapping rule specified a parent queue '" +
-          parent + "', but it is not a managed parent queue, " +
+          parent + "', but it is ambiguous.");
+    case AMBIGUOUS_QUEUE:
+      throw new YarnException("Mapping rule specified a target queue '" +
+          normalizedPath + "', but it is ambiguous.");
+    case EMPTY_PATH:
+      throw new YarnException("Mapping rule did not specify a target queue.");
+    case NO_PARENT_PROVIDED:
+      throw new YarnException("Mapping rule did not specify an existing queue" +
+          " nor a dynamic parent queue.");
+    case NO_DYNAMIC_PARENT:
+      throw new YarnException("Mapping rule specified a parent queue '" +
+          parent + "', but it is not a dynamic parent queue, " +
           "and no queue exists with name '" + leaf + "' under it.");
+    case QUEUE_EXISTS:
+      break;
+    case CREATABLE:
+      if (!allowCreate) {
+        throw new YarnException("Mapping rule doesn't allow auto-creation of " +
+            "the queue '" + normalizedPath + "'.");
+      }
+      break;
+    default:
+      //Probably the QueueCreationValidation have
+      //new items, which are not handled here
+      throw new YarnException("Unknown queue path validation result. '" +
+          validity + "'.");
     }
 
-    //if the queue does not exist but the parent is managed we need to check if
-    //auto-creation is allowed
-    if (parentQueue instanceof ManagedParentQueue
-        && queue == null
-        && allowCreate == false) {
-      throw new YarnException("Mapping rule doesn't allow auto-creation of " +
-          "the queue '" + fullPath + "'");
-    }
-
-
-    //at this point we either have a managed parent or the queue actually
-    //exists so we have a placement context, returning it
-    return fullPath;
+    //at this point we either have a dynamic parent or the queue actually
+    //exists, returning it
+    return normalizedPath;
   }
 
   private String validateAndNormalizeQueueWithNoParent(String leaf)

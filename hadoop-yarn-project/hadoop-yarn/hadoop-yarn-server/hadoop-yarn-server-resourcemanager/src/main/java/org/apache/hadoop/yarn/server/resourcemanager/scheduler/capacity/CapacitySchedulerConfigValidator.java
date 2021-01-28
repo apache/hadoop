@@ -106,6 +106,10 @@ public final class CapacitySchedulerConfigValidator {
     }
   }
 
+  private static boolean isDynamicQueue(CSQueue csQueue) {
+    return ((AbstractCSQueue)csQueue).isDynamicQueue();
+  }
+
   /**
    * Ensure all existing queues are present. Queues cannot be deleted if its not
    * in Stopped state, Queue's cannot be moved from one hierarchy to other also.
@@ -144,10 +148,12 @@ public final class CapacitySchedulerConfigValidator {
             LOG.info("Deleting Queue " + queuePath + ", as it is not"
                 + " present in the modified capacity configuration xml");
           } else {
-            throw new IOException(oldQueue.getQueuePath() + " cannot be"
-              + " deleted from the capacity scheduler configuration, as the"
-              + " queue is not yet in stopped state. Current State : "
-              + oldQueue.getState());
+            if (!isDynamicQueue(oldQueue)) {
+              throw new IOException(oldQueue.getQueuePath() + " cannot be"
+                  + " deleted from the capacity scheduler configuration, as the"
+                  + " queue is not yet in stopped state. Current State : "
+                  + oldQueue.getState());
+            }
           }
         } else if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {
           //Queue's cannot be moved from one hierarchy to other

@@ -499,7 +499,7 @@ public final class Constants {
    * will be validated using {@code S3AFileSystem.verifyBucketExistsV2()}.
    * Value: {@value}
    */
-  public static final int S3A_BUCKET_PROBE_DEFAULT = 2;
+  public static final int S3A_BUCKET_PROBE_DEFAULT = 0;
 
   /**
    * How long a directory listing in the MS is considered as authoritative.
@@ -548,6 +548,13 @@ public final class Constants {
    */
   @InterfaceStability.Unstable
   public static final String INPUT_FADV_RANDOM = "random";
+
+  /**
+   * Gauge name for the input policy : {@value}.
+   * This references an enum currently exclusive to the S3A stream.
+   */
+  public static final String STREAM_READ_GAUGE_INPUT_POLICY =
+      "stream_read_gauge_input_policy";
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
@@ -1040,5 +1047,11 @@ public final class Constants {
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE
       = "fs.s3a.capability.directory.marker.action.delete";
+
+  /**
+   * To comply with the XAttr rules, all headers of the object retrieved
+   * through the getXAttr APIs have the prefix: {@value}.
+   */
+  public static final String XA_HEADER_PREFIX = "header.";
 
 }

@@ -29,10 +29,13 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Private
 public class LogAggregationUtils {
@@ -295,19 +298,8 @@ public class LogAggregationUtils {
         // Return both new and old node files combined
         RemoteIterator<FileStatus> curDir = nodeFilesCur;
         RemoteIterator<FileStatus> prevDir = nodeFilesPrev;
-        RemoteIterator<FileStatus> nodeFilesCombined = new
-            RemoteIterator<FileStatus>() {
-            @Override
-            public boolean hasNext() throws IOException {
-              return prevDir.hasNext() || curDir.hasNext();
-            }
 
-            @Override
-            public FileStatus next() throws IOException {
-              return prevDir.hasNext() ? prevDir.next() : curDir.next();
-            }
-        };
-        return nodeFilesCombined;
+        return combineIterators(prevDir, curDir);
       }
     }
 
@@ -366,6 +358,95 @@ public class LogAggregationUtils {
       throw new IOException(diagnosticsMsg.toString());
     }
     return nodeFiles;
+  }
+
+  public static RemoteIterator<FileStatus> getRemoteFiles(
+      Configuration conf, Path appPath) throws IOException {
+
+    Path qualifiedLogDir =
+        FileContext.getFileContext(conf).makeQualified(appPath);
+    return FileContext.getFileContext(
+        qualifiedLogDir.toUri(), conf).listStatus(appPath);
+  }
+
+  public static RemoteIterator<FileStatus> getUserRemoteLogDir(
+      Configuration conf, String user, Path remoteRootLogDir,
+      String remoteRootLogDirSuffix) throws IOException {
+    Path userPath = LogAggregationUtils.getRemoteLogSuffixedDir(
+        remoteRootLogDir, user, remoteRootLogDirSuffix);
+    final RemoteIterator<FileStatus> userRootDirFiles =
+        getRemoteFiles(conf, userPath);
+
+    RemoteIterator<FileStatus> newDirs = new RemoteIterator<FileStatus>() {
+      private RemoteIterator<FileStatus> currentBucketDir =
+          LogAggregationUtils.getSubDir(conf, userRootDirFiles);
+      @Override
+      public boolean hasNext() throws IOException {
+        return currentBucketDir != null && currentBucketDir.hasNext() ||
+            userRootDirFiles.hasNext();
+      }
+
+      @Override
+      public FileStatus next() throws IOException {
+        FileStatus next = null;
+        while (next == null) {
+          if (currentBucketDir != null && currentBucketDir.hasNext()) {
+            next = currentBucketDir.next();
+          } else if (userRootDirFiles.hasNext()) {
+            currentBucketDir = LogAggregationUtils.getSubDir(
+                conf, userRootDirFiles);
+          } else {
+            throw new NoSuchElementException();
+          }
+        }
+        return next;
+      }
+    };
+
+    RemoteIterator<FileStatus> allDir = newDirs;
+    if (LogAggregationUtils.isOlderPathEnabled(conf)) {
+      try {
+        Path oldPath = LogAggregationUtils.getOlderRemoteLogSuffixedDir(
+            remoteRootLogDir, user, remoteRootLogDirSuffix);
+        final RemoteIterator<FileStatus> oldUserRootDirFiles =
+            getRemoteFiles(conf, oldPath);
+        allDir = combineIterators(oldUserRootDirFiles, newDirs);
+      } catch (FileNotFoundException e) {
+        return newDirs;
+      }
+    }
+
+    return allDir;
+  }
+
+  private static RemoteIterator<FileStatus> getSubDir(
+      Configuration conf, RemoteIterator<FileStatus> rootDir)
+      throws IOException {
+    if (rootDir.hasNext()) {
+      Path userPath = rootDir.next().getPath();
+      Path qualifiedLogDir =
+          FileContext.getFileContext(conf).makeQualified(userPath);
+      return FileContext.getFileContext(
+          qualifiedLogDir.toUri(), conf).listStatus(userPath);
+    } else {
+      return null;
+    }
+  }
+
+  private static RemoteIterator<FileStatus> combineIterators(
+      RemoteIterator<FileStatus> first, RemoteIterator<FileStatus> second) {
+    return new RemoteIterator<FileStatus>() {
+      @Override
+      public boolean hasNext() throws IOException {
+        return first.hasNext() || second.hasNext();
+      }
+
+      @Override
+      public FileStatus next() throws IOException {
+        return first.hasNext() ? first.next() : second.next();
+      }
+    };
+
   }
 
 }

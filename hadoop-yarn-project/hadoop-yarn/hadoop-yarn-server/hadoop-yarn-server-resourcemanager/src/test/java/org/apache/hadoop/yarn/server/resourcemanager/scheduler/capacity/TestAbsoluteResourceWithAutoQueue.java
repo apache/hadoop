@@ -148,6 +148,8 @@ public class TestAbsoluteResourceWithAutoQueue
     return csConf;
   }
 
+  // TODO: Wangda: I think this test case is not correct, Sunil could help look
+  // into details.
   @Test(timeout = 20000)
   public void testAutoCreateLeafQueueCreation() throws Exception {
 
@@ -235,6 +237,10 @@ public class TestAbsoluteResourceWithAutoQueue
       final CSQueue autoCreatedLeafQueue2 = cs.getQueue(TEST_GROUPUSER2);
       validateCapacities((AutoCreatedLeafQueue) autoCreatedLeafQueue2, 0.0f,
           0.0f, 1f, 0.6f);
+      validateCapacities((AutoCreatedLeafQueue) autoCreatedLeafQueue1, 0.4f,
+          0.04f, 1f, 0.6f);
+      validateCapacities((AutoCreatedLeafQueue) autoCreatedLeafQueue, 0.4f,
+          0.04f, 1f, 0.6f);
 
       GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
           (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue) parentQueue)

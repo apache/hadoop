@@ -976,6 +976,8 @@ public class TestDecommission extends AdminStatesBaseTest {
   @Test(timeout=120000)
   public void testAllocAndIBRWhileDecommission() throws IOException {
     LOG.info("Starting test testAllocAndIBRWhileDecommission");
+    getConf().setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+        DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT);
     startCluster(1, 6);
     getCluster().waitActive();
     FSNamesystem ns = getCluster().getNamesystem(0);

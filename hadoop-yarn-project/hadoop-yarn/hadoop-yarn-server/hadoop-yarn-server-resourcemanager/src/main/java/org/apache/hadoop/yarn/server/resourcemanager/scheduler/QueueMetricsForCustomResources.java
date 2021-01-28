@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,7 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,28 +19,20 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetrics;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 
 import java.util.Map;
 
-/**
- * This class is a main entry-point for any kind of metrics for
- * custom resources.
- * It provides increase and decrease methods for all types of metrics.
- */
-public class QueueMetricsForCustomResources {
-  private final QueueMetricsCustomResource aggregatePreemptedSeconds =
-      new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource aggregatePreempted =
-    new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource allocated =
-      new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource available =
-      new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource pending =
-      new QueueMetricsCustomResource();
-
-  private final QueueMetricsCustomResource reserved =
-      new QueueMetricsCustomResource();
+public class QueueMetricsForCustomResources extends CustomResourceMetrics {
+  private final CustomResourceMetricValue aggregatePreemptedSeconds =
+      new CustomResourceMetricValue();
+  private final CustomResourceMetricValue aggregatePreempted =
+      new CustomResourceMetricValue();
+  private final CustomResourceMetricValue pending =
+      new CustomResourceMetricValue();
+  private final CustomResourceMetricValue reserved =
+      new CustomResourceMetricValue();
 
   public void increaseReserved(Resource res) {
     reserved.increase(res);
@@ -46,10 +40,6 @@ public class QueueMetricsForCustomResources {
 
   public void decreaseReserved(Resource res) {
     reserved.decrease(res);
-  }
-
-  public void setAvailable(Resource res) {
-    available.set(res);
   }
 
   public void increasePending(Resource res, int containers) {
@@ -64,20 +54,12 @@ public class QueueMetricsForCustomResources {
     pending.decreaseWithMultiplier(res, containers);
   }
 
-  public void increaseAllocated(Resource res) {
-    allocated.increase(res);
+  public Map<String, Long> getPendingValues() {
+    return pending.getValues();
   }
 
-  public void increaseAllocated(Resource res, int containers) {
-    allocated.increaseWithMultiplier(res, containers);
-  }
-
-  public void decreaseAllocated(Resource res) {
-    allocated.decrease(res);
-  }
-
-  public void decreaseAllocated(Resource res, int containers) {
-    allocated.decreaseWithMultiplier(res, containers);
+  public Map<String, Long> getReservedValues() {
+    return reserved.getValues();
   }
 
   public void increaseAggregatedPreemptedSeconds(Resource res, long seconds) {
@@ -88,27 +70,7 @@ public class QueueMetricsForCustomResources {
     aggregatePreempted.increase(res);
   }
 
-  Map<String, Long> getAllocatedValues() {
-    return allocated.getValues();
-  }
-
-  Map<String, Long> getAvailableValues() {
-    return available.getValues();
-  }
-
-  Map<String, Long> getPendingValues() {
-    return pending.getValues();
-  }
-
-  Map<String, Long> getReservedValues() {
-    return reserved.getValues();
-  }
-
-  QueueMetricsCustomResource getAggregatePreemptedSeconds() {
+  CustomResourceMetricValue getAggregatePreemptedSeconds() {
     return aggregatePreemptedSeconds;
-  }
-
-  public QueueMetricsCustomResource getAvailable() {
-    return available;
   }
 }

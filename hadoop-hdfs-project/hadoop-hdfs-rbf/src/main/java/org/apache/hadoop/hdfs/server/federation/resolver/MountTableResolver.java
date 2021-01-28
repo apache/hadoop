@@ -452,46 +452,12 @@ public class MountTableResolver
     verifyMountTable();
     final String path = RouterAdmin.normalizeFileSystemPath(str);
 
-    Set<String> children = new TreeSet<>();
     readLock.lock();
     try {
       String from = path;
       String to = path + Character.MAX_VALUE;
       SortedMap<String, MountTable> subMap = this.tree.subMap(from, to);
-
-      boolean exists = false;
-      for (String subPath : subMap.keySet()) {
-        String child = subPath;
-
-        // Special case for /
-        if (!path.equals(Path.SEPARATOR)) {
-          // Get the children
-          int ini = path.length();
-          child = subPath.substring(ini);
-        }
-
-        if (child.isEmpty()) {
-          // This is a mount point but without children
-          exists = true;
-        } else if (child.startsWith(Path.SEPARATOR)) {
-          // This is a mount point with children
-          exists = true;
-          child = child.substring(1);
-
-          // We only return immediate children
-          int fin = child.indexOf(Path.SEPARATOR);
-          if (fin > -1) {
-            child = child.substring(0, fin);
-          }
-          if (!child.isEmpty()) {
-            children.add(child);
-          }
-        }
-      }
-      if (!exists) {
-        return null;
-      }
-      return new LinkedList<>(children);
+      return FileSubclusterResolver.getMountPoints(path, subMap.keySet());
     } finally {
       readLock.unlock();
     }

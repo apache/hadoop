@@ -68,6 +68,16 @@ public class DataNodeFaultInjector {
   }
 
   /**
+   * Used as a hook to delay writing a packet to disk.
+   */
+  public void delayWriteToDisk() {}
+
+  /**
+   * Used as a hook to delay writing a packet to os cache.
+   */
+  public void delayWriteToOsCache() {}
+
+  /**
    * Used as a hook to intercept the latency of sending ack.
    */
   public void logDelaySendingAckToUpstream(
@@ -101,6 +111,22 @@ public class DataNodeFaultInjector {
    * process.
    */
   public void stripedBlockChecksumReconstruction() throws IOException {}
+
+  /*
+   * Used as a hook to inject latency when read block
+   * in erasure coding reconstruction process.
+   */
+  public void delayBlockReader() {}
+
+  /**
+   * Used as a hook to inject intercept when free the block reader buffer.
+   */
+  public void interceptFreeBlockReaderBuffer() {}
+
+  /**
+   * Used as a hook to inject intercept When finish reading from block.
+   */
+  public void interceptBlockReader() {}
 
   /**
    * Used as a hook to inject intercept when BPOfferService hold lock.

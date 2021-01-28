@@ -44,6 +44,8 @@ import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
+import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.TokenCache;
@@ -70,6 +72,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOExceptio
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.ALICE;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.assertSecurityEnabled;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_SDK_METRICS_ENABLED;
 import static org.apache.hadoop.test.LambdaTestUtils.doAs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.hamcrest.Matchers.containsString;
@@ -305,6 +308,9 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     describe("Delegation tokens can be passed to a new filesystem;"
         + " if role restricted, permissions are tightened.");
     S3AFileSystem fs = getFileSystem();
+    // force a probe of the remote FS to make sure its endpoint is valid
+    // (this always hits S3, even when S3Guard is enabled)
+    fs.getObjectMetadata(new Path("/"));
     readLandsatMetadata(fs);
 
     URI uri = fs.getUri();
@@ -561,8 +567,13 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     conf.set(ENDPOINT, "");
     factory.setConf(conf);
     String host = landsat.getHost();
+    StatisticsFromAwsSdk awsStats = null;
+    if (AWS_SDK_METRICS_ENABLED) {
+      awsStats = new EmptyS3AStatisticsContext()
+          .newStatisticsFromAwsSdk();
+    }
     AmazonS3 s3 = factory.createS3Client(landsat, host, testing,
-        "ITestSessionDelegationInFileystem");
+        "ITestSessionDelegationInFileystem", awsStats);
 
     return Invoker.once("HEAD", host,
         () -> s3.getObjectMetadata(host, landsat.getPath().substring(1)));

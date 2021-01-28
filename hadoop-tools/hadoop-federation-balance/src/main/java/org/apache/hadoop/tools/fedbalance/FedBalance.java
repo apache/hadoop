@@ -27,24 +27,17 @@ import org.apache.hadoop.conf.Configured;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedure;
-import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
-import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
-import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
-import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceJob;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedureScheduler;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.ROUTER;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.FORCE_CLOSE_OPEN;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.MAP;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.BANDWIDTH;
@@ -58,8 +51,7 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TrashOption;
  * Balance data from src cluster to dst cluster with distcp.
  *
  * 1. Move data from the source path to the destination path with distcp.
- * 2. Update the the mount entry.
- * 3. Delete the source path to trash.
+ * 2. Delete the source path to trash.
  */
 public class FedBalance extends Configured implements Tool {
 
@@ -67,21 +59,18 @@ public class FedBalance extends Configured implements Tool {
       LoggerFactory.getLogger(FedBalance.class);
   private static final String SUBMIT_COMMAND = "submit";
   private static final String CONTINUE_COMMAND = "continue";
-  private static final String NO_MOUNT = "no-mount";
-  private static final String DISTCP_PROCEDURE = "distcp-procedure";
-  private static final String MOUNT_TABLE_PROCEDURE = "mount-table-procedure";
-  private static final String TRASH_PROCEDURE = "trash-procedure";
+  public static final String NO_MOUNT = "no-mount";
+  public static final String DISTCP_PROCEDURE = "distcp-procedure";
+  public static final String TRASH_PROCEDURE = "trash-procedure";
 
-  private static final String FED_BALANCE_DEFAULT_XML =
+  public static final String FED_BALANCE_DEFAULT_XML =
       "hdfs-fedbalance-default.xml";
-  private static final String FED_BALANCE_SITE_XML = "hdfs-fedbalance-site.xml";
+  public static final String FED_BALANCE_SITE_XML = "hdfs-fedbalance-site.xml";
 
   /**
    * This class helps building the balance job.
    */
-  private class Builder {
-    /* Balancing in an rbf cluster. */
-    private boolean routerCluster = false;
+  private final class Builder {
     /* Force close all open files while there is no diff. */
     private boolean forceCloseOpen = false;
     /* Max number of concurrent maps to use for copy. */
@@ -99,18 +88,9 @@ public class FedBalance extends Configured implements Tool {
     /* The dst input. This specifies the dst path. */
     private final String inputDst;
 
-    Builder(String inputSrc, String inputDst) {
+    private Builder(String inputSrc, String inputDst) {
       this.inputSrc = inputSrc;
       this.inputDst = inputDst;
-    }
-
-    /**
-     * Whether balancing in an rbf cluster.
-     * @param value true if it's running in a router-based federation cluster.
-     */
-    public Builder setRouterCluster(boolean value) {
-      this.routerCluster = value;
-      return this;
     }
 
     /**
@@ -177,26 +157,14 @@ public class FedBalance extends Configured implements Tool {
       if (dst.toUri().getAuthority() == null) {
         throw new IOException("The destination cluster must be specified.");
       }
-      if (routerCluster) { // router-based federation.
-        Path src = getSrcPath(inputSrc);
-        String mount = inputSrc;
-        context = new FedBalanceContext.Builder(src, dst, mount, getConf())
-            .setForceCloseOpenFiles(forceCloseOpen)
-            .setUseMountReadOnly(routerCluster).setMapNum(map)
-            .setBandwidthLimit(bandwidth).setTrash(trashOpt)
-            .setDelayDuration(delayDuration)
-            .setDiffThreshold(diffThreshold).build();
-      } else { // normal federation cluster.
-        Path src = new Path(inputSrc);
-        if (src.toUri().getAuthority() == null) {
-          throw new IOException("The source cluster must be specified.");
-        }
-        context = new FedBalanceContext.Builder(src, dst, NO_MOUNT, getConf())
-            .setForceCloseOpenFiles(forceCloseOpen)
-            .setUseMountReadOnly(routerCluster).setMapNum(map)
-            .setBandwidthLimit(bandwidth).setTrash(trashOpt)
-            .setDiffThreshold(diffThreshold).build();
+      Path src = new Path(inputSrc);
+      if (src.toUri().getAuthority() == null) {
+        throw new IOException("The source cluster must be specified.");
       }
+      context = new FedBalanceContext.Builder(src, dst, NO_MOUNT, getConf())
+          .setForceCloseOpenFiles(forceCloseOpen).setUseMountReadOnly(false)
+          .setMapNum(map).setBandwidthLimit(bandwidth).setTrash(trashOpt)
+          .setDiffThreshold(diffThreshold).build();
 
       LOG.info(context.toString());
       // Construct the balance job.
@@ -204,13 +172,6 @@ public class FedBalance extends Configured implements Tool {
       DistCpProcedure dcp =
           new DistCpProcedure(DISTCP_PROCEDURE, null, delayDuration, context);
       builder.nextProcedure(dcp);
-      if (routerCluster) {
-        MountTableProcedure mtp =
-            new MountTableProcedure(MOUNT_TABLE_PROCEDURE, null, delayDuration,
-                inputSrc, dst.toUri().getPath(), dst.toUri().getAuthority(),
-                getConf());
-        builder.nextProcedure(mtp);
-      }
       TrashProcedure tp =
           new TrashProcedure(TRASH_PROCEDURE, null, delayDuration, context);
       builder.nextProcedure(tp);
@@ -291,7 +252,6 @@ public class FedBalance extends Configured implements Tool {
       throws IOException {
     Builder builder = new Builder(inputSrc, inputDst);
     // parse options.
-    builder.setRouterCluster(command.hasOption(ROUTER.getOpt()));
     builder.setForceCloseOpen(command.hasOption(FORCE_CLOSE_OPEN.getOpt()));
     if (command.hasOption(MAP.getOpt())) {
       builder.setMap(Integer.parseInt(command.getOptionValue(MAP.getOpt())));
@@ -338,34 +298,6 @@ public class FedBalance extends Configured implements Tool {
       scheduler.shutDown();
     }
     return 0;
-  }
-
-  /**
-   * Get src uri from Router.
-   */
-  private Path getSrcPath(String fedPath) throws IOException {
-    String address = getConf().getTrimmed(
-        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
-        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
-    InetSocketAddress routerSocket = NetUtils.createSocketAddr(address);
-    RouterClient rClient = new RouterClient(routerSocket, getConf());
-    try {
-      MountTableManager mountTable = rClient.getMountTableManager();
-      MountTable entry = MountTableProcedure.getMountEntry(fedPath, mountTable);
-      if (entry == null) {
-        throw new IllegalArgumentException(
-            "The mount point doesn't exist. path=" + fedPath);
-      } else if (entry.getDestinations().size() > 1) {
-        throw new IllegalArgumentException(
-            "The mount point has more than one destination. path=" + fedPath);
-      } else {
-        String ns = entry.getDestinations().get(0).getNameserviceId();
-        String path = entry.getDestinations().get(0).getDest();
-        return new Path("hdfs://" + ns + path);
-      }
-    } finally {
-      rClient.close();
-    }
   }
 
   private void printUsage() {

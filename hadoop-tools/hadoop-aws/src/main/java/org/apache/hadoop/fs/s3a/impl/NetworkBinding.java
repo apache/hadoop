@@ -51,22 +51,18 @@ public class NetworkBinding {
           ".thirdparty.apache.http.conn.ssl.SSLConnectionSocketFactory";
 
   /**
-   * Configures the {@link com.amazonaws.thirdparty.apache.http.conn.ssl
-   * .SSLConnectionSocketFactory} used by the AWS SDK. A custom
-   * SSLConnectionSocketFactory can be set using the method
-   * {@link com.amazonaws.ApacheHttpClientConfig#setSslSocketFactory(
-   * com.amazonaws.thirdparty.apache.http.conn.socket.ConnectionSocketFactory)}.
-   * If {@link com.amazonaws.thirdparty.apache.http.conn.ssl
-   * .SSLConnectionSocketFactory} cannot be found on the classpath, the value
+   * Configures the {@code SSLConnectionSocketFactory} used by the AWS SDK.
+   * A custom Socket Factory can be set using the method
+   * {@code setSslSocketFactory()}.
+   * If {@code SSLConnectionSocketFactory} cannot be found on the classpath, the value
    * of {@link org.apache.hadoop.fs.s3a.Constants#SSL_CHANNEL_MODE} is ignored.
    *
    * @param conf the {@link Configuration} used to get the client specified
-   *             value of {@link org.apache.hadoop.fs.s3a.Constants
-   *             #SSL_CHANNEL_MODE}
-   * @param awsConf the {@link ClientConfiguration} to set the
+   *             value of {@code SSL_CHANNEL_MODE}
+   * @param awsConf the {@code ClientConfiguration} to set the
    *                SSLConnectionSocketFactory for.
    * @throws IOException if there is an error while initializing the
-   * {@link SSLSocketFactory} other than classloader problems.
+   * {@code SSLSocketFactory} other than classloader problems.
    */
   public static void bindSSLChannelMode(Configuration conf,
       ClientConfiguration awsConf) throws IOException {

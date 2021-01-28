@@ -651,7 +651,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   /////////////////////////////////////////////////////
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize)
+      minBlockSize, long timeInterval)
       throws IOException {
     if(size <= 0) {
       throw new IllegalArgumentException(
@@ -663,7 +663,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     checkNNStartup();
     namesystem.checkSuperuserPrivilege();
-    return namesystem.getBlocks(datanode, size, minBlockSize);
+    namesystem.checkNameNodeSafeMode("Cannot execute getBlocks");
+    return namesystem.getBlocks(datanode, size, minBlockSize, timeInterval);
   }
 
   @Override // NamenodeProtocol

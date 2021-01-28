@@ -65,6 +65,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUPTED;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_FOUND;
@@ -282,16 +283,24 @@ public final class MarkerTool extends S3GuardTool {
     }
     FileSystem fs = path.getFileSystem(getConf());
     boolean nonAuth = command.getOpt(OPT_NONAUTH);
-    ScanResult result = execute(
-        new ScanArgsBuilder()
-            .withSourceFS(fs)
-            .withPath(path)
-            .withDoPurge(clean)
-            .withMinMarkerCount(expectedMin)
-            .withMaxMarkerCount(expectedMax)
-            .withLimit(limit)
-            .withNonAuth(nonAuth)
-            .build());
+    ScanResult result;
+    try {
+      result = execute(
+              new ScanArgsBuilder()
+                      .withSourceFS(fs)
+                      .withPath(path)
+                      .withDoPurge(clean)
+                      .withMinMarkerCount(expectedMin)
+                      .withMaxMarkerCount(expectedMax)
+                      .withLimit(limit)
+                      .withNonAuth(nonAuth)
+                      .build());
+    } catch (UnknownStoreException ex) {
+      // bucket doesn't exist.
+      // replace the stack trace with an error code.
+      throw new ExitUtil.ExitException(EXIT_NOT_FOUND,
+              ex.toString(), ex);
+    }
     if (verbose) {
       dumpFileSystemStatistics(out);
     }
@@ -664,6 +673,7 @@ public final class MarkerTool extends S3GuardTool {
       final int limit) throws IOException {
 
     int count = 0;
+    boolean result = true;
     RemoteIterator<S3AFileStatus> listing = operations
         .listObjects(path, storeContext.pathToKey(path));
     while (listing.hasNext()) {
@@ -692,10 +702,16 @@ public final class MarkerTool extends S3GuardTool {
       if (limit > 0 && count >= limit) {
         println(out, "Limit of scan reached - %,d object%s",
             limit, suffix(limit));
-        return false;
+        result = false;
+        break;
       }
     }
-    return true;
+    LOG.debug("Listing summary {}", listing);
+    if (verbose) {
+      println(out, "%nListing statistics:%n  %s%n",
+          ioStatisticsSourceToString(listing));
+    }
+    return result;
   }
 
   /**

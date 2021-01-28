@@ -20,9 +20,14 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.LinkedList;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
 
 /**
  * Interface to map a file path in the global name space to a specific
@@ -75,4 +80,51 @@ public interface FileSubclusterResolver {
    * @return Default namespace identifier.
    */
   String getDefaultNamespace();
+
+  /**
+   * Get a list of mount points for a path.
+   *
+   * @param path Path to get the mount points under.
+   * @param mountPoints the mount points to choose.
+   * @return Return empty list if the path is a mount point but there are no
+   *         mount points under the path. Return null if the path is not a mount
+   *         point and there are no mount points under the path.
+   */
+  static List<String> getMountPoints(String path,
+      Collection<String> mountPoints) {
+    Set<String> children = new TreeSet<>();
+    boolean exists = false;
+    for (String subPath : mountPoints) {
+      String child = subPath;
+
+      // Special case for /
+      if (!path.equals(Path.SEPARATOR)) {
+        // Get the children
+        int ini = path.length();
+        child = subPath.substring(ini);
+      }
+
+      if (child.isEmpty()) {
+        // This is a mount point but without children
+        exists = true;
+      } else if (child.startsWith(Path.SEPARATOR)) {
+        // This is a mount point with children
+        exists = true;
+        child = child.substring(1);
+
+        // We only return immediate children
+        int fin = child.indexOf(Path.SEPARATOR);
+        if (fin > -1) {
+          child = child.substring(0, fin);
+        }
+        if (!child.isEmpty()) {
+          children.add(child);
+        }
+      }
+    }
+    if (!exists) {
+      return null;
+    }
+    return new LinkedList<>(children);
+  }
 }

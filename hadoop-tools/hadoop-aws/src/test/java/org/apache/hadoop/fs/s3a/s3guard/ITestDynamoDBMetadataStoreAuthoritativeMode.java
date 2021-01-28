@@ -54,7 +54,7 @@ import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_RECORD_WRITES;
 import static org.apache.hadoop.fs.s3a.s3guard.AuthoritativeAuditOperation.ERROR_PATH_NOT_AUTH_IN_FS;
@@ -330,7 +330,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     touchFile(nestedFile2);
 
     S3ATestUtils.MetricDiff objListRequests =
-        new S3ATestUtils.MetricDiff(authFS, OBJECT_LIST_REQUESTS);
+        new S3ATestUtils.MetricDiff(authFS, OBJECT_LIST_REQUEST);
 
     RemoteIterator<LocatedFileStatus> statusIterator =
         authFS.listFiles(dir, true);
@@ -372,7 +372,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     touchFile(nestedFile2);
 
     S3ATestUtils.MetricDiff objListRequests =
-        new S3ATestUtils.MetricDiff(authFS, OBJECT_LIST_REQUESTS);
+        new S3ATestUtils.MetricDiff(authFS, OBJECT_LIST_REQUEST);
 
     RemoteIterator<LocatedFileStatus> statusIterator =
         authFS.listFiles(dir, true);
@@ -766,7 +766,7 @@ public class ITestDynamoDBMetadataStoreAuthoritativeMode
     S3ATestUtils.MetricDiff authDirsMarked = new S3ATestUtils.MetricDiff(authFS,
         S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED);
     S3ATestUtils.MetricDiff listRequests = new S3ATestUtils.MetricDiff(authFS,
-        OBJECT_LIST_REQUESTS);
+        OBJECT_LIST_REQUEST);
     final T call = fn.call();
     authDirsMarked.assertDiffEquals(updates);
     listRequests.assertDiffEquals(lists);

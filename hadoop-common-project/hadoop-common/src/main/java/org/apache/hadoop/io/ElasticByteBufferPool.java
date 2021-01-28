@@ -96,6 +96,7 @@ public final class ElasticByteBufferPool implements ByteBufferPool {
                       ByteBuffer.allocate(length);
     }
     tree.remove(entry.getKey());
+    entry.getValue().clear();
     return entry.getValue();
   }
 

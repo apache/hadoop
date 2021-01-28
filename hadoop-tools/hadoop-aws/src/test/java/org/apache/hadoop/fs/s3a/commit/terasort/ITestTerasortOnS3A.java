@@ -54,7 +54,6 @@ import org.apache.hadoop.util.ToolRunner;
 
 import static java.util.Optional.empty;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 
 /**
  * Runs Terasort against S3A.
@@ -155,7 +154,6 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   @Override
   protected void applyCustomConfigOptions(JobConf conf) {
     // small sample size for faster runs
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
     conf.setInt(TeraSortConfigKeys.SAMPLE_SIZE.key(),
         getSampleSizeForEachPartition());
     conf.setInt(TeraSortConfigKeys.NUM_PARTITIONS.key(),

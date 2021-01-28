@@ -102,16 +102,22 @@ public class FSConfigToCSConfigArgumentHandler {
         "Disables checking whether a placement rule is terminal to maintain" +
         " backward compatibility with configs that were made before YARN-8967.",
         false),
-    CONVERT_PLACEMENT_RULES("convert placement rules",
-        "m", "convert-placement-rules",
-        "Convert Fair Scheduler placement rules to Capacity" +
-        " Scheduler mapping rules", false),
     SKIP_VERIFICATION("skip verification", "s",
         "skip-verification",
         "Skips the verification of the converted configuration", false),
+    SKIP_PLACEMENT_RULES_CONVERSION("skip placement rules conversion",
+        "sp", "skip-convert-placement-rules",
+        "Do not convert placement rules", false),
     ENABLE_ASYNC_SCHEDULER("enable asynchronous scheduler", "a", "enable-async-scheduler",
       "Enables the Asynchronous scheduler which decouples the CapacityScheduler" +
         " scheduling from Node Heartbeats.", false),
+    RULES_TO_FILE("rules to external file", "e", "rules-to-file",
+        "Generates the converted placement rules to an external JSON file " +
+        "called mapping-rules.json", false),
+    CONVERT_PERCENTAGES("convert weights to percentages",
+        "pc", "percentage",
+        "Converts FS queue weights to percentages",
+        false),
     HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
@@ -246,13 +252,21 @@ public class FSConfigToCSConfigArgumentHandler {
     String outputDir =
         cliParser.getOptionValue(CliOption.OUTPUT_DIR.shortSwitch);
     boolean convertPlacementRules =
-        cliParser.hasOption(CliOption.CONVERT_PLACEMENT_RULES.shortSwitch);
+        !cliParser.hasOption(
+            CliOption.SKIP_PLACEMENT_RULES_CONVERSION.shortSwitch);
 
     checkFile(CliOption.YARN_SITE, yarnSiteXmlFile);
     checkFile(CliOption.FAIR_SCHEDULER, fairSchedulerXmlFile);
     checkFile(CliOption.CONVERSION_RULES, conversionRulesFile);
     checkDirectory(CliOption.OUTPUT_DIR, outputDir);
     checkOutputDirDoesNotContainXmls(yarnSiteXmlFile, outputDir);
+
+    // check mapping-rules.json if we intend to generate it
+    if (!cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch) &&
+        cliParser.hasOption(CliOption.RULES_TO_FILE.shortSwitch)) {
+      checkFileNotInOutputDir(new File(outputDir),
+          FSConfigToCSConfigConverter.MAPPING_RULES_JSON);
+    }
 
     return FSConfigToCSConfigConverterParams.Builder.create()
         .withYarnSiteXmlConfig(yarnSiteXmlFile)
@@ -263,6 +277,10 @@ public class FSConfigToCSConfigArgumentHandler {
         .withConsole(cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch))
         .withOutputDirectory(outputDir)
         .withConvertPlacementRules(convertPlacementRules)
+        .withPlacementRulesToFile(
+            cliParser.hasOption(CliOption.RULES_TO_FILE.shortSwitch))
+        .withUsePercentages(
+            cliParser.hasOption(CliOption.CONVERT_PERCENTAGES.shortSwitch))
         .build();
   }
 
