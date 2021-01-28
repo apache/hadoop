@@ -37,7 +37,7 @@ import org.apache.hadoop.thirdparty.protobuf.ByteString;
   }
 
   public static SpanContext byteStringToSpanContext(ByteString byteString) {
-    return new SpanContext();
+    return null;
   }
 
   public static ByteString spanContextToByteString(SpanContext context) {

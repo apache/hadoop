@@ -17,15 +17,22 @@
  */
 package org.apache.hadoop.tracing;
 
+/**
+ * No-Op Tracer (for now) to remove HTrace without changing too many files.
+ */
 public class Tracer {
   // Singleton
   private static Tracer globalTracer;
+  private final NullTraceScope nullTraceScope;
+  private String name;
 
   public final static String SPAN_RECEIVER_CLASSES_KEY =
       "span.receiver.classes";
 
-  public Tracer() {
+  public Tracer(String name) {
+    this.name = name;
     globalTracer = null;
+    nullTraceScope = NullTraceScope.INSTANCE;
   }
 
   // Keeping this function at the moment for HTrace compatiblity,
@@ -43,7 +50,7 @@ public class Tracer {
   }
 
   public TraceScope newScope(String description) {
-    return new TraceScope(new Span());
+    return nullTraceScope;
   }
 
   public Span newSpan(String description, SpanContext spanCtx) {
@@ -51,16 +58,16 @@ public class Tracer {
   }
 
   public TraceScope newScope(String description, SpanContext spanCtx) {
-    return new TraceScope(new Span());
+    return nullTraceScope;
   }
 
   public TraceScope newScope(String description, SpanContext spanCtx,
       boolean finishSpanOnClose) {
-    return new TraceScope(new Span());
+    return nullTraceScope;
   }
 
   public TraceScope activateSpan(Span span) {
-    return new TraceScope(new Span());
+    return nullTraceScope;
   }
 
   public void close() {
@@ -68,7 +75,6 @@ public class Tracer {
 
   public static class Builder {
     static Tracer globalTracer;
-
     private String name;
 
     public Builder(final String name) {
@@ -81,7 +87,7 @@ public class Tracer {
 
     public Tracer build() {
       if (globalTracer == null) {
-        globalTracer = new Tracer();
+        globalTracer = new Tracer(name);
       }
       return globalTracer;
     }
