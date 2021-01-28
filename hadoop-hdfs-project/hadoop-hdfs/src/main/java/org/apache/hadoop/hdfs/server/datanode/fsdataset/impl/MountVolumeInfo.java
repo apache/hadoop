@@ -24,9 +24,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.EnumMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * MountVolumeInfo is a wrapper of
@@ -34,15 +33,15 @@ import java.util.concurrent.ConcurrentMap;
  */
 @InterfaceAudience.Private
 class MountVolumeInfo {
-  private final ConcurrentMap<StorageType, FsVolumeImpl>
+  private final EnumMap<StorageType, FsVolumeImpl>
       storageTypeVolumeMap;
-  private final ConcurrentMap<StorageType, Double>
+  private final EnumMap<StorageType, Double>
       capacityRatioMap;
   private double reservedForArchiveDefault;
 
   MountVolumeInfo(Configuration conf) {
-    storageTypeVolumeMap = new ConcurrentHashMap<>();
-    capacityRatioMap = new ConcurrentHashMap<>();
+    storageTypeVolumeMap = new EnumMap<>(StorageType.class);
+    capacityRatioMap = new EnumMap<>(StorageType.class);
     reservedForArchiveDefault = conf.getDouble(
         DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         DFSConfigKeys

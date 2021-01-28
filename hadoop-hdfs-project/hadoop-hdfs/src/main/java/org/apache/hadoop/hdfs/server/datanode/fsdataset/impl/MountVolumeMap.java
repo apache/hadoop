@@ -99,8 +99,10 @@ class MountVolumeMap {
       if (!info.setCapacityRatio(
           target.getStorageType(), capacityRatio)) {
         throw new IOException(
-            "Not enought capacity ratio left on mount: "
-                + mount + ", for " + target);
+            "Not enough capacity ratio left on mount: "
+                + mount + ", for " + target + ": capacity ratio: "
+                + capacityRatio + ". Sum of the capacity"
+                + " ratio of on same disk mount should be <= 1");
       }
     }
   }

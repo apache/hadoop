@@ -6094,7 +6094,7 @@
   </property>
 
   <property>
-    <name>dfs.datanode.capacity-ratio.percentage</name>
+    <name>dfs.datanode.same-disk-tiering.capacity-ratio.percentage</name>
     <value></value>
     <description>
       Disk capacity ratio of DISK or ARCHIVE volume

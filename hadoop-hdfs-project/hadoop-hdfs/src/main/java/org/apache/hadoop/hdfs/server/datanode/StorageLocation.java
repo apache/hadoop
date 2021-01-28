@@ -60,7 +60,14 @@ public class StorageLocation
   /** Regular expression that describes a storage uri with a storage type.
    *  e.g. [Disk]/storages/storage1/
    */
-  private static final Pattern regex = Pattern.compile("^\\[(\\w*)\\](.+)$");
+  private static final Pattern STORAGE_LOCATION_REGEX =
+      Pattern.compile("^\\[(\\w*)\\](.+)$");
+
+  /** Regular expression for the capacity ratio of a storage volume (uri).
+   *  This is useful when configuring multiple
+   *  storage types on same disk mount (same-disk-tiering).
+   *  e.g. [0.3]/disk1/archive/
+   */
   private static final Pattern CAPACITY_RATIO_REGEX =
       Pattern.compile("^\\[([0-9.]*)\\](.+)$");
 
@@ -131,7 +138,7 @@ public class StorageLocation
    */
   public static StorageLocation parse(String rawLocation)
       throws IOException, SecurityException {
-    Matcher matcher = regex.matcher(rawLocation);
+    Matcher matcher = STORAGE_LOCATION_REGEX.matcher(rawLocation);
     StorageType storageType = StorageType.DEFAULT;
     String location = rawLocation;
 
@@ -148,6 +155,15 @@ public class StorageLocation
     return new StorageLocation(storageType, new Path(location).toUri());
   }
 
+  /**
+   * Attempt to parse the storage capacity ratio and related volume directory
+   * out of the capacity ratio config string.
+   *
+   * @param capacityRatioConf Config string of the capacity ratio
+   * @return Map of URI of the volume and capacity ratio.
+   * @throws SecurityException when format is incorrect or ratio is not
+   *         between 0 - 1.
+   */
   public static Map<URI, Double> parseCapacityRatio(String capacityRatioConf)
       throws SecurityException {
     Map<URI, Double> result = new HashMap<>();

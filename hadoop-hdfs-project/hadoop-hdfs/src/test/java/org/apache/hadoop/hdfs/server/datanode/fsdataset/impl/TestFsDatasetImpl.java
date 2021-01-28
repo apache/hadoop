@@ -464,7 +464,8 @@ public class TestFsDatasetImpl {
         + ", " + "[0.6]file:" + BASE_DIR + diskdir;
 
     conf.set(DFSConfigKeys
-            .DFS_DATANODE_CAPACITY_RATIO_PERCENTAGE, configStr);
+            .DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE,
+        configStr);
 
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
@@ -514,7 +515,7 @@ public class TestFsDatasetImpl {
     } catch (IOException e) {
       System.out.println(e.getLocalizedMessage());
       assertTrue(e.getMessage()
-          .contains("Not enought capacity ratio left on mount"));
+          .contains("Not enough capacity ratio left on mount"));
     }
   }
 
@@ -522,7 +523,7 @@ public class TestFsDatasetImpl {
       String configStr, String archivedir, String diskdir)
       throws IOException {
     conf.set(DFSConfigKeys
-        .DFS_DATANODE_CAPACITY_RATIO_PERCENTAGE, configStr
+        .DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE, configStr
     );
     dataset = new FsDatasetImpl(datanode, storage, conf);
     List<NamespaceInfo> nsInfos = Lists.newArrayList();
