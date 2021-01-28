@@ -32,13 +32,18 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.assumeTrue;
 
 /**
  * Verify the AbfsRestOperationException error message format.
  * */
-public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest{
+public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest {
+
+  private static final String E_UNAUTH
+      = AUTHORIZATION_PERMISSION_MISS_MATCH.getErrorCode();
+
   public ITestAbfsRestOperationException() throws Exception {
     super();
   }
@@ -56,7 +61,9 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
       Assert.assertEquals(4, errorFields.length);
       // Check status message, status code, HTTP Request Type and URL.
-      Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
+      Assert.assertEquals(
+          "Operation failed: \"The specified path does not exist.\"",
+          errorFields[0].trim());
       Assert.assertEquals("404", errorFields[1].trim());
       Assert.assertEquals("HEAD", errorFields[2].trim());
       Assert.assertTrue(errorFields[3].trim().startsWith("http"));
@@ -71,14 +78,16 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
       Assert.assertEquals(6, errorFields.length);
       // Check status message, status code, HTTP Request Type and URL.
-      Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
+      Assert.assertEquals(
+          "Operation failed: \"The specified path does not exist.\"",
+          errorFields[0].trim());
       Assert.assertEquals("404", errorFields[1].trim());
       Assert.assertEquals("GET", errorFields[2].trim());
       Assert.assertTrue(errorFields[3].trim().startsWith("http"));
       // Check storage error code and storage error message.
       Assert.assertEquals("PathNotFound", errorFields[4].trim());
       Assert.assertTrue(errorFields[5].contains("RequestId")
-              && errorFields[5].contains("Time"));
+          && errorFields[5].contains("Time"));
     }
   }
 
@@ -89,38 +98,43 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     testWithDifferentCustomTokenFetchRetry(5);
   }
 
-  public void testWithDifferentCustomTokenFetchRetry(int numOfRetries) throws Exception {
+  public void testWithDifferentCustomTokenFetchRetry(int numOfRetries)
+      throws Exception {
     AzureBlobFileSystem fs = this.getFileSystem();
 
     Configuration config = new Configuration(this.getRawConfiguration());
     String accountName = config.get("fs.azure.abfs.account.name");
     // Setup to configure custom token provider
     config.set("fs.azure.account.auth.type." + accountName, "Custom");
-    config.set("fs.azure.account.oauth.provider.type." + accountName, "org.apache.hadoop.fs"
-        + ".azurebfs.oauth2.RetryTestTokenProvider");
-    config.set("fs.azure.custom.token.fetch.retry.count", Integer.toString(numOfRetries));
+    config.set("fs.azure.account.oauth.provider.type." + accountName,
+        "org.apache.hadoop.fs"
+            + ".azurebfs.oauth2.RetryTestTokenProvider");
+    config.set("fs.azure.custom.token.fetch.retry.count",
+        Integer.toString(numOfRetries));
     // Stop filesystem creation as it will lead to calls to store.
     config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
 
     final AzureBlobFileSystem fs1 =
         (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
-        config);
+            config);
     RetryTestTokenProvider.ResetStatusToFirstTokenFetch();
 
     intercept(Exception.class,
-        ()-> {
+        () -> {
           fs1.getFileStatus(new Path("/"));
         });
 
     // Number of retries done should be as configured
     Assert.assertTrue(
         "Number of token fetch retries (" + RetryTestTokenProvider.reTryCount
-            + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
+            + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured ("
+            + numOfRetries
             + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
   }
 
   @Test
   public void testPermissionDenied() throws Throwable {
+    describe("Verify that permission denial manifests as failures");
     final AzureBlobFileSystem fs = getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
     Path dir = new Path("testPermissionDenied");
@@ -129,8 +143,9 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     // no permissions
     fs.setPermission(path, new FsPermission((short) 00000));
     fs.setPermission(dir, new FsPermission((short) 00000));
-    intercept(AccessDeniedException.class, () ->
+    intercept(AccessDeniedException.class, E_UNAUTH, () ->
         fs.delete(path, false));
-    intercept(AccessDeniedException.class, () ->
+    intercept(AccessDeniedException.class, E_UNAUTH, () ->
         ContractTestUtils.readUTF8(fs, path, -1));
-  }}
+  }
+}
