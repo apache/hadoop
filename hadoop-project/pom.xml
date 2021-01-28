@@ -211,6 +211,8 @@
     <woodstox.version>5.3.0</woodstox.version>
     <json-smart.version>2.4.2</json-smart.version>
     <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
+    <nodejs.version>v12.22.1</nodejs.version>
+    <yarnpkg.version>v1.22.5</yarnpkg.version>
   </properties>
 
   <dependencyManagement>
