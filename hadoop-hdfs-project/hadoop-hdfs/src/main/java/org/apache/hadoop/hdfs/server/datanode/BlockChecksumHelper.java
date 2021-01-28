@@ -503,6 +503,7 @@ final class BlockChecksumHelper {
           }
         } catch (IOException e) {
           LOG.warn("Failed to get the checksum", e);
+          throw e;
         }
       }
 
