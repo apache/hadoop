@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 
 public class WeightToWeightConverter
     implements CapacityConverter {
+  private static final String ROOT_QUEUE = "root";
 
   @Override
   public void convertWeightsForChildQueues(FSQueue queue,
@@ -35,6 +36,10 @@ public class WeightToWeightConverter
     List<FSQueue> children = queue.getChildQueues();
 
     if (queue instanceof FSParentQueue || !children.isEmpty()) {
+      if (queue.getName().equals(ROOT_QUEUE)) {
+        csConfig.set(getProperty(queue), getWeightString(queue));
+      }
+
       children.forEach(fsQueue -> csConfig.set(
           getProperty(fsQueue), getWeightString(fsQueue)));
       csConfig.setBoolean(getAutoCreateV2EnabledProperty(queue), true);

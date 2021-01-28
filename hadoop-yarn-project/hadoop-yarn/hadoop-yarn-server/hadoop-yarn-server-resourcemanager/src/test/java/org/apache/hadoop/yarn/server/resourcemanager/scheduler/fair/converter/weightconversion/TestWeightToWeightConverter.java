@@ -44,7 +44,9 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
     FSQueue root = createFSQueues();
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("Converted items", 1,
+    assertEquals("root weight", "1.0w",
+        config.get(PREFIX + "root.capacity"));
+    assertEquals("Converted items", 2,
         config.getPropsWithPrefix(PREFIX).size());
   }
 
@@ -53,9 +55,11 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
     FSQueue root = createFSQueues(1);
     converter.convertWeightsForChildQueues(root, config);
 
+    assertEquals("root weight", "1.0w",
+        config.get(PREFIX + "root.capacity"));
     assertEquals("root.a weight", "1.0w",
         config.get(PREFIX + "root.a.capacity"));
-    assertEquals("Number of properties", 2,
+    assertEquals("Number of properties", 3,
         config.getPropsWithPrefix(PREFIX).size());
   }
 
@@ -65,8 +69,10 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
 
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("Number of properties", 4,
+    assertEquals("Number of properties", 5,
         config.getPropsWithPrefix(PREFIX).size());
+    assertEquals("root weight", "1.0w",
+        config.get(PREFIX + "root.capacity"));
     assertEquals("root.a weight", "1.0w",
         config.get(PREFIX + "root.a.capacity"));
     assertEquals("root.b weight", "2.0w",
@@ -90,7 +96,7 @@ public class TestWeightToWeightConverter extends WeightConverterTestBase {
     FSQueue root = createParent(new ArrayList<>());
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("Number of properties", 1,
+    assertEquals("Number of properties", 2,
         config.getPropsWithPrefix(PREFIX).size());
     assertTrue("root autocreate v2 enabled",
         config.getBoolean(PREFIX + "root.auto-queue-creation-v2.enabled",
