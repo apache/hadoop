@@ -62,7 +62,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCK
  * Detect the dead nodes in advance, and share this information among all the
  * DFSInputStreams in the same client.
  */
-public class DeadNodeDetector implements Runnable {
+public class DeadNodeDetector extends Daemon {
   public static final Logger LOG =
       LoggerFactory.getLogger(DeadNodeDetector.class);
 

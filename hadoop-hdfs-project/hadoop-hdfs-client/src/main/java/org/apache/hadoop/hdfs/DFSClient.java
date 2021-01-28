@@ -652,7 +652,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       clientRunning = false;
       // close dead node detector thread
       if (!disabledStopDeadNodeDetectorThreadForTest) {
-        clientContext.stopDeadNodeDetectorThread();
+        clientContext.unreference();
       }
 
       // close connections to the namenode
@@ -3386,5 +3386,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   private boolean isDeadNodeDetectionEnabled() {
     return clientContext.isDeadNodeDetectionEnabled();
+  }
+
+  /**
+   * Obtain DeadNodeDetector of the current client.
+   */
+  public DeadNodeDetector getDeadNodeDetector() {
+    return clientContext.getDeadNodeDetector();
   }
 }
