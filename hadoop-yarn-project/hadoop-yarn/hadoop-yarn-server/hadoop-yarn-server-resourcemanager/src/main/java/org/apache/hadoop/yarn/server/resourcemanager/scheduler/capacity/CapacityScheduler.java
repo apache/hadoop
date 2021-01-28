@@ -247,6 +247,7 @@ public class CapacityScheduler extends
   private CSMaxRunningAppsEnforcer maxRunningEnforcer;
 
   private boolean activitiesManagerEnabled = true;
+  private int threadNum = 0;
 
   public CapacityScheduler() {
     super(CapacityScheduler.class.getName());
@@ -634,6 +635,7 @@ public class CapacityScheduler extends
 
     public AsyncScheduleThread(CapacityScheduler cs) {
       this.cs = cs;
+      this.setName("AsyncSchedulerThread-"+ cs.threadNum++);
       setDaemon(true);
     }
 
