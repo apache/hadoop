@@ -139,13 +139,15 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     assumeTrue(fs.getIsNamespaceEnabled());
     Path dir = new Path("testPermissionDenied");
     Path path = new Path(dir, "file");
-    ContractTestUtils.writeTextFile(fs, path, "some text", true);
+    ContractTestUtils.writeTextFile(fs, path, "This should not be readable", true);
     // no permissions
     fs.setPermission(path, new FsPermission((short) 00000));
     fs.setPermission(dir, new FsPermission((short) 00000));
     intercept(AccessDeniedException.class, E_UNAUTH, () ->
-        fs.delete(path, false));
-    intercept(AccessDeniedException.class, E_UNAUTH, () ->
         ContractTestUtils.readUTF8(fs, path, -1));
+    intercept(AccessDeniedException.class, E_UNAUTH, () -> {
+      boolean d = fs.delete(path, false);
+      return "Expected delete to fail, but got " + d;
+    });
   }
 }
