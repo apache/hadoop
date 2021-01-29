@@ -513,7 +513,6 @@ public class TestFsDatasetImpl {
           configStr, archivedir, diskdir);
       fail("Should fail add volume as capacity ratio sum is > 1");
     } catch (IOException e) {
-      System.out.println(e.getLocalizedMessage());
       assertTrue(e.getMessage()
           .contains("Not enough capacity ratio left on mount"));
     }
