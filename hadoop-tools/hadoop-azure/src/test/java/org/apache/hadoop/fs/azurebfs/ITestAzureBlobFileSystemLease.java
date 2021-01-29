@@ -152,7 +152,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         if (expectException) {
           GenericTestUtils.assertExceptionContains(ERR_ACQUIRING_LEASE, e);
         } else {
-          Assert.fail("Unexpected exception " + e.getMessage());
+          throw e;
         }
       }
       out.writeInt(1);

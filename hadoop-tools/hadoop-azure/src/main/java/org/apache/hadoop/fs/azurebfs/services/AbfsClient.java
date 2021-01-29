@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -41,6 +42,8 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Listenable
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableScheduledFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,8 +122,10 @@ public class AbfsClient implements Closeable {
     this.abfsPerfTracker = abfsClientContext.getAbfsPerfTracker();
     this.abfsCounters = abfsClientContext.getAbfsCounters();
 
+    ThreadFactory tf =
+        new ThreadFactoryBuilder().setNameFormat("AbfsClient Lease Ops").setDaemon(true).build();
     this.executorService = MoreExecutors.listeningDecorator(
-        HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads()));
+        HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads(), tf));
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,

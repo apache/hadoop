@@ -72,7 +72,7 @@ public final class SelfRenewingLease {
 
   public static class LeaseException extends AzureBlobFileSystemException {
     public LeaseException(Throwable t) {
-      super(ERR_ACQUIRING_LEASE, t);
+      super(ERR_ACQUIRING_LEASE + ": " + t, t);
     }
 
     public LeaseException(String s) {
