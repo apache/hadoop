@@ -544,7 +544,8 @@ public class TestFileChecksum {
       // getting result.
       FileChecksum fileChecksum1 = getFileChecksum(stripedFile4, -1, true);
 
-      Assert.assertEquals("checksum should be same", fileChecksum, fileChecksum1);
+      Assert.assertEquals("checksum should be same", fileChecksum,
+          fileChecksum1);
     } finally {
       DataNodeFaultInjector.set(oldInjector);
     }
