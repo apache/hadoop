@@ -82,4 +82,22 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
         () -> woh.newUploadPartRequest(key,
             "uploadId", 50000, 1024, inputStream, null, 0L));
   }
+
+  @Test
+  public void testStreamClosedAfterAbort() throws Exception {
+    stream.abort();
+
+    // This verification replaces testing various operations after calling abort:
+    // after calling abort, stream is closed like calling close().
+    intercept(IOException.class, () -> stream.checkOpen());
+  }
+
+  @Test
+  public void testCallingCloseAfterCallingAbort() throws Exception {
+    stream.abort();
+
+    // This shouldn't throw IOException like calling close() multiple times.
+    // This will ensure abort() can be called with try-with-resource.
+    stream.close();
+  }
 }

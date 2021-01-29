@@ -76,6 +76,9 @@ public interface StreamCapabilities {
    */
   String IOSTATISTICS = "iostatistics";
 
+  /** FIXME: javadoc */
+  String ABORTABLE = "abortable";
+
   /**
    * Capabilities that a stream can support and be queried for.
    */

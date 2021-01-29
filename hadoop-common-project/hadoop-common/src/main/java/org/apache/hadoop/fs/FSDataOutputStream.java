@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 @InterfaceStability.Stable
 public class FSDataOutputStream extends DataOutputStream
     implements Syncable, CanSetDropBehind, StreamCapabilities,
-      IOStatisticsSource {
+      IOStatisticsSource, Abortable {
   private final OutputStream wrappedStream;
 
   private static class PositionCache extends FilterOutputStream {
@@ -169,5 +169,16 @@ public class FSDataOutputStream extends DataOutputStream
   @Override
   public IOStatistics getIOStatistics() {
     return IOStatisticsSupport.retrieveIOStatistics(wrappedStream);
+  }
+
+  /** FIXME: javadoc */
+  @Override
+  public void abort() {
+    try {
+      ((Abortable)wrappedStream).abort();
+    } catch (ClassCastException e) {
+      throw new UnsupportedOperationException("the wrapped stream does " +
+          "not support aborting stream.");
+    }
   }
 }

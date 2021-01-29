@@ -37,6 +37,7 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
+import org.apache.hadoop.fs.Abortable;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
@@ -74,7 +75,7 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class S3ABlockOutputStream extends OutputStream implements
-    StreamCapabilities, IOStatisticsSource {
+    StreamCapabilities, IOStatisticsSource, Abortable {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(S3ABlockOutputStream.class);
@@ -541,6 +542,10 @@ class S3ABlockOutputStream extends OutputStream implements
     case StreamCapabilities.IOSTATISTICS:
       return true;
 
+      // S3A supports abort.
+    case StreamCapabilities.ABORTABLE:
+      return true;
+
     default:
       return false;
     }
@@ -549,6 +554,24 @@ class S3ABlockOutputStream extends OutputStream implements
   @Override
   public IOStatistics getIOStatistics() {
     return iostatistics;
+  }
+
+  @Override
+  public void abort() {
+    if (closed.getAndSet(true)) {
+      // already closed
+      LOG.debug("Ignoring abort() as stream is already closed");
+      return;
+    }
+
+    S3ADataBlocks.DataBlock block = getActiveBlock();
+    try {
+      if (multiPartUpload != null) {
+        multiPartUpload.abort();
+      }
+    } finally {
+      cleanupWithLogger(LOG, block, blockFactory);
+    }
   }
 
   /**
