@@ -20,7 +20,7 @@ package org.apache.hadoop.tracing;
 import java.io.Closeable;
 
 public class Span implements Closeable {
-  public SpanContext spanContext;
+  private SpanContext spanContext;
 
   public Span() {
   }
@@ -34,7 +34,7 @@ public class Span implements Closeable {
   }
 
   public SpanContext getContext() {
-    return this.spanContext;
+    return spanContext;
   }
 
   public void finish() {

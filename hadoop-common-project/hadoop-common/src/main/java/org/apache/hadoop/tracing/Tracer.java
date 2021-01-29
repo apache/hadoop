@@ -22,16 +22,15 @@ package org.apache.hadoop.tracing;
  */
 public class Tracer {
   // Singleton
-  private static Tracer globalTracer;
+  private static final Tracer globalTracer = null;
   private final NullTraceScope nullTraceScope;
-  private String name;
+  private final String name;
 
   public final static String SPAN_RECEIVER_CLASSES_KEY =
       "span.receiver.classes";
 
   public Tracer(String name) {
     this.name = name;
-    globalTracer = null;
     nullTraceScope = NullTraceScope.INSTANCE;
   }
 
@@ -71,6 +70,10 @@ public class Tracer {
   }
 
   public void close() {
+  }
+
+  public String getName() {
+    return name;
   }
 
   public static class Builder {
