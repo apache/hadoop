@@ -375,6 +375,10 @@
       <artifactId>lz4-java</artifactId>
       <scope>provided</scope>
     </dependency>
+      <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+      </dependency>
   </dependencies>
 
   <build>
