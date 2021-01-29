@@ -466,7 +466,8 @@ public abstract class AbstractContractCreateTest extends
    * @throws IOException failure
    */
   protected void validateSyncableSemantics(final FileSystem fs,
-      final boolean supportsSync, final boolean supportsFlush) throws IOException {
+      final boolean supportsSync, final boolean supportsFlush)
+      throws IOException {
     Path path = methodPath();
     LOG.info("Expecting files under {} to have supportsSync={}"
             + " and supportsFlush={}",

@@ -329,7 +329,7 @@ writing small 4KB blocks or similar.
 Forwarding this to a full flush across a distributed filesystem, or worse,
 a distant object store, is very inefficient.
 Filesystem clients which do uprate a `flush()` to an `hflush()` will eventually
-have to roll back that feature: 
+have to roll back that feature:
 [HADOOP-16548](https://issues.apache.org/jira/browse/HADOOP-16548).
 
 ### <a name="close"></a>`close()`
@@ -397,7 +397,7 @@ the data to have been successfully written.
 ### HDFS and `OutputStream.close()`
 
 HDFS does not immediately `sync()` the output of a written file to disk on
-`OutputStream.close()` unless configured with `dfs.datanode.synconclose` 
+`OutputStream.close()` unless configured with `dfs.datanode.synconclose`
 is true. This has caused [problems in some applications](https://issues.apache.org/jira/browse/ACCUMULO-1364).
 
 Applications which absolutely require the guarantee that a file has been persisted
@@ -741,7 +741,7 @@ getFileStatus(FS''', path).getLen() = len(data)
 ```
 
 *HDFS does not do this except when the write crosses a block boundary*; to do
-otherwise would overload the Namenode. Other stores MAY copy this behavior. 
+otherwise would overload the Namenode. Other stores MAY copy this behavior.
 
 As a result, while a file is being written
 `length(Filesystem, Path)` MAY be less than the length of `data(Filesystem, Path)`.
@@ -963,7 +963,7 @@ to their advantage.
 ### `StreamCapabilities`
 
 Implementors of filesystem clients SHOULD implement the `StreamCapabilities`
-interface and its `hasCapabilities()` method to to declare whether or not 
+interface and its `hasCapabilities()` method to to declare whether or not
 an output streams offer the visibility and durability guarantees of `Syncable`.
 
 Implementors of `StreamCapabilities.hasCapabilities()` MUST NOT declare that
