@@ -141,8 +141,10 @@ class FsVolumeList {
   private void initializeCapacityRatio(Configuration config) {
     if (capacityRatioMap == null) {
       String capacityRatioConfig = config.get(
-          DFSConfigKeys.DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE,
-          DFSConfigKeys.DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE_DEFAULT
+          DFSConfigKeys
+              .DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE,
+          DFSConfigKeys
+              .DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE_DEFAULT
       );
 
       this.capacityRatioMap = StorageLocation
