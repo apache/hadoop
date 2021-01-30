@@ -363,12 +363,19 @@ public class ConnectionManager {
       // Check if the pool hasn't been active in a while or not 50% are used
       long timeSinceLastActive = Time.now() - pool.getLastActiveTime();
       int total = pool.getNumConnections();
+      // Active is a transient status in many cases for a connection since
+      // the handler thread uses the connection very quickly. Thus the number
+      // of connections with handlers using at the call time is constantly low.
+      // Recently active is more lasting status and it shows how many
+      // connections have been used with a recent time period. (i.e. 30 seconds)
       int active = pool.getNumActiveConnectionsRecently();
       float poolMinActiveRatio = pool.getMinActiveRatio();
       if (timeSinceLastActive > connectionCleanupPeriodMs ||
           active < poolMinActiveRatio * total) {
         // Be greedy here to close as many connections as possible in one shot
-        int targetConnectionsCount = (int)(poolMinActiveRatio * total) - active;
+        // The number should at least be 1
+        int targetConnectionsCount = Math.max(1,
+            (int)(poolMinActiveRatio * total) - active);
         List<ConnectionContext> conns =
             pool.removeConnections(targetConnectionsCount);
         for (ConnectionContext conn : conns) {

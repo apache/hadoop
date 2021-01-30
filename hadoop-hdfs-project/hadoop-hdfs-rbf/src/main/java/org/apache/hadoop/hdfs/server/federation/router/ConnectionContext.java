@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.ipc.RPC;
@@ -46,7 +47,7 @@ public class ConnectionContext {
   /** Last timestamp the connection was active. */
   private long lastActiveTs = 0;
   /** The connection's active status would expire after this window. */
-  private long activeWindow = 30 * 1000;
+  private long activeWindow = TimeUnit.SECONDS.toMillis(30);
 
   public ConnectionContext(ProxyAndInfo<?> connection) {
     this.client = connection;
