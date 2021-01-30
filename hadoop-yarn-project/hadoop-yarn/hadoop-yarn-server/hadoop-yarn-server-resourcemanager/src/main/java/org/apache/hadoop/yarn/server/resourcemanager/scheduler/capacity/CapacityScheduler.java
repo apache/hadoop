@@ -636,7 +636,7 @@ public class CapacityScheduler extends
 
     public AsyncScheduleThread(CapacityScheduler cs) {
       this.cs = cs;
-      this.setName("CapacitySchedulerThread-"+ cs.threadNum++);
+      setName("CapacitySchedulerThread-"+ cs.threadNum++);
       setDaemon(true);
     }
 
