@@ -16,11 +16,11 @@
 # limitations under the License.
 #
 
-add_subdirectory(x-platform)
-add_subdirectory(common)
-add_subdirectory(fs)
-add_subdirectory(reader)
-add_subdirectory(rpc)
-add_subdirectory(proto)
-add_subdirectory(connection)
-add_subdirectory(bindings)
+if(WIN32)
+    add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_utils_obj> utils_common_test.cc utils_test_main.cc utils_win_test.cc)
+else(WIN32)
+    add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_utils_obj> utils_common_test.cc utils_test_main.cc utils_nix_test.cc)
+endif(WIN32)
+target_include_directories(x_platform_utils_test PRIVATE ${LIBHDFSPP_LIB_DIR})
+target_link_libraries(x_platform_utils_test gmock_main)
+add_test(x_platform_utils_test x_platform_utils_test)
