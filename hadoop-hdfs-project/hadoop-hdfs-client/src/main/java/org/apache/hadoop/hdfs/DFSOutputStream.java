@@ -938,8 +938,8 @@ public class DFSOutputStream extends FSOutputSummer
   void completeFile() throws IOException {
     // get last block before destroying the streamer
     ExtendedBlock lastBlock = getStreamer().getBlock();
-    try (TraceScope ignored =
-        dfsClient.getTracer().newScope("DFSOutputStream#completeFile")) {
+    try (TraceScope ignored = dfsClient.getTracer()
+        .newScope("DFSOutputStream#completeFile")) {
       completeFile(lastBlock);
     }
   }
@@ -995,7 +995,8 @@ public class DFSOutputStream extends FSOutputSummer
           DFSClient.LOG.info(msg);
           throw new IOException(msg);
         }
-        try (TraceScope scope = dfsClient.getTracer().newScope("DFSOutputStream#completeFile: Retry")) {
+        try (TraceScope scope = dfsClient.getTracer()
+            .newScope("DFSOutputStream#completeFile: Retry")) {
           scope.addKVAnnotation("retries left", retries);
           scope.addKVAnnotation("sleeptime (sleeping for)", sleeptime);
           if (retries == 0) {

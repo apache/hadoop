@@ -752,7 +752,7 @@ class BlockSender implements java.io.Closeable {
   long sendBlock(DataOutputStream out, OutputStream baseStream, 
                  DataTransferThrottler throttler) throws IOException {
     final TraceScope scope = FsTracer.get(null)
-        .newScope("sendBlock_" + block.getBlockId());  // TODO: Hack
+        .newScope("sendBlock_" + block.getBlockId());
     try {
       return doSendBlock(out, baseStream, throttler);
     } finally {
