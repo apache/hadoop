@@ -24,7 +24,8 @@ import org.apache.hadoop.thirdparty.protobuf.ByteString;
 /**
  * This class provides utility functions for tracing.
  */
-@InterfaceAudience.Private public class TraceUtils {
+@InterfaceAudience.Private
+public class TraceUtils {
   static final String DEFAULT_HADOOP_TRACE_PREFIX = "hadoop.htrace.";
 
   public static TraceConfiguration wrapHadoopConf(final String prefix,
