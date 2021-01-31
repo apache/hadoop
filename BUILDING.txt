@@ -70,13 +70,11 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
   $ sudo apt-get -y install g++-9 gcc-9
   $ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 * CMake 3.19
-  $ mkdir -p /opt/cmake \
-    && curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz \
-    && tar -zxvf cmake-3.19.0.tar.gz \
-    && cd cmake-3.19.0 \
-    && ./bootstrap \
-    && make -j$(nproc) \
-    && sudo make install
+  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
+  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
+  $ ./bootstrap
+  $ make -j$(nproc)
+  $ sudo make install
 * Protocol Buffers 3.7.1 (required to build native code)
   $ mkdir -p /opt/protobuf-3.7-src \
         && curl -L -s -S \
@@ -472,13 +470,11 @@ Building on CentOS 8
   $ source /opt/rh/gcc-toolset-9/enable
 
 * Install CMake 3.19
-  $ mkdir -p /opt/cmake \
-    && curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz \
-    && tar -zxvf cmake-3.19.0.tar.gz \
-    && cd cmake-3.19.0 \
-    && ./bootstrap \
-    && make -j$(nproc) \
-    && sudo make install
+  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
+  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
+  $ ./bootstrap
+  $ make -j$(nproc)
+  $ sudo make install
 
 * Install boost.
   $ curl -L -o boost_1_72_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
