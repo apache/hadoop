@@ -818,6 +818,9 @@ AbfsInputStream and update the cursor positions. If this optimization is true
 it will skip usage of buffer and do a lock free REST call for reading from blob.
 This optimization is very much helpful for HBase kind of short random read over
 a shared AbfsInputStream instance.
+Note: This is not a config which can be set at cluster level. It can be used as
+an option on FutureDataInputStreamBuilder.
+See FileSystem#openFile(Path path)
 
 To run under limited memory situations configure the following. Especially
 when there are too many writes from the same process. 
