@@ -63,7 +63,7 @@ enum RpcKindProto {
 message RPCTraceInfoProto {
     optional int64 traceId = 1; // parentIdHigh
     optional int64 parentId = 2; // parentIdLow
-
+    optional bytes spanContext = 3; // Trace SpanContext
 }
 
 /**

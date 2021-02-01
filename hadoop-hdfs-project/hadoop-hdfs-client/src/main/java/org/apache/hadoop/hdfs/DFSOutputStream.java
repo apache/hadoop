@@ -68,7 +68,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.core.TraceScope;
+import org.apache.hadoop.tracing.TraceScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -904,8 +904,8 @@ public class DFSOutputStream extends FSOutputSummer
   private void completeFile() throws IOException {
     // get last block before destroying the streamer
     ExtendedBlock lastBlock = getStreamer().getBlock();
-    try (TraceScope ignored =
-        dfsClient.getTracer().newScope("completeFile")) {
+    try (TraceScope ignored = dfsClient.getTracer()
+        .newScope("DFSOutputStream#completeFile")) {
       completeFile(lastBlock);
     }
   }
@@ -961,7 +961,10 @@ public class DFSOutputStream extends FSOutputSummer
           DFSClient.LOG.info(msg);
           throw new IOException(msg);
         }
-        try {
+        try (TraceScope scope = dfsClient.getTracer()
+            .newScope("DFSOutputStream#completeFile: Retry")) {
+          scope.addKVAnnotation("retries left", retries);
+          scope.addKVAnnotation("sleeptime (sleeping for)", sleeptime);
           if (retries == 0) {
             throw new IOException("Unable to close file because the last block "
                 + last + " does not have enough number of replicas.");
