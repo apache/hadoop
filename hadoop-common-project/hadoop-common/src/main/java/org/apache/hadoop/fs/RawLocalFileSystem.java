@@ -318,7 +318,7 @@ public class RawLocalFileSystem extends FileSystem {
             success = true;
           } finally {
             if (!success) {
-              IOUtils.cleanup(LOG, this.fos);
+              IOUtils.cleanupWithLogger(LOG, this.fos);
             }
           }
         }

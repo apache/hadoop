@@ -48,8 +48,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -183,7 +181,7 @@ public abstract class FileSystem extends Configured
    * so must be considered something to only be changed with care.
    */
   @InterfaceAudience.Private
-  public static final Log LOG = LogFactory.getLog(FileSystem.class);
+  public static final Logger LOG = LoggerFactory.getLogger(FileSystem.class);
 
   /**
    * The SLF4J logger to use in logging within the FileSystem class itself.
@@ -3391,15 +3389,7 @@ public abstract class FileSystem extends Configured
               LOGGER.info("Full exception loading: {}", fs, e);
             }
           } catch (ServiceConfigurationError ee) {
-            LOG.warn("Cannot load filesystem: " + ee);
-            Throwable cause = ee.getCause();
-            // print all the nested exception messages
-            while (cause != null) {
-              LOG.warn(cause.toString());
-              cause = cause.getCause();
-            }
-            // and at debug: the full stack
-            LOG.debug("Stack Trace", ee);
+            LOGGER.warn("Cannot load filesystem", ee);
           }
         }
         FILE_SYSTEMS_LOADED = true;
