@@ -54,7 +54,6 @@ import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
@@ -120,7 +119,6 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
-import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -178,7 +176,6 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
-import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFutureQuietly;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -194,11 +191,12 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_A
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
-import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_SDK_METRICS_ENABLED;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
-import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
@@ -207,6 +205,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTra
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemoteIterator;
 
 /**
@@ -318,15 +317,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private RawS3A rawS3A;
 
   /**
-   * Utility class for request construction.
+   * Factory for AWS requests.
    */
   private RequestFactory requestFactory;
-
-
-  /**
-   * This is the future returned during async service launch.
-   */
-  private CompletableFuture<Void> serviceLaunchFuture;
 
   /**
    * Specific operations used by rename and delete operations.
@@ -417,7 +410,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       s3guardInvoker = new Invoker(new S3GuardExistsRetryPolicy(getConf()),
           onRetry);
       writeHelper = new WriteOperationHelper(this, getConf(),
-          statisticsContext);
+          statisticsContext, rawS3A());
 
       failOnMetadataWriteError = conf.getBoolean(FAIL_ON_METADATA_WRITE_ERROR,
           FAIL_ON_METADATA_WRITE_ERROR_DEFAULT);
@@ -447,10 +440,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       signerManager = new SignerManager(bucket, this, conf, owner);
       signerManager.initCustomSigners();
 
-      // launch the services and store the relevant future.
-      serviceLaunchFuture = asyncLaunchStore();
-      // for now, we block until everything is live
-      store();
 
       // creates the AWS client, including overriding auth chain if
       // the FS came with a DT
@@ -458,9 +447,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // the encryption algorithms)
       bindAWSClient(name, delegationTokensEnabled);
 
-      initTransferManager();
+      initTransferManager(s3);
 
       initCannedAcls(conf);
+
+      // launch the store and raw S3 services
+      createStore();
 
       // This initiates a probe against S3 for the bucket existing.
       doBucketProbing();
@@ -476,7 +468,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Filesystem support for magic committers {} enabled",
           magicCommitterEnabled ? "is" : "is not");
       committerIntegration = new MagicCommitIntegration(
-          createStoreContext(), magicCommitterEnabled);
+          createStoreContext(),
+          getWriteOperationHelper(),
+          magicCommitterEnabled);
       // header processing for rename and magic committer
       headerProcessing = new HeaderProcessing(createStoreContext());
 
@@ -801,7 +795,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return encryptionSecrets;
   }
 
-  private void initTransferManager() {
+  private void initTransferManager(final AmazonS3 client) {
     TransferManagerConfiguration transferConfiguration =
         new TransferManagerConfiguration();
     transferConfiguration.setMinimumUploadPartSize(partSize);
@@ -809,7 +803,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     transferConfiguration.setMultipartCopyPartSize(partSize);
     transferConfiguration.setMultipartCopyThreshold(multiPartThreshold);
 
-    transfers = new TransferManager(s3, unboundedThreadPool);
+    transfers = new TransferManager(client, unboundedThreadPool);
     transfers.setConfiguration(transferConfiguration);
   }
 
@@ -909,13 +903,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Preconditions.checkNotNull(client, "client");
     LOG.debug("Setting S3 client to {}", client);
     s3 = client;
+    rawS3A().setAmazonS3Client(client);
 
     // Need to use a new TransferManager that uses the new client.
     // Also, using a new TransferManager requires a new threadpool as the old
     // TransferManager will shut the thread pool down when it is garbage
     // collected.
     initThreadPools(getConf());
-    initTransferManager();
+    initTransferManager(client);
   }
 
   /**
@@ -943,9 +938,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   @Retries.RetryTranslated
   public String getBucketLocation(String bucketName) throws IOException {
-    final String region = invoker.retry("getBucketLocation()", bucketName, true,
-        () -> s3.getBucketLocation(bucketName));
-    return fixBucketRegion(region);
+    return rawS3A.getBucketLocation(bucketName);
   }
 
   /**
@@ -1779,12 +1772,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Low-level call to get at the object metadata.
+   * This method is used in some external applications and so
+   * must be viewed as a public entry point.
    * @param path path to the object. This will be qualified.
    * @return metadata
    * @throws IOException IO and object access problems.
    */
   @VisibleForTesting
   @Retries.RetryTranslated
+  @InterfaceAudience.LimitedPrivate("external utilities")
   public ObjectMetadata getObjectMetadata(Path path) throws IOException {
     return getObjectMetadata(makeQualified(path), null, invoker,
         "getObjectMetadata");
@@ -1999,12 +1995,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Request object metadata; increments counters in the process.
    * Retry policy: retry untranslated.
+   * This method is used in some external applications and so
+   * must be viewed as a public entry point.
    * @param key key
    * @return the metadata
    * @throws IOException if the retry invocation raises one (it shouldn't).
    */
   @Retries.RetryRaw
   @VisibleForTesting
+  @InterfaceAudience.LimitedPrivate("external utilities")
   ObjectMetadata getObjectMetadata(String key) throws IOException {
     return getObjectMetadata(key, null, invoker, "getObjectMetadata");
   }
@@ -2026,43 +2025,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       ChangeTracker changeTracker,
       Invoker changeInvoker,
       String operation) throws IOException {
-    /* return */ rawS3A().getObjectMetadata(key, changeTracker, changeInvoker,
-        operation);
-
-    GetObjectMetadataRequest request =
-        new GetObjectMetadataRequest(bucket, key);
-    //SSE-C requires to be filled in if enabled for object metadata
-    generateSSECustomerKey().ifPresent(request::setSSECustomerKey);
-    ObjectMetadata meta = changeInvoker.retryUntranslated("GET " + key, true,
-        () -> {
-          incrementStatistic(OBJECT_METADATA_REQUESTS);
-          DurationTracker duration = getDurationTrackerFactory()
-              .trackDuration(ACTION_HTTP_HEAD_REQUEST.getSymbol());
-          try {
-            LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
-            if (changeTracker != null) {
-              changeTracker.maybeApplyConstraint(request);
-            }
-            ObjectMetadata objectMetadata = s3.getObjectMetadata(request);
-            if (changeTracker != null) {
-              changeTracker.processMetadata(objectMetadata, operation);
-            }
-            return objectMetadata;
-          } catch(AmazonServiceException ase) {
-            if (!isObjectNotFound(ase)) {
-              // file not found is not considered a failure of the call,
-              // so only switch the duration tracker to update failure
-              // metrics on other exception outcomes.
-              duration.failed();
-            }
-            throw ase;
-          } finally {
-            // update the tracker.
-            duration.close();
-          }
-        });
-    incrementReadOperations();
-    return meta;
+    return rawS3A().getObjectMetadata(key, changeTracker, changeInvoker, operation);
   }
 
   /**
@@ -2264,37 +2227,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private DeleteObjectsResult deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
-    // TODO     return rawS3A().deleteObjects(deleteRequest);
-
-    BulkDeleteRetryHandler retryHandler =
-        new BulkDeleteRetryHandler(createStoreContext());
-    int keyCount = deleteRequest.getKeys().size();
-    try(DurationInfo ignored =
-            new DurationInfo(LOG, false, "DELETE %d keys",
-                keyCount)) {
-      return invoker.retryUntranslated("delete",
-          DELETE_CONSIDERED_IDEMPOTENT,
-          (text, e, r, i) -> {
-            // handle the failure
-            retryHandler.bulkDeleteRetried(deleteRequest, e);
-          },
-          // duration is tracked in the bulk delete counters
-          trackDurationOfOperation(getDurationTrackerFactory(),
-              OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
-                incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
-                return s3.deleteObjects(deleteRequest);
-            }));
-    } catch (MultiObjectDeleteException e) {
-      // one or more of the keys could not be deleted.
-      // log and rethrow
-      List<MultiObjectDeleteException.DeleteError> errors = e.getErrors();
-      LOG.debug("Partial failure of delete, {} errors", errors.size(), e);
-      for (MultiObjectDeleteException.DeleteError error : errors) {
-        LOG.debug("{}: \"{}\" - {}",
-            error.getKey(), error.getCode(), error.getMessage());
-      }
-      throw e;
-    }
+    return rawS3A().deleteObjects(deleteRequest);
   }
 
   /**
@@ -2794,8 +2727,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3ListRequest createListObjectsRequest(String key,
       String delimiter, Integer overrideMaxKeys) {
     if (!useListV1) {
-      ListObjectsV2Request request =
-          new ListObjectsV2Request().withBucketName(bucket)
+      ListObjectsV2Request request = requestFactory.newListObjectsV2Request()
               .withMaxKeys(maxKeys)
               .withPrefix(key);
       if (delimiter != null) {
@@ -2806,10 +2738,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       return S3ListRequest.v2(request);
     } else {
-      ListObjectsRequest request = new ListObjectsRequest();
-      request.setBucketName(bucket);
-      request.setMaxKeys(maxKeys);
-      request.setPrefix(key);
+      ListObjectsRequest request = requestFactory.newListObjectsRequest()
+          .withPrefix(key)
+          .withMaxKeys(maxKeys);
       if (delimiter != null) {
         request.setDelimiter(delimiter);
       }
@@ -3742,22 +3673,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   protected void setOptionalMultipartUploadRequestParameters(
       InitiateMultipartUploadRequest request) {
     requestFactory.setOptionalMultipartUploadRequestParameters(request);
-  }
-
-  /**
-   * Initiate a multipart upload from the preconfigured request.
-   * Retry policy: none + untranslated.
-   * @param request request to initiate
-   * @return the result of the call
-   * @throws AmazonClientException on failures inside the AWS SDK
-   * @throws IOException Other IO problems
-   */
-  @Retries.OnceRaw
-  InitiateMultipartUploadResult initiateMultipartUpload(
-      InitiateMultipartUploadRequest request) throws IOException {
-    LOG.debug("Initiate multipart upload to {}", request.getKey());
-    incrementStatistic(OBJECT_MULTIPART_UPLOAD_INITIATED);
-    return getAmazonS3Client().initiateMultipartUpload(request);
   }
 
   private void setOptionalObjectMetadata(ObjectMetadata metadata) {
@@ -4878,6 +4793,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setContextAccessors(new ContextAccessorsImpl())
         .setTimeProvider(getTtlTimeProvider())
         .setRequestFactory(requestFactory)
+        .setDurationTrackerFactory(getDurationTrackerFactory())
         .build();
   }
 
@@ -4930,58 +4846,68 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * set to their values.
    * On failure: neither are set.
    */
-  private CompletableFuture<Void> asyncLaunchStore() {
+  protected void createStore() {
     // instantiate and initiate the store services.
     final Configuration conf = getConf();
+    String cannedACLName = conf.get(CANNED_ACL, DEFAULT_CANNED_ACL);
+    if (!cannedACLName.isEmpty()) {
+      cannedACL = CannedAccessControlList.valueOf(cannedACLName);
+    } else {
+      cannedACL = null;
+    }
+    requestFactory = createRequestFactory(conf);
 
-    // we know this is fast and just do it locally
-    requestFactory = RequestFactoryImpl.newInstance(conf, bucket,
-        encryptionSecrets);
-    // now asynchronously initialize
-    final ListeningExecutorService executor = executor();
+    // raw S3
+    rawS3A = createRaw3AStore();
+    rawS3A.init(conf);
+    rawS3A.bind(
+        createStoreContext(),
+        credentials,
+        signerManager,
+        transfers,
+        s3,
+        requestFactory);
+    rawS3A.start();
+    // S3 + metastore
+    store = createS3AStore();
+    store.init(conf);
+    store.bind(
+        createStoreContext(),
+        rawS3A,
+        s3guardInvoker,
+        unboundedThreadPool,
+        directoryAllocator);
 
-    final CompletableFuture<RawS3A> rawS3AFuture = submit(executor, () -> {
-      final RawS3A raw = createRaw3AStore();
-      raw.init(conf);
-      raw.bind(
-          createStoreContext(),
-          credentials,
-          signerManager,
-          transfers,
-          s3,
-          requestFactory);
-      raw.start();
-      return raw;
-    });
-    final CompletableFuture<Void> launch  = rawS3AFuture
-        .thenApply(r -> {
-          rawS3A = r;
-          return r;
-        })
-        .thenApplyAsync((raw) -> {
-              final S3AStore s3AStore = createS3AStore();
-              s3AStore.init(conf);
-              s3AStore.bind(
-                  createStoreContext(), raw,
-                  s3guardInvoker,
-                  unboundedThreadPool,
-                  directoryAllocator
-              );
+    store.start();
 
-              s3AStore.start();
-              return s3AStore;
-            },
-            executor)
-        .thenAccept(r -> store = r);
-    return serviceLaunchFuture;
   }
 
   /**
-   * Await for the launch sequence to complete.
+   * Create the request factory.
+   * @param conf configuration.
+   * @return the factory
    */
-  private void awaitStoreLive() {
-    // gets the store
-    awaitFutureQuietly(serviceLaunchFuture);
+  protected RequestFactory createRequestFactory(final Configuration conf) {
+    // part limit can be set, but should only be done for
+    // testing
+    long partCountLimit = longOption(conf,
+        UPLOAD_PART_COUNT_LIMIT,
+        DEFAULT_UPLOAD_PART_COUNT_LIMIT,
+        1);
+    if (partCountLimit != DEFAULT_UPLOAD_PART_COUNT_LIMIT) {
+      LOG.warn("Configuration property {} shouldn't be overridden by client",
+          UPLOAD_PART_COUNT_LIMIT);
+    }
+
+    // Request factory is created through a builder.
+    RequestFactory f = RequestFactoryImpl.builder()
+        .withBucket(bucket)
+        .withCannedACL(cannedACL)
+        .withMultipartPartCountLimit(partCountLimit)
+        .withEncryptionSecrets(encryptionSecrets)
+        .withRequesterPays(false)
+        .build();
+    return f;
   }
 
   /**
@@ -4990,22 +4916,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the store.
    */
   public S3AStore store() {
-    if (store == null) {
-      awaitStoreLive();
-    }
     return store;
   }
 
   /**
    * Get the raw store.
-   * This will block until the store is started,
-   * and will rethrow/wrap any failure.
    * @return the store.
    */
   public RawS3A rawS3A() {
-    if (rawS3A == null) {
-      awaitStoreLive();
-    }
     return rawS3A;
   }
 
@@ -5047,8 +4965,5 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           S3AFileSystem.this.getObjectMetadata(key));
     }
 
-    public WriteOperationHelper getWriteOperationHelper() {
-      return S3AFileSystem.this.getWriteOperationHelper();
-    }
   }
 }

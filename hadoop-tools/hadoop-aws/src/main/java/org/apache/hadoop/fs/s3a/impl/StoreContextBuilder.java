@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -71,6 +72,8 @@ public class StoreContextBuilder {
   private ITtlTimeProvider timeProvider;
 
   private RequestFactory requestFactory;
+
+  private DurationTrackerFactory durationTrackerFactory;
 
   public StoreContextBuilder setFsURI(final URI fsURI) {
     this.fsURI = fsURI;
@@ -174,6 +177,12 @@ public class StoreContextBuilder {
     return this;
   }
 
+  public StoreContextBuilder setDurationTrackerFactory(
+      final DurationTrackerFactory durationTrackerFactory) {
+    this.durationTrackerFactory = durationTrackerFactory;
+    return this;
+  }
+
   @SuppressWarnings("deprecation")
   public StoreContext build() {
     return new StoreContext(fsURI,
@@ -193,6 +202,7 @@ public class StoreContextBuilder {
         useListV1,
         contextAccessors,
         timeProvider,
-        requestFactory);
+        requestFactory,
+        durationTrackerFactory);
   }
 }

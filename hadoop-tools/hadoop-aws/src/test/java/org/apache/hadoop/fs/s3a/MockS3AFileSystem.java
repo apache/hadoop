@@ -146,8 +146,10 @@ public class MockS3AFileSystem extends S3AFileSystem {
   public void initialize(URI name, Configuration originalConf)
       throws IOException {
     conf = originalConf;
+    createStore();
     writeHelper = new WriteOperationHelper(this, conf,
-        new EmptyS3AStatisticsContext());
+        new EmptyS3AStatisticsContext(),
+        rawS3A());
   }
 
   @Override

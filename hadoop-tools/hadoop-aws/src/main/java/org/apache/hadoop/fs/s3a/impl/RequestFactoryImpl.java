@@ -20,75 +20,87 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
+import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.apache.hadoop.fs.s3a.Constants.CANNED_ACL;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CANNED_ACL;
-import static org.apache.hadoop.fs.s3a.S3AUtils.longOption;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * The (sole) implementation of the request factory.
+ * The standard implementation of the request factory.
  * This creates AWS SDK request classes for the specific bucket,
  * with standard options/headers set.
+ * It is also where preflight checking of parameters can take place.
+ *
+ * All creation of AWS S3 requests MUST be through this class so that
+ * common options (encryption etc.) can be added here,
+ * and so that any chained transformation of requests can be applied.
  */
 public class RequestFactoryImpl implements RequestFactory {
 
   public static final Logger LOG = LoggerFactory.getLogger(
       RequestFactoryImpl.class);
 
-  private final CannedAccessControlList cannedACL;
+  /**
+   * Target bucket.
+   */
+  private final String bucket;
 
-  private final Configuration conf;
-
+  /**
+   * Encryption secrets.
+   */
   private final EncryptionSecrets encryptionSecrets;
 
-  public final String bucket;
+  /**
+   * ACL For new objects.
+   */
+  private final CannedAccessControlList cannedACL;
 
-  public RequestFactoryImpl(
-      final Configuration conf,
+  private final long multipartPartCountLimit;
+
+  /** Requester Pays. TODO: Wire up. */
+  private final boolean requesterPays;
+
+
+  protected RequestFactoryImpl(
+      final String bucket,
       final EncryptionSecrets encryptionSecrets,
-      final String bucket) {
-    this.conf = conf;
+      final CannedAccessControlList cannedACL,
+      final long multipartPartCountLimit,
+      final boolean requesterPays) {
     this.encryptionSecrets = encryptionSecrets;
     this.bucket = bucket;
-    String cannedACLName = conf.get(CANNED_ACL, DEFAULT_CANNED_ACL);
-    if (!cannedACLName.isEmpty()) {
-      cannedACL = CannedAccessControlList.valueOf(cannedACLName);
-    } else {
-      cannedACL = null;
-    }
-  }
-
-  @Override
-  public void setEncryptionSecrets(final EncryptionSecrets encryptionSecrets) {
-
+    this.cannedACL = cannedACL;
+    this.multipartPartCountLimit = multipartPartCountLimit;
+    this.requesterPays = requesterPays;
   }
 
   /**
@@ -100,6 +112,10 @@ public class RequestFactoryImpl implements RequestFactory {
     return cannedACL;
   }
 
+  /**
+   * Get the target bucket.
+   * @return the bucket.
+   */
   protected String getBucket() {
     return bucket;
   }
@@ -195,9 +211,8 @@ public class RequestFactoryImpl implements RequestFactory {
    */
   @Override
   public ObjectMetadata newObjectMetadata(long length) {
-    final ObjectMetadata om1 = new ObjectMetadata();
-    setOptionalObjectMetadata(om1);
-    final ObjectMetadata om = om1;
+    final ObjectMetadata om = new ObjectMetadata();
+    setOptionalObjectMetadata(om);
     if (length >= 0) {
       om.setContentLength(length);
     }
@@ -289,19 +304,23 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   @Override
+  public CompleteMultipartUploadRequest newCompleteMultipartUploadRequest(String destKey,
+      String uploadId,
+      List<PartETag> partETags) {
+    // a copy of the list is required, so that the AWS SDK doesn't
+    // attempt to sort an unmodifiable list.
+    return new CompleteMultipartUploadRequest(bucket,
+        destKey, uploadId, new ArrayList<>(partETags));
+
+  }
+
+  @Override
   public GetObjectMetadataRequest newGetObjectMetadataRequest(String key) {
     GetObjectMetadataRequest request =
         new GetObjectMetadataRequest(getBucket(), key);
     //SSE-C requires to be filled in if enabled for object metadata
     setOptionalGetObjectMetadataParameters(request);
     return request;
-  }
-
-  public static RequestFactory newInstance(Configuration conf,
-      final String bucket, EncryptionSecrets encryptionSecrets) {
-    RequestFactoryImpl factory = new RequestFactoryImpl(conf, encryptionSecrets,
-        bucket);
-    return factory;
   }
 
   /**
@@ -340,19 +359,11 @@ public class RequestFactoryImpl implements RequestFactory {
 
     LOG.debug("Creating part upload request for {} #{} size {}",
         uploadId, partNumber, size);
-    long partCountLimit = longOption(conf,
-        UPLOAD_PART_COUNT_LIMIT,
-        DEFAULT_UPLOAD_PART_COUNT_LIMIT,
-        1);
-    if (partCountLimit != DEFAULT_UPLOAD_PART_COUNT_LIMIT) {
-      LOG.warn("Configuration property {} shouldn't be overridden by client",
-          UPLOAD_PART_COUNT_LIMIT);
-    }
     final String pathErrorMsg = "Number of parts in multipart upload exceeded."
         + " Current part count = %s, Part count limit = %s ";
-    if (partNumber > partCountLimit) {
+    if (partNumber > multipartPartCountLimit) {
       throw new PathIOException(destKey,
-          String.format(pathErrorMsg, partNumber, partCountLimit));
+          String.format(pathErrorMsg, partNumber, multipartPartCountLimit));
     }
     UploadPartRequest request = new UploadPartRequest()
         .withBucketName(getBucket())
@@ -390,5 +401,89 @@ public class RequestFactoryImpl implements RequestFactory {
     request.setKey(key);
     generateSSECustomerKey().ifPresent(request::setSSECustomerKey);
     return request;
+  }
+
+  @Override
+  public ListObjectsRequest newListObjectsRequest() {
+    return new ListObjectsRequest().withBucketName(bucket);
+  }
+
+  @Override
+  public ListObjectsV2Request newListObjectsV2Request() {
+    return new ListObjectsV2Request().withBucketName(bucket);
+  }
+
+  /**
+   * Create a builder.
+   * @return new builder.
+   */
+  public static RequestFactoryBuilder builder() {
+    return new RequestFactoryBuilder();
+  }
+
+
+  /**
+   * Builder.
+   */
+  public static final class RequestFactoryBuilder {
+
+
+    /**
+     * Target bucket.
+     */
+    private String bucket;
+
+    /**
+     * Encryption secrets.
+     */
+    private EncryptionSecrets encryptionSecrets = new EncryptionSecrets();
+
+    /**
+     * ACL For new objects.
+     */
+    private CannedAccessControlList cannedACL = null;
+
+    /** Requester Pays. TODO: Wire up. */
+    private boolean requesterPays = false;
+
+    private long multipartPartCountLimit = DEFAULT_UPLOAD_PART_COUNT_LIMIT;
+
+    private RequestFactoryBuilder() {
+    }
+
+    public RequestFactoryBuilder withBucket(final String _bucket) {
+      bucket = _bucket;
+      return this;
+    }
+
+    public RequestFactoryBuilder withEncryptionSecrets(
+        final EncryptionSecrets _encryptionSecrets) {
+      encryptionSecrets = _encryptionSecrets;
+      return this;
+    }
+
+    public RequestFactoryBuilder withCannedACL(
+        final CannedAccessControlList _cannedACL) {
+      cannedACL = _cannedACL;
+      return this;
+    }
+
+    public RequestFactoryBuilder withRequesterPays(final boolean _requesterPays) {
+      requesterPays = _requesterPays;
+      return this;
+    }
+
+    public RequestFactoryBuilder withMultipartPartCountLimit(
+        final long _multipartPartCountLimit) {
+      multipartPartCountLimit = _multipartPartCountLimit;
+      return this;
+    }
+
+    public RequestFactory build() {
+      return new RequestFactoryImpl(bucket, encryptionSecrets, cannedACL,
+          multipartPartCountLimit, requesterPays);
+    }
+    
+    
   }
 }

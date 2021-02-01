@@ -95,10 +95,4 @@ public interface ContextAccessors {
   @Retries.RetryTranslated
   ObjectMetadata getObjectMetadata(String key) throws IOException;
 
-
-  /**
-   * Get a write operation helper.
-   * @return a write operation helper instance.
-   */
-  WriteOperationHelper getWriteOperationHelper();
 }

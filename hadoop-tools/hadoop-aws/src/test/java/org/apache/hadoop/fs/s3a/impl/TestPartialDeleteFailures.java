@@ -39,7 +39,6 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
-import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.ACCESS_DENIED;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
@@ -251,11 +250,6 @@ public class TestPartialDeleteFailures {
     public String getBucketLocation() throws IOException {
       return null;
     }
-
-    @Override
-    public WriteOperationHelper getWriteOperationHelper() {
-      return null;
-  }
 
     @Override
     public Path makeQualified(final Path path) {

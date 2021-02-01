@@ -35,10 +35,10 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
@@ -123,6 +123,8 @@ public class StoreContext {
    */
   private final RequestFactory requestFactory;
 
+  private final DurationTrackerFactory durationTrackerFactory;
+
   /**
    * Instantiate.
    * @deprecated as public method: use {@link StoreContextBuilder}.
@@ -145,7 +147,8 @@ public class StoreContext {
       final boolean useListV1,
       final ContextAccessors contextAccessors,
       final ITtlTimeProvider timeProvider,
-      final RequestFactory requestFactory) {
+      final RequestFactory requestFactory,
+      final DurationTrackerFactory durationTrackerFactory) {
     this.fsURI = fsURI;
     this.bucket = bucket;
     this.configuration = configuration;
@@ -164,6 +167,7 @@ public class StoreContext {
     this.contextAccessors = contextAccessors;
     this.timeProvider = timeProvider;
     this.requestFactory = requestFactory;
+    this.durationTrackerFactory = durationTrackerFactory;
   }
 
   @Override
@@ -226,6 +230,10 @@ public class StoreContext {
 
   public RequestFactory getRequestFactory() {
     return requestFactory;
+  }
+
+  public DurationTrackerFactory getDurationTrackerFactory() {
+    return durationTrackerFactory;
   }
 
   public ContextAccessors getContextAccessors() {
@@ -402,11 +410,4 @@ public class StoreContext {
     return future;
   }
 
-  /**
-   * Get a write operation helper.
-   * @return a write operation helper instance.
-   */
-  public WriteOperationHelper getWriteOperationHelper() {
-    return contextAccessors.getWriteOperationHelper();
-  }
 }
