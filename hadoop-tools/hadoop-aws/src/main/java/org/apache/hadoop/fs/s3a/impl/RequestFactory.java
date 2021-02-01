@@ -20,15 +20,20 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Optional;
 
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
+import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
@@ -40,8 +45,6 @@ import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 public interface RequestFactory {
-
-  void setEncryptionSecrets(EncryptionSecrets encryptionSecrets);
 
   /**
    * Get the canned ACL of this FS.
@@ -140,6 +143,10 @@ public interface RequestFactory {
 
   InitiateMultipartUploadRequest newMultipartUploadRequest(String destKey);
 
+  CompleteMultipartUploadRequest newCompleteMultipartUploadRequest(String destKey,
+      String uploadId,
+      List<PartETag> partETags);
+
   GetObjectMetadataRequest newGetObjectMetadataRequest(String key);
 
   /**
@@ -174,4 +181,8 @@ public interface RequestFactory {
    * @return the request
    */
   SelectObjectContentRequest newSelectRequest(String key);
+
+  ListObjectsRequest newListObjectsRequest();
+
+  ListObjectsV2Request newListObjectsV2Request();
 }

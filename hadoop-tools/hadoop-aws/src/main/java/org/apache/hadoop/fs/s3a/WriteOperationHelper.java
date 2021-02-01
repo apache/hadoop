@@ -23,12 +23,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
@@ -51,20 +49,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.impl.RawS3A;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
-import org.apache.hadoop.fs.s3a.select.SelectBinding;
-import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.longOption;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 
 /**
  * Helper for low-level operations against an S3 Bucket for writing data,
@@ -112,6 +105,9 @@ public class WriteOperationHelper implements WriteOperations {
   /** Bucket of the owner FS. */
   private final String bucket;
 
+  /** Raw S3A implementation to invoke. */
+  private final RawS3A rawS3A;
+
   /**
    * statistics context.
    */
@@ -124,11 +120,12 @@ public class WriteOperationHelper implements WriteOperations {
    * @param owner owner FS creating the helper
    * @param conf Configuration object
    * @param statisticsContext statistics context
-   *
+   * @param rawS3A raw S3A implementation.
    */
   protected WriteOperationHelper(S3AFileSystem owner,
       Configuration conf,
-      S3AStatisticsContext statisticsContext) {
+      S3AStatisticsContext statisticsContext,
+      RawS3A rawS3A) {
     this.owner = owner;
     this.invoker = new Invoker(new S3ARetryPolicy(conf),
         this::operationRetried);
@@ -136,6 +133,7 @@ public class WriteOperationHelper implements WriteOperations {
     this.statisticsContext = statisticsContext;
     this.context = owner.createStoreContext();
     this.bucket = owner.getBucket();
+    this.rawS3A = rawS3A;
   }
 
   /**
@@ -231,7 +229,7 @@ public class WriteOperationHelper implements WriteOperations {
    * @return a new metadata instance
    */
   public ObjectMetadata newObjectMetadata(long length) {
-    return owner.newObjectMetadata(length);
+    return context.getRequestFactory().newObjectMetadata(length);
   }
 
   /**
@@ -249,7 +247,7 @@ public class WriteOperationHelper implements WriteOperations {
             destKey);
 
     return retry("initiate MultiPartUpload", destKey, true,
-        () -> owner.initiateMultipartUpload(initiateMPURequest).getUploadId());
+        () -> rawS3A.initiateMultipartUpload(initiateMPURequest).getUploadId());
   }
 
   /**
@@ -279,18 +277,16 @@ public class WriteOperationHelper implements WriteOperations {
       throw new PathIOException(destKey,
           "No upload parts in multipart upload");
     }
+
+    CompleteMultipartUploadRequest request =
+        context.getRequestFactory().newCompleteMultipartUploadRequest(
+            destKey, uploadId, partETags);
     CompleteMultipartUploadResult uploadResult =
         invoker.retry("Completing multipart upload", destKey,
             true,
             retrying,
             () -> {
-              // a copy of the list is required, so that the AWS SDK doesn't
-              // attempt to sort an unmodifiable list.
-              return owner.getAmazonS3Client().completeMultipartUpload(
-                  new CompleteMultipartUploadRequest(bucket,
-                      destKey,
-                      uploadId,
-                      new ArrayList<>(partETags)));
+              return rawS3A.completeMultipartUpload(request);
             }
     );
     owner.finishedWrite(destKey, length, uploadResult.getETag(),
@@ -432,9 +428,9 @@ public class WriteOperationHelper implements WriteOperations {
       InputStream uploadStream,
       File sourceFile,
       Long offset) throws PathIOException {
-    checkNotNull(uploadId);
 
-    return context.getRequestFactory().newUploadPartRequest(destKey, uploadId, partNumber, size, uploadStream, sourceFile, offset);
+    return context.getRequestFactory().newUploadPartRequest(
+        destKey, uploadId, partNumber, size, uploadStream, sourceFile, offset);
   }
 
   /**
@@ -610,33 +606,6 @@ public class WriteOperationHelper implements WriteOperations {
       final SelectObjectContentRequest request,
       final String action)
       throws IOException {
-    String bucketName = request.getBucketName();
-    Preconditions.checkArgument(bucket.equals(bucketName),
-        "wrong bucket: %s", bucketName);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Initiating select call {} {}",
-          source, request.getExpression());
-      LOG.debug(SelectBinding.toString(request));
-    }
-    return invoker.retry(
-        action,
-        source.toString(),
-        true,
-        () -> {
-          try (DurationInfo ignored =
-                   new DurationInfo(LOG, "S3 Select operation")) {
-            try {
-              return owner.getAmazonS3Client().selectObjectContent(request);
-            } catch (AmazonS3Exception e) {
-              LOG.error("Failure of S3 Select request against {}",
-                  source);
-              LOG.debug("S3 Select request against {}:\n{}",
-                  source,
-                  SelectBinding.toString(request),
-                  e);
-              throw e;
-            }
-          }
-        });
+    return owner.store().select(source, request, action);
   }
 }

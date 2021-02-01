@@ -20,24 +20,32 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.TransferManager;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.InvalidRequestException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.MetadataPersistenceException;
@@ -48,22 +56,17 @@ import org.apache.hadoop.fs.s3a.UploadInfo;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 
 /**
- * The Guarded S3A Store.
- * This is where the core operations are implemented; the "APIs", both public
- * (FileSystem, AbstractFileSystem) and the internal ones (WriteOperationHelper)
- * call through here.
+ * The Raw S3A Store.
  */
 public interface RawS3A extends S3AService {
 
   /**
    * Bind the Raw S3 services.
-   * Ultimately the instation of some of these will be pushed down;
-   * for now they are passed in.
    * @param credentials credential source
    * @param signerManager signing
    * @param transfers bulk transfers
    * @param s3client AWS S3 client
-   * @param requestFactory
+   * @param requestFactory AWS request factory
    */
   void bind(
       StoreContext storeContext,
@@ -72,6 +75,12 @@ public interface RawS3A extends S3AService {
       TransferManager transfers,
       AmazonS3 s3client,
       RequestFactory requestFactory);
+
+  /**
+   * Update the S3 client.
+   * @param client new AWS S3 client.
+   */
+  void setAmazonS3Client(AmazonS3 client);
 
   /**
    * Request object metadata; increments counters in the process.
@@ -241,4 +250,56 @@ public interface RawS3A extends S3AService {
    */
   MultipartUtils.UploadIterator listUploads(@Nullable String prefix)
       throws IOException;
+
+  /**
+ * Execute an S3 Select operation.
+ * On a failure, the request is only logged at debug to avoid the
+ * select exception being printed.
+ * @param request Select request to issue.
+ * @return response
+ * @throws IOException failure
+ */
+  @Retries.OnceRaw
+  SelectObjectContentResult select(
+    SelectObjectContentRequest request)
+    throws IOException;
+
+  /**
+   * Initiate a multipart upload from the preconfigured request.
+   * Retry policy: none + untranslated.
+   * @param request request to initiate
+   * @return the result of the call
+   * @throws AmazonClientException on failures inside the AWS SDK
+   * @throws IOException Other IO problems
+   */
+  @Retries.OnceRaw
+  InitiateMultipartUploadResult initiateMultipartUpload(
+      InitiateMultipartUploadRequest request) throws IOException;
+
+  /**
+   * Complete a multipart upload.
+   * @param request request to complete
+   * @return result
+   * @throws AmazonClientException on failures inside the AWS SDK
+   * @throws IOException Other IO problems
+   */
+  @Retries.OnceRaw
+  CompleteMultipartUploadResult completeMultipartUpload(
+      CompleteMultipartUploadRequest request) throws IOException;
+
+
+
+  /**
+   * Get the region of a bucket; fixing up the region so it can be used
+   * in the builders of other AWS clients.
+   * Requires the caller to have the AWS role permission
+   * {@code s3:GetBucketLocation}.
+   * Retry policy: retrying, translated.
+   * @param bucketName the name of the bucket
+   * @return the region in which a bucket is located
+   * @throws AccessDeniedException if the caller lacks permission.
+   * @throws IOException on any failure.
+   */
+  @Retries.RetryTranslated
+   String getBucketLocation(String bucketName) throws IOException;
 }

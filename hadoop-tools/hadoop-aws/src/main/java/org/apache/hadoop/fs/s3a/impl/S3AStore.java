@@ -18,10 +18,16 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
+import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.SelectObjectContentResult;
+
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.Retries;
 
 /**
  * The Guarded S3A Store.
@@ -37,4 +43,21 @@ public interface S3AStore extends S3AService {
       Invoker s3guardInvoker,
       ExecutorService unboundedThreadPool,
       LocalDirAllocator directoryAllocator);
+
+  /**
+   * Execute an S3 Select operation.
+   * On a failure, the request is only logged at debug to avoid the
+   * select exception being printed.
+   * @param source source for selection
+   * @param request Select request to issue.
+   * @param action the action for use in exception creation
+   * @return response
+   * @throws IOException failure
+   */
+  @Retries.RetryTranslated
+  SelectObjectContentResult select(
+      Path source,
+      SelectObjectContentRequest request,
+      String action)
+      throws IOException;
 }

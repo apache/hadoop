@@ -27,23 +27,30 @@ import java.util.Date;
 import java.util.List;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +64,8 @@ import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.UploadInfo;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAX_PAGING_KEYS;
@@ -67,9 +76,16 @@ import static org.apache.hadoop.fs.s3a.Constants.PURGE_EXISTING_MULTIPART;
 import static org.apache.hadoop.fs.s3a.Constants.PURGE_EXISTING_MULTIPART_AGE;
 import static org.apache.hadoop.fs.s3a.S3AUtils.intOption;
 import static org.apache.hadoop.fs.s3a.S3AUtils.longOption;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_HEAD_REQUEST;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_INITIATED;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 
 public class RawS3AImpl extends AbstractS3AService implements RawS3A {
 
@@ -110,6 +126,7 @@ public class RawS3AImpl extends AbstractS3AService implements RawS3A {
     this.signerManager = signerManager;
     this.transfers = transfers;
     this.s3 = s3client;
+    this.factory = requestFactory;
   }
 
 
@@ -130,6 +147,13 @@ public class RawS3AImpl extends AbstractS3AService implements RawS3A {
     return s3;
   }
 
+  /**
+   * Get the factory for duration tracking.
+   * @return a factory from the instrumentation.
+   */
+  protected DurationTrackerFactory getDurationTrackerFactory() {
+    return getStoreContext().getDurationTrackerFactory();
+  }
 
   /**
    * Request object metadata; increments counters in the process.
@@ -153,15 +177,30 @@ public class RawS3AImpl extends AbstractS3AService implements RawS3A {
     ObjectMetadata meta = changeInvoker.retryUntranslated("GET " + key, true,
         () -> {
           incrementStatistic(OBJECT_METADATA_REQUESTS);
-          LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
-          if (changeTracker != null) {
-            changeTracker.maybeApplyConstraint(request);
+          DurationTracker duration = getDurationTrackerFactory()
+              .trackDuration(ACTION_HTTP_HEAD_REQUEST.getSymbol());
+          try {
+            LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
+            if (changeTracker != null) {
+              changeTracker.maybeApplyConstraint(request);
+            }
+            ObjectMetadata objectMetadata = s3.getObjectMetadata(request);
+            if (changeTracker != null) {
+              changeTracker.processMetadata(objectMetadata, operation);
+            }
+            return objectMetadata;
+          } catch (AmazonServiceException ase) {
+            if (!isObjectNotFound(ase)) {
+              // file not found is not considered a failure of the call,
+              // so only switch the duration tracker to update failure
+              // metrics on other exception outcomes.
+              duration.failed();
+            }
+            throw ase;
+          } finally {
+            // update the tracker.
+            duration.close();
           }
-          ObjectMetadata objectMetadata = s3.getObjectMetadata(request);
-          if (changeTracker != null) {
-            changeTracker.processMetadata(objectMetadata, operation);
-          }
-          return objectMetadata;
         });
     incrementReadOperations();
     return meta;
@@ -207,7 +246,7 @@ public class RawS3AImpl extends AbstractS3AService implements RawS3A {
           String.format("Delete %s:/%s", getBucket(), key),
           DELETE_CONSIDERED_IDEMPOTENT,
           () -> {
-            incrementStatistic(OBJECT_DELETE_REQUESTS);
+            incrementStatistic(OBJECT_DELETE_REQUEST);
             s3.deleteObject(getBucket(), key);
             return null;
           });
@@ -236,22 +275,25 @@ public class RawS3AImpl extends AbstractS3AService implements RawS3A {
   @Retries.RetryRaw
   public DeleteObjectsResult deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
+    incrementWriteOperations();
     BulkDeleteRetryHandler retryHandler =
         new BulkDeleteRetryHandler(getStoreContext());
-    incrementWriteOperations();
-    try (DurationInfo ignored =
-             new DurationInfo(LOG, false, "DELETE %d keys",
-                 deleteRequest.getKeys().size())) {
+    int keyCount = deleteRequest.getKeys().size();
+    try(DurationInfo ignored =
+            new DurationInfo(LOG, false, "DELETE %d keys",
+                keyCount)) {
       return getInvoker().retryUntranslated("delete",
-          InternalConstants.DELETE_CONSIDERED_IDEMPOTENT,
+          DELETE_CONSIDERED_IDEMPOTENT,
           (text, e, r, i) -> {
             // handle the failure
             retryHandler.bulkDeleteRetried(deleteRequest, e);
           },
-          () -> {
-            incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
-            return s3.deleteObjects(deleteRequest);
-          });
+          // duration is tracked in the bulk delete counters
+          trackDurationOfOperation(getDurationTrackerFactory(),
+              OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
+                incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
+                return getAmazonS3Client().deleteObjects(deleteRequest);
+            }));
     } catch (MultiObjectDeleteException e) {
       // one or more of the keys could not be deleted.
       // log and rethrow
@@ -464,8 +506,7 @@ public class RawS3AImpl extends AbstractS3AService implements RawS3A {
   public void abortMultipartUpload(String destKey, String uploadId) {
     LOG.debug("Aborting multipart upload {} to {}", uploadId, destKey);
     getAmazonS3Client().abortMultipartUpload(
-        factory.newAbortMultipartUploadRequest(destKey, uploadId)
-    );
+        factory.newAbortMultipartUploadRequest(destKey, uploadId));
   }
 
   /**
@@ -482,7 +523,7 @@ public class RawS3AImpl extends AbstractS3AService implements RawS3A {
     uploadId = upload.getUploadId();
     if (LOG.isInfoEnabled()) {
       DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-      LOG.debug("Aborting multipart upload {} to {} initiated by {} on {}",
+      LOG.info("Aborting multipart upload {} to {} initiated by {} on {}",
           uploadId, destKey, upload.getInitiator(),
           df.format(upload.getInitiated()));
     }
@@ -529,4 +570,75 @@ public class RawS3AImpl extends AbstractS3AService implements RawS3A {
         prefix);
   }
 
+  /**
+   * Execute an S3 Select operation.
+   * On a failure, the request is only logged at debug to avoid the
+   * select exception being printed.
+   * @param request Select request to issue.
+   * @return response
+   * @throws IOException failure
+   */
+  @Override
+  public SelectObjectContentResult select(
+      final SelectObjectContentRequest request)
+      throws IOException {
+    String bucketName = request.getBucketName();
+    Preconditions.checkArgument(getBucket().equals(bucketName),
+        "wrong bucket: %s", bucketName);
+     return getAmazonS3Client().selectObjectContent(request);
+  }
+
+  /**
+   * Initiate a multipart upload from the preconfigured request.
+   * Retry policy: none + untranslated.
+   * @param request request to initiate
+   * @return the result of the call
+   * @throws AmazonClientException on failures inside the AWS SDK
+   * @throws IOException Other IO problems
+   */
+  @Override
+  @Retries.OnceRaw
+  public InitiateMultipartUploadResult initiateMultipartUpload(
+      InitiateMultipartUploadRequest request) throws IOException {
+    LOG.debug("Initiate multipart upload to {}", request.getKey());
+    incrementStatistic(OBJECT_MULTIPART_UPLOAD_INITIATED);
+    return getAmazonS3Client().initiateMultipartUpload(request);
+  }
+
+  @Override
+  public CompleteMultipartUploadResult completeMultipartUpload(
+      final CompleteMultipartUploadRequest request) throws IOException {
+    return getAmazonS3Client().completeMultipartUpload(request);
+  }
+
+  /**
+   * Set the client -used in mocking tests to force in a different client.
+   * @param client client.
+   */
+  @Override
+  public void setAmazonS3Client(final AmazonS3 client) {
+    Preconditions.checkNotNull(client, "client");
+    LOG.info("Setting S3 client to {}", client);
+    s3 = client;
+  }
+
+  /**
+   * Get the region of a bucket; fixing up the region so it can be used
+   * in the builders of other AWS clients.
+   * Requires the caller to have the AWS role permission
+   * {@code s3:GetBucketLocation}.
+   * Retry policy: retrying, translated.
+   * @param bucketName the name of the bucket
+   * @return the region in which a bucket is located
+   * @throws AccessDeniedException if the caller lacks permission.
+   * @throws IOException on any failure.
+   */
+  @VisibleForTesting
+  @Retries.RetryTranslated
+  public String getBucketLocation(String bucketName) throws IOException {
+    final String region = getInvoker().retry("getBucketLocation()",
+        bucketName, true,
+        () -> s3.getBucketLocation(bucketName));
+    return fixBucketRegion(region);
+  }
 }
