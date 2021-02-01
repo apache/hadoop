@@ -4824,6 +4824,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return fsLock.getQueueLength();
   }
 
+  @Metric({"ReadLockLongHoldCount", "The number of time the read lock has been held for longer than the threshold"})
+  public long getNumOfReadLockLongHold() {
+    return fsLock.getNumOfReadLockLongHold();
+  }
+
+  @Metric({"WriteLockLongHoldCount", "The number of time the write lock has been held for longer than the threshold"})
+  public long getNumOfWriteLockLongHold() {
+    return fsLock.getNumOfWriteLockLongHold();
+  }
+
   int getNumberOfDatanodes(DatanodeReportType type) {
     readLock();
     try {
