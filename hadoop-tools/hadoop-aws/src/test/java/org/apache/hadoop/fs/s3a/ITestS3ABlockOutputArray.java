@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
@@ -155,4 +156,20 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     markAndResetDatablock(createFactory(getFileSystem()));
   }
 
+  @Test
+  public void testAbortAfterWrite() throws Throwable {
+    Path dest = path("testAbortAfterWrite");
+    describe(" testAbortAfterWrite");
+    FileSystem fs = getFileSystem();
+    FSDataOutputStream stream = fs.create(dest, true);
+    byte[] data = ContractTestUtils.dataset(16, 'a', 26);
+    try {
+      stream.write(data);
+      stream.abort();
+      ContractTestUtils.assertPathsDoNotExist(fs, "aborted file", dest);
+    } finally {
+      IOUtils.closeStream(stream);
+      ContractTestUtils.assertPathsDoNotExist(fs, "aborted file", dest);
+    }
+  }
 }

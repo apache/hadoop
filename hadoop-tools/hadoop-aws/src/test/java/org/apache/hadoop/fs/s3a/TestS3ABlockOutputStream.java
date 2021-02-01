@@ -83,6 +83,8 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
             "uploadId", 50000, 1024, inputStream, null, 0L));
   }
 
+  static class StreamClosedException extends IOException {}
+
   @Test
   public void testStreamClosedAfterAbort() throws Exception {
     stream.abort();
@@ -90,6 +92,11 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     // This verification replaces testing various operations after calling abort:
     // after calling abort, stream is closed like calling close().
     intercept(IOException.class, () -> stream.checkOpen());
+
+    // check that calling write() will call checkOpen() and throws exception
+    doThrow(new StreamClosedException()).when(stream).checkOpen();
+
+    intercept(StreamClosedException.class, () -> stream.write(new byte[] {'a', 'b', 'c'}));
   }
 
   @Test
