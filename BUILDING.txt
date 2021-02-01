@@ -77,6 +77,7 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
   $ sudo make install
 * Protocol Buffers 3.7.1 (required to build native code)
   $ curl -L -s -S https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz -o protobuf-3.7.1.tar.gz
+  $ mkdir protobuf-3.7-src
   $ tar xzf protobuf-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7-src && cd protobuf-3.7-src
   $ ./configure
   $ make -j$(nproc)
