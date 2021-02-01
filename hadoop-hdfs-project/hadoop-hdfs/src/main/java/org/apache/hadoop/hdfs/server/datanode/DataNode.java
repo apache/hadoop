@@ -772,6 +772,14 @@ public class DataNode extends ReconfigurableBase
             - changedVolumes.deactivateLocations.size() <= 0) {
           throw new IOException("Attempt to remove all volumes.");
         }
+
+        try {
+          removeVolumes(changedVolumes.deactivateLocations);
+        } catch (IOException e) {
+          errorMessageBuilder.append(e.getMessage());
+          LOG.error("Failed to remove volume", e);
+        }
+
         if (!changedVolumes.newLocations.isEmpty()) {
           LOG.info("Adding new volumes: {}",
               Joiner.on(",").join(changedVolumes.newLocations));
@@ -815,13 +823,6 @@ public class DataNode extends ReconfigurableBase
               LOG.error("Failed to add volume: {}", volume, e);
             }
           }
-        }
-
-        try {
-          removeVolumes(changedVolumes.deactivateLocations);
-        } catch (IOException e) {
-          errorMessageBuilder.append(e.getMessage());
-          LOG.error("Failed to remove volume", e);
         }
 
         if (errorMessageBuilder.length() > 0) {
