@@ -199,6 +199,8 @@ public class CapacityScheduler extends
 
   private CSConfigurationProvider csConfProvider;
 
+  private int threadNum = 0;
+
   @Override
   public void setConf(Configuration conf) {
       yarnConf = conf;
@@ -634,6 +636,7 @@ public class CapacityScheduler extends
 
     public AsyncScheduleThread(CapacityScheduler cs) {
       this.cs = cs;
+      setName("CapacitySchedulerThread" + cs.threadNum++);
       setDaemon(true);
     }
 
