@@ -459,7 +459,7 @@ public class ConnectionManager {
           ConnectionPool pool = this.queue.take();
           try {
             int total = pool.getNumConnections();
-            int active = pool.getNumActiveConnections();
+            int active = pool.getNumActiveConnectionsRecently();
             float poolMinActiveRatio = pool.getMinActiveRatio();
             if (pool.getNumConnections() < pool.getMaxSize() &&
                 active >= poolMinActiveRatio * total) {
