@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.AccessDeniedException;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
@@ -1116,7 +1117,8 @@ public class AzureBlobFileSystem extends FileSystem {
    * @param allowedErrorCodesList varargs list of error codes.
    * @throws IOException if the exception error code is not on the allowed list.
    */
-  private void checkException(final Path path,
+  @VisibleForTesting
+  static void checkException(final Path path,
                               final AzureBlobFileSystemException exception,
                               final AzureServiceErrorCode... allowedErrorCodesList) throws IOException {
     if (exception instanceof AbfsRestOperationException) {
@@ -1125,16 +1127,21 @@ public class AzureBlobFileSystem extends FileSystem {
       if (ArrayUtils.contains(allowedErrorCodesList, ere.getErrorCode())) {
         return;
       }
-      int statusCode = ere.getStatusCode();
-
       //AbfsRestOperationException.getMessage() contains full error info including path/uri.
-      if (statusCode == HttpURLConnection.HTTP_NOT_FOUND) {
-        throw (IOException) new FileNotFoundException(ere.getMessage())
+      String message = ere.getMessage();
+
+      switch (ere.getStatusCode()) {
+      case HttpURLConnection.HTTP_NOT_FOUND:
+        throw (IOException) new FileNotFoundException(message)
             .initCause(exception);
-      } else if (statusCode == HttpURLConnection.HTTP_CONFLICT) {
-        throw (IOException) new FileAlreadyExistsException(ere.getMessage())
+      case HttpURLConnection.HTTP_CONFLICT:
+        throw (IOException) new FileAlreadyExistsException(message)
             .initCause(exception);
-      } else {
+      case HttpURLConnection.HTTP_FORBIDDEN:
+      case HttpURLConnection.HTTP_UNAUTHORIZED:
+        throw (IOException) new AccessDeniedException(message)
+            .initCause(exception);
+      default:
         throw ere;
       }
     } else if (exception instanceof SASTokenProviderException) {
