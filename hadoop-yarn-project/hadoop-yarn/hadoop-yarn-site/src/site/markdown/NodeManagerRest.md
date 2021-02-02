@@ -99,6 +99,7 @@ Response Body:
     "pmemCheckEnabled": true,
     "lastNodeUpdateTime": 1485814574224,
     "nodeHealthy": true,
+    "nodeHealthDetails": "[Overall Score = 100,SSD = 100]",
     "nodeManagerVersion": "3.0.0",
     "nodeManagerBuildVersion": "3.0.0",
     "nodeManagerVersionBuiltOn": "2017-01-30T17:42Z",
@@ -140,6 +141,7 @@ Response Body:
     <pmemCheckEnabled>true</pmemCheckEnabled>
     <lastNodeUpdateTime>1485815774203</lastNodeUpdateTime>
     <nodeHealthy>true</nodeHealthy>
+    <nodeHealthDetails>[Overall Score = 100,SSD = 100]</nodeHealthDetails>
     <nodeManagerVersion>3.0.0</nodeManagerVersion>
     <nodeManagerBuildVersion>3.0.0</nodeManagerBuildVersion>
     <nodeManagerVersionBuiltOn>2017-01-30T17:42Z</nodeManagerVersionBuiltOn>

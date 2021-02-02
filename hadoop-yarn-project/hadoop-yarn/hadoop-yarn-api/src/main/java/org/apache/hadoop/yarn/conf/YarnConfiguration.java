@@ -1977,6 +1977,10 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS =
       10000;
 
+  /** The Service to check the health of the node. */
+  public static final String NM_HEALTH_CHECKER_SERVICE =
+      NM_PREFIX + "health-checker-service.class";
+
   /** Prefix for all node manager disk health checker configs. */
   private static final String NM_DISK_HEALTH_CHECK_PREFIX =
       "yarn.nodemanager.disk-health-checker.";
@@ -2091,6 +2095,17 @@ public class YarnConfiguration extends Configuration {
   /** Frequency of running node health script. */
   public static final String NM_HEALTH_CHECK_SCRIPT_INTERVAL_MS_TEMPLATE =
       NM_PREFIX + "health-checker.%s.interval-ms";
+
+  /** The health checker score file. */
+  public static final boolean DEFAULT_NM_HEALTH_CHECK_SCORE_ENABLED =
+      false;
+  public static final String NM_HEALTH_CHECK_SCORE_ENABLED =
+      NM_PREFIX + "health-checker.score-enabled";
+  public static final String NM_HEALTH_CHECK_SCORE_FILE =
+      NM_PREFIX + "health-checker.score-file";
+
+  public static final String NM_HEALTH_DETAILS_REPORTER_CLASS =
+      NM_PREFIX + "health-checker.reporter.class";
 
   /** The JVM options used on forking ContainerLocalizer process
       by container executor. */

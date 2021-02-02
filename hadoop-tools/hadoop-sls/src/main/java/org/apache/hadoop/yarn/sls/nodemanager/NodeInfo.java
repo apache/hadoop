@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthDetails;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -70,10 +71,12 @@ public class NodeInfo {
     private List<ContainerId> toCleanUpContainers;
     private List<ApplicationId> toCleanUpApplications;
     private List<ApplicationId> runningApplications;
+    private NodeHealthDetails nodeHealthDetails;
 
     public FakeRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
         Resource perNode, String rackName, String healthReport,
-        int cmdPort, String hostName, NodeState state) {
+        int cmdPort, String hostName, NodeState state,
+        NodeHealthDetails nodeHealthDetails) {
       this.nodeId = nodeId;
       this.nodeAddr = nodeAddr;
       this.httpAddress = httpAddress;
@@ -86,6 +89,7 @@ public class NodeInfo {
       toCleanUpApplications = new ArrayList<ApplicationId>();
       toCleanUpContainers = new ArrayList<ContainerId>();
       runningApplications = new ArrayList<ApplicationId>();
+      this.nodeHealthDetails = nodeHealthDetails;
     }
 
     public NodeId getNodeID() {
@@ -118,6 +122,11 @@ public class NodeInfo {
 
     public long getLastHealthReportTime() {
       return 0; 
+    }
+
+    @Override
+    public NodeHealthDetails getNodeHealthDetails() {
+      return this.nodeHealthDetails;
     }
 
     public Resource getTotalCapability() {
@@ -263,7 +272,7 @@ public class NodeInfo {
     
     return new FakeRMNodeImpl(nodeId, nodeAddr, httpAddress,
         resource, rackName, "Me good",
-        port, hostName, null);
+        port, hostName, null, null);
   }
   
   public static RMNode newNodeInfo(String rackName, String hostName,

@@ -2479,6 +2479,14 @@
 
   <property>
     <description>
+      The Service class to check the health of the node.
+    </description>
+    <name>yarn.nodemanager.health-checker-service.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl</value>
+  </property>
+
+  <property>
+    <description>
     Flag to enable NodeManager disk health checker
     </description>
     <name>yarn.nodemanager.disk-health-checker.enable</name>

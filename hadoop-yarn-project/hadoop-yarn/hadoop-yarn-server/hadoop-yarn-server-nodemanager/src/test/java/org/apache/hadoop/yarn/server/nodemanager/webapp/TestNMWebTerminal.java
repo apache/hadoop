@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.After;
 import org.junit.Before;
@@ -53,9 +54,9 @@ public class TestNMWebTerminal {
   private WebServer server;
   private int port;
 
-  private NodeHealthCheckerService createNodeHealthCheckerService() {
+  private NodeHealthCheckerServiceImpl createNodeHealthCheckerService() {
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
-    return new NodeHealthCheckerService(dirsHandler);
+    return new NodeHealthCheckerServiceImpl(dirsHandler);
   }
 
   private int startNMWebAppServer(String webAddr) {

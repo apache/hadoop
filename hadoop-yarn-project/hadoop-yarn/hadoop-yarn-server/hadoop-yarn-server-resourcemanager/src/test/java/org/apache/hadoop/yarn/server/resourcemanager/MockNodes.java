@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthDetails;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
@@ -127,6 +128,7 @@ public class MockNodes {
     private ResourceUtilization nodeUtilization;
     private Resource physicalResource;
     private RMContext rmContext;
+    private NodeHealthDetails nodeHealthDetails;
 
     MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
         Resource perNode, String rackName, String healthReport,
@@ -268,6 +270,11 @@ public class MockNodes {
     @Override
     public long getLastHealthReportTime() {
       return lastHealthReportTime;
+    }
+
+    @Override
+    public NodeHealthDetails getNodeHealthDetails() {
+      return nodeHealthDetails;
     }
 
     @Override

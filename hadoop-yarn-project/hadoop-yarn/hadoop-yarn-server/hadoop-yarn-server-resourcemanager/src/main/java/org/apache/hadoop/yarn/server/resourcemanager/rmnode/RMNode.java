@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthDetails;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
@@ -85,12 +86,18 @@ public interface RMNode {
    * @return the latest health report received from this node.
    */
   public String getHealthReport();
-  
+
   /**
    * the time of the latest health report received from this node.
    * @return the time of the latest health report received from this node.
    */
   public long getLastHealthReportTime();
+
+  /**
+   * the overall health score received from this node.
+   * @return the overall health score of the node.
+   */
+  NodeHealthDetails getNodeHealthDetails();
 
   /**
    * the node manager version of the node received as part of the

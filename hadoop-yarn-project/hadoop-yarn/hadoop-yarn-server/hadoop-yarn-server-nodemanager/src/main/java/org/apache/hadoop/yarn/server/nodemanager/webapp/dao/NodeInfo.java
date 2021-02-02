@@ -45,6 +45,7 @@ public class NodeInfo {
   protected long lastNodeUpdateTime;
   protected String resourceTypes;
   protected boolean nodeHealthy;
+  protected String nodeHealthDetails;
   protected String nodeManagerVersion;
   protected String nodeManagerBuildVersion;
   protected String nodeManagerVersionBuiltOn;
@@ -77,7 +78,9 @@ public class NodeInfo {
         .getLastHealthReportTime();
 
     this.healthReport = context.getNodeHealthStatus().getHealthReport();
-
+    this.nodeHealthDetails = context.getNodeHealthStatus()
+        .getNodeHealthDetails() == null ? "" : context.getNodeHealthStatus()
+        .getNodeHealthDetails().toString();
     this.nodeManagerVersion = YarnVersionInfo.getVersion();
     this.nodeManagerBuildVersion = YarnVersionInfo.getBuildVersion();
     this.nodeManagerVersionBuiltOn = YarnVersionInfo.getDate();
@@ -129,6 +132,10 @@ public class NodeInfo {
 
   public String getHealthReport() {
     return this.healthReport;
+  }
+
+  public String getNodeHealthDetails() {
+    return this.nodeHealthDetails;
   }
 
   public long getTotalVmemAllocated() {

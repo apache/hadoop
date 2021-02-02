@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerLogsPage.ContainersLogsBlock;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -78,9 +79,9 @@ import com.google.inject.Module;
 
 public class TestContainerLogsPage {
 
-  private NodeHealthCheckerService createNodeHealthCheckerService() {
+  private NodeHealthCheckerServiceImpl createNodeHealthCheckerService() {
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
-    return new NodeHealthCheckerService(dirsHandler);
+    return new NodeHealthCheckerServiceImpl(dirsHandler);
   }
 
   @Test(timeout=30000)
@@ -90,7 +91,8 @@ public class TestContainerLogsPage {
     String logdirwithFile = absLogDir.toURI().toString();
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_LOG_DIRS, logdirwithFile);
-    NodeHealthCheckerService healthChecker = createNodeHealthCheckerService();
+    NodeHealthCheckerService healthChecker =
+        createNodeHealthCheckerService();
     healthChecker.init(conf);
     LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
     NMContext nmContext = new NodeManager.NMContext(null, null, dirsHandler,
@@ -213,7 +215,8 @@ public class TestContainerLogsPage {
         "kerberos");
       UserGroupInformation.setConfiguration(conf);
 
-      NodeHealthCheckerService healthChecker = createNodeHealthCheckerService();
+      NodeHealthCheckerService healthChecker =
+          createNodeHealthCheckerService();
       healthChecker.init(conf);
       LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
       // Add an application and the corresponding containers

@@ -37,6 +37,7 @@ export default DS.JSONAPISerializer.extend({
         nodeHealthy: payload.nodeHealthy,
         lastNodeUpdateTime: Converter.timeStampToDate(payload.lastNodeUpdateTime),
         healthReport: payload.healthReport || 'N/A',
+        nodeHealthDetails: payload.nodeHealthDetails || 'N/A',
         nmStartupTime: payload.nmStartupTime? Converter.timeStampToDate(payload.nmStartupTime) : '',
         nodeManagerBuildVersion: payload.nodeManagerBuildVersion,
         hadoopBuildVersion: payload.hadoopBuildVersion

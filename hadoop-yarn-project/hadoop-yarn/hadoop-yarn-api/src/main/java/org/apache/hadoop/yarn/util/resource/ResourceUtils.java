@@ -465,7 +465,7 @@ public class ResourceUtils {
     return ris;
   }
 
-  private static void addResourcesFileToConf(String resourceFile,
+  public static void addResourcesFileToConf(String resourceFile,
       Configuration conf) {
     try {
       InputStream ris = getConfInputStream(resourceFile, conf);

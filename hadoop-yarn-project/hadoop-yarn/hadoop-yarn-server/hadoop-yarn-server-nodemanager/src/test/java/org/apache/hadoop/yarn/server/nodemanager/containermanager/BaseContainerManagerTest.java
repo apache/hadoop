@@ -27,6 +27,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.doNothing;
 
 import org.apache.hadoop.yarn.server.nodemanager.NodeResourceMonitorImpl;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -154,7 +155,6 @@ public abstract class BaseContainerManagerTest {
   protected ContainerExecutor exec;
   protected DeletionService delSrvc;
   protected String user = "nobody";
-  protected NodeHealthCheckerService nodeHealthChecker;
   protected LocalDirsHandlerService dirsHandler;
   protected final long DUMMY_RM_IDENTIFIER = 1234;
   private NodeResourceMonitorImpl nodeResourceMonitor = mock(
@@ -170,6 +170,12 @@ public abstract class BaseContainerManagerTest {
   public void setNodeStatusUpdater(
       NodeStatusUpdater nodeStatusUpdater) {
     this.nodeStatusUpdater = nodeStatusUpdater;
+  }
+
+  public void setNodeHealthCheckerService(NodeHealthCheckerService nhcs,
+      Configuration yarnConfiguration) {
+    this.nodeHealthCheckerService = nhcs;
+    this.nodeHealthCheckerService.init(yarnConfiguration);
   }
 
   protected ContainerExecutor createContainerExecutor() {
@@ -208,7 +214,7 @@ public abstract class BaseContainerManagerTest {
 
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
-    nodeHealthCheckerService = new NodeHealthCheckerService(dirsHandler);
+    nodeHealthCheckerService = new NodeHealthCheckerServiceImpl(dirsHandler);
     nodeStatusUpdater = new NodeStatusUpdaterImpl(
         context, new AsyncDispatcher(), nodeHealthCheckerService, metrics) {
       @Override

@@ -517,9 +517,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     nodeHealthStatus.setIsNodeHealthy(healthChecker.isHealthy());
     nodeHealthStatus.setLastHealthReportTime(healthChecker
       .getLastHealthReportTime());
-    LOG.debug("Node's health-status : {}, {}",
+
+    healthChecker.updateNodeHealthDetails(nodeHealthStatus);
+    LOG.debug("Node's health-status : {}, {}, {}",
         nodeHealthStatus.getIsNodeHealthy(),
-        nodeHealthStatus.getHealthReport());
+        nodeHealthStatus.getHealthReport(),
+        nodeHealthStatus.getNodeHealthDetails());
     List<ContainerStatus> containersStatuses = getContainerStatuses();
     ResourceUtilization containersUtilization = getContainersUtilization();
     ResourceUtilization nodeUtilization = getNodeUtilization();

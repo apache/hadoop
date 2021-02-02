@@ -36,6 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.collections.keyvalue.DefaultMapEntry;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthDetails;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -132,6 +133,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   private String healthReport;
   private long lastHealthReportTime;
+  private NodeHealthDetails nodeHealthDetails;
   private String nodeManagerVersion;
   private Integer decommissioningTimeout;
 
@@ -513,7 +515,27 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       this.writeLock.unlock();
     }
   }
-  
+
+  public void setNodeHealthDetails(NodeHealthDetails nhd) {
+    this.writeLock.lock();
+
+    try {
+      this.nodeHealthDetails = nhd;
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
+  public NodeHealthDetails getNodeHealthDetails() {
+    this.readLock.lock();
+
+    try {
+      return this.nodeHealthDetails;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
   @Override
   public long getLastHealthReportTime() {
     this.readLock.lock();
@@ -922,6 +944,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     rmNode.setHealthReport(remoteNodeHealthStatus.getHealthReport());
     rmNode.setLastHealthReportTime(remoteNodeHealthStatus
         .getLastHealthReportTime());
+    rmNode.setNodeHealthDetails(remoteNodeHealthStatus.getNodeHealthDetails());
     rmNode.setAggregatedContainersUtilization(statusEvent
         .getAggregatedContainersUtilization());
     rmNode.setNodeUtilization(statusEvent.getNodeUtilization());

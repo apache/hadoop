@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.yarn.server.api.records.impl.pb;
 
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthDetailsProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthDetails;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
@@ -30,6 +32,7 @@ public class NodeHealthStatusPBImpl extends NodeHealthStatus {
   private boolean viaProto = false;
   private NodeHealthStatusProto proto = NodeHealthStatusProto
       .getDefaultInstance();
+  private NodeHealthDetails nodeHealthDetails;
 
   public NodeHealthStatusPBImpl() {
     this.builder = NodeHealthStatusProto.newBuilder();
@@ -70,6 +73,7 @@ public class NodeHealthStatusPBImpl extends NodeHealthStatus {
   private void mergeLocalToProto() {
     if (this.viaProto)
       maybeInitBuilder();
+    mergeLocalToBuilder();
     this.proto = this.builder.build();
 
     this.viaProto = true;
@@ -80,6 +84,13 @@ public class NodeHealthStatusPBImpl extends NodeHealthStatus {
       this.builder = NodeHealthStatusProto.newBuilder(this.proto);
     }
     this.viaProto = false;
+  }
+
+  private void mergeLocalToBuilder() {
+    if(nodeHealthDetails != null) {
+      builder.setNodeHealthDetails(convertToProtoFormat(
+          nodeHealthDetails));
+    }
   }
 
   @Override
@@ -128,4 +139,36 @@ public class NodeHealthStatusPBImpl extends NodeHealthStatus {
     this.builder.setLastHealthReportTime((lastHealthReport));
   }
 
+  @Override
+  public void setNodeHealthDetails(
+      NodeHealthDetails nodeHealthDetails) {
+    maybeInitBuilder();
+    if(nodeHealthDetails == null) {
+      this.builder.clearNodeHealthDetails();
+    }
+    this.nodeHealthDetails = nodeHealthDetails;
+  }
+
+  @Override
+  public NodeHealthDetails getNodeHealthDetails() {
+    NodeHealthStatusProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    if(this.nodeHealthDetails != null) {
+      return this.nodeHealthDetails;
+    }
+    if(!p.hasNodeHealthDetails()) {
+      return null;
+    }
+    this.nodeHealthDetails = convertFromProtoFormat(p.getNodeHealthDetails());
+    return this.nodeHealthDetails;
+  }
+
+  private NodeHealthDetailsPBImpl convertFromProtoFormat(
+      NodeHealthDetailsProto p) {
+    return new NodeHealthDetailsPBImpl(p);
+  }
+
+  private NodeHealthDetailsProto convertToProtoFormat(NodeHealthDetails nhd) {
+    return ((NodeHealthDetailsPBImpl) nhd).getProto();
+  }
 }

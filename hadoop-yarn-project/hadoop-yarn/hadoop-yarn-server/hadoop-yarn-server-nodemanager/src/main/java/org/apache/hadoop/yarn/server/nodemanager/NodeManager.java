@@ -29,6 +29,7 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -62,6 +63,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.logaggregation.tracker.NMLogAggregationStatusTracker;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ConfigurationNodeLabelsProvider;
@@ -85,6 +87,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -244,6 +247,28 @@ public class NodeManager extends CompositeService
   protected NodeResourceMonitor createNodeResourceMonitor() {
     return new NodeResourceMonitorImpl(context);
   }
+
+  protected NodeHealthCheckerService createNodeHealthCheckerService(
+      Configuration conf) {
+
+    Class<?> clazz = conf.getClassByNameOrNull(conf.get(YarnConfiguration
+        .NM_HEALTH_CHECKER_SERVICE,
+        NodeHealthCheckerServiceImpl.class.getName()));
+    try {
+      if (clazz == null || !AbstractService.class.isAssignableFrom(clazz)) {
+        throw new RuntimeException(clazz + " does not implement "
+            + AbstractService.class);
+      }
+      Constructor<?> cons = clazz.getConstructor(
+          LocalDirsHandlerService.class);
+      return (NodeHealthCheckerService) cons.newInstance(dirsHandler);
+    } catch (Exception e) {
+      throw new YarnRuntimeException(
+          "Could not instantiate NodeHealthChecker Class: " + YarnConfiguration
+              .NM_HEALTH_CHECKER_SERVICE, e);
+    }
+  }
+
 
   protected ContainerManagerImpl createContainerManager(Context context,
       ContainerExecutor exec, DeletionService del,
@@ -410,7 +435,7 @@ public class NodeManager extends CompositeService
     // NodeManager level dispatcher
     this.dispatcher = createNMDispatcher();
 
-    this.nodeHealthChecker = new NodeHealthCheckerService(dirsHandler);
+    this.nodeHealthChecker = createNodeHealthCheckerService(conf);
     addService(nodeHealthChecker);
 
     ((NMContext)context).setContainerExecutor(exec);

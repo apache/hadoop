@@ -81,6 +81,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationRequestInterpreterProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringIntMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.TimedPlacementConstraintProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationAttemptStateProto;
@@ -583,6 +584,34 @@ public class ProtoUtils {
       tmp.setKey(entry.getKey());
       tmp.setValue(entry.getValue());
       ret.add(tmp.build());
+    }
+    return ret;
+  }
+
+
+  public static List<YarnProtos.StringIntMapProto>
+      convertStringIntMapToProtoList(Map<String, Integer> stringIntMap) {
+    List<YarnProtos.StringIntMapProto> pList = new ArrayList<>();
+    if (stringIntMap != null && !stringIntMap.isEmpty()) {
+      StringIntMapProto.Builder pBuilder = StringIntMapProto.newBuilder();
+      for (Map.Entry<String, Integer> entry : stringIntMap.entrySet()) {
+        pBuilder.setKey(entry.getKey());
+        pBuilder.setValue(entry.getValue());
+        pList.add(pBuilder.build());
+      }
+    }
+    return pList;
+  }
+
+  public static Map<String, Integer> convertProtoListToStringIntMap(
+      List<StringIntMapProto> pList) {
+    Map<String, Integer> ret = new HashMap<>();
+    if (pList != null) {
+      for (StringIntMapProto p : pList) {
+        if (p.hasKey()) {
+          ret.put(p.getKey(), p.getValue());
+        }
+      }
     }
     return ret;
   }

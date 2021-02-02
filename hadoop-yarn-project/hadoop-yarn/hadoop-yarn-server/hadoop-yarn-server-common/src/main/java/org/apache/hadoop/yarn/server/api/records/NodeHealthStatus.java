@@ -90,4 +90,22 @@ public abstract class NodeHealthStatus {
   @Private
   @Unstable
   public abstract void setLastHealthReportTime(long lastHealthReport);
+
+  /**
+   * Set the overall score of the Node.
+   * @param nodeHealthDetails contains the resources score and the total
+   *                          overall score of the node
+   */
+  @Private
+  @Unstable
+  public abstract void setNodeHealthDetails(NodeHealthDetails
+      nodeHealthDetails);
+
+  /**
+   * @return {@link NodeHealthDetails} Gives a detailed overall score
+   * of the node health resources.
+   */
+  @Public
+  @Stable
+  public abstract NodeHealthDetails getNodeHealthDetails();
 }

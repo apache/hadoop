@@ -16,19 +16,27 @@
  * limitations under the License.
  */
 
-import DS from 'ember-data';
+package org.apache.hadoop.yarn.server.nodemanager.health;
 
-export default DS.Model.extend({
-  totalVmemAllocatedContainersMB: DS.attr('number'),
-  totalPmemAllocatedContainersMB: DS.attr('number'),
-  totalVCoresAllocatedContainers: DS.attr('number'),
-  vmemCheckEnabled: DS.attr('boolean'),
-  pmemCheckEnabled: DS.attr('boolean'),
-  nodeHealthy: DS.attr('boolean'),
-  lastNodeUpdateTime: DS.attr('string'),
-  healthReport: DS.attr('string'),
-  nodeHealthDetails: DS.attr('string'),
-  nmStartupTime: DS.attr('string'),
-  nodeManagerBuildVersion: DS.attr('string'),
-  hadoopBuildVersion: DS.attr('string'),
-});
+import org.apache.hadoop.yarn.server.api.records.NodeHealthDetails;
+
+/**
+ * Interface for providing the {@link NodeHealthDetails}. This is used to
+ * refresh the scores of the node and provide this information to the
+ * implementing class.
+ */
+public abstract class NodeHealthDetailsReporter implements HealthReporter {
+
+  /**
+   * Gets the updated {@link NodeHealthDetails}. This method should never
+   * return a null. The defaulted score is 0.
+   * @return nodeHealthDetails
+   */
+  public abstract NodeHealthDetails getNodeHealthDetails();
+
+  /**
+   * Refreshes the {@link NodeHealthDetails} when called upon.
+   */
+  public abstract void updateNodeHealthDetails();
+
+}

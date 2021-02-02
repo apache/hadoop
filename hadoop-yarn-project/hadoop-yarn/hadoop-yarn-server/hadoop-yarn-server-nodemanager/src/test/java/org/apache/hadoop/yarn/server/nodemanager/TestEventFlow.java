@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
@@ -106,7 +107,7 @@ public class TestEventFlow {
     Dispatcher dispatcher = new AsyncDispatcher();
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
     NodeHealthCheckerService healthChecker =
-        new NodeHealthCheckerService(dirsHandler);
+        new NodeHealthCheckerServiceImpl(dirsHandler);
     healthChecker.init(conf);
     NodeManagerMetrics metrics = NodeManagerMetrics.create();
     NodeStatusUpdater nodeStatusUpdater =

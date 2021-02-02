@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthDetails;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
@@ -57,6 +58,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
@@ -143,13 +145,15 @@ public class TestNMWebServices extends JerseyTestBase {
           LOGSERVICEWSADDR);
       dirsHandler = new LocalDirsHandlerService();
       NodeHealthCheckerService healthChecker =
-          new NodeHealthCheckerService(dirsHandler);
+          new NodeHealthCheckerServiceImpl(dirsHandler);
       healthChecker.init(conf);
       aclsManager = new ApplicationACLsManager(conf);
       nmContext = new NodeManager.NMContext(null, null, dirsHandler,
           aclsManager, null, false, conf);
       NodeId nodeId = NodeId.newInstance("testhost.foo.com", 8042);
       ((NodeManager.NMContext)nmContext).setNodeId(nodeId);
+      nmContext.getNodeHealthStatus().setNodeHealthDetails(NodeHealthDetails
+          .newInstance(90, Collections.singletonMap("TEST", 90)));
       resourceView = new ResourceView() {
         @Override
         public long getVmemAllocatedForContainers() {
@@ -808,14 +812,15 @@ public class TestNMWebServices extends JerseyTestBase {
               "nodeManagerVersionBuiltOn"), WebServicesTestUtils.getXmlString(
               element, "nodeManagerBuildVersion"),
           WebServicesTestUtils.getXmlString(element, "nodeManagerVersion"),
-          WebServicesTestUtils.getXmlString(element, "resourceTypes"));
+          WebServicesTestUtils.getXmlString(element, "resourceTypes"),
+          WebServicesTestUtils.getXmlString(element, "nodeHealthDetails"));
     }
   }
 
   public void verifyNodeInfo(JSONObject json) throws JSONException, Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject info = json.getJSONObject("nodeInfo");
-    assertEquals("incorrect number of elements", 18, info.length());
+    assertEquals("incorrect number of elements", 19, info.length());
     verifyNodeInfoGeneric(info.getString("id"), info.getString("healthReport"),
         info.getLong("totalVmemAllocatedContainersMB"),
         info.getLong("totalPmemAllocatedContainersMB"),
@@ -827,8 +832,8 @@ public class TestNMWebServices extends JerseyTestBase {
         info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"),
         info.getString("nodeManagerVersionBuiltOn"),
         info.getString("nodeManagerBuildVersion"),
-        info.getString("nodeManagerVersion"),
-        info.getString("resourceTypes")
+        info.getString("nodeManagerVersion"), info.getString("resourceTypes"),
+        info.getString("nodeHealthDetails")
         );
 
   }
@@ -841,7 +846,7 @@ public class TestNMWebServices extends JerseyTestBase {
       String hadoopVersionBuiltOn, String hadoopBuildVersion,
       String hadoopVersion, String resourceManagerVersionBuiltOn,
       String resourceManagerBuildVersion, String resourceManagerVersion,
-      String resourceTypes) {
+      String resourceTypes, String nodeHealthDetails) {
 
     WebServicesTestUtils.checkStringMatch("id", "testhost.foo.com:8042", id);
     WebServicesTestUtils.checkStringMatch("healthReport", "Healthy",
@@ -856,6 +861,8 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals("pmemCheckEnabled incorrect",  true, pmemCheckEnabled);
     assertTrue("lastNodeUpdateTime incorrect", lastNodeUpdateTime == nmContext
         .getNodeHealthStatus().getLastHealthReportTime());
+    assertEquals("nodeHealthDetails incorrect", nodeHealthDetails, nmContext
+        .getNodeHealthStatus().getNodeHealthDetails().toString());
     assertTrue("nodeHealthy isn't true", nodeHealthy);
     WebServicesTestUtils.checkStringMatch("nodeHostName", "testhost.foo.com",
         nodeHostName);

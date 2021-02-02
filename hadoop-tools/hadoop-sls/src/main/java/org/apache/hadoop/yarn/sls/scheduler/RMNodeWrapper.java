@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthDetails;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -92,6 +93,11 @@ public class RMNodeWrapper implements RMNode {
   @Override
   public long getLastHealthReportTime() {
     return node.getLastHealthReportTime();
+  }
+
+  @Override
+  public NodeHealthDetails getNodeHealthDetails() {
+    return node.getNodeHealthDetails();
   }
 
   @Override
