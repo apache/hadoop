@@ -166,9 +166,11 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     try {
       stream.write(data);
       stream.abort();
+      // the path should not exist
       ContractTestUtils.assertPathsDoNotExist(fs, "aborted file", dest);
     } finally {
       IOUtils.closeStream(stream);
+      // check the path doesn't exist "after" closing stream
       ContractTestUtils.assertPathsDoNotExist(fs, "aborted file", dest);
     }
   }

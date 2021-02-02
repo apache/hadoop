@@ -20,6 +20,10 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import java.io.File;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.io.IOUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -117,5 +121,30 @@ public class ITestS3AMultipartUploadSizeLimits extends S3AScaleTestBase {
     Assertions.assertThat(after).
         describedAs("commit abort count")
         .isEqualTo(initial + 1);
+  }
+
+  @Test
+  public void testAbortAfterTwoPartUpload() throws Throwable {
+    Path file = path(getMethodName());
+
+    byte[] data = dataset(6 * _1MB, 'a', 'z' - 'a');
+
+    FileSystem fs = getFileSystem();
+    FSDataOutputStream stream = fs.create(file, true);
+    try {
+      stream.write(data);
+
+      // From testTwoPartUpload() we know closing stream will finalize uploads
+      // and materialize the path. Here we call abort() to abort the upload,
+      // and ensure the path is NOT available. (uploads are aborted)
+
+      stream.abort();
+      // the path should not exist
+      assertPathDoesNotExist("upload must not have completed", file);
+    } finally {
+      IOUtils.closeStream(stream);
+      // check the path doesn't exist "after" closing stream
+      assertPathDoesNotExist("upload must not have completed", file);
+    }
   }
 }
