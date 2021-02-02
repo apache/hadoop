@@ -173,7 +173,8 @@ public class FifoIntraQueuePreemptionPlugin
     // 7. From lowest priority app onwards, calculate toBePreempted resource
     // based on demand.
     calculateToBePreemptedResourcePerApp(clusterResource, orderedApps,
-        Resources.clone(preemptionLimit));
+        Resources.clone(preemptionLimit),
+        tq.leafQueue.getOrderingPolicy());
 
     // Save all apps (low to high) to temp queue for further reference
     tq.addAllApps(orderedApps);
@@ -253,7 +254,8 @@ public class FifoIntraQueuePreemptionPlugin
   }
 
   private void calculateToBePreemptedResourcePerApp(Resource clusterResource,
-      TreeSet<TempAppPerPartition> orderedApps, Resource preemptionLimit) {
+      TreeSet<TempAppPerPartition> orderedApps, Resource preemptionLimit,
+      OrderingPolicy<FiCaSchedulerApp> orderingPolicy) {
 
     for (TempAppPerPartition tmpApp : orderedApps) {
       if (Resources.lessThanOrEqual(rc, clusterResource, preemptionLimit,
@@ -266,7 +268,13 @@ public class FifoIntraQueuePreemptionPlugin
       Resource preemtableFromApp = Resources.subtract(tmpApp.getUsed(),
           tmpApp.idealAssigned);
       Resources.subtractFromNonNegative(preemtableFromApp, tmpApp.selected);
-      Resources.subtractFromNonNegative(preemtableFromApp, tmpApp.getAMUsed());
+
+      // We already consider AM used in the FS calculated.
+      // So, in case of Fair Ordering Policy,
+      // we can skip it when calculating preemptable from app.
+      if(! (orderingPolicy instanceof FairOrderingPolicy)) {
+        Resources.subtractFromNonNegative(preemtableFromApp,tmpApp.getAMUsed());
+      }
 
       if (context.getIntraQueuePreemptionOrderPolicy()
             .equals(IntraQueuePreemptionOrderPolicy.USERLIMIT_FIRST)) {
@@ -277,7 +285,7 @@ public class FifoIntraQueuePreemptionPlugin
       // Calculate toBePreempted from apps as follows:
       // app.preemptable = min(max(app.used - app.selected - app.ideal, 0),
       // intra_q_preemptable)
-      if(Resources.fitsIn(
+      if(Resources.fitsIn(rc,
           tmpApp.getFiCaSchedulerApp().getCSLeafQueue().getMinimumAllocation(),
           preemtableFromApp)) {
         tmpApp.toBePreempted = Resources.min(rc, clusterResource, Resources
@@ -769,7 +777,7 @@ public class FifoIntraQueuePreemptionPlugin
       // Check we don't preempt more resources than
       // ActuallyToBePreempted from the app
       if(tmpApp != null
-          && Resources.fitsIn(
+          && Resources.fitsIn(rc,
           c.getAllocatedResource(), tmpApp.getActuallyToBePreempted())) {
         return false;
       }

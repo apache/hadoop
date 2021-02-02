@@ -83,7 +83,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
             + "(1,1:1,n1,,0,false,20:20,user3)"
             ;
 
-    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
     verify(eventHandler, times(20)).handle(argThat(
@@ -208,13 +208,13 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
             + "(1,1:1,n1,,0,false,20:20,user3)"
             ;
 
-    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(eventHandler, times(16)).handle(argThat(
+    verify(eventHandler, times(17)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(eventHandler, times(4)).handle(argThat(
+    verify(eventHandler, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -333,13 +333,13 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
             "a\t"
             + "(1,1:1,n1,,0,false,20:20,user1)";
 
-    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(eventHandler, times(13)).handle(argThat(
+    verify(eventHandler, times(14)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(eventHandler, times(7)).handle(argThat(
+    verify(eventHandler, times(6)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -395,7 +395,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(eventHandler, times(23)).handle(argThat(
+    verify(eventHandler, times(24)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -446,13 +446,13 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
             "a\t" // app3, user2 in a
             + "(1,1:1,n1,,0,false,50:50,user2);";
 
-    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(eventHandler, times(24)).handle(argThat(
+    verify(eventHandler, times(25)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(eventHandler, times(22)).handle(argThat(
+    verify(eventHandler, times(23)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -500,10 +500,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
             "a\t" // app3, user2 in a
             + "(1,1:1,n1,,0,false,50:50,user3)" + "\t50;";
 
-    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig, true);
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(eventHandler, times(48)).handle(argThat(
+    verify(eventHandler, times(49)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
