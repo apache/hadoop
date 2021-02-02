@@ -171,7 +171,6 @@ public class FSDataOutputStream extends DataOutputStream
     return IOStatisticsSupport.retrieveIOStatistics(wrappedStream);
   }
 
-  /** FIXME: javadoc */
   @Override
   public void abort() {
     try {

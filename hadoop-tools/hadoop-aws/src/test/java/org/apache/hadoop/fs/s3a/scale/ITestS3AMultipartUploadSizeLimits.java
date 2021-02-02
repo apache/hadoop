@@ -22,7 +22,6 @@ import java.io.File;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
