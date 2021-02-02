@@ -504,7 +504,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       return null;
     }
     filesDeleted += keyList.size();
-    return submit(executor, () -> {
+    return submit(executor, getAuditSpan(), () -> {
       asyncDeleteAction(operationState,
           keyList,
           pathList,

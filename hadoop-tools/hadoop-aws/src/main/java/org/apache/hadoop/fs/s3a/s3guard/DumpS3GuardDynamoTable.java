@@ -35,6 +35,8 @@ import java.util.Deque;
 import java.util.List;
 
 import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
+
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -347,21 +349,25 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
   protected long dumpRawS3ObjectStore(
       final CsvFile csv) throws IOException {
     S3AFileSystem fs = getFilesystem();
-    Path rootPath = fs.qualify(new Path("/"));
-    Listing listing = fs.getListing();
-    S3ListRequest request = listing.createListObjectsRequest("", null);
     long count = 0;
-    RemoteIterator<S3AFileStatus> st =
-        listing.createFileStatusListingIterator(rootPath, request,
-            ACCEPT_ALL,
-            new Listing.AcceptAllButSelfAndS3nDirs(rootPath));
-    while (st.hasNext()) {
-      count++;
-      S3AFileStatus next = st.next();
-      LOG.debug("[{}] {}", count, next);
-      csv.entry(next);
+    Path rootPath = fs.qualify(new Path("/"));
+    try (AuditSpan span = fs.createSpan("dump", rootPath.toString(), null)) {
+      Listing listing = fs.getListing();
+      S3ListRequest request = listing.createListObjectsRequest("", null);
+      count = 0;
+      RemoteIterator<S3AFileStatus> st =
+          listing.createFileStatusListingIterator(rootPath, request,
+              ACCEPT_ALL,
+              new Listing.AcceptAllButSelfAndS3nDirs(rootPath),
+              span);
+      while (st.hasNext()) {
+        count++;
+        S3AFileStatus next = st.next();
+        LOG.debug("[{}] {}", count, next);
+        csv.entry(next);
+      }
+      LOG.info("entry count: {}", count);
     }
-    LOG.info("entry count: {}", count);
     return count;
   }
 

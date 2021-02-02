@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
@@ -99,6 +100,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    */
   private Statistic deleteMarkerStatistic;
 
+  private AuditSpan auditSpan;
+
   public AbstractS3ACostTest(
       final boolean s3guard,
       final boolean keepMarkers,
@@ -106,6 +109,18 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     this.s3guard = s3guard;
     this.keepMarkers = keepMarkers;
     this.authoritative = authoritative;
+  }
+
+  /**
+   * Constructor for tests which don't include
+   * any for S3Guard.
+   * @param keepMarkers should markers be tested.
+   */
+  public AbstractS3ACostTest(
+      final boolean keepMarkers) {
+    this.s3guard = false;
+    this.keepMarkers = keepMarkers;
+    this.authoritative = false;
   }
 
   @Override
@@ -183,6 +198,29 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     deleteMarkerStatistic = isBulkDelete()
         ? OBJECT_BULK_DELETE_REQUEST
         : OBJECT_DELETE_REQUEST;
+
+    setSpanSource(fs);
+    // there's lots of internal calls going on; to avoid problems
+    // initiate a span for each test case.
+    if (shouldCreateSpanInSetup()) {
+      auditSpan = span();
+    }
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    if (auditSpan != null) {
+      auditSpan.close();
+    }
+    super.teardown();
+  }
+
+  /**
+   * Should this test suite create a span during setup?
+   * @return true for a span to be created in setup and closed in teardown?
+   */
+  protected boolean shouldCreateSpanInSetup() {
+    return false;
   }
 
   public void assumeUnguarded() {
@@ -357,6 +395,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   protected <T> T verifyMetrics(
       Callable<T> eval,
       OperationCostValidator.ExpectedProbe... expected) throws Exception {
+    span();
     return costValidator.exec(eval, expected);
 
   }
@@ -379,6 +418,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
       String text,
       Callable<T> eval,
       OperationCostValidator.ExpectedProbe... expected) throws Exception {
+    span();
     return costValidator.intercepting(clazz, text, eval, expected);
   }
 
@@ -476,6 +516,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   /**
    * Execute a closure expecting a specific number of HEAD/LIST calls
    * on <i>raw</i> S3 stores only. The operation is always evaluated.
+   * A span is always created prior to the invocation; saves trouble
+   * in tests that way.
    * @param cost expected cost
    * @param eval closure to evaluate
    * @param <T> return type of closure
@@ -525,12 +567,14 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
       boolean needEmptyDirectoryFlag,
       Set<StatusProbeEnum> probes,
       OperationCost cost) throws Exception {
-    interceptRaw(FileNotFoundException.class, "",
-        cost, () ->
-            innerGetFileStatus(getFileSystem(),
-                path,
-                needEmptyDirectoryFlag,
-                probes));
+    try (AuditSpan span = span()) {
+      interceptRaw(FileNotFoundException.class, "",
+          cost, () ->
+              innerGetFileStatus(getFileSystem(),
+                  path,
+                  needEmptyDirectoryFlag,
+                  probes));
+    }
   }
 
   /**

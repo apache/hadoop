@@ -37,7 +37,11 @@ import org.junit.Test;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
+import org.apache.hadoop.fs.s3a.audit.NoopSpan;
 import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
 
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.ACCESS_DENIED;
@@ -261,6 +265,17 @@ public class TestPartialDeleteFailures {
         throws IOException {
       return new ObjectMetadata();
     }
+
+    @Override
+    public AuditSpan getActiveAuditSpan() {
+      return NoopSpan.INSTANCE;
+    }
+
+    @Override
+    public RequestFactory getRequestFactory() {
+      return MockS3AFileSystem.REQUEST_FACTORY;
+    }
+
   }
 
 }

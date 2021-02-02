@@ -381,7 +381,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * Execute a full recursive rename.
    * There is a special handling of directly markers here -only leaf markers
    * are copied. This reduces incompatibility "regions" across versions.
-Are   * @throws IOException failure
+   * @throws IOException failure
    */
   protected void recursiveDirectoryRename() throws IOException {
     final StoreContext storeContext = getStoreContext();
@@ -596,7 +596,7 @@ Are   * @throws IOException failure
             source.getVersionId(),
             source.getLen());
     // queue the copy operation for execution in the thread pool
-    return submit(getStoreContext().getExecutor(), () ->
+    return submit(getStoreContext().getExecutor(), getAuditSpan(), () ->
         copySourceAndUpdateTracker(
             childSourcePath,
             key,

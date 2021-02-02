@@ -60,6 +60,8 @@ import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
@@ -84,6 +86,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.FILESYSTEM_TEMP_PATH;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.SSE_DEFAULT_MASTER_KEY;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.MULTIPART_UPLOAD_ABORTED;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
@@ -1584,6 +1587,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
         throw invalidArgs("No options specified");
       }
       processArgs(paths, out);
+      println(out, "Listing uploads under path \"%s\"", prefix);
       promptBeforeAbort(out);
       processUploads(out);
 
@@ -1605,8 +1609,13 @@ public abstract class S3GuardTool extends Configured implements Tool,
     }
 
     private void processUploads(PrintStream out) throws IOException {
-      MultipartUtils.UploadIterator uploads;
-      uploads = getFilesystem().listUploads(prefix);
+      final S3AFileSystem fs = getFilesystem();
+      MultipartUtils.UploadIterator uploads = fs.listUploads(prefix);
+      AuditSpan span =
+          fs.createSpan(MULTIPART_UPLOAD_ABORTED,
+              prefix, null);
+      final WriteOperationHelper writeOperationHelper
+          = fs.getWriteOperationHelper();
 
       int count = 0;
       while (uploads.hasNext()) {
@@ -1620,18 +1629,20 @@ public abstract class S3GuardTool extends Configured implements Tool,
               upload.getKey(), upload.getUploadId());
         }
         if (mode == Mode.ABORT) {
-          getFilesystem().getWriteOperationHelper()
+          writeOperationHelper
               .abortMultipartUpload(upload.getKey(), upload.getUploadId(),
                   true, LOG_EVENT);
         }
       }
+      span.deactivate();
       if (mode != Mode.EXPECT || verbose) {
         println(out, "%s %d uploads %s.", TOTAL, count,
             mode == Mode.ABORT ? "deleted" : "found");
       }
       if (mode == Mode.EXPECT) {
         if (count != expectedCount) {
-          throw badState("Expected %d uploads, found %d", expectedCount, count);
+          throw badState("Expected upload count under %s: %d, found %d",
+              prefix, expectedCount, count);
         }
       }
     }
@@ -1643,6 +1654,9 @@ public abstract class S3GuardTool extends Configured implements Tool,
      * @return true iff u was created at least age milliseconds ago.
      */
     private boolean olderThan(MultipartUpload u, long msec) {
+      if (msec == 0) {
+        return true;
+      }
       Date ageDate = new Date(System.currentTimeMillis() - msec);
       return ageDate.compareTo(u.getInitiated()) >= 0;
     }

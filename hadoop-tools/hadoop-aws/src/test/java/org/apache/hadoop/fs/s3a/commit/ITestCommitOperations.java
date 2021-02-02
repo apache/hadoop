@@ -195,7 +195,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
     setThrottling(FULL_THROTTLE, STANDARD_FAILURE_LIMIT);
   }
 
-  private CommitOperations newCommitOperations() {
+  private CommitOperations newCommitOperations()
+      throws IOException {
     return new CommitOperations(getFileSystem());
   }
 

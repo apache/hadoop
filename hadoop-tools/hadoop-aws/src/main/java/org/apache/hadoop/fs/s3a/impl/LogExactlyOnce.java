@@ -39,4 +39,14 @@ public class LogExactlyOnce {
       log.warn(format, args);
     }
   }
+  public void info(String format, Object...args) {
+    if (!logged.getAndSet(true)) {
+      log.info(format, args);
+    }
+  }
+  public void error(String format, Object...args) {
+    if (!logged.getAndSet(true)) {
+      log.error(format, args);
+    }
+  }
 }

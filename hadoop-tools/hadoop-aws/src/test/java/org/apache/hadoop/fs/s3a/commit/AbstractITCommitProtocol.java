@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
@@ -177,7 +178,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     describe("teardown");
     abortInTeardown.forEach(this::abortJobQuietly);
     if (outDir != null) {
-      try {
+      try (AuditSpan span = span()) {
         abortMultipartUploadsUnderPath(outDir);
         cleanupDestDir();
       } catch (IOException e) {

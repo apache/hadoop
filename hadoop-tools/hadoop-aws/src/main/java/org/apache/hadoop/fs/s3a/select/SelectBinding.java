@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.select;
 
 import java.io.IOException;
 import java.util.Locale;
-import java.util.Optional;
 
 import com.amazonaws.services.s3.model.CSVInput;
 import com.amazonaws.services.s3.model.CSVOutput;
@@ -28,7 +27,6 @@ import com.amazonaws.services.s3.model.ExpressionType;
 import com.amazonaws.services.s3.model.InputSerialization;
 import com.amazonaws.services.s3.model.OutputSerialization;
 import com.amazonaws.services.s3.model.QuoteFields;
-import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -96,7 +94,6 @@ public class SelectBinding {
    * @param readContext the read context, which includes the source path.
    * @param expression the SQL expression.
    * @param builderOptions query options
-   * @param sseKey optional SSE customer key
    * @param objectAttributes object attributes from a HEAD request
    * @return an FSDataInputStream whose wrapped stream is a SelectInputStream
    * @throws IllegalArgumentException argument failure
@@ -108,7 +105,6 @@ public class SelectBinding {
       final S3AReadOpContext readContext,
       final String expression,
       final Configuration builderOptions,
-      final Optional<SSECustomerKey> sseKey,
       final S3ObjectAttributes objectAttributes) throws IOException {
 
     return new FSDataInputStream(
@@ -118,8 +114,8 @@ public class SelectBinding {
             buildSelectRequest(
                 readContext.getPath(),
                 expression,
-                builderOptions,
-                sseKey)));
+                builderOptions
+            )));
   }
 
   /**
@@ -127,7 +123,6 @@ public class SelectBinding {
    * @param path source path.
    * @param expression the SQL expression.
    * @param builderOptions config to extract other query options from
-   * @param sseKey optional SSE customer key
    * @return the request to serve
    * @throws IllegalArgumentException argument failure
    * @throws IOException problem building/validating the request
@@ -135,16 +130,13 @@ public class SelectBinding {
   public SelectObjectContentRequest buildSelectRequest(
       final Path path,
       final String expression,
-      final Configuration builderOptions,
-      final Optional<SSECustomerKey> sseKey)
+      final Configuration builderOptions)
       throws IOException {
     Preconditions.checkState(isEnabled(),
         "S3 Select is not enabled for %s", path);
 
     SelectObjectContentRequest request = operations.newSelectRequest(path);
     buildRequest(request, expression, builderOptions);
-    // optionally set an SSE key in the input
-    sseKey.ifPresent(request::withSSECustomerKey);
     return request;
   }
 

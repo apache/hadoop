@@ -166,6 +166,13 @@
     <value>0</value>
   </property>
 
+  <!-- auditing rejects out of span operations; this ensures that
+        no regressions take place. -->
+  <property>
+    <name>fs.s3a.audit.reject.out.of.span.operations</name>
+    <value>true</value>
+  </property>
+
   <!--
   To run these tests.
 

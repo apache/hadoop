@@ -155,6 +155,10 @@ public final class StoreStatisticNames {
   public static final String DELEGATION_TOKENS_ISSUED
       = "delegation_tokens_issued";
 
+  /** Probe for store existing: {@value}. */
+  public static final String STORE_EXISTS_PROBE
+      = "store_exists_probe";
+
   /** Requests throttled and retried: {@value}. */
   public static final String STORE_IO_THROTTLED
       = "store_io_throttled";
@@ -348,6 +352,9 @@ public final class StoreStatisticNames {
 
   public static final String MULTIPART_UPLOAD_STARTED
       = "multipart_upload_started";
+
+  public static final String MULTIPART_UPLOAD_LIST
+      = "multipart_upload_list";
 
   private StoreStatisticNames() {
   }

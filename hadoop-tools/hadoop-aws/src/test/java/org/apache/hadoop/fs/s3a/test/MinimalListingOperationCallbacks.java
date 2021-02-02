@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3ListRequest;
 import org.apache.hadoop.fs.s3a.S3ListResult;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
@@ -39,7 +40,8 @@ public class MinimalListingOperationCallbacks
   @Override
   public CompletableFuture<S3ListResult> listObjectsAsync(
       final S3ListRequest request,
-      final DurationTrackerFactory trackerFactory) throws IOException {
+      final DurationTrackerFactory trackerFactory, AuditSpan span)
+      throws IOException {
     return null;
   }
 
@@ -47,7 +49,8 @@ public class MinimalListingOperationCallbacks
   public CompletableFuture<S3ListResult> continueListObjectsAsync(
       final S3ListRequest request,
       final S3ListResult prevResult,
-      final DurationTrackerFactory trackerFactory) throws IOException {
+      final DurationTrackerFactory trackerFactory, AuditSpan span)
+      throws IOException {
     return null;
   }
 

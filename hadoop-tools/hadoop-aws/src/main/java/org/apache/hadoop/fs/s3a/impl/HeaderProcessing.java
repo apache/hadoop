@@ -189,6 +189,15 @@ public class HeaderProcessing extends AbstractStoreOperation {
       XA_HEADER_PREFIX + Headers.STORAGE_CLASS;
 
   /**
+   * HTTP Referrer for logs: {@value}.
+   * This can be found in S3 logs, but is not set as
+   * an attribute in objects.
+   * <i>important: </i> the header value is deliberately
+   * a mis-spelling, as that is defined in RFC-1945.
+   */
+  public static final String HEADER_REFERRER = "Referer";
+
+  /**
    * Standard headers which are retrieved from HEAD Requests
    * and set as XAttrs if the response included the relevant header.
    */
@@ -229,6 +238,13 @@ public class HeaderProcessing extends AbstractStoreOperation {
    */
   public static final String CONTENT_TYPE_APPLICATION_XML =
       "application/xml";
+
+  /**
+   * Directory content type : {@value}.
+   * Matches use/expectations of AWS S3 console.
+   */
+  public static final String CONTENT_TYPE_X_DIRECTORY =
+      "application/x-directory";
 
   /**
    * Construct.
@@ -443,7 +459,7 @@ public class HeaderProcessing extends AbstractStoreOperation {
    * @param source the {@link ObjectMetadata} to copy
    * @param dest the metadata to update; this is the return value.
    */
-  public void cloneObjectMetadata(ObjectMetadata source,
+  public static void cloneObjectMetadata(ObjectMetadata source,
       ObjectMetadata dest) {
 
     // Possibly null attributes

@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.UnknownStoreException;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.impl.DirMarkerTracker;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
@@ -417,13 +418,15 @@ public final class MarkerTool extends S3GuardTool {
       minMarkerCount = maxMarkerCount;
       maxMarkerCount = m;
     }
-    ScanResult result = scan(target,
-        scanArgs.isDoPurge(),
-        minMarkerCount,
-        maxMarkerCount,
-        scanArgs.getLimit(),
-        filterPolicy);
-    return result;
+    try (AuditSpan span =
+             fs.createSpan("marker-tool-scan", target.toString(), null)) {
+      return scan(target,
+          scanArgs.isDoPurge(),
+          minMarkerCount,
+          maxMarkerCount,
+          scanArgs.getLimit(),
+          filterPolicy);
+    }
   }
 
   /**

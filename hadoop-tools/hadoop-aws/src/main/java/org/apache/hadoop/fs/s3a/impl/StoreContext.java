@@ -25,6 +25,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
@@ -146,7 +148,10 @@ public class StoreContext {
     this.configuration = configuration;
     this.username = username;
     this.owner = owner;
-    this.executor = MoreExecutors.listeningDecorator(executor);
+    // some mock tests have a null executor pool
+    this.executor = executor !=null
+        ? MoreExecutors.listeningDecorator(executor)
+        : null;
     this.executorCapacity = executorCapacity;
     this.invoker = invoker;
     this.instrumentation = instrumentation;
@@ -390,5 +395,23 @@ public class StoreContext {
     getExecutor().submit(() ->
         LambdaUtils.eval(future, call));
     return future;
+  }
+
+  /**
+   * Return the active audit span.
+   * This is thread local -it MUST be picked up and passed into workers.
+   * Collect and cache the value during construction.
+   * @return active audit span.
+   */
+  public AuditSpan getActiveAuditSpan() {
+    return contextAccessors.getActiveAuditSpan();
+  }
+
+  /**
+   * Get the request factory.
+   * @return the factory for requests.
+   */
+  public RequestFactory getRequestFactory() {
+    return contextAccessors.getRequestFactory();
   }
 }

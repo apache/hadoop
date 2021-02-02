@@ -32,6 +32,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.impl.FutureIOSupport.raiseInnerCause;
@@ -49,16 +50,40 @@ public final class CallableSupplier<T> implements Supplier {
   private final Callable<T> call;
 
   /**
+   * Audit Span; may be null.
+   */
+  private final AuditSpan auditSpan;
+
+  /**
    * Create.
    * @param call call to invoke.
    */
   public CallableSupplier(final Callable<T> call) {
-    this.call = call;
+    this(null, call);
   }
 
+  /**
+   * Create.
+   * @param auditSpan audit span (or null)
+   * @param call call to invoke.
+   */
+  public CallableSupplier(
+      final AuditSpan auditSpan,
+      final Callable<T> call) {
+    this.call = call;
+    this.auditSpan = auditSpan;
+  }
+
+  /**
+   * Active any span and then call the supplied callable.
+   * @return the result.
+   */
   @Override
-  public Object get() {
+  public T get() {
     try {
+      if (auditSpan != null) {
+        auditSpan.activate();
+      }
       return call.call();
     } catch (RuntimeException e) {
       throw e;
@@ -66,6 +91,10 @@ public final class CallableSupplier<T> implements Supplier {
       throw new UncheckedIOException(e);
     } catch (Exception e) {
       throw new UncheckedIOException(new IOException(e));
+    } finally {
+      if (auditSpan != null) {
+        auditSpan.deactivate();
+      }
     }
   }
 
@@ -86,11 +115,32 @@ public final class CallableSupplier<T> implements Supplier {
     return CompletableFuture.supplyAsync(
         new CallableSupplier<T>(call), executor);
   }
+  /**
+   * Submit a callable into a completable future.
+   * RTEs are rethrown.
+   * Non RTEs are caught and wrapped; IOExceptions to
+   * {@code RuntimeIOException} instances.
+   * @param executor executor.
+   * @param auditSpan audit span (or null)
+   * @param call call to invoke
+   * @param <T> type
+   * @return the future to wait for
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> CompletableFuture<T> submit(
+      final Executor executor,
+      final AuditSpan auditSpan,
+      final Callable<T> call) {
+    return CompletableFuture.supplyAsync(
+        new CallableSupplier<T>(auditSpan, call),
+        executor);
+  }
 
   /**
    * Wait for a list of futures to complete. If the list is empty,
    * return immediately.
    * @param futures list of futures.
+   * @param <T> type
    * @throws IOException if one of the called futures raised an IOE.
    * @throws RuntimeException if one of the futures raised one.
    */
@@ -108,6 +158,7 @@ public final class CallableSupplier<T> implements Supplier {
   /**
    * Wait for a single of future to complete, extracting IOEs afterwards.
    * @param future future to wait for.
+   * @param <T> type
    * @throws IOException if one of the called futures raised an IOE.
    * @throws RuntimeException if one of the futures raised one.
    */
@@ -127,6 +178,7 @@ public final class CallableSupplier<T> implements Supplier {
   /**
    * Wait for a single of future to complete, ignoring exceptions raised.
    * @param future future to wait for.
+   * @param <T> type
    */
   public static <T> void waitForCompletionIgnoringExceptions(
       @Nullable final CompletableFuture<T> future) {

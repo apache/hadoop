@@ -26,6 +26,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 
 /**
  * An interface to implement for providing accessors to
@@ -94,4 +96,17 @@ public interface ContextAccessors {
   @Retries.RetryTranslated
   ObjectMetadata getObjectMetadata(String key) throws IOException;
 
+  /**
+   * Return the active audit span.
+   * This is thread local -it MUST be picked up and passed into workers.
+   * Collect and cache the value during construction.
+   * @return active audit span.
+   */
+  AuditSpan getActiveAuditSpan();
+
+  /**
+   * Get the request factory.
+   * @return the factory for requests.
+   */
+  RequestFactory getRequestFactory();
 }

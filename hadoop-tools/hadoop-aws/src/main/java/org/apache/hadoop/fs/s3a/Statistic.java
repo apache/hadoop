@@ -96,11 +96,11 @@ public enum Statistic {
   INVOCATION_COPY_FROM_LOCAL_FILE(
       StoreStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_CREATE(
       StoreStatisticNames.OP_CREATE,
       "Calls of create()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_CREATE_NON_RECURSIVE(
       StoreStatisticNames.OP_CREATE_NON_RECURSIVE,
       "Calls of createNonRecursive()",
@@ -108,39 +108,39 @@ public enum Statistic {
   INVOCATION_DELETE(
       StoreStatisticNames.OP_DELETE,
       "Calls of delete()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_EXISTS(
       StoreStatisticNames.OP_EXISTS,
       "Calls of exists()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_GET_DELEGATION_TOKEN(
       StoreStatisticNames.OP_GET_DELEGATION_TOKEN,
       "Calls of getDelegationToken()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_GET_FILE_CHECKSUM(
       StoreStatisticNames.OP_GET_FILE_CHECKSUM,
       "Calls of getFileChecksum()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_GET_FILE_STATUS(
       StoreStatisticNames.OP_GET_FILE_STATUS,
       "Calls of getFileStatus()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_GLOB_STATUS(
       StoreStatisticNames.OP_GLOB_STATUS,
       "Calls of globStatus()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_IS_DIRECTORY(
       StoreStatisticNames.OP_IS_DIRECTORY,
       "Calls of isDirectory()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_IS_FILE(
       StoreStatisticNames.OP_IS_FILE,
       "Calls of isFile()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_LIST_FILES(
       StoreStatisticNames.OP_LIST_FILES,
       "Calls of listFiles()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_LIST_LOCATED_STATUS(
       StoreStatisticNames.OP_LIST_LOCATED_STATUS,
       "Calls of listLocatedStatus()",
@@ -148,11 +148,11 @@ public enum Statistic {
   INVOCATION_LIST_STATUS(
       StoreStatisticNames.OP_LIST_STATUS,
       "Calls of listStatus()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_MKDIRS(
       StoreStatisticNames.OP_MKDIRS,
       "Calls of mkdirs()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   INVOCATION_OPEN(
       StoreStatisticNames.OP_OPEN,
       "Calls of open()",
@@ -160,7 +160,7 @@ public enum Statistic {
   INVOCATION_RENAME(
       StoreStatisticNames.OP_RENAME,
       "Calls of rename()",
-      TYPE_COUNTER),
+      TYPE_DURATION),
 
   /* The XAttr API metrics are all durations */
   INVOCATION_XATTR_GET_MAP(
@@ -207,15 +207,15 @@ public enum Statistic {
   OBJECT_MULTIPART_UPLOAD_INITIATED(
       StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_INITIATED,
       "Object multipart upload initiated",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   OBJECT_MULTIPART_UPLOAD_ABORTED(
       StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_ABORTED,
       "Object multipart upload aborted",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   OBJECT_PUT_REQUESTS(
       StoreStatisticNames.OBJECT_PUT_REQUEST,
       "Object put/multipart upload count",
-      TYPE_COUNTER),
+      TYPE_DURATION),
   OBJECT_PUT_REQUESTS_COMPLETED(
       StoreStatisticNames.OBJECT_PUT_REQUEST_COMPLETED,
       "Object put/multipart upload completed count",
@@ -479,6 +479,9 @@ public enum Statistic {
 
 
   /* General Store operations */
+  STORE_EXISTS_PROBE(StoreStatisticNames.STORE_EXISTS_PROBE,
+      "Store Existence Probe",
+      TYPE_DURATION),
   STORE_IO_REQUEST(StoreStatisticNames.STORE_IO_REQUEST,
       "requests made of the remote store",
       TYPE_COUNTER),
@@ -530,10 +533,20 @@ public enum Statistic {
       StoreStatisticNames.MULTIPART_UPLOAD_COMPLETED,
       "Multipart Upload Completed",
       TYPE_COUNTER),
+  MULTIPART_UPLOAD_LIST(
+      StoreStatisticNames.MULTIPART_UPLOAD_LIST,
+      "Multipart Upload List",
+      TYPE_DURATION),
   MULTIPART_UPLOAD_STARTED(
       StoreStatisticNames.MULTIPART_UPLOAD_STARTED,
       "Multipart Upload Started",
-      TYPE_COUNTER);
+      TYPE_COUNTER),
+
+  /* Audit statistics */
+  AUDIT_SPAN_START(
+      "audit_span_start",
+      "Audit Span Started",
+      TYPE_DURATION);
 
 
   /**

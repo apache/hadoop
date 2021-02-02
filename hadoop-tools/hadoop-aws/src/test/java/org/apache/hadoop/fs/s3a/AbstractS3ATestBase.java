@@ -25,6 +25,9 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
+import org.apache.hadoop.fs.s3a.audit.AuditSpanSource;
+import org.apache.hadoop.fs.s3a.audit.NoopSpan;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.io.IOUtils;
@@ -59,6 +62,27 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   protected static final IOStatisticsSnapshot FILESYSTEM_IOSTATS =
       snapshotIOStatistics();
 
+  /**
+   * Source of audit spans.
+   */
+  private AuditSpanSource spanSource;
+
+  /**
+   * Get the source.
+   * @return span source
+   */
+  protected AuditSpanSource getSpanSource() {
+    return spanSource;
+  }
+
+  /**
+   * Set the span source.
+   * @param spanSource new value.
+   */
+  protected void setSpanSource(final AuditSpanSource spanSource) {
+    this.spanSource = spanSource;
+  }
+
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf, false);
@@ -75,6 +99,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     // static initializers. See: HADOOP-17385
     S3AFileSystem.initializeClass();
     super.setup();
+    setSpanSource(getFileSystem());
   }
 
   @Override
@@ -212,5 +237,35 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
 
   protected String getTestTableName(String suffix) {
     return getTestDynamoTablePrefix(getConfiguration()) + suffix;
+  }
+
+  /**
+   * Create a span from the source; returns a no-op if
+   * creation fails or the source is null.
+   * Uses the test method name for the span.
+   * @return a span.
+   */
+  protected AuditSpan span() {
+    return span(getSpanSource());
+  }
+
+  /**
+   * Create a span from the source; returns a no-op if
+   * creation fails or the source is null.
+   * Uses the test method name for the span.
+   * @param source source of spans; can be an S3A FS
+   * @return a span.
+   */
+  protected AuditSpan span(AuditSpanSource source) {
+
+    if (source != null) {
+      try {
+        return source.createSpan(getMethodName(), null, null);
+      } catch (Exception e) {
+        LOG.info("Span collection failure", e);
+        return NoopSpan.INSTANCE;
+      }
+    }
+    return NoopSpan.INSTANCE;
   }
 }
