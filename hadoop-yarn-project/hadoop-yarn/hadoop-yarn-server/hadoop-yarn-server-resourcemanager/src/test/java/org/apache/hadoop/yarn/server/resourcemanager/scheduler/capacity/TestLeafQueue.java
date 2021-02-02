@@ -133,7 +133,7 @@ public class TestLeafQueue {
   CapacityScheduler cs;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
-  RMApp rmApp;
+  private RMApp rmApp;
   
   CSQueue root;
   private CSQueueStore queues;
@@ -500,8 +500,8 @@ public class TestLeafQueue {
     // Attempt the same application again
     final ApplicationAttemptId appAttemptId_1 = TestUtils
         .getMockApplicationAttemptId(0, 2);
-    FiCaSchedulerApp app1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a, null,
-        spyRMContext);
+    FiCaSchedulerApp app1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
+        null, spyRMContext);
     app1.getAppSchedulingInfo().setUnmanagedAM(false);
     app1.setAMResource(Resource.newInstance(100, 1));
     a.submitApplicationAttempt(app1, user_0); // same user

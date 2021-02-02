@@ -593,7 +593,7 @@ public class LeafQueue extends AbstractCSQueue {
     if (!isMoveApp) {
       boolean isAppOnUAM = application.getAppSchedulingInfo() != null &&
           application.getAppSchedulingInfo().isUnmanagedAM();
-        metrics.submitAppAttempt(userName, isAppOnUAM);
+      metrics.submitAppAttempt(userName, isAppOnUAM);
     }
 
     getParent().submitApplicationAttempt(application, userName);
