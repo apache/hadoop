@@ -126,6 +126,7 @@ RUN mkdir -p /opt/protobuf-src \
     && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
     && cd /opt/protobuf-src \
     && ./configure --prefix=/opt/protobuf \
+    && make "-j$(nproc)" \
     && make install \
     && cd /root \
     && rm -rf /opt/protobuf-src
@@ -192,7 +193,7 @@ RUN mkdir -p /opt/isa-l-src \
     && cd /opt/isa-l-src \
     && ./autogen.sh \
     && ./configure \
-    && make \
+    && make "-j$(nproc)" \
     && make install \
     && cd /root \
     && rm -rf /opt/isa-l-src
