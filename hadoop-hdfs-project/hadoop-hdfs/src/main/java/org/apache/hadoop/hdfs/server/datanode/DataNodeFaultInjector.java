@@ -97,6 +97,12 @@ public class DataNodeFaultInjector {
   public void stripedBlockReconstruction() throws IOException {}
 
   /**
+   * Used as a hook to inject failure in erasure coding checksum reconstruction
+   * process.
+   */
+  public void stripedBlockChecksumReconstruction() throws IOException {}
+
+  /**
    * Used as a hook to inject latency when read block
    * in erasure coding reconstruction process.
    */
