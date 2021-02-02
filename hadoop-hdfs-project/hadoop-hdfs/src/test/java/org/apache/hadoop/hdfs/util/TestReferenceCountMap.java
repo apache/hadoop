@@ -23,18 +23,17 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * Verify ReferenceCount map in concurrent scenarios
- *
+ * Verify ReferenceCount map in concurrent scenarios.
  */
 public class TestReferenceCountMap {
   //Add these number of references in loop
   public static final int LOOP_COUNTER = 10000;
   //Use 2 global features
-  AclFeature aclFeature1 = new AclFeature(new int[]{1});
-  AclFeature aclFeature2 = new AclFeature(new int[]{2});
+  private AclFeature aclFeature1 = new AclFeature(new int[]{1});
+  private AclFeature aclFeature2 = new AclFeature(new int[]{2});
 
   @Test
-  public void testReferenceCountMap() throws Exception{
+  public void testReferenceCountMap() throws Exception {
     ReferenceCountMap<AclFeature> countMap = new ReferenceCountMap<>();
     countMap.put(aclFeature1);
     countMap.put(aclFeature2);
@@ -63,7 +62,7 @@ public class TestReferenceCountMap {
   }
 
   @Test
-  public void testRefCountMapConcurrently() throws Exception{
+  public void testRefCountMapConcurrently() throws Exception {
     ReferenceCountMap<AclFeature> countMap = new ReferenceCountMap<>();
 
     PutThread putThread1 = new PutThread(countMap);
@@ -74,8 +73,10 @@ public class TestReferenceCountMap {
 
     putThread1.join();
     putThread2.join();
-    Assert.assertEquals(2 * LOOP_COUNTER, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(2 * LOOP_COUNTER, countMap.getReferenceCount(aclFeature2));
+    Assert.assertEquals(2 * LOOP_COUNTER,
+        countMap.getReferenceCount(aclFeature1));
+    Assert.assertEquals(2 * LOOP_COUNTER,
+        countMap.getReferenceCount(aclFeature2));
 
     removeThread1.start();
     removeThread1.join();
@@ -83,9 +84,9 @@ public class TestReferenceCountMap {
     Assert.assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature2));
   }
 
-  class PutThread extends Thread{
-    ReferenceCountMap<AclFeature> referenceCountMap;
-    public PutThread(ReferenceCountMap<AclFeature> referenceCountMap){
+  class PutThread extends Thread {
+    private ReferenceCountMap<AclFeature> referenceCountMap;
+    PutThread(ReferenceCountMap<AclFeature> referenceCountMap) {
       this.referenceCountMap = referenceCountMap;
     }
     @Override
@@ -97,9 +98,9 @@ public class TestReferenceCountMap {
     }
   };
 
-  class RemoveThread extends Thread{
-    ReferenceCountMap<AclFeature> referenceCountMap;
-    public RemoveThread(ReferenceCountMap<AclFeature> referenceCountMap){
+  class RemoveThread extends Thread {
+    private ReferenceCountMap<AclFeature> referenceCountMap;
+    RemoveThread(ReferenceCountMap<AclFeature> referenceCountMap) {
       this.referenceCountMap = referenceCountMap;
     }
     @Override
