@@ -815,6 +815,25 @@ public class DataNode extends ReconfigurableBase
                     String.format("FAILED TO ADD: %s: %s%n",
                         volume, ioe.getMessage()));
                 LOG.error("Failed to add volume: {}", volume, ioe);
+                /**
+                 * TODO: Some cases are not supported yet with
+                 *   same-disk-tiering on. For example, when replacing a
+                 *   storage directory on same mount, we have check if same
+                 *   storage type already exists on the mount. In this case
+                 *   we need to remove existing vol first then add.
+                 *   Also, we will need to adjust new capacity ratio when
+                 *   refreshVolume in the future.
+                 */
+                if (ioe.getMessage()
+                    .contains("already exists on same mount") ||
+                    ioe.getMessage()
+                    .contains("Not enough capacity ratio left on mount")
+                ) {
+                  LOG.error("RefreshVolume with same-disk-tiering on" +
+                      " is not fully supported yet." +
+                      " Please restart datanode with" +
+                      " volumes and new capacity ratio.");
+                }
               } else {
                 effectiveVolumes.add(volume.toString());
                 LOG.info("Successfully added volume: {}", volume);
