@@ -146,7 +146,7 @@ public class AbfsListStatusRemoteIterator
     continuation = listingSupport
         .listStatus(fileStatus.getPath(), null, fileStatuses, FETCH_ALL_FALSE,
             continuation);
-    if(!fileStatuses.isEmpty()) {
+    if (!fileStatuses.isEmpty()) {
       iteratorsQueue.put(fileStatuses.iterator());
     }
     synchronized (this) {

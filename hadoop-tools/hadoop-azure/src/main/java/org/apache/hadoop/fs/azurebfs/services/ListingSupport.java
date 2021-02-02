@@ -21,10 +21,13 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public interface ListingSupport {
 
   /**
@@ -47,7 +50,6 @@ public interface ListingSupport {
    *                  "/folder/hfile" and "/folder/ifile".
    * @return the entries in the path start from  "startFrom" in lexical order.
    */
-  @InterfaceStability.Unstable
   FileStatus[] listStatus(Path path, String startFrom) throws IOException;
 
   /**

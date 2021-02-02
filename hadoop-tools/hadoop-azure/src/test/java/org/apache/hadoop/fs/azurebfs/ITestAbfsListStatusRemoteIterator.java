@@ -53,7 +53,6 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   private static final int TEST_FILES_NUMBER = 1000;
 
   public ITestAbfsListStatusRemoteIterator() throws Exception {
-    super();
   }
 
   @Test
@@ -319,19 +318,22 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     final List<Future<Void>> tasks = new ArrayList<>();
     final List<String> fileNames = new ArrayList<>();
     ExecutorService es = Executors.newFixedThreadPool(10);
-    for (int i = 0; i < numFiles; i++) {
-      final Path filePath = new Path(rootPath, filenamePrefix + i);
-      Callable<Void> callable = () -> {
-        getFileSystem().create(filePath);
-        fileNames.add(makeQualified(filePath).toString());
-        return null;
-      };
-      tasks.add(es.submit(callable));
+    try {
+      for (int i = 0; i < numFiles; i++) {
+        final Path filePath = new Path(rootPath, filenamePrefix + i);
+        Callable<Void> callable = () -> {
+          getFileSystem().create(filePath);
+          fileNames.add(makeQualified(filePath).toString());
+          return null;
+        };
+        tasks.add(es.submit(callable));
+      }
+      for (Future<Void> task : tasks) {
+        task.get();
+      }
+    } finally {
+      es.shutdownNow();
     }
-    for (Future<Void> task : tasks) {
-      task.get();
-    }
-    es.shutdownNow();
     return fileNames;
   }
 
