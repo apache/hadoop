@@ -20,8 +20,17 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.InterfaceStability;
 
-/** FIXME: javadoc */
+/**
+ *  Stream that abort the upload.
+ */
 @InterfaceStability.Unstable
 public interface Abortable {
+
+  /**
+   * Abort the upload for the stream.
+   *
+   * This is to provide ability to cancel the write on stream; once stream is
+   * aborted, it should behave as the write was never happened.
+   */
   void abort();
 }

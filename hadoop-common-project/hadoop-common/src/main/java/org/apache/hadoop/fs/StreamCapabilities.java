@@ -80,7 +80,9 @@ public interface StreamCapabilities {
    */
   String IOSTATISTICS = "iostatistics";
 
-  /** FIXME: javadoc */
+  /**
+   * Stream abort() capability implemented by {@link Abortable#abort()}.
+   */
   String ABORTABLE = "abortable";
 
   /**
