@@ -47,7 +47,7 @@ public class ConnectionContext {
   /** Last timestamp the connection was active. */
   private long lastActiveTs = 0;
   /** The connection's active status would expire after this window. */
-  private long activeWindow = TimeUnit.SECONDS.toMillis(30);
+  private final static long ACTIVE_WINDOW_TIME = TimeUnit.SECONDS.toMillis(30);
 
   public ConnectionContext(ProxyAndInfo<?> connection) {
     this.client = connection;
@@ -69,8 +69,7 @@ public class ConnectionContext {
    * was active in the past period of time.
    */
   public synchronized boolean isActiveRecently() {
-    return isActive() ||
-        Time.monotonicNow() - this.lastActiveTs <= activeWindow;
+    return Time.monotonicNow() - this.lastActiveTs <= ACTIVE_WINDOW_TIME;
   }
 
   /**

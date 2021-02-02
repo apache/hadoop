@@ -256,7 +256,7 @@ public class ConnectionPool {
       int targetCount = Math.min(num, this.connections.size() - this.minSize);
       // Remove and close targetCount of connections
       List<ConnectionContext> tmpConnections = new ArrayList<>();
-      for (int i=0; i<this.connections.size(); i++) {
+      for (int i = 0; i < this.connections.size(); i++) {
         ConnectionContext conn = this.connections.get(i);
         // Only pick idle connections to close
         if (removed.size() < targetCount && conn.isUsable()) {
