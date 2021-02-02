@@ -136,7 +136,6 @@ public class TestCapacitySchedulerAsyncScheduling {
         numThreads);
     conf.setInt(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
         + ".scheduling-interval-ms", 0);
-
     final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
 
@@ -187,7 +186,8 @@ public class TestCapacitySchedulerAsyncScheduling {
       ams.get(i).allocate("*", 1024, 20 * (i + 1), new ArrayList<>());
       totalAsked += 20 * (i + 1) * GB;
     }
-
+    //test name of thread
+    Assert.assertEquals(testThreadName(Thread.currentThread().getName(), "CapacitySchedulerThread", Thread.currentThread().getClass().toString()), true);
     // Wait for at most 15000 ms
     int waitTime = 15000; // ms
     while (waitTime > 0) {
@@ -1119,5 +1119,14 @@ public class TestCapacitySchedulerAsyncScheduling {
           ContainerId.newContainerId(am.getApplicationAttemptId(), cId),
           RMContainerState.RUNNING);
     }
+  }
+  public boolean testThreadName(String a, String b, String threadClass){
+    if(threadClass.endsWith("$AsyncScheduleThread")){
+      if(a.startsWith(b))
+        return true;
+      else
+        return false;
+    }
+    return true;
   }
 }
