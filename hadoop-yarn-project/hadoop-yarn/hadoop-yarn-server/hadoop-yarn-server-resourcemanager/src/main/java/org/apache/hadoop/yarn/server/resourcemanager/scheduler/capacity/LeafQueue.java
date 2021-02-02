@@ -591,7 +591,9 @@ public class LeafQueue extends AbstractCSQueue {
 
     // We don't want to update metrics for move app
     if (!isMoveApp) {
-      metrics.submitAppAttempt(userName);
+      boolean isAppOnUAM = application.getAppSchedulingInfo() != null &&
+          application.getAppSchedulingInfo().isUnmanagedAM();
+        metrics.submitAppAttempt(userName, isAppOnUAM);
     }
 
     getParent().submitApplicationAttempt(application, userName);

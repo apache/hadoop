@@ -50,7 +50,7 @@ public class TestAppSchedulingInfo {
     doReturn(new YarnConfiguration()).when(rmContext).getYarnConfiguration();
     AppSchedulingInfo appSchedulingInfo = new AppSchedulingInfo(appAttemptId,
         "test", queue, null, 0, new ResourceUsage(),
-        new HashMap<String, String>(), rmContext);
+        new HashMap<String, String>(), rmContext, false);
 
     appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         new ArrayList<String>());
@@ -124,7 +124,7 @@ public class TestAppSchedulingInfo {
     doReturn(new YarnConfiguration()).when(rmContext).getYarnConfiguration();
     AppSchedulingInfo  info = new AppSchedulingInfo(
         appAttemptId, "test", queue, mock(ActiveUsersManager.class), 0,
-        new ResourceUsage(), new HashMap<>(), rmContext);
+        new ResourceUsage(), new HashMap<>(), rmContext, false);
     Assert.assertEquals(0, info.getSchedulerKeys().size());
 
     Priority pri1 = Priority.newInstance(1);

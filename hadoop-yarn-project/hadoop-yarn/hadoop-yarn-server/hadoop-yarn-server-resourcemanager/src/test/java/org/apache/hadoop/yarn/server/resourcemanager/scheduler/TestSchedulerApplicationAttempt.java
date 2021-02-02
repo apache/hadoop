@@ -126,7 +126,8 @@ public class TestSchedulerApplicationAttempt {
     when(rmContext.getYarnConfiguration()).thenReturn(conf);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
         user, oldQueue, oldQueue.getAbstractUsersManager(), rmContext);
-    oldMetrics.submitApp(user);
+    app.appSchedulingInfo.setUnmanagedAM(false);
+    oldMetrics.submitApp(user, false);
     
     // confirm that containerId is calculated based on epoch.
     assertEquals(0x30000000001L, app.getNewContainerId());

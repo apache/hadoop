@@ -851,7 +851,8 @@ public class CapacityScheduler extends
 
   private void addApplicationOnRecovery(ApplicationId applicationId,
       String queueName, String user,
-      Priority priority, ApplicationPlacementContext placementContext) {
+      Priority priority, ApplicationPlacementContext placementContext,
+      boolean isAppOnUAM) {
     writeLock.lock();
     try {
       //check if the queue needs to be auto-created during recovery
@@ -913,9 +914,11 @@ public class CapacityScheduler extends
         // Ignore the exception for recovered app as the app was previously
         // accepted.
       }
-      queue.getMetrics().submitApp(user);
+      queue.getMetrics().submitApp(user, isAppOnUAM);
+
       SchedulerApplication<FiCaSchedulerApp> application =
-          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority);
+          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority,
+              isAppOnUAM);
       applications.put(applicationId, application);
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName);
@@ -987,7 +990,7 @@ public class CapacityScheduler extends
 
   private void addApplication(ApplicationId applicationId, String queueName,
       String user, Priority priority,
-      ApplicationPlacementContext placementContext) {
+      ApplicationPlacementContext placementContext, boolean isAppOnUAM) {
     writeLock.lock();
     try {
       if (isSystemAppsLimitReached()) {
@@ -1091,9 +1094,10 @@ public class CapacityScheduler extends
         return;
       }
       // update the metrics
-      queue.getMetrics().submitApp(user);
+      queue.getMetrics().submitApp(user, isAppOnUAM);
       SchedulerApplication<FiCaSchedulerApp> application =
-          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority);
+          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority,
+              isAppOnUAM);
       applications.put(applicationId, application);
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName);
@@ -1946,11 +1950,11 @@ public class CapacityScheduler extends
         if (!appAddedEvent.getIsAppRecovering()) {
           addApplication(appAddedEvent.getApplicationId(), queueName,
               appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
-              appAddedEvent.getPlacementContext());
+              appAddedEvent.getPlacementContext(), appAddedEvent.isAppOnUAM());
         } else {
           addApplicationOnRecovery(appAddedEvent.getApplicationId(), queueName,
               appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
-              appAddedEvent.getPlacementContext());
+              appAddedEvent.getPlacementContext(), appAddedEvent.isAppOnUAM());
         }
       }
     }

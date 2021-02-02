@@ -44,6 +44,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetrics
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_PENDING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_RUNNING;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.APPS_SUBMITTED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_FAILED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_PENDING;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_RUNNING;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppMetricsChecker.AppMetricsKey.UNMANAGED_APPS_SUBMITTED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_CONTAINERS_ALLOCATED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_CONTAINERS_RELEASED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_CONTAINERS;
@@ -89,12 +93,12 @@ public class TestQueueMetrics {
     MetricsSource queueSource= queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(USER);
 
-    metrics.submitApp(USER);
+    metrics.submitApp(USER, false);
     MetricsSource userSource = userSource(ms, queueName, USER);
     AppMetricsChecker appMetricsChecker = AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
         .checkAgainst(queueSource, true);
-    metrics.submitAppAttempt(USER);
+    metrics.submitAppAttempt(USER, false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 1)
         .checkAgainst(queueSource, true);
@@ -111,7 +115,7 @@ public class TestQueueMetrics {
           .gaugeLong(PENDING_MB, 15 * GB).gaugeInt(PENDING_V_CORES, 15)
           .gaugeInt(PENDING_CONTAINERS, 5).checkAgainst(queueSource);
 
-    metrics.runAppAttempt(app.getApplicationId(), USER);
+    metrics.runAppAttempt(app.getApplicationId(), USER, false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 0)
         .gaugeInt(APPS_RUNNING, 1)
@@ -151,12 +155,12 @@ public class TestQueueMetrics {
         .checkAgainst(queueSource);
 
     metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
+        app.getApplicationId(), app.isPending(), app.getUser(), false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .counter(APPS_SUBMITTED, 1)
         .gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
-    metrics.finishApp(USER, RMAppState.FINISHED);
+    metrics.finishApp(USER, RMAppState.FINISHED, false);
     AppMetricsChecker.createFromChecker(appMetricsChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(queueSource, true);
@@ -172,36 +176,36 @@ public class TestQueueMetrics {
     MetricsSource queueSource = queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(USER);
 
-    metrics.submitApp(USER);
+    metrics.submitApp(USER, false);
     MetricsSource userSource = userSource(ms, queueName, USER);
     AppMetricsChecker appMetricsChecker = AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
         .checkAgainst(queueSource, true);
-    metrics.submitAppAttempt(USER);
+    metrics.submitAppAttempt(USER, false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 1)
         .checkAgainst(queueSource, true);
 
-    metrics.runAppAttempt(app.getApplicationId(), USER);
+    metrics.runAppAttempt(app.getApplicationId(), USER, false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 0)
         .gaugeInt(APPS_RUNNING, 1)
         .checkAgainst(queueSource, true);
 
     metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
+        app.getApplicationId(), app.isPending(), app.getUser(), false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
 
     // As the application has failed, framework retries the same application
     // based on configuration
-    metrics.submitAppAttempt(USER);
+    metrics.submitAppAttempt(USER, false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 1)
         .checkAgainst(queueSource, true);
 
-    metrics.runAppAttempt(app.getApplicationId(), USER);
+    metrics.runAppAttempt(app.getApplicationId(), USER, false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 0)
         .gaugeInt(APPS_RUNNING, 1)
@@ -209,19 +213,19 @@ public class TestQueueMetrics {
 
     // Suppose say application has failed this time as well.
     metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
+        app.getApplicationId(), app.isPending(), app.getUser(), false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
 
     // As the application has failed, framework retries the same application
     // based on configuration
-    metrics.submitAppAttempt(USER);
+    metrics.submitAppAttempt(USER, false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 1)
         .checkAgainst(queueSource, true);
 
-    metrics.runAppAttempt(app.getApplicationId(), USER);
+    metrics.runAppAttempt(app.getApplicationId(), USER, false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_PENDING, 0)
         .gaugeInt(APPS_RUNNING, 1)
@@ -229,15 +233,96 @@ public class TestQueueMetrics {
 
     // Suppose say application has failed, and there's no more retries.
     metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
+        app.getApplicationId(), app.isPending(), app.getUser(), false);
     appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_RUNNING, 0)
         .checkAgainst(queueSource, true);
 
-    metrics.finishApp(USER, RMAppState.FAILED);
+    metrics.finishApp(USER, RMAppState.FAILED, false);
     AppMetricsChecker.createFromChecker(appMetricsChecker)
         .gaugeInt(APPS_RUNNING, 0)
         .counter(APPS_FAILED, 1)
+        .checkAgainst(queueSource, true);
+
+    assertNull(userSource);
+  }
+
+  @Test
+  public void testQueueUnmanagedAppMetricsForMultipleFailures() {
+    String queueName = "single";
+
+    QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false,
+        new Configuration());
+    MetricsSource queueSource = queueSource(ms, queueName);
+    AppSchedulingInfo app = mockApp(USER);
+
+    // Submit an unmanaged Application.
+    metrics.submitApp(USER, true);
+    MetricsSource userSource = userSource(ms, queueName, USER);
+    AppMetricsChecker appMetricsChecker = AppMetricsChecker.create()
+        .counter(UNMANAGED_APPS_SUBMITTED, 1).counter(APPS_SUBMITTED, 1)
+        .checkAgainst(queueSource, true);
+    metrics.submitAppAttempt(USER, true);
+    appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_PENDING, 1).gaugeInt(APPS_PENDING, 1)
+        .checkAgainst(queueSource, true);
+
+    metrics.runAppAttempt(app.getApplicationId(), USER, true);
+    appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_PENDING, 0).gaugeInt(APPS_PENDING, 0)
+        .gaugeInt(UNMANAGED_APPS_RUNNING, 1).gaugeInt(APPS_RUNNING, 1)
+        .checkAgainst(queueSource, true);
+
+    metrics.finishAppAttempt(
+        app.getApplicationId(), app.isPending(), app.getUser(), true);
+    appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_RUNNING, 0).gaugeInt(APPS_RUNNING, 0)
+        .checkAgainst(queueSource, true);
+
+    // As the application has failed, framework retries the same application
+    // based on configuration
+    metrics.submitAppAttempt(USER, true);
+    appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_PENDING, 1).gaugeInt(APPS_PENDING, 1)
+        .checkAgainst(queueSource, true);
+
+    metrics.runAppAttempt(app.getApplicationId(), USER, true);
+    appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_PENDING, 0).gaugeInt(APPS_PENDING, 0)
+        .gaugeInt(UNMANAGED_APPS_RUNNING, 1).gaugeInt(APPS_RUNNING, 1)
+        .checkAgainst(queueSource, true);
+
+    // Suppose say application has failed this time as well.
+    metrics.finishAppAttempt(
+        app.getApplicationId(), app.isPending(), app.getUser(), true);
+    appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_RUNNING, 0).gaugeInt(APPS_RUNNING, 0)
+        .checkAgainst(queueSource, true);
+
+    // As the application has failed, framework retries the same application
+    // based on configuration
+    metrics.submitAppAttempt(USER, true);
+    appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_PENDING, 1).gaugeInt(APPS_PENDING, 1)
+        .checkAgainst(queueSource, true);
+
+    metrics.runAppAttempt(app.getApplicationId(), USER, true);
+    appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_PENDING, 0).gaugeInt(APPS_PENDING, 0)
+        .gaugeInt(UNMANAGED_APPS_RUNNING, 1).gaugeInt(APPS_RUNNING, 1)
+        .checkAgainst(queueSource, true);
+
+    // Suppose say application has failed, and there's no more retries.
+    metrics.finishAppAttempt(
+        app.getApplicationId(), app.isPending(), app.getUser(), true);
+    appMetricsChecker = AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_RUNNING, 0).gaugeInt(APPS_RUNNING, 0)
+        .checkAgainst(queueSource, true);
+
+    metrics.finishApp(USER, RMAppState.FAILED, true);
+    AppMetricsChecker.createFromChecker(appMetricsChecker)
+        .gaugeInt(UNMANAGED_APPS_RUNNING, 0).gaugeInt(APPS_RUNNING, 0)
+        .counter(UNMANAGED_APPS_FAILED, 1).counter(APPS_FAILED, 1)
         .checkAgainst(queueSource, true);
 
     assertNull(userSource);
@@ -252,7 +337,7 @@ public class TestQueueMetrics {
     MetricsSource queueSource = queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(USER_2);
 
-    metrics.submitApp(USER_2);
+    metrics.submitApp(USER_2, false);
     MetricsSource userSource = userSource(ms, queueName, USER_2);
 
     AppMetricsChecker appMetricsQueueSourceChecker = AppMetricsChecker.create()
@@ -262,7 +347,7 @@ public class TestQueueMetrics {
         .counter(APPS_SUBMITTED, 1)
         .checkAgainst(userSource, true);
 
-    metrics.submitAppAttempt(USER_2);
+    metrics.submitAppAttempt(USER_2, false);
     appMetricsQueueSourceChecker = AppMetricsChecker
         .createFromChecker(appMetricsQueueSourceChecker)
         .gaugeInt(APPS_PENDING, 1)
@@ -298,7 +383,7 @@ public class TestQueueMetrics {
             .gaugeInt(PENDING_CONTAINERS, 5)
             .checkAgainst(userSource);
 
-    metrics.runAppAttempt(app.getApplicationId(), USER_2);
+    metrics.runAppAttempt(app.getApplicationId(), USER_2, false);
     appMetricsQueueSourceChecker = AppMetricsChecker
         .createFromChecker(appMetricsQueueSourceChecker)
             .gaugeInt(APPS_PENDING, 0)
@@ -349,7 +434,7 @@ public class TestQueueMetrics {
             .checkAgainst(userSource);
 
     metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
+        app.getApplicationId(), app.isPending(), app.getUser(), false);
     appMetricsQueueSourceChecker =
         AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
             .gaugeInt(APPS_RUNNING, 0)
@@ -358,7 +443,7 @@ public class TestQueueMetrics {
         AppMetricsChecker.createFromChecker(appMetricsUserSourceChecker)
             .gaugeInt(APPS_RUNNING, 0)
             .checkAgainst(userSource, true);
-    metrics.finishApp(USER_2, RMAppState.FINISHED);
+    metrics.finishApp(USER_2, RMAppState.FINISHED, false);
     AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(queueSource, true);
@@ -382,7 +467,7 @@ public class TestQueueMetrics {
     MetricsSource queueSource = queueSource(ms, leafQueueName);
     //AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(USER);
+    metrics.submitApp(USER, false);
     MetricsSource userSource = userSource(ms, leafQueueName, USER);
     MetricsSource parentUserSource = userSource(ms, parentQueueName, USER);
 
@@ -417,7 +502,7 @@ public class TestQueueMetrics {
 
     QueueInfo root = new QueueInfo(null, "root", ms, conf, USER);
     QueueInfo leaf = new QueueInfo(root, "root.leaf", ms, conf, USER);
-    leaf.queueMetrics.submitApp(USER);
+    leaf.queueMetrics.submitApp(USER, false);
 
     AppMetricsChecker appMetricsQueueSourceChecker = AppMetricsChecker.create()
         .counter(APPS_SUBMITTED, 1)
@@ -434,7 +519,7 @@ public class TestQueueMetrics {
         .counter(APPS_SUBMITTED, 1)
         .checkAgainst(root.userSource, true);
 
-    leaf.queueMetrics.submitAppAttempt(USER);
+    leaf.queueMetrics.submitAppAttempt(USER, false);
     appMetricsQueueSourceChecker =
         AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .gaugeInt(APPS_PENDING, 1)
@@ -489,7 +574,7 @@ public class TestQueueMetrics {
           .gaugeLong(PENDING_MB, 15 * GB).gaugeInt(PENDING_V_CORES, 15)
           .gaugeInt(PENDING_CONTAINERS, 5).checkAgainst(root.userSource);
 
-    leaf.queueMetrics.runAppAttempt(app.getApplicationId(), USER);
+    leaf.queueMetrics.runAppAttempt(app.getApplicationId(), USER, false);
     appMetricsQueueSourceChecker =
         AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
             .gaugeInt(APPS_PENDING, 0)
@@ -603,7 +688,7 @@ public class TestQueueMetrics {
         .checkAgainst(root.userSource);
 
     leaf.queueMetrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
+        app.getApplicationId(), app.isPending(), app.getUser(), false);
     appMetricsQueueSourceChecker = AppMetricsChecker
         .createFromChecker(appMetricsQueueSourceChecker)
             .counter(APPS_SUBMITTED, 1)
@@ -627,7 +712,7 @@ public class TestQueueMetrics {
             .gaugeInt(APPS_RUNNING, 0)
             .checkAgainst(root.userSource, true);
 
-    leaf.queueMetrics.finishApp(USER, RMAppState.FINISHED);
+    leaf.queueMetrics.finishApp(USER, RMAppState.FINISHED, false);
     AppMetricsChecker.createFromChecker(appMetricsQueueSourceChecker)
         .counter(APPS_COMPLETED, 1)
         .checkAgainst(leaf.queueSource, true);

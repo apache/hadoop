@@ -405,7 +405,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       RMApp mockAPp =
           new MockRMApp(125, System.currentTimeMillis(), RMAppState.NEW);
       SchedulerApplication<FiCaSchedulerApp> application =
-          new SchedulerApplication<FiCaSchedulerApp>(null, mockAPp.getUser());
+          new SchedulerApplication<FiCaSchedulerApp>(null, mockAPp.getUser(),
+              false);
 
       // Second app with one app attempt
       RMApp app = MockRMAppSubmitter.submitWithMemory(200, rm1);

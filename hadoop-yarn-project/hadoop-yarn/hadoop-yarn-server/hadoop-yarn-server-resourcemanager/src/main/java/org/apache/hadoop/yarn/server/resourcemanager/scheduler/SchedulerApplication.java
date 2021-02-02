@@ -30,16 +30,20 @@ public class SchedulerApplication<T extends SchedulerApplicationAttempt> {
   private final String user;
   private volatile T currentAttempt;
   private volatile Priority priority;
+  private boolean isAppOnUAM;
 
-  public SchedulerApplication(Queue queue, String user) {
+  public SchedulerApplication(Queue queue, String user, boolean isAppOnUAM) {
     this.queue = queue;
     this.user = user;
+    this.isAppOnUAM = isAppOnUAM;
     this.priority = null;
   }
 
-  public SchedulerApplication(Queue queue, String user, Priority priority) {
+  public SchedulerApplication(Queue queue, String user, Priority priority,
+      boolean isAppOnUAM) {
     this.queue = queue;
     this.user = user;
+    this.isAppOnUAM = isAppOnUAM;
     this.priority = priority;
   }
 
@@ -64,7 +68,7 @@ public class SchedulerApplication<T extends SchedulerApplicationAttempt> {
   }
 
   public void stop(RMAppState rmAppFinalState) {
-    queue.getMetrics().finishApp(user, rmAppFinalState);
+    queue.getMetrics().finishApp(user, rmAppFinalState, isAppOnUAM());
   }
 
   public Priority getPriority() {
@@ -80,4 +84,7 @@ public class SchedulerApplication<T extends SchedulerApplicationAttempt> {
     }
   }
 
+  public boolean isAppOnUAM() {
+    return isAppOnUAM;
+  }
 }

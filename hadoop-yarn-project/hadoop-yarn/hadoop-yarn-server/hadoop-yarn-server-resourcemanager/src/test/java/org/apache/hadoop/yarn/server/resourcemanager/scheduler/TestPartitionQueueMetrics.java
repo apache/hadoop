@@ -86,8 +86,8 @@ public class TestPartitionQueueMetrics {
     QueueMetrics q2 =
         QueueMetrics.forQueue(ms, "root.q2", parentQueue, true, CONF);
 
-    q1.submitApp(user);
-    q1.submitAppAttempt(user);
+    q1.submitApp(user, false);
+    q1.submitAppAttempt(user, false);
 
     root.setAvailableResourcesToQueue("x",
         Resources.createResource(200 * GB, 200));
@@ -140,8 +140,8 @@ public class TestPartitionQueueMetrics {
         QueueMetrics.forQueue(ms, "root.q2", parentQueue, false, CONF);
 
     AppSchedulingInfo app = mockApp(user);
-    q1.submitApp(user);
-    q1.submitAppAttempt(user);
+    q1.submitApp(user, false);
+    q1.submitAppAttempt(user, false);
 
     root.setAvailableResourcesToQueue("x",
         Resources.createResource(200 * GB, 200));
@@ -414,8 +414,8 @@ public class TestPartitionQueueMetrics {
         QueueMetrics.forQueue(ms, leafQueueName, parentQueue, true, CONF);
     AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(user);
-    metrics.submitAppAttempt(user);
+    metrics.submitApp(user, false);
+    metrics.submitAppAttempt(user, false);
 
     parentMetrics.setAvailableResourcesToQueue(partition,
         Resources.createResource(100 * GB, 100));
@@ -447,7 +447,7 @@ public class TestPartitionQueueMetrics {
     checkResources(partitionSource, 0, 0, 0, 0, 0, 100 * GB, 100, 18 * GB, 18,
         6, 0, 0, 0);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.runAppAttempt(app.getApplicationId(), user, false);
 
     metrics.allocateResources(partition, user, 3,
         Resources.createResource(1 * GB, 1), true);
@@ -491,9 +491,9 @@ public class TestPartitionQueueMetrics {
         0, 0, 0);
 
     metrics.finishAppAttempt(app.getApplicationId(), app.isPending(),
-        app.getUser());
+        app.getUser(), false);
 
-    metrics.finishApp(user, RMAppState.FINISHED);
+    metrics.finishApp(user, RMAppState.FINISHED, false);
   }
 
   @Test
@@ -519,8 +519,8 @@ public class TestPartitionQueueMetrics {
         QueueMetrics.forQueue(leafQueueName1, leafQueue, true, CONF);
     AppSchedulingInfo app = mockApp(user);
 
-    metrics1.submitApp(user);
-    metrics1.submitAppAttempt(user);
+    metrics1.submitApp(user, false);
+    metrics1.submitAppAttempt(user, false);
 
     parentMetrics.setAvailableResourcesToQueue(partitionX,
         Resources.createResource(200 * GB, 200));
@@ -615,9 +615,9 @@ public class TestPartitionQueueMetrics {
         0, 0);
 
     metrics1.finishAppAttempt(app.getApplicationId(), app.isPending(),
-        app.getUser());
+        app.getUser(), false);
 
-    metrics1.finishApp(user, RMAppState.FINISHED);
+    metrics1.finishApp(user, RMAppState.FINISHED, false);
   }
 
   /**
@@ -650,8 +650,8 @@ public class TestPartitionQueueMetrics {
 
     AppSchedulingInfo app = mockApp(user);
 
-    q1.submitApp(user);
-    q1.submitAppAttempt(user);
+    q1.submitApp(user, false);
+    q1.submitAppAttempt(user, false);
 
     root.setAvailableResourcesToQueue("x",
         Resources.createResource(200 * GB, 200));
@@ -680,8 +680,9 @@ public class TestPartitionQueueMetrics {
     checkResources(q2Source, 0, 0, 0, 0, 0, 3 * GB, 3, 3);
     checkResources(q2UserSource, 0, 0, 0, 0, 0, 3 * GB, 3, 3);
 
-    q1.finishAppAttempt(app.getApplicationId(), app.isPending(), app.getUser());
-    q1.finishApp(user, RMAppState.FINISHED);
+    q1.finishAppAttempt(app.getApplicationId(), app.isPending(), app.getUser(),
+        false);
+    q1.finishApp(user, RMAppState.FINISHED, false);
   }
 
   public static MetricsSource partitionSource(MetricsSystem ms,

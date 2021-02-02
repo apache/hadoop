@@ -389,11 +389,12 @@ public class FifoScheduler extends
 
   @VisibleForTesting
   public synchronized void addApplication(ApplicationId applicationId,
-      String queue, String user, boolean isAppRecovering) {
+      String queue, String user, boolean isAppRecovering, boolean isAppOnUAM) {
     SchedulerApplication<FifoAppAttempt> application =
-        new SchedulerApplication<>(DEFAULT_QUEUE, user);
+        new SchedulerApplication<>(DEFAULT_QUEUE, user, isAppOnUAM);
     applications.put(applicationId, application);
-    metrics.submitApp(user);
+
+    metrics.submitApp(user, isAppOnUAM);
     LOG.info("Accepted application " + applicationId + " from user: " + user
         + ", currently num of applications: " + applications.size());
     if (isAppRecovering) {
@@ -424,7 +425,8 @@ public class FifoScheduler extends
     }
     application.setCurrentAppAttempt(schedulerApp);
 
-    metrics.submitAppAttempt(user);
+    metrics.submitAppAttempt(user, application.isAppOnUAM());
+
     LOG.info("Added Application Attempt " + appAttemptId
         + " to scheduler from user " + application.getUser());
     if (isAttemptRecovering) {
@@ -768,8 +770,8 @@ public class FifoScheduler extends
     {
       AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
       addApplication(appAddedEvent.getApplicationId(),
-        appAddedEvent.getQueue(), appAddedEvent.getUser(),
-        appAddedEvent.getIsAppRecovering());
+          appAddedEvent.getQueue(), appAddedEvent.getUser(),
+          appAddedEvent.getIsAppRecovering(), appAddedEvent.isAppOnUAM());
     }
     break;
     case APP_REMOVED:
