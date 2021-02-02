@@ -18,14 +18,21 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -461,7 +468,28 @@ public class TestCapacitySchedulerNewQueueAutoCreation
             "for auto queue creation",
         ((ParentQueue)empty).isEligibleForAutoQueueCreation());
   }
-  
+
+  @Test
+  public void testAutoQueueCreationWithDisabledMappingRules() throws Exception {
+    startScheduler();
+
+    ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+    // Set ApplicationPlacementContext to null in the submitted application
+    // in order to imitate a submission with mapping rules turned off
+    SchedulerEvent addAppEvent = new AppAddedSchedulerEvent(appId,
+        "root.a.a1-auto.a2-auto", USER0, null);
+    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+        appId, 1);
+    SchedulerEvent addAttemptEvent = new AppAttemptAddedSchedulerEvent(
+        appAttemptId, false);
+    cs.handle(addAppEvent);
+    cs.handle(addAttemptEvent);
+
+    CSQueue a2Auto = cs.getQueue("root.a.a1-auto.a2-auto");
+    Assert.assertNotNull(a2Auto);
+  }
+
+  @Test
   public void testAutoCreateQueueUserLimitDisabled() throws Exception {
     startScheduler();
     createBasicQueueStructureAndValidate();

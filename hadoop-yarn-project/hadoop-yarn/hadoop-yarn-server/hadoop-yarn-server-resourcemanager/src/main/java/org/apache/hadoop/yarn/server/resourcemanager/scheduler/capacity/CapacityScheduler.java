@@ -932,12 +932,26 @@ public class CapacityScheduler extends
       boolean isRecovery) {
 
     CSQueue queue = getQueue(queueName);
+    ApplicationPlacementContext fallbackContext = placementContext;
 
     if (queue == null) {
-      if (placementContext != null && placementContext.hasParentQueue()) {
+      // Even if placement rules are turned off, we still have the opportunity
+      // to auto create a queue.
+      if (placementContext == null) {
+        fallbackContext = CSQueueUtils.extractQueuePath(queueName);
+      }
+      if (fallbackContext.hasParentQueue()) {
         try {
-          return autoCreateLeafQueue(placementContext);
+          return autoCreateLeafQueue(fallbackContext);
         } catch (YarnException | IOException e) {
+          // A null queue is expected if the placementContext is null. In order
+          // not to disrupt the control flow, if we fail to auto create a queue,
+          // we fall back to the original logic.
+          if (placementContext == null) {
+            LOG.error("Could not auto-create leaf queue " + queueName +
+                " due to : ", e);
+            return null;
+          }
           if (isRecovery) {
             if (!getConfiguration().shouldAppFailFast(getConfig())) {
               LOG.error("Could not auto-create leaf queue " + queueName +
