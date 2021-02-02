@@ -59,9 +59,12 @@ public class TempUserPerPartition extends AbstractPreemptionEntity {
         .append(idealAssigned).append(" USED_WO_AMUSED: ")
         .append(getUsedDeductAM()).append(" IDEAL_PREEMPT: ")
         .append(toBePreempted).append(" ACTUAL_PREEMPT: ")
-        .append(getActuallyToBePreempted()).append("\n");
+        .append(getActuallyToBePreempted());
+    if(getFairShare() != null) {
+      sb.append(" FAIR-SHARE: ").append(getFairShare());
+    }
 
-    return sb.toString();
+    return sb.append("\n").toString();
   }
 
   public String getUserName() {

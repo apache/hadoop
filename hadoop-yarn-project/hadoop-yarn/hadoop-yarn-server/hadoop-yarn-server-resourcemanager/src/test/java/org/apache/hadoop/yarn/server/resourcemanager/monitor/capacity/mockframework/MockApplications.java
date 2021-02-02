@@ -143,6 +143,7 @@ class MockApplications {
           users = userMap.get(queue.getQueuePath());
         }
         when(queue.getAllUsers()).thenReturn(users);
+        when(queue.getUserLimit()).thenReturn(mulp * 100f);
         Resource userLimit = calculateUserLimit(resourceCalculator, mulp, capacity,
             users);
         LOG.debug("Updating user-limit from mock: toResourcePartition="

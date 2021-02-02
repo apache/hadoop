@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -205,50 +206,48 @@ public class FifoIntraQueuePreemptionPlugin
    * to the amount of resources allocated to a user.
    * Following is the calculation used:
    *
-   *    fairSharePerApp = total Queue Cap / no: of apps
+   *  foreach user:
+   *    fairSharePerApp = total Queue Cap / no: of apps of that user
    *    idealFairSharePerAppwithUL = UL / no: of apps of that user
    *
    *    if(UserLimitPercent < 100)
    *      fairSharePerApp = idealFairSharePerAppwithUL
    *
    * Using above formula,
-   * we firstly ensure all the apps in the queue get equal resources.
-   * However, if any user would be hitting their userlimit,
+   * we ensure all the apps of a user get equal resources.
+   * If any user would be hitting their userlimit,
    * then we try and ensure all apps for that user
    * have fairness within their UserLimit.
    * @param tq tempQueuePerPartition being considered
    */
   private void setFairShareForApps(TempQueuePerPartition tq,
       Resource queueReassignableResource) {
-    int numOfAppsInQueue = tq.leafQueue.getAllApplications().size();
-    Resource fairShareAcrossApps = Resources.none();
-
-    if(numOfAppsInQueue > 0) {
-      fairShareAcrossApps = Resources.divideAndCeil(
-          this.rc, queueReassignableResource, numOfAppsInQueue);
-    }
-
     for(TempUserPerPartition tmpUser : tq.getUsersPerPartition().values()){
+      Resource fairSharePerApp;
+      Resource fairShareForCurrUser;
       int numOfAppsInUser = tmpUser.getApps().size();
       Resource userLimitWithAmUsed = Resources.add(
           tmpUser.getUserLimit(), tmpUser.getAMUsed());
-      Resource fairShareWithinUL = Resources.divideAndCeil(
-          this.rc, userLimitWithAmUsed, numOfAppsInUser);
+
+      fairShareForCurrUser = tq.leafQueue.getUserLimit() == 100 ?
+          queueReassignableResource : userLimitWithAmUsed;
+      tmpUser.setFairShare(fairShareForCurrUser);
+
+      fairSharePerApp = Resources.divideAndCeil(
+          rc, tmpUser.getFairShare(), numOfAppsInUser);
+
+      fairSharePerApp =
+          Resources.componentwiseMax(fairSharePerApp, Resources.none());
 
       for(TempAppPerPartition tmpApp : tmpUser.getApps()) {
-        Resource fairShareForApp = tq.leafQueue.getUserLimit() == 100 ?
-          fairShareAcrossApps : fairShareWithinUL;
+        tmpApp.setFairShare(fairSharePerApp);
 
-        fairShareForApp =
-            Resources.componentwiseMax(fairShareForApp, Resources.none());
-        tmpApp.setFairShare(fairShareForApp);
-
-        LOG.debug("App: " + tmpApp.getApplicationId()
+        LOG.debug("For app: " + tmpApp.getApplicationId()
             + " from user: " + tmpUser.getUserName()
-            + ", FairShareAcrossApps: " + fairShareAcrossApps
-            + ", fairShareWithinUL: " + fairShareWithinUL
-            + ", num_of_apps for user: " + numOfAppsInUser
-            + ". Calculated FairShare for app is: " + tmpApp.getFairShare());
+            + ", queueResources: " + queueReassignableResource
+            + ", UserLimit: " + userLimitWithAmUsed
+            + ", Num_of_apps for user: " + numOfAppsInUser
+            + ". Calculated FairShare per app is: " + tmpApp.getFairShare());
       }
     }
   }
@@ -694,40 +693,89 @@ public class FifoIntraQueuePreemptionPlugin
     for(int starvedAppInd = apps.length-1; starvedAppInd>=0; starvedAppInd--) {
       TempAppPerPartition starvedApp = apps[starvedAppInd];
 
-      for(TempAppPerPartition overfedApp : apps) {
-        if(overfedApp == starvedApp) {
-          continue;
-        }
+      // 1. Check if starved app can get resources from other overfed apps.
+      // Stay within the user's fair share.
+      markResourcesToBePreemptedForApp(starvedApp, Arrays.asList(apps),
+          clusterResource, true);
 
-        Resource preemptForStarved = starvedApp.getToBePreemptFromOther();
-        if(Resources.lessThanOrEqual(
-            rc, clusterResource, preemptForStarved, Resources.none())) {
-          break;
-        }
-
-        Resource preemptFromOverfed =
-            Resources.subtractNonNegative(overfedApp.toBePreempted,
-                overfedApp.getActuallyToBePreempted());
-        if(Resources.lessThanOrEqual(
-            rc, clusterResource, preemptFromOverfed, Resources.none())) {
-          continue;
-        }
-
-
-        Resource preempt = Resources.min(rc, clusterResource,
-            preemptFromOverfed, preemptForStarved);
-
-        LOG.debug("Marking:  " + preempt
-            + " resources which can be preempted from " + overfedApp
-            + " to " + starvedApp);
-
-        starvedApp.setToBePreemptFromOther(
-            Resources.subtractNonNegative(
-                starvedApp.getToBePreemptFromOther(), preempt));
-
-        overfedApp.setActuallyToBePreempted(
-            Resources.add(overfedApp.getActuallyToBePreempted(), preempt));
+      // 2. Check if starved app is still starving.
+      Resource preemptForStarved = starvedApp.getToBePreemptFromOther();
+      if (Resources.lessThanOrEqual(
+          rc, clusterResource, preemptForStarved, Resources.none())) {
+        continue;
       }
+
+      // 3. Check overfed apps from starved app's user with relaxed UL check.
+      markResourcesToBePreemptedForApp(starvedApp,
+          starvedApp.getTempUserPerPartition().getApps(),
+          clusterResource, false);
+    }
+
+
+  }
+
+  private void markResourcesToBePreemptedForApp(TempAppPerPartition starvedApp,
+      Collection<TempAppPerPartition> overfedApps,
+      Resource clusterResource, boolean checkUserFS) {
+    for (TempAppPerPartition overfedApp : overfedApps) {
+      if (overfedApp == starvedApp) {
+        continue;
+      }
+
+      // 1. Check how much resources we require for the starved app.
+      Resource preemptForStarved = starvedApp.getToBePreemptFromOther();
+      if (Resources.lessThanOrEqual(
+          rc, clusterResource, preemptForStarved, Resources.none())) {
+        break;
+      }
+
+      // 2. Check how much resources we can get from the overfed app.
+      Resource preemptFromOverfed =
+          Resources.subtractNonNegative(overfedApp.toBePreempted,
+              overfedApp.getActuallyToBePreempted());
+      if (Resources.lessThanOrEqual(
+          rc, clusterResource, preemptFromOverfed, Resources.none())) {
+        continue;
+      }
+
+      // 3. Take min of starved and overfed app resources.
+      Resource preempt = Resources.min(rc, clusterResource,
+          preemptFromOverfed, preemptForStarved);
+
+      // 4. Check if overfed user can spare resources.
+      TempUserPerPartition overfedUser = overfedApp.getTempUserPerPartition();
+      if(checkUserFS) {
+        Resource preemptFromOverfedUser = Resources.subtractNonNegative(
+            overfedUser.getUsed(), overfedUser.getFairShare());
+        Resources.subtractFromNonNegative(preemptFromOverfedUser,
+            overfedUser.getActuallyToBePreempted());
+
+        if (Resources.lessThanOrEqual(
+            rc, clusterResource, preemptFromOverfedUser, Resources.none())) {
+          continue;
+        }
+
+        // 5. Take min of app and user preemptable resources.
+        preempt = Resources.min(rc, clusterResource,
+            preempt, preemptFromOverfedUser);
+
+        preempt = Resources.componentwiseMax(preempt, Resources.none());
+      }
+
+      LOG.debug("Marking:  " + preempt
+          + " resources which can be preempted from " + overfedApp
+          + " to " + starvedApp
+          + " . Overfed user stats: " + overfedUser);
+
+      starvedApp.setToBePreemptFromOther(
+          Resources.subtractNonNegative(
+              starvedApp.getToBePreemptFromOther(), preempt));
+
+      overfedApp.setActuallyToBePreempted(
+          Resources.add(overfedApp.getActuallyToBePreempted(), preempt));
+
+      overfedUser.setActuallyToBePreempted(
+          Resources.add(overfedUser.getActuallyToBePreempted(), preempt));
     }
   }
 
