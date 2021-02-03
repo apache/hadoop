@@ -79,7 +79,7 @@
   outside synchronized block since the same is costly. -->
   <Match>
     <Class name="org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator" />
-    <Method name="addNextBatchIteratorToQueue" />
+    <Field name="continuation" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
 
