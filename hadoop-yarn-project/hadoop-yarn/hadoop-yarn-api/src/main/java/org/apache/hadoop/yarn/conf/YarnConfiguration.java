@@ -712,6 +712,14 @@ public class YarnConfiguration extends Configuration {
   public static final float
       DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR = 1.0f;
 
+  /**
+   * Number of consecutive missed heartbeats after which node will be
+   * skipped from scheduling.
+   */
+  public static final String SCHEDULER_SKIP_NODE_MULTIPLIER =
+      YARN_PREFIX + "scheduler.skip.node.multiplier";
+  public static final int DEFAULT_SCHEDULER_SKIP_NODE_MULTIPLIER = 2;
+
   /** Number of worker threads that write the history data. */
   public static final String RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
       RM_PREFIX + "history-writer.multi-threaded-dispatcher.pool-size";
@@ -4749,6 +4757,20 @@ public class YarnConfiguration extends Configuration {
   public static boolean numaAwarenessEnabled(Configuration conf) {
     return conf.getBoolean(NM_NUMA_AWARENESS_ENABLED,
         DEFAULT_NM_NUMA_AWARENESS_ENABLED);
+  }
+
+  /**
+   * Returns Timeout to skip node from scheduling if not heartbeated.
+   * @param conf the configuration
+   * @return timeout in milliseconds.
+   */
+  public static long getSkipNodeInterval(Configuration conf) {
+    long heartbeatIntvl = conf.getLong(
+         YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
+         YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
+    int multiplier = conf.getInt(SCHEDULER_SKIP_NODE_MULTIPLIER,
+        DEFAULT_SCHEDULER_SKIP_NODE_MULTIPLIER);
+    return multiplier * heartbeatIntvl;
   }
 
   /* For debugging. mp configurations to system output as XML format. */
