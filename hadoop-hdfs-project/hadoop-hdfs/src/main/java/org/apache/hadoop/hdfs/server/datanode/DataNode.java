@@ -1445,7 +1445,7 @@ public class DataNode extends ReconfigurableBase
 
     if (dnConf.diskStatsEnabled) {
       diskMetrics = new DataNodeDiskMetrics(this,
-          dnConf.outliersReportIntervalMs);
+          dnConf.outliersReportIntervalMs, getConf());
     }
   }
 
