@@ -130,6 +130,33 @@ public class TestCapacitySchedulerAsyncScheduling {
     testAsyncContainerAllocation(2);
   }
 
+  @Test(timeout = 300000)
+  public void testAsyncThreadNames() throws Exception{
+    conf.setInt(
+            CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
+            1);
+    conf.setInt(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
+            + ".scheduling-interval-ms", 0);
+    final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
+    mgr.init(conf);
+
+    // inject node label manager
+    MockRM rm = new MockRM(TestUtils.getConfigurationWithMultipleQueues(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    for (CapacityScheduler.AsyncScheduleThread thread: cs.asyncSchedulerThreads) {
+      Assert.assertTrue(thread.getName().startsWith("AsyncCapacitySchedulerThread"));
+    }
+  }
+
   public void testAsyncContainerAllocation(int numThreads) throws Exception {
     conf.setInt(
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
@@ -186,8 +213,6 @@ public class TestCapacitySchedulerAsyncScheduling {
       ams.get(i).allocate("*", 1024, 20 * (i + 1), new ArrayList<>());
       totalAsked += 20 * (i + 1) * GB;
     }
-    //test name of thread
-    Assert.assertEquals(testThreadName(Thread.currentThread().getName(), "CapacitySchedulerThread", Thread.currentThread().getClass().toString()), true);
     // Wait for at most 15000 ms
     int waitTime = 15000; // ms
     while (waitTime > 0) {
@@ -1119,14 +1144,5 @@ public class TestCapacitySchedulerAsyncScheduling {
           ContainerId.newContainerId(am.getApplicationAttemptId(), cId),
           RMContainerState.RUNNING);
     }
-  }
-  public boolean testThreadName(String a, String b, String threadClass){
-    if(threadClass.endsWith("$AsyncScheduleThread")){
-      if(a.startsWith(b))
-        return true;
-      else
-        return false;
-    }
-    return true;
   }
 }
