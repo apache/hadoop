@@ -112,27 +112,27 @@ public class TestOrderedSnapshotDeletionGc {
     hdfs.deleteSnapshot(snapshottableDir, "s2");
     assertNotMarkedAsDeleted(s0path, cluster);
     assertNotMarkedAsDeleted(s1path, cluster);
-    assertMarkedAsDeleted(s2path, cluster);
+    assertMarkedAsDeleted(s2path, snapshottableDir, cluster);
 
     hdfs.deleteSnapshot(snapshottableDir, "s1");
     assertNotMarkedAsDeleted(s0path, cluster);
-    assertMarkedAsDeleted(s1path, cluster);
-    assertMarkedAsDeleted(s2path, cluster);
+    assertMarkedAsDeleted(s1path, snapshottableDir, cluster);
+    assertMarkedAsDeleted(s2path, snapshottableDir, cluster);
 
     // should not be gc'ed
     Thread.sleep(10*GC_PERIOD);
     assertNotMarkedAsDeleted(s0path, cluster);
-    assertMarkedAsDeleted(s1path, cluster);
-    assertMarkedAsDeleted(s2path, cluster);
+    assertMarkedAsDeleted(s1path, snapshottableDir, cluster);
+    assertMarkedAsDeleted(s2path, snapshottableDir, cluster);
 
     hdfs.deleteSnapshot(snapshottableDir, "s0");
     Assert.assertFalse(exist(s0path, hdfs));
 
     waitForGc(Arrays.asList(s1path, s2path), hdfs);
     // total no of edit log records created for delete snapshot will be equal
-    // to sum of no of user deleted snapshots and no of snapshots gc'ed with
-    // snapshotDeletion gc thread
-    doEditLogValidation(cluster, 5);
+    // to sum of no of user deleted distinct snapshots
+    // and no of snapshots gc'ed with snapshotDeletion gc thread
+    doEditLogValidation(cluster, 4);
   }
 
   static void doEditLogValidation(MiniDFSCluster cluster,

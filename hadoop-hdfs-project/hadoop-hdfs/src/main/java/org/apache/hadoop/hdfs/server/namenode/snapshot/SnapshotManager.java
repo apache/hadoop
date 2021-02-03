@@ -66,16 +66,17 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Manage snapshottable directories and their snapshots.
- * 
+ *
  * This class includes operations that create, access, modify snapshots and/or
  * snapshot-related data. In general, the locking structure of snapshot
  * operations is: <br>
- * 
+ *
  * 1. Lock the {@link FSNamesystem} lock in {@link FSNamesystem} before calling
  * into {@link SnapshotManager} methods.<br>
  * 2. Lock the {@link FSDirectory} lock for the {@link SnapshotManager} methods
@@ -133,7 +134,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   private int snapshotCounter = 0;
   private final int maxSnapshotLimit;
   private final int maxSnapshotFSLimit;
-  
+
   /** All snapshottable directories in the namesystem. */
   private final Map<Long, INodeDirectory> snapshottables =
       new ConcurrentHashMap<>();
@@ -258,7 +259,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
     addSnapshottable(d);
   }
-  
+
   /** Add the given snapshottable directory to {@link #snapshottables}. */
   public void addSnapshottable(INodeDirectory dir) {
     Preconditions.checkArgument(dir.isSnapshottable());
@@ -269,7 +270,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   private void removeSnapshottable(INodeDirectory s) {
     snapshottables.remove(s.getId());
   }
-  
+
   /** Remove snapshottable directories from {@link #snapshottables} */
   public void removeSnapshottable(List<INodeDirectory> toRemove) {
     if (toRemove != null) {
@@ -281,7 +282,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
 
   /**
    * Set the given snapshottable directory to non-snapshottable.
-   * 
+   *
    * @throws SnapshotException if there are snapshots in the directory.
    */
   public void resetSnapshottable(final String path) throws IOException {
@@ -461,7 +462,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     int n = numSnapshots.get();
     checkFileSystemSnapshotLimit(n);
     srcRoot.addSnapshot(this, snapshotName, leaseManager, mtime);
-      
+
     //create success, update id
     snapshotCounter++;
     numSnapshots.getAndIncrement();
@@ -502,8 +503,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * @param now is the snapshot deletion time set by Time.now().
    * @param reclaimContext Used to collect information to reclaim blocks
    *                       and inodes
+   * @return true, if actual snapshot gets deleted or marked for deletion
+   *         , false otherwise
    */
-  public void deleteSnapshot(final INodesInPath iip, final String snapshotName,
+  public boolean deleteSnapshot(final INodesInPath iip, final String snapshotName,
       INode.ReclaimContext reclaimContext, long now) throws IOException {
     final INodeDirectory srcRoot = getSnapshottableRoot(iip);
     if (isSnapshotDeletionOrdered()) {
@@ -515,32 +518,41 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       // Diffs must be not empty since a snapshot exists in the list
       final int earliest = snapshottable.getDiffs().getFirst().getSnapshotId();
       if (snapshot.getId() != earliest) {
-        final XAttr snapshotXAttr = buildXAttr();
-        final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
-        xattrs.add(snapshotXAttr);
+        if (!snapshot.getRoot().isMarkedAsDeleted()) {
+          final XAttr snapshotXAttr = buildXAttr();
+          final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+          xattrs.add(snapshotXAttr);
 
-        // The snapshot to be deleted is just marked for deletion in the xAttr.
-        // Same snaphot delete call can happen multiple times until and unless
-        // the very 1st instance of a snapshot delete hides it/remove it from
-        // snapshot list. XAttrSetFlag.REPLACE needs to be set to here in order
-        // to address this.
+          // The snapshot to be deleted is just marked for deletion in the xAttr.
+          // Same snaphot delete call can happen multiple times until and unless
+          // the very 1st instance of a snapshot delete hides it/remove it from
+          // snapshot list. XAttrSetFlag.REPLACE needs to be set to here in order
+          // to address this.
 
-        // XAttr will set on the snapshot root directory
-        // NOTE : This function is directly called while replaying the edit
-        // logs.While replaying the edit logs we need to mark the snapshot
-        // deleted in the xattr of the snapshot root.
-        FSDirXAttrOp.unprotectedSetXAttrs(fsdir,
-            INodesInPath.append(iip, snapshot.getRoot(),
-                DFSUtil.string2Bytes(snapshotName)), xattrs,
-            EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
-        return;
+          // XAttr will set on the snapshot root directory
+          // NOTE : This function is directly called while replaying the edit
+          // logs.While replaying the edit logs we need to mark the snapshot
+          // deleted in the xattr of the snapshot root.
+          FSDirXAttrOp.unprotectedSetXAttrs(fsdir, INodesInPath
+                  .append(iip, snapshot.getRoot(),
+                      DFSUtil.string2Bytes(snapshotName)), xattrs,
+              EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+          // Rename the snapshot getting marked deleted
+          renameSnapshot(iip, srcRoot.getFullPathName(), snapshotName,
+              Snapshot.generateDeletedSnapshotName(snapshot), Time.now());
+          return true;
+        } else {
+          // If the snapshot is not the earliest and is already marked deleted,
+          // nothing to do here.
+          return false;
+        }
       }
-
       assertFirstSnapshot(srcRoot, snapshottable, snapshot);
     }
 
     srcRoot.removeSnapshot(reclaimContext, snapshotName, now, this);
     numSnapshots.getAndDecrement();
+    return true;
   }
 
   /**
