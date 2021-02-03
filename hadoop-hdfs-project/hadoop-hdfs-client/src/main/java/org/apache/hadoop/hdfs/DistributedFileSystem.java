@@ -51,6 +51,8 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.IORenameStatistic;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.InvalidPathHandleException;
 import org.apache.hadoop.fs.PartialListing;
 import org.apache.hadoop.fs.MultipartUploaderBuilder;
@@ -964,6 +966,26 @@ public class DistributedFileSystem extends FileSystem
         }
       }.resolve(this, absDst);
     }
+  }
+
+  protected List<String> getBatchPathName(List<String> files) {
+    List<String> ret = new ArrayList<>();
+    for(String f :  files) {
+      ret.add(getPathName(new Path(f)));
+    }
+    return ret;
+  }
+
+  @Override
+  public IORenameStatistic batchRename(List<String> srcs, List<String> dsts,
+                                       final Options.Rename... options) throws IOException {
+    if (srcs.size() != dsts.size()) {
+      throw new InvalidPathException("mismatch batch path src: " +
+          String.join(",", srcs) + " dst: " + String.join(",", dsts));
+    }
+    statistics.incrementWriteOps(1);
+    dfs.batchRename(getBatchPathName(srcs), getBatchPathName(dsts));
+    return new IORenameStatistic();
   }
 
   @Override

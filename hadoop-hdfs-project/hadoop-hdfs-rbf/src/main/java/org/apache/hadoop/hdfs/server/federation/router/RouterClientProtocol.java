@@ -642,6 +642,12 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public void batchRename(String[] srcs, String[] dsts,
+                          Options.Rename... options) throws IOException {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public void concat(String trg, String[] src) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 

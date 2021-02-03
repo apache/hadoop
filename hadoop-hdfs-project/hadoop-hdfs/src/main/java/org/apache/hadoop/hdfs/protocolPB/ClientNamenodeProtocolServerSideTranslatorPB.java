@@ -92,6 +92,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowS
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.BatchRenameRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.BatchRenameResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteRequestProto;
@@ -357,6 +359,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   private static final Rename2ResponseProto VOID_RENAME2_RESPONSE = 
   Rename2ResponseProto.newBuilder().build();
+
+  private static final BatchRenameResponseProto VOID_BATCHRENAME_RESPONSE =
+      BatchRenameResponseProto.newBuilder().build();
 
   private static final GetListingResponseProto VOID_GETLISTING_RESPONSE = 
   GetListingResponseProto.newBuilder().build();
@@ -710,6 +715,32 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }   
     return VOID_RENAME2_RESPONSE;
+  }
+
+  @Override
+  public BatchRenameResponseProto batchRename(RpcController controller,
+      BatchRenameRequestProto req) throws ServiceException {
+    // resolve rename options
+    ArrayList<Rename> optionList = new ArrayList<Rename>();
+    if(req.getOverwriteDest()) {
+      optionList.add(Rename.OVERWRITE);
+    }
+    if (req.hasMoveToTrash() && req.getMoveToTrash()) {
+      optionList.add(Rename.TO_TRASH);
+    }
+
+    if(optionList.isEmpty()) {
+      optionList.add(Rename.NONE);
+    }
+    List<String> srcs = req.getSrcsList();
+    List<String> dsts = req.getDstsList();
+    try {
+      server.batchRename(
+          srcs, dsts, optionList.toArray(new Rename[optionList.size()]));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_BATCHRENAME_RESPONSE;
   }
 
   @Override

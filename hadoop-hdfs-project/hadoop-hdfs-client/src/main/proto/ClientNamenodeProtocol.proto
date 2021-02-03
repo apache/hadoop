@@ -257,6 +257,16 @@ message Rename2RequestProto {
 message Rename2ResponseProto { // void response
 }
 
+message BatchRenameRequestProto {
+  repeated string srcs = 1;
+  repeated string dsts = 2;
+  required bool overwriteDest = 3;
+  optional bool moveToTrash = 4;
+}
+
+message BatchRenameResponseProto {
+}
+
 message DeleteRequestProto {
   required string src = 1;
   required bool recursive = 2;
@@ -904,6 +914,7 @@ service ClientNamenodeProtocol {
   rpc truncate(TruncateRequestProto) returns(TruncateResponseProto);
   rpc rename(RenameRequestProto) returns(RenameResponseProto);
   rpc rename2(Rename2RequestProto) returns(Rename2ResponseProto);
+  rpc batchRename(BatchRenameRequestProto) returns(BatchRenameResponseProto);
   rpc delete(DeleteRequestProto) returns(DeleteResponseProto);
   rpc mkdirs(MkdirsRequestProto) returns(MkdirsResponseProto);
   rpc getListing(GetListingRequestProto) returns(GetListingResponseProto);

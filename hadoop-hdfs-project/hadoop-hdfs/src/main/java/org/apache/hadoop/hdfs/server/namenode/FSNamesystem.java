@@ -97,6 +97,7 @@ import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
+import org.apache.hadoop.hdfs.protocol.BatchRenameException;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
@@ -3293,6 +3294,113 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     logAuditEvent(true, operationName + " (options=" +
         Arrays.toString(options) + ")", src, dst, res.auditStat);
+  }
+
+  class RenameInfo {
+    private String src;
+    private String dst;
+    private FSDirRenameOp.RenameResult ret;
+
+    RenameInfo(String src, String dst) throws InvalidPathException {
+      this.src = src;
+      this.dst = dst;
+
+      if (!DFSUtil.isValidName(dst)) {
+        throw new InvalidPathException("Invalid name: " + dst);
+      }
+      this.ret = null;
+    }
+
+    String getSrc() {
+      return src;
+    }
+
+    String getDst(){
+      return dst;
+    }
+
+    void setResult(FSDirRenameOp.RenameResult r) {
+      this.ret =  r;
+    }
+
+    public void logAudit() throws IOException {
+      if (ret != null) {
+        logAuditEvent(true, "rename", src, dst, ret.auditStat);
+      } else {
+        logAuditEvent(false, "rename", src, dst, null);
+      }
+    }
+  }
+
+  /** Batch rename src to dst. */
+  void batchRename(List<String>  srcs, List<String>  dsts,
+                   boolean logRetryCache, Options.Rename... options)
+      throws IOException {
+    final String operationName = "batchRename";
+    FSDirRenameOp.RenameResult res = null;
+    checkOperation(OperationCategory.WRITE);
+    final FSPermissionChecker pc = getPermissionChecker();
+    FSPermissionChecker.setOperationType(operationName);
+
+    List<RenameInfo> infos = new ArrayList<>();
+    for (int i = 0; i < srcs.size(); i++) {
+      infos.add(new RenameInfo(srcs.get(i), dsts.get(i)));
+    }
+    BatchRenameException breakException = null;
+    int cnt = 0;
+    try {
+      writeLock();
+      try {
+        checkOperation(OperationCategory.WRITE);
+        checkNameNodeSafeMode("Cannot rename " + String.join(",", srcs));
+        for (RenameInfo info : infos) {
+          try {
+            res = FSDirRenameOp.renameToInt(dir, pc, info.getSrc(),
+                info.getDst(), logRetryCache, options);
+            info.setResult(res);
+            cnt++;
+          } catch (IOException ioe) {
+            if (cnt > 0) {
+              breakException = new BatchRenameException(cnt, infos.size(), ioe);
+              break;
+            } else {
+              throw ioe;
+            }
+          }
+        }
+      } finally {
+        FileStatus status = res != null ? res.auditStat : null;
+        writeUnlock(operationName,
+            getLockReportInfoSupplier(String.join(",", srcs),
+                String.join(",", dsts), status));
+      }
+    } catch (AccessControlException e) {
+      logAuditEvent(false, operationName + " (options=" +
+              Arrays.toString(options) + ")",
+          String.join(",", srcs), String.join(",", dsts), null);
+      throw e;
+    }
+    getEditLog().logSync();
+    assert res != null;
+    BlocksMapUpdateInfo collectedBlocks = res.collectedBlocks;
+    if (!collectedBlocks.getToDeleteList().isEmpty()) {
+      removeBlocks(collectedBlocks);
+      collectedBlocks.clear();
+    }
+    int recordNum = cnt;
+    for (RenameInfo info : infos) {
+      if (recordNum < 0) {
+        break;
+      }
+      recordNum--;
+      info.logAudit();
+    }
+    if (breakException != null) {
+      LOG.warn("batchRename "+ cnt + "/" + infos.size() + " success. from " +
+              String.join(",", srcs) + " to " + String.join(",", dsts),
+          breakException);
+      throw breakException;
+    }
   }
 
   /**

@@ -60,6 +60,7 @@ public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
     SETQUOTA(false, HttpURLConnection.HTTP_OK),
     SETQUOTABYSTORAGETYPE(false, HttpURLConnection.HTTP_OK),
 
+    BATCH_RENAME(false, HttpURLConnection.HTTP_OK),
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 
     final boolean doOutputAndRedirect;

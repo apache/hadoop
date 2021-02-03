@@ -105,6 +105,7 @@ import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchRenameException;
 import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -1608,6 +1609,27 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           SnapshotAccessControlException.class);
     }
   }
+
+  /**
+   * Rename a batch files or directories.
+   * @see ClientProtocol#batchRename(List<String>, List<String>,
+   * Options.Rename...)
+   */
+  public void batchRename(List<String> srcs, List<String> dsts,
+      Options.Rename... options) throws IOException {
+    checkOpen();
+    try {
+      namenode.batchRename(srcs, dsts, options);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          NSQuotaExceededException.class,
+          DSQuotaExceededException.class,
+          UnresolvedPathException.class,
+          SnapshotAccessControlException.class,
+          BatchRenameException.class);
+    }
+  }
+
 
   /**
    * Truncate a file to an indicated size

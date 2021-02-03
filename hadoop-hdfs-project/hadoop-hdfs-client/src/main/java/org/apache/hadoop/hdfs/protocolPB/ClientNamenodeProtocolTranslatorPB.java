@@ -104,6 +104,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddCac
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.BatchRenameRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteRequestProto;
@@ -635,6 +636,33 @@ public class ClientNamenodeProtocolTranslatorPB implements
       throw ProtobufHelper.getRemoteException(e);
     }
 
+  }
+
+  @Override
+  public void batchRename(List<String> srcs, List<String> dsts,
+      Rename... options) throws IOException {
+    boolean overwrite = false;
+    boolean toTrash = false;
+    if (options != null) {
+      for (Rename option : options) {
+        if (option == Rename.OVERWRITE) {
+          overwrite = true;
+        }
+        if (option == Rename.TO_TRASH) {
+          toTrash = true;
+        }
+      }
+    }
+    BatchRenameRequestProto req = BatchRenameRequestProto.newBuilder()
+        .addAllSrcs(srcs)
+        .addAllDsts(dsts)
+        .setOverwriteDest(overwrite)
+        .setMoveToTrash(toTrash).build();
+    try {
+      rpcProxy.batchRename(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
   @Override

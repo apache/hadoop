@@ -28,6 +28,7 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.EnumSet;
@@ -732,6 +733,15 @@ public class NamenodeWebHdfsMethods {
             s.toArray(new Options.Rename[s.size()]));
         return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
       }
+    }
+    case BATCH_RENAME:
+    {
+      validateOpParams(op, destination);
+      final EnumSet<Options.Rename> s = renameOptions.getValue();
+      cp.batchRename(Arrays.asList(fullpath.split(":")),
+          Arrays.asList(destination.getValue().split(":")),
+          s.toArray(new Options.Rename[s.size()]));
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case SETREPLICATION:
     {

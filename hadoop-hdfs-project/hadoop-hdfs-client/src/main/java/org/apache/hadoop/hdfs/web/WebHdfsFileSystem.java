@@ -46,7 +46,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -63,7 +62,6 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
@@ -76,9 +74,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.IORenameStatistic;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.QuotaUsage;
-import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.impl.FileSystemMultipartUploaderBuilder;
@@ -139,8 +138,6 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-
-import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
@@ -1197,6 +1194,36 @@ public class WebHdfsFileSystem extends FileSystem
         new DestinationParam(makeQualified(dst).toUri().getPath()),
         new RenameOptionSetParam(options)
     ).run();
+  }
+
+  protected List<String> getBatchPathName(List<String> files)
+      throws IOException{
+    List<String> ret = new ArrayList<>();
+    for(String f :  files) {
+      if(!f.startsWith(Path.SEPARATOR)) {
+        throw new InvalidPathException("Path is not absolute! " + f);
+      }
+      ret.add(makeQualified(new Path(f)).toUri().getPath());
+    }
+    return ret;
+  }
+
+  @Override
+  public IORenameStatistic batchRename(List<String> srcs, List<String> dsts,
+        final Options.Rename... options) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.BATCH_RENAME);
+    final HttpOpParam.Op op = PutOpParam.Op.BATCH_RENAME;
+    if (srcs.size() != dsts.size()) {
+      throw new InvalidPathException("mismatch batch path src: " +
+          String.join(",", srcs) + " dst: " + String.join(",", dsts));
+    }
+    new FsPathRunner(op,
+        new Path(StringUtils.join(":", getBatchPathName(srcs))),
+        new DestinationParam(StringUtils.join(":", getBatchPathName(dsts))),
+        new RenameOptionSetParam(options)
+    ).run();
+    return new IORenameStatistic();
   }
 
   @Override
