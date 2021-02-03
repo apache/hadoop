@@ -33,6 +33,7 @@ public interface ListingSupport {
   /**
    * @param path The list path.
    * @return the entries in the path.
+   * @throws IOException in case of error
    */
   FileStatus[] listStatus(Path path) throws IOException;
 
@@ -49,6 +50,7 @@ public interface ListingSupport {
    *                  (Path("/folder"), "cfile") will return
    *                  "/folder/hfile" and "/folder/ifile".
    * @return the entries in the path start from  "startFrom" in lexical order.
+   * @throws IOException in case of error
    */
   FileStatus[] listStatus(Path path, String startFrom) throws IOException;
 
@@ -70,7 +72,7 @@ public interface ListingSupport {
    *                     result.
    * @param continuation Contiuation token. null means start rom the begining.
    * @return Continuation tokem
-   * @throws IOException
+   * @throws IOException in case of error
    */
   String listStatus(Path path, String startFrom, List<FileStatus> fileStatuses,
       boolean fetchAll, String continuation) throws IOException;
