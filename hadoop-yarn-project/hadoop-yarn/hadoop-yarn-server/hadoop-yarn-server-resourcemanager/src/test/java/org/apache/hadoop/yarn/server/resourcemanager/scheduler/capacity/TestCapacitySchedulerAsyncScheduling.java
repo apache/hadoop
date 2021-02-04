@@ -131,28 +131,28 @@ public class TestCapacitySchedulerAsyncScheduling {
   }
 
   @Test(timeout = 300000)
-  public void testAsyncThreadNames() throws Exception{
+  public void testAsyncThreadNames() throws Exception {
     conf.setInt(
-            CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
-            1);
+        CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
+        1);
     conf.setInt(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
-            + ".scheduling-interval-ms", 0);
-    final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
-    mgr.init(conf);
+        + ".scheduling-interval-ms", 0);
+    final RMNodeLabelsManager mg = new NullRMNodeLabelsManager();
+    mg.init(conf);
 
     // inject node label manager
     MockRM rm = new MockRM(TestUtils.getConfigurationWithMultipleQueues(conf)) {
       @Override
       public RMNodeLabelsManager createNodeLabelManager() {
-        return mgr;
+        return mg;
       }
     };
 
-    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.getRMContext().setNodeLabelManager(mg);
     rm.start();
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    for (CapacityScheduler.AsyncScheduleThread thread: cs.asyncSchedulerThreads) {
+    for (CapacityScheduler.AsyncScheduleThread thread : cs.asyncSchedulerThreads) {
       Assert.assertTrue(thread.getName().startsWith("AsyncCapacitySchedulerThread"));
     }
   }
