@@ -786,7 +786,7 @@ public class DataNode extends ReconfigurableBase
           String mount = df.getMount();
           if (data.getMountVolumeMap().hasMount(mount)) {
             String errMsg = "Disk mount " + mount
-                + " already have volume, when trying to add "
+                + " already has volume, when trying to add "
                 + location + ". Please try removing mounts first" +
                 " or restart datanode.";
             LOG.error(errMsg);

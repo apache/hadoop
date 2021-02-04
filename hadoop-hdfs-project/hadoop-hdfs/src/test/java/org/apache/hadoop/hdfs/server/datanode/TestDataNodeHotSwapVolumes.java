@@ -1165,7 +1165,7 @@ public class TestDataNodeHotSwapVolumes {
       fail("Adding mount should fail.");
     } catch (Exception e) {
       assertTrue(e.getCause()
-          .getLocalizedMessage().contains("already have volumes"));
+          .getLocalizedMessage().contains("already has volume"));
     }
 
   }
