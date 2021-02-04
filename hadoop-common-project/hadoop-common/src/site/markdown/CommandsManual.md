@@ -240,10 +240,6 @@ Usage: `hadoop kms`
 
 Run KMS, the Key Management Server.
 
-### `trace`
-
-View and modify Hadoop tracing settings. See the [Tracing Guide](./Tracing.html).
-
 ### `version`
 
 Usage: `hadoop version`
