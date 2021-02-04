@@ -2524,7 +2524,7 @@ public class TestDistributedFileSystem {
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
-     DistributedFileSystem dfs = cluster.getFileSystem();
+      DistributedFileSystem dfs = cluster.getFileSystem();
       final Path testDir = new Path("/disallowss/test2/");
       final Path file0path = new Path(testDir, "file-0");
       dfs.create(file0path).close();
