@@ -103,7 +103,8 @@ public class TestOrderedSnapshotDeletion {
     final String snapName =
         getDeletedSnapshotName(cluster.getFileSystem(), snapshottableDir,
             snapshotRoot.getName());
-    final Path snapPathNew = SnapshotTestHelper.getSnapshotRoot(snapshottableDir, snapName);
+    final Path snapPathNew =
+        SnapshotTestHelper.getSnapshotRoot(snapshottableDir, snapName);
     Assert.assertFalse(snapPathNew.equals(snapshotRoot));
     // Check if the path exists
     Assert.assertNotNull(cluster.getFileSystem().getFileStatus(snapPathNew));
@@ -154,7 +155,8 @@ public class TestOrderedSnapshotDeletion {
     assertMarkedAsDeleted(snapshotRoot, snapshottableDir, cluster);
     // Check xAttr for parent directory
     snapName = getDeletedSnapshotName(hdfs, snapshottableDir, snapshot);
-    snapshotRoot = SnapshotTestHelper.getSnapshotRoot(snapshottableDir, snapName);
+    snapshotRoot =
+        SnapshotTestHelper.getSnapshotRoot(snapshottableDir, snapName);
     // Make sure its not user visible
     if (cluster.getNameNode().getConf().getBoolean(DFSConfigKeys.
             DFS_NAMENODE_XATTRS_ENABLED_KEY,

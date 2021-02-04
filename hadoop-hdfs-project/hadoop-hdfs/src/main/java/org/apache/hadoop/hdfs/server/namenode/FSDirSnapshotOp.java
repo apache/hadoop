@@ -280,8 +280,9 @@ class FSDirSnapshotOp {
       throws IOException {
     INode.BlocksMapUpdateInfo collectedBlocks = new INode.BlocksMapUpdateInfo();
     ChunkedArrayList<INode> removedINodes = new ChunkedArrayList<>();
-    INode.ReclaimContext context = new INode.ReclaimContext(fsd.getBlockStoragePolicySuite(),
-        collectedBlocks, removedINodes, null);
+    INode.ReclaimContext context =
+        new INode.ReclaimContext(fsd.getBlockStoragePolicySuite(),
+            collectedBlocks, removedINodes, null);
     fsd.writeLock();
     boolean shouldRecord;
     try {
