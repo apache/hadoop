@@ -152,8 +152,10 @@ public class TestCapacitySchedulerAsyncScheduling {
     rm.start();
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-    for (CapacityScheduler.AsyncScheduleThread thread : cs.asyncSchedulerThreads) {
-      Assert.assertTrue(thread.getName().startsWith("AsyncCapacitySchedulerThread"));
+    for (CapacityScheduler
+        .AsyncScheduleThread thread : cs.asyncSchedulerThreads) {
+      Assert.assertTrue(thread.getName()
+          .startsWith("AsyncCapacitySchedulerThread"));
     }
   }
 
