@@ -275,6 +275,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
   private long sasTokenRenewPeriodForStreamsInSeconds;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_ABFS_LIST_ITERATOR, DefaultValue = DEFAULT_ENABLE_ABFS_LIST_ITERATOR)
+  private boolean enableAbfsListIterator;
+
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -896,6 +900,10 @@ public class AbfsConfiguration{
     return this.maxWriteRequestsToQueue;
   }
 
+  public boolean enableAbfsListIterator() {
+    return this.enableAbfsListIterator;
+  }
+
   @VisibleForTesting
   void setReadBufferSize(int bufferSize) {
     this.readBufferSize = bufferSize;
@@ -959,6 +967,11 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setOptimizeFooterRead(boolean optimizeFooterRead) {
     this.optimizeFooterRead = optimizeFooterRead;
+  }
+
+  @VisibleForTesting
+  public void setEnableAbfsListIterator(boolean enableAbfsListIterator) {
+    this.enableAbfsListIterator = enableAbfsListIterator;
   }
 
 }
