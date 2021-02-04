@@ -46,6 +46,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
+import org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -79,6 +81,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
@@ -981,6 +984,19 @@ public class AzureBlobFileSystem extends FileSystem {
   public boolean exists(Path f) throws IOException {
     statIncrement(CALL_EXIST);
     return super.exists(f);
+  }
+
+  @Override
+  public RemoteIterator<FileStatus> listStatusIterator(Path path)
+      throws IOException {
+    LOG.debug("AzureBlobFileSystem.listStatusIterator path : {}", path);
+    if (abfsStore.getAbfsConfiguration().enableAbfsListIterator()) {
+      AbfsListStatusRemoteIterator abfsLsItr =
+          new AbfsListStatusRemoteIterator(getFileStatus(path), abfsStore);
+      return RemoteIterators.typeCastingRemoteIterator(abfsLsItr);
+    } else {
+      return super.listStatusIterator(path);
+    }
   }
 
   private FileStatus tryGetFileStatus(final Path f) {
