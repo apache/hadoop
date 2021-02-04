@@ -193,7 +193,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  MountVolumeMap getMountVolumeMap() {
+  @Override
+  public MountVolumeMap getMountVolumeMap() {
     return volumes.getMountVolumeMap();
   }
 

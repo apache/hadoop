@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentMap;
  * we don't configure multiple volumes with same storage type on one mount.
  */
 @InterfaceAudience.Private
-class MountVolumeMap {
+public class MountVolumeMap {
   private final ConcurrentMap<String, MountVolumeInfo>
       mountVolumeMapping;
   private final Configuration conf;
@@ -105,5 +105,9 @@ class MountVolumeMap {
                 + " ratio of on same disk mount should be <= 1");
       }
     }
+  }
+
+  public boolean hasMount(String mount) {
+    return mountVolumeMapping.containsKey(mount);
   }
 }
