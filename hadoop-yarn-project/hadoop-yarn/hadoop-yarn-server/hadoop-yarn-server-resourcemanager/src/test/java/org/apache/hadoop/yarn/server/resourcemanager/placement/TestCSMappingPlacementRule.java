@@ -467,7 +467,7 @@ public class TestCSMappingPlacementRule {
     assertTrue("Rule's match value should be bob",
         ruleStr.contains("value='bob'"));
     assertTrue("Rule's action should be place to queue", ruleStr.contains(
-        "action=PlaceToQueueAction{queueName='%primary_group'}"));
+        "action=PlaceToQueueAction{queueName='%primary_group'"));
   }
 
   @Test

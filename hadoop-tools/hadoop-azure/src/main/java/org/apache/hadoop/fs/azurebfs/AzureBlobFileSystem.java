@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.AccessDeniedException;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
@@ -48,6 +49,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
+import org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -83,6 +86,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
@@ -1008,6 +1012,19 @@ public class AzureBlobFileSystem extends FileSystem {
     return super.exists(f);
   }
 
+  @Override
+  public RemoteIterator<FileStatus> listStatusIterator(Path path)
+      throws IOException {
+    LOG.debug("AzureBlobFileSystem.listStatusIterator path : {}", path);
+    if (abfsStore.getAbfsConfiguration().enableAbfsListIterator()) {
+      AbfsListStatusRemoteIterator abfsLsItr =
+          new AbfsListStatusRemoteIterator(getFileStatus(path), abfsStore);
+      return RemoteIterators.typeCastingRemoteIterator(abfsLsItr);
+    } else {
+      return super.listStatusIterator(path);
+    }
+  }
+
   private FileStatus tryGetFileStatus(final Path f) {
     try {
       return getFileStatus(f);
@@ -1142,7 +1159,8 @@ public class AzureBlobFileSystem extends FileSystem {
    * @param allowedErrorCodesList varargs list of error codes.
    * @throws IOException if the exception error code is not on the allowed list.
    */
-  private void checkException(final Path path,
+  @VisibleForTesting
+  static void checkException(final Path path,
                               final AzureBlobFileSystemException exception,
                               final AzureServiceErrorCode... allowedErrorCodesList) throws IOException {
     if (exception instanceof AbfsRestOperationException) {
@@ -1151,16 +1169,21 @@ public class AzureBlobFileSystem extends FileSystem {
       if (ArrayUtils.contains(allowedErrorCodesList, ere.getErrorCode())) {
         return;
       }
-      int statusCode = ere.getStatusCode();
-
       //AbfsRestOperationException.getMessage() contains full error info including path/uri.
-      if (statusCode == HttpURLConnection.HTTP_NOT_FOUND) {
-        throw (IOException) new FileNotFoundException(ere.getMessage())
+      String message = ere.getMessage();
+
+      switch (ere.getStatusCode()) {
+      case HttpURLConnection.HTTP_NOT_FOUND:
+        throw (IOException) new FileNotFoundException(message)
             .initCause(exception);
-      } else if (statusCode == HttpURLConnection.HTTP_CONFLICT) {
-        throw (IOException) new FileAlreadyExistsException(ere.getMessage())
+      case HttpURLConnection.HTTP_CONFLICT:
+        throw (IOException) new FileAlreadyExistsException(message)
             .initCause(exception);
-      } else {
+      case HttpURLConnection.HTTP_FORBIDDEN:
+      case HttpURLConnection.HTTP_UNAUTHORIZED:
+        throw (IOException) new AccessDeniedException(message)
+            .initCause(exception);
+      default:
         throw ere;
       }
     } else if (exception instanceof SASTokenProviderException) {

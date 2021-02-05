@@ -2431,6 +2431,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws  IOException
    */
   void setStoragePolicy(String src, String policyName) throws IOException {
+    if (policyName.equalsIgnoreCase(
+            HdfsConstants.ALLNVDIMM_STORAGE_POLICY_NAME)) {
+      requireEffectiveLayoutVersionForFeature(Feature.NVDIMM_SUPPORT);
+    }
     final String operationName = "setStoragePolicy";
     checkOperation(OperationCategory.WRITE);
     checkStoragePolicyEnabled("set storage policy", true);
@@ -3571,6 +3575,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (type != null) {
       requireEffectiveLayoutVersionForFeature(Feature.QUOTA_BY_STORAGE_TYPE);
     }
+    if (type == StorageType.NVDIMM) {
+      requireEffectiveLayoutVersionForFeature(Feature.NVDIMM_SUPPORT);
+    }
     checkOperation(OperationCategory.WRITE);
     final String operationName = getQuotaCommand(nsQuota, ssQuota);
     final FSPermissionChecker pc = getPermissionChecker();
@@ -4087,14 +4094,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void renewLease(String holder) throws IOException {
     checkOperation(OperationCategory.WRITE);
-    readLock();
-    try {
-      checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Cannot renew lease for " + holder);
-      leaseManager.renewLease(holder);
-    } finally {
-      readUnlock("renewLease");
-    }
+    checkNameNodeSafeMode("Cannot renew lease for " + holder);
+    // fsn is not mutated so lock is not required.  the leaseManger is also
+    // thread-safe.
+    leaseManager.renewLease(holder);
   }
 
   /**

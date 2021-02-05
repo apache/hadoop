@@ -708,16 +708,33 @@ public class LeafQueue extends AbstractCSQueue {
           queueCapacities.getMaxAMResourcePercentage(nodePartition)
               * effectiveUserLimit * usersManager.getUserLimitFactor(),
           minimumAllocation);
+
+      if (getUserLimitFactor() == -1) {
+        userAMLimit = Resources.multiplyAndNormalizeUp(
+            resourceCalculator, queuePartitionResource,
+            queueCapacities.getMaxAMResourcePercentage(nodePartition),
+            minimumAllocation);
+      }
+
       userAMLimit =
           Resources.min(resourceCalculator, lastClusterResource,
               userAMLimit,
               Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
 
-      Resource preWeighteduserAMLimit = Resources.multiplyAndNormalizeUp(
+      Resource preWeighteduserAMLimit =
+          Resources.multiplyAndNormalizeUp(
           resourceCalculator, queuePartitionResource,
           queueCapacities.getMaxAMResourcePercentage(nodePartition)
               * preWeightedUserLimit * usersManager.getUserLimitFactor(),
           minimumAllocation);
+
+      if (getUserLimitFactor() == -1) {
+        preWeighteduserAMLimit = Resources.multiplyAndNormalizeUp(
+            resourceCalculator, queuePartitionResource,
+            queueCapacities.getMaxAMResourcePercentage(nodePartition),
+            minimumAllocation);
+      }
+
       preWeighteduserAMLimit =
           Resources.min(resourceCalculator, lastClusterResource,
               preWeighteduserAMLimit,
@@ -1896,9 +1913,14 @@ public class LeafQueue extends AbstractCSQueue {
       maxApplications =
           (int) (maxSystemApps * queueCapacities.getAbsoluteCapacity());
     }
-    maxApplicationsPerUser = Math.min(maxApplications,
+    maxApplicationsPerUser =
+        Math.min(maxApplications,
         (int) (maxApplications * (usersManager.getUserLimit() / 100.0f)
             * usersManager.getUserLimitFactor()));
+
+    if (getUserLimitFactor() == -1) {
+      maxApplicationsPerUser = maxApplications;
+    }
   }
 
   @Override

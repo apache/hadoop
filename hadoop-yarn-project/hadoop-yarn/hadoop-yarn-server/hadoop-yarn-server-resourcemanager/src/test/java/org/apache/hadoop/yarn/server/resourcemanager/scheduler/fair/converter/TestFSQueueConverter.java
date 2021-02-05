@@ -335,6 +335,35 @@ public class TestFSQueueConverter {
   }
 
   @Test
+  public void testAutoCreateV2FlagsInWeightMode() {
+    converter = builder.withPercentages(false).build();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    assertTrue("root autocreate v2 flag",
+        csConfig.getBoolean(
+            PREFIX + "root.auto-queue-creation-v2.enabled", false));
+    assertTrue("root.admins autocreate v2 flag",
+        csConfig.getBoolean(
+            PREFIX + "root.admins.auto-queue-creation-v2.enabled", false));
+    assertTrue("root.users autocreate v2 flag",
+        csConfig.getBoolean(
+            PREFIX + "root.users.auto-queue-creation-v2.enabled", false));
+    assertTrue("root.misc autocreate v2 flag",
+        csConfig.getBoolean(
+            PREFIX + "root.misc.auto-queue-creation-v2.enabled", false));
+
+    Set<String> leafs = Sets.difference(ALL_QUEUES,
+        Sets.newHashSet("root",
+            "root.default",
+            "root.admins",
+            "root.users",
+            "root.misc"));
+    assertNoValueForQueues(leafs, "auto-queue-creation-v2.enabled",
+        csConfig);
+  }
+
+  @Test
   public void testZeroSumCapacityValidation() {
     converter = builder.withPercentages(true).build();
 

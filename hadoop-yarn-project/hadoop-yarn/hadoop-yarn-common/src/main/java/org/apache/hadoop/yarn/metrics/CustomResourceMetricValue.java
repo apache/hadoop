@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
+package org.apache.hadoop.yarn.metrics;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -29,26 +29,26 @@ import java.util.function.BiFunction;
  * the name of the custom resource.
  * There are different kinds of values like allocated, available and others.
  */
-public class QueueMetricsCustomResource {
+public class CustomResourceMetricValue {
   private final Map<String, Long> values = Maps.newHashMap();
 
-  protected void increase(Resource res) {
+  public void increase(Resource res) {
     update(res, Long::sum);
   }
 
-  void increaseWithMultiplier(Resource res, long multiplier) {
+  public void increaseWithMultiplier(Resource res, long multiplier) {
     update(res, (v1, v2) -> v1 + v2 * multiplier);
   }
 
-  protected void decrease(Resource res) {
+  public void decrease(Resource res) {
     update(res, (v1, v2) -> v1 - v2);
   }
 
-  void decreaseWithMultiplier(Resource res, int containers) {
+  public void decreaseWithMultiplier(Resource res, int containers) {
     update(res, (v1, v2) -> v1 - v2 * containers);
   }
 
-  protected void set(Resource res) {
+  public void set(Resource res) {
     update(res, (v1, v2) -> v2);
   }
 
@@ -64,8 +64,7 @@ public class QueueMetricsCustomResource {
         if (!values.containsKey(resource.getName())) {
           values.put(resource.getName(), 0L);
         }
-        values.merge(resource.getName(),
-            resource.getValue(), operation);
+        values.merge(resource.getName(), resource.getValue(), operation);
       }
     }
   }

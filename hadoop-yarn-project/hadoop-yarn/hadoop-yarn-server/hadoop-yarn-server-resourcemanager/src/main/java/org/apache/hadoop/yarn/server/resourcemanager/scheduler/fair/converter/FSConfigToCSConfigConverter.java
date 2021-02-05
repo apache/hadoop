@@ -339,6 +339,7 @@ public class FSConfigToCSConfigConverter {
 
       capacitySchedulerConfig.set(MAPPING_RULE_FORMAT,
           MAPPING_RULE_FORMAT_JSON);
+      capacitySchedulerConfig.setOverrideWithQueueMappings(true);
       if (!rulesToFile) {
         String json =
             ((ByteArrayOutputStream)mappingRulesOutputStream)

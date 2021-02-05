@@ -135,7 +135,7 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
       Map<NodeId, SchedulerNode> nodesByPartition = new HashMap<>();
       List<SchedulerNode> nodes = ((AbstractYarnScheduler) rmContext
           .getScheduler()).getNodeTracker().getNodesPerPartition(label);
-      if (nodes != null && !nodes.isEmpty()) {
+      if (nodes != null) {
         nodes.forEach(n -> nodesByPartition.put(n.getNodeID(), n));
         multiNodePolicy.addAndRefreshNodesSet(
             (Collection<N>) nodesByPartition.values(), label);

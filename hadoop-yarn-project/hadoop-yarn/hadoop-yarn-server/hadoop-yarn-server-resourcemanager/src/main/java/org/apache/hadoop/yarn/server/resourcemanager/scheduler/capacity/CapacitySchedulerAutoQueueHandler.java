@@ -31,14 +31,11 @@ import java.util.List;
  */
 public class CapacitySchedulerAutoQueueHandler {
   private final CapacitySchedulerQueueManager queueManager;
-  private final CapacitySchedulerConfiguration conf;
   private static final int MAXIMUM_DEPTH_ALLOWED = 2;
 
   public CapacitySchedulerAutoQueueHandler(
-      CapacitySchedulerQueueManager queueManager,
-      CapacitySchedulerConfiguration conf) {
+      CapacitySchedulerQueueManager queueManager) {
     this.queueManager = queueManager;
-    this.conf = conf;
   }
 
   /**

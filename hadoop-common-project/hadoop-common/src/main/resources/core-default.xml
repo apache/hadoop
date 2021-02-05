@@ -1873,11 +1873,9 @@
 
 <property>
   <name>fs.s3a.committer.magic.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
-    Enable support in the filesystem for the S3 "Magic" committer.
-    When working with AWS S3, S3Guard must be enabled for the destination
-    bucket, as consistent metadata listings are required.
+    Enable support in the S3A filesystem for the "Magic" committer.
   </description>
 </property>
 
@@ -2847,7 +2845,7 @@
   <value>${user.home}/hadoop-http-auth-signature-secret</value>
   <description>
     The signature secret for signing the authentication tokens.
-    The same secret should be used for RM/NM/NN/DN configurations.
+    A different secret should be used for each service.
   </description>
 </property>
 

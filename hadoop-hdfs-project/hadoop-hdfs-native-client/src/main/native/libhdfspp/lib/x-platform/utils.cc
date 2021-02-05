@@ -15,28 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.tracing;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.tracing.SpanReceiverInfo.ConfigurationPair;
+#include "x-platform/utils.h"
 
-@InterfaceAudience.Public
-@InterfaceStability.Stable
-public class SpanReceiverInfoBuilder {
-  private SpanReceiverInfo info;
+#include <filesystem>
+#include <string>
+#include <vector>
 
-  public SpanReceiverInfoBuilder(String className) {
-    info = new SpanReceiverInfo(0, className);
+std::string XPlatform::Utils::Basename(const std::string& file_path) {
+  if (file_path.empty()) {
+    return ".";
   }
 
-  public void addConfigurationPair(String key, String value) {
-    info.configPairs.add(new ConfigurationPair(key, value));
+  const std::filesystem::path path(file_path);
+  std::vector<std::string> parts;
+  for (const auto& part : std::filesystem::path(file_path)) {
+    parts.emplace_back(part.string());
   }
 
-  public SpanReceiverInfo build() {
-    SpanReceiverInfo ret = info;
-    info = null;
-    return ret;
+  /* Handle the case of trailing slash */
+  if (parts.back().empty()) {
+    parts.pop_back();
   }
+  return parts.back();
 }

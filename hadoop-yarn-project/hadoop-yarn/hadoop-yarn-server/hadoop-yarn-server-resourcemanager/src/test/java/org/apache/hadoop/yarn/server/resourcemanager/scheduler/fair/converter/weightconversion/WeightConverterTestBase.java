@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -44,12 +45,15 @@ public abstract class WeightConverterTestBase {
       queues.add(queue);
     }
 
-    FSQueue root = mock(FSQueue.class);
+    return createParent(queues);
+  }
+
+  protected FSParentQueue createParent(List<FSQueue> children) {
+    FSParentQueue root = mock(FSParentQueue.class);
     when(root.getWeight()).thenReturn(1.0f);
     when(root.getName()).thenReturn("root");
     when(root.getMinShare()).thenReturn(Resources.none());
-    when(root.getChildQueues()).thenReturn(queues);
-
+    when(root.getChildQueues()).thenReturn(children);
     return root;
   }
 }

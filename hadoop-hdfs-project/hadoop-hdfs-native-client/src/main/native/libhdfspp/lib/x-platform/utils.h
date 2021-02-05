@@ -16,23 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.tracing;
+#ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_UTILS
+#define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_UTILS
 
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.tracing.TraceAdminPB.TraceAdminService;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.security.KerberosInfo;
+#include <string>
 
-@KerberosInfo(
-    serverPrincipal=CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
-@ProtocolInfo(
-    protocolName = "org.apache.hadoop.tracing.TraceAdminPB.TraceAdminService",
-    protocolVersion = 1)
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface TraceAdminProtocolPB extends
-    TraceAdminService.BlockingInterface, VersionedProtocol {
-}
+/**
+ * The {@link XPlatform} namespace contains components that
+ * aid in writing cross-platform code.
+ */
+namespace XPlatform {
+class Utils {
+ public:
+  /**
+   * A cross-platform implementation of basename in linux.
+   * Please refer https://www.man7.org/linux/man-pages/man3/basename.3.html
+   * for more details.
+   *
+   * @param file_path The input path to get the basename.
+   *
+   * @returns The trailing component of the given {@link file_path}
+   */
+  static std::string Basename(const std::string& file_path);
+};
+}  // namespace XPlatform
+
+#endif

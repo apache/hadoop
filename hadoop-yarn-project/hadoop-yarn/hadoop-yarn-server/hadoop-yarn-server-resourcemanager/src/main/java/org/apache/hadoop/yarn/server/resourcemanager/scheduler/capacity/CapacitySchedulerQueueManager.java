@@ -238,14 +238,21 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     boolean isReservableQueue = conf.isReservable(fullQueueName);
     boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(
         fullQueueName);
+    // if a queue is eligible for auto queue creation v2
+    // it must be a ParentQueue (even if it is empty)
+    boolean isAutoQueueCreationV2Enabled = conf.isAutoQueueCreationV2Enabled(
+        fullQueueName);
     boolean isDynamicParent = false;
 
+    // Auto created parent queues might not have static children, but they
+    // must be kept as a ParentQueue
     CSQueue oldQueue = oldQueues.get(fullQueueName);
     if (oldQueue instanceof ParentQueue) {
       isDynamicParent = ((ParentQueue) oldQueue).isDynamicQueue();
     }
 
-    if (childQueueNames.size() == 0 && !isDynamicParent) {
+    if (childQueueNames.size() == 0 && !isDynamicParent &&
+        !isAutoQueueCreationV2Enabled) {
       if (null == parent) {
         throw new IllegalStateException(
             "Queue configuration missing child queue names for " + queueName);

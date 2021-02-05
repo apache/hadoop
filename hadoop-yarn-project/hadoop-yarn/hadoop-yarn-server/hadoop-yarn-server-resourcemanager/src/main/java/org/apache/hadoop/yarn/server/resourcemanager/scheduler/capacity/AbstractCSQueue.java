@@ -128,7 +128,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   // either at this level or anywhere in the queue's hierarchy.
   private volatile boolean defaultAppLifetimeWasSpecifiedInConfig = false;
 
-  protected enum CapacityConfigType {
+  public enum CapacityConfigType {
     // FIXME, from what I can see, Percentage mode can almost apply to weighted
     // and percentage mode at the same time, there's only small area need to be
     // changed, we need to rename "PERCENTAGE" to "PERCENTAGE" and "WEIGHT"
@@ -153,11 +153,6 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   // is it a dynamic queue?
   private boolean dynamicQueue = false;
-
-  // When this queue has application submit to?
-  // This property only applies to dynamic queue,
-  // and will be used to check when the queue need to be removed.
-  private long lastSubmittedTimestamp;
 
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -1540,8 +1535,13 @@ public abstract class AbstractCSQueue implements CSQueue {
       leafQueue.setMaxApplications(maxApplications);
 
       int maxApplicationsPerUser = Math.min(maxApplications,
-          (int) (maxApplications * (leafQueue.getUsersManager().getUserLimit()
-              / 100.0f) * leafQueue.getUsersManager().getUserLimitFactor()));
+          (int) (maxApplications
+              * (leafQueue.getUsersManager().getUserLimit() / 100.0f)
+              * leafQueue.getUsersManager().getUserLimitFactor()));
+      if (leafQueue.getUsersManager().getUserLimitFactor() == -1) {
+        maxApplicationsPerUser =  maxApplications;
+      }
+
       leafQueue.setMaxApplicationsPerUser(maxApplicationsPerUser);
       LOG.info("LeafQueue:" + leafQueue.getQueuePath() + ", maxApplications="
           + maxApplications + ", maxApplicationsPerUser="
@@ -1629,20 +1629,6 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     try {
       this.dynamicQueue = dynamicQueue;
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  public long getLastSubmittedTimestamp() {
-    return lastSubmittedTimestamp;
-  }
-
-  // "Tab" the queue, so this queue won't be removed because of idle timeout.
-  public void signalToSubmitToQueue() {
-    writeLock.lock();
-    try {
-      this.lastSubmittedTimestamp = System.currentTimeMillis();
     } finally {
       writeLock.unlock();
     }

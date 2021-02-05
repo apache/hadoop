@@ -272,7 +272,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   @Override
   public void teardown() throws Exception {
     // restore the s3 client so there's no mocking interfering with the teardown
-    originalS3Client.ifPresent(fs::setAmazonS3Client);
+    if (fs != null) {
+      originalS3Client.ifPresent(fs::setAmazonS3Client);
+    }
     super.teardown();
   }
 

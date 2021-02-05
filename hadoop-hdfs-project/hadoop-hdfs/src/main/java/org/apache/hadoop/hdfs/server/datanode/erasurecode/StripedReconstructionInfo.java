@@ -104,19 +104,5 @@ public class StripedReconstructionInfo {
     return targetStorageIds;
   }
 
-  /**
-   * Return the weight of this EC reconstruction task.
-   *
-   * DN uses it to coordinate with NN to adjust the speed of scheduling the
-   * reconstructions tasks to this DN.
-   *
-   * @return the weight of this reconstruction task.
-   * @see HDFS-12044
-   */
-  int getWeight() {
-    // See HDFS-12044. The weight of a RS(n, k) is calculated by the network
-    // connections it opens.
-    return sources.length + targets.length;
-  }
 }
 

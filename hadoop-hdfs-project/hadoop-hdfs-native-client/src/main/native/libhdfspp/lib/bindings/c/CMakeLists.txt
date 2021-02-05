@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+add_library(bindings_c_obj OBJECT $<TARGET_OBJECTS:x_platform_utils_obj> hdfs.cc)
+add_dependencies(bindings_c_obj fs rpc reader proto common fs rpc reader proto common x_platform_utils_obj)
 
-add_library(bindings_c_obj OBJECT hdfs.cc)
-add_dependencies(bindings_c_obj fs rpc reader proto common fs rpc reader proto common)
-add_library(bindings_c $<TARGET_OBJECTS:bindings_c_obj>)
+add_library(bindings_c $<TARGET_OBJECTS:bindings_c_obj> $<TARGET_OBJECTS:x_platform_utils_obj>)

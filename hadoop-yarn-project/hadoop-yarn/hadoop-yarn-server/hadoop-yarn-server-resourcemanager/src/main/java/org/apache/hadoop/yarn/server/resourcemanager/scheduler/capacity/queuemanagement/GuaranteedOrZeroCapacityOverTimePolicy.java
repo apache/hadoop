@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .queuemanagement;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .QueueManagementDynamicEditPolicy;
@@ -624,7 +625,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
           QueueCapacities capacities = leafQueueEntitlements.get(
               leafQueue.getQueuePath());
-          updateToZeroCapacity(capacities, nodeLabel);
+          updateToZeroCapacity(capacities, nodeLabel, (LeafQueue)childQueue);
           deactivatedQueues.put(leafQueue.getQueuePath(),
               leafQueueTemplateCapacities);
         }
@@ -822,7 +823,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
           updateCapacityFromTemplate(capacities, nodeLabel);
           activate(leafQueue, nodeLabel);
         } else{
-          updateToZeroCapacity(capacities, nodeLabel);
+          updateToZeroCapacity(capacities, nodeLabel, leafQueue);
         }
       }
 
@@ -834,10 +835,12 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   private void updateToZeroCapacity(QueueCapacities capacities,
-      String nodeLabel) {
+      String nodeLabel, LeafQueue leafQueue) {
     capacities.setCapacity(nodeLabel, 0.0f);
     capacities.setMaximumCapacity(nodeLabel,
         leafQueueTemplateCapacities.getMaximumCapacity(nodeLabel));
+    leafQueue.getQueueResourceQuotas().
+        setConfiguredMinResource(nodeLabel, Resource.newInstance(0, 0));
   }
 
   private void updateCapacityFromTemplate(QueueCapacities capacities,

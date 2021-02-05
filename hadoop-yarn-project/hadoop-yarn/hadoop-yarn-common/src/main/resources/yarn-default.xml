@@ -911,6 +911,13 @@
   </property>
 
   <property>
+    <description>The Number of consecutive missed heartbeats after which node will be
+    skipped from scheduling</description>
+    <name>yarn.scheduler.skip.node.multiplier</name>
+    <value>2</value>
+  </property>
+
+  <property>
     <description>The minimum allowed version of a connecting nodemanager.  The valid values are
       NONE (no version checking), EqualToRM (the nodemanager's version is equal to
       or greater than the RM version), or a Version String.</description>

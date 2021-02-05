@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -113,14 +114,20 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
         IOException.class);
   }
 
-  protected void validateTaskAttemptPathDuringWrite(Path p) throws IOException {
+  protected void validateTaskAttemptPathDuringWrite(Path p,
+      final long expectedLength) throws IOException {
     // this is expected to be local FS
     ContractTestUtils.assertPathExists(getLocalFS(), "task attempt", p);
   }
 
-  protected void validateTaskAttemptPathAfterWrite(Path p) throws IOException {
+  protected void validateTaskAttemptPathAfterWrite(Path p,
+      final long expectedLength) throws IOException {
     // this is expected to be local FS
-    ContractTestUtils.assertPathExists(getLocalFS(), "task attempt", p);
+    // this is expected to be local FS
+    FileSystem localFS = getLocalFS();
+    ContractTestUtils.assertPathExists(localFS, "task attempt", p);
+    FileStatus st = localFS.getFileStatus(p);
+    assertEquals("file length in " + st, expectedLength, st.getLen());
   }
 
   protected FileSystem getLocalFS() throws IOException {

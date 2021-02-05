@@ -24,10 +24,9 @@
 #include "common/logging.h"
 #include "fs/filesystem.h"
 #include "fs/filehandle.h"
+#include "x-platform/utils.h"
 
-
-#include <libgen.h>
-#include "limits.h"
+#include <limits.h>
 #include <string>
 #include <cstring>
 #include <iostream>
@@ -40,7 +39,7 @@ using namespace std::placeholders;
 
 static constexpr tPort kDefaultPort = 8020;
 
-/** Annotate what parts of the code below are implementatons of API functions
+/** Annotate what parts of the code below are implementations of API functions
  *  and if they are normal vs. extended API.
  */
 #define LIBHDFS_C_API
@@ -767,15 +766,9 @@ void StatInfoToHdfsFileInfo(hdfsFileInfo * file_info,
     LOG_WARN(kFileSystem, << "Symlink is not supported! Reporting as a file: ");
   }
 
-  /* the name of the file */
-  char copyOfPath[PATH_MAX];
-  strncpy(copyOfPath, stat_info.path.c_str(), PATH_MAX);
-  copyOfPath[PATH_MAX - 1] = '\0'; // in case strncpy ran out of space
-
-  char * mName = basename(copyOfPath);
-  size_t mName_size = strlen(mName);
-  file_info->mName = new char[mName_size+1];
-  strncpy(file_info->mName, basename(copyOfPath), mName_size + 1);
+  const auto filename = XPlatform::Utils::Basename(stat_info.path);
+  file_info->mName = new char[filename.size() + 1];
+  strncpy(file_info->mName, filename.c_str(), filename.size() + 1);
 
   /* the last modification time for the file in seconds */
   file_info->mLastMod = (tTime) stat_info.modification_time;

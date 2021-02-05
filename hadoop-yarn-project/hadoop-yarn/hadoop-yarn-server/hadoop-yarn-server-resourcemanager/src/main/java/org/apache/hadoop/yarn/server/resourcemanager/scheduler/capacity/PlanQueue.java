@@ -64,6 +64,9 @@ public class PlanQueue extends AbstractManagedParentQueue {
     float userLimitFactor = conf.getUserLimitFactor(queuePath);
     int maxAppsPerUserForReservation =
         (int) (maxAppsForReservation * (userLimit / 100.0f) * userLimitFactor);
+    if (userLimitFactor == -1) {
+      maxAppsPerUserForReservation = maxAppsForReservation;
+    }
     updateQuotas(userLimit, userLimitFactor, maxAppsForReservation,
         maxAppsPerUserForReservation);
 

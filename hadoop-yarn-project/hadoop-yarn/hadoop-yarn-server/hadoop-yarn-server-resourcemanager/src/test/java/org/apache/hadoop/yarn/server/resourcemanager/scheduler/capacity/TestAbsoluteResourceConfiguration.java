@@ -231,8 +231,10 @@ public class TestAbsoluteResourceConfiguration {
         d1.queueResourceQuotas.getEffectiveMaxResource());
 
     /**
-     * After adding child queue d2, adjustment happens and both d1 and d2 shares
-     * resource of Managed Parent Queue
+     * After adding child queue d2, d1 + d2 > resource
+     * of Managed Parent queue, d2 will change to 0.
+     * d1 will occupy all entire resource
+     * of Managed Parent queue.
      */
     AutoCreatedLeafQueue d2 = new AutoCreatedLeafQueue(cs, "d2", parentQueue);
     cs.addQueue(d2);
@@ -240,9 +242,9 @@ public class TestAbsoluteResourceConfiguration {
     cs.getRootQueue().updateClusterResource(cs.getClusterResource(),
         new ResourceLimits(cs.getClusterResource()));
 
-    Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
+    Assert.assertEquals(Resource.newInstance(0, 0),
         d2.queueResourceQuotas.getConfiguredMinResource());
-    Assert.assertEquals(Resource.newInstance(12800, 2),
+    Assert.assertEquals(Resource.newInstance(0, 0),
         d2.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
         d2.queueResourceQuotas.getConfiguredMaxResource());
@@ -251,7 +253,7 @@ public class TestAbsoluteResourceConfiguration {
 
     Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
         d1.queueResourceQuotas.getConfiguredMinResource());
-    Assert.assertEquals(Resource.newInstance(12800, 2),
+    Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
         d1.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
         d1.queueResourceQuotas.getConfiguredMaxResource());
