@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
