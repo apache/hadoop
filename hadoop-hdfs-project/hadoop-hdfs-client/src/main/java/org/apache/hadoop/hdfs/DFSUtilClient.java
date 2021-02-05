@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.net.DomainNameResolver;
-import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -409,6 +408,17 @@ public class DFSUtilClient {
     return getAddressesForNsIds(conf, nameserviceIds, defaultAddress, keys);
   }
 
+  /**
+   * Use DNS record to resolve NN and return resolved FQDN.
+   *
+   * @param conf Configuration
+   * @param nsId Nameservice Id to resolve
+   * @param dnr  Class used to resolve DNS
+   * @param defaultValue default address to return in case key is not found.
+   * @param keys Set of keys to look for in the order of preference
+   * @return a map(namenodeId to InetSocketAddress),
+   *         where namenodeId is combination of nsId, resolved hostname and port.
+   */
   static Map<String, InetSocketAddress> getResolvedAddressesForNsId(
       Configuration conf, String nsId, DomainNameResolver dnr,
       String defaultValue, String... keys) {
@@ -420,16 +430,26 @@ public class DFSUtilClient {
       if (address != null) {
         InetSocketAddress isa = NetUtils.createSocketAddr(address);
         try {
-          InetAddress[] addresses = dnr.getAllByDomainName(isa.getHostName());
-          for (InetAddress addr : addresses) {
+          // Datanode should just use FQDN
+          String[] resolvedHostNames = dnr
+              .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
+          int port = isa.getPort();
+          for (String hostname : resolvedHostNames) {
             InetSocketAddress inetSocketAddress = new InetSocketAddress(
-                addr.getHostName(), isa.getPort());
-            // Concat nnId with inetSocketAddress to make uniq ID
-            String concatId = inetSocketAddress.toString();
+                hostname, port);
+            // Concat nn info with host info to make uniq ID
+            String concatId;
+            if (nnId == null || nnId.isEmpty()) {
+              concatId = String
+                  .join("-", nsId, hostname, String.valueOf(port));
+            } else {
+              concatId = String
+                  .join("-", nsId, nnId, hostname, String.valueOf(port));
+            }
             ret.put(concatId, inetSocketAddress);
           }
         } catch (UnknownHostException e) {
-          LOG.warn("Didn't resolve anything");
+          LOG.error("Failed to resolve address: " + address);
         }
       }
     }

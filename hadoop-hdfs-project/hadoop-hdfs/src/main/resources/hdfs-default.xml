@@ -6218,8 +6218,18 @@
     <value>false</value>
     <description>
       Determines if the given nameservice address is a domain name which needs to
-      be resolved (using the resolver configured by dfs.resolver.impl). This is used
-      in HDFS components.
+      be resolved (using the resolver configured by dfs.nameservices.resolver.impl).
+      This is used in HDFS components like datanode.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.nameservices.resolution-enabled</name>
+    <value>false</value>
+    <description>
+      Determines if the given nameservice address is a domain name which needs to
+      be resolved (using the resolver configured by dfs.nameservices.resolver.impl).
+      This is used in HDFS components like datanode.
     </description>
   </property>
 </configuration>

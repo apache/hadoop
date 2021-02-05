@@ -1609,14 +1609,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE_DEFAULT = "";
 
   public static final String
-      DFS_RESOLVE_NAMESERVICE_NEEDED =
-      "dfs.resolve.nameservice.needed";
+      DFS_NAMESERVICES_RESOLUTION_ENABLED =
+      "dfs.nameservices.resolution-enabled";
   public static final boolean
-      DFS_RESOLVE_NAMESERVICE_NEEDED_DEFAULT = false;
+      DFS_NAMESERVICES_RESOLUTION_ENABLED_DEFAULT = false;
 
   public static final String
-      DFS_RESOLVER_IMPL =
-      "dfs.resolver.impl";
+      DFS_NAMESERVICES_RESOLVER_IMPL =
+      "dfs.nameservices.resolver.impl";
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated

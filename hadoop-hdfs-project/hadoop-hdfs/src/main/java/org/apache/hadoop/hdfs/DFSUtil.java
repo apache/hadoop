@@ -640,28 +640,42 @@ public class DFSUtil {
         DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY);
   }
 
-  // DFSConfigKeys is not accessible in client module so taking this part out.
+  //
+  /**
+   * Returns the configured address for all NameNodes in the cluster.
+   * This is similar with DFSUtilClient.getAddressesForNsIds()
+   * but can access DFSConfigKeys.
+   *
+   * @param conf configuration
+   * @param defaultAddress default address to return in case key is not found.
+   * @param keys Set of keys to look for in the order of preference
+   *
+   * @return a map(nameserviceId to map(namenodeId to InetSocketAddress))
+   */
   static Map<String, Map<String, InetSocketAddress>> getAddressesForNsIds(
       Configuration conf, Collection<String> nsIds, String defaultAddress,
       String... keys) {
-    // Look for configurations of the form <key>[.<nameserviceId>][.<namenodeId>]
+    // Look for configurations of the form
+    // <key>[.<nameserviceId>][.<namenodeId>]
     // across all of the configured nameservices and namenodes.
     Map<String, Map<String, InetSocketAddress>> ret = Maps.newLinkedHashMap();
     for (String nsId : DFSUtilClient.emptyAsSingletonNull(nsIds)) {
 
       String configKeyWithHost =
-          DFSConfigKeys.DFS_RESOLVE_NAMESERVICE_NEEDED + "." + nsId;
+          DFSConfigKeys.DFS_NAMESERVICES_RESOLUTION_ENABLED + "." + nsId;
       boolean resolveNeeded = conf.getBoolean(configKeyWithHost,
-          DFSConfigKeys.DFS_RESOLVE_NAMESERVICE_NEEDED_DEFAULT);
+          DFSConfigKeys.DFS_NAMESERVICES_RESOLUTION_ENABLED_DEFAULT);
 
       Map<String, InetSocketAddress> isas;
 
       if (resolveNeeded) {
         DomainNameResolver dnr = DomainNameResolverFactory.newInstance(
-            conf, nsId, DFSConfigKeys.DFS_RESOLVER_IMPL);
-        isas = DFSUtilClient.getResolvedAddressesForNsId(conf, nsId, dnr, defaultAddress, keys);
+            conf, nsId, DFSConfigKeys.DFS_NAMESERVICES_RESOLVER_IMPL);
+        isas = DFSUtilClient.getResolvedAddressesForNsId(
+            conf, nsId, dnr, defaultAddress, keys);
       } else {
-        isas = DFSUtilClient.getAddressesForNameserviceId(conf, nsId, defaultAddress, keys);
+        isas = DFSUtilClient.getAddressesForNameserviceId(
+            conf, nsId, defaultAddress, keys);
       }
       if (!isas.isEmpty()) {
         ret.put(nsId, isas);

@@ -188,14 +188,16 @@ public class TestBlockPoolManager {
     Assert.assertTrue(map.containsKey("ns2"));
     Assert.assertTrue(map.containsKey("ns3"));
     Assert.assertEquals(2, map.get("ns3").getBPServiceActors().size());
-    Assert.assertEquals(new InetSocketAddress(MockDomainNameResolver.ADDR_1, 8020)
-        .toString(), map.get("ns3").getBPServiceActors().get(0).getNnId());
-    Assert.assertEquals(new InetSocketAddress(MockDomainNameResolver.ADDR_2, 8020)
-        .toString(), map.get("ns3").getBPServiceActors().get(1).getNnId());
-    Assert.assertEquals(new InetSocketAddress(MockDomainNameResolver.ADDR_1, 8020),
+    Assert.assertEquals("ns3-" +  MockDomainNameResolver.FQDN_1 + "-8020",
+        map.get("ns3").getBPServiceActors().get(0).getNnId());
+    Assert.assertEquals("ns3-" +  MockDomainNameResolver.FQDN_2 + "-8020",
+        map.get("ns3").getBPServiceActors().get(1).getNnId());
+    Assert.assertEquals(
+        new InetSocketAddress(MockDomainNameResolver.FQDN_1, 8020),
         map.get("ns3").getBPServiceActors().get(0).getNNSocketAddress());
-    Assert.assertEquals(new InetSocketAddress(MockDomainNameResolver.ADDR_1, 8020),
-        map.get("ns3").getBPServiceActors().get(0).getNNSocketAddress());
+    Assert.assertEquals(
+        new InetSocketAddress(MockDomainNameResolver.FQDN_2, 8020),
+        map.get("ns3").getBPServiceActors().get(1).getNNSocketAddress());
     log.setLength(0);
   }
 
@@ -207,9 +209,9 @@ public class TestBlockPoolManager {
   private void addDNSSettings(Configuration config,
       String nameservice) {
     config.setBoolean(
-        DFSConfigKeys.DFS_RESOLVE_NAMESERVICE_NEEDED + "." + nameservice, true);
+        DFSConfigKeys.DFS_NAMESERVICES_RESOLUTION_ENABLED + "." + nameservice, true);
     config.set(
-        DFSConfigKeys.DFS_RESOLVER_IMPL + "." + nameservice,
+        DFSConfigKeys.DFS_NAMESERVICES_RESOLVER_IMPL + "." + nameservice,
         MockDomainNameResolver.class.getName());
   }
 
