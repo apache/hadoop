@@ -1183,6 +1183,17 @@
   </property>
 
   <property>
+    <description>
+      * PATH components that will be prepended to the user's path.
+      * If this is defined and the user does not define PATH, NM will also
+      * append ":$PATH" to prevent this from eclipsing the PATH defined in
+      * the container. This feature is only available for Linux.
+    </description>
+    <name>yarn.nodemanager.force.path</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>Environment variables that containers may override rather than use NodeManager's default.</description>
     <name>yarn.nodemanager.env-whitelist</name>
     <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_HOME,PATH,LANG,TZ</value>
