@@ -233,8 +233,8 @@ public class ContractTestUtils extends Assert {
   public static void verifyFileContents(FileSystem fs,
                                         Path path,
                                         byte[] original) throws IOException {
-    assertIsFile(fs, path);
     FileStatus stat = fs.getFileStatus(path);
+    assertIsFile(path, stat);
     String statText = stat.toString();
     assertEquals("wrong length " + statText, original.length, stat.getLen());
     byte[] bytes = readDataset(fs, path, original.length);

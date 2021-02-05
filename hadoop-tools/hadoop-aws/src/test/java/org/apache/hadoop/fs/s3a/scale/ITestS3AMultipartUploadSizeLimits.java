@@ -20,27 +20,38 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import java.io.File;
 
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.IOUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.auth.ProgressCounter;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 
+import static org.apache.hadoop.fs.StreamCapabilities.ABORTABLE_STREAM;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_ABORT;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
+import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertCompleteAbort;
+import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertNoopAbort;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -128,7 +139,7 @@ public class ITestS3AMultipartUploadSizeLimits extends S3AScaleTestBase {
 
     byte[] data = dataset(6 * _1MB, 'a', 'z' - 'a');
 
-    FileSystem fs = getFileSystem();
+    S3AFileSystem fs = getFileSystem();
     FSDataOutputStream stream = fs.create(file, true);
     try {
       stream.write(data);
@@ -137,7 +148,8 @@ public class ITestS3AMultipartUploadSizeLimits extends S3AScaleTestBase {
       // and materialize the path. Here we call abort() to abort the upload,
       // and ensure the path is NOT available. (uploads are aborted)
 
-      stream.abort();
+      assertCompleteAbort(stream.abort());
+
       // the path should not exist
       assertPathDoesNotExist("upload must not have completed", file);
     } finally {
@@ -145,5 +157,58 @@ public class ITestS3AMultipartUploadSizeLimits extends S3AScaleTestBase {
       // check the path doesn't exist "after" closing stream
       assertPathDoesNotExist("upload must not have completed", file);
     }
+    verifyStreamWasAborted(fs, stream);
+    // a second abort is a no-op
+    assertNoopAbort(stream.abort());
+  }
+
+
+  @Test
+  public void testAbortWhenOverwritingAFile() throws Throwable {
+    Path file = path(getMethodName());
+
+    S3AFileSystem fs = getFileSystem();
+    // write the original data
+    byte[] smallData = writeTextFile(fs, file, "original", true);
+
+    // now attempt a multipart upload
+    byte[] data = dataset(6 * _1MB, 'a', 'z' - 'a');
+    FSDataOutputStream stream = fs.create(file, true);
+    try {
+      ContractTestUtils.assertCapabilities(stream,
+          new String[]{ABORTABLE_STREAM},
+          null);
+      stream.write(data);
+      assertCompleteAbort(stream.abort());
+
+      verifyFileContents(fs, file, smallData);
+    } finally {
+      IOUtils.closeStream(stream);
+    }
+    verifyFileContents(fs, file, smallData);
+    verifyStreamWasAborted(fs, stream);
+  }
+
+  /**
+   * Check up on the IOStatistics of the FS and stream to verify that
+   * a stream was aborted -both in invocations of abort() and
+   * that the multipart upload itself was aborted.
+   * @param fs filesystem
+   * @param stream stream
+   */
+  private void verifyStreamWasAborted(final S3AFileSystem fs,
+      final FSDataOutputStream stream) {
+    // check the stream
+    final IOStatistics iostats = stream.getIOStatistics();
+    final String sstr = ioStatisticsToPrettyString(iostats);
+    LOG.info("IOStatistics for stream: {}", sstr);
+    verifyStatisticCounterValue(iostats, INVOCATION_ABORT.getSymbol(), 1);
+    verifyStatisticCounterValue(iostats,
+        OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(), 1);
+
+    // now the FS.
+    final IOStatistics fsIostats = fs.getIOStatistics();
+    assertThatStatisticCounter(fsIostats, INVOCATION_ABORT.getSymbol())
+        .isGreaterThanOrEqualTo(1);
   }
 }

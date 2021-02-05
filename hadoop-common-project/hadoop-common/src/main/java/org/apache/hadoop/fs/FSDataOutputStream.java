@@ -169,13 +169,20 @@ public class FSDataOutputStream extends DataOutputStream
     return IOStatisticsSupport.retrieveIOStatistics(wrappedStream);
   }
 
+  /**
+   * Invoke {@code abort()} on the wrapped stream if it
+   * is Abortable, otherwise raise an
+   * {@code UnsupportedOperationException}.
+   * @throws UnsupportedOperationException if not available.
+   * @return the result.
+   */
   @Override
-  public void abort() {
-    try {
-      ((Abortable)wrappedStream).abort();
-    } catch (ClassCastException e) {
-      throw new UnsupportedOperationException("the wrapped stream does " +
-          "not support aborting stream.");
+  public AbortableResult abort() {
+    if (wrappedStream instanceof Abortable) {
+      return ((Abortable) wrappedStream).abort();
+    } else {
+      throw new UnsupportedOperationException(
+          FSExceptionMessages.ABORTABLE_UNSUPPORTED);
     }
   }
 }
