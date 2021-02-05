@@ -72,7 +72,6 @@ public class KerberosUtil {
     }
   }
 
-  @Deprecated
   /**
    * Returns the Oid instance from string oidName.
    * Use {@link GSS_SPNEGO_MECH_OID}, {@link GSS_KRB5_MECH_OID},
@@ -82,6 +81,7 @@ public class KerberosUtil {
    * @param oidName The oid Name
    * @throws NoSuchFieldException if the input is not supported.
    */
+  @Deprecated
   public static Oid getOidInstance(String oidName)
       throws NoSuchFieldException {
     switch (oidName) {
