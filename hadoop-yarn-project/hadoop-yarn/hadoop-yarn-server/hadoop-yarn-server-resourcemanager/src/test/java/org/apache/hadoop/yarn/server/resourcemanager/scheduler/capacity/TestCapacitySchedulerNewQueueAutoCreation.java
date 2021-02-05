@@ -525,6 +525,25 @@ public class TestCapacitySchedulerNewQueueAutoCreation
             user0LeafQueue.getMinimumAllocation()).getMemorySize(), 1e-6);
   }
 
+  @Test
+  public void testAutoCreateQueueIfAmbiguousQueueNames() throws Exception {
+    startScheduler();
+
+    AbstractCSQueue b = (AbstractCSQueue) cs.getQueue("root.b");
+    Assert.assertFalse(b.isDynamicQueue());
+
+    createQueue("root.a.b.b");
+
+    AbstractCSQueue bAutoParent = (AbstractCSQueue) cs.getQueue("root.a.b");
+    Assert.assertTrue(bAutoParent.isDynamicQueue());
+    Assert.assertTrue(bAutoParent.hasChildQueues());
+
+    AbstractCSQueue bAutoLeafQueue =
+        (AbstractCSQueue) cs.getQueue("root.a.b.b");
+    Assert.assertTrue(bAutoLeafQueue.isDynamicQueue());
+    Assert.assertFalse(bAutoLeafQueue.hasChildQueues());
+  }
+
   private LeafQueue createQueue(String queuePath) throws YarnException {
     return autoQueueHandler.autoCreateQueue(
         CSQueueUtils.extractQueuePath(queuePath));

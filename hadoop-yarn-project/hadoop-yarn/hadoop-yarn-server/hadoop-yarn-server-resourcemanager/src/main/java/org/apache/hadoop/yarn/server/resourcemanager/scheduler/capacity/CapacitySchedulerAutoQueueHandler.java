@@ -55,13 +55,15 @@ public class CapacitySchedulerAutoQueueHandler {
     List<ApplicationPlacementContext> parentsToCreate = new ArrayList<>();
 
     ApplicationPlacementContext queueCandidateContext = parentContext;
-    CSQueue existingQueueCandidate = getQueue(queueCandidateContext.getQueue());
+    CSQueue existingQueueCandidate = getQueue(
+        queueCandidateContext.getFullQueuePath());
 
     while (existingQueueCandidate == null) {
       parentsToCreate.add(queueCandidateContext);
       queueCandidateContext = CSQueueUtils.extractQueuePath(
           queueCandidateContext.getParentQueue());
-      existingQueueCandidate = getQueue(queueCandidateContext.getQueue());
+      existingQueueCandidate = getQueue(
+          queueCandidateContext.getFullQueuePath());
     }
 
     // Reverse the collection to to represent the hierarchy to be created
