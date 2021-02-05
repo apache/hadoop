@@ -140,8 +140,8 @@ public class TestOrderedSnapshotDeletionGc {
 
     waitForGc(Arrays.asList(s1pathNew, s2pathNew), hdfs);
     // total no of edit log records created for delete snapshot will be equal
-    // to sum of no of user deleted distinct snapshots
-    // and no of snapshots gc'ed with snapshotDeletion gc thread
+    // to sum of no of user deleted snapshots and no of snapshots gc'ed with
+    // snapshotDeletion gc thread
     doEditLogValidation(cluster, 5);
   }
 
