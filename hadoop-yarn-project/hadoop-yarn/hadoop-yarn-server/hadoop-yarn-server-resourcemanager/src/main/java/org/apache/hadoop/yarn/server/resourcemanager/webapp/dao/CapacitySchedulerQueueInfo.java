@@ -57,9 +57,7 @@ public class CapacitySchedulerQueueInfo {
   @XmlTransient
   static final float EPSILON = 1e-8f;
 
-  @XmlTransient
   protected String queuePath;
-
   protected float capacity;
   protected float usedCapacity;
   protected float maxCapacity;
