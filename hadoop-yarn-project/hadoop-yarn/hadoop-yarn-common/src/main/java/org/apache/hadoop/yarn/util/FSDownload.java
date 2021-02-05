@@ -325,18 +325,31 @@ public class FSDownload implements Callable<Path> {
             YarnConfiguration.NM_LOCALIZER_FETCH_THREAD_COUNT,
             YarnConfiguration.DEFAULT_NM_LOCALIZER_FETCH_THREAD_COUNT);
     AtomicReference<IOException> ioException = new AtomicReference<>();
-    partitionInputList(fileStatuses, nThreads).parallelStream()
-        .forEach(part -> {
-          try {
-            Path[] sourcePaths = part.stream()
-                                     .map(FileStatus::getPath)
-                                     .toArray(Path[]::new);
-            FileUtil.copy(sourceFileSystem, sourcePaths, destinationFileSystem,
-                    destination, false, true, conf);
-          } catch (IOException e) {
-            ioException.set(e);
-          }
-        });
+    ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
+    List<Callable<Object>> callableList = new ArrayList<>();
+    for (List<FileStatus> part : partitionInputList(fileStatuses, nThreads)) {
+      callableList.add(() -> {
+        try {
+          Path[] sourcePaths = part.stream()
+                                   .map(FileStatus::getPath)
+                                   .toArray(Path[]::new);
+          FileUtil.copy(sourceFileSystem, sourcePaths, destinationFileSystem,
+                  destination, false, true, conf);
+        } catch (IOException e) {
+          ioException.set(e);
+        }
+        return null;
+      });
+    }
+    try {
+      executorService.invokeAll(callableList);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new AssertionError(e);
+    } finally {
+      executorService.shutdown();
+    }
+
     if (ioException.get() != null){
       throw new YarnException("Download and unpack failed", ioException.get());
     }
@@ -358,7 +371,7 @@ public class FSDownload implements Callable<Path> {
         destinationFileSystem.mkdirs(destination,
                 sourceFileStatus.getPermission());
         localizeDirectoryInParallel(sourceFileSystem, destinationFileSystem,
-                                   source, destination);
+                source, destination);
       } else {
         unpack(source, destination, sourceFileSystem, destinationFileSystem);
       }
