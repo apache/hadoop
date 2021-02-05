@@ -62,8 +62,7 @@ public class Snapshot implements Comparable<byte[]> {
   }
 
   public static String generateDeletedSnapshotName(Snapshot s) {
-    return getSnapshotName(s) + "-" + s.getId() + "-"
-        + generateDefaultSnapshotName();
+    return getSnapshotName(s) + "#" + s.getId();
   }
 
   public static String getSnapshotPath(String snapshottableDir,

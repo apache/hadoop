@@ -280,26 +280,21 @@ class FSDirSnapshotOp {
       throws IOException {
     INode.BlocksMapUpdateInfo collectedBlocks = new INode.BlocksMapUpdateInfo();
     ChunkedArrayList<INode> removedINodes = new ChunkedArrayList<>();
-    INode.ReclaimContext context =
-        new INode.ReclaimContext(fsd.getBlockStoragePolicySuite(),
-            collectedBlocks, removedINodes, null);
+    INode.ReclaimContext context = new INode.ReclaimContext(
+        fsd.getBlockStoragePolicySuite(), collectedBlocks, removedINodes, null);
     fsd.writeLock();
-    boolean shouldRecord;
     try {
-      shouldRecord =
-          snapshotManager.deleteSnapshot(iip, snapshotName, context, now);
+      snapshotManager.deleteSnapshot(iip, snapshotName, context, now);
       fsd.updateCount(iip, context.quotaDelta(), false);
       fsd.removeFromInodeMap(removedINodes);
-      fsd.updateReplicationFactor(
-          context.collectedBlocks().toUpdateReplicationInfo());
+      fsd.updateReplicationFactor(context.collectedBlocks()
+                                      .toUpdateReplicationInfo());
     } finally {
       fsd.writeUnlock();
     }
     removedINodes.clear();
-    if (shouldRecord) {
-      fsd.getEditLog()
-          .logDeleteSnapshot(snapshotRoot, snapshotName, logRetryCache, now);
-    }
+    fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
+        logRetryCache, now);
     return collectedBlocks;
   }
 

@@ -105,7 +105,6 @@ public class TestOrderedSnapshotDeletion {
             snapshotRoot.getName());
     final Path snapPathNew =
         SnapshotTestHelper.getSnapshotRoot(snapshottableDir, snapName);
-    Assert.assertFalse(snapPathNew.equals(snapshotRoot));
     // Check if the path exists
     Assert.assertNotNull(cluster.getFileSystem().getFileStatus(snapPathNew));
 

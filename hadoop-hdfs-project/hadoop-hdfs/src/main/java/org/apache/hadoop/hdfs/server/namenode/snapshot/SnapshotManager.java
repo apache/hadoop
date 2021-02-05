@@ -503,58 +503,47 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * @param now is the snapshot deletion time set by Time.now().
    * @param reclaimContext Used to collect information to reclaim blocks
    *                       and inodes
-   * @return true, if actual snapshot gets deleted or marked for deletion
-   *         , false otherwise
    */
-  public boolean deleteSnapshot(final INodesInPath iip,
-      final String snapshotName, INode.ReclaimContext reclaimContext, long now)
-      throws IOException {
+  public void deleteSnapshot(final INodesInPath iip, final String snapshotName,
+      INode.ReclaimContext reclaimContext, long now) throws IOException {
     final INodeDirectory srcRoot = getSnapshottableRoot(iip);
     if (isSnapshotDeletionOrdered()) {
-      final DirectorySnapshottableFeature snapshottable =
-          srcRoot.getDirectorySnapshottableFeature();
-      final Snapshot snapshot =
-          snapshottable.getSnapshotByName(srcRoot, snapshotName);
+      final DirectorySnapshottableFeature snapshottable
+          = srcRoot.getDirectorySnapshottableFeature();
+      final Snapshot snapshot = snapshottable.getSnapshotByName(
+          srcRoot, snapshotName);
 
       // Diffs must be not empty since a snapshot exists in the list
       final int earliest = snapshottable.getDiffs().getFirst().getSnapshotId();
       if (snapshot.getId() != earliest) {
-        if (!snapshot.getRoot().isMarkedAsDeleted()) {
-          final XAttr snapshotXAttr = buildXAttr();
-          final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
-          xattrs.add(snapshotXAttr);
+        final XAttr snapshotXAttr = buildXAttr();
+        final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+        xattrs.add(snapshotXAttr);
 
-          // The snapshot to be deleted is just marked for deletion in the
-          // xAttr. Same snaphot delete call can happen multiple times until
-          // and unless the very 1st instance of a snapshot delete hides
-          // it/remove it from snapshot list.
-          // XAttrSetFlag.REPLACE needs to be set to here in
-          // order to address this.
+        // The snapshot to be deleted is just marked for deletion in the xAttr.
+        // Same snaphot delete call can happen multiple times until and unless
+        // the very 1st instance of a snapshot delete hides it/remove it from
+        // snapshot list. XAttrSetFlag.REPLACE needs to be set to here in order
+        // to address this.
 
-          // XAttr will set on the snapshot root directory
-          // NOTE : This function is directly called while replaying the edit
-          // logs. While replaying the edit logs we need to mark the snapshot
-          // deleted in the xattr of the snapshot root.
-          FSDirXAttrOp.unprotectedSetXAttrs(fsdir, INodesInPath
-                  .append(iip, snapshot.getRoot(),
-                      DFSUtil.string2Bytes(snapshotName)), xattrs,
-              EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
-          // Rename the snapshot getting marked deleted
-          renameSnapshot(iip, srcRoot.getFullPathName(), snapshotName,
-              Snapshot.generateDeletedSnapshotName(snapshot), Time.now());
-          return true;
-        } else {
-          // If the snapshot is not the earliest and is already marked deleted,
-          // nothing to do here.
-          return false;
-        }
+        // XAttr will set on the snapshot root directory
+        // NOTE : This function is directly called while replaying the edit
+        // logs.While replaying the edit logs we need to mark the snapshot
+        // deleted in the xattr of the snapshot root.
+        FSDirXAttrOp.unprotectedSetXAttrs(fsdir,
+            INodesInPath.append(iip, snapshot.getRoot(),
+                DFSUtil.string2Bytes(snapshotName)), xattrs,
+            EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+        renameSnapshot(iip, srcRoot.getFullPathName(), snapshotName,
+            Snapshot.generateDeletedSnapshotName(snapshot), Time.now());
+        return;
       }
+
       assertFirstSnapshot(srcRoot, snapshottable, snapshot);
     }
 
     srcRoot.removeSnapshot(reclaimContext, snapshotName, now, this);
     numSnapshots.getAndDecrement();
-    return true;
   }
 
   /**
