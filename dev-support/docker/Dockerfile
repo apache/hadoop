@@ -44,7 +44,6 @@ RUN apt-get -q update \
         cmake \
         curl \
         doxygen \
-        findbugs \
         fuse \
         g++ \
         gcc \
@@ -91,7 +90,6 @@ RUN apt-get -q update \
 ENV MAVEN_HOME /usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
-ENV FINDBUGS_HOME /usr
 
 #######
 # Install SpotBugs 4.0.6
