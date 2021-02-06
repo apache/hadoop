@@ -2524,7 +2524,7 @@ public class TestDistributedFileSystem {
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
-      final DistributedFileSystem dfs = cluster.getFileSystem();
+      DistributedFileSystem dfs = cluster.getFileSystem();
       final Path testDir = new Path("/disallowss/test2/");
       final Path file0path = new Path(testDir, "file-0");
       dfs.create(file0path).close();
@@ -2535,7 +2535,20 @@ public class TestDistributedFileSystem {
       // Set dfs.namenode.snapshot.trashroot.enabled=true
       conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
       cluster.setNameNodeConf(0, conf);
+      cluster.shutdown();
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
       cluster.restartNameNode(0);
+      dfs = cluster.getFileSystem();
+      assertTrue(cluster.getNameNode().isInSafeMode());
+      // Check .Trash existence, won't be created now
+      assertFalse(dfs.exists(trashRoot));
+      // Start a datanode
+      cluster.startDataNodes(conf, 1, true, null, null);
+      // Wait long enough for safemode check to retire
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException ignored) {}
       // Check .Trash existence, should be created now
       assertTrue(dfs.exists(trashRoot));
       // Check permission
@@ -2553,4 +2566,6 @@ public class TestDistributedFileSystem {
       }
     }
   }
+
+
 }

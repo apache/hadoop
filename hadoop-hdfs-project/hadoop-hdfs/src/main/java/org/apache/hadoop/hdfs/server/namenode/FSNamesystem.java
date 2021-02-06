@@ -124,7 +124,8 @@ import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
-import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.*;
+
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics.TOPMETRICS_METRICS_SOURCE_NAME;
@@ -329,11 +330,6 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
@@ -8531,25 +8527,37 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Check if snapshot roots are created for all existing snapshottable
    * directories. Create them if not.
    */
-  void checkAndProvisionSnapshotTrashRoots() throws IOException {
-    SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
-    if (dirStatusList == null) {
-      return;
-    }
-    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
-      String currDir = dirStatus.getFullPath().toString();
-      if (!currDir.endsWith(Path.SEPARATOR)) {
-        currDir += Path.SEPARATOR;
+  @Override
+  public void checkAndProvisionSnapshotTrashRoots() {
+    if (isSnapshotTrashRootEnabled) {
+      try {
+        SnapshottableDirectoryStatus[] dirStatusList =
+            getSnapshottableDirListing();
+        if (dirStatusList == null) {
+          return;
+        }
+        for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+          String currDir = dirStatus.getFullPath().toString();
+          if (!currDir.endsWith(Path.SEPARATOR)) {
+            currDir += Path.SEPARATOR;
+          }
+          String trashPath = currDir + FileSystem.TRASH_PREFIX;
+          HdfsFileStatus fileStatus = getFileInfo(trashPath, false, false, false);
+          if (fileStatus == null) {
+            LOG.info("Trash doesn't exist for snapshottable directory {}. " + "Creating trash at {}", currDir, trashPath);
+            PermissionStatus permissionStatus =
+                new PermissionStatus(getRemoteUser().getShortUserName(), null,
+                    SHARED_TRASH_PERMISSION);
+            mkdirs(trashPath, permissionStatus, false);
+          }
+        }
+      } catch (IOException e) {
+        final String msg =
+            "Could not provision Trash directory for existing "
+                + "snapshottable directories. Exiting Namenode.";
+        ExitUtil.terminate(1, msg);
       }
-      String trashPath = currDir + FileSystem.TRASH_PREFIX;
-      HdfsFileStatus fileStatus = getFileInfo(trashPath, false, false, false);
-      if (fileStatus == null) {
-        LOG.info("Trash doesn't exist for snapshottable directory {}. "
-            + "Creating trash at {}", currDir, trashPath);
-        PermissionStatus permissionStatus = new PermissionStatus(getRemoteUser()
-            .getShortUserName(), null, SHARED_TRASH_PERMISSION);
-        mkdirs(trashPath, permissionStatus, false);
-      }
+
     }
   }
 
