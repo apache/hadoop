@@ -48,7 +48,7 @@ public class ContentSummaryProcessor {
   private final AtomicLong directoryCount = new AtomicLong(0L);
   private final AtomicLong totalBytes = new AtomicLong(0L);
   private final AtomicInteger numTasks = new AtomicInteger(0);
-  private final AzureBlobFileSystemStore abfsStore;
+  private final ListingSupport abfsStore;
   private final ExecutorService executorService = new ThreadPoolExecutor(
       CORE_POOL_SIZE, MAX_THREAD_COUNT, KEEP_ALIVE_TIME, TimeUnit.SECONDS,
       new SynchronousQueue<>());
@@ -62,7 +62,7 @@ public class ContentSummaryProcessor {
    * @param abfsStore Instance of AzureBlobFileSystemStore, used to make
    * listStatus calls to server
    */
-  public ContentSummaryProcessor(AzureBlobFileSystemStore abfsStore) {
+  public ContentSummaryProcessor(ListingSupport abfsStore) {
     this.abfsStore = abfsStore;
   }
 
