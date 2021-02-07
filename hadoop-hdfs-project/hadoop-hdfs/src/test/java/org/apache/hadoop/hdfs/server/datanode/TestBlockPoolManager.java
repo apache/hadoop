@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -159,9 +158,7 @@ public class TestBlockPoolManager {
     conf.set(DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY, "ns1");
     bpm.refreshNamenodes(conf);
     assertEquals("create #1\n", log.toString());
-    @SuppressWarnings("unchecked")
-    Map<String, BPOfferService> map = (Map<String, BPOfferService>) Whitebox
-            .getInternalState(bpm, "bpByNameserviceId");
+    Map<String, BPOfferService> map = bpm.getBpByNameserviceId();
     Assert.assertFalse(map.containsKey("ns2"));
     Assert.assertFalse(map.containsKey("ns3"));
     Assert.assertTrue(map.containsKey("ns1"));
@@ -181,9 +178,7 @@ public class TestBlockPoolManager {
         "create #1\n" +
             "create #2\n" +
             "create #3\n", log.toString());
-    @SuppressWarnings("unchecked")
-    Map<String, BPOfferService> map = (Map<String, BPOfferService>) Whitebox
-        .getInternalState(bpm, "bpByNameserviceId");
+    Map<String, BPOfferService> map = bpm.getBpByNameserviceId();
     Assert.assertTrue(map.containsKey("ns1"));
     Assert.assertTrue(map.containsKey("ns2"));
     Assert.assertTrue(map.containsKey("ns3"));
