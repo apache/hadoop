@@ -911,6 +911,13 @@
   </property>
 
   <property>
+    <description>The Number of consecutive missed heartbeats after which node will be
+    skipped from scheduling</description>
+    <name>yarn.scheduler.skip.node.multiplier</name>
+    <value>2</value>
+  </property>
+
+  <property>
     <description>The minimum allowed version of a connecting nodemanager.  The valid values are
       NONE (no version checking), EqualToRM (the nodemanager's version is equal to
       or greater than the RM version), or a Version String.</description>
@@ -1186,6 +1193,17 @@
     </description>
     <name>yarn.nodemanager.admin-env</name>
     <value>MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX</value>
+  </property>
+
+  <property>
+    <description>
+      * PATH components that will be prepended to the user's path.
+      * If this is defined and the user does not define PATH, NM will also
+      * append ":$PATH" to prevent this from eclipsing the PATH defined in
+      * the container. This feature is only available for Linux.
+    </description>
+    <name>yarn.nodemanager.force.path</name>
+    <value></value>
   </property>
 
   <property>

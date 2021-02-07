@@ -475,7 +475,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
   /**
    * Execute a closure expecting a specific number of HEAD/LIST calls
-   * on <i>raw</i> S3 stores only.
+   * on <i>raw</i> S3 stores only. The operation is always evaluated.
    * @param cost expected cost
    * @param eval closure to evaluate
    * @param <T> return type of closure
@@ -484,7 +484,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   protected <T> T verifyRaw(
       OperationCost cost,
       Callable<T> eval) throws Exception {
-    return verifyMetrics(eval, whenRaw(cost));
+    return verifyMetrics(eval,
+        whenRaw(cost), OperationCostValidator.always());
   }
 
   /**

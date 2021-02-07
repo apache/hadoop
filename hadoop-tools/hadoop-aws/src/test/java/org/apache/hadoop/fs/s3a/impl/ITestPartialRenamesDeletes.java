@@ -76,6 +76,7 @@ import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndel
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.toPathList;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.extractCause;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.LambdaTestUtils.eval;
 
@@ -683,7 +684,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
           readOnlyFiles.size());
       rejectionCount.assertDiffEquals("Wrong rejection count",
           readOnlyFiles.size());
-      reset(rejectionCount, deleteVerbCount, deleteObjectCount);
+      reset(rejectionCount, deleteVerbCount, deleteObjectCount,
+          bulkDeleteVerbCount);
     }
     // all the files are still there? (avoid in scale test due to cost)
     if (!scaleTest) {
@@ -692,9 +694,13 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     describe("Trying to delete upper-level directory");
     ex = expectDeleteForbidden(basePath);
+    String iostats = ioStatisticsSourceToString(roleFS);
+
     if (multiDelete) {
       // multi-delete status checks
-      deleteVerbCount.assertDiffEquals("Wrong delete count", 1);
+      deleteVerbCount.assertDiffEquals("Wrong delete request count", 0);
+      bulkDeleteVerbCount.assertDiffEquals(
+          "Wrong count of delete operations in " + iostats, 1);
       MultiObjectDeleteException mde = extractCause(
           MultiObjectDeleteException.class, ex);
       List<MultiObjectDeleteSupport.KeyPath> undeletedKeyPaths =

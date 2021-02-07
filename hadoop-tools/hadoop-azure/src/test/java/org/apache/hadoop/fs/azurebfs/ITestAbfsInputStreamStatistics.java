@@ -139,10 +139,9 @@ public class ITestAbfsInputStreamStatistics
        * forwardSeekOps - Since we are doing a forward seek inside a loop
        * for OPERATION times, total forward seeks would be OPERATIONS.
        *
-       * bytesBackwardsOnSeek - Since we are doing backward seeks from end of
-       * file in a ONE_MB file each time, this would mean the bytes from
-       * backward seek would be OPERATIONS * ONE_MB. Since this is backward
-       * seek this value is expected be to be negative.
+       * negativeBytesBackwardsOnSeek - Since we are doing backward seeks from
+       * end of file in a ONE_MB file each time, this would mean the bytes from
+       * backward seek would be OPERATIONS * ONE_MB.
        *
        * bytesSkippedOnSeek - Since, we move from start to end in seek, but
        * our fCursor(position of cursor) always remain at end of file, this
@@ -160,7 +159,7 @@ public class ITestAbfsInputStreamStatistics
       assertEquals("Mismatch in forwardSeekOps value", OPERATIONS,
           stats.getForwardSeekOperations());
       assertEquals("Mismatch in bytesBackwardsOnSeek value",
-          -1 * OPERATIONS * ONE_MB, stats.getBytesBackwardsOnSeek());
+          OPERATIONS * ONE_MB, stats.getBytesBackwardsOnSeek());
       assertEquals("Mismatch in bytesSkippedOnSeek value",
           0, stats.getBytesSkippedOnSeek());
       assertEquals("Mismatch in seekInBuffer value", 2 * OPERATIONS,
@@ -363,6 +362,40 @@ public class ITestAbfsInputStreamStatistics
 
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
+    }
+  }
+
+  /**
+   * Testing time taken by AbfsInputStream to complete a GET request.
+   */
+  @Test
+  public void testActionHttpGetRequest() throws IOException {
+    describe("Test to check the correct value of Time taken by http get "
+        + "request in AbfsInputStream");
+    AzureBlobFileSystem fs = getFileSystem();
+    AzureBlobFileSystemStore abfss = fs.getAbfsStore();
+    Path actionHttpGetRequestPath = path(getMethodName());
+    AbfsInputStream abfsInputStream = null;
+    AbfsOutputStream abfsOutputStream = null;
+    try {
+      abfsOutputStream = createAbfsOutputStreamWithFlushEnabled(fs,
+          actionHttpGetRequestPath);
+      abfsOutputStream.write('a');
+      abfsOutputStream.hflush();
+
+      abfsInputStream =
+          abfss.openFileForRead(actionHttpGetRequestPath, fs.getFsStatistics());
+      abfsInputStream.read();
+      AbfsInputStreamStatisticsImpl abfsInputStreamStatistics =
+          (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
+
+      LOG.info("AbfsInputStreamStats info: {}", abfsInputStreamStatistics.toString());
+      Assertions.assertThat(
+          abfsInputStreamStatistics.getActionHttpGetRequest())
+          .describedAs("Mismatch in time taken by a GET request")
+          .isGreaterThan(0.0);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, abfsInputStream, abfsOutputStream);
     }
   }
 

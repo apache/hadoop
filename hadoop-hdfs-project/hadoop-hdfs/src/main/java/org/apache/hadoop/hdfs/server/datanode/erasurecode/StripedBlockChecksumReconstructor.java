@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 /**
@@ -75,6 +76,7 @@ public abstract class StripedBlockChecksumReconstructor
     prepareDigester();
     long maxTargetLength = getMaxTargetLength();
     while (requestedLen > 0 && getPositionInBlock() < maxTargetLength) {
+      DataNodeFaultInjector.get().stripedBlockChecksumReconstruction();
       long remaining = maxTargetLength - getPositionInBlock();
       final int toReconstructLen = (int) Math
           .min(getStripedReader().getBufferSize(), remaining);

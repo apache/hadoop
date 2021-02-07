@@ -46,8 +46,9 @@ interface MappingRuleValidationContext {
    * A part is dynamic if a known variable is referenced in it.
    * @param queuePath The path to check
    * @return true if no dynamic parts were found
+   * @throws YarnException if invalid path parts are found (eg. empty)
    */
-  boolean isPathStatic(String queuePath);
+  boolean isPathStatic(String queuePath) throws YarnException;
 
   /**
    * This method will add a known variable to the validation context, known

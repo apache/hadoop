@@ -286,6 +286,78 @@ public final class StreamStatisticNames {
   public static final String STREAM_WRITE_TOTAL_DATA
       = "stream_write_total_data";
 
+  /**
+   * Number of bytes to upload from an OutputStream.
+   */
+  public static final String BYTES_TO_UPLOAD
+      = "bytes_upload";
+
+  /**
+   * Number of bytes uploaded successfully to the object store.
+   */
+  public static final String BYTES_UPLOAD_SUCCESSFUL
+      = "bytes_upload_successfully";
+
+  /**
+   * Number of bytes failed to upload to the object store.
+   */
+  public static final String BYTES_UPLOAD_FAILED
+      = "bytes_upload_failed";
+
+  /**
+   * Total time spent on waiting for a task to complete.
+   */
+  public static final String TIME_SPENT_ON_TASK_WAIT
+      = "time_spent_task_wait";
+
+  /**
+   * Number of task queue shrunk operations.
+   */
+  public static final String QUEUE_SHRUNK_OPS
+      = "queue_shrunk_ops";
+
+  /**
+   * Number of times current buffer is written to the service.
+   */
+  public static final String WRITE_CURRENT_BUFFER_OPERATIONS
+      = "write_current_buffer_ops";
+
+  /**
+   * Total time spent on completing a PUT request.
+   */
+  public static final String TIME_SPENT_ON_PUT_REQUEST
+      = "time_spent_on_put_request";
+
+  /**
+   * Number of seeks in buffer.
+   */
+  public static final String SEEK_IN_BUFFER
+      = "seek_in_buffer";
+
+  /**
+   * Number of bytes read from the buffer.
+   */
+  public static final String BYTES_READ_BUFFER
+      = "bytes_read_buffer";
+
+  /**
+   * Total number of remote read operations performed.
+   */
+  public static final String REMOTE_READ_OP
+      = "remote_read_op";
+
+  /**
+   * Total number of bytes read from readAhead.
+   */
+  public static final String READ_AHEAD_BYTES_READ
+      = "read_ahead_bytes_read";
+
+  /**
+   * Total number of bytes read from remote operations.
+   */
+  public static final String REMOTE_BYTES_READ
+      = "remote_bytes_read";
+
   private StreamStatisticNames() {
   }
 

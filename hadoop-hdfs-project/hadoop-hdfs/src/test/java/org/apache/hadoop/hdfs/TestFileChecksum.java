@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -46,6 +47,8 @@ import java.io.IOException;
 import java.util.Random;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /**
  * This test serves a prototype to demo the idea proposed so far. It creates two
@@ -515,6 +518,37 @@ public class TestFileChecksum {
     prepareTestFiles(fileLength, new String[] {stripedFile3});
     testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
         bytesPerCRC - 1);
+  }
+
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithReconstructFail()
+      throws Exception {
+    String stripedFile4 = ecDir + "/stripedFileChecksum4";
+    prepareTestFiles(fileSize, new String[] {stripedFile4});
+
+    // get checksum
+    FileChecksum fileChecksum = getFileChecksum(stripedFile4, -1, false);
+
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector newInjector = mock(DataNodeFaultInjector.class);
+    doThrow(new IOException())
+        .doNothing()
+        .when(newInjector)
+        .stripedBlockChecksumReconstruction();
+    DataNodeFaultInjector.set(newInjector);
+
+    try {
+      // Get checksum again with reconstruction.
+      // If the reconstruction task fails, a client try to get checksum from
+      // another DN which has a block of the block group because of a failure of
+      // getting result.
+      FileChecksum fileChecksum1 = getFileChecksum(stripedFile4, -1, true);
+
+      Assert.assertEquals("checksum should be same", fileChecksum,
+          fileChecksum1);
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
   }
 
   @Test(timeout = 90000)

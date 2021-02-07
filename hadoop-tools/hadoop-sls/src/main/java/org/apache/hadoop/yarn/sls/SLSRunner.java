@@ -159,6 +159,10 @@ public class SLSRunner extends Configured implements Tool {
   private TraceType inputType;
   private SynthTraceJobProducer stjp;
 
+  public static int getRemainingApps() {
+    return remainingApps;
+  }
+
   public SLSRunner() throws ClassNotFoundException {
     Configuration tempConf = new Configuration(false);
     init(tempConf);
@@ -933,12 +937,12 @@ public class SLSRunner extends Configured implements Tool {
 
   public static void decreaseRemainingApps() {
     remainingApps--;
+  }
 
-    if (remainingApps == 0) {
-      LOG.info("SLSRunner tears down.");
-      if (exitAtTheFinish) {
-        System.exit(0);
-      }
+  public static void exitSLSRunner() {
+    LOG.info("SLSRunner tears down.");
+    if (exitAtTheFinish) {
+      System.exit(0);
     }
   }
 

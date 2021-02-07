@@ -128,7 +128,8 @@ public class TestLayoutVersion {
         NameNodeLayoutVersion.Feature.APPEND_NEW_BLOCK,
         NameNodeLayoutVersion.Feature.QUOTA_BY_STORAGE_TYPE,
         NameNodeLayoutVersion.Feature.ERASURE_CODING,
-        NameNodeLayoutVersion.Feature.EXPANDED_STRING_TABLE);
+        NameNodeLayoutVersion.Feature.EXPANDED_STRING_TABLE,
+        NameNodeLayoutVersion.Feature.NVDIMM_SUPPORT);
     for (LayoutFeature f : compatibleFeatures) {
       assertEquals(String.format("Expected minimum compatible layout version " +
           "%d for feature %s.", baseLV, f), baseLV,

@@ -108,4 +108,19 @@ public interface RouterMBean {
    * @return Json string of owners to token counts
    */
   String getTopTokenRealOwners();
+
+  /**
+   * Gets the count of the currently running router federation rename jobs.
+   *
+   * @return the count of the currently running router federation rename jobs.
+   */
+  int getRouterFederationRenameCount();
+
+  /**
+   * Gets the count of the currently running jobs in the scheduler. It includes
+   * both the submitted and the recovered jobs.
+   *
+   * @return the count of the currently running jobs in the scheduler.
+   */
+  int getSchedulerJobCount();
 }

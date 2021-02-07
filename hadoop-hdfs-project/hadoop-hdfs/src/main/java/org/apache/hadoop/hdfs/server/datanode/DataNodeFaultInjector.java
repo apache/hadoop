@@ -68,6 +68,16 @@ public class DataNodeFaultInjector {
   }
 
   /**
+   * Used as a hook to delay writing a packet to disk.
+   */
+  public void delayWriteToDisk() {}
+
+  /**
+   * Used as a hook to delay writing a packet to os cache.
+   */
+  public void delayWriteToOsCache() {}
+
+  /**
    * Used as a hook to intercept the latency of sending ack.
    */
   public void logDelaySendingAckToUpstream(
@@ -95,6 +105,12 @@ public class DataNodeFaultInjector {
    * process.
    */
   public void stripedBlockReconstruction() throws IOException {}
+
+  /**
+   * Used as a hook to inject failure in erasure coding checksum reconstruction
+   * process.
+   */
+  public void stripedBlockChecksumReconstruction() throws IOException {}
 
   /**
    * Used as a hook to inject latency when read block

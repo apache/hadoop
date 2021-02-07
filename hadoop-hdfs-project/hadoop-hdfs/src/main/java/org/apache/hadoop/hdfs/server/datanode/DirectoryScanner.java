@@ -322,7 +322,8 @@ public class DirectoryScanner implements Runnable {
    * Start the scanner. The scanner will run every
    * {@link DFSConfigKeys#DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY} seconds.
    */
-  void start() {
+  @VisibleForTesting
+  public void start() {
     shouldRun.set(true);
     long firstScanTime = ThreadLocalRandom.current().nextLong(scanPeriodMsecs);
 

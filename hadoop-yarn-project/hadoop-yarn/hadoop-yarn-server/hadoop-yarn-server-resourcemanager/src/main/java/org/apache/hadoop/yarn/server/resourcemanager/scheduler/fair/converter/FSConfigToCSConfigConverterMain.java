@@ -16,6 +16,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
+import java.util.function.Consumer;
+
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -25,12 +28,16 @@ import org.slf4j.MarkerFactory;
  * Main class that invokes the FS-&gt;CS converter.
  *
  */
-@SuppressWarnings("checkstyle:hideutilityclassconstructor")
-public class FSConfigToCSConfigConverterMain {
+public final class FSConfigToCSConfigConverterMain {
+  private FSConfigToCSConfigConverterMain() {
+    // no instances
+  }
+
   private static final Logger LOG =
       LoggerFactory.getLogger(FSConfigToCSConfigConverterMain.class);
   private static final Marker FATAL =
       MarkerFactory.getMarker("FATAL");
+  private static Consumer<Integer> exitFunction = System::exit;
 
   public static void main(String[] args) {
     try {
@@ -44,11 +51,16 @@ public class FSConfigToCSConfigConverterMain {
                 "see previous error messages for details!");
       }
 
-      System.exit(exitCode);
+      exitFunction.accept(exitCode);
     } catch (Throwable t) {
       LOG.error(FATAL,
           "Error while starting FS configuration conversion!", t);
-      System.exit(-1);
+      exitFunction.accept(-1);
     }
+  }
+
+  @VisibleForTesting
+  static void setExit(Consumer<Integer> exitFunc) {
+    exitFunction = exitFunc;
   }
 }

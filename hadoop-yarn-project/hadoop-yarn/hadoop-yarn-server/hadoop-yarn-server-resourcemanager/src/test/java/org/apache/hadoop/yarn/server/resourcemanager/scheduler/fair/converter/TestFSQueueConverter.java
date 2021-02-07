@@ -265,8 +265,8 @@ public class TestFSQueueConverter {
   }
 
   @Test
-  public void testChildCapacity() {
-    converter = builder.build();
+  public void testChildCapacityInCapacityMode() {
+    converter = builder.withPercentages(true).build();
 
     converter.convertQueueHierarchy(rootQueue);
 
@@ -300,8 +300,72 @@ public class TestFSQueueConverter {
   }
 
   @Test
+  public void testChildCapacityInWeightMode() {
+    converter = builder.withPercentages(false).build();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    // root
+    assertEquals("root.default weight", "1.0w",
+        csConfig.get(PREFIX + "root.default.capacity"));
+    assertEquals("root.admins weight", "1.0w",
+        csConfig.get(PREFIX + "root.admins.capacity"));
+    assertEquals("root.users weight", "1.0w",
+        csConfig.get(PREFIX + "root.users.capacity"));
+
+    // root.users
+    assertEquals("root.users.john weight", "1.0w",
+        csConfig.get(PREFIX + "root.users.john.capacity"));
+    assertEquals("root.users.joe weight", "3.0w",
+        csConfig.get(PREFIX + "root.users.joe.capacity"));
+
+    // root.admins
+    assertEquals("root.admins.alice weight", "3.0w",
+        csConfig.get(PREFIX + "root.admins.alice.capacity"));
+    assertEquals("root.admins.bob weight", "1.0w",
+        csConfig.get(PREFIX + "root.admins.bob.capacity"));
+
+    // root.misc
+    assertEquals("root.misc weight", "0.0w",
+        csConfig.get(PREFIX + "root.misc.capacity"));
+    assertEquals("root.misc.a weight", "0.0w",
+        csConfig.get(PREFIX + "root.misc.a.capacity"));
+    assertEquals("root.misc.b weight", "0.0w",
+        csConfig.get(PREFIX + "root.misc.b.capacity"));
+  }
+
+  @Test
+  public void testAutoCreateV2FlagsInWeightMode() {
+    converter = builder.withPercentages(false).build();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    assertTrue("root autocreate v2 flag",
+        csConfig.getBoolean(
+            PREFIX + "root.auto-queue-creation-v2.enabled", false));
+    assertTrue("root.admins autocreate v2 flag",
+        csConfig.getBoolean(
+            PREFIX + "root.admins.auto-queue-creation-v2.enabled", false));
+    assertTrue("root.users autocreate v2 flag",
+        csConfig.getBoolean(
+            PREFIX + "root.users.auto-queue-creation-v2.enabled", false));
+    assertTrue("root.misc autocreate v2 flag",
+        csConfig.getBoolean(
+            PREFIX + "root.misc.auto-queue-creation-v2.enabled", false));
+
+    Set<String> leafs = Sets.difference(ALL_QUEUES,
+        Sets.newHashSet("root",
+            "root.default",
+            "root.admins",
+            "root.users",
+            "root.misc"));
+    assertNoValueForQueues(leafs, "auto-queue-creation-v2.enabled",
+        csConfig);
+  }
+
+  @Test
   public void testZeroSumCapacityValidation() {
-    converter = builder.build();
+    converter = builder.withPercentages(true).build();
 
     converter.convertQueueHierarchy(rootQueue);
 

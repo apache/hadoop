@@ -84,9 +84,14 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     float absoluteUsedCapacity;
     int numApplications;
     String queueName;
+    private String queuePath;
     String state;
     boolean isAbsoluteResource;
     boolean autoCreateChildQueueEnabled;
+
+    public String getQueuePath() {
+      return queuePath;
+    }
   }
 
   private class LeafQueueInfo extends QueueInfo {
@@ -261,7 +266,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           WebServicesTestUtils.getXmlFloat(element, "usedCapacity"),
           WebServicesTestUtils.getXmlFloat(element, "capacity"),
           WebServicesTestUtils.getXmlFloat(element, "maxCapacity"),
-          WebServicesTestUtils.getXmlString(element, "queueName"));
+          WebServicesTestUtils.getXmlString(element, "queueName"),
+          WebServicesTestUtils.getXmlString(element, "queuePath"));
 
       NodeList children = element.getChildNodes();
       for (int j = 0; j < children.getLength(); j++) {
@@ -306,6 +312,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     qi.numApplications =
         WebServicesTestUtils.getXmlInt(qElem, "numApplications");
     qi.queueName = WebServicesTestUtils.getXmlString(qElem, "queueName");
+    qi.queuePath = WebServicesTestUtils.getXmlString(qElem, "queuePath");
     qi.state = WebServicesTestUtils.getXmlString(qElem, "state");
     qi.autoCreateChildQueueEnabled = WebServicesTestUtils.getXmlBoolean(qElem,
         "autoCreateChildQueueEnabled");
@@ -362,11 +369,13 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements in: " + info, 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements in: " + info, 12, info.length());
+    assertEquals("incorrect number of elements in: " + info, 19, info.length());
     verifyClusterSchedulerGeneric(info.getString("type"),
         (float) info.getDouble("usedCapacity"),
         (float) info.getDouble("capacity"),
-        (float) info.getDouble("maxCapacity"), info.getString("queueName"));
+        (float) info.getDouble("maxCapacity"),
+        info.getString("queueName"),
+        info.getString("queuePath"));
     JSONObject health = info.getJSONObject("health");
     assertNotNull(health);
     assertEquals("incorrect number of elements in: " + health, 3,
@@ -401,22 +410,24 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   private void verifyClusterSchedulerGeneric(String type, float usedCapacity,
-      float capacity, float maxCapacity, String queueName) throws Exception {
+      float capacity, float maxCapacity, String queueName, String queuePath)
+      throws Exception {
 
     assertTrue("type doesn't match", "capacityScheduler".matches(type));
     assertEquals("usedCapacity doesn't match", 0, usedCapacity, 1e-3f);
     assertEquals("capacity doesn't match", 100, capacity, 1e-3f);
     assertEquals("maxCapacity doesn't match", 100, maxCapacity, 1e-3f);
     assertTrue("queueName doesn't match", "root".matches(queueName));
+    assertTrue("queuePath doesn't match", "root".matches(queuePath));
   }
 
   private void verifySubQueue(JSONObject info, String q,
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 27;
+    int numExpectedElements = 34;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 45;
+      numExpectedElements = 52;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
@@ -430,6 +441,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     qi.absoluteUsedCapacity = (float) info.getDouble("absoluteUsedCapacity");
     qi.numApplications = info.getInt("numApplications");
     qi.queueName = info.getString("queueName");
+    qi.queuePath = info.getString("queuePath");
     qi.state = info.getString("state");
 
     verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
@@ -502,6 +514,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     assertEquals("numApplications doesn't match", 0, info.numApplications);
     assertTrue("queueName doesn't match, got: " + info.queueName
         + " expected: " + q, qshortName.matches(info.queueName));
+    assertTrue("queuePath doesn't match, got: " + info.getQueuePath()
+        + " expected: " + q, q.matches(info.getQueuePath()));
     assertTrue("state doesn't match",
         (csConf.getState(q).toString()).matches(info.state));
     if (q.equals("c")) {

@@ -22,6 +22,7 @@ import java.util.Set;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -32,7 +33,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 public class CSQueueUtils {
 
   public final static float EPSILON = 0.0001f;
-  
+
   /*
    * Used only by tests
    */
@@ -40,7 +41,7 @@ public class CSQueueUtils {
       float capacity, float maximumCapacity) {
     if (maximumCapacity < 0.0f || maximumCapacity > 1.0f) {
       throw new IllegalArgumentException(
-          "Illegal value  of maximumCapacity " + maximumCapacity + 
+          "Illegal value  of maximumCapacity " + maximumCapacity +
           " used in call to setMaxCapacity for queue " + queuePath);
     }
     }
@@ -58,66 +59,15 @@ public class CSQueueUtils {
           + ")");
   }
   }
-  
-  /**
-   * Check sanity of capacities:
-   * - capacity <= maxCapacity
-   * - absCapacity <= absMaximumCapacity
-   */
-  private static void capacitiesSanityCheck(String queueName,
-      QueueCapacities queueCapacities) {
-    for (String label : queueCapacities.getExistingNodeLabels()) {
-      // The only thing we should care about is absolute capacity <=
-      // absolute max capacity otherwise the absolute max capacity is
-      // no longer an absolute maximum.
-      float absCapacity = queueCapacities.getAbsoluteCapacity(label);
-      float absMaxCapacity = queueCapacities.getAbsoluteMaximumCapacity(label);
-      if (absCapacity > absMaxCapacity) {
-        throw new IllegalArgumentException("Illegal queue capacity setting "
-            + "(abs-capacity=" + absCapacity + ") > (abs-maximum-capacity="
-            + absMaxCapacity + ") for queue=["
-            + queueName + "],label=[" + label + "]");
-      }
-    }
-  }
 
   public static float computeAbsoluteMaximumCapacity(
       float maximumCapacity, CSQueue parent) {
-    float parentAbsMaxCapacity = 
+    float parentAbsMaxCapacity =
         (parent == null) ? 1.0f : parent.getAbsoluteMaximumCapacity();
     return (parentAbsMaxCapacity * maximumCapacity);
   }
-  
-  /**
-   * This method intends to be used by ReservationQueue, ReservationQueue will
-   * not appear in configuration file, so we shouldn't do load capacities
-   * settings in configuration for reservation queue.
-   */
-  public static void updateAndCheckCapacitiesByLabel(String queuePath,
-      QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities) {
-    updateAbsoluteCapacitiesByNodeLabels(queueCapacities, parentQueueCapacities);
 
-    capacitiesSanityCheck(queuePath, queueCapacities);
-  }
-
-  /**
-   * Do following steps for capacities
-   * - Load capacities from configuration
-   * - Update absolute capacities for new capacities
-   * - Check if capacities/absolute-capacities legal
-   */
-  public static void loadUpdateAndCheckCapacities(String queuePath,
-      CapacitySchedulerConfiguration csConf,
-      QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities) {
-    loadCapacitiesByLabelsFromConf(queuePath,
-        queueCapacities, csConf);
-
-    updateAbsoluteCapacitiesByNodeLabels(queueCapacities, parentQueueCapacities);
-
-    capacitiesSanityCheck(queuePath, queueCapacities);
-  }
-  
-  private static void loadCapacitiesByLabelsFromConf(String queuePath,
+  public static void loadCapacitiesByLabelsFromConf(String queuePath,
       QueueCapacities queueCapacities, CapacitySchedulerConfiguration csConf) {
     queueCapacities.clearConfigurableFields();
     Set<String> configuredNodelabels =
@@ -132,41 +82,30 @@ public class CSQueueUtils {
         queueCapacities.setMaxAMResourcePercentage(
             label,
             csConf.getMaximumAMResourcePercentPerPartition(queuePath, label));
-      } else {
+        queueCapacities.setWeight(label,
+            csConf.getNonLabeledQueueWeight(queuePath));
+      } else{
         queueCapacities.setCapacity(label,
             csConf.getLabeledQueueCapacity(queuePath, label) / 100);
         queueCapacities.setMaximumCapacity(label,
             csConf.getLabeledQueueMaximumCapacity(queuePath, label) / 100);
         queueCapacities.setMaxAMResourcePercentage(label,
             csConf.getMaximumAMResourcePercentPerPartition(queuePath, label));
+        queueCapacities.setWeight(label,
+            csConf.getLabeledQueueWeight(queuePath, label));
       }
+
+      /*float absCapacity = queueCapacities.getCapacity(label);
+      float absMaxCapacity = queueCapacities.getMaximumCapacity(label);
+      if (absCapacity > absMaxCapacity) {
+        throw new IllegalArgumentException("Illegal queue capacity setting "
+            + "(abs-capacity=" + absCapacity + ") > (abs-maximum-capacity="
+            + absMaxCapacity + ") for queue=["
+            + queuePath + "],label=[" + label + "]");
+      }*/
     }
   }
 
-  // Set absolute capacities for {capacity, maximum-capacity}
-  private static void updateAbsoluteCapacitiesByNodeLabels(
-      QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities) {
-    for (String label : queueCapacities.getExistingNodeLabels()) {
-      float capacity = queueCapacities.getCapacity(label);
-      if (capacity > 0f) {
-        queueCapacities.setAbsoluteCapacity(
-            label,
-            capacity
-                * (parentQueueCapacities == null ? 1 : parentQueueCapacities
-                    .getAbsoluteCapacity(label)));
-      }
-
-      float maxCapacity = queueCapacities.getMaximumCapacity(label);
-      if (maxCapacity > 0f) {
-        queueCapacities.setAbsoluteMaximumCapacity(
-            label,
-            maxCapacity
-                * (parentQueueCapacities == null ? 1 : parentQueueCapacities
-                    .getAbsoluteMaximumCapacity(label)));
-      }
-    }
-  }
-  
   /**
    * Update partitioned resource usage, if nodePartition == null, will update
    * used resource for all partitions of this queue.
@@ -344,4 +283,45 @@ public class CSQueueUtils {
         queue.getQueueCapacities().getMaximumCapacity(partition),
         queue.getQueueCapacities().getAbsoluteMaximumCapacity(partition));
    }
+
+  public static void updateAbsoluteCapacitiesByNodeLabels(QueueCapacities queueCapacities,
+                                                          QueueCapacities parentQueueCapacities,
+                                                          Set<String> nodeLabels) {
+    for (String label : nodeLabels) {
+      // Weight will be normalized to queue.weight =
+      //      queue.weight(sum({sibling-queues.weight}))
+      // When weight is set, capacity will be set to 0;
+      // When capacity is set, weight will be normalized to 0,
+      // So get larger from normalized_weight and capacity will make sure we do
+      // calculation correct
+      float capacity = Math.max(
+          queueCapacities.getCapacity(label),
+          queueCapacities
+              .getNormalizedWeight(label));
+      if (capacity > 0f) {
+        queueCapacities.setAbsoluteCapacity(label, capacity * (
+            parentQueueCapacities == null ? 1 :
+                parentQueueCapacities.getAbsoluteCapacity(label)));
+      }
+
+      float maxCapacity = queueCapacities
+          .getMaximumCapacity(label);
+      if (maxCapacity > 0f) {
+        queueCapacities.setAbsoluteMaximumCapacity(label, maxCapacity * (
+            parentQueueCapacities == null ? 1 :
+                parentQueueCapacities.getAbsoluteMaximumCapacity(label)));
+      }
+    }
+  }
+
+  public static ApplicationPlacementContext extractQueuePath(String queuePath) {
+    int parentQueueNameEndIndex = queuePath.lastIndexOf(".");
+    if (parentQueueNameEndIndex > -1) {
+      String parent = queuePath.substring(0, parentQueueNameEndIndex).trim();
+      String leaf = queuePath.substring(parentQueueNameEndIndex + 1).trim();
+      return new ApplicationPlacementContext(leaf, parent);
+    } else{
+      return new ApplicationPlacementContext(queuePath);
+    }
+  }
 }

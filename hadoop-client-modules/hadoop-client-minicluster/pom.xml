@@ -672,7 +672,6 @@
                       <exclude>org.apache.hadoop:hadoop-client-api</exclude>
                       <exclude>org.apache.hadoop:hadoop-client-runtime</exclude>
                       <!-- Fine to expose our purposefully not-shaded deps as dependencies -->
-                      <exclude>org.apache.htrace:htrace-core4</exclude>
                       <exclude>org.slf4j:slf4j-api</exclude>
                       <exclude>commons-logging:commons-logging</exclude>
                       <exclude>junit:junit</exclude>
@@ -870,9 +869,7 @@
                       <excludes>
                         <exclude>org/apache/hadoop/*</exclude>
                         <exclude>org/apache/hadoop/**/*</exclude>
-                        <!-- Our non-shaded htrace and logging libraries -->
-                        <exclude>org/apache/htrace/*</exclude>
-                        <exclude>org/apache/htrace/**/*</exclude>
+                        <!-- Our non-shaded logging libraries -->
                         <exclude>org/slf4j/*</exclude>
                         <exclude>org/slf4j/**/*</exclude>
                         <exclude>org/apache/commons/logging/*</exclude>

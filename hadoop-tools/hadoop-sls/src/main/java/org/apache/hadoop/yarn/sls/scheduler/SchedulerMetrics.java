@@ -539,9 +539,13 @@ public abstract class SchedulerMetrics {
   }
 
   void tearDown() throws Exception {
+    setRunning(false);
+    LOG.info("Scheduler Metrics tears down");
     if (metricsLogBW != null)  {
       metricsLogBW.write("]");
       metricsLogBW.close();
+      //metricsLogBW is nullified to prevent the usage after closing
+      metricsLogBW = null;
     }
 
     if (web != null) {

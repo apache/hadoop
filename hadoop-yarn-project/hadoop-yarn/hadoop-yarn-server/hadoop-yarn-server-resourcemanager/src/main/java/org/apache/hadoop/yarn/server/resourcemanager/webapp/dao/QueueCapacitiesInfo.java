@@ -52,6 +52,8 @@ public class QueueCapacitiesInfo {
     float absUsedCapacity;
     float absMaxCapacity;
     float maxAMLimitPercentage;
+    float weight;
+    float normalizedWeight;
     for (String partitionName : capacities.getExistingNodeLabels()) {
       usedCapacity = capacities.getUsedCapacity(partitionName) * 100;
       capacity = capacities.getCapacity(partitionName) * 100;
@@ -67,10 +69,13 @@ public class QueueCapacitiesInfo {
       if (maxCapacity < CapacitySchedulerQueueInfo.EPSILON || maxCapacity > 1f)
         maxCapacity = 1f;
       maxCapacity = maxCapacity * 100;
+      weight = capacities.getWeight(partitionName);
+      normalizedWeight = capacities.getNormalizedWeight(partitionName);
       queueCapacitiesByPartition.add(new PartitionQueueCapacitiesInfo(
           partitionName, capacity, usedCapacity, maxCapacity, absCapacity,
           absUsedCapacity, absMaxCapacity,
           considerAMUsage ? maxAMLimitPercentage : 0f,
+          weight, normalizedWeight,
           resourceQuotas.getConfiguredMinResource(partitionName),
           resourceQuotas.getConfiguredMaxResource(partitionName),
           resourceQuotas.getEffectiveMinResource(partitionName),

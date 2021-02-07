@@ -28,7 +28,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -49,9 +51,10 @@ public class TestReservationQueue {
   private final ResourceCalculator resourceCalculator =
       new DefaultResourceCalculator();
   private ReservationQueue autoCreatedLeafQueue;
+  private PlanQueue planQueue;
 
   @Before
-  public void setup() throws IOException {
+  public void setup() throws IOException, SchedulerDynamicEditException {
     // setup a context / conf
     csConf = new CapacitySchedulerConfiguration();
 
@@ -66,12 +69,14 @@ public class TestReservationQueue {
     when(csContext.getClusterResource()).thenReturn(
         Resources.createResource(100 * 16 * GB, 100 * 32));
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     RMContext mockRMContext = TestUtils.getMockRMContext();
     when(csContext.getRMContext()).thenReturn(mockRMContext);
 
     // create a queue
-    PlanQueue pq = new PlanQueue(csContext, "root", null, null);
-    autoCreatedLeafQueue = new ReservationQueue(csContext, "a", pq);
+    planQueue = new PlanQueue(csContext, "root", null, null);
+    autoCreatedLeafQueue = new ReservationQueue(csContext, "a", planQueue);
+    planQueue.addChildQueue(autoCreatedLeafQueue);
   }
 
   private void validateAutoCreatedLeafQueue(double capacity) {
@@ -83,9 +88,14 @@ public class TestReservationQueue {
 
   @Test
   public void testAddSubtractCapacity() throws Exception {
-
     // verify that setting, adding, subtracting capacity works
     autoCreatedLeafQueue.setCapacity(1.0F);
+    autoCreatedLeafQueue.setMaxCapacity(1.0F);
+
+    planQueue.updateClusterResource(
+        Resources.createResource(100 * 16 * GB, 100 * 32),
+        new ResourceLimits(Resources.createResource(100 * 16 * GB, 100 * 32)));
+
     validateAutoCreatedLeafQueue(1);
     autoCreatedLeafQueue.setEntitlement(new QueueEntitlement(0.9f, 1f));
     validateAutoCreatedLeafQueue(0.9);

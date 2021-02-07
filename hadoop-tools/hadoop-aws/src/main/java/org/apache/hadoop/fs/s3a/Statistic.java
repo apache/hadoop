@@ -157,6 +157,24 @@ public enum Statistic {
       "Calls of rename()",
       TYPE_COUNTER),
 
+  /* The XAttr API metrics are all durations */
+  INVOCATION_XATTR_GET_MAP(
+      StoreStatisticNames.OP_XATTR_GET_MAP,
+      "Calls of getXAttrs(Path path)",
+      TYPE_DURATION),
+  INVOCATION_XATTR_GET_NAMED(
+      StoreStatisticNames.OP_XATTR_GET_NAMED,
+      "Calls of getXAttr(Path, String)",
+      TYPE_DURATION),
+  INVOCATION_XATTR_GET_NAMED_MAP(
+      StoreStatisticNames.OP_XATTR_GET_NAMED_MAP,
+      "Calls of xattr()",
+      TYPE_DURATION),
+  INVOCATION_OP_XATTR_LIST(
+      StoreStatisticNames.OP_XATTR_LIST,
+      "Calls of getXAttrs(Path path, List<String> names)",
+      TYPE_DURATION),
+
   /* Object IO */
   OBJECT_COPY_REQUESTS(StoreStatisticNames.OBJECT_COPY_REQUESTS,
       "Object copy requests",
@@ -476,8 +494,8 @@ public enum Statistic {
   /*
    * Delegation Token Operations.
    */
-  DELEGATION_TOKEN_ISSUED(
-      StoreStatisticNames.DELEGATION_TOKEN_ISSUED,
+  DELEGATION_TOKENS_ISSUED(
+      StoreStatisticNames.DELEGATION_TOKENS_ISSUED,
       "Count of delegation tokens issued",
       TYPE_DURATION),
 
