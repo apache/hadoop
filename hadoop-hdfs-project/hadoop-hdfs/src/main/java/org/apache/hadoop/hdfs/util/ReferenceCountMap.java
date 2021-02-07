@@ -46,7 +46,7 @@ public class ReferenceCountMap<E extends ReferenceCountMap.ReferenceCounter> {
    * @param key Key to put in reference map
    * @return Referenced instance
    */
-  public E put(E key) {
+  public synchronized E put(E key) {
     E value = referenceMap.get(key);
     if (value == null) {
       value = key;
@@ -62,7 +62,7 @@ public class ReferenceCountMap<E extends ReferenceCountMap.ReferenceCounter> {
    * 
    * @param key Key to remove the reference.
    */
-  public void remove(E key) {
+  public synchronized void remove(E key) {
     E value = referenceMap.get(key);
     if (value != null && value.decrementAndGetRefCount() == 0) {
       referenceMap.remove(key);
@@ -75,14 +75,14 @@ public class ReferenceCountMap<E extends ReferenceCountMap.ReferenceCounter> {
    * @return
    */
   @VisibleForTesting
-  public ImmutableList<E> getEntries() {
+  public synchronized ImmutableList<E> getEntries() {
     return new ImmutableList.Builder<E>().addAll(referenceMap.keySet()).build();
   }
 
   /**
    * Get the reference count for the key
    */
-  public long getReferenceCount(E key) {
+  public synchronized long getReferenceCount(E key) {
     ReferenceCounter counter = referenceMap.get(key);
     if (counter != null) {
       return counter.getRefCount();
@@ -93,7 +93,7 @@ public class ReferenceCountMap<E extends ReferenceCountMap.ReferenceCounter> {
   /**
    * Get the number of unique elements
    */
-  public int getUniqueElementsSize() {
+  public synchronized int getUniqueElementsSize() {
     return referenceMap.size();
   }
 
@@ -101,7 +101,7 @@ public class ReferenceCountMap<E extends ReferenceCountMap.ReferenceCounter> {
    * Clear the contents
    */
   @VisibleForTesting
-  public void clear() {
+  public synchronized void clear() {
     referenceMap.clear();
   }
 
