@@ -256,6 +256,52 @@
      <dependency>
          <groupId>org.jsonschema2pojo</groupId>
          <artifactId>jsonschema2pojo-core</artifactId>
+         <exclusions>
+           <exclusion>
+             <groupId>joda-time</groupId>
+             <artifactId>joda-time</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.google.code.findbugs</groupId>
+             <artifactId>jsr305</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.fasterxml.jackson.core</groupId>
+             <artifactId>*</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.fasterxml.jackson.dataformat</groupId>
+             <artifactId>*</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>org.codehaus.jackson</groupId>
+             <artifactId>*</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.google.code.gson</groupId>
+             <artifactId>gson</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.google.code.findbugs</groupId>
+             <artifactId>annotations</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>org.scala-lang</groupId>
+             <artifactId>scala-library</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>org.jsonschema2pojo</groupId>
+             <artifactId>jsonschema2pojo-scalagen</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>com.google.code.javaparser</groupId>
+             <artifactId>javaparser</artifactId>
+           </exclusion>
+           <exclusion>
+             <groupId>javax.validation</groupId>
+             <artifactId>validation-api</artifactId>
+           </exclusion>
+         </exclusions>
      </dependency>
      <dependency>
          <groupId>com.fasterxml.jackson.core</groupId>

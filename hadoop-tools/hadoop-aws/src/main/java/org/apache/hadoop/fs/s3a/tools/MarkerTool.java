@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 
@@ -64,6 +65,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUPTED;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_FOUND;
@@ -281,16 +283,24 @@ public final class MarkerTool extends S3GuardTool {
     }
     FileSystem fs = path.getFileSystem(getConf());
     boolean nonAuth = command.getOpt(OPT_NONAUTH);
-    ScanResult result = execute(
-        new ScanArgsBuilder()
-            .withSourceFS(fs)
-            .withPath(path)
-            .withDoPurge(clean)
-            .withMinMarkerCount(expectedMin)
-            .withMaxMarkerCount(expectedMax)
-            .withLimit(limit)
-            .withNonAuth(nonAuth)
-            .build());
+    ScanResult result;
+    try {
+      result = execute(
+              new ScanArgsBuilder()
+                      .withSourceFS(fs)
+                      .withPath(path)
+                      .withDoPurge(clean)
+                      .withMinMarkerCount(expectedMin)
+                      .withMaxMarkerCount(expectedMax)
+                      .withLimit(limit)
+                      .withNonAuth(nonAuth)
+                      .build());
+    } catch (UnknownStoreException ex) {
+      // bucket doesn't exist.
+      // replace the stack trace with an error code.
+      throw new ExitUtil.ExitException(EXIT_NOT_FOUND,
+              ex.toString(), ex);
+    }
     if (verbose) {
       dumpFileSystemStatistics(out);
     }
@@ -395,10 +405,22 @@ public final class MarkerTool extends S3GuardTool {
     } else {
       filterPolicy = null;
     }
+    int minMarkerCount = scanArgs.getMinMarkerCount();
+    int maxMarkerCount = scanArgs.getMaxMarkerCount();
+    if (minMarkerCount > maxMarkerCount) {
+      // swap min and max if they are wrong.
+      // this is to ensure any test scripts written to work around
+      // HADOOP-17332 and min/max swapping continue to work.
+      println(out, "Swapping -min (%d) and -max (%d) values",
+          minMarkerCount, maxMarkerCount);
+      int m = minMarkerCount;
+      minMarkerCount = maxMarkerCount;
+      maxMarkerCount = m;
+    }
     ScanResult result = scan(target,
         scanArgs.isDoPurge(),
-        scanArgs.getMaxMarkerCount(),
-        scanArgs.getMinMarkerCount(),
+        minMarkerCount,
+        maxMarkerCount,
         scanArgs.getLimit(),
         filterPolicy);
     return result;
@@ -512,6 +534,11 @@ public final class MarkerTool extends S3GuardTool {
       final int limit,
       final DirectoryPolicy filterPolicy)
       throws IOException, ExitUtil.ExitException {
+
+    // safety check: min and max are correctly ordered at this point.
+    Preconditions.checkArgument(minMarkerCount <= maxMarkerCount,
+        "The min marker count of %d is greater than the max value of %d",
+        minMarkerCount, maxMarkerCount);
 
     ScanResult result = new ScanResult();
 
@@ -646,6 +673,7 @@ public final class MarkerTool extends S3GuardTool {
       final int limit) throws IOException {
 
     int count = 0;
+    boolean result = true;
     RemoteIterator<S3AFileStatus> listing = operations
         .listObjects(path, storeContext.pathToKey(path));
     while (listing.hasNext()) {
@@ -674,10 +702,16 @@ public final class MarkerTool extends S3GuardTool {
       if (limit > 0 && count >= limit) {
         println(out, "Limit of scan reached - %,d object%s",
             limit, suffix(limit));
-        return false;
+        result = false;
+        break;
       }
     }
-    return true;
+    LOG.debug("Listing summary {}", listing);
+    if (verbose) {
+      println(out, "%nListing statistics:%n  %s%n",
+          ioStatisticsSourceToString(listing));
+    }
+    return result;
   }
 
   /**

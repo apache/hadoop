@@ -51,6 +51,8 @@ public final class OperationCost {
 
   /**
    * Delete cost when deleting a marker.
+   * Note: if bulk delete is disabled, this changes to being
+   * the number of directories deleted.
    */
   public static final int DELETE_MARKER_REQUEST = DELETE_OBJECT_REQUEST;
 
@@ -75,6 +77,11 @@ public final class OperationCost {
    * Cost of {@link org.apache.hadoop.fs.s3a.impl.StatusProbeEnum#FILE}.
    */
   public static final OperationCost FILE_STATUS_FILE_PROBE = HEAD_OPERATION;
+
+  /**
+   * Cost of getFileStatus on root directory.
+   */
+  public static final OperationCost ROOT_FILE_STATUS_PROBE = NO_IO;
 
   /**
    * Cost of {@link org.apache.hadoop.fs.s3a.impl.StatusProbeEnum#ALL}.

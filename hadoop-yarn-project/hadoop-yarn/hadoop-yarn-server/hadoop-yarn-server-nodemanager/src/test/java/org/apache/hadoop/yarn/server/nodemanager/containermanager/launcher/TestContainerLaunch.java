@@ -824,6 +824,69 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   }
 
   @Test
+  public void testNmForcePath() throws Exception {
+    // Valid only for unix
+    assumeNotWindows();
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
+    Map<String, String> userSetEnv = new HashMap<>();
+    Set<String> nmEnvTrack = new LinkedHashSet<>();
+    containerLaunchContext.setEnvironment(userSetEnv);
+    Container container = mock(Container.class);
+    when(container.getContainerId()).thenReturn(cId);
+    when(container.getLaunchContext()).thenReturn(containerLaunchContext);
+    when(container.getLocalizedResources()).thenReturn(null);
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler<Event> eventHandler = new EventHandler<Event>() {
+      public void handle(Event event) {
+        Assert.assertTrue(event instanceof ContainerExitEvent);
+        ContainerExitEvent exitEvent = (ContainerExitEvent) event;
+        Assert.assertEquals(ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
+            exitEvent.getType());
+      }
+    };
+    when(dispatcher.getEventHandler()).thenReturn(eventHandler);
+
+    String testDir = System.getProperty("test.build.data",
+        "target/test-dir");
+    Path pwd = new Path(testDir);
+    List<Path> appDirs = new ArrayList<>();
+    List<String> userLocalDirs = new ArrayList<>();
+    List<String> containerLogs = new ArrayList<>();
+    Map<Path, List<String>> resources = new HashMap<>();
+    Path nmp = new Path(testDir);
+
+    YarnConfiguration conf = new YarnConfiguration();
+    String forcePath = "./force-path";
+    conf.set("yarn.nodemanager.force.path", forcePath);
+
+    ContainerLaunch launch = new ContainerLaunch(distContext, conf,
+        dispatcher, exec, null, container, dirsHandler, containerManager);
+    launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
+        resources, nmp, nmEnvTrack);
+
+    Assert.assertTrue(userSetEnv.containsKey(Environment.PATH.name()));
+    Assert.assertEquals(forcePath + ":$PATH",
+        userSetEnv.get(Environment.PATH.name()));
+
+    String userPath = "/usr/bin:/usr/local/bin";
+    userSetEnv.put(Environment.PATH.name(), userPath);
+    containerLaunchContext.setEnvironment(userSetEnv);
+    when(container.getLaunchContext()).thenReturn(containerLaunchContext);
+
+    launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
+        resources, nmp, nmEnvTrack);
+
+    Assert.assertTrue(userSetEnv.containsKey(Environment.PATH.name()));
+    Assert.assertEquals(forcePath + ":" + userPath,
+        userSetEnv.get(Environment.PATH.name()));
+  }
+
+  @Test
   public void testErrorLogOnContainerExit() throws Exception {
     verifyTailErrorLogOnContainerExit(new Configuration(), "/stderr", false);
   }

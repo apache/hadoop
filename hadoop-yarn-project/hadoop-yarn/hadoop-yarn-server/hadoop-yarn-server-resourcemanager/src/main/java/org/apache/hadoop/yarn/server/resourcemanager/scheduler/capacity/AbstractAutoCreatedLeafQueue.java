@@ -128,9 +128,4 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
       writeLock.unlock();
     }
   }
-
-  protected void setupConfigurableCapacities(QueueCapacities queueCapacities) {
-    CSQueueUtils.updateAndCheckCapacitiesByLabel(getQueuePath(),
-        queueCapacities, parent == null ? null : parent.getQueueCapacities());
-  }
 }

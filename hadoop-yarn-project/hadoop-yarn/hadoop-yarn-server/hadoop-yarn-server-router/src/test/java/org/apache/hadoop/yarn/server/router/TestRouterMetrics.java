@@ -47,11 +47,15 @@ public class TestRouterMetrics {
     Assert.assertEquals(0, metrics.getNumSucceededAppsSubmitted());
     Assert.assertEquals(0, metrics.getNumSucceededAppsKilled());
     Assert.assertEquals(0, metrics.getNumSucceededAppsRetrieved());
+    Assert.assertEquals(0,
+        metrics.getNumSucceededAppAttemptsRetrieved());
 
     Assert.assertEquals(0, metrics.getAppsFailedCreated());
     Assert.assertEquals(0, metrics.getAppsFailedSubmitted());
     Assert.assertEquals(0, metrics.getAppsFailedKilled());
     Assert.assertEquals(0, metrics.getAppsFailedRetrieved());
+    Assert.assertEquals(0,
+        metrics.getAppAttemptsFailedRetrieved());
 
     LOG.info("Test: aggregate metrics are updated correctly");
   }
@@ -197,6 +201,46 @@ public class TestRouterMetrics {
   }
 
   /**
+   * This test validates the correctness of the metric:
+   * Retrieved AppAttempt Report
+   * successfully.
+   */
+  @Test
+  public void testSucceededAppAttemptReport() {
+
+    long totalGoodBefore = metrics.getNumSucceededAppAttemptsRetrieved();
+
+    goodSubCluster.getApplicationAttemptReport(100);
+
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededAppAttemptsRetrieved());
+    Assert.assertEquals(100,
+        metrics.getLatencySucceededGetAppAttemptReport(), 0);
+
+    goodSubCluster.getApplicationAttemptReport(200);
+
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededAppAttemptsRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetAppAttemptReport(), 0);
+  }
+
+  /**
+   * This test validates the correctness of the metric:
+   * Failed to retrieve AppAttempt Report.
+   */
+  @Test
+  public void testAppAttemptReportFailed() {
+
+    long totalBadbefore = metrics.getAppAttemptsFailedRetrieved();
+
+    badSubCluster.getApplicationAttemptReport();
+
+    Assert.assertEquals(totalBadbefore + 1,
+        metrics.getAppAttemptsFailedRetrieved());
+  }
+
+  /**
    * This test validates the correctness of the metric: Retrieved Multiple Apps
    * successfully.
    */
@@ -257,6 +301,11 @@ public class TestRouterMetrics {
       metrics.incrAppsFailedRetrieved();
     }
 
+    public void getApplicationAttemptReport() {
+      LOG.info("Mocked: failed getApplicationAttemptReport call");
+      metrics.incrAppsFailedRetrieved();
+    }
+
     public void getApplicationsReport() {
       LOG.info("Mocked: failed getApplicationsReport call");
       metrics.incrMultipleAppsFailedRetrieved();
@@ -287,6 +336,13 @@ public class TestRouterMetrics {
       LOG.info("Mocked: successful getApplicationReport call with duration {}",
           duration);
       metrics.succeededAppsRetrieved(duration);
+    }
+
+    public void getApplicationAttemptReport(long duration) {
+      LOG.info("Mocked: successful " +
+              "getApplicationAttemptReport call with duration {}",
+          duration);
+      metrics.succeededAppAttemptsRetrieved(duration);
     }
 
     public void getApplicationsReport(long duration) {

@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdfs.server.federation.fairness.NoRouterRpcFairnessPolicyController;
+import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicyController;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -334,4 +336,43 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final Class<? extends AbstractDelegationTokenSecretManager>
       DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS_DEFAULT =
       ZKDelegationTokenSecretManagerImpl.class;
+
+  // HDFS Router fairness
+  public static final String FEDERATION_ROUTER_FAIRNESS_PREFIX =
+      FEDERATION_ROUTER_PREFIX + "fairness.";
+  public static final String
+      DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS =
+      FEDERATION_ROUTER_FAIRNESS_PREFIX + "policy.controller.class";
+  public static final Class<? extends RouterRpcFairnessPolicyController>
+      DFS_ROUTER_FAIRNESS_POLICY_CONTROLLER_CLASS_DEFAULT =
+      NoRouterRpcFairnessPolicyController.class;
+  public static final String DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX =
+      FEDERATION_ROUTER_FAIRNESS_PREFIX + "handler.count.";
+
+  // HDFS Router Federation Rename.
+  public static final String DFS_ROUTER_FEDERATION_RENAME_PREFIX =
+      FEDERATION_ROUTER_PREFIX + "federation.rename.";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_OPTION =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "option";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT =
+      "NONE";
+  public static final String
+      DFS_ROUTER_FEDERATION_RENAME_FORCE_CLOSE_OPEN_FILE =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "force.close.open.file";
+  public static final boolean
+      DFS_ROUTER_FEDERATION_RENAME_FORCE_CLOSE_OPEN_FILE_DEFAULT = true;
+  public static final String DFS_ROUTER_FEDERATION_RENAME_MAP =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "map";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_BANDWIDTH =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "bandwidth";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_DELAY =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "delay";
+  public static final long DFS_ROUTER_FEDERATION_RENAME_DELAY_DEFAULT = 1000;
+  public static final String DFS_ROUTER_FEDERATION_RENAME_DIFF =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "diff";
+  public static final int DFS_ROUTER_FEDERATION_RENAME_DIFF_DEFAULT = 0;
+  public static final String DFS_ROUTER_FEDERATION_RENAME_TRASH =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "trash";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_TRASH_DEFAULT =
+      "trash";
 }

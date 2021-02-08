@@ -24,6 +24,8 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Listenable
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 
 import java.util.Collection;
 import java.util.List;
@@ -33,6 +35,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTrackerFactory;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED;
 
 /**
  * This ExecutorService blocks the submission of new tasks when its queue is
@@ -54,9 +60,30 @@ public class SemaphoredDelegatingExecutor extends
   private final Semaphore queueingPermits;
   private final ListeningExecutorService executorDelegatee;
   private final int permitCount;
+  private final DurationTrackerFactory trackerFactory;
 
   /**
    * Instantiate.
+   * @param executorDelegatee Executor to delegate to
+   * @param permitCount number of permits into the queue permitted
+   * @param fair should the semaphore be "fair"
+   * @param trackerFactory duration tracker factory.
+   */
+  public SemaphoredDelegatingExecutor(
+      ListeningExecutorService executorDelegatee,
+      int permitCount,
+      boolean fair,
+      DurationTrackerFactory trackerFactory) {
+    this.permitCount = permitCount;
+    queueingPermits = new Semaphore(permitCount, fair);
+    this.executorDelegatee = requireNonNull(executorDelegatee);
+    this.trackerFactory = trackerFactory != null
+        ? trackerFactory
+        : stubDurationTrackerFactory();
+  }
+
+  /**
+   * Instantiate without collecting executor aquisition duration information.
    * @param executorDelegatee Executor to delegate to
    * @param permitCount number of permits into the queue permitted
    * @param fair should the semaphore be "fair"
@@ -65,9 +92,7 @@ public class SemaphoredDelegatingExecutor extends
       ListeningExecutorService executorDelegatee,
       int permitCount,
       boolean fair) {
-    this.permitCount = permitCount;
-    queueingPermits = new Semaphore(permitCount, fair);
-    this.executorDelegatee = executorDelegatee;
+    this(executorDelegatee, permitCount, fair, null);
   }
 
   @Override
@@ -103,7 +128,8 @@ public class SemaphoredDelegatingExecutor extends
 
   @Override
   public <T> ListenableFuture<T> submit(Callable<T> task) {
-    try {
+    try (DurationTracker ignored =
+             trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -114,7 +140,8 @@ public class SemaphoredDelegatingExecutor extends
 
   @Override
   public <T> ListenableFuture<T> submit(Runnable task, T result) {
-    try {
+    try (DurationTracker ignored =
+             trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -125,7 +152,8 @@ public class SemaphoredDelegatingExecutor extends
 
   @Override
   public ListenableFuture<?> submit(Runnable task) {
-    try {
+    try (DurationTracker ignored =
+             trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -136,7 +164,8 @@ public class SemaphoredDelegatingExecutor extends
 
   @Override
   public void execute(Runnable command) {
-    try {
+    try (DurationTracker ignored =
+             trackerFactory.trackDuration(ACTION_EXECUTOR_ACQUIRED)) {
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();

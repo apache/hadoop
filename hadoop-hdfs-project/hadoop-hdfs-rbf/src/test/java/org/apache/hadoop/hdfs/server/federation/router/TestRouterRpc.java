@@ -233,9 +233,13 @@ public class TestRouterRpc {
 
     // We decrease the DN heartbeat expire interval to make them dead faster
     cluster.getCluster().getNamesystem(0).getBlockManager()
-        .getDatanodeManager().setHeartbeatExpireInterval(5000);
+        .getDatanodeManager().setHeartbeatInterval(1);
     cluster.getCluster().getNamesystem(1).getBlockManager()
-        .getDatanodeManager().setHeartbeatExpireInterval(5000);
+        .getDatanodeManager().setHeartbeatInterval(1);
+    cluster.getCluster().getNamesystem(0).getBlockManager()
+        .getDatanodeManager().setHeartbeatExpireInterval(3000);
+    cluster.getCluster().getNamesystem(1).getBlockManager()
+        .getDatanodeManager().setHeartbeatExpireInterval(3000);
   }
 
   @AfterClass
@@ -881,37 +885,40 @@ public class TestRouterRpc {
     resolver.addLocation(mountPoint, ns0, "/");
 
     FsPermission permission = new FsPermission("777");
-    routerProtocol.mkdirs(mountPoint, permission, false);
     routerProtocol.mkdirs(snapshotFolder, permission, false);
-    for (int i = 1; i <= 9; i++) {
-      String folderPath = snapshotFolder + "/subfolder" + i;
-      routerProtocol.mkdirs(folderPath, permission, false);
+    try {
+      for (int i = 1; i <= 9; i++) {
+        String folderPath = snapshotFolder + "/subfolder" + i;
+        routerProtocol.mkdirs(folderPath, permission, false);
+      }
+
+      LOG.info("Create the snapshot: {}", snapshotFolder);
+      routerProtocol.allowSnapshot(snapshotFolder);
+      String snapshotName =
+          routerProtocol.createSnapshot(snapshotFolder, "snap");
+      assertEquals(snapshotFolder + "/.snapshot/snap", snapshotName);
+      assertTrue(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
+
+      LOG.info("Rename the snapshot and check it changed");
+      routerProtocol.renameSnapshot(snapshotFolder, "snap", "newsnap");
+      assertFalse(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
+      assertTrue(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
+      LambdaTestUtils.intercept(SnapshotException.class,
+          "Cannot delete snapshot snap from path " + snapshotFolder + ":",
+          () -> routerFS.deleteSnapshot(new Path(snapshotFolder), "snap"));
+
+      LOG.info("Delete the snapshot and check it is not there");
+      routerProtocol.deleteSnapshot(snapshotFolder, "newsnap");
+      assertFalse(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
+    } finally {
+      // Cleanup
+      assertTrue(routerProtocol.delete(snapshotFolder, true));
+      assertTrue(resolver.removeLocation(mountPoint, ns0, "/"));
     }
-
-    LOG.info("Create the snapshot: {}", snapshotFolder);
-    routerProtocol.allowSnapshot(snapshotFolder);
-    String snapshotName = routerProtocol.createSnapshot(
-        snapshotFolder, "snap");
-    assertEquals(snapshotFolder + "/.snapshot/snap", snapshotName);
-    assertTrue(verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
-
-    LOG.info("Rename the snapshot and check it changed");
-    routerProtocol.renameSnapshot(snapshotFolder, "snap", "newsnap");
-    assertFalse(
-        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
-    assertTrue(
-        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
-    LambdaTestUtils.intercept(SnapshotException.class,
-        "Cannot delete snapshot snap from path " + snapshotFolder + ":",
-        () -> routerFS.deleteSnapshot(new Path(snapshotFolder), "snap"));
-
-    LOG.info("Delete the snapshot and check it is not there");
-    routerProtocol.deleteSnapshot(snapshotFolder, "newsnap");
-    assertFalse(
-        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
-
-    // Cleanup
-    routerProtocol.delete(mountPoint, true);
   }
 
   @Test
@@ -1346,9 +1353,9 @@ public class TestRouterRpc {
 
     // Verify that checking that datanode works
     BlocksWithLocations routerBlockLocations =
-        routerNamenodeProtocol.getBlocks(dn0, 1024, 0);
+        routerNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
     BlocksWithLocations nnBlockLocations =
-        nnNamenodeProtocol.getBlocks(dn0, 1024, 0);
+        nnNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
     BlockWithLocations[] routerBlocks = routerBlockLocations.getBlocks();
     BlockWithLocations[] nnBlocks = nnBlockLocations.getBlocks();
     assertEquals(nnBlocks.length, routerBlocks.length);
@@ -1859,7 +1866,7 @@ public class TestRouterRpc {
         }
         return datanodeReport.length == dn.length;
       }
-    }, 500, 5 * 1000);
+    }, 100, 10 * 1000);
 
     // The cache should be updated now
     final DatanodeInfo[] datanodeReport3 =

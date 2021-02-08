@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -33,13 +34,12 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public enum StorageType {
-  // sorted by the speed of the storage types, from fast to slow
   RAM_DISK(true, true),
-  NVDIMM(false, true),
   SSD(false, false),
   DISK(false, false),
   ARCHIVE(false, false),
-  PROVIDED(false, false);
+  PROVIDED(false, false),
+  NVDIMM(false, true);
 
   private final boolean isTransient;
   private final boolean isRAM;
@@ -91,6 +91,11 @@ public enum StorageType {
     return StorageType.valueOf(StringUtils.toUpperCase(s));
   }
 
+  public static boolean allowSameDiskTiering(StorageType storageType) {
+    return storageType == StorageType.DISK
+        || storageType == StorageType.ARCHIVE;
+  }
+
   private static List<StorageType> getNonTransientTypes() {
     List<StorageType> nonTransientTypes = new ArrayList<>();
     for (StorageType t : VALUES) {
@@ -99,5 +104,21 @@ public enum StorageType {
       }
     }
     return nonTransientTypes;
+  }
+
+  // The configuration header for different StorageType.
+  public static final String CONF_KEY_HEADER =
+      "dfs.datanode.storagetype.";
+
+  /**
+   * Get the configured values for different StorageType.
+   * @param conf - absolute or fully qualified path
+   * @param t - the StorageType
+   * @param name - the sub-name of key
+   * @return the file system of the path
+   */
+  public static String getConf(Configuration conf,
+                               StorageType t, String name) {
+    return conf.get(CONF_KEY_HEADER + t.toString() + "." + name);
   }
 }

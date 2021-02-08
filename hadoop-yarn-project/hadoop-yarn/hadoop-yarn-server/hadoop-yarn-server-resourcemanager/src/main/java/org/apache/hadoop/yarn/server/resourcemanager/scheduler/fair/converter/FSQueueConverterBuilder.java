@@ -32,6 +32,7 @@ public final class FSQueueConverterBuilder {
   int queueMaxAppsDefault;
   ConversionOptions conversionOptions;
   boolean drfUsed;
+  boolean usePercentages;
 
   private FSQueueConverterBuilder() {
   }
@@ -90,6 +91,11 @@ public final class FSQueueConverterBuilder {
 
   public FSQueueConverterBuilder withDrfUsed(boolean drfUsed) {
     this.drfUsed = drfUsed;
+    return this;
+  }
+
+  public FSQueueConverterBuilder withPercentages(boolean usePercentages) {
+    this.usePercentages = usePercentages;
     return this;
   }
 

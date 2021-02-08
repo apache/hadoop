@@ -51,6 +51,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 public class AbfsHttpOperation implements AbfsPerfLoggable {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
+  public static final String SIGNATURE_QUERY_PARAM_KEY = "sig=";
+
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
 
@@ -61,6 +63,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   private final String method;
   private final URL url;
+  private String maskedUrl;
+  private String maskedEncodedUrl;
 
   private HttpURLConnection connection;
   private int statusCode;
@@ -82,12 +86,23 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
 
-  public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(final URL url,
-      final String method, final int httpStatus) {
-       return new AbfsHttpOperation(url, method, httpStatus);
+  public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
+      final URL url,
+      final String method,
+      final int httpStatus) {
+    AbfsHttpOperationWithFixedResult httpOp
+        = new AbfsHttpOperationWithFixedResult(url, method, httpStatus);
+    return httpOp;
   }
 
-  private AbfsHttpOperation(final URL url, final String method,
+  /**
+   * Constructor for FixedResult instance, avoiding connection init.
+   * @param url request url
+   * @param method Http method
+   * @param httpStatus HttpStatus
+   */
+  protected AbfsHttpOperation(final URL url,
+      final String method,
       final int httpStatus) {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
@@ -103,8 +118,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return method;
   }
 
-  public URL getUrl() {
-    return url;
+  public String getHost() {
+    return url.getHost();
   }
 
   public int getStatusCode() {
@@ -154,7 +169,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   // Returns a trace message for the request
   @Override
   public String toString() {
-    final String urlStr = url.toString();
     final StringBuilder sb = new StringBuilder();
     sb.append(statusCode);
     sb.append(",");
@@ -180,19 +194,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(",");
     sb.append(method);
     sb.append(",");
-    sb.append(urlStr);
+    sb.append(getSignatureMaskedUrl());
     return sb.toString();
   }
 
   // Returns a trace message for the ABFS API logging service to consume
   public String getLogString() {
-    String urlStr = null;
-
-    try {
-      urlStr = URLEncoder.encode(url.toString(), "UTF-8");
-    } catch(UnsupportedEncodingException e) {
-      urlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
-    }
 
     final StringBuilder sb = new StringBuilder();
     sb.append("s=")
@@ -220,7 +227,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       .append(" m=")
       .append(method)
       .append(" u=")
-      .append(urlStr);
+      .append(getSignatureMaskedEncodedUrl());
 
     return sb.toString();
   }
@@ -512,5 +519,63 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   private boolean isNullInputStream(InputStream stream) {
     return stream == null ? true : false;
+  }
+
+  public static String getSignatureMaskedUrl(String url) {
+    int qpStrIdx = url.indexOf('?' + SIGNATURE_QUERY_PARAM_KEY);
+    if (qpStrIdx == -1) {
+      qpStrIdx = url.indexOf('&' + SIGNATURE_QUERY_PARAM_KEY);
+    }
+    if (qpStrIdx == -1) {
+      return url;
+    }
+    final int sigStartIdx = qpStrIdx + SIGNATURE_QUERY_PARAM_KEY.length() + 1;
+    final int ampIdx = url.indexOf("&", sigStartIdx);
+    final int sigEndIndex = (ampIdx != -1) ? ampIdx : url.length();
+    String signature = url.substring(sigStartIdx, sigEndIndex);
+    return url.replace(signature, "XXXX");
+  }
+
+  public static String encodedUrlStr(String url) {
+    try {
+      return URLEncoder.encode(url, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      return "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
+    }
+  }
+
+  public String getSignatureMaskedUrl() {
+    if (this.maskedUrl == null) {
+      this.maskedUrl = getSignatureMaskedUrl(this.url.toString());
+    }
+    return this.maskedUrl;
+  }
+
+  public String getSignatureMaskedEncodedUrl() {
+    if (this.maskedEncodedUrl == null) {
+      this.maskedEncodedUrl = encodedUrlStr(getSignatureMaskedUrl());
+    }
+    return this.maskedEncodedUrl;
+  }
+
+  public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
+    /**
+     * Creates an instance to represent fixed results.
+     * This is used in idempotency handling.
+     *
+     * @param url The full URL including query string parameters.
+     * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
+     * @param httpStatus StatusCode to hard set
+     */
+    public AbfsHttpOperationWithFixedResult(final URL url,
+        final String method,
+        final int httpStatus) {
+      super(url, method, httpStatus);
+    }
+
+    @Override
+    public String getResponseHeader(final String httpHeader) {
+      return "";
+    }
   }
 }

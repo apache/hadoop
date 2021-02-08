@@ -392,6 +392,14 @@ public abstract class AbstractAbfsIntegrationTest extends
     return path;
   }
 
+  public AzureBlobFileSystemStore getAbfsStore(final AzureBlobFileSystem fs) {
+    return fs.getAbfsStore();
+  }
+
+  public Path makeQualified(Path path) throws java.io.IOException {
+    return getFileSystem().makeQualified(path);
+  }
+
   /**
    * Create a path under the test path provided by
    * {@link #getTestPath()}.

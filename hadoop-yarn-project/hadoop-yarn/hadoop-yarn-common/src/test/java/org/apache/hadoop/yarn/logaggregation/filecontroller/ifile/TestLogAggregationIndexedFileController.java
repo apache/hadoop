@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
+import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
@@ -496,5 +497,110 @@ public class TestLogAggregationIndexedFileController
     conf.set(remoteDirConf, "s3a://test/path");
     fileFormat.initialize(conf, fileControllerName);
     assertThat(fileFormat.getRollOverLogMaxSize(conf)).isZero();
+  }
+
+  @Test
+  public void testGetLogMetaFilesOfNode() throws Exception {
+    if (fs.exists(rootLocalLogDirPath)) {
+      fs.delete(rootLocalLogDirPath, true);
+    }
+    assertTrue(fs.mkdirs(rootLocalLogDirPath));
+
+    Path appLogsDir = new Path(rootLocalLogDirPath, appId.toString());
+    if (fs.exists(appLogsDir)) {
+      fs.delete(appLogsDir, true);
+    }
+    assertTrue(fs.mkdirs(appLogsDir));
+
+    List<String> logTypes = new ArrayList<String>();
+    logTypes.add("syslog");
+    logTypes.add("stdout");
+    logTypes.add("stderr");
+
+    Set<File> files = new HashSet<>();
+
+    LogKey key1 = new LogKey(containerId.toString());
+
+    for(String logType : logTypes) {
+      File file = createAndWriteLocalLogFile(containerId, appLogsDir,
+          logType);
+      files.add(file);
+    }
+    files.add(createZeroLocalLogFile(appLogsDir));
+
+    LogValue value = mock(LogValue.class);
+    when(value.getPendingLogFilesToUploadForThisContainer()).thenReturn(files);
+
+    LogAggregationIndexedFileController fileFormat =
+        new LogAggregationIndexedFileController();
+
+    fileFormat.initialize(getConf(), "Indexed");
+
+    Map<ApplicationAccessType, String> appAcls = new HashMap<>();
+    Path appDir = fileFormat.getRemoteAppLogDir(appId,
+        USER_UGI.getShortUserName());
+    if (fs.exists(appDir)) {
+      fs.delete(appDir, true);
+    }
+    assertTrue(fs.mkdirs(appDir));
+
+    Path logPath = fileFormat.getRemoteNodeLogFileForApp(
+        appId, USER_UGI.getShortUserName(), nodeId);
+    LogAggregationFileControllerContext context =
+        new LogAggregationFileControllerContext(
+            logPath, logPath, true, 1000, appId, appAcls, nodeId, USER_UGI);
+    // initialize the writer
+    fileFormat.initializeWriter(context);
+
+    fileFormat.write(key1, value);
+    fileFormat.postWrite(context);
+    fileFormat.closeWriter();
+
+    ContainerLogsRequest logRequest = new ContainerLogsRequest();
+    logRequest.setAppId(appId);
+    logRequest.setNodeId(nodeId.toString());
+    logRequest.setAppOwner(USER_UGI.getShortUserName());
+    logRequest.setContainerId(containerId.toString());
+    logRequest.setBytes(Long.MAX_VALUE);
+    // create a checksum file
+    final ControlledClock clock = new ControlledClock();
+    clock.setTime(System.currentTimeMillis());
+    Path checksumFile = new Path(fileFormat.getRemoteAppLogDir(
+        appId, USER_UGI.getShortUserName()),
+        LogAggregationUtils.getNodeString(nodeId)
+            + LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX);
+    FSDataOutputStream fInput = null;
+    try {
+      String nodeName = logPath.getName() + "_" + clock.getTime();
+      fInput = FileSystem.create(fs, checksumFile, LOG_FILE_UMASK);
+      fInput.writeInt(nodeName.length());
+      fInput.write(nodeName.getBytes(
+          Charset.forName("UTF-8")));
+      fInput.writeLong(0);
+    } finally {
+      IOUtils.closeQuietly(fInput);
+    }
+
+    Path nodePath = LogAggregationUtils.getRemoteAppLogDir(
+        fileFormat.getRemoteRootLogDir(), appId, USER_UGI.getShortUserName(),
+        fileFormat.getRemoteRootLogDirSuffix());
+    FileStatus[] nodes = fs.listStatus(nodePath);
+    ExtendedLogMetaRequest req =
+        new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder().build();
+    for (FileStatus node : nodes) {
+      Map<String, List<ContainerLogFileInfo>> metas =
+          fileFormat.getLogMetaFilesOfNode(req, node, appId);
+
+      if (node.getPath().getName().contains(
+          LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX)) {
+        assertTrue("Checksum node files should not contain any logs",
+            metas.isEmpty());
+      } else {
+        assertFalse("Non-checksum node files should contain log files",
+            metas.isEmpty());
+        assertEquals(4, metas.values().stream().findFirst().get().size());
+      }
+    }
+
   }
 }

@@ -496,4 +496,15 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
     }
     return nodesPerPartition;
   }
+
+  public List<String> getPartitions() {
+    List<String> partitions = null;
+    readLock.lock();
+    try {
+      partitions = new ArrayList(nodesPerLabel.keySet());
+    } finally {
+      readLock.unlock();
+    }
+    return partitions;
+  }
 }

@@ -26,9 +26,12 @@ import java.util.List;
 
 import java.util.Map;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -38,6 +41,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -177,7 +181,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       ApplicationId appId) {
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
     ApplicationSubmissionContext context = ApplicationSubmissionContext
-        .newInstance(appId, MockApps.newAppName(), "q1",
+        .newInstance(appId, MockApps.newAppName(), "default",
             Priority.newInstance(0), amContainerSpec, false, false, -1,
             Resources.createResource(
                 YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
@@ -409,6 +413,102 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
               + "applicationId information."));
     }
   }
+
+  /**
+   * This test validates the correctness of
+   * GetApplicationAttemptReport in case the
+   * application exists in the cluster.
+   */
+  @Test
+  public void testGetApplicationAttemptReport()
+          throws YarnException, IOException, InterruptedException {
+    LOG.info("Test FederationClientInterceptor: " +
+            "Get ApplicationAttempt Report");
+
+    ApplicationId appId =
+            ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ApplicationAttemptId appAttemptId =
+            ApplicationAttemptId.newInstance(appId, 1);
+
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application we want the applicationAttempt report later
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    GetApplicationAttemptReportRequest requestGet =
+            GetApplicationAttemptReportRequest.newInstance(appAttemptId);
+
+    GetApplicationAttemptReportResponse responseGet =
+            interceptor.getApplicationAttemptReport(requestGet);
+
+    Assert.assertNotNull(responseGet);
+  }
+
+  /**
+   * This test validates the correctness of
+   * GetApplicationAttemptReport in case the
+   * application does not exist in StateStore.
+   */
+  @Test
+  public void testGetApplicationAttemptNotExists()
+          throws Exception {
+    LOG.info(
+            "Test ApplicationClientProtocol: " +
+                    "Get ApplicationAttempt Report - Not Exists");
+    ApplicationId appId =
+            ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ApplicationAttemptId appAttemptID =
+            ApplicationAttemptId.newInstance(appId, 1);
+    GetApplicationAttemptReportRequest requestGet =
+            GetApplicationAttemptReportRequest.newInstance(appAttemptID);
+
+    LambdaTestUtils.intercept(YarnException.class, "ApplicationAttempt " +
+            appAttemptID + "belongs to Application " +
+            appId + " does not exist in FederationStateStore",
+        () -> interceptor.getApplicationAttemptReport(requestGet));
+  }
+
+  /**
+   * This test validates
+   * the correctness of GetApplicationAttemptReport in case of
+   * empty request.
+   */
+  @Test
+  public void testGetApplicationAttemptEmptyRequest()
+          throws Exception {
+    LOG.info("Test FederationClientInterceptor: " +
+                    "Get ApplicationAttempt Report - Empty");
+
+    LambdaTestUtils.intercept(YarnException.class,
+            "Missing getApplicationAttemptReport " +
+                    "request or applicationId " +
+                    "or applicationAttemptId information.",
+        () -> interceptor.getApplicationAttemptReport(null));
+
+    LambdaTestUtils.intercept(YarnException.class,
+            "Missing getApplicationAttemptReport " +
+                    "request or applicationId " +
+                    "or applicationAttemptId information.",
+        () -> interceptor
+                    .getApplicationAttemptReport(
+                            GetApplicationAttemptReportRequest
+                                    .newInstance(null)));
+
+    LambdaTestUtils.intercept(YarnException.class,
+            "Missing getApplicationAttemptReport " +
+                    "request or applicationId " +
+                    "or applicationAttemptId information.",
+        () -> interceptor
+                    .getApplicationAttemptReport(
+                            GetApplicationAttemptReportRequest.newInstance(
+                                    ApplicationAttemptId
+                                            .newInstance(null, 1)
+                            )));
+  }
+
 
   @Test
   public void testGetClusterMetricsRequest() throws YarnException, IOException {

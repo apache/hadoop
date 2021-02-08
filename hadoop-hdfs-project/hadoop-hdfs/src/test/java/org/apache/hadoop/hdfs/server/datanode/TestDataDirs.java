@@ -22,7 +22,10 @@ import java.io.*;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.util.Shell;
+import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
@@ -94,5 +97,35 @@ public class TestDataDirs {
     assertThat(locations.get(0).getUri(), is(dir0.toURI()));
     assertThat(locations.get(1).getStorageType(), is(StorageType.DISK));
     assertThat(locations.get(1).getUri(), is(dir1.toURI()));
+  }
+
+  @Test
+  public void testDataDirFileSystem() throws Exception {
+    if (Shell.MAC) {
+      throw new AssumptionViolatedException("Not supported on MAC OS");
+    }
+    Configuration conf = new Configuration();
+    String archiveDir = "/home";
+    String location = "[DISK]/dir1,[ARCHIVE]" + archiveDir;
+    conf.set(DFS_DATANODE_DATA_DIR_KEY, location);
+
+    // NO any filesystem is set, should do as before
+    List<StorageLocation> locations = DataNode.getStorageLocations(conf);
+    assertEquals(2, locations.size());
+
+    // Set the filesystem of archive as NOT existing filesystem
+    // the archive directory should not be added.
+    conf.set("dfs.datanode.storagetype.ARCHIVE.filesystem",
+        "nothis_filesystem");
+    locations = DataNode.getStorageLocations(conf);
+    assertEquals(1, locations.size());
+
+    // Set the filesystem of archive as right filesystem
+    // the archive directory should be added.
+    DF df = new DF(new File(archiveDir), conf);
+    String fsInfo = df.getFilesystem();
+    conf.set("dfs.datanode.storagetype.ARCHIVE.filesystem", fsInfo);
+    locations = DataNode.getStorageLocations(conf);
+    assertEquals(2, locations.size());
   }
 }

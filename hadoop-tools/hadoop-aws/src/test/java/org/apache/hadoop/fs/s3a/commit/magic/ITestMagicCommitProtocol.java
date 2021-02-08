@@ -20,21 +20,30 @@ package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
+
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitProtocol;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjection;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjectionImpl;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
+import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.hamcrest.CoreMatchers.containsString;
 
@@ -55,13 +64,6 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   @Override
   public boolean useInconsistentClient() {
     return false;
-  }
-
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
-    return conf;
   }
 
   @Override
@@ -91,30 +93,56 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   }
 
   @Override
-  protected AbstractS3ACommitter createCommitter(
+  protected MagicS3GuardCommitter createCommitter(
       Path outputPath,
       TaskAttemptContext context)
       throws IOException {
     return new MagicS3GuardCommitter(outputPath, context);
   }
 
-  public AbstractS3ACommitter createFailingCommitter(
+  public MagicS3GuardCommitter createFailingCommitter(
       TaskAttemptContext tContext) throws IOException {
     return new CommitterWithFailedThenSucceed(getOutDir(), tContext);
   }
 
-  protected void validateTaskAttemptPathDuringWrite(Path p) throws IOException {
+  protected void validateTaskAttemptPathDuringWrite(Path p,
+      final long expectedLength) throws IOException {
     String pathStr = p.toString();
     assertTrue("not magic " + pathStr,
         pathStr.contains(MAGIC));
     assertPathDoesNotExist("task attempt visible", p);
   }
 
-  protected void validateTaskAttemptPathAfterWrite(Path p) throws IOException {
-    FileStatus st = getFileSystem().getFileStatus(p);
-    assertEquals("file length in " + st, 0, st.getLen());
-    Path pendingFile = new Path(p.toString() + PENDING_SUFFIX);
+  protected void validateTaskAttemptPathAfterWrite(Path marker,
+      final long expectedLength) throws IOException {
+    // the pending file exists
+    Path pendingFile = new Path(marker.toString() + PENDING_SUFFIX);
     assertPathExists("pending file", pendingFile);
+    S3AFileSystem fs = getFileSystem();
+
+    // THIS SEQUENCE MUST BE RUN IN ORDER ON A S3GUARDED
+    // STORE
+    // if you list the parent dir and find the marker, it
+    // is really 0 bytes long
+    String name = marker.getName();
+    List<LocatedFileStatus> filtered = listAndFilter(fs,
+        marker.getParent(), false,
+        (path) -> path.getName().equals(name));
+    Assertions.assertThat(filtered)
+        .hasSize(1);
+    Assertions.assertThat(filtered.get(0))
+        .matches(lst -> lst.getLen() == 0,
+            "Listing should return 0 byte length");
+
+    // marker file is empty
+    FileStatus st = fs.getFileStatus(marker);
+    assertEquals("file length in " + st, 0, st.getLen());
+    // xattr header
+    Assertions.assertThat(CommitOperations.extractMagicFileLength(fs,
+        marker))
+        .describedAs("XAttribute " + XA_MAGIC_MARKER)
+        .isNotEmpty()
+        .hasValue(expectedLength);
   }
 
   /**
@@ -134,6 +162,41 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
         "s3a", wd.getScheme());
     assertThat(wd.getPath(),
         containsString('/' + CommitConstants.MAGIC + '/'));
+  }
+
+  /**
+   * Verify that the __magic path for the application/tasks use the
+   * committer UUID to ensure uniqueness in the case of more than
+   * one job writing to the same destination path.
+   */
+  @Test
+  public void testCommittersPathsHaveUUID() throws Throwable {
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(
+        getConfiguration(),
+        getTaskAttempt0());
+    MagicS3GuardCommitter committer = createCommitter(getOutDir(), tContext);
+
+    String ta0 = getTaskAttempt0().toString();
+    // magic path for the task attempt
+    Path taskAttemptPath = committer.getTaskAttemptPath(tContext);
+    Assertions.assertThat(taskAttemptPath.toString())
+        .describedAs("task path of %s", committer)
+        .contains(committer.getUUID())
+        .contains(MAGIC)
+        .doesNotContain(TEMP_DATA)
+        .endsWith(BASE)
+        .contains(ta0);
+
+    // temp path for files which the TA will create with an absolute path
+    // and which need renaming into place.
+    Path tempTaskAttemptPath = committer.getTempTaskAttemptPath(tContext);
+    Assertions.assertThat(tempTaskAttemptPath.toString())
+        .describedAs("Temp task path of %s", committer)
+        .contains(committer.getUUID())
+        .contains(TEMP_DATA)
+        .doesNotContain(MAGIC)
+        .doesNotContain(BASE)
+        .contains(ta0);
   }
 
   /**

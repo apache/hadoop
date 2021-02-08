@@ -73,6 +73,15 @@
                 <maxAMShare>-1.0</maxAMShare>
             </queue>
         </queue>
+        <queue name="misc" type="parent">
+          <weight>0</weight>
+          <queue name="a">
+            <weight>0</weight>
+          </queue>
+          <queue name="b">
+            <weight>0</weight>
+          </queue>
+        </queue>
     </queue>
     <user name="alice">
       <maxRunningApps>30</maxRunningApps>

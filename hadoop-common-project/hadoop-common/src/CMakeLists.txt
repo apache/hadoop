@@ -236,10 +236,6 @@ configure_file(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 hadoop_add_dual_library(hadoop
     main/native/src/exception.c
-    ${SRC}/io/compress/lz4/Lz4Compressor.c
-    ${SRC}/io/compress/lz4/Lz4Decompressor.c
-    ${SRC}/io/compress/lz4/lz4.c
-    ${SRC}/io/compress/lz4/lz4hc.c
     ${ISAL_SOURCE_FILES}
     ${ZSTD_SOURCE_FILES}
     ${OPENSSL_SOURCE_FILES}

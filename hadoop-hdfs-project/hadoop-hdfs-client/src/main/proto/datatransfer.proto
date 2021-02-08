@@ -58,8 +58,9 @@ message BaseHeaderProto {
 }
 
 message DataTransferTraceInfoProto {
-  required uint64 traceId = 1;
-  required uint64 parentId = 2;
+  optional uint64 traceId = 1;
+  optional uint64 parentId = 2;
+  optional bytes spanContext = 3;
 }
 
 message ClientOperationHeaderProto {

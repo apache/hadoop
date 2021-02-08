@@ -18,11 +18,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +26,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.weightconversion.CapacityConverter;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.weightconversion.CapacityConverterFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
@@ -55,6 +53,7 @@ public class FSQueueConverter {
   private final float queueMaxAMShareDefault;
   private final int queueMaxAppsDefault;
   private final boolean drfUsed;
+  private final boolean usePercentages;
 
   private ConversionOptions conversionOptions;
 
@@ -68,6 +67,7 @@ public class FSQueueConverter {
     this.queueMaxAppsDefault = builder.queueMaxAppsDefault;
     this.conversionOptions = builder.conversionOptions;
     this.drfUsed = builder.drfUsed;
+    this.usePercentages = builder.usePercentages;
   }
 
   public void convertQueueHierarchy(FSQueue queue) {
@@ -268,13 +268,15 @@ public class FSQueueConverter {
    * @param queue
    */
   private void emitChildCapacity(FSQueue queue) {
-    List<FSQueue> children = queue.getChildQueues();
+    CapacityConverter converter =
+        CapacityConverterFactory.getConverter(usePercentages);
 
-    int totalWeight = getTotalWeight(children);
-    Map<String, BigDecimal> capacities = getCapacities(totalWeight, children);
-    capacities
-        .forEach((key, value) -> capacitySchedulerConfig.set(PREFIX + key +
-                ".capacity", value.toString()));
+    converter.convertWeightsForChildQueues(queue,
+        capacitySchedulerConfig);
+
+    if (Resources.none().compareTo(queue.getMinShare()) != 0) {
+      ruleHandler.handleMinResources();
+    }
   }
 
   /**
@@ -292,68 +294,6 @@ public class FSQueueConverter {
         ruleHandler.handleMaxChildCapacity();
       }
     }
-  }
-
-  private Map<String, BigDecimal> getCapacities(int totalWeight,
-      List<FSQueue> children) {
-    final BigDecimal hundred = new BigDecimal(100).setScale(3);
-
-    if (children.size() == 0) {
-      return new HashMap<>();
-    } else if (children.size() == 1) {
-      Map<String, BigDecimal> capacity = new HashMap<>();
-      String queueName = children.get(0).getName();
-      capacity.put(queueName, hundred);
-
-      return capacity;
-    } else {
-      Map<String, BigDecimal> capacities = new HashMap<>();
-
-      children
-          .stream()
-          .forEach(queue -> {
-            BigDecimal total = new BigDecimal(totalWeight);
-            BigDecimal weight = new BigDecimal(queue.getWeight());
-            BigDecimal pct = weight
-                              .setScale(5)
-                              .divide(total, RoundingMode.HALF_UP)
-                              .multiply(hundred)
-                              .setScale(3);
-
-            if (Resources.none().compareTo(queue.getMinShare()) != 0) {
-              ruleHandler.handleMinResources();
-            }
-
-            capacities.put(queue.getName(), pct);
-          });
-
-      BigDecimal totalPct = new BigDecimal(0);
-      for (Map.Entry<String, BigDecimal> entry : capacities.entrySet()) {
-        totalPct = totalPct.add(entry.getValue());
-      }
-
-      // fix last value if total != 100.000
-      if (!totalPct.equals(hundred)) {
-        BigDecimal tmp = new BigDecimal(0);
-        for (int i = 0; i < children.size() - 1; i++) {
-          tmp = tmp.add(capacities.get(children.get(i).getQueueName()));
-        }
-
-        String lastQueue = children.get(children.size() - 1).getName();
-        BigDecimal corrected = hundred.subtract(tmp);
-        capacities.put(lastQueue, corrected);
-      }
-
-      return capacities;
-    }
-  }
-
-  private int getTotalWeight(List<FSQueue> children) {
-    double sum = children
-                  .stream()
-                  .mapToDouble(c -> c.getWeight())
-                  .sum();
-    return (int) sum;
   }
 
   private String getQueueShortName(String queueName) {

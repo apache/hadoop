@@ -42,7 +42,8 @@ class QueuePlacementConverter {
   MappingRulesDescription convertPlacementPolicy(
       PlacementManager placementManager,
       FSConfigToCSConfigRuleHandler ruleHandler,
-      CapacitySchedulerConfiguration convertedCSconfig) {
+      CapacitySchedulerConfiguration convertedCSconfig,
+      boolean usePercentages) {
 
     MappingRulesDescription desc = new MappingRulesDescription();
     List<Rule> rules = new ArrayList<>();
@@ -59,32 +60,40 @@ class QueuePlacementConverter {
               userRule,
               ruleHandler,
               create,
-              convertedCSconfig);
+              convertedCSconfig,
+              usePercentages);
         } else {
-          rules.add(createRule(Policy.USER, create, ruleHandler));
+          rules.add(createRule(Policy.USER, create, ruleHandler,
+              usePercentages));
         }
       } else if (fsRule instanceof SpecifiedPlacementRule) {
-        rules.add(createRule(Policy.SPECIFIED, create, ruleHandler));
+        rules.add(createRule(Policy.SPECIFIED, create, ruleHandler,
+            usePercentages));
       } else if (fsRule instanceof PrimaryGroupPlacementRule) {
-        rules.add(createRule(Policy.PRIMARY_GROUP, create, ruleHandler));
+        rules.add(createRule(Policy.PRIMARY_GROUP, create, ruleHandler,
+            usePercentages));
       } else if (fsRule instanceof DefaultPlacementRule) {
         DefaultPlacementRule defaultRule = (DefaultPlacementRule) fsRule;
         String defaultQueueName = defaultRule.defaultQueueName;
 
         Rule rule;
         if (DEFAULT_QUEUE.equals(defaultQueueName)) {
-          rule = createRule(Policy.DEFAULT_QUEUE, create, ruleHandler);
+          rule = createRule(Policy.DEFAULT_QUEUE, create, ruleHandler,
+              usePercentages);
         } else {
-          rule = createRule(Policy.CUSTOM, create, ruleHandler);
+          rule = createRule(Policy.CUSTOM, create, ruleHandler,
+              usePercentages);
           rule.setCustomPlacement(defaultQueueName);
         }
 
         rules.add(rule);
       } else if (fsRule instanceof SecondaryGroupExistingPlacementRule) {
-        Rule rule = createRule(Policy.SECONDARY_GROUP, create, ruleHandler);
+        Rule rule = createRule(Policy.SECONDARY_GROUP, create, ruleHandler,
+            usePercentages);
         rules.add(rule);
       } else if (fsRule instanceof RejectPlacementRule) {
-        rules.add(createRule(Policy.REJECT, false, ruleHandler));
+        rules.add(createRule(Policy.REJECT, false, ruleHandler,
+            usePercentages));
       } else {
         throw new IllegalArgumentException("Unknown placement rule: " + fsRule);
       }
@@ -99,7 +108,8 @@ class QueuePlacementConverter {
       UserPlacementRule userRule,
       FSConfigToCSConfigRuleHandler ruleHandler,
       boolean create,
-      CapacitySchedulerConfiguration csConf) {
+      CapacitySchedulerConfiguration csConf,
+      boolean usePercentages) {
     PlacementRule parentRule = userRule.getParentRule();
     boolean parentCreate = ((FSPlacementRule) parentRule).getCreateFlag();
     Policy policy;
@@ -124,12 +134,13 @@ class QueuePlacementConverter {
         ruleHandler,
         parentCreate,
         queueName,
-        csConf);
+        csConf,
+        usePercentages);
     rules.add(rule);
   }
 
   private Rule createRule(Policy policy, boolean create,
-      FSConfigToCSConfigRuleHandler ruleHandler) {
+      FSConfigToCSConfigRuleHandler ruleHandler, boolean usePercentages) {
     Rule rule = new Rule();
     rule.setPolicy(policy);
     rule.setCreate(create);
@@ -137,7 +148,7 @@ class QueuePlacementConverter {
     rule.setFallbackResult(SKIP_RESULT);
     rule.setType(Type.USER);
 
-    if (create) {
+    if (usePercentages && create) {
       // display warning that these queues must exist and
       // cannot be created automatically under "root"
       if (policy == Policy.PRIMARY_GROUP
@@ -159,29 +170,41 @@ class QueuePlacementConverter {
       FSConfigToCSConfigRuleHandler ruleHandler,
       boolean fsParentCreate,
       String parentQueue,
-      CapacitySchedulerConfiguration csConf) {
+      CapacitySchedulerConfiguration csConf,
+      boolean usePercentages) {
 
-    Rule rule = createRule(policy, create, ruleHandler);
+    Rule rule = createRule(policy, create, ruleHandler, usePercentages);
 
     if (parentQueue != null) {
       rule.setParentQueue(parentQueue);
     }
 
-    // create flag for the parent rule is not supported
-    if (fsParentCreate) {
-      if (policy == Policy.PRIMARY_GROUP_USER) {
-        ruleHandler.handleFSParentCreateFlag("root.<primaryGroup>");
-      } else if (policy == Policy.SECONDARY_GROUP_USER) {
-        ruleHandler.handleFSParentCreateFlag("root.<secondaryGroup>");
-      } else {
-        ruleHandler.handleFSParentCreateFlag(parentQueue);
+    if (usePercentages) {
+      // create flag for the parent rule is not supported
+      if (fsParentCreate) {
+        if (policy == Policy.PRIMARY_GROUP_USER) {
+          ruleHandler.handleFSParentCreateFlag("root.<primaryGroup>");
+        } else if (policy == Policy.SECONDARY_GROUP_USER) {
+          ruleHandler.handleFSParentCreateFlag("root.<secondaryGroup>");
+        } else {
+          ruleHandler.handleFSParentCreateFlag(parentQueue);
+        }
       }
-    }
 
-    // check if parent conflicts with existing static queues
-    if (create && policy == Policy.USER) {
-      ruleHandler.handleRuleAutoCreateFlag(parentQueue);
-      checkStaticDynamicConflict(parentQueue, csConf, ruleHandler);
+      // check if parent conflicts with existing static queues
+      if (create && policy == Policy.USER) {
+        ruleHandler.handleRuleAutoCreateFlag(parentQueue);
+        checkStaticDynamicConflict(parentQueue, csConf, ruleHandler);
+      }
+    } else {
+      // weight mode, we have only minor limitations
+      rule.setCreate(fsParentCreate || create);
+
+      // we don't support nested create flags yet, so "true/false"
+      // "false/true" settings are ignored
+      if (fsParentCreate ^ create) {
+        ruleHandler.handleFSParentAndChildCreateFlagDiff(policy);
+      }
     }
 
     return rule;

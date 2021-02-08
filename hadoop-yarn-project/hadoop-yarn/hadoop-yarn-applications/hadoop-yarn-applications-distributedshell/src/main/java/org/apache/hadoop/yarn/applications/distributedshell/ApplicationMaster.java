@@ -781,7 +781,7 @@ public class ApplicationMaster {
     new HelpFormatter().printHelp("ApplicationMaster", opts);
   }
 
-  private void cleanup() {
+  protected void cleanup() {
     try {
       appSubmitterUgi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
