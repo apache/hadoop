@@ -41,8 +41,8 @@ public class TestLocalFSContractCreate extends AbstractContractCreateTest {
         fs.getRawFileSystem())) {
       // disable checksumming output
       lfs.setWriteChecksum(false);
-      // now the filesystem supports Sync
-      validateSyncableSemantics(lfs, true, true);
+      // now the filesystem supports Sync with immediate update of file status
+      validateSyncableSemantics(lfs, true, true, true);
     }
   }
 }

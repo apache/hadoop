@@ -454,8 +454,12 @@ public abstract class AbstractContractCreateTest extends
     FileSystem fs = getFileSystem();
     boolean supportsFlush = isSupported(SUPPORTS_HFLUSH);
     boolean supportsSync = isSupported(SUPPORTS_HSYNC);
+    boolean metadataUpdatedOnHSync = isSupported(METADATA_UPDATED_ON_HSYNC);
 
-    validateSyncableSemantics(fs, supportsSync, supportsFlush);
+    validateSyncableSemantics(fs,
+        supportsSync,
+        supportsFlush,
+        metadataUpdatedOnHSync);
   }
 
   /**
@@ -463,16 +467,18 @@ public abstract class AbstractContractCreateTest extends
    * @param fs filesystem
    * @param supportsSync sync is present
    * @param supportsFlush flush is present.
+   * @param metadataUpdatedOnHSync  Is the metadata updated after an hsync?
    * @throws IOException failure
    */
   protected void validateSyncableSemantics(final FileSystem fs,
-      final boolean supportsSync, final boolean supportsFlush)
+      final boolean supportsSync,
+      final boolean supportsFlush,
+      final boolean metadataUpdatedOnHSync)
       throws IOException {
     Path path = methodPath();
     LOG.info("Expecting files under {} to have supportsSync={}"
-            + " and supportsFlush={}",
-        path, supportsSync, supportsFlush);
-
+            + " and supportsFlush={}; metadataUpdatedOnHSync={}",
+        path, supportsSync, supportsFlush, metadataUpdatedOnHSync);
 
     try (FSDataOutputStream out = fs.create(path, true)) {
       LOG.info("Created output stream {}", out);
@@ -495,11 +501,15 @@ public abstract class AbstractContractCreateTest extends
       } else {
         assertCapabilities(out, null, hsyncCapabilities);
       }
+
+      // write one byte, then hflush it
       out.write('a');
       try {
         out.hflush();
         if (!supportsFlush) {
-          // hsync not ignored
+          // FSDataOutputStream silently downgrades to flush() here.
+          // This is not good, but if changed some applications
+          // break writing to some stores.
           LOG.warn("FS doesn't support Syncable.hflush(),"
               + " but doesn't reject it either.");
         }
@@ -508,6 +518,8 @@ public abstract class AbstractContractCreateTest extends
           throw new AssertionError("hflush not supported", e);
         }
       }
+
+      // write a second byte, then hsync it.
       out.write('b');
       try {
         out.hsync();
@@ -518,20 +530,30 @@ public abstract class AbstractContractCreateTest extends
       }
 
       if (supportsSync) {
-        // if sync really worked, data is visible here
+        // if sync really worked, data MUST be visible here
 
-        try(FSDataInputStream in = fs.open(path)) {
+        // first the metadata which MUST be present
+        final FileStatus st = fs.getFileStatus(path);
+        if (metadataUpdatedOnHSync) {
+          // not all stores reliably update it, HDFS/webHDFS in particular
+          assertEquals("Metadata not updated during write " + st,
+              2, st.getLen());
+        }
+
+        // there's no way to verify durability, but we can
+        // at least verify a new file input stream reads
+        // the data
+        try (FSDataInputStream in = fs.open(path)) {
           assertEquals('a', in.read());
           assertEquals('b', in.read());
           assertEquals(-1, in.read());
           LOG.info("Successfully read synced data on a new reader {}", in);
         }
       } else {
-        // np sync. Let's do a flush and see what happens.
+        // no sync. Let's do a flush and see what happens.
         out.flush();
         // Now look at the filesystem.
         try (FSDataInputStream in = fs.open(path)) {
-
           int c = in.read();
           if (c == -1) {
             // nothing was synced; sync and flush really aren't there.
@@ -542,16 +564,28 @@ public abstract class AbstractContractCreateTest extends
             LOG.info("sync and flush are declared unsupported"
                 + " - but the stream does offer some sync/flush semantics");
           }
+          // close outside a finally as we do want to see any exception raised.
+          in.close();
+
         } catch (FileNotFoundException e) {
           // that's OK if it's an object store, but not if its a real
           // FS
           if (!isSupported(IS_BLOBSTORE)) {
             throw e;
+          } else {
+            LOG.warn(
+                "Output file was not created; this is an object store with different"
+                    + " visibility semantics");
           }
         }
       }
+      // close the output stream
       out.close();
-      LOG.info("{}", ioStatisticsSourceToString(out));
+
+      final String stats = ioStatisticsSourceToString(out);
+      if (!stats.isEmpty()) {
+        LOG.info("IOStatistics {}", stats);
+      }
     }
   }
 }

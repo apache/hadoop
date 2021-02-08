@@ -250,4 +250,10 @@ public interface ContractOptions {
    * Is hsync supported in API and StreamCapabilities?
    */
   String SUPPORTS_HSYNC = "supports-hsync";
+
+  /**
+   * Is the metadata updated after an hsync?
+   * HDFS does not do this.
+   */
+  String METADATA_UPDATED_ON_HSYNC = "metadata_updated_on_hsync";
 }

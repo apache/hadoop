@@ -126,4 +126,9 @@
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.contract.metadata_updated_on_hsync</name>
+    <value>false</value>
+  </property>
+
 </configuration>

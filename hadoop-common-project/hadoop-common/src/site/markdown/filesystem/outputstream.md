@@ -287,7 +287,7 @@ This is defined as the equivalent of:
 write(data, 0, data.length)
 ```
 
-### <a name="flush()"></a>`flush()`
+### <a name="flush()"></a> `flush()`
 
 Requests that the data is flushed. The specification of `ObjectStream.flush()`
 declares that this SHOULD write data to the "intended destination".
@@ -429,11 +429,13 @@ public interface Syncable {
 The purpose of `Syncable` interface is to provide guarantees that data is written
 to a filesystem for both visibility and durability.
 
-*SYNC-1*: An `OutputStream` which implements `Syncable` is
+*SYNC-1*: An `OutputStream` which implements `Syncable` and does not raise
+`UnsupportedOperationException` on invocations is
 making an explicit declaration that it can meet those guarantees.
 
-*SYNC-2*: The interface MUST NOT be declared as implemented by an `OutputStream` unless
-those guarantees can be met.
+*SYNC-2*: If a stream, declares the interface as implemented, but does not
+provide durability, the interface's methods MUST raise
+`UnsupportedOperationException`.
 
 The `Syncable` interface has been implemented by other classes than
 subclasses of `OutputStream`, such as `org.apache.hadoop.io.SequenceFile.Writer`.
@@ -863,10 +865,9 @@ data until the file is finally closed.
 
 For this reason, the local fileystem accessed via `file://` URLs
 does not support `Syncable` unless `setWriteChecksum(false)` was
-called on that FileSystem instance so as do disable checksum creation.
+called on that FileSystem instance so as to disable checksum creation.
 After which, obviously, checksums are not generated for any file.
-
-
+Is
 ### <a name="checksummed-fs-issues"></a> Checksummed output streams
 
 Because  `org.apache.hadoop.fs.FSOutputSummer` and
@@ -883,6 +884,8 @@ to close the stream more than once.
 
 Behaviors 1 and 2 really have to be considered bugs to fix, albeit with care.
 
+Behavior 3 has to be considered a defacto standard, for other implementations
+to copy.
 
 ### <a name="object-store-issues"></a> Object Stores
 
@@ -960,6 +963,16 @@ to their advantage.
 
 ## <a name="implementors"></a> Implementors notes.
 
+### Always implement `Syncable` -even if just to throw `UnsupportedOperationException`
+
+Because `FSDataOutputStream` silently downgrades `Syncable.hflush()`
+and `Syncable.hsync()` to `wrappedStream.flush()`, callers of the 
+API MAY be misled into believing that their data has been flushed/synced
+after syncing to a stream which does not support the APIs.
+
+Implementations SHOULD implement the API but
+throw `UnsupportedOperationException`. 
+
 ### `StreamCapabilities`
 
 Implementors of filesystem clients SHOULD implement the `StreamCapabilities`
@@ -981,18 +994,6 @@ every `hsync()` call. HDFS doesn't, except when the written data crosses
 a block boundary.
 
 
-### Implemting `OutputStream.flush()`
-
-Implementors SHOULD NOT forward `OutputStream.flush()` to `Syncable.hflush()`.
-Too much code calls `flush()` at the end of writing every line of text;
-blocking to upload this to a remote store and waiting for the results
-significantly hurts performance.
-Given that there are no guarantees of what `flush()` does, this is
-needless.
-
-Implementors who do forward the call to `OutputStream.flush()`
-to `Syncable.hflush()` do end up having to turn this feature
-off [HADOOP-16548](https://issues.apache.org/jira/browse/HADOOP-16548).
 
 ### Does `close()` sync data?
 
