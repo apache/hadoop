@@ -54,15 +54,16 @@ import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.SpillDefaultKeyProvider;
+import org.apache.hadoop.mapreduce.SpillKeyProvider;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
-import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
+
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -82,15 +83,27 @@ public class TestMerger {
     fs = FileSystem.getLocal(conf);
   }
 
+  @After
+  public void tearDown() throws IOException {
+    fs.close();
+  }
+
+  private void testEncryptionWithProvider(
+      Class<? extends SpillKeyProvider> keyProviderClass)  throws Throwable {
+    jobConf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
+    jobConf.setClass(
+        MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_CLASS,
+        keyProviderClass, SpillKeyProvider.class);
+    conf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
+    Assert.assertTrue(CryptoUtils.isEncryptedSpillEnabled(jobConf));
+    CryptoUtils.processEncryptedSpillKeyFromConf(jobConf);
+    Assert.assertTrue(CryptoUtils.isEncryptedSpillEnabled(jobConf));
+    testInMemoryAndOnDiskMerger();
+  }
 
   @Test
-  public void testEncryptedMerger() throws Throwable {
-    jobConf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
-    conf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
-    Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
-    TokenCache.setEncryptedSpillKey(new byte[16], credentials);
-    UserGroupInformation.getCurrentUser().addCredentials(credentials);
-    testInMemoryAndOnDiskMerger();
+  public void testEncryptedMergerWithKeyGenProvider() throws Throwable {
+    testEncryptionWithProvider(SpillDefaultKeyProvider.class);
   }
 
   @Test

@@ -32,9 +32,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.crypto.CryptoFSDataInputStream;
 import org.apache.hadoop.fs.crypto.CryptoFSDataOutputStream;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.LimitInputStream;
+import org.apache.hadoop.util.ReflectionUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +54,55 @@ public class CryptoUtils {
   private static final Logger LOG = LoggerFactory.getLogger(CryptoUtils.class);
 
   public static boolean isEncryptedSpillEnabled(Configuration conf) {
-    return conf.getBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA,
-        MRJobConfig.DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA);
+    boolean isEnabled =
+        conf.getBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA,
+            MRJobConfig.DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA);
+    return isEnabled
+        && !getSpillKeyProviderClass(conf, isEnabled)
+               .equals(SpillNullKeyProvider.class);
+  }
+
+  protected static Class<? extends SpillKeyProvider> getSpillKeyProviderClass(
+      Configuration conf, boolean isEnabled) {
+    if (!isEnabled) {
+      return SpillNullKeyProvider.class;
+    }
+    Class<? extends SpillKeyProvider> spillKeyProviderClass = conf.getClass(
+        MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_CLASS,
+        SpillDefaultKeyProvider.class,
+        SpillKeyProvider.class);
+    return spillKeyProviderClass;
+  }
+
+  public static SpillKeyProvider initSpillKeyProvider(Configuration conf) {
+    boolean encryptionEnabled =
+        conf.getBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA,
+            MRJobConfig.DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA);
+    Class<? extends SpillKeyProvider> providerClass =
+        getSpillKeyProviderClass(conf, encryptionEnabled);
+    return ReflectionUtils.newInstance(providerClass, conf);
+  }
+
+  public static byte[] processEncryptedSpillKeyFromConf(JobConf jobConf)
+      throws IOException {
+    return processEncryptedSpillKeyFromConf(jobConf, true);
+  }
+
+  public static byte[] processEncryptedSpillKeyFromConf(JobConf jobConf,
+      boolean addToUGI) throws IOException {
+    SpillKeyProvider spillKeyProvider =
+        CryptoUtils.initSpillKeyProvider(jobConf);
+    Credentials jobCredentials = jobConf.getCredentials();
+    spillKeyProvider.addEncryptedSpillKey(jobCredentials);
+    byte[] encryptedSpillKey =
+        spillKeyProvider.getEncryptionSpillKey(jobCredentials);
+    if (spillKeyProvider.isEncryptionEnabled() && addToUGI) {
+      Credentials ugiCredentials =
+          UserGroupInformation.getCurrentUser().getCredentials();
+      TokenCache.setEncryptedSpillKey(encryptedSpillKey, ugiCredentials);
+      UserGroupInformation.getCurrentUser().addCredentials(ugiCredentials);
+    }
+    return encryptedSpillKey;
   }
 
   /**

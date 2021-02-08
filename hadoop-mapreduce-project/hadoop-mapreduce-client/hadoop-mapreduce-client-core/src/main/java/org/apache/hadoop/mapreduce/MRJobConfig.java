@@ -1216,6 +1216,21 @@ public interface MRJobConfig {
       "mapreduce.job.encrypted-intermediate-data";
   public static final boolean DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA = false;
 
+  String MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_CLASS =
+      "mapreduce.job.encrypted-intermediate-data.keyprovider.class";
+
+  String MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_KEY_NAME =
+      "mapreduce.job.encrypted-intermediate-data.keyprovider.key-name";
+
+  String DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_KEY_NAME =
+      "am-spill-key";
+
+  String MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_EDEK =
+      "mapreduce.job.encrypted-intermediate-data.keyprovider.edek";
+
+  String DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_EDEK =
+      "AMEncryptedSpillEdek";
+
   public static final String MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS =
       "mapreduce.job.encrypted-intermediate-data-key-size-bits";
   public static final int DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS =
@@ -1225,6 +1240,12 @@ public interface MRJobConfig {
       "mapreduce.job.encrypted-intermediate-data.buffer.kb";
   public static final int DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_BUFFER_KB =
           128;
+
+  String MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_ALGORITHM =
+      "mapreduce.job.encrypted-intermediate-data.keyprovider.keygen.algorithm";
+
+  String DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_ALGORITHM =
+      "HmacSHA1";
 
   /**
    * The maximum number of resources a map reduce job is allowed to submit for
