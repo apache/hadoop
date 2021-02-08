@@ -19,10 +19,12 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.*;
+import java.net.URI;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.util.Shell;
 import org.junit.AssumptionViolatedException;
@@ -127,5 +129,36 @@ public class TestDataDirs {
     conf.set("dfs.datanode.storagetype.ARCHIVE.filesystem", fsInfo);
     locations = DataNode.getStorageLocations(conf);
     assertEquals(2, locations.size());
+  }
+
+  @Test
+  public void testCapacityRatioForDataDir() {
+    // Good case
+    String config = "[0.9 ]/disk /2, [0.1]/disk2/1";
+    Map<URI, Double> map = StorageLocation.parseCapacityRatio(config);
+    assertEquals(0.9,
+        map.get(new Path("/disk/2").toUri()), 0);
+    assertEquals(0.1,
+        map.get(new Path("/disk2/1").toUri()), 0);
+
+    // config without capacity ratio
+    config = "[0.9 ]/disk /2, /disk2/1";
+    try {
+      StorageLocation.parseCapacityRatio(config);
+      fail("Should fail parsing");
+    } catch (IllegalArgumentException e) {
+      assertTrue(e.getMessage().contains(
+          "Capacity ratio config is not with correct form"));
+    }
+
+    // config with bad capacity ratio
+    config = "[11.1]/disk /2";
+    try {
+      StorageLocation.parseCapacityRatio(config);
+      fail("Should fail parsing");
+    } catch (IllegalArgumentException e) {
+      assertTrue(e.getMessage().contains("is not between 0 to 1"));
+    }
+
   }
 }

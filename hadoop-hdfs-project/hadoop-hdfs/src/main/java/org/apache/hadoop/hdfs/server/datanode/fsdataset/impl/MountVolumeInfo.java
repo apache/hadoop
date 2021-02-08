@@ -24,8 +24,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 
 import java.nio.channels.ClosedChannelException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.EnumMap;
+import java.util.Map;
 
 /**
  * MountVolumeInfo is a wrapper of
@@ -33,12 +33,15 @@ import java.util.concurrent.ConcurrentMap;
  */
 @InterfaceAudience.Private
 class MountVolumeInfo {
-  private final ConcurrentMap<StorageType, FsVolumeImpl>
+  private final EnumMap<StorageType, FsVolumeImpl>
       storageTypeVolumeMap;
+  private final EnumMap<StorageType, Double>
+      capacityRatioMap;
   private double reservedForArchiveDefault;
 
   MountVolumeInfo(Configuration conf) {
-    storageTypeVolumeMap = new ConcurrentHashMap<>();
+    storageTypeVolumeMap = new EnumMap<>(StorageType.class);
+    capacityRatioMap = new EnumMap<>(StorageType.class);
     reservedForArchiveDefault = conf.getDouble(
         DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE,
         DFSConfigKeys
@@ -71,12 +74,22 @@ class MountVolumeInfo {
 
   /**
    * Return configured capacity ratio.
-   * If the volume is the only one on the mount,
-   * return 1 to avoid unnecessary allocation.
-   *
-   * TODO: We should support customized capacity ratio for volumes.
    */
   double getCapacityRatio(StorageType storageType) {
+    // If capacity ratio is set, return the val.
+    if (capacityRatioMap.containsKey(storageType)) {
+      return capacityRatioMap.get(storageType);
+    }
+    // If capacity ratio is set for counterpart,
+    // use the rest of capacity of the mount for it.
+    if (!capacityRatioMap.isEmpty()) {
+      double leftOver = 1;
+      for (Map.Entry<StorageType, Double> e : capacityRatioMap.entrySet()) {
+        leftOver -= e.getValue();
+      }
+      return leftOver;
+    }
+    // Use reservedForArchiveDefault by default.
     if (storageTypeVolumeMap.containsKey(storageType)
         && storageTypeVolumeMap.size() > 1) {
       if (storageType == StorageType.ARCHIVE) {
@@ -102,9 +115,28 @@ class MountVolumeInfo {
     return true;
   }
 
-
   void removeVolume(FsVolumeImpl target) {
     storageTypeVolumeMap.remove(target.getStorageType());
+    capacityRatioMap.remove(target.getStorageType());
+  }
+
+  /**
+   * Set customize capacity ratio for a storage type.
+   * Return false if the value is too big.
+   */
+  boolean setCapacityRatio(StorageType storageType,
+      double capacityRatio) {
+    double leftover = 1;
+    for (Map.Entry<StorageType, Double> e : capacityRatioMap.entrySet()) {
+      if (e.getKey() != storageType) {
+        leftover -= e.getValue();
+      }
+    }
+    if (leftover < capacityRatio) {
+      return false;
+    }
+    capacityRatioMap.put(storageType, capacityRatio);
+    return true;
   }
 
   int size() {
