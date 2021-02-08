@@ -24,7 +24,7 @@ import java.net.URI;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.metrics.RequestMetricCollector;
+import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -41,13 +41,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
-import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 
 /**
  * The default {@link S3ClientFactory} implementation.
@@ -70,22 +67,24 @@ public class DefaultS3ClientFactory extends Configured
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
 
   /**
-   * Create the client.
+   * Create the client by preparing the AwsConf configuration
+   * and then invoking {@link #buildAmazonS3Client(AWSCredentialsProvider, ClientConfiguration, S3ClientCreationParameters, String, boolean)}
    * <p>
    * If the AWS stats are not null then a {@link AwsStatisticsCollector}.
    * is created to bind to the two.
-   * <i>Important: until this binding works properly across regions,
-   * this should be null.</i>
    */
   @Override
-  public AmazonS3 createS3Client(URI name,
-      final String bucket,
-      final AWSCredentialsProvider credentials,
-      final String userAgentSuffix,
-      final StatisticsFromAwsSdk statisticsFromAwsSdk) throws IOException {
+  public AmazonS3 createS3Client(
+      final URI uri,
+      final S3ClientCreationParameters parameters) throws IOException {
     Configuration conf = getConf();
     final ClientConfiguration awsConf = S3AUtils
-        .createAwsConf(conf, bucket, Constants.AWS_SERVICE_IDENTIFIER_S3);
+        .createAwsConf(conf,
+            uri.getHost(),
+            Constants.AWS_SERVICE_IDENTIFIER_S3);
+    // add any headers
+    parameters.getHeaders().forEach((h, v) ->
+        awsConf.addHeader(h, v));
 
     // When EXPERIMENTAL_AWS_INTERNAL_THROTTLING is false
     // throttling is explicitly disabled on the S3 client so that
@@ -96,109 +95,60 @@ public class DefaultS3ClientFactory extends Configured
         conf.getBoolean(EXPERIMENTAL_AWS_INTERNAL_THROTTLING,
             EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT));
 
-    if (!StringUtils.isEmpty(userAgentSuffix)) {
-      awsConf.setUserAgentSuffix(userAgentSuffix);
+    if (!StringUtils.isEmpty(parameters.getUserAgentSuffix())) {
+      awsConf.setUserAgentSuffix(parameters.getUserAgentSuffix());
     }
-    // optional metrics
-    RequestMetricCollector metrics = statisticsFromAwsSdk != null
-        ? new AwsStatisticsCollector(statisticsFromAwsSdk)
-        : null;
 
-    return newAmazonS3Client(
-        credentials,
+    return buildAmazonS3Client(
         awsConf,
-        metrics,
-        conf.getTrimmed(ENDPOINT, ""),
-        conf.getBoolean(PATH_STYLE_ACCESS, false));
+        parameters);
   }
 
   /**
-   * Create an {@link AmazonS3} client.
-   * Override this to provide an extended version of the client
-   * @param credentials credentials to use
-   * @param awsConf  AWS configuration
-   * @param metrics metrics collector or null
-   * @param endpoint endpoint string; may be ""
-   * @param pathStyleAccess enable path style access?
-   * @return new AmazonS3 client
-   */
-  protected AmazonS3 newAmazonS3Client(
-      final AWSCredentialsProvider credentials,
-      final ClientConfiguration awsConf,
-      final RequestMetricCollector metrics,
-      final String endpoint,
-      final boolean pathStyleAccess) {
-    if (metrics != null) {
-      LOG.debug("Building S3 client using the SDK builder API");
-      return buildAmazonS3Client(credentials, awsConf, metrics, endpoint,
-          pathStyleAccess);
-    } else {
-      LOG.debug("Building S3 client using the SDK builder API");
-      return classicAmazonS3Client(credentials, awsConf, endpoint,
-          pathStyleAccess);
-    }
-  }
-
-  /**
-   * Use the (newer) Builder SDK to create a an AWS S3 client.
+   * Use the Builder API to create a an AWS S3 client.
    * <p>
-   * This has a more complex endpoint configuration in a
-   * way which does not yet work in this code in a way
-   * which doesn't trigger regressions. So it is only used
-   * when SDK metrics are supplied.
-   * @param credentials credentials to use
+   * This has a more complex endpoint configuration mechanism
+   * which initially caused problems; the
+   * {@code withForceGlobalBucketAccessEnabled(true)}
+   * command is critical here.
    * @param awsConf  AWS configuration
-   * @param metrics metrics collector or null
-   * @param endpoint endpoint string; may be ""
-   * @param pathStyleAccess enable path style access?
+   * @param parameters parameters
    * @return new AmazonS3 client
    */
-  private AmazonS3 buildAmazonS3Client(
-      final AWSCredentialsProvider credentials,
+  protected AmazonS3 buildAmazonS3Client(
       final ClientConfiguration awsConf,
-      final RequestMetricCollector metrics,
-      final String endpoint,
-      final boolean pathStyleAccess) {
+      final S3ClientCreationParameters parameters) {
     AmazonS3ClientBuilder b = AmazonS3Client.builder();
-    b.withCredentials(credentials);
+    b.withCredentials(parameters.getCredentialSet());
     b.withClientConfiguration(awsConf);
-    b.withPathStyleAccessEnabled(pathStyleAccess);
-    if (metrics != null) {
-      b.withMetricsCollector(metrics);
+    b.withPathStyleAccessEnabled(parameters.isPathStyleAccess());
+
+    if (parameters.getMetrics() != null) {
+      b.withMetricsCollector(
+          new AwsStatisticsCollector(parameters.getMetrics()));
+    }
+    if (parameters.getRequestHandlers() != null) {
+      b.withRequestHandlers(
+          parameters.getRequestHandlers().toArray(new RequestHandler2[0]));
+    }
+    if (parameters.getMonitoringListener() != null) {
+      b.withMonitoringListener(parameters.getMonitoringListener());
     }
 
     // endpoint set up is a PITA
-    //  client.setEndpoint("") is no longer available
     AwsClientBuilder.EndpointConfiguration epr
-        = createEndpointConfiguration(endpoint, awsConf);
+        = createEndpointConfiguration(parameters.getEndpoint(),
+        awsConf);
     if (epr != null) {
       // an endpoint binding was constructed: use it.
       b.withEndpointConfiguration(epr);
+    } else {
+      // no idea what the endpoint is, so tell the SDK
+      // to work it out at the cost of an extra HEAD request
+      b.withForceGlobalBucketAccessEnabled(true);
     }
     final AmazonS3 client = b.build();
     return client;
-  }
-
-  /**
-   * Wrapper around constructor for {@link AmazonS3} client.
-   * Override this to provide an extended version of the client.
-   * <p>
-   * This uses a deprecated constructor -it is currently
-   * the only one which works for us.
-   * @param credentials credentials to use
-   * @param awsConf  AWS configuration
-   * @param endpoint endpoint string; may be ""
-   * @param pathStyleAccess enable path style access?
-   * @return new AmazonS3 client
-   */
-  @SuppressWarnings("deprecation")
-  private AmazonS3 classicAmazonS3Client(
-      AWSCredentialsProvider credentials,
-      ClientConfiguration awsConf,
-      final String endpoint,
-      final boolean pathStyleAccess) {
-    final AmazonS3 client = new AmazonS3Client(credentials, awsConf);
-    return configureAmazonS3Client(client, endpoint, pathStyleAccess);
   }
 
   /**
@@ -226,31 +176,6 @@ public class DefaultS3ClientFactory extends Configured
         throw new IllegalArgumentException(msg, e);
       }
     }
-    return applyS3ClientOptions(s3, pathStyleAccess);
-  }
-
-  /**
-   * Perform any tuning of the {@code S3ClientOptions} settings based on
-   * the Hadoop configuration.
-   * This is different from the general AWS configuration creation as
-   * it is unique to S3 connections.
-   * <p>
-   * The {@link Constants#PATH_STYLE_ACCESS} option enables path-style access
-   * to S3 buckets if configured.  By default, the
-   * behavior is to use virtual hosted-style access with URIs of the form
-   * {@code http://bucketname.s3.amazonaws.com}
-   * <p>
-   * Enabling path-style access and a
-   * region-specific endpoint switches the behavior to use URIs of the form
-   * {@code http://s3-eu-west-1.amazonaws.com/bucketname}.
-   * It is common to use this when connecting to private S3 servers, as it
-   * avoids the need to play with DNS entries.
-   * @param s3 S3 client
-   * @param pathStyleAccess enable path style access?
-   * @return the S3 client
-   */
-  protected static AmazonS3 applyS3ClientOptions(AmazonS3 s3,
-      final boolean pathStyleAccess) {
     if (pathStyleAccess) {
       LOG.debug("Enabling path style access!");
       s3.setS3ClientOptions(S3ClientOptions.builder()
