@@ -69,6 +69,10 @@ public class DefaultS3ClientFactory extends Configured
   protected static final Logger LOG =
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
 
+  private static final String US_EAST_1 = "us-east-1";
+
+  private static final String CENTRAL_ENDPOINT = "s3.amazonaws.com";
+
   /**
    * Create the client.
    * <p>
@@ -283,28 +287,26 @@ public class DefaultS3ClientFactory extends Configured
   @VisibleForTesting
   public static AwsClientBuilder.EndpointConfiguration
       createEndpointConfiguration(
-          final String endpoint, final ClientConfiguration awsConf) {
+          String endpoint, final ClientConfiguration awsConf) {
     LOG.debug("Creating endpoint configuration for {}", endpoint);
+    String region;
     if (endpoint == null || endpoint.isEmpty()) {
       // the default endpoint...we should be using null at this point.
-      LOG.debug("Using default endpoint -no need to generate a configuration");
-      return null;
-    }
-
-    final URI epr = RuntimeHttpUtils.toUri(endpoint, awsConf);
-    LOG.debug("Endpoint URI = {}", epr);
-
-    String region;
-    if (!ServiceUtils.isS3USStandardEndpoint(endpoint)) {
+      LOG.debug("Using central endpoint");
+      endpoint = CENTRAL_ENDPOINT;
+      region = US_EAST_1;
+    } else if (ServiceUtils.isS3USStandardEndpoint(endpoint)) {
+      region = US_EAST_1;
+    } else {
+      final URI epr = RuntimeHttpUtils.toUri(endpoint, awsConf);
       LOG.debug("Endpoint {} is not the default; parsing", epr);
       region = AwsHostNameUtils.parseRegion(
           epr.getHost(),
           S3_SERVICE_NAME);
-    } else {
-      // US-east, set region == null.
-      LOG.debug("Endpoint {} is the standard one; declare region as null", epr);
-      region = null;
     }
+
+    final URI epr = RuntimeHttpUtils.toUri(endpoint, awsConf);
+    LOG.debug("Endpoint URI = {}", epr);
     LOG.debug("Region for endpoint {}, URI {} is determined as {}",
         endpoint, epr, region);
     return new AwsClientBuilder.EndpointConfiguration(endpoint, region);
