@@ -66,16 +66,17 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Manage snapshottable directories and their snapshots.
- *
+ * 
  * This class includes operations that create, access, modify snapshots and/or
  * snapshot-related data. In general, the locking structure of snapshot
  * operations is: <br>
- *
+ * 
  * 1. Lock the {@link FSNamesystem} lock in {@link FSNamesystem} before calling
  * into {@link SnapshotManager} methods.<br>
  * 2. Lock the {@link FSDirectory} lock for the {@link SnapshotManager} methods
@@ -133,7 +134,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   private int snapshotCounter = 0;
   private final int maxSnapshotLimit;
   private final int maxSnapshotFSLimit;
-
+  
   /** All snapshottable directories in the namesystem. */
   private final Map<Long, INodeDirectory> snapshottables =
       new ConcurrentHashMap<>();
@@ -258,7 +259,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
     addSnapshottable(d);
   }
-
+  
   /** Add the given snapshottable directory to {@link #snapshottables}. */
   public void addSnapshottable(INodeDirectory dir) {
     Preconditions.checkArgument(dir.isSnapshottable());
@@ -269,7 +270,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   private void removeSnapshottable(INodeDirectory s) {
     snapshottables.remove(s.getId());
   }
-
+  
   /** Remove snapshottable directories from {@link #snapshottables} */
   public void removeSnapshottable(List<INodeDirectory> toRemove) {
     if (toRemove != null) {
@@ -281,7 +282,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
 
   /**
    * Set the given snapshottable directory to non-snapshottable.
-   *
+   * 
    * @throws SnapshotException if there are snapshots in the directory.
    */
   public void resetSnapshottable(final String path) throws IOException {
@@ -461,7 +462,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     int n = numSnapshots.get();
     checkFileSystemSnapshotLimit(n);
     srcRoot.addSnapshot(this, snapshotName, leaseManager, mtime);
-
+      
     //create success, update id
     snapshotCounter++;
     numSnapshots.getAndIncrement();
