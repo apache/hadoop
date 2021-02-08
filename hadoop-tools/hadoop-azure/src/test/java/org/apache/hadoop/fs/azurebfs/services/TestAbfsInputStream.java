@@ -19,11 +19,11 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Optional;
 
 import org.junit.Assert;
 import org.junit.Test;
+import java.util.Arrays;
+
 import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
@@ -629,7 +629,7 @@ public class TestAbfsInputStream extends
         ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE, config);
     byte[] byteBuffer = new byte[ONE_MB];
     AbfsInputStream inputStream = this.getAbfsStore(fs)
-        .openFileForRead(testPath, Optional.empty(), null);
+        .openFileForRead(testPath, null);
 
     Assertions.assertThat(inputStream.getBufferSize())
         .describedAs("Unexpected AbfsInputStream buffer size")

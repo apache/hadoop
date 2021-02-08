@@ -609,6 +609,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   public AbfsInputStream openFileForRead(final Path path,
+      final FileSystem.Statistics statistics)
+      throws AzureBlobFileSystemException {
+    return openFileForRead(path, Optional.empty(), statistics);
+  }
+
+  public AbfsInputStream openFileForRead(final Path path,
       final Optional<Configuration> options,
       final FileSystem.Statistics statistics)
       throws AzureBlobFileSystemException {

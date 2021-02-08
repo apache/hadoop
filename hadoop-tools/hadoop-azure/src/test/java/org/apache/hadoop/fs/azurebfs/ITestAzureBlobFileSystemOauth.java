@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
-import java.util.Optional;
 
 import org.junit.Assume;
 import org.junit.Test;
@@ -143,8 +142,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     }
 
     // TEST READ  FILE
-    try (InputStream inputStream = abfsStore.openFileForRead(EXISTED_FILE_PATH,
-        Optional.empty(), null)) {
+    try (InputStream inputStream = abfsStore.openFileForRead(EXISTED_FILE_PATH, null)) {
       assertTrue(inputStream.read() != 0);
     }
 

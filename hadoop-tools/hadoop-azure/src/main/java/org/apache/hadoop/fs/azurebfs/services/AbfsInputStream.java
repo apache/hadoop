@@ -148,7 +148,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @Override
   public int read(long position, byte[] buffer, int offset, int length)
       throws IOException {
-    // When bufferedPreadDisabled = true, this API do not use any shared buffer,
+    // When bufferedPreadDisabled = true, this API does not use any shared buffer,
     // cursor position etc. So this is implemented as NOT synchronized. HBase
     // kind of random reads on a shared file input stream will greatly get
     // benefited by such implementation.
