@@ -744,4 +744,74 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
+
+  @Test
+  public void testIntraQueuePreemptionFairNonSchedulablePendingApps()
+      throws IOException {
+    // Enable FairOrderingPolicy for yarn.scheduler.capacity.root.a
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + ".a.ordering-policy", "fair");
+    // Make sure all containers will be preempted in a single round.
+    conf.setFloat(CapacitySchedulerConfiguration.
+            INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
+        (float) 1.0);
+
+    String labelsConfig = "=100:100,true;";
+    String nodesConfig = // n1 has no label
+        "n1= res=100";
+    String queuesConfig =
+        // guaranteed,max,used,pending,reserved
+        "root(=[100:100 100:100 100:100 1:1 0]);" + // root
+            "-a(=[100:100 100:100 100:100 1:1 0])"; // a
+    String appsConfig =
+        // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+        "a\t" // app1 and app2, user1 in a
+            + "(1,1,n1,,1,false,0,user1);" +
+            "a\t"
+            + "(1,1,n1,,99,false,0,user1);" +
+            "a\t" // app3, user1 in a
+            + "(1,1,n1,,0,false,10,user1)" + "\t100" + "\tfalse;";
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    policy.editSchedule();
+
+    verify(eventHandler, times(0)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(2))));
+  }
+
+  @Test
+  public void testIntraQueuePreemptionFairWithULNonSchedulablePendingApps()
+      throws IOException {
+    // Enable FairOrderingPolicy for yarn.scheduler.capacity.root.a
+    conf.set(CapacitySchedulerConfiguration.PREFIX
+        + CapacitySchedulerConfiguration.ROOT + ".a.ordering-policy", "fair");
+    // Make sure all containers will be preempted in a single round.
+    conf.setFloat(CapacitySchedulerConfiguration.
+            INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,
+        (float) 1.0);
+
+    String labelsConfig = "=100:100,true;";
+    String nodesConfig = // n1 has no label
+        "n1= res=100";
+    String queuesConfig =
+        // guaranteed,max,used,pending,reserved
+        "root(=[100:100 100:100 100:100 1:1 0]);" + // root
+            "-a(=[100:100 100:100 100:100 1:1 0])"; // a
+    String appsConfig =
+        // queueName\t(prio,resource,host,expression,#repeat,reserved,pending,user)
+        "a\t" // app1 and app2, user1 in a
+            + "(1,1,n1,,1,false,0,user1);" +
+            "a\t"
+            + "(1,1,n1,,99,false,0,user2);" +
+            "a\t" // app3, user1 in a
+            + "(1,1,n1,,0,false,10,user2)" + "\t34" + "\tfalse;";
+
+    buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
+    policy.editSchedule();
+
+    verify(eventHandler, times(0)).handle(argThat(
+        new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
+            getAppAttemptId(2))));
+  }
 }

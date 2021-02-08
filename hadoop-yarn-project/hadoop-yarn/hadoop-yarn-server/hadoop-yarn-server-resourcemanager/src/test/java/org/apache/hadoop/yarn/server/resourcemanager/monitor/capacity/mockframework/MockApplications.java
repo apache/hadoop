@@ -23,12 +23,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -87,19 +89,37 @@ class MockApplications {
       String containersConfig = appConfigComponents[1];
       MockApplication mockApp = new MockApplication(id, containersConfig, queueName);
       new MockContainers(mockApp, nameToCSQueues, nodeIdToSchedulerNodes);
-      add(mockApp);
+      if(appConfigComponents.length > 3 && appConfigComponents[3] != null) {
+        boolean schedulable = Boolean.parseBoolean(appConfigComponents[3]);
+        LOG.debug("For app: " + mockApp.appAttemptId +
+            " isSchedulable: " + schedulable);
+        add(mockApp, schedulable);
+      } else {
+        add(mockApp);
+      }
       id++;
     }
     setupUserResourceUsagePerLabel(resourceCalculator, mulp);
   }
 
   private void add(MockApplication mockApp) {
+    add(mockApp, true);
+  }
+
+  private void add(MockApplication mockApp, boolean schedulable) {
     // add to LeafQueue
     LeafQueue queue = (LeafQueue) nameToCSQueues.get(mockApp.queueName);
     queue.getApplications().add(mockApp.app);
     queue.getAllApplications().add(mockApp.app);
     when(queue.getMinimumAllocation()).thenReturn(Resource.newInstance(1,1));
     when(mockApp.app.getCSLeafQueue()).thenReturn(queue);
+    Collection<FiCaSchedulerApp> schedulableApps =
+        queue.getOrderingPolicy().getSchedulableEntities();
+    if(schedulable) {
+      schedulableApps.add(mockApp.app);
+    }
+    when(queue.getOrderingPolicy().getSchedulableEntities())
+        .thenReturn(schedulableApps);
 
     LOG.debug("Application mock: queue: " + mockApp.queueName + ", appId:" + mockApp.app);
 
