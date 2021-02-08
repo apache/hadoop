@@ -189,6 +189,7 @@ public final class RemoteIterators {
 
   /**
    * Build a list from a RemoteIterator.
+   * @param source source iterator
    * @param <T> type
    * @return a list of the values.
    * @throws IOException if the source RemoteIterator raises it.
@@ -202,12 +203,17 @@ public final class RemoteIterators {
 
   /**
    * Build an array from a RemoteIterator.
+   * @param source source iterator
+   * @param a destination array; if too small a new array
+   * of the same type is created
    * @param <T> type
    * @return an array of the values.
    * @throws IOException if the source RemoteIterator raises it.
    */
-  public static <T> T[] toArray(RemoteIterator<T> source) throws IOException {
-    return (T[]) toList(source).toArray();
+  public static <T> T[] toArray(RemoteIterator<T> source,
+      T[] a) throws IOException {
+    List<T> list = toList(source);
+    return list.toArray(a);
   }
 
   /**
@@ -240,16 +246,26 @@ public final class RemoteIterators {
         consumer.accept(source.next());
       }
 
-      // maybe log the results
-      logIOStatisticsAtDebug(LOG, "RemoteIterator Statistics: {}", source);
     } finally {
-      if (source instanceof Closeable) {
-        // source is closeable, so close.
-        IOUtils.cleanupWithLogger(LOG, (Closeable) source);
-      }
+      cleanupRemoteIterator(source);
     }
-
     return count;
+  }
+
+  /**
+   * Clean up after an iteration.
+   * If the log is at debug, calculate and log the IOStatistics.
+   * If the iterator is closeable, cast and then cleanup the iterator
+   * @param source iterator source
+   * @param <T> type of source
+   */
+  public static <T> void cleanupRemoteIterator(RemoteIterator<T> source) {
+    // maybe log the results
+    logIOStatisticsAtDebug(LOG, "RemoteIterator Statistics: {}", source);
+    if (source instanceof Closeable) {
+      /* source is closeable, so close.*/
+      IOUtils.cleanupWithLogger(LOG, (Closeable) source);
+    }
   }
 
   /**
