@@ -160,4 +160,17 @@ public class FiCaSchedulerNode extends SchedulerNode {
   public synchronized Map<ContainerId, RMContainer> getKillableContainers() {
     return Collections.unmodifiableMap(killableContainers);
   }
+
+  protected synchronized void allocateContainer(RMContainer rmContainer,
+      boolean launchedOnNode) {
+    super.allocateContainer(rmContainer, launchedOnNode);
+
+    final Container container = rmContainer.getContainer();
+    LOG.info("Assigned container " + container.getId() + " of capacity "
+          + container.getResource() + " on host " + getRMNode().getNodeAddress()
+          + ", which has " + getNumContainers() + " containers, "
+          + getAllocatedResource() + " used and " + getUnallocatedResource()
+          + " available after allocation");
+  }
+
 }
