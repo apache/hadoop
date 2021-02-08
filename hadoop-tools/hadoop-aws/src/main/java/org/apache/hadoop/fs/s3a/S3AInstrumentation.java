@@ -685,7 +685,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       metricsSystem.unregisterSource(metricsSourceName);
       metricsSourceActiveCounter--;
       int activeSources = metricsSourceActiveCounter;
-      if (activeSources == 0) {
+      if (activeSources == 0 && metricsSystem != null) {
         LOG.debug("Shutting down metrics publisher");
         metricsSystem.publishMetricsNow();
         metricsSystem.shutdown();

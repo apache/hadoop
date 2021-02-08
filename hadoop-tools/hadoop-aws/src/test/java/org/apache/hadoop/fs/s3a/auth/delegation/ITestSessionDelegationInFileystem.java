@@ -344,7 +344,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY,
         DELEGATION_TOKEN_ROLE_ARN,
-        DELEGATION_TOKEN_ENDPOINT);
+        DELEGATION_TOKEN_ENDPOINT,
+        S3GUARD_DDB_TABLE_CREATE_KEY);
     // this is done to make sure you cannot create an STS session no
     // matter how you pick up credentials.
     conf.set(DELEGATION_TOKEN_ENDPOINT, "http://localhost:8080/");

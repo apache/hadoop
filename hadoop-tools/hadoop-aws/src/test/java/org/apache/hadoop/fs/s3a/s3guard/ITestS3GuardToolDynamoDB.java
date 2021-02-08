@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
 import org.apache.hadoop.util.ExitUtil;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
@@ -54,6 +55,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.setBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommand;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -320,8 +322,10 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testCLIFsckFailInitializeFs() throws Exception {
+    Configuration conf = new Configuration(getConfiguration());
+    conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
     intercept(UnknownStoreException.class,
-        () -> run(S3GuardTool.Fsck.NAME, "-check",
+        () -> runS3GuardCommand(conf, Fsck.NAME, "-check",
             "s3a://this-bucket-does-not-exist-" + UUID.randomUUID()));
   }
 

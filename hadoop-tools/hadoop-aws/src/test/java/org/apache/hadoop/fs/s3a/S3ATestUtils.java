@@ -517,7 +517,6 @@ public final class S3ATestUtils {
       conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
       conf.set(AUTHORITATIVE_PATH, "");
       conf.set(S3_METADATA_STORE_IMPL, implClass);
-      conf.setBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, true);
     }
   }
 

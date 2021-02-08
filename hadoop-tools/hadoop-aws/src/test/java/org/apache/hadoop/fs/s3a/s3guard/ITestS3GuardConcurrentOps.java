@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeFilesystemHasMetadatastore;
 
 /**
  * Tests concurrent operations on S3Guard.
@@ -63,6 +64,12 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
     conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, 0);
     conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, 0);
     return conf;
+  }
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    assumeFilesystemHasMetadatastore(getFileSystem());
   }
 
   private void failIfTableExists(DynamoDB db, String tableName) {

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -124,10 +125,9 @@ public final class S3Guard {
           msClass.getSimpleName(), fs.getScheme());
       msInstance.initialize(fs, ttlTimeProvider);
       return msInstance;
-    } catch (FileNotFoundException e) {
-      // Don't log this exception as it means the table doesn't exist yet;
-      // rely on callers to catch and treat specially
-      throw e;
+    } catch (FileNotFoundException | AccessDeniedException e) {
+      // Downgrade.
+      return new NullMetadataStore();
     } catch (RuntimeException | IOException e) {
       String message = "Failed to instantiate metadata store " +
           conf.get(S3_METADATA_STORE_IMPL)
