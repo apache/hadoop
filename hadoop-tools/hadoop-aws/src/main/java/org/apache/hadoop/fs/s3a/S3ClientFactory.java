@@ -31,8 +31,9 @@ import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 /**
  * Factory for creation of {@link AmazonS3} client instances.
  * Important: HBase's HBoss module implements this interface in its
- * test. If changing the signature use default implementations to avoid
- * breaking things.
+ * test.
+ * Take care when updating this interface to ensure that a client
+ * implementing only the deprecated method will work.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -70,6 +71,7 @@ public interface S3ClientFactory {
    * @throws IOException IO problem
    * @deprecated this is only here to stop hboss builds breaking.
    */
+  @Deprecated
   default AmazonS3 createS3Client(URI name,
       String bucket,
       AWSCredentialsProvider credentialSet,
