@@ -770,7 +770,7 @@ public class DataNode extends ReconfigurableBase
     if (dnConf.getConf().getBoolean(DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
         DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT)
         && data.getMountVolumeMap() != null) {
-      // Check if mount already exist
+      // Check if mount already exist.
       for (StorageLocation location : changedVolumes.newLocations) {
         if (StorageType.allowSameDiskTiering(location.getStorageType())) {
           File dir = new File(location.getUri());
@@ -787,8 +787,8 @@ public class DataNode extends ReconfigurableBase
           if (data.getMountVolumeMap().hasMount(mount)) {
             String errMsg = "Disk mount " + mount
                 + " already has volume, when trying to add "
-                + location + ". Please try removing mounts first" +
-                " or restart datanode.";
+                + location + ". Please try removing mounts first"
+                + " or restart datanode.";
             LOG.error(errMsg);
             throw new IOException(errMsg);
           }

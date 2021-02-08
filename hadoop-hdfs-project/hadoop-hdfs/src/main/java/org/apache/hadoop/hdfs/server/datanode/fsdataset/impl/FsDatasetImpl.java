@@ -193,11 +193,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  @Override
-  public MountVolumeMap getMountVolumeMap() {
-    return volumes.getMountVolumeMap();
-  }
-
   @Override // FsDatasetSpi
   public Block getStoredBlock(String bpid, long blkid)
       throws IOException {
@@ -250,7 +245,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     return info.getMetadataInputStream(0);
   }
-    
+
   final DataNode datanode;
   private final DataNodeMetrics dataNodeMetrics;
   final DataStorage dataStorage;
@@ -3525,7 +3520,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInfo r = getBlockReplica(block);
     return r.getPinning(localFS);
   }
-  
+
+  @Override
+  public MountVolumeMap getMountVolumeMap() {
+    return volumes.getMountVolumeMap();
+  }
+
   @Override
   public boolean isDeletingBlock(String bpid, long blockId) {
     synchronized(deletingBlock) {
