@@ -204,7 +204,8 @@ public class TestBlockPoolManager {
   private void addDNSSettings(Configuration config,
       String nameservice) {
     config.setBoolean(
-        DFSConfigKeys.DFS_NAMESERVICES_RESOLUTION_ENABLED + "." + nameservice, true);
+        DFSConfigKeys.DFS_NAMESERVICES_RESOLUTION_ENABLED + "."
+            + nameservice, true);
     config.set(
         DFSConfigKeys.DFS_NAMESERVICES_RESOLVER_IMPL + "." + nameservice,
         MockDomainNameResolver.class.getName());

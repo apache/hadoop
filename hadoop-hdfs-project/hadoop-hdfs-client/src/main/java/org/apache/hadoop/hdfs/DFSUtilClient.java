@@ -417,7 +417,8 @@ public class DFSUtilClient {
    * @param defaultValue default address to return in case key is not found.
    * @param keys Set of keys to look for in the order of preference
    * @return a map(namenodeId to InetSocketAddress),
-   *         where namenodeId is combination of nsId, resolved hostname and port.
+   *         where namenodeId is combination of nsId,
+   *         resolved hostname and port.
    */
   static Map<String, InetSocketAddress> getResolvedAddressesForNsId(
       Configuration conf, String nsId, DomainNameResolver dnr,

@@ -6232,4 +6232,13 @@
       This is used in HDFS components like datanode.
     </description>
   </property>
+
+  <property>
+    <name>dfs.nameservices.resolver.impl</name>
+    <value></value>
+    <description>
+      Nameservice resolver implementation used by HDFS components.
+      Effective with dfs.nameservices.resolution-enabled on.
+    </description>
+  </property>
 </configuration>
