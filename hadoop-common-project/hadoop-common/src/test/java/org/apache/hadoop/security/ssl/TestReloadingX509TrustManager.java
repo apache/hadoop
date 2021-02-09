@@ -89,7 +89,7 @@ public class TestReloadingX509TrustManager {
     createTrustStore(truststoreLocation, "password", "cert1", cert1);
 
     long reloadInterval = 10;
-    Timer fileMonitoringTimer = new Timer("SSL Certificates Store Monitor", true);
+    Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
     final ReloadingX509TrustManager tm =
       new ReloadingX509TrustManager("jks", truststoreLocation, "password");
     try {
@@ -126,7 +126,7 @@ public class TestReloadingX509TrustManager {
     createTrustStore(truststoreLocation, "password", "cert1", cert1);
 
     long reloadInterval = 10;
-    Timer fileMonitoringTimer = new Timer("SSL Certificates Store Monitor", true);
+    Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
     ReloadingX509TrustManager tm =
       new ReloadingX509TrustManager("jks", truststoreLocation, "password");
     try {
@@ -166,7 +166,7 @@ public class TestReloadingX509TrustManager {
     createTrustStore(truststoreLocation, "password", "cert1", cert1);
 
     long reloadInterval = 10;
-    Timer fileMonitoringTimer = new Timer("SSL Certificates Store Monitor", true);
+    Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
     ReloadingX509TrustManager tm =
       new ReloadingX509TrustManager("jks", truststoreLocation, "password");
     try {
@@ -217,7 +217,7 @@ public class TestReloadingX509TrustManager {
     String truststoreLocation = BASEDIR + "/testreload.jks";
     createTrustStore(truststoreLocation, "password", "cert1", cert1);
 
-    Timer fileMonitoringTimer = new Timer("SSL Certificates Store Monitor", true);
+    Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
     final ReloadingX509TrustManager tm =
         new ReloadingX509TrustManager("jks", truststoreLocation, null);
     try {

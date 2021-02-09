@@ -84,7 +84,7 @@ public class TestReloadingX509KeyManager {
         createKeyStore(keystoreLocation, "password", "cert1", kp.getPrivate(), sCert);
 
         long reloadInterval = 10;
-        Timer fileMonitoringTimer = new Timer("SSL Certificates Store Monitor", true);
+        Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
         ReloadingX509KeystoreManager tm =
                 new ReloadingX509KeystoreManager("jks", keystoreLocation,
                         "password",
@@ -122,7 +122,7 @@ public class TestReloadingX509KeyManager {
         createKeyStore(keystoreLocation, "password", "cert1", kp.getPrivate(), cert1);
 
         long reloadInterval = 10;
-        Timer fileMonitoringTimer = new Timer("SSL Certificates Store Monitor", true);
+        Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
         ReloadingX509KeystoreManager tm =
                 new ReloadingX509KeystoreManager("jks", keystoreLocation,
                         "password",
@@ -161,7 +161,7 @@ public class TestReloadingX509KeyManager {
         createKeyStore(keystoreLocation, "password", "cert1", kp.getPrivate(), cert1);
 
         long reloadInterval = 10;
-        Timer fileMonitoringTimer = new Timer("SSL Certificates Store Monitor", true);
+        Timer fileMonitoringTimer = new Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
         ReloadingX509KeystoreManager tm =
                 new ReloadingX509KeystoreManager("jks", keystoreLocation,
                         "password",

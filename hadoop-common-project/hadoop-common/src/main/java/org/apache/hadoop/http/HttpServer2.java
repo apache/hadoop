@@ -595,7 +595,7 @@ public final class HttpServer2 implements FilterContainer {
 
     private Timer makeConfigurationChangeMonitor(long reloadInterval,
         SslContextFactory.Server sslContextFactory) {
-      Timer timer = new Timer("SSL Certificates Store Monitor", true);
+      java.util.Timer timer = new java.util.Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
       //
       // The Jetty SSLContextFactory provides a 'reload' method which will reload both
       // truststore and keystore certificates.

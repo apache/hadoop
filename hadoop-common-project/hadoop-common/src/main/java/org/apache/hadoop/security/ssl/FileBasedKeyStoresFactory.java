@@ -51,6 +51,12 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
   private static final Logger LOG =
       LoggerFactory.getLogger(FileBasedKeyStoresFactory.class);
 
+
+  /**
+   * The name of the timer thread monitoring file changes.
+   */
+  public static final String SSL_MONITORING_THREAD_NAME = "SSL Certificates Store Monitor";
+
   /**
    * The refresh interval used to check if either of the truststore or keystore
    * certificate file has changed.
@@ -255,7 +261,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
         resolvePropertyName(mode, SSL_STORES_RELOAD_INTERVAL_TPL_KEY),
         DEFAULT_SSL_STORES_RELOAD_INTERVAL);
 
-    fileMonitoringTimer = new Timer("SSL Certificates Store Monitor", true);
+    fileMonitoringTimer = new Timer(SSL_MONITORING_THREAD_NAME, true);
 
     // certificate store
     String keystoreType =
