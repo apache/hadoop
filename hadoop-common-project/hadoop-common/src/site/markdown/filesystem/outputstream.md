@@ -63,7 +63,7 @@ through a chain of streams.
 ## Output Stream Model
 
 For this specification, an output stream can be viewed as a list of bytes
-stored in the client -the `hsync()` and `hflush()` operations the actions
+stored in the client; `hsync()` and `hflush()` are operations the actions
 which propagate the data to be visible to other readers of the file and/or
 made durable.
 
@@ -177,7 +177,7 @@ The `FileSystem.create()`, `FileSystem.append()` and
 `FSDataOutputStreamBuilder.build()` calls return an instance
 of a class `FSDataOutputStream`, a subclass of `java.io.OutputStream`.
 
-The base class wraps an `OutputStream` instance, one which may implement `Streamable`,
+The base class wraps an `OutputStream` instance, one which may implement `Syncable`,
 `CanSetDropBehind` and `StreamCapabilities`.
 
 This document covers the requirements of such implementations.
@@ -328,7 +328,7 @@ writing small 4KB blocks or similar.
 
 Forwarding this to a full flush across a distributed filesystem, or worse,
 a distant object store, is very inefficient.
-Filesystem clients which do uprate a `flush()` to an `hflush()` will eventually
+Filesystem clients which convert a `flush()` to an `hflush()` will eventually
 have to roll back that feature:
 [HADOOP-16548](https://issues.apache.org/jira/browse/HADOOP-16548).
 
@@ -364,7 +364,7 @@ Catching and swallowing exceptions, while common, is not always the ideal soluti
 Follow-on calls to `close()` are ignored, and calls to other methods
 rejected. That is: caller's cannot be expected to call `close()` repeatedly
 until it succeeds.
-1. The duration of the `call()` operation is undefined. Operations which rely
+1. The duration of the `close()` operation is undefined. Operations which rely
 on acknowledgements from remote systems to meet the persistence guarantees
 implicitly have to await these acknowledgements. Some Object Store output streams
 upload the entire data file in the `close()` operation. This can take a large amount
@@ -653,7 +653,7 @@ filesystem. After returning to the caller, the data MUST be visible to other rea
 it MAY be durable. That is: it does not have to be persisted, merely guaranteed
 to be consistently visible to all clients attempting to open a new stream reading
 data at the path.
-1. `Syncable.hsync()` MUST transmit the data as per `hflush` the data and persist
+1. `Syncable.hsync()` MUST transmit the data as per `hflush` and persist
    that data to the underlying durable storage.
 1. `close()` The first call to `close()` MUST flush out all remaining data in
 the buffers, and persist it, as a call to `hsync()`.
@@ -824,7 +824,7 @@ That HDFS file metadata often lags the content of a file being written
 to is not something everyone expects, nor convenient for any program trying
 to pick up updated data in a file being written. Most visible is the length
 of a file returned in the various `list` commands and `getFileStatus` —this
-is often out of data.
+is often out of date.
 
 As HDFS only supports file growth in its output operations, this means
 that the size of the file as listed in the metadata may be less than or equal
@@ -995,9 +995,18 @@ a block boundary.
 
 
 
-### Does `close()` sync data?
+### Does `close()` synchronize and persist data?
 
-By default, HDFS does not sync data to disk when a stream is closed; it will
+By default, HDFS does not immediately data to disk when a stream is closed; it will
 be asynchronously saved to disk.
 
 This does not mean that users do not expect it.
+
+The behavior as implemented is similar to the write-back aspect's of NFS's
+[caching](https://docstore.mik.ua/orelly/networking_2ndEd/nfs/ch07_04.htm).
+`DFSClient.close()` is performing an `hflush()` to the client to upload
+all data to the datanodes.
+
+1. `close()` SHALL return once the guarantees of `hflush()` are met: the data is
+   visible to others.
+1. For durability guarantees, `hsync()` MUST be called first.

@@ -85,12 +85,12 @@ public final class StoreImplementationUtils {
    * Probe for an input stream having a capability; returns true
    * if the stream implements {@link StreamCapabilities} and its
    * {@code hasCapabilities()} method returns true for the capability.
-   * @param out output stream
+   * @param in input stream
    * @param capability capability to probe for
    * @return true if the stream declares that it supports the capability.
    */
-  public static boolean hasCapability(InputStream out, String capability) {
-    return objectHasCapability(out, capability);
+  public static boolean hasCapability(InputStream in, String capability) {
+    return objectHasCapability(in, capability);
   }
 
 }
