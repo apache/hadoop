@@ -652,8 +652,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(
       Optional<Configuration> options) {
-    boolean bufferedPreadDisabled = options.isPresent()
-        && options.get().getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false);
+    boolean bufferedPreadDisabled = options
+        .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
+        .orElse(false);
     return new AbfsInputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
             .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
