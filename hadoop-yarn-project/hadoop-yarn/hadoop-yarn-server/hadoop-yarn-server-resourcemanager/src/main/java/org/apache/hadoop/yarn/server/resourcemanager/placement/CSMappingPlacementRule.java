@@ -217,7 +217,13 @@ public class CSMappingPlacementRule extends PlacementRule {
     VariableContext vctx = new VariableContext();
 
     vctx.put("%user", user);
-    vctx.put("%specified", asc.getQueue());
+    //If the specified matches the default it means NO queue have been specified
+    //as per ClientRMService#submitApplication which sets the queue to default
+    //when no queue is provided.
+    //To place queues specifically to default, users must use root.default
+    if (!asc.getQueue().equals(YarnConfiguration.DEFAULT_QUEUE_NAME)) {
+      vctx.put("%specified", asc.getQueue());
+    }
     vctx.put("%application", asc.getApplicationName());
     vctx.put("%default", "root.default");
     try {
@@ -379,7 +385,6 @@ public class CSMappingPlacementRule extends PlacementRule {
         asc.getApplicationName(), appQueue, overrideWithQueueMappings);
     if (appQueue != null &&
         !appQueue.equals(YarnConfiguration.DEFAULT_QUEUE_NAME) &&
-        !appQueue.equals(YarnConfiguration.DEFAULT_QUEUE_FULL_NAME) &&
         !overrideWithQueueMappings &&
         !recovery) {
       LOG.info("Have no jurisdiction over application submission '{}', " +
