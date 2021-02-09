@@ -214,7 +214,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     this.s3guard = s3guard;
     this.authMode = authMode;
     this.guardedInAuthMode = s3guard && authMode;
-
+    setS3GuardRequired(s3guard);
   }
 
   @Override

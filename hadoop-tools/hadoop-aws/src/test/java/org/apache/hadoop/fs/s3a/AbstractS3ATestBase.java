@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.io.IOUtils;
@@ -38,6 +39,7 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
@@ -52,6 +54,19 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     implements S3ATestConstants {
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractS3ATestBase.class);
+
+  /**
+   * Flag to set if S3Guard is downgrading as DDB tables
+   * are not found. This is used to exit faster on
+   * tests which require a guarded bucket.
+   */
+  private static boolean s3GuardDowngrading = false;
+
+  /**
+   * Flag to set if S3Guard is required for the test
+   * suite/run. Will trigger early exit if downgrading is in progress.
+   */
+  private boolean s3GuardRequired;
 
   /**
    * FileSystem statistics are collected across every test case.
@@ -74,7 +89,15 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     // Force deprecated key load through the
     // static initializers. See: HADOOP-17385
     S3AFileSystem.initializeClass();
+    if (isS3GuardRequired()) {
+      skipIfS3GuardDowngrading();
+    }
     super.setup();
+    S3AFileSystem fs = getFileSystem();
+    // check that the FS has the expected state
+    if (isS3GuardRequired()) {
+      downgradeIfUnguarded(fs);
+    }
   }
 
   @Override
@@ -212,5 +235,66 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
 
   protected String getTestTableName(String suffix) {
     return getTestDynamoTablePrefix(getConfiguration()) + suffix;
+  }
+
+  /**
+   * Is S3Guard Downgrading?
+   * @return true if a set has concluded that S3Guard is downgrading
+   * and that parameterized runs can exit fast.
+   */
+  protected static boolean isS3GuardDowngrading() {
+    return s3GuardDowngrading;
+  }
+
+  /**
+   * Set the downgrading status; if set this will
+   * cause subsequent tests to skip s3guard runs.
+   * @param downgrading true if S3Guard is downgrading
+   */
+  protected static void setS3GuardDowngrading(final boolean downgrading) {
+    s3GuardDowngrading = downgrading;
+  }
+
+  /**
+   * Verify that an FS has S3Guard enabled; if the FS
+   * has downgraded then not only skip this test but
+   * set the static {@link #s3GuardDowngrading} flag
+   * for faster exit of subsequent tests.
+   * @param fs filesystem to probe.
+   */
+  protected static void downgradeIfUnguarded(S3AFileSystem fs) {
+    if (!fs.hasMetadataStore()) {
+      setS3GuardDowngrading(true);
+      // if the FS has fallen back to unguarded, then
+      // all tests in a guarded run are going to
+      // fail as their cost estimates will be wrong.
+      assume("Filesystem does not have a metastore",
+          false);
+    }
+  }
+
+  /**
+   * Exit fast on any parameterized test case where S3Guard
+   * is downgrading. Call before creating any FS instance.
+   */
+  protected static void skipIfS3GuardDowngrading() {
+    assume("Filesystem does not have a metastore",
+        !s3GuardDowngrading);
+  }
+
+  /**
+   * Declare whether a test run must have S3Guard.
+   * @param s3GuardRequired is s3guard required.
+   */
+  protected final void setS3GuardRequired(final boolean s3GuardRequired) {
+    this.s3GuardRequired = s3GuardRequired;
+  }
+
+  /**
+   * Does this test require S3Guard?
+   * @return true if the test expects S3Guard to be live.
+   */
+  protected final boolean isS3GuardRequired() {
+    return s3GuardRequired;
   }
 }

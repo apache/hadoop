@@ -61,6 +61,10 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
   static final Path BUCKET_ROOT = new Path("s3a://fake-bucket/");
   private ITtlTimeProvider ttlTimeProvider;
 
+  protected AbstractITestS3AMetadataStoreScale() {
+    setS3GuardRequired(true);
+  }
+
   @Before
   public void initialize() {
     ttlTimeProvider = new S3Guard.TtlTimeProvider(new Configuration());

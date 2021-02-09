@@ -59,6 +59,10 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.getStatusWithEmptyDirFlag;
  */
 public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
 
+  public ITestS3GuardEmptyDirs() {
+    setS3GuardRequired(true);
+  }
+
   /**
    * Rename an empty directory, verify that the empty dir
    * marker moves in both S3Guard and in the S3A FS.

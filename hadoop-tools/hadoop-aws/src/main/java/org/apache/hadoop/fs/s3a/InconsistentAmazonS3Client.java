@@ -133,14 +133,16 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
 
   /**
    * Clear any accumulated inconsistency state. Used by tests to make paths
-   * visible again.
-   * @param fs S3AFileSystem under test
+   * visible again. No-op if the FS is null (for teardowns)
+   * @param fs S3AFileSystem under test; can be null.
    * @throws Exception on failure
    */
   public static void clearInconsistency(S3AFileSystem fs) throws Exception {
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("s3guard");
-    InconsistentAmazonS3Client ic = InconsistentAmazonS3Client.castFrom(s3);
-    ic.clearInconsistency();
+    if (fs != null) {
+      AmazonS3 s3 = fs.getAmazonS3ClientForTesting("s3guard");
+      InconsistentAmazonS3Client ic = InconsistentAmazonS3Client.castFrom(s3);
+      ic.clearInconsistency();
+    }
   }
 
   /**

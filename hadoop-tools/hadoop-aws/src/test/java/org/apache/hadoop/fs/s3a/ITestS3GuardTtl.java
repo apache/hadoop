@@ -79,6 +79,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
 
   public ITestS3GuardTtl(boolean authoritative) {
     this.authoritative = authoritative;
+    setS3GuardRequired(true);
   }
 
   /**

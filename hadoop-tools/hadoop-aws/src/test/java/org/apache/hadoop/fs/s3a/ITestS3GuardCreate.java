@@ -32,6 +32,10 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
  */
 public class ITestS3GuardCreate extends AbstractS3ATestBase {
 
+   public ITestS3GuardCreate() {
+     setS3GuardRequired(true);
+   }
+
   /**
    * Test that ancestor creation during S3AFileSystem#create() is properly
    * accounted for in the MetadataStore.  This should be handled by the

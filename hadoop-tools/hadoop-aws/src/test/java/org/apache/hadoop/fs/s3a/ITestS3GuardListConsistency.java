@@ -66,6 +66,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
   @Override
   public void setup() throws Exception {
+    setS3GuardRequired(true);
     super.setup();
     invoker = new Invoker(new S3ARetryPolicy(getConfiguration()),
         Invoker.NO_OP

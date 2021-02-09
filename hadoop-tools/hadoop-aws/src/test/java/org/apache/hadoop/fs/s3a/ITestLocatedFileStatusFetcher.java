@@ -141,6 +141,7 @@ public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
       final boolean s3guard) {
     this.name = name;
     this.s3guard = s3guard;
+    setS3GuardRequired(s3guard);
   }
 
   @Override

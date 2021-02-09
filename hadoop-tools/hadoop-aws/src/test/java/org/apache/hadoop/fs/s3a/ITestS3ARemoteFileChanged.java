@@ -255,6 +255,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     this.changeDetectionMode = changeDetectionMode;
     this.authMode = authMode;
     this.expectedExceptionInteractions = expectedExceptionInteractions;
+    setS3GuardRequired(authMode);
   }
 
   @Override
@@ -441,6 +442,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    */
   @Test
   public void testOpenFileWithStatus() throws Throwable {
+    requireS3Guard();
     final Path testpath = path("testOpenFileWithStatus.dat");
     final byte[] dataset = TEST_DATA_BYTES;
     S3AFileStatus originalStatus =
@@ -1004,6 +1006,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    * should result in {@link RemoteFileChangedException}.
    */
   private Path writeOutOfSyncFileVersion(String filename) throws IOException {
+    // skip if S3Guard is out of play.
+    requireS3Guard();
     final Path testpath = path(filename);
     final byte[] dataset = TEST_DATA_BYTES;
     S3AFileStatus originalStatus =
@@ -1453,7 +1457,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    * not have it.
    */
   private void requireS3Guard() {
-    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+    downgradeIfUnguarded(fs);
   }
 
   /**

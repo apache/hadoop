@@ -61,6 +61,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
 
   @Before
   public void setup() throws Exception {
+    setS3GuardRequired(true);
     super.setup();
     S3AFileSystem fs = getFileSystem();
     // These test will fail if no ms

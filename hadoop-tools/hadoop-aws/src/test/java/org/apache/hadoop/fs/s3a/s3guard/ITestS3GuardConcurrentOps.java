@@ -58,6 +58,10 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
   @Rule
   public final Timeout timeout = new Timeout(5 * 60 * 1000);
 
+  public ITestS3GuardConcurrentOps() {
+    setS3GuardRequired(true);
+  }
+
   protected Configuration createConfiguration() {
     Configuration conf =  super.createConfiguration();
     //patch the read/write capacity

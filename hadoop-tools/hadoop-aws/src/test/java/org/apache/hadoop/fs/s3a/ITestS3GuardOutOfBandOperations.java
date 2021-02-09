@@ -148,6 +148,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
   public ITestS3GuardOutOfBandOperations(final boolean authoritative) {
     this.authoritative = authoritative;
+    setS3GuardRequired(true);
   }
 
   /**

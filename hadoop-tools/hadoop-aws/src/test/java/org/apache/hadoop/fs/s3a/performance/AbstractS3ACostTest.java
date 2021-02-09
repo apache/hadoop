@@ -53,7 +53,10 @@ import static org.apache.hadoop.test.AssertExtensions.dynamicDescription;
 /**
  * Abstract class for tests which make assertions about cost.
  * <p></p>
- * Factored out from {@code ITestS3AFileOperationCost}
+ * Factored out from {@code ITestS3AFileOperationCost}.
+ * When S3Guard is required, if the store falls back to
+ * being unguarded then the test will be skipped during
+ * setup.
  */
 public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
@@ -106,6 +109,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     this.s3guard = s3guard;
     this.keepMarkers = keepMarkers;
     this.authoritative = authoritative;
+    setS3GuardRequired(s3guard);
   }
 
   @Override

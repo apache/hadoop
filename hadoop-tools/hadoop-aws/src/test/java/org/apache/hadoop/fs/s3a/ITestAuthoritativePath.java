@@ -53,6 +53,7 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
 
   @Before
   public void setup() throws Exception {
+    setS3GuardRequired(true);
     super.setup();
 
     long timestamp = System.currentTimeMillis();
