@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +74,7 @@ public class SnapshotDeletionGc {
   private void gcDeletedSnapshot(String name) {
     final Snapshot.Root deleted;
     namesystem.readLock();
+    NameNode.getNameNodeMetrics().incrNumSnapshotGcRun();
     try {
       deleted = namesystem.getSnapshotManager().chooseDeletedSnapshot();
     } catch (Throwable e) {
@@ -82,6 +84,7 @@ public class SnapshotDeletionGc {
       namesystem.readUnlock();
     }
     if (deleted == null) {
+      NameNode.getNameNodeMetrics().incrNumSnapshoteEmptyGcRun();
       LOG.trace("{}: no snapshots are marked as deleted.", name);
       return;
     }
@@ -93,6 +96,7 @@ public class SnapshotDeletionGc {
 
     try {
       namesystem.gcDeletedSnapshot(snapshotRoot, snapshotName);
+      NameNode.getNameNodeMetrics().incrNumSnapshotSuccessGcRun();
     } catch (Throwable e) {
       LOG.error("Failed to gcDeletedSnapshot " + deleted.getFullPathName(), e);
     }

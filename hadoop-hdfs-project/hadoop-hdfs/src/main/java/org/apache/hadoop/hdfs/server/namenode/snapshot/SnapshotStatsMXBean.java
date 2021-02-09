@@ -40,4 +40,16 @@ public interface SnapshotStatsMXBean {
    */
   public SnapshotInfo.Bean[] getSnapshots();
 
+  /**
+   * Return number of ACTIVE snapshots
+   * @return number of ACTIVE snapshots
+   */
+  public long getnumActiveSnapshots();
+
+  /**
+   * Return number of DELETED snapshots
+   * @return number of DELETED snapshots
+   */
+  public long getnumDeletedSnapshots();
+
 }

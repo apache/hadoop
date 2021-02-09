@@ -409,7 +409,7 @@ public class FSDirXAttrOp {
     return xAttrs;
   }
 
-  static XAttr getXAttrByPrefixedName(FSDirectory fsd, INodesInPath iip,
+  public static XAttr getXAttrByPrefixedName(FSDirectory fsd, INodesInPath iip,
       String prefixedName) throws IOException {
     fsd.readLock();
     try {

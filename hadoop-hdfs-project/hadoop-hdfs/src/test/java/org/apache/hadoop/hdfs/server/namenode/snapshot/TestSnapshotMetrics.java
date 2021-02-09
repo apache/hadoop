@@ -41,6 +41,7 @@ public class TestSnapshotMetrics {
   private static final short REPLICATION = 3;
   private static final String NN_METRICS = "NameNodeActivity";
   private static final String NS_METRICS = "FSNamesystem";
+  private static final String SI_METRICS = "SnapshotInfo";
   
   private final Path dir = new Path("/TestSnapshot");
   private final Path sub1 = new Path(dir, "sub1");

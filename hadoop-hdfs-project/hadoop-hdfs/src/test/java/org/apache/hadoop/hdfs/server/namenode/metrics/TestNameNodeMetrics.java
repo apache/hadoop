@@ -1126,4 +1126,22 @@ public class TestNameNodeMetrics {
     }
 
   }
+
+  @Test
+  public void TestNumSnapshotInOrderDeleteOp() throws Exception {
+    DistributedFileSystem dfs = cluster.getFileSystem();
+
+    final String dirPathString = "/snaptest";
+    final Path testDir = new Path(dirPathString);
+    dfs.mkdirs(testDir);
+    dfs.allowSnapshot(testDir);
+    dfs.createSnapshot(testDir, "s1");
+    dfs.createSnapshot(testDir, "s2");
+    dfs.deleteSnapshot(testDir, "s1");
+    dfs.deleteSnapshot(testDir, "s2");
+
+    MetricsRecordBuilder rb = getMetrics(NN_METRICS);
+    assertCounter("AllowSnapshotOps", 1L, rb);
+    assertCounter("NumSnapshotInOrderDeleteOp", 2L, rb);
+    }
 }

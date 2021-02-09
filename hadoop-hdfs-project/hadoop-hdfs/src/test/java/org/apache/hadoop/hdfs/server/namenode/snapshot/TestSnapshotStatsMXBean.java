@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -41,6 +42,7 @@ public class TestSnapshotStatsMXBean {
   @Test
   public void testSnapshotStatsMXBeanInfo() throws Exception {
     Configuration conf = new Configuration();
+    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, true);
     MiniDFSCluster cluster = null;
     String pathName = "/snapshot";
     Path path = new Path(pathName);
@@ -68,6 +70,17 @@ public class TestSnapshotStatsMXBean {
           (CompositeData[]) mbs.getAttribute(mxbeanName, "Snapshots");
       int numSnapshots = Array.getLength(snapshots);
       assertEquals(sm.getNumSnapshots(), numSnapshots);
+      dfs.createSnapshot(path, "S1");
+      dfs.createSnapshot(path, "S2");
+      dfs.createSnapshot(path, "S3");
+      dfs.deleteSnapshot(path, "S3");
+      dfs.deleteSnapshot(path, "S2");
+      long numActiveSnapshots =
+          (Long)mbs.getAttribute(mxbeanName, "numActiveSnapshots");
+      long numDeletedSnapshots =
+          (Long)mbs.getAttribute(mxbeanName, "numDeletedSnapshots");
+      assertEquals(numActiveSnapshots, 2);
+      assertEquals(numDeletedSnapshots, 2);
 
       CompositeData d = (CompositeData) Array.get(directories, 0);
       CompositeData s = (CompositeData) Array.get(snapshots, 0);
