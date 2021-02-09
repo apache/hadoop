@@ -425,6 +425,55 @@ public class TestCSMappingPlacementRule {
 
   }
 
+  @Test
+  public void testSpecified() throws IOException {
+    ArrayList<MappingRule> rules = new ArrayList<>();
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createAllMatcher(),
+            (new MappingRuleActions.PlaceToQueueAction("%specified", true))
+                .setFallbackSkip()));
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createAllMatcher(),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "root.ambiguous.group.tester", true))
+                .setFallbackSkip()));
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createAllMatcher(),
+            (new MappingRuleActions.RejectAction())
+                .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext appNoQueue = createApp("app");
+    ApplicationSubmissionContext appDefault = createApp("app", "default");
+    ApplicationSubmissionContext appRootDefault =
+        createApp("app", "root.default");
+    ApplicationSubmissionContext appBob =
+        createApp("app", "root.user.bob");
+
+    assertPlace("App with non specified queue should end up in " +
+        "'root.ambiguous.group.tester' because no queue was specified and " +
+        "this is the only rule matching the submission",
+        engine, appNoQueue, "alice", "root.ambiguous.group.tester");
+
+    assertPlace("App with specified 'default' should end up in " +
+            "'root.ambiguous.group.tester' because 'default' is the same as " +
+            "no queue being specified and this is the only rule matching the " +
+            "submission ",
+        engine, appDefault, "alice", "root.ambiguous.group.tester");
+
+    assertPlace("App with specified root.default should end up in " +
+            "'root.default' because root.default is specifically provided",
+        engine, appRootDefault, "alice", "root.default");
+
+    assertPlace("App with specified queue should end up in the specified " +
+        "queue 'root.user.bob'", engine, appBob, "alice", "root.user.bob");
+  }
+
   private MappingRule createGroupMapping(String group, String queue) {
     MappingRuleMatcher matcher = MappingRuleMatchers.createUserGroupMatcher(group);
     MappingRuleAction action =
