@@ -22,7 +22,7 @@
 <!-- MACRO{toc|fromDepth=1|toDepth=2} -->
 
 Abort the active operation such that the output does not become
-manifest. 
+manifest.
 
 Specifically, if supported on an output stream, a successful `abort()`
 MUST guarantee that the stream will not be made visible in the close()
@@ -74,7 +74,7 @@ public interface Abortable {
 Aborts the ongoing operation such that no output SHALL become visible
 when the operation is completed.
 
-Unless and until other File System classes implement `Abortable`, the 
+Unless and until other File System classes implement `Abortable`, the
 interface is specified purely for output streams.
 
 ## Method `abort()` on an output stream
@@ -90,8 +90,8 @@ The stream MUST implement `Abortable` and `StreamCapabilities`.
 ```python
  if unsupported:
   throw UnsupportedException
- 
-if not isOpen(stream): 
+
+if not isOpen(stream):
   no-op
 
 StreamCapabilities.hasCapability("fs.capability.outputstream.abortable") == True
@@ -119,7 +119,7 @@ Strictly then:
 > if `Abortable.abort()` does not raise `UnsupportedOperationException`
 > then returns, then it guarantees that the write SHALL NOT become visible
 > and that any existing data in the filesystem at the destination path SHALL
-> continue to be available. 
+> continue to be available.
 
 
 1. Calls to `write()` methods MUST fail.
@@ -127,7 +127,7 @@ Strictly then:
 1. Subsequent calls to `abort()` MUST be no-ops.
 1. `close()` MUST NOT manifest the file, and MUST NOT raise an exception
 
-That is, the postconditions of `close()` becomes: 
+That is, the postconditions of `close()` becomes:
 
 ```
 FS' = FS
@@ -135,7 +135,7 @@ FS' = FS
 
 ### Cleanup
 
-* If is temporary data stored in the local filesystem or in the store's upload
+* If temporary data is stored in the local filesystem or in the store's upload
   infrastructure then this MAY be cleaned up; best-effort is expected here.
 
 * The stream SHOULD NOT retry cleanup operations; any failure there MUST be

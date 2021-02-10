@@ -428,9 +428,7 @@ class S3ABlockOutputStream extends OutputStream implements
       // if this happened during a multipart upload, abort the
       // operation, so as to not leave (billable) data
       // pending on the bucket
-      if (multiPartUpload != null) {
-        multiPartUpload.abort();
-      }
+      maybeAbortMultipart();
       writeOperationHelper.writeFailed(ioe);
       throw ioe;
     } finally {
@@ -445,7 +443,7 @@ class S3ABlockOutputStream extends OutputStream implements
    * Shuts down block factory, closes any active block,
    * and pushes out statistics.
    */
-  private void cleanupOnClose() {
+  private synchronized void cleanupOnClose() {
     cleanupWithLogger(LOG, getActiveBlock(), blockFactory);
     LOG.debug("Statistics: {}", statistics);
     cleanupWithLogger(LOG, statistics);
@@ -453,8 +451,23 @@ class S3ABlockOutputStream extends OutputStream implements
   }
 
   /**
+   * Best effort abort of the multipart upload; sets
+   * the field to null afterwards.
+   * @return any exception caught during the operation.
+   */
+  private synchronized IOException maybeAbortMultipart() {
+    if (multiPartUpload != null) {
+      final IOException ioe = multiPartUpload.abort();
+      multiPartUpload = null;
+      return ioe;
+    } else {
+      return null;
+    }
+  }
+
+  /**
    * Abort any active uploads, enter closed state.
-   * @return
+   * @return the outcome
    */
   @Override
   public AbortableResult abort() {
@@ -465,12 +478,7 @@ class S3ABlockOutputStream extends OutputStream implements
     }
     try (DurationTracker d =
              statistics.trackDuration(INVOCATION_ABORT.getSymbol())) {
-      if (multiPartUpload != null) {
-        return new AbortableResultImpl(false,
-            multiPartUpload.abort());
-      } else {
-        return new AbortableResultImpl(false, null);
-      }
+      return new AbortableResultImpl(false, maybeAbortMultipart());
     } finally {
       cleanupOnClose();
     }
@@ -821,7 +829,7 @@ class S3ABlockOutputStream extends OutputStream implements
         //abort multipartupload
         this.abort();
         throw extractException("Multi-part upload with id '" + uploadId
-                + "' to " + key, key, ee);
+            + "' to " + key, key, ee);
       }
     }
 
@@ -870,10 +878,10 @@ class S3ABlockOutputStream extends OutputStream implements
       try {
         trackDurationOfInvocation(statistics,
             OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(), () -> {
-          cancelAllActiveFutures();
-          writeOperationHelper.abortMultipartUpload(key, uploadId,
-              false, null);
-        });
+              cancelAllActiveFutures();
+              writeOperationHelper.abortMultipartUpload(key, uploadId,
+                  false, null);
+            });
         return null;
       } catch (IOException e) {
         // this point is only reached if the operation failed more than
@@ -884,7 +892,6 @@ class S3ABlockOutputStream extends OutputStream implements
         return e;
       }
     }
-
   }
 
   /**
