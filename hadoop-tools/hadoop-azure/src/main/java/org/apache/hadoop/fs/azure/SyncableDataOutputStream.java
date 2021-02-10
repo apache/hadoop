@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 
 /**
  * Support the Syncable interface on top of a DataOutputStream.
@@ -56,10 +57,7 @@ public class SyncableDataOutputStream extends DataOutputStream
 
   @Override
   public boolean hasCapability(String capability) {
-    if (out instanceof StreamCapabilities) {
-      return ((StreamCapabilities) out).hasCapability(capability);
-    }
-    return false;
+    return StoreImplementationUtils.hasCapability(out, capability);
   }
 
   @Override

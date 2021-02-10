@@ -27,8 +27,6 @@ import com.microsoft.azure.storage.blob.BlockEntry;
 import com.microsoft.azure.storage.blob.BlockListingFilter;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -39,8 +37,9 @@ import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeNotNull;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasStreamCapabilities;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksStreamCapabilities;
 
 /**
  * Test semantics of functions flush, hflush, hsync, and close for block blobs,
@@ -192,11 +191,14 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   public void testPageBlobCapabilities() throws IOException {
     Path path = getBlobPathWithTestName(PAGE_BLOB_DIR);
     try (FSDataOutputStream stream = fs.create(path)) {
-      assertTrue(stream.hasCapability(StreamCapabilities.HFLUSH));
-      assertTrue(stream.hasCapability(StreamCapabilities.HSYNC));
-      assertFalse(stream.hasCapability(StreamCapabilities.DROPBEHIND));
-      assertFalse(stream.hasCapability(StreamCapabilities.READAHEAD));
-      assertFalse(stream.hasCapability(StreamCapabilities.UNBUFFER));
+      assertCapabilities(stream,
+          new String[]{
+            StreamCapabilities.HFLUSH,
+            StreamCapabilities.HSYNC,
+            StreamCapabilities.DROPBEHIND,
+            StreamCapabilities.READAHEAD,
+            StreamCapabilities.UNBUFFER},
+          null);
       stream.write(getRandomBytes());
     }
   }
@@ -285,11 +287,12 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   public void testBlockBlobCapabilities() throws IOException {
     Path path = getBlobPathWithTestName(BLOCK_BLOB_DIR);
     try (FSDataOutputStream stream = fs.create(path)) {
-      assertFalse(stream.hasCapability(StreamCapabilities.HFLUSH));
-      assertFalse(stream.hasCapability(StreamCapabilities.HSYNC));
-      assertFalse(stream.hasCapability(StreamCapabilities.DROPBEHIND));
-      assertFalse(stream.hasCapability(StreamCapabilities.READAHEAD));
-      assertFalse(stream.hasCapability(StreamCapabilities.UNBUFFER));
+      assertLacksStreamCapabilities(stream,
+          StreamCapabilities.HFLUSH,
+          StreamCapabilities.HSYNC,
+          StreamCapabilities.DROPBEHIND,
+          StreamCapabilities.READAHEAD,
+          StreamCapabilities.UNBUFFER);
       stream.write(getRandomBytes());
     }
   }
@@ -381,11 +384,12 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   public void testBlockBlobCompactionCapabilities() throws IOException {
     Path path = getBlobPathWithTestName(BLOCK_BLOB_COMPACTION_DIR);
     try (FSDataOutputStream stream = fs.create(path)) {
-      assertTrue(stream.hasCapability(StreamCapabilities.HFLUSH));
-      assertTrue(stream.hasCapability(StreamCapabilities.HSYNC));
-      assertFalse(stream.hasCapability(StreamCapabilities.DROPBEHIND));
-      assertFalse(stream.hasCapability(StreamCapabilities.READAHEAD));
-      assertFalse(stream.hasCapability(StreamCapabilities.UNBUFFER));
+      assertHasStreamCapabilities(stream,
+          StreamCapabilities.HFLUSH,
+          StreamCapabilities.HSYNC,
+          StreamCapabilities.DROPBEHIND,
+          StreamCapabilities.READAHEAD,
+          StreamCapabilities.UNBUFFER);
       stream.write(getRandomBytes());
     }
   }

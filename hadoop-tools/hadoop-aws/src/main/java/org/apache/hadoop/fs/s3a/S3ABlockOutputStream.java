@@ -37,6 +37,8 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
+
+import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
@@ -70,14 +72,19 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
  * is instead done as a single PUT operation.
  *
  * Unstable: statistics and error handling might evolve.
+ *
+ * Syncable is declared as supported so the calls can be
+ * explicitly rejected.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class S3ABlockOutputStream extends OutputStream implements
-    StreamCapabilities, IOStatisticsSource {
+    StreamCapabilities, IOStatisticsSource, Syncable {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(S3ABlockOutputStream.class);
+
+  private static final String E_NOT_SYNCABLE = "S3A streams are not Syncable";
 
   /** Owner FileSystem. */
   private final S3AFileSystem fs;
@@ -544,6 +551,16 @@ class S3ABlockOutputStream extends OutputStream implements
     default:
       return false;
     }
+  }
+
+  @Override
+  public void hflush() throws IOException {
+    throw new UnsupportedOperationException(E_NOT_SYNCABLE);
+  }
+
+  @Override
+  public void hsync() throws IOException {
+    throw new UnsupportedOperationException(E_NOT_SYNCABLE);
   }
 
   @Override
