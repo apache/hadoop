@@ -34,7 +34,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface StreamCapabilities {
   /**
    * Stream hflush capability implemented by {@link Syncable#hflush()}.
+   *
+   * Use the {@link #HSYNC} probe to check for the support of Syncable;
+   * it's that presence of {@code hsync()} which matters.
    */
+  @Deprecated
   String HFLUSH = "hflush";
 
   /**
