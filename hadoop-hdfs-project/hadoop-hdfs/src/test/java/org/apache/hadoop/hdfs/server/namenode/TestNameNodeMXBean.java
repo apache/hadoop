@@ -493,9 +493,9 @@ public class TestNameNodeMXBean {
       decomNodes.add(cluster.getDataNodes().get(0).getDisplayName());
 
       Map<String, Long> maintenanceNodes = new HashMap<>();
-      final int EXPIRATION_MS = 30 * 1000;
+      final int expirationInMs = 30 * 1000;
       maintenanceNodes.put(cluster.getDataNodes().get(1).getDisplayName(),
-          Time.now() + EXPIRATION_MS);
+          Time.now() + expirationInMs);
 
       hostsFileWriter.initOutOfServiceHosts(decomNodes, maintenanceNodes);
       fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
@@ -509,8 +509,8 @@ public class TestNameNodeMXBean {
                 "NumLiveDataNodes");
             int numDecomLiveDataNodes = (int) mbs.getAttribute(mxbeanName,
                 "NumDecomLiveDataNodes");
-            int numInMaintenanceLiveDataNodes = (int) mbs.getAttribute(mxbeanName,
-                "NumInMaintenanceLiveDataNodes");
+            int numInMaintenanceLiveDataNodes = (int) mbs.getAttribute(
+                mxbeanName, "NumInMaintenanceLiveDataNodes");
             return numLiveDataNodes == 3 &&
                 numDecomLiveDataNodes == 1 &&
                 numInMaintenanceLiveDataNodes == 1;
