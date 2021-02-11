@@ -392,9 +392,9 @@ public class TestDelegationTokenRenewer {
     return token1;
   }
 
-  private RMApp submitApp(MockRM rm, Credentials cred, ByteBuffer tokensConf)
-      throws Exception {
-    int maxAttempts = rm.getConfig().getInt(
+  private RMApp submitApp(MockRM mockrm,
+      Credentials cred, ByteBuffer tokensConf) throws Exception {
+    int maxAttempts = mockrm.getConfig().getInt(
         YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
     MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder.create()
@@ -418,7 +418,7 @@ public class TestDelegationTokenRenewer {
         .withApplicationTimeouts(null)
         .withTokensConf(tokensConf)
         .build();
-    return MockRMAppSubmitter.submit(rm, data);
+    return MockRMAppSubmitter.submit(mockrm, data);
   }
   
   
@@ -923,7 +923,8 @@ public class TestDelegationTokenRenewer {
     localDtr.start();
 
     try {
-      localDtr.addApplicationSync(mock(ApplicationId.class), credsx, false, "user");
+      localDtr.addApplicationSync(mock(ApplicationId.class),
+          credsx, false, "user");
       fail("Catch IOException on app submission");
     } catch (IOException e){
       Assert.assertTrue(e.getMessage().contains(tokenx.toString()));
@@ -985,16 +986,16 @@ public class TestDelegationTokenRenewer {
     Thread submitThread = new Thread() {                                       
       @Override                                                                
       public void run() {
-        localDtr.addApplicationAsync(mock(ApplicationId.class), creds1, false, "user",
-            new Configuration());
+        localDtr.addApplicationAsync(mock(ApplicationId.class),
+            creds1, false, "user", new Configuration());
       }                                                                        
     };                                                                         
     submitThread.start();                                                      
                                                                                
     // wait till 1st submit blocks, then submit another
     startBarrier.await();                           
-    localDtr.addApplicationAsync(mock(ApplicationId.class), creds2, false, "user",
-        new Configuration());
+    localDtr.addApplicationAsync(mock(ApplicationId.class),
+        creds2, false, "user", new Configuration());
     // signal 1st to complete                                                  
     endBarrier.await();                                                        
     submitThread.join(); 
@@ -1504,10 +1505,10 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(renewer.getDelegationTokens().contains(token1));
   }
 
-  private void finishAMAndWaitForComplete(final RMApp app, MockRM rm,
-      MockNM nm, MockAM am, final DelegationTokenToRenew dttr)
+  private void finishAMAndWaitForComplete(final RMApp app, MockRM mockrm,
+      MockNM mocknm, MockAM mockam, final DelegationTokenToRenew dttr)
           throws Exception {
-    MockRM.finishAMAndVerifyAppState(app, rm, nm, am);
+    MockRM.finishAMAndVerifyAppState(app, mockrm, mocknm, mockam);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       public Boolean get() {
         return !dttr.referringAppIds.contains(app.getApplicationId());
@@ -1640,7 +1641,7 @@ public class TestDelegationTokenRenewer {
    * interactions that occur when it has been stopped.
    */
   @Test
-  public void testShutDown() throws Exception {
+  public void testShutDown() {
     localDtr = createNewDelegationTokenRenewer(conf, counter);
     RMContext mockContext = mock(RMContext.class);
     when(mockContext.getSystemCredentialsForApps()).thenReturn(
