@@ -893,7 +893,7 @@ Object store streams MAY buffer the entire stream's output
 until the final `close()` operation triggers a single `PUT` of the data
 and materialization of the final output.
 
-This significantly change's their behaviour compared to that of
+This significantly changes their behaviour compared to that of
 POSIX filesystems and that specified in this document.
 
 #### Visibility of newly created objects
@@ -960,6 +960,10 @@ own guarantee: a newly created object is either absent or all of its data
 is present: the act of instantiating the object, while potentially exhibiting
 create inconsistency, is atomic. Applications may be able to use that fact
 to their advantage.
+
+The [Abortable](abortable.html) interface exposes this ability to abort an output
+stream before its data is made visible, so can be used for checkpointing and similar
+operations.
 
 ## <a name="implementors"></a> Implementors notes.
 

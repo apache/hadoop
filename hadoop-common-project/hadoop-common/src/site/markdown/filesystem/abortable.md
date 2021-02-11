@@ -24,8 +24,8 @@
 Abort the active operation such that the output does not become
 manifest.
 
-Specifically, if supported on an output stream, a successful `abort()`
-MUST guarantee that the stream will not be made visible in the close()
+Specifically, if supported on an [output stream](outputstream.html),
+a successful `abort()` MUST guarantee that the stream will not be made visible in the `close()`
 operation.
 
 ```java
