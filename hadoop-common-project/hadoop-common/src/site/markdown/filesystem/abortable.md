@@ -107,11 +107,10 @@ After `abort()` returns, the filesystem MUST be unchanged:
 FS' = FS
 ```
 
-A successful `abort()` operation MUST guarantee that 
+A successful `abort()` operation MUST guarantee that
 when the stream` close()` is invoked no output shall be manifest.
 
 * The stream MUST retry any remote calls needed to force the abort outcome.
-  
 * If any file was present at the destination path, it MUST remain unchanged.
 
 Strictly then:

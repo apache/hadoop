@@ -156,7 +156,7 @@ public final class ExtraAssertions {
   /**
    * Assert that an abort was completely successful in that it
    * was not a no-op and no exception was raised during
-   * cleanup
+   * cleanup.
    * @param result result to assert over
    */
   public static void assertCompleteAbort(

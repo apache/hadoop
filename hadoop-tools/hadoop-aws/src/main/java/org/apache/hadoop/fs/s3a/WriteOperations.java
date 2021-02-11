@@ -161,7 +161,7 @@ public interface WriteOperations {
    */
   @Retries.RetryTranslated
   void abortMultipartUpload(String destKey, String uploadId,
-      final boolean shouldRetry, Invoker.Retried retrying)
+      boolean shouldRetry, Invoker.Retried retrying)
       throws IOException;
 
   /**
