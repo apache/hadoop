@@ -39,7 +39,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -57,6 +56,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.slf4j.event.Level;
 
 public class TestRequestHedgingProxyProvider {
 

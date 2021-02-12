@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
@@ -299,7 +300,7 @@ public class TestAuditLogs {
     }
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
     // disable logging while the cluster startup preps files
-    logger.setLevel(Level.OFF);
+    GenericTestUtils.disableLog(logger);
     PatternLayout layout = new PatternLayout("%m%n");
     RollingFileAppender appender = new RollingFileAppender(layout, auditLogFile);
     logger.addAppender(appender);
@@ -315,7 +316,7 @@ public class TestAuditLogs {
       throws IOException {
     // Turn off the logs
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-    logger.setLevel(Level.OFF);
+    GenericTestUtils.disableLog(logger);
 
     // Close the appenders and force all logs to be flushed
     Enumeration<?> appenders = logger.getAllAppenders();
@@ -348,7 +349,7 @@ public class TestAuditLogs {
       throws IOException {
     // Turn off the logs
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-    logger.setLevel(Level.OFF);
+    GenericTestUtils.disableLog(logger);
 
     // Close the appenders and force all logs to be flushed
     Enumeration<?> appenders = logger.getAllAppenders();
