@@ -110,9 +110,9 @@ class FSNamesystemLock {
       new AtomicReference<>(new LockHeldInfo());
   private LockHeldInfo longestWriteLockHeldInfo = new LockHeldInfo();
   /** The number of time the read lock has been held for longer than the threshold. */
-  private final AtomicLong numOfReadLockWarnings = new AtomicLong(0);
+  private final AtomicLong numReadLockLongHold = new AtomicLong(0);
   /** The number of time the write lock has been held for longer than the threshold. */
-  private final AtomicLong numOfWriteLockWarnings = new AtomicLong(0);
+  private final AtomicLong numWriteLockLongHold = new AtomicLong(0);
 
   @VisibleForTesting
   static final String OP_NAME_OTHER = "OTHER";
@@ -186,7 +186,7 @@ class FSNamesystemLock {
     final long readLockIntervalMs =
         TimeUnit.NANOSECONDS.toMillis(readLockIntervalNanos);
     if (needReport && readLockIntervalMs >= this.readLockReportingThresholdMs) {
-      numOfReadLockWarnings.addAndGet(1);
+      numReadLockLongHold.addAndGet(1);
       String lockReportInfo = null;
       boolean done = false;
       while (!done) {
@@ -303,7 +303,7 @@ class FSNamesystemLock {
     LogAction logAction = LogThrottlingHelper.DO_NOT_LOG;
     if (needReport &&
         writeLockIntervalMs >= this.writeLockReportingThresholdMs) {
-      numOfWriteLockWarnings.addAndGet(1);
+      numWriteLockLongHold.addAndGet(1);
       if (longestWriteLockHeldInfo.getIntervalMs() <= writeLockIntervalMs) {
         String lockReportInfo = lockReportInfoSupplier != null ? " (" +
             lockReportInfoSupplier.get() + ")" : "";
@@ -373,8 +373,8 @@ class FSNamesystemLock {
    *
    * @return long - Number of time the read lock has been held for longer than the threshold
    */
-  public long getNumOfReadLockWarnings() {
-    return numOfReadLockWarnings.get();
+  public long getNumOfReadLockLongHold() {
+    return numReadLockLongHold.get();
   }
 
   /**
@@ -382,8 +382,8 @@ class FSNamesystemLock {
    *
    * @return long - Number of time the write lock has been held for longer than the threshold.
    */
-  public long getNumOfWriteLockWarnings() {
-    return numOfWriteLockWarnings.get();
+  public long getNumOfWriteLockLongHold() {
+    return numWriteLockLongHold.get();
   }
 
   /**
