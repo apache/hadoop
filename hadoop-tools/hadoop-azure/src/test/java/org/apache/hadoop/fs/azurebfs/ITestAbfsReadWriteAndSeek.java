@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.EOFException;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -33,6 +34,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.A
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test read, write and seek.
@@ -85,6 +87,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
       assertNotEquals(-1, result);
       inputStream.seek(0);
       result = inputStream.read(readBuffer, 0, bufferSize);
+      intercept(EOFException.class, () -> inputStream.seek(2*bufferSize));
     }
     assertNotEquals("data read in final read()", -1, result);
     assertArrayEquals(readBuffer, b);

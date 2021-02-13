@@ -497,7 +497,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (n < 0) {
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
     }
-    if (n > contentLength) {
+    if (n >= contentLength) {
       throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
     }
 
