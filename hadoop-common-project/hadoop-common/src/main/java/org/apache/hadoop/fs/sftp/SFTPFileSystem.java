@@ -25,6 +25,10 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Vector;
 
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.ChannelSftp.LsEntry;
+import com.jcraft.jsch.SftpATTRS;
+import com.jcraft.jsch.SftpException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -32,13 +36,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.Progressable;
-
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.ChannelSftp.LsEntry;
-import com.jcraft.jsch.SftpATTRS;
-import com.jcraft.jsch.SftpException;
+import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -700,6 +699,13 @@ public class SFTPFileSystem extends FileSystem {
       return status;
     } finally {
       disconnect(channel);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (connectionPool != null) {
+      connectionPool.shutdown();
     }
   }
 

@@ -33,8 +33,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
-
-import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.SshServer;
@@ -44,20 +42,22 @@ import org.apache.sshd.server.auth.password.UserAuthPasswordFactory;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
-import static org.hamcrest.core.Is.is;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestName;
+
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
 
 public class TestSFTPFileSystem {
 
@@ -373,5 +373,13 @@ public class TestSFTPFileSystem {
     assertTrue(localFs.getFileStatus(path).isDirectory());
     assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
         is(1));
+  }
+
+  @Test
+  public void testCloseFileSystem() throws Exception {
+    sftpFs.getHomeDirectory();
+    assertThat(((SFTPFileSystem)sftpFs).getConnectionPool().getLiveConnCount(), is(1));
+    sftpFs.close();
+    assertThat(((SFTPFileSystem)sftpFs).getConnectionPool().getLiveConnCount(), is(0));
   }
 }
