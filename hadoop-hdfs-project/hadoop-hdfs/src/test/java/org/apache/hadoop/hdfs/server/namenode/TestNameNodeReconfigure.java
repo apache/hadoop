@@ -24,7 +24,6 @@ import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
 import static org.junit.Assert.*;
 
@@ -388,7 +387,8 @@ public class TestNameNodeReconfigure {
     // By default, enableParallelLoad is false
     assertEquals(false, FSImageFormatProtobuf.getEnableParallelLoad());
 
-    nameNode.reconfigureProperty(DFS_IMAGE_PARALLEL_LOAD_KEY, Boolean.toString(true));
+    nameNode.reconfigureProperty(DFS_IMAGE_PARALLEL_LOAD_KEY,
+        Boolean.toString(true));
 
     // After reconfigured, enableParallelLoad is true
     assertEquals(true, FSImageFormatProtobuf.getEnableParallelLoad());
