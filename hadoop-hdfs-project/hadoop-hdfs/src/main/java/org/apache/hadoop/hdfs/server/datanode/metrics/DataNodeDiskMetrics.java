@@ -70,17 +70,18 @@ public class DataNodeDiskMetrics {
    */
   private final long lowThresholdMs;
 
-  public DataNodeDiskMetrics(DataNode dn, long diskOutlierDetectionIntervalMs, Configuration conf) {
+  public DataNodeDiskMetrics(DataNode dn, long diskOutlierDetectionIntervalMs,
+      Configuration conf) {
     this.dn = dn;
     this.detectionInterval = diskOutlierDetectionIntervalMs;
     minOutlierDetectionDisks =
-            conf.getLong(DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY,
-                    DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT);
+        conf.getLong(DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY,
+            DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT);
     lowThresholdMs =
-            conf.getLong(DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY,
-                    DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT);
+        conf.getLong(DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY,
+            DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT);
     slowDiskDetector =
-            new OutlierDetector(minOutlierDetectionDisks, lowThresholdMs);
+        new OutlierDetector(minOutlierDetectionDisks, lowThresholdMs);
     shouldRun = true;
     startDiskOutlierDetectionThread();
   }
