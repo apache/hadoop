@@ -87,7 +87,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
       assertNotEquals(-1, result);
       inputStream.seek(0);
       result = inputStream.read(readBuffer, 0, bufferSize);
-      intercept(EOFException.class, () -> inputStream.seek(2*bufferSize));
+      intercept(EOFException.class, () -> inputStream.seek(2 * bufferSize));
     }
     assertNotEquals("data read in final read()", -1, result);
     assertArrayEquals(readBuffer, b);
