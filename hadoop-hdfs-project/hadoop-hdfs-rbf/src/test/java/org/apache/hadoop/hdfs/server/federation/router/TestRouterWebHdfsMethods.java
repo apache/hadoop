@@ -78,31 +78,34 @@ public class TestRouterWebHdfsMethods {
 
   @Test
   public void testWebHdfsCreate() throws Exception {
-    // case 1: the file is created at default ns (ns0)
-    String path1 = "/tmp/file";
-    URL url = new URL(getUri(path1));
+    // the file is created at default ns (ns0)
+    String path = "/tmp/file";
+    URL url = new URL(getUri(path));
     LOG.info("URL: {}", url);
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("PUT");
     assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
-    verifyFile("ns0", path1, true);
-    verifyFile("ns1", path1, false);
+    verifyFile("ns0", path, true);
+    verifyFile("ns1", path, false);
     conn.disconnect();
+  }
 
-    // case 2: the file is created at mounted ns (ns1)
+  @Test
+  public void testWebHdfsCreateWithMounts() throws Exception {
+    // the file is created at mounted ns (ns1)
     String mountPoint = "/tmp-ns1";
-    String path2 = "/tmp-ns1/file";
+    String path = "/tmp-ns1/file";
     createMountTableEntry(
         router.getRouter(), mountPoint,
         DestinationOrder.RANDOM, Collections.singletonList("ns1"));
-    URL url2 = new URL(getUri(path2));
-    LOG.info("URL 2: {}", url2);
-    HttpURLConnection conn2 = (HttpURLConnection) url2.openConnection();
-    conn2.setRequestMethod("PUT");
-    assertEquals(HttpURLConnection.HTTP_CREATED, conn2.getResponseCode());
-    verifyFile("ns1", path2, true);
-    verifyFile("ns0", path2, false);
-    conn2.disconnect();
+    URL url = new URL(getUri(path));
+    LOG.info("URL: {}", url);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+    verifyFile("ns1", path, true);
+    verifyFile("ns0", path, false);
+    conn.disconnect();
   }
 
   private String getUri(String path) {
