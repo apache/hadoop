@@ -376,10 +376,11 @@ public class TestSFTPFileSystem {
   }
 
   @Test
-  public void testCloseFileSystem() throws Exception {
-    sftpFs.getHomeDirectory();
-    assertThat(((SFTPFileSystem)sftpFs).getConnectionPool().getLiveConnCount(), is(1));
-    sftpFs.close();
-    assertThat(((SFTPFileSystem)sftpFs).getConnectionPool().getLiveConnCount(), is(0));
+  public void testCloseFileSystemClosesConnectionPool() throws Exception {
+    SFTPFileSystem fs = (SFTPFileSystem) sftpFs;
+    fs.getHomeDirectory();
+    assertThat(fs.getConnectionPool().getLiveConnCount(), is(1));
+    fs.close();
+    assertThat(fs.getConnectionPool().getLiveConnCount(), is(0));
   }
 }
