@@ -109,9 +109,15 @@ class FSNamesystemLock {
   private final AtomicReference<LockHeldInfo> longestReadLockHeldInfo =
       new AtomicReference<>(new LockHeldInfo());
   private LockHeldInfo longestWriteLockHeldInfo = new LockHeldInfo();
-  /** The number of time the read lock has been held for longer than the threshold. */
+  /**
+   * The number of time the read lock
+   * has been held longer than the threshold.
+   */
   private final AtomicLong numReadLockLongHold = new AtomicLong(0);
-  /** The number of time the write lock has been held for longer than the threshold. */
+  /**
+   * The number of time the write lock
+   * has been held for longer than the threshold.
+   */
   private final AtomicLong numWriteLockLongHold = new AtomicLong(0);
 
   @VisibleForTesting
@@ -369,18 +375,22 @@ class FSNamesystemLock {
   }
 
   /**
-   * Returns the number of time the read lock has been held for longer than the threshold.
+   * Returns the number of time the read lock
+   * has been held longer than the threshold.
    *
-   * @return long - Number of time the read lock has been held for longer than the threshold
+   * @return long - Number of time the read lock
+   * has been held longer than the threshold
    */
   public long getNumOfReadLockLongHold() {
     return numReadLockLongHold.get();
   }
 
   /**
-   * Returns the number of time the write lock has been held for longer than the threshold.
+   * Returns the number of time the write lock
+   * has been held longer than the threshold.
    *
-   * @return long - Number of time the write lock has been held for longer than the threshold.
+   * @return long - Number of time the write lock
+   * has been held longer than the threshold.
    */
   public long getNumOfWriteLockLongHold() {
     return numWriteLockLongHold.get();
