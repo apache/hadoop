@@ -543,6 +543,16 @@ public class ParentQueue extends AbstractCSQueue {
         return queue;
       }
 
+      // Check if the max queue limit is exceeded.
+      int maxQueues = csContext.getConfiguration().
+          getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePath());
+      if (childQueues.size() >= maxQueues) {
+        throw new SchedulerDynamicEditException(
+            "Cannot auto create queue " + childQueuePath + ". Max Child "
+                + "Queue limit exceeded which is configured as: " + maxQueues
+                + " and number of child queues is: " + childQueues.size());
+      }
+
       // First, check if we allow creation or not
       boolean weightsAreUsed = false;
       try {
