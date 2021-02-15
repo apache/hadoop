@@ -60,7 +60,7 @@ public class TestFileConcurrentReader {
 
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestFileConcurrentReader.class);
+      LoggerFactory.getLogger(TestFileConcurrentReader.class);
 
   {
     GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.TRACE);
