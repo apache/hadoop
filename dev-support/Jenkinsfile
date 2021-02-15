@@ -60,7 +60,7 @@ pipeline {
         stage ('precommit-run') {
             steps {
                 withCredentials(
-                    [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                    [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
                                   passwordVariable: 'GITHUB_TOKEN',
                                   usernameVariable: 'GITHUB_USER'),
                     usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
@@ -170,7 +170,7 @@ pipeline {
           script {
             // Publish status if it was missed (YETUS-1059)
             withCredentials(
-                [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
                                   passwordVariable: 'GITHUB_TOKEN',
                                   usernameVariable: 'GITHUB_USER')]) {
                 sh '''#!/usr/bin/env bash
