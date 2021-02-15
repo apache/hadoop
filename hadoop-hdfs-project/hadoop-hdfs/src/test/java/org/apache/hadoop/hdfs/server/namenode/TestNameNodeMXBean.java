@@ -435,6 +435,103 @@ public class TestNameNodeMXBean {
     }
   }
 
+  @Test(timeout = 120000)
+  public void testInServiceNodes() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
+        30);
+    conf.setClass(DFSConfigKeys.DFS_NAMENODE_HOSTS_PROVIDER_CLASSNAME_KEY,
+        CombinedHostFileManager.class, HostConfigManager.class);
+    MiniDFSCluster cluster = null;
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "temp/TestInServiceNodes");
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster.waitActive();
+
+      final FSNamesystem fsn = cluster.getNameNode().namesystem;
+      final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      final ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=NameNode,name=FSNamesystem");
+
+      List<String> hosts = new ArrayList<>();
+      for (DataNode dn : cluster.getDataNodes()) {
+        hosts.add(dn.getDisplayName());
+      }
+      hostsFileWriter.initIncludeHosts(hosts.toArray(
+          new String[hosts.size()]));
+      fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
+
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            int numLiveDataNodes = (int) mbs.getAttribute(mxbeanName,
+                "NumLiveDataNodes");
+            return numLiveDataNodes == 3;
+          } catch (Exception e) {
+            return false;
+          }
+        }
+      }, 1000, 60000);
+
+      // Verify nodes
+      int numDecomLiveDataNodes = (int) mbs.getAttribute(mxbeanName,
+          "NumDecomLiveDataNodes");
+      int numInMaintenanceLiveDataNodes = (int) mbs.getAttribute(mxbeanName,
+          "NumInMaintenanceLiveDataNodes");
+      int numInServiceLiveDataNodes = (int) mbs.getAttribute(mxbeanName,
+          "NumInServiceLiveDataNodes");
+      assertEquals(0, numDecomLiveDataNodes);
+      assertEquals(0, numInMaintenanceLiveDataNodes);
+      assertEquals(3, numInServiceLiveDataNodes);
+
+      // Add 2 nodes to out-of-service list
+      ArrayList<String> decomNodes = new ArrayList<>();
+      decomNodes.add(cluster.getDataNodes().get(0).getDisplayName());
+
+      Map<String, Long> maintenanceNodes = new HashMap<>();
+      final int expirationInMs = 30 * 1000;
+      maintenanceNodes.put(cluster.getDataNodes().get(1).getDisplayName(),
+          Time.now() + expirationInMs);
+
+      hostsFileWriter.initOutOfServiceHosts(decomNodes, maintenanceNodes);
+      fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
+
+      // Wait for the DatanodeAdminManager to complete check
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            int numLiveDataNodes = (int) mbs.getAttribute(mxbeanName,
+                "NumLiveDataNodes");
+            int numDecomLiveDataNodes = (int) mbs.getAttribute(mxbeanName,
+                "NumDecomLiveDataNodes");
+            int numInMaintenanceLiveDataNodes = (int) mbs.getAttribute(
+                mxbeanName, "NumInMaintenanceLiveDataNodes");
+            return numLiveDataNodes == 3 &&
+                numDecomLiveDataNodes == 1 &&
+                numInMaintenanceLiveDataNodes == 1;
+          } catch (Exception e) {
+            return false;
+          }
+        }
+      }, 1000, 60000);
+
+      // Verify nodes
+      numInServiceLiveDataNodes = (int) mbs.getAttribute(mxbeanName,
+          "NumInServiceLiveDataNodes");
+      assertEquals(1, numInServiceLiveDataNodes);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      hostsFileWriter.cleanup();
+    }
+  }
+
   @Test (timeout = 120000)
   public void testMaintenanceNodes() throws Exception {
     LOG.info("Starting testMaintenanceNodes");
