@@ -1251,7 +1251,7 @@ class DataXceiver extends Receiver implements Runnable {
         LOG.info("Moved {} from {}, delHint={}",
             block, peer.getRemoteAddressString(), delHint);
 
-        datanode.metrics.incrReplaceBlockOpToOtherNode();
+        datanode.metrics.incrReplaceBlockOpToOtherHost();
       }
     } catch (IOException ioe) {
       opStatus = ERROR;

@@ -235,16 +235,16 @@ public class TestMover {
   }
 
   private void testReplaceBlockOpLocalityMetrics(
-      long replaceBlockOnLocalHostCount,
-      long replaceBlockOnLocalMount,
-      long replaceBlockOpToOtherNode,
+      long sameHostWithCopy,
+      long sameHostWithHardLink,
+      long otherHost,
       MetricsRecordBuilder rb) {
-    assertCounter("ReplaceBlockOpOnLocalHost",
-          replaceBlockOnLocalHostCount, rb);
-    assertCounter("ReplaceBlockOpOnLocalMount",
-          replaceBlockOnLocalMount, rb);
-    assertCounter("ReplaceBlockOpToOtherNode",
-          replaceBlockOpToOtherNode, rb);
+    assertCounter("ReplaceBlockOpOnSameHostWithCopy",
+        sameHostWithCopy, rb);
+    assertCounter("ReplaceBlockOpOnSameHostWithHardlink",
+        sameHostWithHardLink, rb);
+    assertCounter("ReplaceBlockOpToOtherHost",
+        otherHost, rb);
   }
 
   private void setupStoragePoliciesAndPaths(DistributedFileSystem dfs1,

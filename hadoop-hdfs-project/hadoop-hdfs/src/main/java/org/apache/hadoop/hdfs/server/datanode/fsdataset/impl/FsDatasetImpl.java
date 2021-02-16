@@ -1122,9 +1122,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     try {
       moveBlock(block, replicaInfo, volumeRef, useVolumeOnSameMount);
       if (useVolumeOnSameMount) {
-        datanode.getMetrics().incrReplaceBlockOpOnLocalMount();
+        datanode.getMetrics().incrReplaceBlockOpOnSameHostWithHardlink();
       } else {
-        datanode.getMetrics().incrReplaceBlockOpOnLocalHost();
+        datanode.getMetrics().incrReplaceBlockOpOnSameHostWithCopy();
       }
     } finally {
       if (volumeRef != null) {
