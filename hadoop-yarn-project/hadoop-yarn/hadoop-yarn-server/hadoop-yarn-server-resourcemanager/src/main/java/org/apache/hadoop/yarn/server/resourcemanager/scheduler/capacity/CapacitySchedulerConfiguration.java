@@ -2010,11 +2010,19 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   private static final String AUTO_QUEUE_CREATION_V2_PREFIX =
-      "auto-queue-creation-v2";
+      "auto-queue-creation-v2.";
 
   @Private
   public static final String AUTO_QUEUE_CREATION_V2_ENABLED =
-      AUTO_QUEUE_CREATION_V2_PREFIX + ".enabled";
+      AUTO_QUEUE_CREATION_V2_PREFIX + "enabled";
+
+  @Private
+  public static final String AUTO_QUEUE_CREATION_V2_MAX_QUEUES =
+      AUTO_QUEUE_CREATION_V2_PREFIX + "max-queues";
+
+  @Private
+  public static final int
+      DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES = 1000;
 
   @Private
   public static final boolean DEFAULT_AUTO_QUEUE_CREATION_ENABLED = false;
@@ -2128,6 +2136,28 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getInt(getQueuePrefix(queuePath) +
             AUTO_CREATE_QUEUE_MAX_QUEUES,
         DEFAULT_AUTO_CREATE_QUEUE_MAX_QUEUES);
+  }
+
+  /**
+   * Get the max number of queues that are allowed to be created under
+   * a parent queue which allowed auto creation v2.
+   *
+   * @param queuePath the parent queue's path
+   * @return the max number of queues allowed to be auto created,
+   * in new auto created.
+   */
+  @Private
+  public int getAutoCreatedQueuesV2MaxChildQueuesLimit(String queuePath) {
+    return getInt(getQueuePrefix(queuePath) +
+            AUTO_QUEUE_CREATION_V2_MAX_QUEUES,
+        DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES);
+  }
+
+  @VisibleForTesting
+  public void setAutoCreatedQueuesV2MaxChildQueuesLimit(String queuePath,
+      int maxQueues) {
+    setInt(getQueuePrefix(queuePath) +
+        AUTO_QUEUE_CREATION_V2_MAX_QUEUES, maxQueues);
   }
 
   @Private
