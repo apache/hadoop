@@ -538,8 +538,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       newPos = 0;
       n = newPos - currentPos;
     }
-    if (newPos > contentLength) {
-      newPos = contentLength;
+    if (newPos >= contentLength) {
+      newPos = contentLength - 1;
       n = newPos - currentPos;
     }
     seek(newPos);

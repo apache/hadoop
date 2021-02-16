@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsInputStream;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
@@ -203,17 +204,14 @@ public class ITestAzureBlobFileSystemRandomRead extends
 
       assertTrue(testFileLength > 0);
 
-      skipped = inputStream.skip(testFileLength);
-      assertEquals(testFileLength, skipped);
 
-      intercept(EOFException.class,
-              new Callable<Long>() {
-                @Override
-                public Long call() throws Exception {
-                  return inputStream.skip(1);
-                }
-              }
-      );
+      inputStream.seek(testFileLength - 1); //last valid pos, negative skip
+      skipped = inputStream.skip(-testFileLength+1);
+      assertEquals(-testFileLength + 1, skipped);
+
+      skipped = inputStream.skip(testFileLength); //EOF
+      assertEquals(testFileLength - 1, skipped);
+
       long elapsedTimeMs = timer.elapsedTimeMs();
       assertTrue(
               String.format(
@@ -251,15 +249,15 @@ public class ITestAzureBlobFileSystemRandomRead extends
       );
 
       assertTrue("Test file length only " + testFileLength, testFileLength > 0);
-      inputStream.seek(testFileLength);
-      assertEquals(testFileLength, inputStream.getPos());
+      inputStream.seek(testFileLength - 1);
+      assertEquals(testFileLength - 1, inputStream.getPos());
 
       intercept(EOFException.class,
               FSExceptionMessages.CANNOT_SEEK_PAST_EOF,
               new Callable<FSDataInputStream>() {
                 @Override
                 public FSDataInputStream call() throws Exception {
-                  inputStream.seek(testFileLength + 1);
+                  inputStream.seek(testFileLength);
                   return inputStream;
                 }
               }
@@ -356,7 +354,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
       byte[] expected3 = {(byte) 'b', (byte) 'c', (byte) 'd'};
       byte[] expected4 = {(byte) 'g', (byte) 'h', (byte) 'i'};
 
-      assertEquals(testFileLength, inputStream.available());
+      assertEquals(testFileLength, inputStream.available()); //test at offset 0
       assertEquals(0, inputStream.getPos());
 
       int n = 3;
@@ -402,6 +400,18 @@ public class ITestAzureBlobFileSystemRandomRead extends
               inputStream.getPos());
       assertEquals(testFileLength - inputStream.getPos(),
               inputStream.available());
+
+      skipped = inputStream.skip(testFileLength + 1); //goes to last byte
+      assertEquals(1, inputStream.available());
+      bytesRead = inputStream.read(buffer);
+      assertEquals(1, bytesRead);
+      assertEquals(testFileLength, inputStream.getPos());
+
+      byte[] buffer2 = new byte[DEFAULT_READ_BUFFER_SIZE + 10];
+      inputStream.seek(0);
+      bytesRead = inputStream.read(buffer2);
+      assertEquals(buffer2.length, bytesRead);
+      assertEquals(testFileLength - buffer2.length, inputStream.available());
     }
   }
 
