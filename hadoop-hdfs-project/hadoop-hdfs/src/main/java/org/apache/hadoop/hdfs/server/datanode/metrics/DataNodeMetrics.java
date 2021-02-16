@@ -188,6 +188,15 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong packetsSlowWriteToDisk;
   @Metric MutableCounterLong packetsSlowWriteToOsCache;
 
+  @Metric("Number of replaceBlock ops between" +
+      " storage types on same host")
+  private MutableCounterLong replaceBlockOpOnLocalHost;
+  @Metric("Number of replaceBlock ops between" +
+      " storage types on same disk mount")
+  private MutableCounterLong replaceBlockOpOnLocalMount;
+  @Metric("Number of replaceBlock ops to another node")
+  private MutableCounterLong replaceBlockOpToOtherNode;
+
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   @Metric("Milliseconds spent on calling NN rpc")
   private MutableRatesWithAggregation
@@ -711,4 +720,17 @@ public class DataNodeMetrics {
   public void incrPacketsSlowWriteToOsCache() {
     packetsSlowWriteToOsCache.incr();
   }
+
+  public void incrReplaceBlockOpOnLocalMount() {
+    replaceBlockOpOnLocalMount.incr();
+  }
+
+  public void incrReplaceBlockOpOnLocalHost() {
+    replaceBlockOpOnLocalHost.incr();
+  }
+
+  public void incrReplaceBlockOpToOtherNode() {
+    replaceBlockOpToOtherNode.incr();
+  }
+
 }
