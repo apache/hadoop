@@ -239,11 +239,11 @@ public class TestMover {
       long replaceBlockOnLocalMount,
       long replaceBlockOpToOtherNode,
       MetricsRecordBuilder rb) {
-      assertCounter("ReplaceBlockOpOnLocalHost",
+    assertCounter("ReplaceBlockOpOnLocalHost",
           replaceBlockOnLocalHostCount, rb);
-      assertCounter("ReplaceBlockOpOnLocalMount",
+    assertCounter("ReplaceBlockOpOnLocalMount",
           replaceBlockOnLocalMount, rb);
-      assertCounter("ReplaceBlockOpToOtherNode",
+    assertCounter("ReplaceBlockOpToOtherNode",
           replaceBlockOpToOtherNode, rb);
   }
 
@@ -1056,7 +1056,8 @@ public class TestMover {
 
   /**
    * Test Mover runs fine when logging in with a keytab in kerberized env.
-   * Reusing testMovementWithLocalityOption here for basic functionality testing.
+   * Reusing testMovementWithLocalityOption
+   * here for basic functionality testing.
    */
   @Test(timeout = 300000)
   public void testMoverWithKeytabs() throws Exception {
