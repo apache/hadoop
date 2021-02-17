@@ -85,8 +85,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
+import org.slf4j.event.Level;
 
 /**
  * Main class for a series of name-node benchmarks.
@@ -150,9 +149,9 @@ public class NNThroughputBenchmark implements Tool {
     LOG.info("Log level = " + logLevel.toString());
     // change log level to NameNode logs
     DFSTestUtil.setNameNodeLogLevel(logLevel);
-    GenericTestUtils.setLogLevel(LogManager.getLogger(
+    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(
             NetworkTopology.class.getName()), logLevel);
-    GenericTestUtils.setLogLevel(LogManager.getLogger(
+    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(
             Groups.class.getName()), logLevel);
   }
 
@@ -353,7 +352,7 @@ public class NNThroughputBenchmark implements Tool {
       if(llIndex >= 0) {
         if(args.size() <= llIndex + 1)
           printUsage();
-        logLevel = Level.toLevel(args.get(llIndex+1), Level.ERROR);
+        logLevel = Level.valueOf(args.get(llIndex+1));
         args.remove(llIndex+1);
         args.remove(llIndex);
       }

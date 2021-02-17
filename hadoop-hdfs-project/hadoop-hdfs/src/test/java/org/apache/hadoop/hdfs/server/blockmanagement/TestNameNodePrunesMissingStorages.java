@@ -45,9 +45,9 @@ import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -319,7 +319,7 @@ public class TestNameNodePrunesMissingStorages {
         .Builder(conf).numDataNodes(1)
         .storagesPerDatanode(1)
         .build();
-    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.TRACE);
     try {
       cluster.waitActive();
       final Path TEST_PATH = new Path("/foo1");
