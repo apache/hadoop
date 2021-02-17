@@ -102,8 +102,10 @@ public class AbfsInputStreamStatisticsImpl
   public void seek(long seekTo, long currentPos) {
     if (seekTo >= currentPos) {
       this.seekForwards(seekTo - currentPos);
+//      System.out.println(seekTo + " " + currentPos + " fwd");
     } else {
       this.seekBackwards(currentPos - seekTo);
+//      System.out.println(seekTo + " " + currentPos + " bwd");
     }
   }
 

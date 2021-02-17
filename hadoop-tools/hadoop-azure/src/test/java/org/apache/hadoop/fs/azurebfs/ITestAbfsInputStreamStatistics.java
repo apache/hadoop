@@ -42,6 +42,7 @@ public class ITestAbfsInputStreamStatistics
   private static final int ONE_KB = 1024;
   private static final int CUSTOM_BLOCK_BUFFER_SIZE = 4 * 1024;
   private byte[] defBuffer = new byte[ONE_MB];
+  private byte[] defBuffer2 = new byte[ONE_MB * 5];
 
   public ITestAbfsInputStreamStatistics() throws Exception {
   }
@@ -104,24 +105,24 @@ public class ITestAbfsInputStreamStatistics
       out = createAbfsOutputStreamWithFlushEnabled(fs, seekStatPath);
 
       //Writing a default buffer in a file.
-      out.write(defBuffer);
+      out.write(defBuffer2);
       out.hflush();
       in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
 
       /*
-       * Writing 1MB buffer to the file, this would make the fCursor(Current
-       * position of cursor) to the end of file.
+       * Writing 4MB buffer to the file
        */
-      int result = in.read(defBuffer, 0, ONE_MB);
+      int result = in.read(defBuffer2, 0, ONE_MB * 4);
+//      System.out.println(in.fCursor + " " + in.length() + in.available());
       LOG.info("Result of read : {}", result);
 
       /*
-       * Seeking to start of file and then back to end would result in a
-       * backward and a forward seek respectively 10 times.
+       * Seeking to start of file and then back to 4MB position would result
+       * in a backward and a forward seek respectively 10 times.
        */
       for (int i = 0; i < OPERATIONS; i++) {
         in.seek(0);
-        in.seek(ONE_MB);
+        in.seek(ONE_MB * 4);
       }
 
       AbfsInputStreamStatisticsImpl stats =
@@ -152,6 +153,8 @@ public class ITestAbfsInputStreamStatistics
        * would be equal to 2 * OPERATIONS.
        *
        */
+//      System.out.println(stats.getSeekOperations() + " " +
+//          stats.getForwardSeekOperations() + " " + stats.getBytesBackwardsOnSeek());
       assertEquals("Mismatch in seekOps value", 2 * OPERATIONS,
           stats.getSeekOperations());
       assertEquals("Mismatch in backwardSeekOps value", OPERATIONS,
@@ -159,7 +162,7 @@ public class ITestAbfsInputStreamStatistics
       assertEquals("Mismatch in forwardSeekOps value", OPERATIONS,
           stats.getForwardSeekOperations());
       assertEquals("Mismatch in bytesBackwardsOnSeek value",
-          OPERATIONS * ONE_MB, stats.getBytesBackwardsOnSeek());
+          OPERATIONS * ONE_MB * 4, stats.getBytesBackwardsOnSeek());
       assertEquals("Mismatch in bytesSkippedOnSeek value",
           0, stats.getBytesSkippedOnSeek());
       assertEquals("Mismatch in seekInBuffer value", 2 * OPERATIONS,
@@ -279,7 +282,7 @@ public class ITestAbfsInputStreamStatistics
       // Verifying that AbfsInputStream Operations works with null statistics.
       assertNotEquals("AbfsInputStream read() with null statistics should "
           + "work", -1, in.read());
-      in.seek(ONE_KB);
+      in.seek(ONE_KB - 1);
 
       // Verifying toString() with no StreamStatistics.
       LOG.info("AbfsInputStream: {}", in.toString());

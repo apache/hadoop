@@ -76,7 +76,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private CachedSASToken cachedSasToken;
   private byte[] buffer = null;            // will be initialized on first use
 
-  private long fCursor = 0;  // cursor of buffer within file - offset of next byte to read from remote server
+  public long fCursor = 0;  // cursor of buffer within file - offset of next byte
+  // to read from remote server
   private long fCursorAfterLastRead = -1;
   private int bCursor = 0;   // cursor of read within buffer - offset of next byte to be returned from buffer
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
@@ -498,6 +499,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
     }
     if (n > 0 && n >= contentLength) {
+//    if (n > contentLength) {
       throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
     }
 
