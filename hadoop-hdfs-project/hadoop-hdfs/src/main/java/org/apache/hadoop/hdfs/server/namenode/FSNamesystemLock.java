@@ -192,7 +192,7 @@ class FSNamesystemLock {
     final long readLockIntervalMs =
         TimeUnit.NANOSECONDS.toMillis(readLockIntervalNanos);
     if (needReport && readLockIntervalMs >= this.readLockReportingThresholdMs) {
-      numReadLockLongHold.addAndGet(1);
+      numReadLockLongHold.incrementAndGet();
       String lockReportInfo = null;
       boolean done = false;
       while (!done) {
@@ -309,7 +309,7 @@ class FSNamesystemLock {
     LogAction logAction = LogThrottlingHelper.DO_NOT_LOG;
     if (needReport &&
         writeLockIntervalMs >= this.writeLockReportingThresholdMs) {
-      numWriteLockLongHold.addAndGet(1);
+      numWriteLockLongHold.incrementAndGet();
       if (longestWriteLockHeldInfo.getIntervalMs() <= writeLockIntervalMs) {
         String lockReportInfo = lockReportInfoSupplier != null ? " (" +
             lockReportInfoSupplier.get() + ")" : "";
