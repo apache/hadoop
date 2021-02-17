@@ -469,7 +469,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
         resolvedNs = rpcServer.getCreateLocation(path).getNameserviceId();
       } catch (IOException e) {
         LOG.error("Cannot get the name service " +
-            "to create file for path " + path, e);
+            "to create file for path {} ", path, e);
       }
     }
 
@@ -525,7 +525,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   @VisibleForTesting
   public static String getNsFromDataNodeNetworkLocation(String location) {
     // network location should be in the format of /ns/rack
-    Pattern pattern = Pattern.compile("/(.*)/");
+    Pattern pattern = Pattern.compile("^/([^/]*)/");
     Matcher matcher = pattern.matcher(location);
     if (matcher.find()) {
       return matcher.group(1);
