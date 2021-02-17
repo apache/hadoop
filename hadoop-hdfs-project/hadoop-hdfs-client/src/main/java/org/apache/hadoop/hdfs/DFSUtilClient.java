@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -72,6 +74,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -404,6 +407,33 @@ public class DFSUtilClient {
       Configuration conf, String defaultAddress, String... keys) {
     Collection<String> nameserviceIds = getNameServiceIds(conf);
     return getAddressesForNsIds(conf, nameserviceIds, defaultAddress, keys);
+  }
+
+  static Map<String, InetSocketAddress> getResolvedAddressesForNsId(
+      Configuration conf, String nsId, DomainNameResolver dnr,
+      String defaultValue, String... keys) {
+    Collection<String> nnIds = getNameNodeIds(conf, nsId);
+    Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
+    for (String nnId : emptyAsSingletonNull(nnIds)) {
+      String suffix = concatSuffixes(nsId, nnId);
+      String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
+      if (address != null) {
+        InetSocketAddress isa = NetUtils.createSocketAddr(address);
+        try {
+          InetAddress[] addresses = dnr.getAllByDomainName(isa.getHostName());
+          for (InetAddress addr : addresses) {
+            InetSocketAddress inetSocketAddress = new InetSocketAddress(
+                addr.getHostName(), isa.getPort());
+            // Concat nnId with inetSocketAddress to make uniq ID
+            String concatId = inetSocketAddress.toString();
+            ret.put(concatId, inetSocketAddress);
+          }
+        } catch (UnknownHostException e) {
+          LOG.warn("Didn't resolve anything");
+        }
+      }
+    }
+    return ret;
   }
 
   /**

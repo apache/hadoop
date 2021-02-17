@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.net.MockDomainNameResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -61,6 +62,14 @@ public class TestBlockPoolManager {
         doLog("create #" + idx);
         final BPOfferService bpos = Mockito.mock(BPOfferService.class);
         Mockito.doReturn("Mock BPOS #" + idx).when(bpos).toString();
+        List<BPServiceActor> bpsa = new ArrayList<>(nnIds.size());
+        for (int i = 0; i < nnIds.size(); i++) {
+          BPServiceActor actor = Mockito.mock(BPServiceActor.class);
+          Mockito.doReturn(nnIds.get(i)).when(actor).getNnId();
+          Mockito.doReturn(nnAddrs.get(i)).when(actor).getNNSocketAddress();
+          bpsa.add(actor);
+        }
+        Mockito.doReturn(bpsa).when(bpos).getBPServiceActors();
         // Log refreshes
         try {
           Mockito.doAnswer(
@@ -157,6 +166,51 @@ public class TestBlockPoolManager {
     Assert.assertFalse(map.containsKey("ns3"));
     Assert.assertTrue(map.containsKey("ns1"));
     log.setLength(0);
+  }
+
+  @Test
+  public void testNameServiceNeedToBeResolved() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1,ns2,ns3");
+    addNN(conf, "ns1", "mock1:8020");
+    addNN(conf, "ns2", "mock1:8020");
+    addNN(conf, "ns3", MockDomainNameResolver.DOMAIN + ":8020");
+    addDNSSettings(conf, "ns3");
+    bpm.refreshNamenodes(conf);
+    assertEquals(
+        "create #1\n" +
+            "create #2\n" +
+            "create #3\n", log.toString());
+    @SuppressWarnings("unchecked")
+    Map<String, BPOfferService> map = (Map<String, BPOfferService>) Whitebox
+        .getInternalState(bpm, "bpByNameserviceId");
+    Assert.assertTrue(map.containsKey("ns1"));
+    Assert.assertTrue(map.containsKey("ns2"));
+    Assert.assertTrue(map.containsKey("ns3"));
+    Assert.assertEquals(2, map.get("ns3").getBPServiceActors().size());
+    Assert.assertEquals(new InetSocketAddress(MockDomainNameResolver.ADDR_1, 8020)
+        .toString(), map.get("ns3").getBPServiceActors().get(0).getNnId());
+    Assert.assertEquals(new InetSocketAddress(MockDomainNameResolver.ADDR_2, 8020)
+        .toString(), map.get("ns3").getBPServiceActors().get(1).getNnId());
+    Assert.assertEquals(new InetSocketAddress(MockDomainNameResolver.ADDR_1, 8020),
+        map.get("ns3").getBPServiceActors().get(0).getNNSocketAddress());
+    Assert.assertEquals(new InetSocketAddress(MockDomainNameResolver.ADDR_1, 8020),
+        map.get("ns3").getBPServiceActors().get(0).getNNSocketAddress());
+    log.setLength(0);
+  }
+
+
+  /**
+   * Add more DNS related settings to the passed in configuration.
+   * @param config Configuration file to add settings to.
+   */
+  private void addDNSSettings(Configuration config,
+      String nameservice) {
+    config.setBoolean(
+        DFSConfigKeys.DFS_RESOLVE_NAMESERVICE_NEEDED + "." + nameservice, true);
+    config.set(
+        DFSConfigKeys.DFS_RESOLVER_IMPL + "." + nameservice,
+        MockDomainNameResolver.class.getName());
   }
 
   private static void addNN(Configuration conf, String ns, String addr) {

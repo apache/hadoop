@@ -1608,6 +1608,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String
       DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE_DEFAULT = "";
 
+  public static final String
+      DFS_RESOLVE_NAMESERVICE_NEEDED =
+      "dfs.resolve.nameservice.needed";
+  public static final boolean
+      DFS_RESOLVE_NAMESERVICE_NEEDED_DEFAULT = false;
+
+  public static final String
+      DFS_RESOLVER_IMPL =
+      "dfs.resolver.impl";
+
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated
   public static final String  DFS_CLIENT_RETRY_POLICY_ENABLED_KEY
@@ -1943,5 +1953,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_KEY;
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
+
 
 }

@@ -219,6 +219,11 @@ class BPServiceActor implements Runnable {
   }
 
   @VisibleForTesting
+  String getNnId() {
+    return nnId;
+  }
+
+  @VisibleForTesting
   DatanodeProtocolClientSideTranslatorPB getNameNodeProxy() {
     return bpNamenode;
   }
