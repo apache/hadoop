@@ -552,15 +552,15 @@ public class FairScheduler extends
           return;
         }
       }
-      boolean isAppOnUAM = rmApp != null &&
+      boolean unmanagedAM = rmApp != null &&
           rmApp.getApplicationSubmissionContext() != null
           && rmApp.getApplicationSubmissionContext().getUnmanagedAM();
 
       SchedulerApplication<FSAppAttempt> application =
-          new SchedulerApplication<>(queue, user, isAppOnUAM);
+          new SchedulerApplication<>(queue, user, unmanagedAM);
       applications.put(applicationId, application);
 
-      queue.getMetrics().submitApp(user, isAppOnUAM);
+      queue.getMetrics().submitApp(user, unmanagedAM);
 
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName
@@ -614,7 +614,7 @@ public class FairScheduler extends
         maxRunningEnforcer.trackNonRunnableApp(attempt);
       }
 
-      queue.getMetrics().submitAppAttempt(user, application.isAppOnUAM());
+      queue.getMetrics().submitAppAttempt(user, application.isUnmanagedAM());
 
       LOG.info("Added Application Attempt " + applicationAttemptId
           + " to scheduler from user: " + user);

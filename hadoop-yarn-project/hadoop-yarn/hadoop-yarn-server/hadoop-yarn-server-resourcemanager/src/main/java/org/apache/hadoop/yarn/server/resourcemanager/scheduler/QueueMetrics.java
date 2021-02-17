@@ -415,57 +415,57 @@ public class QueueMetrics implements MetricsSource {
     registry.snapshot(collector.addRecord(registry.info()), all);
   }
 
-  public void submitApp(String user, boolean isAppOnUAM) {
+  public void submitApp(String user, boolean unmanagedAM) {
     appsSubmitted.incr();
-    if(isAppOnUAM) {
+    if(unmanagedAM) {
       unmanagedAppsSubmitted.incr();
     }
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.submitApp(user, isAppOnUAM);
+      userMetrics.submitApp(user, unmanagedAM);
     }
     if (parent != null) {
-      parent.submitApp(user, isAppOnUAM);
+      parent.submitApp(user, unmanagedAM);
     }
   }
 
 
-  public void submitAppAttempt(String user, boolean isAppOnUAM) {
+  public void submitAppAttempt(String user, boolean unmanagedAM) {
     appsPending.incr();
-    if(isAppOnUAM) {
+    if(unmanagedAM) {
       unmanagedAppsPending.incr();
     }
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.submitAppAttempt(user, isAppOnUAM);
+      userMetrics.submitAppAttempt(user, unmanagedAM);
     }
     if (parent != null) {
-      parent.submitAppAttempt(user, isAppOnUAM);
+      parent.submitAppAttempt(user, unmanagedAM);
     }
   }
 
   public void runAppAttempt(ApplicationId appId, String user,
-      boolean isAppOnUAM) {
+      boolean unmanagedAM) {
     runBuckets.add(appId, System.currentTimeMillis());
     appsRunning.incr();
     appsPending.decr();
 
-    if(isAppOnUAM) {
+    if(unmanagedAM) {
       unmanagedAppsRunning.incr();
       unmanagedAppsPending.decr();
     }
 
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.runAppAttempt(appId, user, isAppOnUAM);
+      userMetrics.runAppAttempt(appId, user, unmanagedAM);
     }
     if (parent != null) {
-      parent.runAppAttempt(appId, user, isAppOnUAM);
+      parent.runAppAttempt(appId, user, unmanagedAM);
     }
   }
 
   public void finishAppAttempt(ApplicationId appId, boolean isPending,
-      String user, boolean isAppOnUAM) {
+      String user, boolean unmanagedAM) {
     runBuckets.remove(appId);
     if (isPending) {
       appsPending.decr();
@@ -473,7 +473,7 @@ public class QueueMetrics implements MetricsSource {
       appsRunning.decr();
     }
 
-    if(isAppOnUAM) {
+    if(unmanagedAM) {
       if (isPending) {
         unmanagedAppsPending.decr();
       } else {
@@ -482,22 +482,22 @@ public class QueueMetrics implements MetricsSource {
     }
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.finishAppAttempt(appId, isPending, user, isAppOnUAM);
+      userMetrics.finishAppAttempt(appId, isPending, user, unmanagedAM);
     }
     if (parent != null) {
-      parent.finishAppAttempt(appId, isPending, user, isAppOnUAM);
+      parent.finishAppAttempt(appId, isPending, user, unmanagedAM);
     }
   }
 
   public void finishApp(String user, RMAppState rmAppFinalState,
-      boolean isAppOnUAM) {
+      boolean unmanagedAM) {
     switch (rmAppFinalState) {
       case KILLED: appsKilled.incr(); break;
       case FAILED: appsFailed.incr(); break;
       default: appsCompleted.incr();  break;
     }
 
-    if(isAppOnUAM) {
+    if(unmanagedAM) {
       switch (rmAppFinalState) {
       case KILLED:
         unmanagedAppsKilled.incr();
@@ -513,21 +513,21 @@ public class QueueMetrics implements MetricsSource {
 
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.finishApp(user, rmAppFinalState, isAppOnUAM);
+      userMetrics.finishApp(user, rmAppFinalState, unmanagedAM);
     }
     if (parent != null) {
-      parent.finishApp(user, rmAppFinalState, isAppOnUAM);
+      parent.finishApp(user, rmAppFinalState, unmanagedAM);
     }
   }
 
 
-  public void moveAppFrom(AppSchedulingInfo app, boolean isAppOnUAM) {
+  public void moveAppFrom(AppSchedulingInfo app, boolean unmanagedAM) {
     if (app.isPending()) {
       appsPending.decr();
     } else {
       appsRunning.decr();
     }
-    if(isAppOnUAM) {
+    if(unmanagedAM) {
       if (app.isPending()) {
         unmanagedAppsPending.decr();
       } else {
@@ -537,20 +537,20 @@ public class QueueMetrics implements MetricsSource {
 
     QueueMetrics userMetrics = getUserMetrics(app.getUser());
     if (userMetrics != null) {
-      userMetrics.moveAppFrom(app, isAppOnUAM);
+      userMetrics.moveAppFrom(app, unmanagedAM);
     }
     if (parent != null) {
-      parent.moveAppFrom(app, isAppOnUAM);
+      parent.moveAppFrom(app, unmanagedAM);
     }
   }
 
-  public void moveAppTo(AppSchedulingInfo app, boolean isAppOnUAM) {
+  public void moveAppTo(AppSchedulingInfo app, boolean unmanagedAM) {
     if (app.isPending()) {
       appsPending.incr();
     } else {
       appsRunning.incr();
     }
-    if(isAppOnUAM){
+    if(unmanagedAM) {
       if (app.isPending()) {
         unmanagedAppsPending.incr();
       } else {
@@ -559,10 +559,10 @@ public class QueueMetrics implements MetricsSource {
     }
     QueueMetrics userMetrics = getUserMetrics(app.getUser());
     if (userMetrics != null) {
-      userMetrics.moveAppTo(app, isAppOnUAM);
+      userMetrics.moveAppTo(app, unmanagedAM);
     }
     if (parent != null) {
-      parent.moveAppTo(app, isAppOnUAM);
+      parent.moveAppTo(app, unmanagedAM);
     }
   }
 

@@ -102,13 +102,13 @@ public class AppSchedulingInfo {
   private final Map<String, String> applicationSchedulingEnvs = new HashMap<>();
   private final RMContext rmContext;
   private final int retryAttempts;
-  private boolean isUnmanagedAM;
+  private boolean unmanagedAM;
 
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId, String user,
       Queue queue, AbstractUsersManager abstractUsersManager, long epoch,
       ResourceUsage appResourceUsage,
       Map<String, String> applicationSchedulingEnvs, RMContext rmContext,
-      boolean isUnmanagedAM) {
+      boolean unmanagedAM) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queue = queue;
@@ -122,7 +122,7 @@ public class AppSchedulingInfo {
     this.retryAttempts = rmContext.getYarnConfiguration().getInt(
          YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS,
          YarnConfiguration.DEFAULT_RM_PLACEMENT_CONSTRAINTS_RETRY_ATTEMPTS);
-    this.isUnmanagedAM = isUnmanagedAM;
+    this.unmanagedAM = unmanagedAM;
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     updateContext = new ContainerUpdateContext(this);
@@ -159,12 +159,12 @@ public class AppSchedulingInfo {
     return pending;
   }
 
-  public void setUnmanagedAM(boolean isUAM) {
-    this.isUnmanagedAM = isUAM;
+  public void setUnmanagedAM(boolean unmanagedAM) {
+    this.unmanagedAM = unmanagedAM;
   }
 
   public boolean isUnmanagedAM() {
-    return isUnmanagedAM;
+    return unmanagedAM;
   }
 
   public Set<String> getRequestedPartitions() {
@@ -663,7 +663,7 @@ public class AppSchedulingInfo {
         }
       }
 
-      metrics.finishAppAttempt(applicationId, pending, user, isUnmanagedAM);
+      metrics.finishAppAttempt(applicationId, pending, user, unmanagedAM);
 
       // Clear requests themselves
       clearRequests();
