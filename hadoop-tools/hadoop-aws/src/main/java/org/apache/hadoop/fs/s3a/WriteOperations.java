@@ -154,13 +154,14 @@ public interface WriteOperations {
    * Abort a multipart upload operation.
    * @param destKey destination key of the upload
    * @param uploadId multipart operation Id
+   * @param shouldRetry should failures trigger a retry?
    * @param retrying callback invoked on every retry
    * @throws IOException failure to abort
    * @throws FileNotFoundException if the abort ID is unknown
    */
   @Retries.RetryTranslated
   void abortMultipartUpload(String destKey, String uploadId,
-      Invoker.Retried retrying)
+      boolean shouldRetry, Invoker.Retried retrying)
       throws IOException;
 
   /**

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -48,8 +50,6 @@ public class DataNodeDiskMetrics {
       DataNodeDiskMetrics.class);
 
   private DataNode dn;
-  private final long MIN_OUTLIER_DETECTION_DISKS = 5;
-  private final long SLOW_DISK_LOW_THRESHOLD_MS = 20;
   private final long detectionInterval;
   private volatile boolean shouldRun;
   private OutlierDetector slowDiskDetector;
@@ -61,11 +61,27 @@ public class DataNodeDiskMetrics {
   // code, status should not be overridden by daemon thread.
   private boolean overrideStatus = true;
 
-  public DataNodeDiskMetrics(DataNode dn, long diskOutlierDetectionIntervalMs) {
+  /**
+   * Minimum number of disks to run outlier detection.
+   */
+  private final long minOutlierDetectionDisks;
+  /**
+   * Threshold in milliseconds below which a disk is definitely not slow.
+   */
+  private final long lowThresholdMs;
+
+  public DataNodeDiskMetrics(DataNode dn, long diskOutlierDetectionIntervalMs,
+      Configuration conf) {
     this.dn = dn;
     this.detectionInterval = diskOutlierDetectionIntervalMs;
-    slowDiskDetector = new OutlierDetector(MIN_OUTLIER_DETECTION_DISKS,
-        SLOW_DISK_LOW_THRESHOLD_MS);
+    minOutlierDetectionDisks =
+        conf.getLong(DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY,
+            DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT);
+    lowThresholdMs =
+        conf.getLong(DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY,
+            DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT);
+    slowDiskDetector =
+        new OutlierDetector(minOutlierDetectionDisks, lowThresholdMs);
     shouldRun = true;
     startDiskOutlierDetectionThread();
   }

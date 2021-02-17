@@ -88,6 +88,11 @@ public enum Statistic {
       TYPE_COUNTER),
   IGNORED_ERRORS("ignored_errors", "Errors caught and ignored",
       TYPE_COUNTER),
+
+  INVOCATION_ABORT(
+      StoreStatisticNames.OP_ABORT,
+      "Calls of abort()",
+      TYPE_DURATION),
   INVOCATION_COPY_FROM_LOCAL_FILE(
       StoreStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()",

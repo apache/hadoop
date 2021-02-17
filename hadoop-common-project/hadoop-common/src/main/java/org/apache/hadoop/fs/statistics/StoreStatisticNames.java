@@ -38,6 +38,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class StoreStatisticNames {
 
   /** {@value}. */
+  public static final String OP_ABORT = "op_abort";
+
+  /** {@value}. */
   public static final String OP_APPEND = "op_append";
 
   /** {@value}. */

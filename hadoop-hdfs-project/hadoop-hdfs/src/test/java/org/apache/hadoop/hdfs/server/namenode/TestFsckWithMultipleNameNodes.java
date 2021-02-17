@@ -36,9 +36,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * Test fsck with multiple NameNodes
@@ -47,7 +47,7 @@ public class TestFsckWithMultipleNameNodes {
   static final Logger LOG =
       LoggerFactory.getLogger(TestFsckWithMultipleNameNodes.class);
   {
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
 
   

@@ -81,6 +81,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_PREEMPTION;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -1069,6 +1070,47 @@ public class TestProportionalCapacityPreemptionPolicy {
 
     assertEquals(newMonitoringInterval, policy.getMonitoringInterval());
     assertEquals(newObserveOnly, policy.isObserveOnly());
+  }
+
+  @Test
+  public void testLeafQueueNameExtraction() throws Exception {
+    ProportionalCapacityPreemptionPolicy policy =
+        buildPolicy(Q_DATA_FOR_IGNORE);
+    ParentQueue root = (ParentQueue) mCS.getRootQueue();
+    root.addDynamicParentQueue("childlessFlexible");
+    List<CSQueue> queues = root.getChildQueues();
+    ArrayList<CSQueue> extendedQueues = new ArrayList<>();
+    LinkedList<ParentQueue> pqs = new LinkedList<>();
+    ParentQueue dynamicParent = mockParentQueue(
+        null, 0, pqs);
+    when(dynamicParent.getQueuePath()).thenReturn("root.dynamicParent");
+    when(dynamicParent.getQueueCapacities()).thenReturn(
+        new QueueCapacities(false));
+    QueueResourceQuotas dynamicParentQr = new QueueResourceQuotas();
+    dynamicParentQr.setEffectiveMaxResource(Resource.newInstance(1, 1));
+    dynamicParentQr.setEffectiveMinResource(Resources.createResource(1));
+    dynamicParentQr.setEffectiveMaxResource(RMNodeLabelsManager.NO_LABEL,
+        Resource.newInstance(1, 1));
+    dynamicParentQr.setEffectiveMinResource(RMNodeLabelsManager.NO_LABEL,
+        Resources.createResource(1));
+    when(dynamicParent.getQueueResourceQuotas()).thenReturn(dynamicParentQr);
+    when(dynamicParent.getEffectiveCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resources.createResource(1));
+    when(dynamicParent.getEffectiveMaxCapacity(RMNodeLabelsManager.NO_LABEL))
+        .thenReturn(Resource.newInstance(1, 1));
+    ResourceUsage resUsage = new ResourceUsage();
+    resUsage.setUsed(Resources.createResource(1024));
+    resUsage.setReserved(Resources.createResource(1024));
+    when(dynamicParent.getQueueResourceUsage()).thenReturn(resUsage);
+    when(dynamicParent.isEligibleForAutoQueueCreation()).thenReturn(true);
+    extendedQueues.add(dynamicParent);
+    extendedQueues.addAll(queues);
+    when(root.getChildQueues()).thenReturn(extendedQueues);
+
+    policy.editSchedule();
+
+    assertFalse("dynamicParent should not be a LeafQueue " +
+        "candidate", policy.getLeafQueueNames().contains("root.dynamicParent"));
   }
 
   static class IsPreemptionRequestFor

@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeRef
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -500,7 +500,6 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
    * @param level the level to set
    */
   public static void setFsDatasetImplLogLevel(Level level) {
-    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG,
-        org.slf4j.event.Level.valueOf(level.toString()));
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, level);
   }
 }

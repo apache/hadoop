@@ -62,12 +62,12 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.VolumeScanner.Statistics;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 public class TestBlockScanner {
   public static final Logger LOG =
@@ -76,9 +76,9 @@ public class TestBlockScanner {
   @Before
   public void before() {
     BlockScanner.Conf.allowUnitTestSettings = true;
-    GenericTestUtils.setLogLevel(BlockScanner.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(VolumeScanner.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FsVolumeImpl.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(BlockScanner.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(VolumeScanner.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(FsVolumeImpl.LOG, Level.TRACE);
   }
 
   private static void disableBlockScanner(Configuration conf) {
@@ -899,7 +899,7 @@ public class TestBlockScanner {
    */
   @Test(timeout=120000)
   public void testAppendWhileScanning() throws Exception {
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
     Configuration conf = new Configuration();
     // throttle the block scanner: 1MB per second
     conf.setLong(DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND, 1048576);

@@ -88,7 +88,7 @@ public final class MultipartTestUtils {
       while (uploads.hasNext()) {
         MultipartUpload upload = uploads.next();
         fs.getWriteOperationHelper().abortMultipartUpload(upload.getKey(),
-            upload.getUploadId(), LOG_EVENT);
+            upload.getUploadId(), true, LOG_EVENT);
         LOG.debug("Cleaning up upload: {} {}", upload.getKey(),
             truncatedUploadId(upload.getUploadId()));
       }
