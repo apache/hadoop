@@ -230,6 +230,31 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * Creates a directory for the data/logs of the unit test.
+   * It first delete the directory if it exists.
+   *
+   * @param testClass the unit test class.
+   * @param defaultTargetRootDir the directory where the class directory is
+   *                             created.
+   * @return the Path of the root directory.
+   */
+  public static Path setupTestRootDir(Class<?> testClass,
+      String defaultTargetRootDir) {
+    // setup the test root directory
+    String targetTestDir =
+        System.getProperty(SYSPROP_TEST_DATA_DIR, defaultTargetRootDir);
+    Path testRootDirPath =
+        new Path(targetTestDir, testClass.getSimpleName());
+    System.setProperty(GenericTestUtils.SYSPROP_TEST_DATA_DIR,
+        testRootDirPath.toString());
+    // delete the folder if it exists
+    File rootDir = clearTestRootDir();
+    // create the directory
+    rootDir.mkdirs();
+    return testRootDirPath;
+  }
+
+  /**
    * Get the (created) base directory for tests.
    * @return the absolute directory
    */
@@ -243,6 +268,18 @@ public abstract class GenericTestUtils {
     dir.mkdirs();
     assertExists(dir);
     return dir;
+  }
+
+  /**
+   * Cleans-up the root directory from the property
+   * {@link #SYSPROP_TEST_DATA_DIR}.
+   *
+   * @return the absolute file of the test root directory.
+   */
+  public static File clearTestRootDir() {
+    File testRootDir = getTestDir();
+    FileUtil.fullyDelete(testRootDir);
+    return testRootDir;
   }
 
   /**

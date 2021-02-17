@@ -41,6 +41,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
@@ -171,8 +172,9 @@ public class MiniYARNCluster extends CompositeService {
     this.numLocalDirs = numLocalDirs;
     this.numLogDirs = numLogDirs;
     this.enableAHS = enableAHS;
-    String testSubDir = testName.replace("$", "");
-    File targetWorkDir = new File("target", testSubDir);
+    String testSubDir = testName.replace("$", "").concat("-yarn");
+    File targetWorkDirRoot = GenericTestUtils.getTestDir();
+    File targetWorkDir = new File(targetWorkDirRoot, testSubDir);
     try {
       FileContext.getLocalFSFileContext().delete(
           new Path(targetWorkDir.getAbsolutePath()), true);

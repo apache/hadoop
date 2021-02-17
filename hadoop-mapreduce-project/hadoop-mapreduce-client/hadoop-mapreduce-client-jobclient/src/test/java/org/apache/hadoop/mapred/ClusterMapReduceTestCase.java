@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.test.GenericTestUtils;
+
 import org.junit.After;
 import org.junit.Before;
 
@@ -43,8 +45,21 @@ import java.util.Properties;
  * The DFS filesystem is formated before the testcase starts and after it ends.
  */
 public abstract class ClusterMapReduceTestCase {
+  private static final String TEST_ROOT_DEFAULT_PATH =
+      System.getProperty("test.build.data", "target/test-dir");
+  private static Path testRootDir;
+
   private MiniDFSCluster dfsCluster = null;
-  private MiniMRCluster mrCluster = null;
+  private MiniMRClientCluster mrCluster = null;
+
+  protected static void setupClassBase(Class<?> testClass) throws Exception {
+    // setup the test root directory
+    testRootDir = GenericTestUtils.setupTestRootDir(testClass,
+        TEST_ROOT_DEFAULT_PATH);
+    System.setProperty(GenericTestUtils.SYSPROP_TEST_DATA_DIR,
+        testRootDir.toString());
+  }
+
 
   /**
    * Creates Hadoop Cluster and DFS before a test case is run.
@@ -81,34 +96,7 @@ public abstract class ClusterMapReduceTestCase {
       dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
       .format(reformatDFS).racks(null).build();
 
-      ConfigurableMiniMRCluster.setConfiguration(props);
-      //noinspection deprecation
-      mrCluster = new ConfigurableMiniMRCluster(2,
-          getFileSystem().getUri().toString(), 1, conf);
-    }
-  }
-
-  private static class ConfigurableMiniMRCluster extends MiniMRCluster {
-    private static Properties config;
-
-    public static void setConfiguration(Properties props) {
-      config = props;
-    }
-
-    public ConfigurableMiniMRCluster(int numTaskTrackers, String namenode,
-                                     int numDir, JobConf conf)
-        throws Exception {
-      super(0,0, numTaskTrackers, namenode, numDir, null, null, null, conf);
-    }
-
-    public JobConf createJobConf() {
-      JobConf conf = super.createJobConf();
-      if (config != null) {
-        for (Map.Entry entry : config.entrySet()) {
-          conf.set((String) entry.getKey(), (String) entry.getValue());
-        }
-      }
-      return conf;
+      mrCluster = MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
     }
   }
 
@@ -125,7 +113,7 @@ public abstract class ClusterMapReduceTestCase {
    */
   protected void stopCluster() throws Exception {
     if (mrCluster != null) {
-      mrCluster.shutdown();
+      mrCluster.stop();
       mrCluster = null;
     }
     if (dfsCluster != null) {
@@ -157,17 +145,13 @@ public abstract class ClusterMapReduceTestCase {
     return dfsCluster.getFileSystem();
   }
 
-  protected MiniMRCluster getMRCluster() {
-    return mrCluster;
-  }
-
   /**
    * Returns the path to the root directory for the testcase.
    *
    * @return path to the root directory for the testcase.
    */
   protected Path getTestRootDir() {
-    return new Path("x").getParent();
+    return testRootDir;
   }
 
   /**
@@ -194,8 +178,8 @@ public abstract class ClusterMapReduceTestCase {
    *
    * @return configuration that works on the testcase Hadoop instance
    */
-  protected JobConf createJobConf() {
-    return mrCluster.createJobConf();
+  protected JobConf createJobConf() throws IOException {
+    return new JobConf(mrCluster.getConfig());
   }
 
 }
