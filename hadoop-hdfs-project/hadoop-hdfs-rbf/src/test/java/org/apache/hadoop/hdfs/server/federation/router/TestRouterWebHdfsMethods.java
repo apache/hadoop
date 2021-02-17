@@ -137,6 +137,10 @@ public class TestRouterWebHdfsMethods {
   public void testGetNsFromDataNodeNetworkLocation() {
     assertEquals("ns0", RouterWebHdfsMethods
         .getNsFromDataNodeNetworkLocation("/ns0/rack-info1"));
+    assertEquals("ns0", RouterWebHdfsMethods
+        .getNsFromDataNodeNetworkLocation("/ns0/row1/rack-info1"));
+    assertEquals("", RouterWebHdfsMethods
+        .getNsFromDataNodeNetworkLocation("/row0"));
     assertEquals("", RouterWebHdfsMethods
         .getNsFromDataNodeNetworkLocation("whatever-rack-info1"));
   }
