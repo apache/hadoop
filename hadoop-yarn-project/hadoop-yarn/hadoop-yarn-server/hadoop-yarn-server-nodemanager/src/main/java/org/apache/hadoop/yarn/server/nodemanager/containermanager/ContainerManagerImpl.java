@@ -1082,8 +1082,10 @@ public class ContainerManagerImpl extends CompositeService implements
     ContainerId containerId = containerTokenIdentifier.getContainerID();
     String containerIdStr = containerId.toString();
     String user = containerTokenIdentifier.getApplicationSubmitter();
+    Resource containerResource = containerTokenIdentifier.getResource();
 
-    LOG.info("Start request for " + containerIdStr + " by user " + remoteUser);
+    LOG.info("Start request for " + containerIdStr + " by user " + remoteUser +
+        " with resource " + containerResource);
 
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
 

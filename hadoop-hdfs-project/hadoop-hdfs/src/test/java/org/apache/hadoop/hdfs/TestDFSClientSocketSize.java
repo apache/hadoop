@@ -20,12 +20,12 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 
 import org.junit.Test;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -37,7 +37,7 @@ public class TestDFSClientSocketSize {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestDFSClientSocketSize.class);
   static {
-    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
   }
 
   /**

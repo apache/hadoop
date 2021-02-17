@@ -57,11 +57,12 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 /**
  * This class tests the decommissioning of nodes.
@@ -107,8 +108,9 @@ public class TestDecommissioningStatus {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 1);
     conf.setLong(DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY, 1);
-    Logger.getLogger(DatanodeAdminManager.class).setLevel(Level.DEBUG);
-    LOG = Logger.getLogger(TestDecommissioningStatus.class);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(DatanodeAdminManager.class), Level.DEBUG);
+    LOG = LoggerFactory.getLogger(TestDecommissioningStatus.class);
     return conf;
   }
 
@@ -388,8 +390,8 @@ public class TestDecommissioningStatus {
    */
   @Test(timeout=120000)
   public void testDecommissionDeadDN() throws Exception {
-    Logger log = Logger.getLogger(DatanodeAdminManager.class);
-    log.setLevel(Level.DEBUG);
+    Logger log = LoggerFactory.getLogger(DatanodeAdminManager.class);
+    GenericTestUtils.setLogLevel(log, Level.DEBUG);
     DatanodeID dnID = cluster.getDataNodes().get(0).getDatanodeId();
     String dnName = dnID.getXferAddr();
     DataNodeProperties stoppedDN = cluster.stopDataNode(0);

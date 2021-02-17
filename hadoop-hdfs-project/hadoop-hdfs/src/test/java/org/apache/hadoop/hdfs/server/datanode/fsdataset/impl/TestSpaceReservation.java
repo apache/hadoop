@@ -45,13 +45,13 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -101,8 +101,8 @@ public class TestSpaceReservation {
   }
 
   static {
-    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
   }
 
   /**
