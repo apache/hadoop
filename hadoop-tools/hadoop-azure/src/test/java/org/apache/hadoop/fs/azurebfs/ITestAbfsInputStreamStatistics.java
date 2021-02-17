@@ -42,7 +42,6 @@ public class ITestAbfsInputStreamStatistics
   private static final int ONE_KB = 1024;
   private static final int CUSTOM_BLOCK_BUFFER_SIZE = 4 * 1024;
   private byte[] defBuffer = new byte[ONE_MB];
-  private byte[] defBuffer2 = new byte[ONE_MB * 5];
 
   public ITestAbfsInputStreamStatistics() throws Exception {
   }
@@ -101,28 +100,31 @@ public class ITestAbfsInputStreamStatistics
     AbfsOutputStream out = null;
     AbfsInputStream in = null;
 
+    int readBufferSize = getConfiguration().getReadBufferSize();
+    byte[] buf = new byte[readBufferSize + 1];
+
     try {
       out = createAbfsOutputStreamWithFlushEnabled(fs, seekStatPath);
 
-      //Writing a default buffer in a file.
-      out.write(defBuffer2);
+      //Writing buffer to file
+      out.write(buf);
       out.hflush();
       in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
 
       /*
-       * Writing 4MB buffer to the file
+       * Reading buffer size from file. After read, fCursor = readBufferSize
+       * Last valid offset in file is (readBufferSize - 1)
        */
-      int result = in.read(defBuffer2, 0, ONE_MB * 4);
-//      System.out.println(in.fCursor + " " + in.length() + in.available());
+      int result = in.read(buf, 0, readBufferSize);
       LOG.info("Result of read : {}", result);
 
       /*
-       * Seeking to start of file and then back to 4MB position would result
-       * in a backward and a forward seek respectively 10 times.
+       * Seeking to start of file and then back to readBufferSize position would
+       * result in a backward and a forward seek respectively 10 times.
        */
       for (int i = 0; i < OPERATIONS; i++) {
         in.seek(0);
-        in.seek(ONE_MB * 4);
+        in.seek(readBufferSize);
       }
 
       AbfsInputStreamStatisticsImpl stats =
@@ -141,8 +143,8 @@ public class ITestAbfsInputStreamStatistics
        * for OPERATION times, total forward seeks would be OPERATIONS.
        *
        * negativeBytesBackwardsOnSeek - Since we are doing backward seeks from
-       * end of file in a ONE_MB file each time, this would mean the bytes from
-       * backward seek would be OPERATIONS * ONE_MB.
+       * end of file in a readBufferSize file each time, this would mean the bytes from
+       * backward seek would be OPERATIONS * readBufferSize.
        *
        * bytesSkippedOnSeek - Since, we move from start to end in seek, but
        * our fCursor(position of cursor) always remain at end of file, this
@@ -153,8 +155,6 @@ public class ITestAbfsInputStreamStatistics
        * would be equal to 2 * OPERATIONS.
        *
        */
-//      System.out.println(stats.getSeekOperations() + " " +
-//          stats.getForwardSeekOperations() + " " + stats.getBytesBackwardsOnSeek());
       assertEquals("Mismatch in seekOps value", 2 * OPERATIONS,
           stats.getSeekOperations());
       assertEquals("Mismatch in backwardSeekOps value", OPERATIONS,
@@ -162,7 +162,7 @@ public class ITestAbfsInputStreamStatistics
       assertEquals("Mismatch in forwardSeekOps value", OPERATIONS,
           stats.getForwardSeekOperations());
       assertEquals("Mismatch in bytesBackwardsOnSeek value",
-          OPERATIONS * ONE_MB * 4, stats.getBytesBackwardsOnSeek());
+          OPERATIONS * readBufferSize, stats.getBytesBackwardsOnSeek());
       assertEquals("Mismatch in bytesSkippedOnSeek value",
           0, stats.getBytesSkippedOnSeek());
       assertEquals("Mismatch in seekInBuffer value", 2 * OPERATIONS,
