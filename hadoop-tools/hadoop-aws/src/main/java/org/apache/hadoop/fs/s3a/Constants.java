@@ -1093,4 +1093,22 @@ public final class Constants {
    */
   public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
+  /**
+   * S3 client-side encryption(CSE) method.
+   */
+  public static final String CLIENT_SIDE_ENCRYPTION_METHOD =
+      "fs.s3a.cse.method";
+
+  /**
+   * Key ID for KMS S3 CSE method.
+   */
+  public static final String CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID =
+      "fs.s3a.cse.kms.keyId";
+
+  /**
+   * Custom implementation of EncryptionMaterialsProvider class for CUSTOM s3
+   * CSE method.
+   */
+  public static final String CLIENT_SIDE_ENCRYPTION_MATERIALS_PROVIDER =
+      "fs.s3a.cse.materialsProvider";
 }

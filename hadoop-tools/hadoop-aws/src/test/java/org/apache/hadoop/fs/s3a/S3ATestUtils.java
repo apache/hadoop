@@ -1495,4 +1495,16 @@ public final class S3ATestUtils {
         probes);
   }
 
+  /**
+   * Skip a test if CSE KMS key id is not set.
+   *
+   * @param configuration configuration to probe.
+   */
+  public static void skipIfKmsKeyIdIsNotSet(Configuration configuration) {
+    if (configuration.get(
+        Constants.CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID) == null) {
+      skip("AWS KMS key id is not set");
+    }
+  }
+
 }
