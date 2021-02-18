@@ -112,8 +112,8 @@ public class ITestAbfsInputStreamStatistics
       in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
 
       /*
-       * Reading buffer size from file. After read, fCursor = readBufferSize
-       * Last valid offset in file is (readBufferSize - 1)
+       * Reading from file. After read, fCursor = readBufferSize
+       * Last valid offset in file is readBufferSize
        */
       int result = in.read(buf, 0, readBufferSize);
       LOG.info("Result of read : {}", result);
@@ -143,8 +143,8 @@ public class ITestAbfsInputStreamStatistics
        * for OPERATION times, total forward seeks would be OPERATIONS.
        *
        * negativeBytesBackwardsOnSeek - Since we are doing backward seeks from
-       * end of file in a readBufferSize file each time, this would mean the bytes from
-       * backward seek would be OPERATIONS * readBufferSize.
+       * last byte of file over readBufferSize bytes each time, this would mean
+       * the bytes from backward seek would be OPERATIONS * readBufferSize.
        *
        * bytesSkippedOnSeek - Since, we move from start to end in seek, but
        * our fCursor(position of cursor) always remain at end of file, this
