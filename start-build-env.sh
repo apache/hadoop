@@ -87,7 +87,7 @@ DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 # within the container and use the result on your normal
 # system.  And this also is a significant speedup in subsequent
 # builds because the dependencies are downloaded only once.
-dockerargs=(--rm=true)
+dockerargs=("--rm=true")
 dockerargs+=($DOCKER_INTERACTIVE_RUN)
 # use urandom to increase entropy
 dockerargs+=(-v "/dev/urandom:/dev/random${V_OPTS:-}")
@@ -101,6 +101,8 @@ dockerargs+=(-v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}")
 dockerargs+=(-w "${DOCKER_HOME_DIR}/hadoop")
 # set user
 dockerargs+=(-u "${USER_ID}")
+
+set -x
 
 docker run "${dockerargs[@]}" \
   "hadoop-build-${USER_ID}" "$@"

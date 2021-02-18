@@ -58,12 +58,7 @@ import static org.junit.Assert.*;
 public class TestMRIntermediateDataEncryption {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMRIntermediateDataEncryption.class);
-  /**
-   * Use urandom to avoid the YarnChild  process from hanging on low entropy
-   * systems.
-   */
-  private static final String JVM_SECURITY_EGD_OPT =
-      "-Djava.security.egd=file:/dev/./urandom";
+
   // Where MR job's input will reside.
   private static final Path INPUT_DIR = new Path("/test/input");
   // Where output goes.
@@ -114,14 +109,6 @@ public class TestMRIntermediateDataEncryption {
   public static void setupClass() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
-
-    // Set the jvm arguments.
-    conf.set(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS,
-        JVM_SECURITY_EGD_OPT);
-    final String childJVMOpts = JVM_SECURITY_EGD_OPT
-        + " " + conf.get("mapred.child.java.opts", " ");
-    conf.set("mapred.child.java.opts", childJVMOpts);
-
 
     // Start the mini-MR and mini-DFS clusters.
     dfsCluster = new MiniDFSCluster.Builder(conf)
