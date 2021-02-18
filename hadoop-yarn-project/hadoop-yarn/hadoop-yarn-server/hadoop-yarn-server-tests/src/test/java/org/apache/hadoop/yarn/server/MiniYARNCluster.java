@@ -172,7 +172,7 @@ public class MiniYARNCluster extends CompositeService {
     this.numLocalDirs = numLocalDirs;
     this.numLogDirs = numLogDirs;
     this.enableAHS = enableAHS;
-    String testSubDir = testName.replace("$", "");
+    String testSubDir = testName.replace("$", "").concat("-yarn");
     File targetWorkDirRoot = GenericTestUtils.getTestDir();
     File targetWorkDir = new File(targetWorkDirRoot, testSubDir);
     try {

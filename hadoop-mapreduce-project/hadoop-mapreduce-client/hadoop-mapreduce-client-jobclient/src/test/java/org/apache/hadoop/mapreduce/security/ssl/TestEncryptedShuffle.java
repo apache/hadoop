@@ -31,6 +31,7 @@ import org.apache.hadoop.mapred.RunningJob;
 
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
@@ -40,28 +41,37 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Assert;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.net.URL;
 
 public class TestEncryptedShuffle {
 
-  private static final String BASEDIR =
-    System.getProperty("test.build.dir", "target/test-dir") + "/" +
-    TestEncryptedShuffle.class.getSimpleName();
-  
+  private static final String TEST_ROOT_DEFAULT_PATH =
+      System.getProperty("test.build.data", "target/test-dir");
+
+  private static Path testRootDir;
   private String classpathDir;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    File base = new File(BASEDIR);
+    testRootDir =
+        new Path(TEST_ROOT_DEFAULT_PATH,
+            TestEncryptedShuffle.class.getSimpleName());
+    System.setProperty(GenericTestUtils.SYSPROP_TEST_DATA_DIR,
+        testRootDir.toString());
+    File base = new File(testRootDir.toString());
     FileUtil.fullyDelete(base);
     base.mkdirs();
+  }
+
+  @AfterClass
+  public static void tearDownClass() throws Exception {
+    // delete the entire test directory
+    File rootDir = new File(testRootDir.toString());
+    FileUtil.fullyDelete(rootDir);
   }
 
   @Before
@@ -73,7 +83,7 @@ public class TestEncryptedShuffle {
   @After
   public void cleanUpMiniClusterSpecialConfig() throws Exception {
     new File(classpathDir, "core-site.xml").delete();
-    String keystoresDir = new File(BASEDIR).getAbsolutePath();
+    String keystoresDir = new File(testRootDir.toString()).getAbsolutePath();
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, classpathDir);
   }
 
@@ -82,7 +92,7 @@ public class TestEncryptedShuffle {
 
   private void startCluster(Configuration  conf) throws Exception {
     if (System.getProperty("hadoop.log.dir") == null) {
-      System.setProperty("hadoop.log.dir", "target/test-dir");
+      System.setProperty("hadoop.log.dir", testRootDir.toString());
     }
     conf.set("dfs.block.access.token.enable", "false");
     conf.set("dfs.permissions", "true");
@@ -129,7 +139,7 @@ public class TestEncryptedShuffle {
     throws Exception {
     try {
       Configuration conf = new Configuration();
-      String keystoresDir = new File(BASEDIR).getAbsolutePath();
+      String keystoresDir = new File(testRootDir.toString()).getAbsolutePath();
       String sslConfsDir =
         KeyStoreTestUtil.getClasspathDir(TestEncryptedShuffle.class);
       KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfsDir, conf,
