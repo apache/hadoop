@@ -42,7 +42,6 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsInputStream;
 
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
@@ -407,7 +406,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
       assertEquals(1, bytesRead);
       assertEquals(testFileLength, inputStream.getPos());
 
-      byte[] buffer2 = new byte[DEFAULT_READ_BUFFER_SIZE + 10];
+      byte[] buffer2 = new byte[getConfiguration().getReadBufferSize() + 10];
       inputStream.seek(0);
       bytesRead = inputStream.read(buffer2);
       assertEquals(buffer2.length, bytesRead);
