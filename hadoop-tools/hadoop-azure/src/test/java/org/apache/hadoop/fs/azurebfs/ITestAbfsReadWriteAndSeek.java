@@ -88,7 +88,6 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
       inputStream.seek(bufferSize);
       result = inputStream.read(readBuffer, bufferSize, bufferSize - 1);
       assertNotEquals(-1, result);
-
       //seek to first byte and read till file mid
       inputStream.seek(0);
       result = inputStream.read(readBuffer, 0, bufferSize);
@@ -97,7 +96,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
       //seek to last valid position and read
       inputStream.seek(contentLength - 1);
       result = inputStream.read(readBuffer, contentLength - 1, 1);
-      assertNotEquals(-1, result);
+      assertNotEquals("Read should succeed for last byte", -1, result);
       //negative seek
       intercept(IOException.class, () -> inputStream.seek(-1));
     }

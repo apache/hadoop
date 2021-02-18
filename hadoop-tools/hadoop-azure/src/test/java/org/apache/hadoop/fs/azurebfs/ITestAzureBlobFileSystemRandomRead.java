@@ -353,7 +353,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
       byte[] expected3 = {(byte) 'b', (byte) 'c', (byte) 'd'};
       byte[] expected4 = {(byte) 'g', (byte) 'h', (byte) 'i'};
 
-      assertEquals(testFileLength, inputStream.available()); //test at offset 0
+      assertEquals(testFileLength, inputStream.available());
       assertEquals(0, inputStream.getPos());
 
       int n = 3;
@@ -401,17 +401,27 @@ public class ITestAzureBlobFileSystemRandomRead extends
               inputStream.available());
 
       skipped = inputStream.skip(testFileLength + 1); //goes to last byte
-      assertEquals(1, inputStream.available());
+      assertEquals("One byte should be available after skip to EOF", 1,
+          inputStream.available());
       bytesRead = inputStream.read(buffer);
-      assertEquals(1, bytesRead);
-      assertEquals(testFileLength, inputStream.getPos());
-
-      byte[] buffer2 = new byte[getConfiguration().getReadBufferSize() + 10];
-      inputStream.seek(0);
-      bytesRead = inputStream.read(buffer2);
-      assertEquals(buffer2.length, bytesRead);
-      assertEquals(testFileLength - buffer2.length, inputStream.available());
+      assertEquals("Incorrect read byte count", 1, bytesRead);
+      assertEquals("Incorrect position post read", testFileLength,
+          inputStream.getPos());
     }
+  }
+
+  @Test
+  public void testZeroByteFile() throws IOException {
+    Path emptyFile = new Path("/emptyFile");
+    getFileSystem().create(emptyFile);
+    FSDataInputStream in = getFileSystem().open(emptyFile);
+    assertEquals("Initial position of inputstream in empty fils 0", 0,
+        in.getPos());
+    in.seek(0);
+    assertEquals("Seek to 0 should succeed", 0, in.getPos());
+    in.skip(0);
+    assertEquals("Skip 0 should succeed", 0, in.getPos());
+    assertEquals("Available bytes in empty file is 0", 0, in.available());
   }
 
   /**
