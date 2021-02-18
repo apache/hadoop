@@ -206,10 +206,10 @@ public class ITestAzureBlobFileSystemRandomRead extends
 
       inputStream.seek(testFileLength - 1); //last valid pos, negative skip
       skipped = inputStream.skip(-testFileLength+1);
-      assertEquals(-testFileLength + 1, skipped);
+      assertEquals("Incorrect skip count", -testFileLength + 1, skipped);
 
       skipped = inputStream.skip(testFileLength); //EOF
-      assertEquals(testFileLength - 1, skipped);
+      assertEquals("Incorrect skip count", testFileLength - 1, skipped);
 
       long elapsedTimeMs = timer.elapsedTimeMs();
       assertTrue(
