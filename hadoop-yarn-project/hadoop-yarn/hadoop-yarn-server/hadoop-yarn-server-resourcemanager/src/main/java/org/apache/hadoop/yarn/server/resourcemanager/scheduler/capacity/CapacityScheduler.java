@@ -1950,11 +1950,13 @@ public class CapacityScheduler extends
         if (!appAddedEvent.getIsAppRecovering()) {
           addApplication(appAddedEvent.getApplicationId(), queueName,
               appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
-              appAddedEvent.getPlacementContext(), appAddedEvent.isUnmanagedAM());
+              appAddedEvent.getPlacementContext(),
+              appAddedEvent.isUnmanagedAM());
         } else {
           addApplicationOnRecovery(appAddedEvent.getApplicationId(), queueName,
               appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
-              appAddedEvent.getPlacementContext(), appAddedEvent.isUnmanagedAM());
+              appAddedEvent.getPlacementContext(),
+              appAddedEvent.isUnmanagedAM());
         }
       }
     }
