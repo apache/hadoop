@@ -88,6 +88,8 @@ public final class FSImageFormatProtobuf {
   private static final Logger LOG = LoggerFactory
       .getLogger(FSImageFormatProtobuf.class);
 
+  private static volatile boolean enableParallelLoad = false;
+
   public static final class LoaderContext {
     private SerialNumberManager.StringTable stringTable;
     private final ArrayList<INodeReference> refList = Lists.newArrayList();
@@ -582,9 +584,7 @@ public final class FSImageFormatProtobuf {
   }
 
   private static boolean enableParallelSaveAndLoad(Configuration conf) {
-    boolean loadInParallel =
-        conf.getBoolean(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY,
-            DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT);
+    boolean loadInParallel = enableParallelLoad;
     boolean compressionEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY,
         DFSConfigKeys.DFS_IMAGE_COMPRESS_DEFAULT);
@@ -598,6 +598,20 @@ public final class FSImageFormatProtobuf {
       }
     }
     return loadInParallel;
+  }
+
+  public static void initParallelLoad(Configuration conf) {
+    enableParallelLoad =
+        conf.getBoolean(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY,
+            DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT);
+  }
+
+  public static void refreshParallelSaveAndLoad(boolean enable) {
+    enableParallelLoad = enable;
+  }
+
+  public static boolean getEnableParallelLoad() {
+    return enableParallelLoad;
   }
 
   public static final class Saver {
@@ -638,10 +652,6 @@ public final class FSImageFormatProtobuf {
 
     public int getInodesPerSubSection() {
       return inodesPerSubSection;
-    }
-
-    public boolean shouldWriteSubSections() {
-      return writeSubSections;
     }
 
     /**
