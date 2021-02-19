@@ -616,4 +616,22 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
         toNodeId("n1"), toSet(NodeLabel.newInstance("p2", true)),
         toNodeId("n2"), toSet(NodeLabel.newInstance("p3", false))));
   }
+
+  @Test(timeout = 5000)
+  public void testRemoveNodeLabelsInfo() throws IOException {
+    mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("p1", true)));
+    mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("p2", true)));
+    mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p1")));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p2")));
+
+    Map<String, Set<NodeId>> labelsToNodes = mgr.getLabelsToNodes();
+    assertLabelsToNodesEquals(
+        labelsToNodes,
+        ImmutableMap.of(
+        "p2", toSet(toNodeId("n1:1"), toNodeId("n1:0"))));
+
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), new HashSet()));
+    Map<String, Set<NodeId>> labelsToNodes2 = mgr.getLabelsToNodes();
+    Assert.assertEquals(labelsToNodes2.get("p2"), null);
+  }
 }
