@@ -64,7 +64,7 @@ public class TestCSMappingPlacementRule {
       "alice", ImmutableSet.of("p_alice", "user", "developer"),
       "bob", ImmutableSet.of("p_bob", "user", "developer"),
       "charlie", ImmutableSet.of("p_charlie", "user", "tester"),
-      "dave", ImmutableSet.of("user", "tester"),
+      "dave", ImmutableSet.of("user"),
       "emily", ImmutableSet.of("user", "tester", "developer")
   );
 
@@ -90,6 +90,7 @@ public class TestCSMappingPlacementRule {
         .withQueue("root.disambiguous.deep.disambiuser.disambi")
         .withQueue("root.disambiguous.deep.group.developer")
         .withManagedParentQueue("root.disambiguous.deep.dman")
+        .withDynamicParentQueue("root.dynamic")
         .build();
 
     when(queueManager.getQueue(isNull())).thenReturn(null);
@@ -151,8 +152,9 @@ public class TestCSMappingPlacementRule {
   private void assertReject(String message, CSMappingPlacementRule engine,
       ApplicationSubmissionContext asc, String user) {
     try {
-      engine.getPlacementForApp(asc, user);
-      fail(message);
+      ApplicationPlacementContext apc = engine.getPlacementForApp(asc, user);
+      fail("Unexpected queue result: " + apc.getFullQueuePath() + " - " +
+          message);
     } catch (YarnException e) {
       //To prevent PlacementRule chaining present in PlacementManager
       //when an application is rejected an exception is thrown to make sure
@@ -483,14 +485,36 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testGroupMatching() throws IOException {
+  public void testGroupTargetMatching() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
 
-    rules.add(createGroupMapping("p_alice", "root.man.p_alice"));
-    rules.add(createGroupMapping("developer", "root.man.developer"));
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("alice"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "root.man.%primary_group", true))
+                .setFallbackReject()));
 
-    //everybody is in the user group, this should catch all
-    rules.add(createGroupMapping("user", "root.man.user"));
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("bob"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "root.dynamic.%secondary_group.%user", true))
+                .setFallbackReject()));
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("charlie"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "root.man.%secondary_group", true))
+                .setFallbackReject()));
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("dave"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "root.dynamic.%secondary_group.%user", true))
+                .setFallbackReject()));
 
     CSMappingPlacementRule engine = setupEngine(true, rules);
     ApplicationSubmissionContext app = createApp("app");
@@ -499,12 +523,15 @@ public class TestCSMappingPlacementRule {
         "Alice should be placed to root.man.p_alice based on her primary group",
         engine, app, "alice", "root.man.p_alice");
     assertPlace(
-        "Bob should be placed to root.man.developer based on his developer " +
-        "group", engine, app, "bob", "root.man.developer");
-    assertPlace(
-        "Charlie should be placed to root.man.user because he is not a " +
-        "developer nor in the p_alice group", engine, app, "charlie",
-        "root.man.user");
+        "Bob should be placed to root.dynamic.developer.bob based on his " +
+        "secondary group, since we have a queue named 'developer', bob " +
+        "identifies as a user with secondary_group 'developer'", engine, app,
+        "bob", "root.dynamic.developer.bob");
+    assertReject("Charlie should get rejected because he neither of his" +
+        "groups have an ambiguous queue, so effectively he has no secondary " +
+        "group", engine, app, "charlie");
+    assertReject("Dave should get rejected because he has no secondary group",
+        engine, app, "dave");
   }
 
   void assertConfigTestResult(List<MappingRule> rules) {
