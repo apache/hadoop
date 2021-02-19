@@ -20,7 +20,6 @@ package org.apache.hadoop;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-
 /**
  * Indicates that a method has been passed illegal or invalid argument. This
  * exception is thrown instead of IllegalArgumentException to differentiate the
