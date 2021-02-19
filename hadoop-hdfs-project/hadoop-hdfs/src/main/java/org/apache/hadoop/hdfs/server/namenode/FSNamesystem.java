@@ -8077,7 +8077,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     checkErasureCodingSupported(operationName);
     boolean success = false;
-    LOG.info("Disable the erasure coding policy " + ecPolicyName);
     try {
       writeLock();
       try {
