@@ -2258,10 +2258,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     try {
       if (ecPolicyName == null) {
         ecPolicyName = defaultECPolicyName;
-        LOG.trace("No policy name is specified, " +
+        LOG.debug("No policy name is specified, " +
             "set the default policy name instead");
       }
-      LOG.trace("Set erasure coding policy " + ecPolicyName + " on " + src);
+      LOG.debug("Set erasure coding policy {} on {}", ecPolicyName, src);
       namesystem.setErasureCodingPolicy(src, ecPolicyName, cacheEntry != null);
       success = true;
     } finally {
@@ -2491,6 +2491,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     boolean success = false;
     try {
+      LOG.debug("Unset erasure coding policy on {}", src);
       namesystem.unsetErasureCodingPolicy(src, cacheEntry != null);
       success = true;
     } finally {
