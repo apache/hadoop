@@ -190,10 +190,10 @@ public class DataNodeMetrics {
 
   @Metric("Number of replaceBlock ops between" +
       " storage types on same host with local copy")
-  private MutableCounterLong replaceBlockOpOnSameHostWithCopy;
+  private MutableCounterLong replaceBlockOpOnSameHost;
   @Metric("Number of replaceBlock ops between" +
-      " storage types on same disk mount using hardlink")
-  private MutableCounterLong replaceBlockOpOnSameHostWithHardlink;
+      " storage types on same disk mount with same disk tiering feature")
+  private MutableCounterLong replaceBlockOpOnSameMount;
   @Metric("Number of replaceBlock ops to another node")
   private MutableCounterLong replaceBlockOpToOtherHost;
 
@@ -721,12 +721,12 @@ public class DataNodeMetrics {
     packetsSlowWriteToOsCache.incr();
   }
 
-  public void incrReplaceBlockOpOnSameHostWithHardlink() {
-    replaceBlockOpOnSameHostWithHardlink.incr();
+  public void incrReplaceBlockOpOnSameMount() {
+    replaceBlockOpOnSameMount.incr();
   }
 
-  public void incrReplaceBlockOpOnSameHostWithCopy() {
-    replaceBlockOpOnSameHostWithCopy.incr();
+  public void incrReplaceBlockOpOnSameHost() {
+    replaceBlockOpOnSameHost.incr();
   }
 
   public void incrReplaceBlockOpToOtherHost() {

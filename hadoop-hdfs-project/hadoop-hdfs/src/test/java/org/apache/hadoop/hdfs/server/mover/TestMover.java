@@ -225,7 +225,7 @@ public class TestMover {
         testReplaceBlockOpLocalityMetrics(0, 0, 1, rb);
       } else if (conf.getBoolean(
           DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, false)) {
-        testReplaceBlockOpLocalityMetrics(0, 1, 0, rb);
+        testReplaceBlockOpLocalityMetrics(1, 1, 0, rb);
       } else {
         testReplaceBlockOpLocalityMetrics(1, 0, 0, rb);
       }
@@ -235,14 +235,14 @@ public class TestMover {
   }
 
   private void testReplaceBlockOpLocalityMetrics(
-      long sameHostWithCopy,
-      long sameHostWithHardLink,
+      long sameHost,
+      long sameMount,
       long otherHost,
       MetricsRecordBuilder rb) {
-    assertCounter("ReplaceBlockOpOnSameHostWithCopy",
-        sameHostWithCopy, rb);
-    assertCounter("ReplaceBlockOpOnSameHostWithHardlink",
-        sameHostWithHardLink, rb);
+    assertCounter("ReplaceBlockOpOnSameHost",
+        sameHost, rb);
+    assertCounter("ReplaceBlockOpOnSameMount",
+        sameMount, rb);
     assertCounter("ReplaceBlockOpToOtherHost",
         otherHost, rb);
   }
