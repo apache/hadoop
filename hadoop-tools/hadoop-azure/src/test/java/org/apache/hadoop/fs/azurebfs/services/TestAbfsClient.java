@@ -103,7 +103,7 @@ public final class TestAbfsClient {
   }
 
   private String getUserAgentString(AbfsConfiguration config,
-      boolean includeSSLProvider) throws MalformedURLException {
+      boolean includeSSLProvider) throws IOException {
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().build();
     AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
         config, (AccessTokenProvider) null, abfsClientContext);
@@ -250,8 +250,7 @@ public final class TestAbfsClient {
 
   public static AbfsClient createTestClientFromCurrentContext(
       AbfsClient baseAbfsClientInstance,
-      AbfsConfiguration abfsConfig)
-      throws AzureBlobFileSystemException {
+      AbfsConfiguration abfsConfig) throws IOException {
     AuthType currentAuthType = abfsConfig.getAuthType(
         abfsConfig.getAccountName());
 
