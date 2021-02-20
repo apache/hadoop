@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include <unistd.h>
 
 #include "hdfspp/hdfs_ext.h"
 #include "common/util_c.h"
@@ -43,10 +42,10 @@ const char *catch_exit   = "Exiting the signal handler.\n";
 // Print to stdout without calling malloc or otherwise indirectly modify userspace state.
 // Write calls to stdout may still interleave with stuff coming from elsewhere.
 static void sighandler_direct_stdout(const char *msg) {
-  if(!msg)
+  if(!msg) {
     return;
-  ssize_t res = write(1 /*posix stdout fd*/, msg, strlen(msg));
-  (void)res;
+  }
+  printf("%s", msg);
 }
 
 static void sig_catch(int val) {
