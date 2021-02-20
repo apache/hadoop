@@ -101,6 +101,7 @@
     <zookeeper.version>3.5.6</zookeeper.version>
     <curator.version>4.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
+    <spotbugs.version>4.0.6</spotbugs.version>
     <dnsjava.version>2.1.7</dnsjava.version>
 
     <guava.version>27.0-jre</guava.version>
@@ -1855,6 +1856,18 @@
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+          <version>${findbugs.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>com.github.spotbugs</groupId>
+              <artifactId>spotbugs</artifactId>
+              <version>${spotbugs.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
           <artifactId>make-maven-plugin</artifactId>
           <version>${make-maven-plugin.version}</version>
         </plugin>
@@ -2085,6 +2098,10 @@
             </fileset>
           </filesets>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

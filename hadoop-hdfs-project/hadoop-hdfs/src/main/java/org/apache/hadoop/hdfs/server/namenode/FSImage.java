@@ -172,6 +172,7 @@ public class FSImage implements Closeable {
 
     this.editLog = FSEditLog.newInstance(conf, storage, editsDirs);
     archivalManager = new NNStorageRetentionManager(conf, storage, editLog);
+    FSImageFormatProtobuf.initParallelLoad(conf);
   }
  
   void format(FSNamesystem fsn, String clusterId, boolean force)
