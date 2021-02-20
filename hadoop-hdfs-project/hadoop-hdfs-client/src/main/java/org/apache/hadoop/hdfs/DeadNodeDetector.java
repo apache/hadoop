@@ -271,6 +271,37 @@ public class DeadNodeDetector extends Daemon {
     }
   }
 
+  /**
+   * Shutdown all the threads.
+   */
+  public void shutdown() {
+    threadShutDown(this);
+    threadShutDown(probeDeadNodesSchedulerThr);
+    threadShutDown(probeSuspectNodesSchedulerThr);
+    probeDeadNodesThreadPool.shutdown();
+    probeSuspectNodesThreadPool.shutdown();
+    rpcThreadPool.shutdown();
+  }
+
+  private static void threadShutDown(Thread thread) {
+    if (thread != null && thread.isAlive()) {
+      thread.interrupt();
+      try {
+        thread.join();
+      } catch (InterruptedException e) {
+      }
+    }
+  }
+
+  @VisibleForTesting
+  boolean isThreadsShutdown() {
+    return !this.isAlive() && !probeDeadNodesSchedulerThr.isAlive()
+        && !probeSuspectNodesSchedulerThr.isAlive()
+        && probeDeadNodesThreadPool.isShutdown()
+        && probeSuspectNodesThreadPool.isShutdown()
+        && rpcThreadPool.isShutdown();
+  }
+
   @VisibleForTesting
   static void setDisabledProbeThreadForTest(
       boolean disabledProbeThreadForTest) {

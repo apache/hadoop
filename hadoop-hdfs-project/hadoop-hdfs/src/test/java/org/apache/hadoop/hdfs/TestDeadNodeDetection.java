@@ -357,6 +357,18 @@ public class TestDeadNodeDetection {
     dfs1.close();
   }
 
+  @Test
+  public void testDeadNodeDetectorThreadsShutdown() throws Exception {
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .newInstance(new URI("hdfs://127.0.0.1:2001/"), conf);
+    DeadNodeDetector detector = dfs.getClient().getDeadNodeDetector();
+    assertNotNull(detector);
+    dfs.close();
+    assertTrue(detector.isThreadsShutdown());
+    detector = dfs.getClient().getDeadNodeDetector();
+    assertNull(detector);
+  }
+
   private void createFile(FileSystem fs, Path filePath) throws IOException {
     FSDataOutputStream out = null;
     try {
