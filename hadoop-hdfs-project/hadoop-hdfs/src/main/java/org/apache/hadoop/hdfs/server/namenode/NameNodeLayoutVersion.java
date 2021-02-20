@@ -89,7 +89,8 @@ public class NameNodeLayoutVersion {
     APPEND_NEW_BLOCK(-62, -61, "Support appending to new block"),
     QUOTA_BY_STORAGE_TYPE(-63, -61, "Support quota for specific storage types"),
     ERASURE_CODING(-64, -61, "Support erasure coding"),
-    EXPANDED_STRING_TABLE(-65, -61, "Support expanded string table in fsimage");
+    EXPANDED_STRING_TABLE(-65, -61, "Support expanded string table in fsimage"),
+    NVDIMM_SUPPORT(-66, -61, "Support NVDIMM storage type");
 
     private final FeatureInfo info;
 

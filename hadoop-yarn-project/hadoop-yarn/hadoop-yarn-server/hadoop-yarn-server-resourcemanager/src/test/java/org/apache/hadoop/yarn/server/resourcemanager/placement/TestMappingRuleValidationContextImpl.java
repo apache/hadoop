@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 
 public class TestMappingRuleValidationContextImpl {
   @Test
-  public void testContextVariables() {
+  public void testContextVariables() throws YarnException {
     //Setting up queue manager and emulated queue hierarchy
     CapacitySchedulerQueueManager qm =
         mock(CapacitySchedulerQueueManager.class);
@@ -79,7 +79,7 @@ public class TestMappingRuleValidationContextImpl {
     try {
       ctx.validateQueuePath(path);
     } catch (YarnException e) {
-      fail("Path '" + path + "' should be VALID");
+      fail("Path '" + path + "' should be VALID: " + e);
     }
   }
 
@@ -93,7 +93,7 @@ public class TestMappingRuleValidationContextImpl {
   }
 
   @Test
-  public void testDynamicQueueValidation() {
+  public void testManagedQueueValidation() {
     //Setting up queue manager and emulated queue hierarchy
     CapacitySchedulerQueueManager qm =
         mock(CapacitySchedulerQueueManager.class);
@@ -123,11 +123,52 @@ public class TestMappingRuleValidationContextImpl {
     assertValidPath(ctx, "managed.%dynamic");
 
     assertInvalidPath(ctx, "root.invalid.%dynamic");
-    assertInvalidPath(ctx, "root.umanaged.%dynamic");
+    assertInvalidPath(ctx, "root.unmanaged.%dynamic");
 
     assertValidPath(ctx, "root.unmanagedwithchild.%user");
     assertValidPath(ctx, "unmanagedwithchild.%user");
   }
+
+  @Test
+  public void testDynamicQueueValidation() {
+    //Setting up queue manager and emulated queue hierarchy
+    CapacitySchedulerQueueManager qm =
+        mock(CapacitySchedulerQueueManager.class);
+
+    MockQueueHierarchyBuilder.create()
+        .withQueueManager(qm)
+        .withQueue("root.unmanaged")
+        .withDynamicParentQueue("root.managed")
+        .withQueue("root.unmanagedwithchild.child")
+        .withQueue("root.leaf")
+        .build();
+    when(qm.getQueue(isNull())).thenReturn(null);
+
+    MappingRuleValidationContextImpl ctx =
+        new MappingRuleValidationContextImpl(qm);
+    try {
+      ctx.addVariable("%dynamic");
+      ctx.addVariable("%user");
+    } catch (YarnException e) {
+      fail("We don't expect the add variable to fail: " + e.getMessage());
+    }
+
+    assertValidPath(ctx, "%dynamic");
+    assertValidPath(ctx, "root.%dynamic");
+    assertValidPath(ctx, "%user.%dynamic");
+    assertValidPath(ctx, "root.managed.%dynamic");
+    assertValidPath(ctx, "managed.%dynamic");
+    assertValidPath(ctx, "managed.static");
+    assertValidPath(ctx, "managed.static.%dynamic");
+    assertValidPath(ctx, "managed.static.%dynamic.%dynamic");
+
+    assertInvalidPath(ctx, "root.invalid.%dynamic");
+    assertInvalidPath(ctx, "root.unmanaged.%dynamic");
+
+    assertValidPath(ctx, "root.unmanagedwithchild.%user");
+    assertValidPath(ctx, "unmanagedwithchild.%user");
+  }
+
 
   @Test
   public void testStaticQueueValidation() {
@@ -142,6 +183,9 @@ public class TestMappingRuleValidationContextImpl {
         .withQueue("root.deep.queue.path")
         .withQueue("root.ambi.ambileaf")
         .withQueue("root.deep.ambi.ambileaf")
+        .withQueue("root.deep.ambi.very.deeepleaf")
+        .withDynamicParentQueue("root.dynamic")
+        .withQueue("root.dynamic.static.static")
         .build();
     when(qm.getQueue(isNull())).thenReturn(null);
 
@@ -160,13 +204,22 @@ public class TestMappingRuleValidationContextImpl {
     assertInvalidPath(ctx, "ambi.ambileaf");
     assertValidPath(ctx, "root.ambi.ambileaf");
 
+    assertInvalidPath(ctx, "root.dynamic.static");
+    assertValidPath(ctx, "root.dynamic.static.static");
+    //Invalid because static is already created as a non-dynamic parent queue
+    assertInvalidPath(ctx, "root.dynamic.static.any");
+    //Valid because 'any' is not created yet
+    assertValidPath(ctx, "root.dynamic.any.thing");
+    //Too deep, dynamic is the last dynamic parent
+    assertInvalidPath(ctx, "root.dynamic.any.thing.deep");
 
     assertValidPath(ctx, "root.managed.a");
     assertInvalidPath(ctx, "root.deep");
     assertInvalidPath(ctx, "deep");
     assertInvalidPath(ctx, "deep.queue");
     assertInvalidPath(ctx, "root.deep.queue");
-    assertInvalidPath(ctx, "deep.queue.path");
+    assertValidPath(ctx, "deep.queue.path");
+    assertInvalidPath(ctx, "ambi.very.deeepleaf");
     assertValidPath(ctx, "queue.path");
     assertInvalidPath(ctx, "queue.invalidPath");
     assertValidPath(ctx, "path");

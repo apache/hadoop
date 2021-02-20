@@ -26,9 +26,29 @@ and reliable commitment of output to S3.
 For details on their internal design, see
 [S3A Committers: Architecture and Implementation](./committer_architecture.html).
 
+### January 2021 Update
+
+Now that S3 is fully consistent, problems related to inconsistent directory
+listings have gone. However the rename problem exists: committing work by
+renaming directories is unsafe as well as horribly slow.
+
+This architecture document, and the committers, were written at a time when S3
+was inconsistent. The two committers addressed this problem differently
+
+* Staging Committer: rely on a cluster HDFS filesystem for safely propagating
+  the lists of files to commit from workers to the job manager/driver.
+* Magic Committer: require S3Guard to offer consistent directory listings on the
+  object store.
+
+With consistent S3, the Magic Committer can be safely used with any S3 bucket.
+The choice of which to use, then, is matter for experimentation.
+
+This document was written in 2017, a time when S3 was only
+consistent when an extra consistency layer such as S3Guard was used. The
+document indicates where requirements/constraints which existed then are now
+obsolete.
 
 ## Introduction: The Commit Problem
-
 
 Apache Hadoop MapReduce (and behind the scenes, Apache Spark) often write
 the output of their work to filesystems
@@ -50,21 +70,18 @@ or it is at the destination, -in which case the rename actually succeeded.
 
 **The S3 object store and the `s3a://` filesystem client cannot meet these requirements.*
 
-1. Amazon S3 has inconsistent directory listings unless S3Guard is enabled.
-1. The S3A mimics `rename()` by copying files and then deleting the originals.
+Although S3A is (now) consistent, the S3A client still mimics `rename()`
+by copying files and then deleting the originals.
 This can fail partway through, and there is nothing to prevent any other process
 in the cluster attempting a rename at the same time.
 
 As a result,
 
-* Files my not be listed, hence not renamed into place.
-* Deleted files may still be discovered, confusing the rename process to the point
-of failure.
 * If a rename fails, the data is left in an unknown state.
 * If more than one process attempts to commit work simultaneously, the output
 directory may contain the results of both processes: it is no longer an exclusive
 operation.
-*. While S3Guard may deliver the listing consistency, commit time is still
+*. Commit time is still
 proportional to the amount of data created. It still can't handle task failure.
 
 **Using the "classic" `FileOutputCommmitter` to commit work to Amazon S3 risks
@@ -163,10 +180,8 @@ and restarting the job.
 whose output is in the job attempt directory, *and only rerunning all uncommitted tasks*.
 
 
-None of this algorithm works safely or swiftly when working with "raw" AWS S3 storage:
-* Directory listing can be inconsistent: the tasks and jobs may not list all work to
-be committed.
-* Renames go from being fast, atomic operations to slow operations which can fail partway through.
+This algorithm does not works safely or swiftly with AWS S3 storage because 
+tenames go from being fast, atomic operations to slow operations which can fail partway through.
 
 This then is the problem which the S3A committers address:
 
@@ -341,12 +356,11 @@ task commit.
 
 However, it has extra requirements of the filesystem
 
-1. It requires a consistent object store, which for Amazon S3,
-means that [S3Guard](./s3guard.html) must be enabled. For third-party stores,
-consult the documentation.
+1. [Obsolete] It requires a consistent object store.
 1. The S3A client must be configured to recognize interactions
 with the magic directories and treat them specially.
 
+Now that Amazon S3 is consistent, the magic committer is enabled by default.
 
 It's also not been field tested to the extent of Netflix's committer; consider
 it the least mature of the committers.
@@ -358,14 +372,15 @@ it the least mature of the committers.
 Partitioned Committer. Make sure you have enough hard disk capacity for all staged data.
 Do not use it in other situations.
 
-1. If you know that your object store is consistent, or that the processes
-writing data use S3Guard, use the Magic Committer for higher performance
-writing of large amounts of data.
+1. If you do not have a shared cluster store: use the Magic Committer.
+   
+1. If you are writing large amounts of data: use the Magic Committer.
 
 1. Otherwise: use the directory committer, making sure you have enough
 hard disk capacity for all staged data.
 
-Put differently: start with the Directory Committer.
+Now that S3 is consistent, there are fewer reasons not to use the Magic Committer.
+Experiment with both to see which works best for your work.
 
 ## Switching to an S3A Committer
 
@@ -499,9 +514,6 @@ performance.
 
 ### FileSystem client setup
 
-1. Use a *consistent* S3 object store. For Amazon S3, this means enabling
-[S3Guard](./s3guard.html). For S3-compatible filesystems, consult the filesystem
-documentation to see if it is consistent, hence compatible "out of the box".
 1. Turn the magic on by `fs.s3a.committer.magic.enabled"`
 
 ```xml
@@ -514,8 +526,6 @@ documentation to see if it is consistent, hence compatible "out of the box".
 </property>
 ```
 
-*Do not use the Magic Committer on an inconsistent S3 object store. For
-Amazon S3, that means S3Guard must *always* be enabled.
 
 
 ### Enabling the committer
@@ -569,11 +579,9 @@ Conflict management is left to the execution engine itself.
 
 <property>
   <name>fs.s3a.committer.magic.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Enable support in the filesystem for the S3 "Magic" committer.
-    When working with AWS S3, S3Guard must be enabled for the destination
-    bucket, as consistent metadata listings are required.
   </description>
 </property>
 
@@ -677,6 +685,27 @@ Conflict management is left to the execution engine itself.
 
 ```
 
+### Disabling magic committer path rewriting
+
+The magic committer recognizes when files are created under paths with `__magic/` as a parent directory
+and redirects the upload to a different location, adding the information needed to complete the upload
+in the job commit operation.
+
+If, for some reason, you *do not* want these paths to be redirected and not manifest until later,
+the feature can be disabled by setting `fs.s3a.committer.magic.enabled` to false.
+
+By default it is true.
+
+```xml
+<property>
+  <name>fs.s3a.committer.magic.enabled</name>
+  <value>true</value>
+  <description>
+    Enable support in the S3A filesystem for the "Magic" committer.
+  </description>
+</property>
+```
+
 ## <a name="concurrent-jobs"></a> Concurrent Jobs writing to the same destination
 
 It is sometimes possible for multiple jobs to simultaneously write to the same destination path.
@@ -726,7 +755,6 @@ in configuration option fs.s3a.committer.magic.enabled
 The Job is configured to use the magic committer, but the S3A bucket has not been explicitly
 declared as supporting it.
 
-The destination bucket **must** be declared as supporting the magic committer.
 
 This can be done for those buckets which are known to be consistent, either
 because [S3Guard](s3guard.html) is used to provide consistency,
@@ -738,10 +766,6 @@ or because the S3-compatible filesystem is known to be strongly consistent.
   <value>true</value>
 </property>
 ```
-
-*IMPORTANT*: only enable the magic committer against object stores which
-offer consistent listings. By default, Amazon S3 does not do this -which is
-why the option `fs.s3a.committer.magic.enabled` is disabled by default.
 
 
 Tip: you can verify that a bucket supports the magic committer through the

@@ -66,11 +66,11 @@ import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 public class TestReconstructStripedFile {
   public static final Logger LOG =
@@ -85,9 +85,9 @@ public class TestReconstructStripedFile {
   private int dnNum;
 
   static {
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.TRACE);
   }
 
   enum ReconstructionType {

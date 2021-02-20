@@ -78,10 +78,6 @@ public class FSConfigToCSConfigConverter {
   private static final String FAIR_SCHEDULER_XML =
       "fair-scheduler.xml";
 
-  public static final String WARNING_TEXT =
-      "WARNING: This feature is experimental and not intended " +
-          "for production use!";
-
   private Resource clusterResource;
   private boolean preemptionEnabled = false;
   private int queueMaxAppsDefault;
@@ -106,6 +102,7 @@ public class FSConfigToCSConfigConverter {
   private boolean convertPlacementRules = true;
   private String outputDirectory;
   private boolean rulesToFile;
+  private boolean usePercentages;
 
   public FSConfigToCSConfigConverter(FSConfigToCSConfigRuleHandler
       ruleHandler, ConversionOptions conversionOptions) {
@@ -123,6 +120,7 @@ public class FSConfigToCSConfigConverter {
     this.convertPlacementRules = params.isConvertPlacementRules();
     this.outputDirectory = params.getOutputDirectory();
     this.rulesToFile = params.isPlacementRulesToFile();
+    this.usePercentages = params.isUsePercentages();
     prepareOutputFiles(params.isConsole());
     loadConversionRules(params.getConversionRulesConfig());
     Configuration inputYarnSiteConfig = getInputYarnSiteConfig(params);
@@ -225,8 +223,6 @@ public class FSConfigToCSConfigConverter {
 
   @VisibleForTesting
   void convert(Configuration inputYarnSiteConfig) throws Exception {
-    System.out.println(WARNING_TEXT);
-
     // initialize Fair Scheduler
     RMContext ctx = new RMContextImpl();
     PlacementManager placementManager = new PlacementManager();
@@ -306,6 +302,7 @@ public class FSConfigToCSConfigConverter {
         .withQueueMaxAppsDefault(queueMaxAppsDefault)
         .withConversionOptions(conversionOptions)
         .withDrfUsed(drfUsed)
+        .withPercentages(usePercentages)
         .build();
 
     queueConverter.convertQueueHierarchy(rootQueue);
@@ -324,7 +321,7 @@ public class FSConfigToCSConfigConverter {
 
       MappingRulesDescription desc =
           placementConverter.convertPlacementPolicy(placementManager,
-              ruleHandler, capacitySchedulerConfig);
+              ruleHandler, capacitySchedulerConfig, usePercentages);
 
       ObjectMapper mapper = new ObjectMapper();
       // close output stream if we write to a file, leave it open otherwise
@@ -342,6 +339,7 @@ public class FSConfigToCSConfigConverter {
 
       capacitySchedulerConfig.set(MAPPING_RULE_FORMAT,
           MAPPING_RULE_FORMAT_JSON);
+      capacitySchedulerConfig.setOverrideWithQueueMappings(true);
       if (!rulesToFile) {
         String json =
             ((ByteArrayOutputStream)mappingRulesOutputStream)

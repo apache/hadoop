@@ -237,9 +237,8 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
       // only one rack
       return new BlockPlacementStatusDefault(1, 1, 1);
     }
-    // 1. Check that all locations are different.
-    // 2. Count locations on different racks.
-    Set<String> racks = new TreeSet<>();
+    // Count locations on different racks.
+    Set<String> racks = new HashSet<>();
     for (DatanodeInfo dn : locs) {
       racks.add(dn.getNetworkLocation());
     }

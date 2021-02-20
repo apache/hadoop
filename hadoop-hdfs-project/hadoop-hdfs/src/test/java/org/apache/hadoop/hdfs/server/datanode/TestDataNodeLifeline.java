@@ -57,8 +57,6 @@ import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.apache.log4j.Level;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -70,6 +68,7 @@ import org.mockito.stubbing.Answer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.util.function.Supplier;
 
@@ -82,7 +81,7 @@ public class TestDataNodeLifeline {
       TestDataNodeLifeline.class);
 
   static {
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
   }
 
   @Rule

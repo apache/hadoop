@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.ipc.WeightedTimeCostProvider;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -385,6 +386,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public static final Pattern RESOURCE_PATTERN = Pattern.compile(PATTERN_FOR_ABSOLUTE_RESOURCE);
 
+  private static final String WEIGHT_SUFFIX = "w";
+
   public static final String MAX_PARALLEL_APPLICATIONS = "max-parallel-apps";
 
   public static final int DEFAULT_MAX_PARALLEL_APPLICATIONS = Integer.MAX_VALUE;
@@ -491,12 +494,45 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       float percent) {
     setFloat(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
   }
-  
+
+  private void throwExceptionForUnexpectedWeight(float weight, String queue,
+      String label) {
+    if ((weight < -1e-6 && Math.abs(weight + 1) > 1e-6) || weight > 10000) {
+      throw new IllegalArgumentException(
+          "Illegal " + "weight=" + weight + " for queue=" + queue + "label="
+              + label
+              + ". Acceptable values: [0, 10000], -1 is same as not set");
+    }
+  }
+
+  public float getNonLabeledQueueWeight(String queue) {
+    String configuredValue = get(getQueuePrefix(queue) + CAPACITY);
+    float weight = extractFloatValueFromWeightConfig(configuredValue);
+    throwExceptionForUnexpectedWeight(weight, queue, "");
+    return weight;
+  }
+
+  public void setNonLabeledQueueWeight(String queue, float weight) {
+    set(getQueuePrefix(queue) + CAPACITY, weight + WEIGHT_SUFFIX);
+  }
+
+  public void setLabeledQueueWeight(String queue, String label, float weight) {
+    set(getNodeLabelPrefix(queue, label) + CAPACITY, weight + WEIGHT_SUFFIX);
+  }
+
+  public float getLabeledQueueWeight(String queue, String label) {
+    String configuredValue = get(getNodeLabelPrefix(queue, label) + CAPACITY);
+    float weight = extractFloatValueFromWeightConfig(configuredValue);
+    throwExceptionForUnexpectedWeight(weight, queue, label);
+    return weight;
+  }
+
   public float getNonLabeledQueueCapacity(String queue) {
     String configuredCapacity = get(getQueuePrefix(queue) + CAPACITY);
-    boolean matcher = (configuredCapacity != null)
+    boolean absoluteResourceConfigured = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
-    if (matcher) {
+    if (absoluteResourceConfigured || configuredWeightAsCapacity(
+        configuredCapacity)) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
       // updated. Once nodes are added/removed in cluster, capacity in
@@ -729,31 +765,51 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
     return Collections.unmodifiableSet(set);
   }
-  
-  private float internalGetLabeledQueueCapacity(String queue, String label, String suffix,
-      float defaultValue) {
+
+  private boolean configuredWeightAsCapacity(String configureValue) {
+    if (configureValue == null) {
+      return false;
+    }
+    return configureValue.endsWith(WEIGHT_SUFFIX);
+  }
+
+  private float extractFloatValueFromWeightConfig(String configureValue) {
+    if (!configuredWeightAsCapacity(configureValue)) {
+      return -1f;
+    } else {
+      return Float.valueOf(
+          configureValue.substring(0, configureValue.indexOf(WEIGHT_SUFFIX)));
+    }
+  }
+
+  private float internalGetLabeledQueueCapacity(String queue, String label,
+      String suffix, float defaultValue) {
     String capacityPropertyName = getNodeLabelPrefix(queue, label) + suffix;
     String configuredCapacity = get(capacityPropertyName);
-    boolean matcher = (configuredCapacity != null)
-        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
-    if (matcher) {
+    boolean absoluteResourceConfigured =
+        (configuredCapacity != null) && RESOURCE_PATTERN.matcher(
+            configuredCapacity).find();
+    if (absoluteResourceConfigured || configuredWeightAsCapacity(
+        configuredCapacity)) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
-      // root.From AbstractCSQueue, absolute resource will be parsed and
-      // updated. Once nodes are added/removed in cluster, capacity in
-      // percentage will also be re-calculated.
+      // root.From AbstractCSQueue, absolute resource, and weight will be parsed
+      // and updated separately. Once nodes are added/removed in cluster,
+      // capacity is percentage will also be re-calculated.
       return defaultValue;
     }
 
     float capacity = getFloat(capacityPropertyName, defaultValue);
     if (capacity < MINIMUM_CAPACITY_VALUE
         || capacity > MAXIMUM_CAPACITY_VALUE) {
-      throw new IllegalArgumentException("Illegal capacity of " + capacity
-          + " for node-label=" + label + " in queue=" + queue
-          + ", valid capacity should in range of [0, 100].");
+      throw new IllegalArgumentException(
+          "Illegal capacity of " + capacity + " for node-label=" + label
+              + " in queue=" + queue
+              + ", valid capacity should in range of [0, 100].");
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("CSConf - getCapacityOfLabel: prefix="
-          + getNodeLabelPrefix(queue, label) + ", capacity=" + capacity);
+      LOG.debug(
+          "CSConf - getCapacityOfLabel: prefix=" + getNodeLabelPrefix(queue,
+              label) + ", capacity=" + capacity);
     }
     return capacity;
   }
@@ -1953,6 +2009,25 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       AUTO_CREATE_CHILD_QUEUE_PREFIX + "enabled";
 
   @Private
+  private static final String AUTO_QUEUE_CREATION_V2_PREFIX =
+      "auto-queue-creation-v2.";
+
+  @Private
+  public static final String AUTO_QUEUE_CREATION_V2_ENABLED =
+      AUTO_QUEUE_CREATION_V2_PREFIX + "enabled";
+
+  @Private
+  public static final String AUTO_QUEUE_CREATION_V2_MAX_QUEUES =
+      AUTO_QUEUE_CREATION_V2_PREFIX + "max-queues";
+
+  @Private
+  public static final int
+      DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES = 1000;
+
+  @Private
+  public static final boolean DEFAULT_AUTO_QUEUE_CREATION_ENABLED = false;
+
+  @Private
   public static final String AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX =
       "leaf-queue-template";
 
@@ -1986,6 +2061,20 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setBoolean(getQueuePrefix(queuePath) +
             AUTO_CREATE_CHILD_QUEUE_ENABLED,
         autoCreationEnabled);
+  }
+
+  public void setAutoQueueCreationV2Enabled(String queuePath,
+      boolean autoQueueCreation) {
+    setBoolean(
+        getQueuePrefix(queuePath) + AUTO_QUEUE_CREATION_V2_ENABLED,
+        autoQueueCreation);
+  }
+
+  public boolean isAutoQueueCreationV2Enabled(String queuePath) {
+    boolean isAutoQueueCreation = getBoolean(
+        getQueuePrefix(queuePath) + AUTO_QUEUE_CREATION_V2_ENABLED,
+        DEFAULT_AUTO_QUEUE_CREATION_ENABLED);
+    return isAutoQueueCreation;
   }
 
   /**
@@ -2047,6 +2136,28 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getInt(getQueuePrefix(queuePath) +
             AUTO_CREATE_QUEUE_MAX_QUEUES,
         DEFAULT_AUTO_CREATE_QUEUE_MAX_QUEUES);
+  }
+
+  /**
+   * Get the max number of queues that are allowed to be created under
+   * a parent queue which allowed auto creation v2.
+   *
+   * @param queuePath the parent queue's path
+   * @return the max number of queues allowed to be auto created,
+   * in new auto created.
+   */
+  @Private
+  public int getAutoCreatedQueuesV2MaxChildQueuesLimit(String queuePath) {
+    return getInt(getQueuePrefix(queuePath) +
+            AUTO_QUEUE_CREATION_V2_MAX_QUEUES,
+        DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES);
+  }
+
+  @VisibleForTesting
+  public void setAutoCreatedQueuesV2MaxChildQueuesLimit(String queuePath,
+      int maxQueues) {
+    setInt(getQueuePrefix(queuePath) +
+        AUTO_QUEUE_CREATION_V2_MAX_QUEUES, maxQueues);
   }
 
   @Private

@@ -27,6 +27,7 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -601,5 +602,12 @@ public class SchedulerUtils {
     appAttempt.addRMContainer(container.getId(), rmContainer);
     node.allocateContainer(rmContainer);
     return rmContainer;
+  }
+
+  public static boolean isNodeHeartbeated(SchedulerNode node,
+      long skipNodeInterval) {
+    long timeElapsedFromLastHeartbeat =
+        Time.monotonicNow() - node.getLastHeartbeatMonotonicTime();
+    return timeElapsedFromLastHeartbeat <= skipNodeInterval;
   }
 }

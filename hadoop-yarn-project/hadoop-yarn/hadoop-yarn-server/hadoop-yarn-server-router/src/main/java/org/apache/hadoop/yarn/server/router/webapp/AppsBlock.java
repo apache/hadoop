@@ -24,6 +24,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
+import com.sun.jersey.api.client.Client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -53,10 +54,12 @@ public class AppsBlock extends HtmlBlock {
   protected void render(Block html) {
     // Get the applications from the Resource Managers
     Configuration conf = this.router.getConfig();
+    Client client = RouterWebServiceUtil.createJerseyClient(conf);
     String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
-    AppsInfo apps = RouterWebServiceUtil.genericForward(webAppAddress, null,
-        AppsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, null, conf);
+    AppsInfo apps = RouterWebServiceUtil
+        .genericForward(webAppAddress, null, AppsInfo.class, HTTPMethods.GET,
+            RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, null, conf,
+            client);
 
     setTitle("Applications");
 

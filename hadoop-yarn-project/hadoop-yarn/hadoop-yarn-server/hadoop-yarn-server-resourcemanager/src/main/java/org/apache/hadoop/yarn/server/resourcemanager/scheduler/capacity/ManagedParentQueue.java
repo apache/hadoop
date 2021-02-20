@@ -20,9 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue.CapacityConfigType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
     .FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -180,9 +182,10 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
     //Load template capacities
     QueueCapacities queueCapacities = new QueueCapacities(false);
-    CSQueueUtils.loadUpdateAndCheckCapacities(csContext.getConfiguration()
+    CSQueueUtils.loadCapacitiesByLabelsFromConf(csContext.getConfiguration()
             .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
-        csContext.getConfiguration(), queueCapacities, getQueueCapacities());
+        queueCapacities,
+        csContext.getConfiguration());
 
 
     /**
@@ -266,6 +269,11 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       ManagedParentQueue parentQueue =
           (ManagedParentQueue) childQueue.getParent();
 
+      if (parentQueue == null) {
+        throw new SchedulerDynamicEditException(
+            "Parent Queue is null, should not add child queue!");
+      }
+
       String leafQueuePath = childQueue.getQueuePath();
       int maxQueues = conf.getAutoCreatedQueuesMaxChildQueuesLimit(
           parentQueue.getQueuePath());
@@ -289,6 +297,9 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
         }
       }
 
+      ((GuaranteedOrZeroCapacityOverTimePolicy) queueManagementPolicy)
+          .updateTemplateAbsoluteCapacities(parentQueue.getQueueCapacities());
+
       AutoCreatedLeafQueue leafQueue = (AutoCreatedLeafQueue) childQueue;
       super.addChildQueue(leafQueue);
 
@@ -305,6 +316,11 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
           queueManagementPolicy.getInitialLeafQueueConfiguration(leafQueue);
 
       leafQueue.reinitializeFromTemplate(initialLeafQueueTemplate);
+
+      // Do one update cluster resource call to make sure all absolute resources
+      // effective resources are updated.
+      updateClusterResource(this.csContext.getClusterResource(),
+          new ResourceLimits(this.csContext.getClusterResource()));
     } finally {
       writeLock.unlock();
     }

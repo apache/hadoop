@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
@@ -89,6 +90,7 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -436,7 +438,8 @@ public class TestCapacitySchedulerAutoQueueCreation
         //expected exception
 
         assertTrue(e.getMessage().contains(
-            "Target queue path 'a1.%user' has a non-managed parent queue"));
+            "Queue path 'a1.%user' is invalid because 'root.a.a1' " +
+                "is a leaf queue"));
       }
 
       //"a" is not auto create enabled and app_user does not exist as a leaf
@@ -450,7 +453,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       } catch (IOException e) {
         //expected exception
         assertTrue(e.getMessage().contains(
-            "contains an invalid parent queue 'INVALID_PARENT_QUEUE'"));
+            "Path root 'INVALID_PARENT_QUEUE' does not exist."));
       }
     } finally {
       if (newMockRM != null) {
@@ -474,13 +477,14 @@ public class TestCapacitySchedulerAutoQueueCreation
       newCS.updatePlacementRules();
 
       try {
-        setupQueueMapping(newCS, CURRENT_USER_MAPPING, "",
+        setupQueueMapping(newCS, CURRENT_USER_MAPPING, "nonexistent",
             CURRENT_USER_MAPPING);
         newCS.updatePlacementRules();
         fail("Expected invalid parent queue mapping failure");
       } catch (IOException e) {
         //expected exception
-        assertTrue(e.getMessage().contains("invalid parent queue"));
+        assertTrue(
+            e.getMessage().contains("Path root 'nonexistent' does not exist."));
       }
     } finally {
       if (newMockRM != null) {
@@ -532,6 +536,53 @@ public class TestCapacitySchedulerAutoQueueCreation
       }
     }
   }
+
+
+  @Test
+  public void testAutoQueueCreationFailsForEmptyPathWithAQCAndWeightMode()
+      throws Exception {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+
+    //We need a special configuration we only need a V2 queue auto creation
+    //And weight mode, to allow dynamic auto queue creation for root
+    CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
+    conf.setAutoQueueCreationV2Enabled(ROOT, true);
+    conf.setCapacity("root.default", "1w");
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    //Just a regular mockRM and CapacityScheduler instance
+    MockRM newMockRM = new MockRM(conf);
+    newMockRM.start();
+    ((CapacityScheduler) newMockRM.getResourceScheduler()).start();
+
+    CapacityScheduler newCS =
+        (CapacityScheduler) newMockRM.getResourceScheduler();
+
+    try {
+      //submitting to root..user, this should fail WITHOUT crashing the RM
+      submitApp(newCS, USER0, "user", "root.");
+
+      RMContext rmContext = mock(RMContext.class);
+      when(rmContext.getDispatcher()).thenReturn(dispatcher);
+      newCS.setRMContext(rmContext);
+
+      ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+      SchedulerEvent addAppEvent = new AppAddedSchedulerEvent(
+          appId, "user", "root.");
+      newCS.handle(addAppEvent);
+
+      RMAppEvent event = new RMAppEvent(appId, RMAppEventType.APP_REJECTED,
+          "error");
+      dispatcher.spyOnNextEvent(event, 10000);
+    } finally {
+      ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
+      newMockRM.stop();
+    }
+  }
+
 
   /**
    * This test case checks if a mapping rule can put an application to an auto
@@ -907,7 +958,12 @@ public class TestCapacitySchedulerAutoQueueCreation
   @Test
   public void testDynamicAutoQueueCreationWithTags()
       throws Exception {
-    MockRM rm = null;
+    // This test we will reinitialize mockRM, so stop the previous initialized
+    // mockRM to avoid issues like MetricsSystem
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+    mockRM = null;
     try {
       CapacitySchedulerConfiguration csConf
           = new CapacitySchedulerConfiguration();
@@ -929,35 +985,35 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
       mgr.init(csConf);
-      rm = new MockRM(csConf) {
+      mockRM = new MockRM(csConf) {
         @Override
         public RMNodeLabelsManager createNodeLabelManager() {
           return mgr;
         }
       };
-      rm.start();
-      MockNM nm = rm.registerNode("127.0.0.1:1234", 16 * GB);
+      mockRM.start();
+      MockNM nm = mockRM.registerNode("127.0.0.1:1234", 16 * GB);
 
       MockRMAppSubmissionData data =
-          MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+          MockRMAppSubmissionData.Builder.createWithMemory(GB, mockRM)
           .withAppName("apptodynamicqueue")
           .withUser("hadoop")
           .withAcls(null)
           .withUnmanagedAM(false)
           .withApplicationTags(Sets.newHashSet("userid=testuser"))
           .build();
-      RMApp app = MockRMAppSubmitter.submit(rm, data);
-      MockRM.launchAndRegisterAM(app, rm, nm);
+      RMApp app = MockRMAppSubmitter.submit(mockRM, data);
+      MockRM.launchAndRegisterAM(app, mockRM, nm);
       nm.nodeHeartbeat(true);
 
-      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
       CSQueue queue = cs.getQueue("root.a.testuser");
       assertNotNull("Leaf queue has not been auto-created", queue);
       assertEquals("Number of running applications", 1,
           queue.getNumApplications());
     } finally {
-      if (rm != null) {
-        rm.close();
+      if (mockRM != null) {
+        mockRM.close();
       }
     }
   }

@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -172,12 +173,19 @@ public class WriteOperationHelper implements WriteOperations {
    * @param destKey destination key
    * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
+   * @param headers optional map of custom headers.
    * @return the request
    */
   public PutObjectRequest createPutObjectRequest(String destKey,
-      InputStream inputStream, long length) {
+      InputStream inputStream,
+      long length,
+      final Map<String, String> headers) {
+    ObjectMetadata objectMetadata = newObjectMetadata(length);
+    if (headers != null) {
+      objectMetadata.setUserMetadata(headers);
+    }
     return owner.newPutObjectRequest(destKey,
-        newObjectMetadata(length),
+        objectMetadata,
         inputStream);
   }
 
@@ -328,21 +336,32 @@ public class WriteOperationHelper implements WriteOperations {
    * Abort a multipart upload operation.
    * @param destKey destination key of the upload
    * @param uploadId multipart operation Id
+   * @param shouldRetry should failures trigger a retry?
    * @param retrying callback invoked on every retry
    * @throws IOException failure to abort
    * @throws FileNotFoundException if the abort ID is unknown
    */
   @Retries.RetryTranslated
   public void abortMultipartUpload(String destKey, String uploadId,
-      Retried retrying)
+      boolean shouldRetry, Retried retrying)
       throws IOException {
-    invoker.retry("Aborting multipart upload ID " + uploadId,
-        destKey,
-        true,
-        retrying,
-        () -> owner.abortMultipartUpload(
-            destKey,
-            uploadId));
+    if (shouldRetry) {
+      // retrying option
+      invoker.retry("Aborting multipart upload ID " + uploadId,
+          destKey,
+          true,
+          retrying,
+          () -> owner.abortMultipartUpload(
+              destKey,
+              uploadId));
+    } else {
+      // single pass attempt.
+      once("Aborting multipart upload ID " + uploadId,
+          destKey,
+          () -> owner.abortMultipartUpload(
+              destKey,
+              uploadId));
+    }
   }
 
   /**
@@ -393,7 +412,7 @@ public class WriteOperationHelper implements WriteOperations {
   @Retries.RetryTranslated
   public void abortMultipartCommit(String destKey, String uploadId)
       throws IOException {
-    abortMultipartUpload(destKey, uploadId, invoker.getRetryCallback());
+    abortMultipartUpload(destKey, uploadId, true, invoker.getRetryCallback());
   }
 
   /**

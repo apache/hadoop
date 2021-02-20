@@ -8,10 +8,10 @@ Requirements:
 * Maven 3.3 or later
 * Boost 1.72 (if compiling native code)
 * Protocol Buffers 3.7.1 (if compiling native code)
-* CMake 3.1 or newer (if compiling native code)
+* CMake 3.19 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
-* One of the compilers that support thread_local storage: GCC 4.8.1 or later, Visual Studio,
+* One of the compilers that support thread_local storage: GCC 9.3.0 or later, Visual Studio,
   Clang (community version), Clang (version for iOS 9 and later) (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
@@ -63,22 +63,30 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
   $ sudo apt-get -y install maven
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
+* GCC 9.3.0
+  $ sudo apt-get -y install software-properties-common
+  $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  $ sudo apt-get update
+  $ sudo apt-get -y install g++-9 gcc-9
+  $ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+* CMake 3.19
+  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
+  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
+  $ ./bootstrap
+  $ make -j$(nproc)
+  $ sudo make install
 * Protocol Buffers 3.7.1 (required to build native code)
-  $ mkdir -p /opt/protobuf-3.7-src \
-        && curl -L -s -S \
-          https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
-          -o /opt/protobuf-3.7.1.tar.gz \
-        && tar xzf /opt/protobuf-3.7.1.tar.gz --strip-components 1 -C /opt/protobuf-3.7-src \
-        && cd /opt/protobuf-3.7-src \
-        && ./configure\
-        && make install \
-        && rm -rf /opt/protobuf-3.7-src
+  $ curl -L -s -S https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz -o protobuf-3.7.1.tar.gz
+  $ mkdir protobuf-3.7-src
+  $ tar xzf protobuf-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7-src && cd protobuf-3.7-src
+  $ ./configure
+  $ make -j$(nproc)
+  $ sudo make install
 * Boost
-  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
-    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
-    && cd boost_1_72_0 \
-    && ./bootstrap.sh --prefix=/usr/ \
-    && ./b2 --without-python install
+  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2
+  $ tar --bzip2 -xf boost_1_72_0.tar.bz2 && cd boost_1_72_0
+  $ ./bootstrap.sh --prefix=/usr/
+  $ ./b2 --without-python install
 
 Optional packages:
 
@@ -103,7 +111,7 @@ Maven main modules:
          - hadoop-project               (Parent POM for all Hadoop Maven modules.             )
                                         (All plugins & dependencies versions are defined here.)
          - hadoop-project-dist          (Parent POM for modules that generate distributions.)
-         - hadoop-annotations           (Generates the Hadoop doclet used to generated the Javadocs)
+         - hadoop-annotations           (Generates the Hadoop doclet used to generate the Javadocs)
          - hadoop-assemblies            (Maven assemblies used by the different modules)
          - hadoop-maven-plugins         (Maven plugins used in project)
          - hadoop-build-tools           (Build tools like checkstyle, etc.)
@@ -120,7 +128,7 @@ Maven main modules:
 ----------------------------------------------------------------------------------
 Where to run Maven from?
 
-  It can be run from any module. The only catch is that if not run from utrunk
+  It can be run from any module. The only catch is that if not run from trunk
   all modules that are not part of the build run must be installed in the local
   Maven cache or available in a Maven repository.
 
@@ -176,7 +184,6 @@ Maven build goals:
     we silently build a version of libhadoop.so that cannot make use of snappy.
     This option is recommended if you plan on making use of snappy and want
     to get more repeatable builds.
-
   * Use -Dsnappy.prefix to specify a nonstandard location for the libsnappy
     header files and library files. You do not need this option if you have
     installed snappy using a package manager.
@@ -453,6 +460,17 @@ Building on CentOS 8
 * Install libraries provided by CentOS 8.
   $ sudo dnf install libtirpc-devel zlib-devel lz4-devel bzip2-devel openssl-devel cyrus-sasl-devel libpmem-devel
 
+* Install GCC 9.3.0
+  $ sudo dnf -y install gcc-toolset-9-gcc gcc-toolset-9-gcc-c++
+  $ source /opt/rh/gcc-toolset-9/enable
+
+* Install CMake 3.19
+  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
+  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
+  $ ./bootstrap
+  $ make -j$(nproc)
+  $ sudo make install
+
 * Install boost.
   $ curl -L -o boost_1_72_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
   $ tar xjf boost_1_72_0.tar.bz2
@@ -489,7 +507,7 @@ Requirements:
 * Maven 3.0 or later
 * Boost 1.72
 * Protocol Buffers 3.7.1
-* CMake 3.1 or newer
+* CMake 3.19 or newer
 * Visual Studio 2010 Professional or Higher
 * Windows SDK 8.1 (if building CPU rate control for the container executor)
 * zlib headers (if building native code bindings for zlib)

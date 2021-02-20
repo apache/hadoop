@@ -1289,10 +1289,8 @@ public class ViewFileSystem extends FileSystem {
               .create(fileToCreate, permission, overwrite, bufferSize,
                   replication, blockSize, progress);
         } catch (IOException e) {
-          StringBuilder msg =
-              new StringBuilder("Failed to create file:").append(fileToCreate)
-                  .append(" at fallback : ").append(linkedFallbackFs.getUri());
-          LOG.error(msg.toString(), e);
+          LOG.error("Failed to create file: {} at fallback: {}", fileToCreate,
+              linkedFallbackFs.getUri(), e);
           throw e;
         }
       }
@@ -1523,11 +1521,8 @@ public class ViewFileSystem extends FileSystem {
           return linkedFallbackFs.mkdirs(dirToCreate, permission);
         } catch (IOException e) {
           if (LOG.isDebugEnabled()) {
-            StringBuilder msg =
-                new StringBuilder("Failed to create ").append(dirToCreate)
-                    .append(" at fallback : ")
-                    .append(linkedFallbackFs.getUri());
-            LOG.debug(msg.toString(), e);
+            LOG.debug("Failed to create: {} at fallback: {}", dirToCreate,
+                linkedFallbackFs.getUri(), e);
           }
           throw e;
         }

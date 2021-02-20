@@ -70,6 +70,7 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.fs.azure.security.RemoteWasbDelegationTokenManager;
 import org.apache.hadoop.fs.azure.security.WasbDelegationTokenManager;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -1052,10 +1053,7 @@ public class NativeAzureFileSystem extends FileSystem {
      */
     @Override // StreamCapability
     public boolean hasCapability(String capability) {
-      if (out instanceof StreamCapabilities) {
-        return ((StreamCapabilities) out).hasCapability(capability);
-      }
-      return false;
+      return StoreImplementationUtils.hasCapability(out, capability);
     }
 
     @Override

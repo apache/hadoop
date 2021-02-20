@@ -702,4 +702,63 @@
       concurrent calls.
     </description>
   </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.bandwidth</name>
+    <value></value>
+    <description>
+      Specify bandwidth per map in MB.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.map</name>
+    <value></value>
+    <description>
+      Max number of concurrent maps to use for copy.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.delay</name>
+    <value>1000</value>
+    <description>
+      Specify the delayed duration(millie seconds) when the job needs to retry.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.diff</name>
+    <value>0</value>
+    <description>
+      Specify the threshold of the diff entries that used in incremental copy
+      stage.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.option</name>
+    <value>NONE</value>
+    <description>
+      Specify the action when rename across namespaces. The option can be NONE
+      and DISTCP.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.force.close.open.file</name>
+    <value>true</value>
+    <description>
+      Force close all open files when there is no diff in the DIFF_DISTCP stage.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.trash</name>
+    <value>trash</value>
+    <description>
+      This options has 3 values: trash (move the source path to trash), delete
+      (delete the source path directly) and skip (skip both trash and deletion).
+    </description>
+  </property>
 </configuration>

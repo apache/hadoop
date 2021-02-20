@@ -107,6 +107,7 @@ import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
+import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
@@ -331,6 +332,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private DirectoryPolicy directoryPolicy;
 
   /**
+   * Header processing for XAttr.
+   */
+  private HeaderProcessing headerProcessing;
+
+  /**
    * Context accessors for re-use.
    */
   private final ContextAccessors contextAccessors = new ContextAccessorsImpl();
@@ -456,6 +462,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           magicCommitterEnabled ? "is" : "is not");
       committerIntegration = new MagicCommitIntegration(
           this, magicCommitterEnabled);
+      // header processing for rename and magic committer
+      headerProcessing = new HeaderProcessing(createStoreContext());
 
       // instantiate S3 Select support
       selectBinding = new SelectBinding(writeHelper);
@@ -1781,14 +1789,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Low-level call to get at the object metadata.
-   * @param path path to the object
+   * @param path path to the object. This will be qualified.
    * @return metadata
    * @throws IOException IO and object access problems.
    */
   @VisibleForTesting
   @Retries.RetryTranslated
   public ObjectMetadata getObjectMetadata(Path path) throws IOException {
-    return getObjectMetadata(path, null, invoker, null);
+    return getObjectMetadata(makeQualified(path), null, invoker,
+        "getObjectMetadata");
   }
 
   /**
@@ -1800,31 +1809,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return metadata
    * @throws IOException IO and object access problems.
    */
-  @VisibleForTesting
   @Retries.RetryTranslated
-  public ObjectMetadata getObjectMetadata(Path path,
+  private ObjectMetadata getObjectMetadata(Path path,
       ChangeTracker changeTracker, Invoker changeInvoker, String operation)
       throws IOException {
     checkNotClosed();
-    return once("getObjectMetadata", path.toString(),
+    String key = pathToKey(path);
+    return once(operation, path.toString(),
         () ->
             // this always does a full HEAD to the object
             getObjectMetadata(
-                pathToKey(path), changeTracker, changeInvoker, operation));
-  }
-
-  /**
-   * Get all the headers of the object of a path, if the object exists.
-   * @param path path to probe
-   * @return an immutable map of object headers.
-   * @throws IOException failure of the query
-   */
-  @Retries.RetryTranslated
-  public Map<String, Object> getObjectHeaders(Path path) throws IOException {
-    LOG.debug("getObjectHeaders({})", path);
-    checkNotClosed();
-    incrementReadOperations();
-    return getObjectMetadata(path).getRawMetadata();
+                key, changeTracker, changeInvoker, operation));
   }
 
   /**
@@ -2021,7 +2016,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryRaw
   @VisibleForTesting
   ObjectMetadata getObjectMetadata(String key) throws IOException {
-    return getObjectMetadata(key, null, invoker,null);
+    return getObjectMetadata(key, null, invoker, "getObjectMetadata");
   }
 
   /**
@@ -4099,59 +4094,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return a copy of {@link ObjectMetadata} with only relevant attributes
    */
   private ObjectMetadata cloneObjectMetadata(ObjectMetadata source) {
-    // This approach may be too brittle, especially if
-    // in future there are new attributes added to ObjectMetadata
-    // that we do not explicitly call to set here
     ObjectMetadata ret = newObjectMetadata(source.getContentLength());
-
-    // Possibly null attributes
-    // Allowing nulls to pass breaks it during later use
-    if (source.getCacheControl() != null) {
-      ret.setCacheControl(source.getCacheControl());
-    }
-    if (source.getContentDisposition() != null) {
-      ret.setContentDisposition(source.getContentDisposition());
-    }
-    if (source.getContentEncoding() != null) {
-      ret.setContentEncoding(source.getContentEncoding());
-    }
-    if (source.getContentMD5() != null) {
-      ret.setContentMD5(source.getContentMD5());
-    }
-    if (source.getContentType() != null) {
-      ret.setContentType(source.getContentType());
-    }
-    if (source.getExpirationTime() != null) {
-      ret.setExpirationTime(source.getExpirationTime());
-    }
-    if (source.getExpirationTimeRuleId() != null) {
-      ret.setExpirationTimeRuleId(source.getExpirationTimeRuleId());
-    }
-    if (source.getHttpExpiresDate() != null) {
-      ret.setHttpExpiresDate(source.getHttpExpiresDate());
-    }
-    if (source.getLastModified() != null) {
-      ret.setLastModified(source.getLastModified());
-    }
-    if (source.getOngoingRestore() != null) {
-      ret.setOngoingRestore(source.getOngoingRestore());
-    }
-    if (source.getRestoreExpirationTime() != null) {
-      ret.setRestoreExpirationTime(source.getRestoreExpirationTime());
-    }
-    if (source.getSSEAlgorithm() != null) {
-      ret.setSSEAlgorithm(source.getSSEAlgorithm());
-    }
-    if (source.getSSECustomerAlgorithm() != null) {
-      ret.setSSECustomerAlgorithm(source.getSSECustomerAlgorithm());
-    }
-    if (source.getSSECustomerKeyMd5() != null) {
-      ret.setSSECustomerKeyMd5(source.getSSECustomerKeyMd5());
-    }
-
-    for (Map.Entry<String, String> e : source.getUserMetadata().entrySet()) {
-      ret.addUserMetadata(e.getKey(), e.getValue());
-    }
+    getHeaderProcessing().cloneObjectMetadata(source, ret);
     return ret;
   }
 
@@ -4380,6 +4324,37 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // disabled
       return null;
     }
+  }
+
+  /**
+   * Get header processing support.
+   * @return the header processing of this instance.
+   */
+  private HeaderProcessing getHeaderProcessing() {
+    return headerProcessing;
+  }
+
+  @Override
+  public byte[] getXAttr(final Path path, final String name)
+      throws IOException {
+    return getHeaderProcessing().getXAttr(path, name);
+  }
+
+  @Override
+  public Map<String, byte[]> getXAttrs(final Path path) throws IOException {
+    return getHeaderProcessing().getXAttrs(path);
+  }
+
+  @Override
+  public Map<String, byte[]> getXAttrs(final Path path,
+      final List<String> names)
+      throws IOException {
+    return getHeaderProcessing().getXAttrs(path, names);
+  }
+
+  @Override
+  public List<String> listXAttrs(final Path path) throws IOException {
+    return getHeaderProcessing().listXAttrs(path);
   }
 
   /**
@@ -4749,6 +4724,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
 
+    case CommonPathCapabilities.ABORTABLE_STREAM:
     case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
       return true;
 
@@ -5088,5 +5064,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return S3AFileSystem.this.makeQualified(path);
     }
 
+    @Override
+    public ObjectMetadata getObjectMetadata(final String key)
+        throws IOException {
+      return once("getObjectMetadata", key, () ->
+          S3AFileSystem.this.getObjectMetadata(key));
+    }
   }
 }

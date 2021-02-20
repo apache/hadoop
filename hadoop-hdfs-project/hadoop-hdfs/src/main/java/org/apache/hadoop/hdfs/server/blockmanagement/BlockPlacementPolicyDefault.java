@@ -81,7 +81,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     NODE_STALE("the node is stale"),
     NODE_TOO_BUSY("the node is too busy"),
     TOO_MANY_NODES_ON_RACK("the rack has too many chosen nodes"),
-    NOT_ENOUGH_STORAGE_SPACE("not enough storage space to place the block");
+    NOT_ENOUGH_STORAGE_SPACE("not enough storage space to place the block"),
+    NO_REQUIRED_STORAGE_TYPE("required storage types are unavailable");
 
     private final String text;
 
@@ -822,6 +823,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
             includeType = type;
             break;
           }
+          logNodeIsNotChosen(null,
+              NodeNotChosenReason.NO_REQUIRED_STORAGE_TYPE,
+              " for storage type " + type);
         }
       } else {
         chosenNode = chooseDataNode(scope, excludedNodes);
@@ -958,7 +962,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if (LOG.isDebugEnabled()) {
       // build the error message for later use.
       debugLoggingBuilder.get()
-          .append("\n  Datanode ").append(node)
+          .append("\n  Datanode ").append((node==null)?"None":node)
           .append(" is not chosen since ").append(reason.getText());
       if (reasonDetails != null) {
         debugLoggingBuilder.get().append(" ").append(reasonDetails);

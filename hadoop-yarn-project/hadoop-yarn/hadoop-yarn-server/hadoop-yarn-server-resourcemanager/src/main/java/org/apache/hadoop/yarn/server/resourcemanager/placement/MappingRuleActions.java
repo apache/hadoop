@@ -66,13 +66,15 @@ public final class MappingRuleActions {
      * This method is the main logic of the action, it will replace all the
      * variables in the queuePattern with their respective values, then returns
      * a placementResult with the final queue name.
+     *
      * @param variables The variable context, which contains all the variables
      * @return The result of the action
      */
     @Override
     public MappingRuleResult execute(VariableContext variables) {
-      String substituted = variables.replacePathVariables(queuePattern);
-      return MappingRuleResult.createPlacementResult(substituted, allowCreate);
+        String substituted = variables.replacePathVariables(queuePattern);
+        return MappingRuleResult.createPlacementResult(
+            substituted, allowCreate);
     }
 
     /**
@@ -96,8 +98,9 @@ public final class MappingRuleActions {
     @Override
     public String toString() {
       return "PlaceToQueueAction{" +
-          "queueName='" + queuePattern + '\'' +
-          '}';
+          "queueName='" + queuePattern + "'," +
+          "allowCreate=" + allowCreate +
+          "}";
     }
   }
 

@@ -1170,8 +1170,13 @@ public class ShuffleHandler extends AuxiliaryService {
         StringBuilder sb = new StringBuilder("shuffle for ");
         sb.append(jobId).append(" reducer ").append(reduce);
         sb.append(" length ").append(contentLength);
-        sb.append(" mappers: ").append(mapIds);
-        AUDITLOG.debug(sb.toString());
+        if (AUDITLOG.isTraceEnabled()) {
+          // For trace level logging, append the list of mappers
+          sb.append(" mappers: ").append(mapIds);
+          AUDITLOG.trace(sb.toString());
+        } else {
+          AUDITLOG.debug(sb.toString());
+        }
       }
     }
 

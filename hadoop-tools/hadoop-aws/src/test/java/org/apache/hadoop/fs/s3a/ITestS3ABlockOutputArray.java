@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
@@ -32,7 +33,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
+import static org.apache.hadoop.fs.StreamCapabilities.ABORTABLE_STREAM;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertCompleteAbort;
+import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertNoopAbort;
 
 /**
  * Tests small file upload functionality for
@@ -153,6 +157,53 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
   @Test
   public void testMarkReset() throws Throwable {
     markAndResetDatablock(createFactory(getFileSystem()));
+  }
+
+  @Test
+  public void testAbortAfterWrite() throws Throwable {
+    describe("Verify abort after a write does not create a file");
+    Path dest = path(getMethodName());
+    FileSystem fs = getFileSystem();
+    ContractTestUtils.assertHasPathCapabilities(fs, dest, ABORTABLE_STREAM);
+    FSDataOutputStream stream = fs.create(dest, true);
+    byte[] data = ContractTestUtils.dataset(16, 'a', 26);
+    try {
+      ContractTestUtils.assertCapabilities(stream,
+          new String[]{ABORTABLE_STREAM},
+          null);
+      stream.write(data);
+      assertCompleteAbort(stream.abort());
+      // second attempt is harmless
+      assertNoopAbort(stream.abort());
+
+      // the path should not exist
+      ContractTestUtils.assertPathsDoNotExist(fs, "aborted file", dest);
+    } finally {
+      IOUtils.closeStream(stream);
+      // check the path doesn't exist "after" closing stream
+      ContractTestUtils.assertPathsDoNotExist(fs, "aborted file", dest);
+    }
+    // and it can be called on the stream after being closed.
+    assertNoopAbort(stream.abort());
+  }
+
+  /**
+   * A stream which was abort()ed after being close()d for a
+   * successful write will return indicating nothing happened.
+   */
+  @Test
+  public void testAbortAfterCloseIsHarmless() throws Throwable {
+    describe("Verify abort on a closed stream is harmless "
+        + "and that the result indicates that nothing happened");
+    Path dest = path(getMethodName());
+    FileSystem fs = getFileSystem();
+    byte[] data = ContractTestUtils.dataset(16, 'a', 26);
+    try (FSDataOutputStream stream = fs.create(dest, true)) {
+      stream.write(data);
+      assertCompleteAbort(stream.abort());
+      stream.close();
+      assertNoopAbort(stream.abort());
+    }
   }
 
 }

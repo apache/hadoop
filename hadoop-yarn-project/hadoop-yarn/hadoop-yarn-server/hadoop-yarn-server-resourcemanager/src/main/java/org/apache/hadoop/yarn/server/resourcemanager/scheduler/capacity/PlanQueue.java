@@ -46,6 +46,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
   public PlanQueue(CapacitySchedulerContext cs, String queueName,
       CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
+    updateAbsoluteCapacities();
 
     this.schedulerContext = cs;
     // Set the reservation queue attributes for the Plan
@@ -63,6 +64,9 @@ public class PlanQueue extends AbstractManagedParentQueue {
     float userLimitFactor = conf.getUserLimitFactor(queuePath);
     int maxAppsPerUserForReservation =
         (int) (maxAppsForReservation * (userLimit / 100.0f) * userLimitFactor);
+    if (userLimitFactor == -1) {
+      maxAppsPerUserForReservation = maxAppsForReservation;
+    }
     updateQuotas(userLimit, userLimitFactor, maxAppsForReservation,
         maxAppsPerUserForReservation);
 
@@ -100,7 +104,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
       }
 
       // Set new configs
-      setupQueueConfigs(clusterResource);
+      setupQueueConfigs(clusterResource, csContext.getConfiguration());
 
       updateQuotas(newlyParsedParentQueue.userLimit,
           newlyParsedParentQueue.userLimitFactor,

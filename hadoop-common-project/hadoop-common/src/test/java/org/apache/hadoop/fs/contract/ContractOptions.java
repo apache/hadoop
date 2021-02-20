@@ -241,4 +241,19 @@ public interface ContractOptions {
    */
   String TEST_RANDOM_SEEK_COUNT = "test.random-seek-count";
 
+  /**
+   * Is hflush supported in API and StreamCapabilities?
+   */
+  String SUPPORTS_HFLUSH = "supports-hflush";
+
+  /**
+   * Is hsync supported in API and StreamCapabilities?
+   */
+  String SUPPORTS_HSYNC = "supports-hsync";
+
+  /**
+   * Is the metadata updated after an hsync?
+   * HDFS does not do this.
+   */
+  String METADATA_UPDATED_ON_HSYNC = "metadata_updated_on_hsync";
 }

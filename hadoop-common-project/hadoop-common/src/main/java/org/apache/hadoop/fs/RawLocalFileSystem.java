@@ -43,10 +43,12 @@ import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.StringTokenizer;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -137,8 +139,13 @@ public class RawLocalFileSystem extends FileSystem {
             STREAM_READ_SKIP_BYTES)
         .build();
 
+    /** Reference to the bytes read counter for slightly faster counting. */
+    private final AtomicLong bytesRead;
+
     public LocalFSFileInputStream(Path f) throws IOException {
       fis = new FileInputStream(pathToFile(f));
+      bytesRead = ioStatistics.getCounterReference(
+          STREAM_READ_BYTES);
     }
     
     @Override
@@ -161,8 +168,8 @@ public class RawLocalFileSystem extends FileSystem {
       return false;
     }
     
-    /*
-     * Just forward to the fis
+    /**
+     * Just forward to the fis.
      */
     @Override
     public int available() throws IOException { return fis.available(); }
@@ -178,7 +185,7 @@ public class RawLocalFileSystem extends FileSystem {
         if (value >= 0) {
           this.position++;
           statistics.incrementBytesRead(1);
-          ioStatistics.incrementCounter(STREAM_READ_BYTES);
+          bytesRead.addAndGet(1);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -196,7 +203,7 @@ public class RawLocalFileSystem extends FileSystem {
         if (value > 0) {
           this.position += value;
           statistics.incrementBytesRead(value);
-          ioStatistics.incrementCounter(STREAM_READ_BYTES, value);
+          bytesRead.addAndGet(value);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -285,7 +292,7 @@ public class RawLocalFileSystem extends FileSystem {
    * For create()'s FSOutputStream.
    *********************************************************/
   final class LocalFSFileOutputStream extends OutputStream implements
-      IOStatisticsSource, StreamCapabilities {
+      IOStatisticsSource, StreamCapabilities, Syncable {
     private FileOutputStream fos;
 
     /**
@@ -318,7 +325,7 @@ public class RawLocalFileSystem extends FileSystem {
             success = true;
           } finally {
             if (!success) {
-              IOUtils.cleanup(LOG, this.fos);
+              IOUtils.cleanupWithLogger(LOG, this.fos);
             }
           }
         }
@@ -355,6 +362,21 @@ public class RawLocalFileSystem extends FileSystem {
     }
 
     @Override
+    public void hflush() throws IOException {
+      flush();
+    }
+
+    /**
+     * HSync calls sync on fhe file descriptor after a local flush() call.
+     * @throws IOException failure
+     */
+    @Override
+    public void hsync() throws IOException {
+      flush();
+      fos.getFD().sync();
+    }
+
+    @Override
     public boolean hasCapability(String capability) {
       // a bit inefficient, but intended to make it easier to add
       // new capabilities.
@@ -362,7 +384,7 @@ public class RawLocalFileSystem extends FileSystem {
       case StreamCapabilities.IOSTATISTICS:
         return true;
       default:
-        return false;
+        return StoreImplementationUtils.isProbeForSyncable(capability);
       }
     }
 

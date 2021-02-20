@@ -29,7 +29,7 @@ import java.util.Properties;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.Policy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,17 +61,8 @@ public class FSConfigToCSConfigRuleHandler {
   public static final String MIN_RESOURCES =
       "minResources.action";
 
-  public static final String USER_MAX_RUNNING_APPS =
-      "userMaxRunningApps.action";
-
-  public static final String USER_MAX_APPS_DEFAULT =
-      "userMaxAppsDefault.action";
-
   public static final String DYNAMIC_MAX_ASSIGN =
       "dynamicMaxAssign.action";
-
-  public static final String SPECIFIED_NOT_FIRST =
-      "specifiedNotFirstRule.action";
 
   public static final String RESERVATION_SYSTEM =
       "reservationSystem.action";
@@ -90,6 +81,9 @@ public class FSConfigToCSConfigRuleHandler {
 
   public static final String CHILD_STATIC_DYNAMIC_CONFLICT =
       "childStaticDynamicConflict.action";
+
+  public static final String PARENT_CHILD_CREATE_DIFFERS =
+      "parentChildCreateDiff.action";
 
   @VisibleForTesting
   enum RuleAction {
@@ -132,16 +126,14 @@ public class FSConfigToCSConfigRuleHandler {
     setActionForProperty(MAX_CHILD_CAPACITY);
     setActionForProperty(MAX_RESOURCES);
     setActionForProperty(MIN_RESOURCES);
-    setActionForProperty(USER_MAX_RUNNING_APPS);
-    setActionForProperty(USER_MAX_APPS_DEFAULT);
     setActionForProperty(DYNAMIC_MAX_ASSIGN);
-    setActionForProperty(SPECIFIED_NOT_FIRST);
     setActionForProperty(RESERVATION_SYSTEM);
     setActionForProperty(QUEUE_AUTO_CREATE);
     setActionForProperty(FAIR_AS_DRF);
     setActionForProperty(QUEUE_DYNAMIC_CREATE);
     setActionForProperty(PARENT_DYNAMIC_CREATE);
     setActionForProperty(CHILD_STATIC_DYNAMIC_CONFLICT);
+    setActionForProperty(PARENT_CHILD_CREATE_DIFFERS);
   }
 
   public void handleMaxCapacityPercentage(String queueName) {
@@ -221,6 +213,15 @@ public class FSConfigToCSConfigRuleHandler {
         + " This configuration is invalid and *must* be corrected", parentPath);
 
     handle(CHILD_STATIC_DYNAMIC_CONFLICT, null, msg);
+  }
+
+  public void handleFSParentAndChildCreateFlagDiff(Policy policy) {
+    String msg = String.format("Placement rules: the policy %s originally uses"
+        + " true/false or false/true \"create\" settings on the Fair Scheduler"
+        + " side. This is not supported and create flag will be set"
+        + " to *true* in the generated JSON rule chain", policy.name());
+
+    handle(PARENT_CHILD_CREATE_DIFFERS, null, msg);
   }
 
   private void handle(String actionName, String fsSetting, String message) {

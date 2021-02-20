@@ -394,8 +394,10 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
         // when S3Guard is enabled, the restricted policy still
         // permits S3Guard record lookup, so getFileStatus calls
         // will work iff the record is in the database.
+        // probe the store using a path other than /, so a HEAD
+        // request is issued.
         forbidden("getFileStatus",
-            () -> fs.getFileStatus(ROOT));
+            () -> fs.getFileStatus(methodPath()));
       }
       forbidden("",
           () -> fs.listStatus(ROOT));
@@ -553,7 +555,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void testRestrictedCommitActions() throws Throwable {
     describe("Attempt commit operations against a path with restricted rights");
     Configuration conf = createAssumedRoleConfig();
-    conf.setBoolean(CommitConstants.MAGIC_COMMITTER_ENABLED, true);
     final int uploadPartSize = 5 * 1024 * 1024;
 
     ProgressCounter progress = new ProgressCounter();

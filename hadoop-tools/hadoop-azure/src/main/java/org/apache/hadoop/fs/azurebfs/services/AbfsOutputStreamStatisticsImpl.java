@@ -18,32 +18,47 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+
 /**
  * OutputStream statistics implementation for Abfs.
  */
 public class AbfsOutputStreamStatisticsImpl
     implements AbfsOutputStreamStatistics {
-  private long bytesToUpload;
-  private long bytesUploadSuccessful;
-  private long bytesUploadFailed;
-  /**
-   * Counter to get the total time spent while waiting for tasks to complete
-   * in the blocking queue inside the thread executor.
+
+  private final IOStatisticsStore ioStatisticsStore = iostatisticsStore()
+      .withCounters(
+          StreamStatisticNames.BYTES_TO_UPLOAD,
+          StreamStatisticNames.BYTES_UPLOAD_SUCCESSFUL,
+          StreamStatisticNames.BYTES_UPLOAD_FAILED,
+          StreamStatisticNames.QUEUE_SHRUNK_OPS,
+          StreamStatisticNames.WRITE_CURRENT_BUFFER_OPERATIONS
+      )
+      .withDurationTracking(
+          StreamStatisticNames.TIME_SPENT_ON_PUT_REQUEST,
+          StreamStatisticNames.TIME_SPENT_ON_TASK_WAIT
+      )
+      .build();
+
+  /* Reference to the atomic counter for frequently updated counters to avoid
+   * cost of the map lookup on every increment.
    */
-  private long timeSpentOnTaskWait;
-  /**
-   * Counter to get the total number of queue shrink operations done {@code
-   * AbfsOutputStream#shrinkWriteOperationQueue()} by AbfsOutputStream to
-   * remove the write operations which were successfully done by
-   * AbfsOutputStream from the task queue.
-   */
-  private long queueShrunkOps;
-  /**
-   * Counter to get the total number of times the current buffer is written
-   * to the service {@code AbfsOutputStream#writeCurrentBufferToService()} via
-   * AbfsClient and appended to the data store by AbfsRestOperation.
-   */
-  private long writeCurrentBufferOperations;
+  private final AtomicLong bytesUpload =
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.BYTES_TO_UPLOAD);
+  private final AtomicLong bytesUploadedSuccessfully =
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.BYTES_UPLOAD_SUCCESSFUL);
+  private final AtomicLong writeCurrentBufferOps =
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.WRITE_CURRENT_BUFFER_OPERATIONS);
 
   /**
    * Records the need to upload bytes and increments the total bytes that
@@ -53,9 +68,7 @@ public class AbfsOutputStreamStatisticsImpl
    */
   @Override
   public void bytesToUpload(long bytes) {
-    if (bytes > 0) {
-      bytesToUpload += bytes;
-    }
+    bytesUpload.addAndGet(bytes);
   }
 
   /**
@@ -66,9 +79,7 @@ public class AbfsOutputStreamStatisticsImpl
    */
   @Override
   public void uploadSuccessful(long bytes) {
-    if (bytes > 0) {
-      bytesUploadSuccessful += bytes;
-    }
+    bytesUploadedSuccessfully.addAndGet(bytes);
   }
 
   /**
@@ -78,9 +89,7 @@ public class AbfsOutputStreamStatisticsImpl
    */
   @Override
   public void uploadFailed(long bytes) {
-    if (bytes > 0) {
-      bytesUploadFailed += bytes;
-    }
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.BYTES_UPLOAD_FAILED, bytes);
   }
 
   /**
@@ -96,14 +105,10 @@ public class AbfsOutputStreamStatisticsImpl
    * This time spent while waiting for the task to be completed is being
    * recorded in this counter.
    *
-   * @param startTime time(in milliseconds) before the wait for task to be
-   *                  completed is begin.
-   * @param endTime   time(in milliseconds) after the wait for the task to be
-   *                  completed is done.
    */
   @Override
-  public void timeSpentTaskWait(long startTime, long endTime) {
-    timeSpentOnTaskWait += endTime - startTime;
+  public DurationTracker timeSpentTaskWait() {
+    return ioStatisticsStore.trackDuration(StreamStatisticNames.TIME_SPENT_ON_TASK_WAIT);
   }
 
   /**
@@ -114,7 +119,7 @@ public class AbfsOutputStreamStatisticsImpl
    */
   @Override
   public void queueShrunk() {
-    queueShrunkOps++;
+    ioStatisticsStore.incrementCounter(StreamStatisticNames.QUEUE_SHRUNK_OPS);
   }
 
   /**
@@ -125,31 +130,59 @@ public class AbfsOutputStreamStatisticsImpl
    */
   @Override
   public void writeCurrentBuffer() {
-    writeCurrentBufferOperations++;
+    writeCurrentBufferOps.incrementAndGet();
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * A getter for IOStatisticsStore instance which extends IOStatistics.
+   *
+   * @return IOStatisticsStore instance.
+   */
+  @Override
+  public IOStatistics getIOStatistics() {
+    return ioStatisticsStore;
+  }
+
+  @VisibleForTesting
   public long getBytesToUpload() {
-    return bytesToUpload;
+    return ioStatisticsStore.counters().get(StreamStatisticNames.BYTES_TO_UPLOAD);
   }
 
+  @VisibleForTesting
   public long getBytesUploadSuccessful() {
-    return bytesUploadSuccessful;
+    return ioStatisticsStore.counters().get(StreamStatisticNames.BYTES_UPLOAD_SUCCESSFUL);
   }
 
+  @VisibleForTesting
   public long getBytesUploadFailed() {
-    return bytesUploadFailed;
+    return ioStatisticsStore.counters().get(StreamStatisticNames.BYTES_UPLOAD_FAILED);
   }
 
+  @VisibleForTesting
   public long getTimeSpentOnTaskWait() {
-    return timeSpentOnTaskWait;
+    return ioStatisticsStore.counters().get(StreamStatisticNames.TIME_SPENT_ON_TASK_WAIT);
   }
 
+  @VisibleForTesting
   public long getQueueShrunkOps() {
-    return queueShrunkOps;
+    return ioStatisticsStore.counters().get(StreamStatisticNames.QUEUE_SHRUNK_OPS);
   }
 
+  @VisibleForTesting
   public long getWriteCurrentBufferOperations() {
-    return writeCurrentBufferOperations;
+    return ioStatisticsStore.counters().get(StreamStatisticNames.WRITE_CURRENT_BUFFER_OPERATIONS);
+  }
+
+  /**
+   * Getter for mean value of time taken to complete a PUT request by
+   * AbfsOutputStream.
+   * @return mean value.
+   */
+  @VisibleForTesting
+  public double getTimeSpentOnPutRequest() {
+    return ioStatisticsStore.meanStatistics().get(StreamStatisticNames.TIME_SPENT_ON_PUT_REQUEST + StoreStatisticNames.SUFFIX_MEAN).mean();
   }
 
   /**
@@ -160,16 +193,7 @@ public class AbfsOutputStreamStatisticsImpl
   @Override public String toString() {
     final StringBuilder outputStreamStats = new StringBuilder(
         "OutputStream Statistics{");
-    outputStreamStats.append(", bytes_upload=").append(bytesToUpload);
-    outputStreamStats.append(", bytes_upload_successfully=")
-        .append(bytesUploadSuccessful);
-    outputStreamStats.append(", bytes_upload_failed=")
-        .append(bytesUploadFailed);
-    outputStreamStats.append(", time_spent_task_wait=")
-        .append(timeSpentOnTaskWait);
-    outputStreamStats.append(", queue_shrunk_ops=").append(queueShrunkOps);
-    outputStreamStats.append(", write_current_buffer_ops=")
-        .append(writeCurrentBufferOperations);
+    outputStreamStats.append(ioStatisticsStore.toString());
     outputStreamStats.append("}");
     return outputStreamStats.toString();
   }
