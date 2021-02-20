@@ -224,6 +224,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
       //test large positive skip from position 0 beyond EOF
       skipped = inputStream.skip(testFileLength);
       assertEquals("Incorrect skip count", testFileLength - 1, skipped);
+      assertEquals("One byte should be available after skip to EOF", 1,
+          inputStream.available());
 
       //test positive skip from contentlength postion (EOF + 1)
       inputStream.read(); //read 1 byte from EOF
@@ -413,10 +415,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
               inputStream.getPos());
       assertEquals(testFileLength - inputStream.getPos(),
               inputStream.available());
-
-      inputStream.skip(testFileLength + 1); //goes to last byte
-      assertEquals("One byte should be available after skip to EOF", 1,
-          inputStream.available());
     }
   }
 
@@ -425,7 +423,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
     Path emptyFile = new Path("/emptyFile");
     getFileSystem().create(emptyFile);
     FSDataInputStream in = getFileSystem().open(emptyFile);
-    assertEquals("Initial position of inputstream in empty fils 0", 0,
+    assertEquals("Initial position of inputstream in empty file is 0", 0,
         in.getPos());
     in.seek(0);
     assertEquals("Seek to 0 should succeed", 0, in.getPos());
@@ -439,7 +437,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
     intercept(EOFException.class, () -> in.skip(1));
     in.skip(-1);
     assertEquals("Should seek to 0", 0, in.getPos());
-
   }
 
   /**
