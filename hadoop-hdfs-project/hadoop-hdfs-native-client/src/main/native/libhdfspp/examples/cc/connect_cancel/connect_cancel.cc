@@ -25,7 +25,6 @@
 #include <google/protobuf/stubs/common.h>
 
 #include <signal.h>
-#include <unistd.h>
 
 #include <thread>
 #include <iostream>
@@ -47,11 +46,10 @@ const std::string catch_exit("Exiting the signal handler.\n");
 // It's possible that the write interleaves with another write call,
 // but it won't corrupt the stack or heap.
 static void sighandler_direct_stdout(const std::string &msg) {
-  ssize_t res = ::write(1 /*posix stdout FD*/, msg.data(), msg.size());
-  // In production you'd want to check res, but error handling code will
+  std::cout.write(msg.c_str(), msg.size());
+  // In production you'd want to check std::cout.failbit, but error handling code will
   // need to be fairly application specific if it's going to properly
   // avoid reentrant calls to malloc.
-  (void)res;
 }
 
 // Signal handler to make a SIGINT call cancel rather than exit().
