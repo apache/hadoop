@@ -91,7 +91,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
       //seek to first byte and read till file mid
       inputStream.seek(0);
       result = inputStream.read(readBuffer, 0, bufferSize);
-      //test seek EOF handling
+      //test seek beyond EOF handling
       intercept(EOFException.class, () -> inputStream.seek(contentLength));
       //seek to last valid position and read
       inputStream.seek(contentLength - 1);
