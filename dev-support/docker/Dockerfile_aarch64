@@ -72,18 +72,26 @@ RUN apt-get -q update \
         openjdk-8-jdk \
         pinentry-curses \
         pkg-config \
-        python \
-        python2.7 \
-        python-pip \
-        python-pkg-resources \
-        python-setuptools \
-        python-wheel \
+        python3 \
+        python3-pip \
+        python3-pkg-resources \
+        python3-setuptools \
+        python3-wheel \
         rsync \
         shellcheck \
         software-properties-common \
         sudo \
         valgrind \
         zlib1g-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+#######
+# OpenJDK 8
+#######
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends openjdk-8-jdk libbcprov-java \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -113,19 +121,9 @@ ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ####
-# Install pylint at fixed version (2.0.0 removed python2 support)
-# https://github.com/PyCQA/pylint/issues/2294
+# Install pylint and python-dateutil
 ####
-RUN pip2 install \
-    astroid==1.6.6 \
-    isort==4.3.21 \
-    configparser==4.0.2 \
-    pylint==1.9.2
-
-####
-# Install dateutil.parser
-####
-RUN pip2 install python-dateutil==2.7.3
+RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 
 ###
 # Install node.js 10.x for web UI framework (4.2.6 ships with Xenial)
