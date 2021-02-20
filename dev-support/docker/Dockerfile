@@ -72,10 +72,11 @@ RUN apt-get -q update \
         openjdk-8-jdk \
         pinentry-curses \
         pkg-config \
-        python \
-        python2.7 \
-        python-pkg-resources \
-        python-setuptools \
+        python3 \
+        python3-pip \
+        python3-pkg-resources \
+        python3-setuptools \
+        python3-wheel \
         rsync \
         shellcheck \
         software-properties-common \
@@ -108,18 +109,6 @@ RUN mkdir -p /opt/boost-library \
     && cd /root \
     && rm -rf /opt/boost-library
 
-####
-# Install pip (deprecated from Focal toolchain)
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/pip \
-    && curl -L https://bootstrap.pypa.io/2.7/get-pip.py > get-pip.py \
-    && mv get-pip.py /opt/pip \
-    && cd /opt/pip \
-    && python2.7 get-pip.py "pip < 21.0" \
-    && cd /root \
-    && rm -rf /opt/pip
-
 ######
 # Install Google Protobuf 3.7.1 (3.6.1 ships with Focal)
 ######
@@ -139,19 +128,9 @@ ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ####
-# Install pylint at fixed version (2.0.0 removed python2 support)
-# https://github.com/PyCQA/pylint/issues/2294
+# Install pylint and python-dateutil
 ####
-RUN pip2 install \
-    astroid==1.6.6 \
-    isort==4.3.21 \
-    configparser==4.0.2 \
-    pylint==1.9.2
-
-####
-# Install dateutil.parser
-####
-RUN pip2 install python-dateutil==2.7.3
+RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 
 ####
 # Install bower
