@@ -43,6 +43,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.conf.Configuration;
@@ -103,8 +104,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.DelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.io.Text;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -146,6 +145,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.xml.sax.InputSource;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -153,7 +155,7 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 public class TestEncryptionZones {
-  static final Logger LOG = Logger.getLogger(TestEncryptionZones.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestEncryptionZones.class);
 
   protected Configuration conf;
   private FileSystemTestHelper fsHelper;
@@ -197,7 +199,8 @@ public class TestEncryptionZones {
         2);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
-    Logger.getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(EncryptionZoneManager.class), Level.TRACE);
     fs = cluster.getFileSystem();
     fsWrapper = new FileSystemTestWrapper(fs);
     fcWrapper = new FileContextTestWrapper(

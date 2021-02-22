@@ -200,6 +200,8 @@ public class CapacityScheduler extends
 
   private CSConfigurationProvider csConfProvider;
 
+  private int threadNum = 0;
+
   @Override
   public void setConf(Configuration conf) {
       yarnConf = conf;
@@ -653,6 +655,7 @@ public class CapacityScheduler extends
 
     public AsyncScheduleThread(CapacityScheduler cs) {
       this.cs = cs;
+      setName("AsyncCapacitySchedulerThread" + cs.threadNum++);
       setDaemon(true);
     }
 
@@ -959,6 +962,17 @@ public class CapacityScheduler extends
       if (placementContext == null) {
         fallbackContext = CSQueueUtils.extractQueuePath(queueName);
       }
+
+      //we need to make sure there is no empty path parts present
+      String path = fallbackContext.getFullQueuePath();
+      String[] pathParts = path.split("\\.");
+      for (int i = 0; i < pathParts.length; i++) {
+        if ("".equals(pathParts[i])) {
+          LOG.error("Application submitted to invalid path: '{}'", path);
+          return null;
+        }
+      }
+
       if (fallbackContext.hasParentQueue()) {
         try {
           return autoCreateLeafQueue(fallbackContext);
@@ -1019,8 +1033,8 @@ public class CapacityScheduler extends
       }
 
       //Could be a potential auto-created leaf queue
-      CSQueue queue = getOrCreateQueueFromPlacementContext(applicationId, user,
-            queueName, placementContext, false);
+      CSQueue queue = getOrCreateQueueFromPlacementContext(
+           applicationId, user, queueName, placementContext, false);
 
       if (queue == null) {
         String message;

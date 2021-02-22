@@ -48,7 +48,7 @@ public class TestWebHdfsWithMultipleNameNodes {
     GenericTestUtils.setLogLevel(LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG, Level.TRACE);
 
-    DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
 
   private static final Configuration conf = new HdfsConfiguration();

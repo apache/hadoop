@@ -32,9 +32,9 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import java.util.function.Supplier;
 
@@ -46,8 +46,8 @@ import java.util.function.Supplier;
 public class TestDNFencingWithReplication {
   static {
     GenericTestUtils.setLogLevel(FSNamesystem.auditLog, Level.WARN);
-    GenericTestUtils.setLogLevel(Server.LOG, Level.FATAL);
-    GenericTestUtils.setLogLevel(RetryInvocationHandler.LOG, Level.FATAL);
+    GenericTestUtils.setLogLevel(Server.LOG, Level.ERROR);
+    GenericTestUtils.setLogLevel(RetryInvocationHandler.LOG, Level.ERROR);
   }
 
   private static final int NUM_THREADS = 20;

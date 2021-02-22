@@ -5580,6 +5580,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"NumInServiceLiveDataNodes",
+      "Number of live datanodes which are currently in service"})
+  public int getNumInServiceLiveDataNodes() {
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    int liveInService = live.size();
+    for (DatanodeDescriptor node : live) {
+      liveInService -= node.isInMaintenance() ? 1 : 0;
+    }
+    return liveInService;
+  }
+
+  @Override // FSNamesystemMBean
   @Metric({"VolumeFailuresTotal",
       "Total number of volume failures across all Datanodes"})
   public int getVolumeFailuresTotal() {
@@ -6228,8 +6241,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   void loadSecretManagerState(SecretManagerSection s,
       List<SecretManagerSection.DelegationKey> keys,
-      List<SecretManagerSection.PersistToken> tokens) throws IOException {
-    dtSecretManager.loadSecretManagerState(new SecretManagerState(s, keys, tokens));
+      List<SecretManagerSection.PersistToken> tokens,
+      StartupProgress.Counter counter) throws IOException {
+    dtSecretManager.loadSecretManagerState(new SecretManagerState(s, keys, tokens),
+            counter);
   }
 
   /**
@@ -8213,7 +8228,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     checkErasureCodingSupported(operationName);
     boolean success = false;
-    LOG.info("Disable the erasure coding policy " + ecPolicyName);
     try {
       writeLock();
       try {

@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 
+import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -34,7 +35,7 @@ import java.util.concurrent.ConcurrentMap;
  * we don't configure multiple volumes with same storage type on one mount.
  */
 @InterfaceAudience.Private
-class MountVolumeMap {
+public class MountVolumeMap {
   private final ConcurrentMap<String, MountVolumeInfo>
       mountVolumeMapping;
   private final Configuration conf;
@@ -88,5 +89,25 @@ class MountVolumeMap {
         mountVolumeMapping.remove(mount);
       }
     }
+  }
+
+  void setCapacityRatio(FsVolumeImpl target, double capacityRatio)
+      throws IOException {
+    String mount = target.getMount();
+    if (!mount.isEmpty()) {
+      MountVolumeInfo info = mountVolumeMapping.get(mount);
+      if (!info.setCapacityRatio(
+          target.getStorageType(), capacityRatio)) {
+        throw new IOException(
+            "Not enough capacity ratio left on mount: "
+                + mount + ", for " + target + ": capacity ratio: "
+                + capacityRatio + ". Sum of the capacity"
+                + " ratio of on same disk mount should be <= 1");
+      }
+    }
+  }
+
+  public boolean hasMount(String mount) {
+    return mountVolumeMapping.containsKey(mount);
   }
 }

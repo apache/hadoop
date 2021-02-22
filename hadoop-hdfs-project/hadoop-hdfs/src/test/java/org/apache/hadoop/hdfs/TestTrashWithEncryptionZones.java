@@ -34,11 +34,13 @@ import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.io.File;
 import java.security.PrivilegedExceptionAction;
@@ -91,8 +93,8 @@ public class TestTrashWithEncryptionZones {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
         2);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    org.apache.log4j.Logger
-        .getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(EncryptionZoneManager.class), Level.TRACE);
     fs = cluster.getFileSystem();
     fsWrapper = new FileSystemTestWrapper(fs);
     dfsAdmin = new HdfsAdmin(cluster.getURI(), conf);

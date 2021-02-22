@@ -544,6 +544,27 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertFalse(bAutoLeafQueue.hasChildQueues());
   }
 
+  @Test
+  public void testAutoCreateQueueMaxQueuesLimit() throws Exception {
+    startScheduler();
+
+    csConf.setAutoCreatedQueuesV2MaxChildQueuesLimit("root.e", 5);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+
+    for (int i = 0; i < 5; ++i) {
+      createQueue("root.e.q_" + i);
+    }
+
+    // Check if max queue limit can't be exceeded
+    try {
+      createQueue("root.e.q_6");
+      Assert.fail("Can't exceed max queue limit.");
+    } catch (Exception ex) {
+      Assert.assertTrue(ex
+          instanceof SchedulerDynamicEditException);
+    }
+  }
+
   private LeafQueue createQueue(String queuePath) throws YarnException {
     return autoQueueHandler.autoCreateQueue(
         CSQueueUtils.extractQueuePath(queuePath));
