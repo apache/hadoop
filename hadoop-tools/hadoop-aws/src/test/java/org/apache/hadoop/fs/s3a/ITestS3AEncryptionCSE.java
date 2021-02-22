@@ -19,9 +19,14 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
@@ -34,9 +39,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
  */
 public abstract class ITestS3AEncryptionCSE extends AbstractS3ATestBase {
 
-  private static final int[] SIZES = {
-      0, 1, 255, 4095
-  };
+  private static final List<Integer> SIZES =
+      new ArrayList<>(Arrays.asList(0, 1, 255, 4095));
 
   /**
    * Testing S3 CSE on different file sizes.
@@ -68,6 +72,38 @@ public abstract class ITestS3AEncryptionCSE extends AbstractS3ATestBase {
     fs.rename(src, dest);
     ContractTestUtils.verifyFileContents(fs, dest, data);
     assertEncrypted(dest);
+  }
+
+  /**
+   * Test to verify if we get same content length of files in S3 CSE using
+   * listStatus on the parent directory.
+   */
+  @Test
+  public void testDirectoryListingFileLengths() throws IOException {
+    describe("Test to verify directory listing calls gives correct content "
+        + "lengths");
+    S3AFileSystem fs = getFileSystem();
+    Path parentDir = path(getMethodName());
+
+    // Creating files in the parent directory that will be used to assert
+    // content length.
+    for (int i : SIZES) {
+      Path child = new Path(parentDir, getMethodName() + i);
+      writeThenReadFile(child, i);
+    }
+
+    // Getting the content lengths of files inside the directory via
+    // directory listing.
+    List<Integer> fileLengthDirListing = new ArrayList<>();
+    for (FileStatus fileStatus : fs.listStatus(parentDir)) {
+      fileLengthDirListing.add((int) fileStatus.getLen());
+    }
+
+    // Assert the file length we got against expected file length.
+    Assertions.assertThat(fileLengthDirListing)
+        .describedAs("File length isn't same "
+            + "as expected from directory listing").containsExactlyInAnyOrderElementsOf(SIZES);
+
   }
 
   /**

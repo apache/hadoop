@@ -52,6 +52,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -3658,13 +3659,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // look for the simple file
         ObjectMetadata meta = getObjectMetadata(key);
         LOG.debug("Found exact file: normal file {}", key);
-        return new S3AFileStatus(meta.getContentLength(),
-            dateToLong(meta.getLastModified()),
-            path,
-            getDefaultBlockSize(path),
-            username,
-            meta.getETag(),
-            meta.getVersionId());
+
+        // if S3 Client side encryption is enabled then use unencrypted
+        // content length.
+        if (this.getConf().get(CLIENT_SIDE_ENCRYPTION_METHOD) != null) {
+          return new S3AFileStatus(Long.parseLong(
+              meta.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH)),
+              dateToLong(meta.getLastModified()),
+              path,
+              getDefaultBlockSize(path),
+              username,
+              meta.getETag(),
+              meta.getVersionId());
+        } else {
+          return new S3AFileStatus(meta.getContentLength(),
+              dateToLong(meta.getLastModified()),
+              path,
+              getDefaultBlockSize(path),
+              username,
+              meta.getETag(),
+              meta.getVersionId());
+        }
       } catch (AmazonServiceException e) {
         // if the response is a 404 error, it just means that there is
         // no file at that path...the remaining checks will be needed.
