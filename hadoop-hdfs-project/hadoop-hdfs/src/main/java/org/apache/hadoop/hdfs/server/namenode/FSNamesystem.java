@@ -6166,8 +6166,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   void loadSecretManagerState(SecretManagerSection s,
       List<SecretManagerSection.DelegationKey> keys,
-      List<SecretManagerSection.PersistToken> tokens) throws IOException {
-    dtSecretManager.loadSecretManagerState(new SecretManagerState(s, keys, tokens));
+      List<SecretManagerSection.PersistToken> tokens,
+      StartupProgress.Counter counter) throws IOException {
+    dtSecretManager.loadSecretManagerState(new SecretManagerState(s, keys, tokens),
+            counter);
   }
 
   /**
