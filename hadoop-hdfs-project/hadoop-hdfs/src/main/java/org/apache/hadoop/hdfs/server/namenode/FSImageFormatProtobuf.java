@@ -544,10 +544,9 @@ public final class FSImageFormatProtobuf {
       Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
       for (int i = 0; i < numTokens; ++i) {
         tokens.add(SecretManagerSection.PersistToken.parseDelimitedFrom(in));
-        counter.increment();
       }
 
-      fsn.loadSecretManagerState(s, keys, tokens);
+      fsn.loadSecretManagerState(s, keys, tokens, counter);
     }
 
     private void loadCacheManagerSection(InputStream in, StartupProgress prog,
