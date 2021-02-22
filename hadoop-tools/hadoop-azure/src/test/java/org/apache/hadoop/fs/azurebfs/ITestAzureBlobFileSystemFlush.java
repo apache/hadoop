@@ -326,7 +326,8 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, true)) {
       assertHasStreamCapabilities(stream,
           StreamCapabilities.HFLUSH,
-          StreamCapabilities.HSYNC,
+          StreamCapabilities.HSYNC);
+      assertLacksStreamCapabilities(stream,
           StreamCapabilities.DROPBEHIND,
           StreamCapabilities.READAHEAD,
           StreamCapabilities.UNBUFFER);
