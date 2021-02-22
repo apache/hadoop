@@ -136,7 +136,10 @@ RUN apt-get -q update \
 ENV FINDBUGS_HOME /usr
 
 # Install pylint and python-dateutil
-RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
+RUN pip3 install pylint==2.6.0 \
+    python-dateutil==2.8.1 \
+    astroid==2.4.2 \
+    isort==4.3.21
 
 ###
 # Install node.js 10.x for web UI framework (4.2.6 ships with Xenial)
