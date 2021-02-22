@@ -17,17 +17,14 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
@@ -55,26 +52,14 @@ public abstract class ClusterMapReduceTestCase {
   private MiniDFSCluster dfsCluster = null;
   private MiniMRClientCluster mrCluster = null;
 
-  protected static void setupClassBase(String testClassName) throws Exception {
+  protected static void setupClassBase(Class<?> testClass) throws Exception {
     // setup the test root directory
-    testRootDir =
-        new Path(TEST_ROOT_DEFAULT_PATH, testClassName);
+    testRootDir = GenericTestUtils.setupTestRootDir(testClass,
+        TEST_ROOT_DEFAULT_PATH);
     System.setProperty(GenericTestUtils.SYSPROP_TEST_DATA_DIR,
         testRootDir.toString());
   }
 
-  protected static void clearRootDirectory() throws Exception {
-    // delete the entire test directory
-    File rootDir = new File(testRootDir.toString());
-    FileContext.getLocalFSFileContext().delete(
-        new Path(rootDir.getAbsoluteFile().getPath()), true);
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws Exception {
-    // delete the entire test directory
-    clearRootDirectory();
-  }
 
   /**
    * Creates Hadoop Cluster and DFS before a test case is run.

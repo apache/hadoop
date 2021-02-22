@@ -19,7 +19,6 @@ package org.apache.hadoop.mapreduce.security.ssl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -35,7 +34,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -58,20 +56,8 @@ public class TestEncryptedShuffle {
   @BeforeClass
   public static void setUp() throws Exception {
     testRootDir =
-        new Path(TEST_ROOT_DEFAULT_PATH,
-            TestEncryptedShuffle.class.getSimpleName());
-    System.setProperty(GenericTestUtils.SYSPROP_TEST_DATA_DIR,
-        testRootDir.toString());
-    File base = new File(testRootDir.toString());
-    FileUtil.fullyDelete(base);
-    base.mkdirs();
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws Exception {
-    // delete the entire test directory
-    File rootDir = new File(testRootDir.toString());
-    FileUtil.fullyDelete(rootDir);
+        GenericTestUtils.setupTestRootDir(TestEncryptedShuffle.class,
+            TEST_ROOT_DEFAULT_PATH);
   }
 
   @Before

@@ -41,7 +41,7 @@ public class TestClusterMapReduceTestCase extends ClusterMapReduceTestCase {
 
   @BeforeClass
   public static void setupClass() throws Exception {
-    setupClassBase(TestClusterMapReduceTestCase.class.getSimpleName());
+    setupClassBase(TestClusterMapReduceTestCase.class);
   }
 
   public void _testMapReduce(boolean restart) throws Exception {
@@ -96,7 +96,6 @@ public class TestClusterMapReduceTestCase extends ClusterMapReduceTestCase {
       reader.close();
       assertEquals(4, counter);
     }
-
   }
 
   @Test

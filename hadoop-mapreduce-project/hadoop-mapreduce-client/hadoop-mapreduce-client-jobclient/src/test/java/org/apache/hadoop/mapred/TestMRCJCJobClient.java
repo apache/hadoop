@@ -37,7 +37,7 @@ public class TestMRCJCJobClient extends TestMRJobClient {
 
   @BeforeClass
   public static void setupClass() throws Exception {
-    setupClassBase(TestMRCJCJobClient.class.getSimpleName());
+    setupClassBase(TestMRCJCJobClient.class);
   }
 
   private String runJob() throws Exception {

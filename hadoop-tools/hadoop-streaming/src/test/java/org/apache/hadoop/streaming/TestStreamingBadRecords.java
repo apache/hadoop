@@ -68,7 +68,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
 
   @BeforeClass
   public static void setupClass() throws Exception {
-    setupClassBase(TestStreamingBadRecords.class.getSimpleName());
+    setupClassBase(TestStreamingBadRecords.class);
   }
 
   public TestStreamingBadRecords() throws IOException

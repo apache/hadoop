@@ -63,7 +63,7 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
 
   @BeforeClass
   public static void setupClass() throws Exception {
-    setupClassBase(TestBadRecords.class.getSimpleName());
+    setupClassBase(TestBadRecords.class);
   }
 
   public TestBadRecords() {

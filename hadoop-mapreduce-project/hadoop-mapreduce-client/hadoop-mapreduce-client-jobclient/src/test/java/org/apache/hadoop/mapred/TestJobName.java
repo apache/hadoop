@@ -39,7 +39,7 @@ public class TestJobName extends ClusterMapReduceTestCase {
 
   @BeforeClass
   public static void setupClass() throws Exception {
-    setupClassBase(TestJobName.class.getSimpleName());
+    setupClassBase(TestJobName.class);
   }
 
   @Test

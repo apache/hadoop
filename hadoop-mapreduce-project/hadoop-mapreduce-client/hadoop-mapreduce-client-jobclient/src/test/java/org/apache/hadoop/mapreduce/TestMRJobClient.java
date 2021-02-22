@@ -66,7 +66,7 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
   @BeforeClass
   public static void setupClass() throws Exception {
-    setupClassBase(TestMRJobClient.class.getSimpleName());
+    setupClassBase(TestMRJobClient.class);
   }
 
   private Job runJob(Configuration conf) throws Exception {
