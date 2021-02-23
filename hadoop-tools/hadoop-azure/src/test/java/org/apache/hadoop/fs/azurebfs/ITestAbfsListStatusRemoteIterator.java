@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -64,7 +65,8 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
 
     ListingSupport listngSupport = Mockito.spy(getFileSystem().getAbfsStore());
     RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(
-        getFileSystem().getFileStatus(testDir), listngSupport);
+        getFileSystem().getFileStatus(testDir), listngSupport,
+        getTestTracingContext(getFileSystem(), true));
     Assertions.assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
@@ -88,7 +90,8 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     verify(listngSupport, Mockito.atLeast(minNumberOfInvokations))
         .listStatus(any(Path.class), nullable(String.class),
             anyList(), anyBoolean(),
-            nullable(String.class));
+            nullable(String.class),
+            any(TracingContext.class));
   }
 
   @Test
@@ -100,7 +103,8 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
 
     ListingSupport listngSupport = Mockito.spy(getFileSystem().getAbfsStore());
     RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(
-        getFileSystem().getFileStatus(testDir), listngSupport);
+        getFileSystem().getFileStatus(testDir), listngSupport,
+        getTestTracingContext(getFileSystem(), true));
     Assertions.assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
@@ -129,7 +133,8 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     verify(listngSupport, Mockito.atLeast(minNumberOfInvokations))
         .listStatus(any(Path.class), nullable(String.class),
             anyList(), anyBoolean(),
-            nullable(String.class));
+            nullable(String.class),
+            any(TracingContext.class));
   }
 
   @Test
@@ -205,7 +210,8 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     setPageSize(10);
     RemoteIterator fsItr =
         new AbfsListStatusRemoteIterator(getFileSystem().getFileStatus(testDir),
-            getFileSystem().getAbfsStore());
+            getFileSystem().getAbfsStore(),
+            getTestTracingContext(getFileSystem(), true));
     fsItr = Mockito.spy(fsItr);
     Mockito.doReturn(false).when(fsItr).hasNext();
 
@@ -253,7 +259,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     ListingSupport lsSupport =getMockListingSupport(exceptionMessage);
     RemoteIterator fsItr =
         new AbfsListStatusRemoteIterator(getFileSystem().getFileStatus(testDir),
-        lsSupport);
+        lsSupport, getTestTracingContext(getFileSystem(), true));
 
     Assertions.assertThatThrownBy(() -> fsItr.next())
         .describedAs(
@@ -276,19 +282,20 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   private ListingSupport getMockListingSupport(String exceptionMessage) {
     return new ListingSupport() {
       @Override
-      public FileStatus[] listStatus(Path path) throws IOException {
+      public FileStatus[] listStatus(Path path, TracingContext tracingContext) throws IOException {
         return null;
       }
 
       @Override
-      public FileStatus[] listStatus(Path path, String startFrom)
+      public FileStatus[] listStatus(Path path, String startFrom, TracingContext tracingContext)
           throws IOException {
         return null;
       }
 
       @Override
       public String listStatus(Path path, String startFrom,
-          List<FileStatus> fileStatuses, boolean fetchAll, String continuation)
+          List<FileStatus> fileStatuses, boolean fetchAll,
+          String continuation, TracingContext tracingContext)
           throws IOException {
         throw new IOException(exceptionMessage);
       }

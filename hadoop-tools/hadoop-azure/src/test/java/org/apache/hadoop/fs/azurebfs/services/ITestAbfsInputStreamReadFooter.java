@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -270,7 +271,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
           .getWrappedStream();
       abfsInputStream = spy(abfsInputStream);
       doReturn(10).doReturn(10).doCallRealMethod().when(abfsInputStream)
-          .readRemote(anyLong(), any(), anyInt(), anyInt());
+          .readRemote(anyLong(), any(), anyInt(), anyInt(),
+              any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
       seek(iStream, seekPos);
@@ -319,7 +321,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
               - someDataLength;
       doReturn(10).doReturn(secondReturnSize).doCallRealMethod()
           .when(abfsInputStream)
-          .readRemote(anyLong(), any(), anyInt(), anyInt());
+          .readRemote(anyLong(), any(), anyInt(), anyInt(),
+              any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
       seek(iStream, seekPos);

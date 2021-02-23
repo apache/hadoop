@@ -389,7 +389,8 @@ public class ITestAbfsInputStreamStatistics
       abfsOutputStream.hflush();
 
       abfsInputStream =
-          abfss.openFileForRead(actionHttpGetRequestPath, fs.getFsStatistics());
+          abfss.openFileForRead(actionHttpGetRequestPath,
+              fs.getFsStatistics(), getTestTracingContext(fs, false));
       abfsInputStream.read();
       AbfsInputStreamStatisticsImpl abfsInputStreamStatistics =
           (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
