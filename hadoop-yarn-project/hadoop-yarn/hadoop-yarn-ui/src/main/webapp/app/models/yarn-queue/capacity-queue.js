@@ -21,6 +21,7 @@ import Converter from 'yarn-ui/utils/converter';
 
 export default DS.Model.extend({
   name: DS.attr("string"),
+  path: DS.attr("string"),
   children: DS.attr("array"),
   parent: DS.attr("string"),
   capacity: DS.attr("number"),
@@ -31,6 +32,10 @@ export default DS.Model.extend({
   absCapacity: DS.attr("number"),
   absMaxCapacity: DS.attr("number"),
   absUsedCapacity: DS.attr("number"),
+  weight: DS.attr("number"),
+  normalizedWeight: DS.attr("number"),
+  creationMethod: DS.attr("string"),
+  orderingPolicy: DS.attr("string"),
   state: DS.attr("string"),
   userLimit: DS.attr("number"),
   userLimitFactor: DS.attr("number"),
@@ -47,6 +52,14 @@ export default DS.Model.extend({
       return true;
     }
     return len <= 0;
+  }.property("children"),
+
+  isWeightMode: function() {
+   return this.get("weight") !== -1;
+  }.property("children"),
+
+  isFlexibleDynamicQueue: function() {
+    return this.get("creationMethod") === "dynamicFlexible";
   }.property("children"),
 
   capacitiesBarChartData: function() {

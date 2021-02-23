@@ -70,6 +70,21 @@ public class MappingQueuePath {
   }
 
   /**
+   * Simple helper method to determine if the path contains any empty parts.
+   * @return true if there is at least one empty part of the path
+   */
+  public boolean hasEmptyPart() {
+    String[] parts = getFullPath().split("\\.");
+    for (int i = 0; i < parts.length; i++) {
+      if (parts[i].equals("")) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Getter for the parent part of the path.
    * @return Parent path of the queue, null if there is no parent.
    */
