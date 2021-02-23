@@ -217,7 +217,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
           elapsedTimeMs < MAX_ELAPSEDTIMEMS);
 
       //test negative skip from last valid position
-      skipped = inputStream.skip(-testFileLength+1);
+      skipped = inputStream.skip(-testFileLength + 1);
       assertEquals("Incorrect skip count", -testFileLength + 1, skipped);
       assertEquals("Position should be 0", 0, inputStream.getPos());
 
@@ -427,15 +427,17 @@ public class ITestAzureBlobFileSystemRandomRead extends
         in.getPos());
     in.seek(0);
     assertEquals("Seek to 0 should succeed", 0, in.getPos());
-    in.skip(0);
-    assertEquals("Skip 0 should succeed", 0, in.getPos());
+    long skipped = in.skip(0);
+    assertEquals("Number of skipped bytes should be 0", 0, skipped);
+    assertEquals("Position should be 0 post skip 0", 0, in.getPos());
     assertEquals("Available bytes in empty file is 0", 0, in.available());
 
     intercept(EOFException.class, () -> in.seek(1));
     intercept(EOFException.class, () -> in.seek(-1));
     //skip(1) from position 0 does not seek(0) since pos = contentlength
     intercept(EOFException.class, () -> in.skip(1));
-    in.skip(-1);
+    skipped = in.skip(-1);
+    assertEquals("Number of skipped bytes should be 0", 0, skipped);
     assertEquals("Should seek to 0", 0, in.getPos());
   }
 
