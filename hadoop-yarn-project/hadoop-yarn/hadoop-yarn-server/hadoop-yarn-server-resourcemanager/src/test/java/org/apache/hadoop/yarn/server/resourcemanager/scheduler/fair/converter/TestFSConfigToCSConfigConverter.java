@@ -22,9 +22,13 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CHILD_CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.QUEUE_AUTO_CREATE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RESERVATION_SYSTEM;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.SPECIFIED_NOT_FIRST;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_APPS_DEFAULT;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.USER_MAX_RUNNING_APPS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.CHILD_STATIC_DYNAMIC_CONFLICT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.PARENT_CHILD_CREATE_DIFFERS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.FAIR_AS_DRF;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_RESOURCES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MIN_RESOURCES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.PARENT_DYNAMIC_CREATE;
+
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.ABORT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.RuleAction.WARNING;
 import static org.junit.Assert.assertEquals;
@@ -32,11 +36,11 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -393,14 +397,8 @@ public class TestFSConfigToCSConfigConverter {
         ABORT, actions.get(MAX_CAPACITY_PERCENTAGE));
     assertEquals("maxChildCapacity",
         ABORT, actions.get(MAX_CHILD_CAPACITY));
-    assertEquals("userMaxRunningApps",
-        ABORT, actions.get(USER_MAX_RUNNING_APPS));
-    assertEquals("userMaxAppsDefault",
-        ABORT, actions.get(USER_MAX_APPS_DEFAULT));
     assertEquals("dynamicMaxAssign",
         ABORT, actions.get(DYNAMIC_MAX_ASSIGN));
-    assertEquals("specifiedNotFirstRule",
-        ABORT, actions.get(SPECIFIED_NOT_FIRST));
     assertEquals("reservationSystem",
         ABORT, actions.get(RESERVATION_SYSTEM));
     assertEquals("queueAutoCreate",
@@ -428,18 +426,24 @@ public class TestFSConfigToCSConfigConverter {
         WARNING, actions.get(MAX_CAPACITY_PERCENTAGE));
     assertEquals("maxChildCapacity",
         WARNING, actions.get(MAX_CHILD_CAPACITY));
-    assertEquals("userMaxRunningApps",
-        WARNING, actions.get(USER_MAX_RUNNING_APPS));
-    assertEquals("userMaxAppsDefault",
-        WARNING, actions.get(USER_MAX_APPS_DEFAULT));
     assertEquals("dynamicMaxAssign",
         WARNING, actions.get(DYNAMIC_MAX_ASSIGN));
-    assertEquals("specifiedNotFirstRule",
-        WARNING, actions.get(SPECIFIED_NOT_FIRST));
     assertEquals("reservationSystem",
         WARNING, actions.get(RESERVATION_SYSTEM));
     assertEquals("queueAutoCreate",
         WARNING, actions.get(QUEUE_AUTO_CREATE));
+    assertEquals("childStaticDynamicConflict",
+        WARNING, actions.get(CHILD_STATIC_DYNAMIC_CONFLICT));
+    assertEquals("parentChildCreateDiffers",
+        WARNING, actions.get(PARENT_CHILD_CREATE_DIFFERS));
+    assertEquals("fairAsDrf",
+        WARNING, actions.get(FAIR_AS_DRF));
+    assertEquals("maxResources",
+        WARNING, actions.get(MAX_RESOURCES));
+    assertEquals("minResources",
+        WARNING, actions.get(MIN_RESOURCES));
+    assertEquals("parentDynamicCreate",
+        WARNING, actions.get(PARENT_DYNAMIC_CREATE));
   }
 
   @Test
@@ -463,6 +467,7 @@ public class TestFSConfigToCSConfigConverter {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
         .withClusterResource(CLUSTER_RESOURCE_STRING)
         .withConvertPlacementRules(true)
+        .withPlacementRulesToFile(true)
         .build();
 
     converter.convert(params);
@@ -612,17 +617,17 @@ public class TestFSConfigToCSConfigConverter {
     config.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
         true);
 
-    ByteArrayOutputStream jsonOutStream = new ByteArrayOutputStream();
     converter.setConvertPlacementRules(true);
-    converter.setMappingRulesOutputStream(jsonOutStream);
     converter.setConsoleMode(true);
     converter.convert(config);
+    String json = converter.getCapacitySchedulerConfig()
+        .get(CapacitySchedulerConfiguration.MAPPING_RULE_JSON);
 
     MappingRulesDescription description =
         new ObjectMapper()
           .reader()
           .forType(MappingRulesDescription.class)
-          .readValue(jsonOutStream.toByteArray());
+          .readValue(json);
 
     if (hasPlacementRules) {
       // fs.xml defines 5 rules
@@ -661,7 +666,10 @@ public class TestFSConfigToCSConfigConverter {
     verify(placementConverter).convertPlacementPolicy(
         any(PlacementManager.class),
         any(FSConfigToCSConfigRuleHandler.class),
-        any(CapacitySchedulerConfiguration.class));
+        any(CapacitySchedulerConfiguration.class),
+        anyBoolean());
+    assertTrue(converter.getCapacitySchedulerConfig().getBoolean(
+        CapacitySchedulerConfiguration.ENABLE_QUEUE_MAPPING_OVERRIDE, false));
   }
 
   @Test

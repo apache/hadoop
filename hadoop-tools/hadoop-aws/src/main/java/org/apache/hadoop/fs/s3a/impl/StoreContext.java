@@ -33,9 +33,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -88,7 +88,8 @@ public class StoreContext {
   private final Invoker invoker;
 
   /** Instrumentation and statistics. */
-  private final S3AInstrumentation instrumentation;
+  private final S3AStatisticsContext instrumentation;
+
   private final S3AStorageStatistics storageStatistics;
 
   /** Seek policy. */
@@ -129,7 +130,7 @@ public class StoreContext {
       final ListeningExecutorService executor,
       final int executorCapacity,
       final Invoker invoker,
-      final S3AInstrumentation instrumentation,
+      final S3AStatisticsContext instrumentation,
       final S3AStorageStatistics storageStatistics,
       final S3AInputPolicy inputPolicy,
       final ChangeDetectionPolicy changeDetectionPolicy,
@@ -186,7 +187,12 @@ public class StoreContext {
     return invoker;
   }
 
-  public S3AInstrumentation getInstrumentation() {
+  /**
+   * Get the statistics context for this StoreContext.
+   * @return the statistics context this store context was created
+   * with.
+   */
+  public S3AStatisticsContext getInstrumentation() {
     return instrumentation;
   }
 
@@ -268,7 +274,6 @@ public class StoreContext {
    */
   public void incrementStatistic(Statistic statistic, long count) {
     instrumentation.incrementCounter(statistic, count);
-    storageStatistics.incrementCounter(statistic, count);
   }
 
   /**

@@ -39,6 +39,11 @@
   </property>
 
   <property>
+    <name>fs.contract.rename-returns-false-if-dest-exists</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <name>fs.contract.test.random-seek-count</name>
     <value>10</value>
   </property>
@@ -145,6 +150,16 @@
 
   <property>
     <name>fs.contract.supports-getfilestatus</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-hflush</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-hsync</name>
     <value>true</value>
   </property>
 

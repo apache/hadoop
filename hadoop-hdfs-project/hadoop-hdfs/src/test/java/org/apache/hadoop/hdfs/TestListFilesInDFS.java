@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestListFiles;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -29,10 +26,6 @@ import org.junit.BeforeClass;
  * This class tests the FileStatus API.
  */
 public class TestListFilesInDFS extends TestListFiles {
-  {
-    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.ALL);
-  }
-
 
   private static MiniDFSCluster cluster;
 

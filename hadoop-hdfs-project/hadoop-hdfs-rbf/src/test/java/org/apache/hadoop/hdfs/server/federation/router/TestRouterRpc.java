@@ -99,6 +99,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -885,37 +886,40 @@ public class TestRouterRpc {
     resolver.addLocation(mountPoint, ns0, "/");
 
     FsPermission permission = new FsPermission("777");
-    routerProtocol.mkdirs(mountPoint, permission, false);
     routerProtocol.mkdirs(snapshotFolder, permission, false);
-    for (int i = 1; i <= 9; i++) {
-      String folderPath = snapshotFolder + "/subfolder" + i;
-      routerProtocol.mkdirs(folderPath, permission, false);
+    try {
+      for (int i = 1; i <= 9; i++) {
+        String folderPath = snapshotFolder + "/subfolder" + i;
+        routerProtocol.mkdirs(folderPath, permission, false);
+      }
+
+      LOG.info("Create the snapshot: {}", snapshotFolder);
+      routerProtocol.allowSnapshot(snapshotFolder);
+      String snapshotName =
+          routerProtocol.createSnapshot(snapshotFolder, "snap");
+      assertEquals(snapshotFolder + "/.snapshot/snap", snapshotName);
+      assertTrue(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
+
+      LOG.info("Rename the snapshot and check it changed");
+      routerProtocol.renameSnapshot(snapshotFolder, "snap", "newsnap");
+      assertFalse(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
+      assertTrue(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
+      LambdaTestUtils.intercept(SnapshotException.class,
+          "Cannot delete snapshot snap from path " + snapshotFolder + ":",
+          () -> routerFS.deleteSnapshot(new Path(snapshotFolder), "snap"));
+
+      LOG.info("Delete the snapshot and check it is not there");
+      routerProtocol.deleteSnapshot(snapshotFolder, "newsnap");
+      assertFalse(
+          verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
+    } finally {
+      // Cleanup
+      assertTrue(routerProtocol.delete(snapshotFolder, true));
+      assertTrue(resolver.removeLocation(mountPoint, ns0, "/"));
     }
-
-    LOG.info("Create the snapshot: {}", snapshotFolder);
-    routerProtocol.allowSnapshot(snapshotFolder);
-    String snapshotName = routerProtocol.createSnapshot(
-        snapshotFolder, "snap");
-    assertEquals(snapshotFolder + "/.snapshot/snap", snapshotName);
-    assertTrue(verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
-
-    LOG.info("Rename the snapshot and check it changed");
-    routerProtocol.renameSnapshot(snapshotFolder, "snap", "newsnap");
-    assertFalse(
-        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
-    assertTrue(
-        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
-    LambdaTestUtils.intercept(SnapshotException.class,
-        "Cannot delete snapshot snap from path " + snapshotFolder + ":",
-        () -> routerFS.deleteSnapshot(new Path(snapshotFolder), "snap"));
-
-    LOG.info("Delete the snapshot and check it is not there");
-    routerProtocol.deleteSnapshot(snapshotFolder, "newsnap");
-    assertFalse(
-        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
-
-    // Cleanup
-    routerProtocol.delete(mountPoint, true);
   }
 
   @Test
@@ -1930,5 +1934,17 @@ public class TestRouterRpc {
     assertTrue(auditlog.getOutput()
         .contains("callerContext=clientContext,clientIp:"));
     assertTrue(verifyFileExists(routerFS, dirPath));
+  }
+
+  @Test
+  public void testSetBalancerBandwidth() throws Exception {
+    long defaultBandwidth =
+        DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT;
+    long newBandwidth = defaultBandwidth * 2;
+    routerProtocol.setBalancerBandwidth(newBandwidth);
+    ArrayList<DataNode> datanodes = cluster.getCluster().getDataNodes();
+    GenericTestUtils.waitFor(() ->  {
+      return datanodes.get(0).getBalancerBandwidth() == newBandwidth;
+    }, 100, 60 * 1000);
   }
 }

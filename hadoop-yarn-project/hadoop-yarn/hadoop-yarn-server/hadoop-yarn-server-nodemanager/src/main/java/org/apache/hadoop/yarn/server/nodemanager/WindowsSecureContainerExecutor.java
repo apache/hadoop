@@ -374,7 +374,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
           return os;
         } finally {
           if (!success) {
-            IOUtils.cleanup(LOG, os);
+            IOUtils.cleanupWithLogger(LOG, os);
           }
         }
       }

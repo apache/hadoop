@@ -22,6 +22,7 @@ package org.apache.hadoop.hdfs.server.datanode.metrics;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.metrics2.MetricsJsonBuilder;
 import org.apache.hadoop.metrics2.lib.MutableRollingAverages;
 import org.slf4j.Logger;
@@ -48,11 +49,6 @@ public class DataNodePeerMetrics {
 
   private final String name;
 
-  /**
-   * Threshold in milliseconds below which a DataNode is definitely not slow.
-   */
-  private static final long LOW_THRESHOLD_MS = 5;
-  private static final long MIN_OUTLIER_DETECTION_NODES = 10;
 
   private final OutlierDetector slowNodeDetector;
 
@@ -62,14 +58,28 @@ public class DataNodePeerMetrics {
    * outlier detection is skipped.
    */
   private final long minOutlierDetectionSamples;
+  /**
+   * Threshold in milliseconds below which a DataNode is definitely not slow.
+   */
+  private final long lowThresholdMs;
+  /**
+   * Minimum number of nodes to run outlier detection.
+   */
+  private final long minOutlierDetectionNodes;
 
   public DataNodePeerMetrics(final String name, Configuration conf) {
     this.name = name;
     minOutlierDetectionSamples = conf.getLong(
         DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY,
         DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT);
-    this.slowNodeDetector = new OutlierDetector(MIN_OUTLIER_DETECTION_NODES,
-        LOW_THRESHOLD_MS);
+    lowThresholdMs =
+        conf.getLong(DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY,
+            DFSConfigKeys.DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT);
+    minOutlierDetectionNodes =
+        conf.getLong(DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY,
+            DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT);
+    this.slowNodeDetector =
+        new OutlierDetector(minOutlierDetectionNodes, lowThresholdMs);
     sendPacketDownstreamRollingAverages = new MutableRollingAverages("Time");
   }
 

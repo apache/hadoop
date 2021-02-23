@@ -484,9 +484,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // should share the same amount of reserved capacity.
     // When calculating actual non dfs used,
     // exclude DFS used capacity by another volume.
-    if (enableSameDiskTiering &&
-        (storageType == StorageType.DISK
-            || storageType == StorageType.ARCHIVE)) {
+    if (enableSameDiskTiering
+        && StorageType.allowSameDiskTiering(storageType)) {
       StorageType counterpartStorageType = storageType == StorageType.DISK
           ? StorageType.ARCHIVE : StorageType.DISK;
       FsVolumeReference counterpartRef = dataset
@@ -1517,6 +1516,24 @@ public class FsVolumeImpl implements FsVolumeSpi {
         block.getGenerationStamp(), replicaInfo,
         getTmpDir(block.getBlockPoolId()),
         replicaInfo.isOnTransientStorage(), smallBufferSize, conf);
+
+    ReplicaInfo newReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
+        .setBlockId(replicaInfo.getBlockId())
+        .setGenerationStamp(replicaInfo.getGenerationStamp())
+        .setFsVolume(this)
+        .setDirectoryToUse(blockFiles[0].getParentFile())
+        .setBytesToReserve(0)
+        .build();
+    newReplicaInfo.setNumBytes(blockFiles[1].length());
+    return newReplicaInfo;
+  }
+
+  public ReplicaInfo hardLinkBlockToTmpLocation(ExtendedBlock block,
+      ReplicaInfo replicaInfo) throws IOException {
+
+    File[] blockFiles = FsDatasetImpl.hardLinkBlockFiles(block.getBlockId(),
+        block.getGenerationStamp(), replicaInfo,
+        getTmpDir(block.getBlockPoolId()));
 
     ReplicaInfo newReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
         .setBlockId(replicaInfo.getBlockId())

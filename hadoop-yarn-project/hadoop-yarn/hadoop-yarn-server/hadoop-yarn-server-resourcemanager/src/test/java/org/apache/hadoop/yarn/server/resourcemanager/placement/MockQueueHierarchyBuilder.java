@@ -21,7 +21,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.commons.compress.utils.Lists;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.*;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +41,7 @@ class MockQueueHierarchyBuilder {
   private static final String QUEUE_SEP = ".";
   private List<String> queuePaths = Lists.newArrayList();
   private List<String> managedParentQueues = Lists.newArrayList();
+  private List<String> dynamicParentQueues = Lists.newArrayList();
   private Set<String> ambiguous = Sets.newHashSet();
   private Map<String, String> shortNameMapping = Maps.newHashMap();
   private CapacitySchedulerQueueManager queueManager;
@@ -62,6 +68,12 @@ class MockQueueHierarchyBuilder {
     return this;
   }
 
+  public MockQueueHierarchyBuilder withDynamicParentQueue(
+      String dynamicQueue) {
+    this.dynamicParentQueues.add(dynamicQueue);
+    return this;
+  }
+
   public void build() {
     if (this.queueManager == null) {
       throw new IllegalStateException(
@@ -73,6 +85,15 @@ class MockQueueHierarchyBuilder {
         queuePaths.add(managedParentQueue);
       } else {
         throw new IllegalStateException("Cannot add a managed parent " +
+            "and a simple queue with the same path");
+      }
+    }
+
+    for (String dynamicParentQueue : dynamicParentQueues) {
+      if (!queuePaths.contains(dynamicParentQueue)) {
+        queuePaths.add(dynamicParentQueue);
+      } else {
+        throw new IllegalStateException("Cannot add a dynamic parent " +
             "and a simple queue with the same path");
       }
     }
@@ -128,10 +149,12 @@ class MockQueueHierarchyBuilder {
       return createRootQueue(ROOT);
     } else if (managedParentQueues.contains(currentQueuePath)) {
       return addManagedParentQueueAsChildOf(parentQueue, queueName);
+    } else if (dynamicParentQueues.contains(currentQueuePath)) {
+      return addParentQueueAsChildOf(parentQueue, queueName, true);
     } else if (isLeaf) {
       return addLeafQueueAsChildOf(parentQueue, queueName);
     } else {
-      return addParentQueueAsChildOf(parentQueue, queueName);
+      return addParentQueueAsChildOf(parentQueue, queueName, false);
     }
   }
 
@@ -144,8 +167,9 @@ class MockQueueHierarchyBuilder {
   }
 
   private AbstractCSQueue addParentQueueAsChildOf(ParentQueue parent,
-      String queueName) {
+      String queueName, boolean isDynamic) {
     ParentQueue queue = mock(ParentQueue.class);
+    when(queue.isEligibleForAutoQueueCreation()).thenReturn(isDynamic);
     setQueueFields(parent, queue, queueName);
     return queue;
   }

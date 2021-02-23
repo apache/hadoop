@@ -21,10 +21,14 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 
 /**
  * Test s3a performance metrics register and output.
@@ -51,17 +55,34 @@ public class ITestS3AMetrics extends AbstractS3ATestBase {
     Path file = path("testStreamStatistics");
     byte[] data = "abcdefghijklmnopqrstuvwxyz".getBytes();
     ContractTestUtils.createFile(fs, file, false, data);
-
-    try (InputStream inputStream = fs.open(file)) {
+    InputStream inputStream = fs.open(file);
+    try {
       while (inputStream.read(data) != -1) {
         LOG.debug("Read batch of data from input stream...");
       }
+      LOG.info("Final stream statistics: {}",
+          ioStatisticsSourceToString(inputStream));
+    } finally {
+      // this is not try-with-resources only to aid debugging
+      inputStream.close();
     }
 
+    final String statName = Statistic.STREAM_READ_BYTES.getSymbol();
+
+    final S3AInstrumentation instrumentation = fs.getInstrumentation();
+
+    final long counterValue = instrumentation.getCounterValue(statName);
+
+    final int expectedBytesRead = 26;
+    Assertions.assertThat(counterValue)
+        .describedAs("Counter %s from instrumentation %s",
+            statName, instrumentation)
+        .isEqualTo(expectedBytesRead);
     MutableCounterLong read = (MutableCounterLong)
-        fs.getInstrumentation().getRegistry()
-        .get(Statistic.STREAM_SEEK_BYTES_READ.getSymbol());
-    assertEquals("Stream statistics were not merged", 26, read.value());
+        instrumentation.getRegistry()
+        .get(statName);
+    assertEquals("Stream statistics were not merged", expectedBytesRead,
+        read.value());
   }
 
 

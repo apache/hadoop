@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -199,6 +200,8 @@ public class CapacityScheduler extends
 
   private CSConfigurationProvider csConfProvider;
 
+  private int threadNum = 0;
+
   @Override
   public void setConf(Configuration conf) {
       yarnConf = conf;
@@ -230,7 +233,9 @@ public class CapacityScheduler extends
   private AppPriorityACLsManager appPriorityACLManager;
   private boolean multiNodePlacementEnabled;
 
-  private static boolean printedVerboseLoggingForAsyncScheduling = false;
+  private CapacitySchedulerAutoQueueHandler autoQueueHandler;
+
+  private boolean printedVerboseLoggingForAsyncScheduling;
 
   /**
    * EXPERT
@@ -339,6 +344,9 @@ public class CapacityScheduler extends
       this.queueManager = new CapacitySchedulerQueueManager(yarnConf,
           this.labelManager, this.appPriorityACLManager);
       this.queueManager.setCapacitySchedulerContext(this);
+
+      this.autoQueueHandler = new CapacitySchedulerAutoQueueHandler(
+          this.queueManager);
 
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
 
@@ -513,20 +521,45 @@ public class CapacityScheduler extends
 
   private final static Random random = new Random(System.currentTimeMillis());
 
-  private static boolean shouldSkipNodeSchedule(FiCaSchedulerNode node,
+  @VisibleForTesting
+  public static boolean shouldSkipNodeSchedule(FiCaSchedulerNode node,
       CapacityScheduler cs, boolean printVerboseLog) {
-    // Skip node which missed 2 heartbeats since the node might be dead and
-    // we should not continue allocate containers on that.
-    long timeElapsedFromLastHeartbeat =
-        Time.monotonicNow() - node.getLastHeartbeatMonotonicTime();
-    if (timeElapsedFromLastHeartbeat > cs.nmHeartbeatInterval * 2) {
+    // Skip node which missed YarnConfiguration.SCHEDULER_SKIP_NODE_MULTIPLIER
+    // heartbeats since the node might be dead and we should not continue
+    // allocate containers on that.
+    if (!SchedulerUtils.isNodeHeartbeated(node, cs.getSkipNodeInterval())) {
       if (printVerboseLog && LOG.isDebugEnabled()) {
-        LOG.debug("Skip scheduling on node because it haven't heartbeated for "
+        long timeElapsedFromLastHeartbeat =
+            Time.monotonicNow() - node.getLastHeartbeatMonotonicTime();
+        LOG.debug("Skip scheduling on node " + node.getNodeID()
+            + " because it haven't heartbeated for "
             + timeElapsedFromLastHeartbeat / 1000.0f + " secs");
       }
       return true;
     }
+
+    if (node.getRMNode().getState() != NodeState.RUNNING) {
+      if (printVerboseLog && LOG.isDebugEnabled()) {
+        LOG.debug("Skip scheduling on node because it is in " +
+            node.getRMNode().getState() + " state");
+      }
+      return true;
+    }
     return false;
+  }
+
+  private static boolean isPrintSkippedNodeLogging(CapacityScheduler cs) {
+    // To avoid too verbose DEBUG logging, only print debug log once for
+    // every 10 secs.
+    boolean printSkipedNodeLogging = false;
+    if (LOG.isDebugEnabled()) {
+      if (Time.monotonicNow() / 1000 % 10 == 0) {
+        printSkipedNodeLogging = (!cs.printedVerboseLoggingForAsyncScheduling);
+      } else {
+        cs.printedVerboseLoggingForAsyncScheduling = false;
+      }
+    }
+    return printSkipedNodeLogging;
   }
 
   /**
@@ -550,19 +583,12 @@ public class CapacityScheduler extends
     if (!cs.multiNodePlacementEnabled) {
       int start = random.nextInt(nodeSize);
 
-      // To avoid too verbose DEBUG logging, only print debug log once for
-      // every 10 secs.
-      boolean printSkipedNodeLogging = false;
-      if (Time.monotonicNow() / 1000 % 10 == 0) {
-        printSkipedNodeLogging = (!printedVerboseLoggingForAsyncScheduling);
-      } else {
-        printedVerboseLoggingForAsyncScheduling = false;
-      }
+      boolean printSkippedNodeLogging = isPrintSkippedNodeLogging(cs);
 
       // Allocate containers of node [start, end)
       for (FiCaSchedulerNode node : nodes) {
         if (current++ >= start) {
-          if (shouldSkipNodeSchedule(node, cs, printSkipedNodeLogging)) {
+          if (shouldSkipNodeSchedule(node, cs, printSkippedNodeLogging)) {
             continue;
           }
           cs.allocateContainersToNode(node.getNodeID(), false);
@@ -576,14 +602,14 @@ public class CapacityScheduler extends
         if (current++ > start) {
           break;
         }
-        if (shouldSkipNodeSchedule(node, cs, printSkipedNodeLogging)) {
+        if (shouldSkipNodeSchedule(node, cs, printSkippedNodeLogging)) {
           continue;
         }
         cs.allocateContainersToNode(node.getNodeID(), false);
       }
 
-      if (printSkipedNodeLogging) {
-        printedVerboseLoggingForAsyncScheduling = true;
+      if (printSkippedNodeLogging) {
+        cs.printedVerboseLoggingForAsyncScheduling = true;
       }
     } else {
       // Get all partitions
@@ -629,6 +655,7 @@ public class CapacityScheduler extends
 
     public AsyncScheduleThread(CapacityScheduler cs) {
       this.cs = cs;
+      setName("AsyncCapacitySchedulerThread" + cs.threadNum++);
       setDaemon(true);
     }
 
@@ -924,15 +951,40 @@ public class CapacityScheduler extends
   private CSQueue getOrCreateQueueFromPlacementContext(ApplicationId
       applicationId, String user, String queueName,
       ApplicationPlacementContext placementContext,
-       boolean isRecovery) {
+      boolean isRecovery) {
 
     CSQueue queue = getQueue(queueName);
+    ApplicationPlacementContext fallbackContext = placementContext;
 
     if (queue == null) {
-      if (placementContext != null && placementContext.hasParentQueue()) {
+      // Even if placement rules are turned off, we still have the opportunity
+      // to auto create a queue.
+      if (placementContext == null) {
+        fallbackContext = CSQueueUtils.extractQueuePath(queueName);
+      }
+
+      //we need to make sure there is no empty path parts present
+      String path = fallbackContext.getFullQueuePath();
+      String[] pathParts = path.split("\\.");
+      for (int i = 0; i < pathParts.length; i++) {
+        if ("".equals(pathParts[i])) {
+          LOG.error("Application submitted to invalid path: '{}'", path);
+          return null;
+        }
+      }
+
+      if (fallbackContext.hasParentQueue()) {
         try {
-          return autoCreateLeafQueue(placementContext);
+          return autoCreateLeafQueue(fallbackContext);
         } catch (YarnException | IOException e) {
+          // A null queue is expected if the placementContext is null. In order
+          // not to disrupt the control flow, if we fail to auto create a queue,
+          // we fall back to the original logic.
+          if (placementContext == null) {
+            LOG.error("Could not auto-create leaf queue " + queueName +
+                " due to : ", e);
+            return null;
+          }
           if (isRecovery) {
             if (!getConfiguration().shouldAppFailFast(getConfig())) {
               LOG.error("Could not auto-create leaf queue " + queueName +
@@ -981,8 +1033,8 @@ public class CapacityScheduler extends
       }
 
       //Could be a potential auto-created leaf queue
-      CSQueue queue = getOrCreateQueueFromPlacementContext(applicationId, user,
-            queueName, placementContext, false);
+      CSQueue queue = getOrCreateQueueFromPlacementContext(
+           applicationId, user, queueName, placementContext, false);
 
       if (queue == null) {
         String message;
@@ -1522,20 +1574,37 @@ public class CapacityScheduler extends
             || assignedContainers < maxAssignPerHeartbeat);
   }
 
-  private CandidateNodeSet<FiCaSchedulerNode> getCandidateNodeSet(
-          String partition) {
-    CandidateNodeSet<FiCaSchedulerNode> candidates = null;
+  private Map<NodeId, FiCaSchedulerNode> getNodesHeartbeated(String partition) {
     Map<NodeId, FiCaSchedulerNode> nodesByPartition = new HashMap<>();
+    boolean printSkippedNodeLogging = isPrintSkippedNodeLogging(this);
     List<FiCaSchedulerNode> nodes = nodeTracker
-            .getNodesPerPartition(partition);
+        .getNodesPerPartition(partition);
+
     if (nodes != null && !nodes.isEmpty()) {
       //Filter for node heartbeat too long
       nodes.stream()
-              .filter(node -> !shouldSkipNodeSchedule(node, this, true))
-              .forEach(n -> nodesByPartition.put(n.getNodeID(), n));
-      candidates = new SimpleCandidateNodeSet<FiCaSchedulerNode>(
-              nodesByPartition, partition);
+          .filter(node ->
+              !shouldSkipNodeSchedule(node, this, printSkippedNodeLogging))
+          .forEach(n -> nodesByPartition.put(n.getNodeID(), n));
     }
+
+    if (printSkippedNodeLogging) {
+      printedVerboseLoggingForAsyncScheduling = true;
+    }
+    return nodesByPartition;
+  }
+
+  private CandidateNodeSet<FiCaSchedulerNode> getCandidateNodeSet(
+          String partition) {
+    CandidateNodeSet<FiCaSchedulerNode> candidates = null;
+    Map<NodeId, FiCaSchedulerNode> nodesByPartition
+        = getNodesHeartbeated(partition);
+
+    if (!nodesByPartition.isEmpty()) {
+      candidates = new SimpleCandidateNodeSet<FiCaSchedulerNode>(
+          nodesByPartition, partition);
+    }
+
     return candidates;
   }
 
@@ -1544,11 +1613,9 @@ public class CapacityScheduler extends
     CandidateNodeSet<FiCaSchedulerNode> candidates = null;
     candidates = new SimpleCandidateNodeSet<>(node);
     if (multiNodePlacementEnabled) {
-      Map<NodeId, FiCaSchedulerNode> nodesByPartition = new HashMap<>();
-      List<FiCaSchedulerNode> nodes = nodeTracker
-              .getNodesPerPartition(node.getPartition());
-      if (nodes != null && !nodes.isEmpty()) {
-        nodes.forEach(n -> nodesByPartition.put(n.getNodeID(), n));
+      Map<NodeId, FiCaSchedulerNode> nodesByPartition =
+          getNodesHeartbeated(node.getPartition());
+      if (!nodesByPartition.isEmpty()) {
         candidates = new SimpleCandidateNodeSet<FiCaSchedulerNode>(
                 nodesByPartition, node.getPartition());
       }
@@ -3329,44 +3396,6 @@ public class CapacityScheduler extends
     return null;
   }
 
-  private LeafQueue autoCreateLeafQueue(
-      ApplicationPlacementContext placementContext)
-      throws IOException, YarnException {
-
-    AutoCreatedLeafQueue autoCreatedLeafQueue = null;
-
-    String leafQueueName = placementContext.getQueue();
-    String parentQueueName = placementContext.getParentQueue();
-
-    if (!StringUtils.isEmpty(parentQueueName)) {
-      CSQueue parentQueue = getQueue(parentQueueName);
-
-      if (parentQueue != null && conf.isAutoCreateChildQueueEnabled(
-          parentQueue.getQueuePath())) {
-
-        ManagedParentQueue autoCreateEnabledParentQueue =
-            (ManagedParentQueue) parentQueue;
-        autoCreatedLeafQueue = new AutoCreatedLeafQueue(this, leafQueueName,
-            autoCreateEnabledParentQueue);
-
-        addQueue(autoCreatedLeafQueue);
-
-      } else{
-        throw new SchedulerDynamicEditException(
-            "Could not auto-create leaf queue for " + leafQueueName
-                + ". Queue mapping specifies an invalid parent queue "
-                + "which does not exist "
-                + parentQueueName);
-      }
-    } else{
-      throw new SchedulerDynamicEditException(
-          "Could not auto-create leaf queue for " + leafQueueName
-              + ". Queue mapping does not specify"
-              + " which parent queue it needs to be created under.");
-    }
-    return autoCreatedLeafQueue;
-  }
-
   @Override
   public void resetSchedulerMetrics() {
     CapacitySchedulerMetrics.destroy();
@@ -3402,5 +3431,42 @@ public class CapacityScheduler extends
   @VisibleForTesting
   public void setQueueManager(CapacitySchedulerQueueManager qm) {
     this.queueManager = qm;
+  }
+
+  private LeafQueue autoCreateLeafQueue(
+      ApplicationPlacementContext placementContext)
+      throws IOException, YarnException {
+    String leafQueueName = placementContext.getQueue();
+    String parentQueueName = placementContext.getParentQueue();
+
+    if (!StringUtils.isEmpty(parentQueueName)) {
+      CSQueue parentQueue = getQueue(parentQueueName);
+
+      if (parentQueue != null &&
+          conf.isAutoCreateChildQueueEnabled(parentQueue.getQueuePath())) {
+        // Case 1: Handle ManagedParentQueue
+        ManagedParentQueue autoCreateEnabledParentQueue =
+            (ManagedParentQueue) parentQueue;
+        AutoCreatedLeafQueue autoCreatedLeafQueue =
+            new AutoCreatedLeafQueue(
+                this, leafQueueName, autoCreateEnabledParentQueue);
+
+        addQueue(autoCreatedLeafQueue);
+        return autoCreatedLeafQueue;
+
+      } else {
+        try {
+          writeLock.lock();
+          return autoQueueHandler.autoCreateQueue(placementContext);
+        } finally {
+          writeLock.unlock();
+        }
+      }
+    }
+
+    throw new SchedulerDynamicEditException(
+        "Could not auto-create leaf queue for " + leafQueueName
+            + ". Queue mapping does not specify"
+            + " which parent queue it needs to be created under.");
   }
 }

@@ -393,6 +393,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_EDITS_ASYNC_LOGGING =
       "dfs.namenode.edits.asynclogging";
   public static final boolean DFS_NAMENODE_EDITS_ASYNC_LOGGING_DEFAULT = true;
+  public static final String
+      DFS_NAMENODE_EDITS_ASYNC_LOGGING_PENDING_QUEUE_SIZE =
+      "dfs.namenode.edits.asynclogging.pending.queue.size";
+  public static final int
+      DFS_NAMENODE_EDITS_ASYNC_LOGGING_PENDING_QUEUE_SIZE_DEFAULT = 4096;
 
   public static final String DFS_NAMENODE_PROVIDED_ENABLED = "dfs.namenode.provided.enabled";
   public static final boolean DFS_NAMENODE_PROVIDED_ENABLED_DEFAULT = false;
@@ -663,6 +668,22 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long
           DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT =
       1000;
+  public static final String DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY =
+      "dfs.datanode.min.outlier.detection.nodes";
+  public static final long DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_DEFAULT =
+      10L;
+  public static final String DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_KEY =
+      "dfs.datanode.slowpeer.low.threshold.ms";
+  public static final long DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT =
+      5L;
+  public static final String DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY =
+      "dfs.datanode.min.outlier.detection.disks";
+  public static final long DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT =
+      5L;
+  public static final String DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY =
+      "dfs.datanode.slowdisk.low.threshold.ms";
+  public static final long DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT =
+      20L;
   public static final String  DFS_DATANODE_HOST_NAME_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_DATANODE_HOST_NAME_KEY;
   public static final String  DFS_NAMENODE_CHECKPOINT_DIR_KEY =
@@ -1543,6 +1564,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.reserve-for-archive.default.percentage";
   public static final double
       DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE_DEFAULT = 0.0;
+
+  public static final String
+      DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE =
+      "dfs.datanode.same-disk-tiering.capacity-ratio.percentage";
+  public static final String
+      DFS_DATANODE_SAME_DISK_TIERING_CAPACITY_RATIO_PERCENTAGE_DEFAULT = "";
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated

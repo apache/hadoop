@@ -139,4 +139,11 @@ public final class CommonPathCapabilities {
   public static final String FS_MULTIPART_UPLOADER =
       "fs.capability.multipart.uploader";
 
+
+  /**
+   * Stream abort() capability implemented by {@link Abortable#abort()}.
+   * Value: {@value}.
+   */
+  public static final String ABORTABLE_STREAM =
+      "fs.capability.outputstream.abortable";
 }

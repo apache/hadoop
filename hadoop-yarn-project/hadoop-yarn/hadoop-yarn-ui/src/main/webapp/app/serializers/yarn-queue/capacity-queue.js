@@ -92,6 +92,7 @@ export default DS.JSONAPISerializer.extend({
         type: primaryModelClass.modelName, // yarn-queue
         attributes: {
           name: payload.queueName,
+          path: payload.queuePath,
           parent: payload.myParent,
           children: children,
           capacity: payload.capacity,
@@ -100,7 +101,11 @@ export default DS.JSONAPISerializer.extend({
           absCapacity: payload.absoluteCapacity,
           absMaxCapacity: payload.absoluteMaxCapacity,
           absUsedCapacity: payload.absoluteUsedCapacity,
+          weight: payload.weight,
+          normalizedWeight: payload.normalizedWeight,
+          creationMethod: payload.creationMethod,
           state: payload.state,
+          orderingPolicy: payload.orderingPolicyInfo,
           userLimit: payload.userLimit,
           userLimitFactor: payload.userLimitFactor,
           preemptionDisabled: payload.preemptionDisabled,

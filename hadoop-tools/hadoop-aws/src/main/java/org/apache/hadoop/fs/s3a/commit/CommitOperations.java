@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -39,27 +40,36 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MATERIALIZE_FILE;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_STAGE_FILE_UPLOAD;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 
 /**
  * The implementation of the various actions a committer needs.
@@ -71,7 +81,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * duplicate that work.
  *
  */
-public class CommitOperations {
+public class CommitOperations implements IOStatisticsSource {
   private static final Logger LOG = LoggerFactory.getLogger(
       CommitOperations.class);
 
@@ -81,7 +91,7 @@ public class CommitOperations {
   private final S3AFileSystem fs;
 
   /** Statistics. */
-  private final S3AInstrumentation.CommitterStatistics statistics;
+  private final CommitterStatistics statistics;
 
   /**
    * Write operations for the destination fs.
@@ -105,9 +115,18 @@ public class CommitOperations {
    * @param fs FS to bind to
    */
   public CommitOperations(S3AFileSystem fs) {
-    Preconditions.checkArgument(fs != null, "null fs");
-    this.fs = fs;
-    statistics = fs.newCommitterStatistics();
+    this(requireNonNull(fs), fs.newCommitterStatistics());
+  }
+
+  /**
+   * Instantiate.
+   * @param fs FS to bind to
+   * @param committerStatistics committer statistics
+   */
+  public CommitOperations(S3AFileSystem fs,
+      CommitterStatistics committerStatistics) {
+    this.fs = requireNonNull(fs);
+    statistics = requireNonNull(committerStatistics);
     writeOperations = fs.getWriteOperationHelper();
   }
 
@@ -128,8 +147,13 @@ public class CommitOperations {
   }
 
   /** @return statistics. */
-  protected S3AInstrumentation.CommitterStatistics getStatistics() {
+  protected CommitterStatistics getStatistics() {
     return statistics;
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    return statistics.getIOStatistics();
   }
 
   /**
@@ -166,7 +190,8 @@ public class CommitOperations {
 
       commit.validate();
       destKey = commit.getDestinationKey();
-      long l = innerCommit(commit, operationState);
+      long l = trackDuration(statistics, COMMITTER_MATERIALIZE_FILE.getSymbol(),
+          () -> innerCommit(commit, operationState));
       LOG.debug("Successful commit of file length {}", l);
       outcome = MaybeIOE.NONE;
       statistics.commitCompleted(commit.getLength());
@@ -409,8 +434,6 @@ public class CommitOperations {
         conf.getTrimmed(METADATASTORE_AUTHORITATIVE, "false"));
     successData.addDiagnostic(AUTHORITATIVE_PATH,
         conf.getTrimmed(AUTHORITATIVE_PATH, ""));
-    successData.addDiagnostic(MAGIC_COMMITTER_ENABLED,
-        conf.getTrimmed(MAGIC_COMMITTER_ENABLED, "false"));
 
     // now write
     Path markerPath = new Path(outputPath, _SUCCESS);
@@ -449,7 +472,7 @@ public class CommitOperations {
    * @return a pending upload entry
    * @throws IOException failure
    */
-  public SinglePendingCommit uploadFileToPendingCommit(File localFile,
+  public SinglePendingCommit  uploadFileToPendingCommit(File localFile,
       Path destPath,
       String partition,
       long uploadPartSize,
@@ -466,7 +489,11 @@ public class CommitOperations {
     String destKey = fs.pathToKey(destPath);
     String uploadId = null;
 
+    // flag to indicate to the finally clause that the operation
+    // failed. it is cleared as the last action in the try block.
     boolean threw = true;
+    final DurationTracker tracker = statistics.trackDuration(
+        COMMITTER_STAGE_FILE_UPLOAD.getSymbol());
     try (DurationInfo d = new DurationInfo(LOG,
         "Upload staged file from %s to %s",
         localFile.getAbsolutePath(),
@@ -507,6 +534,7 @@ public class CommitOperations {
       LOG.debug("File size is {}, number of parts to upload = {}",
           length, numParts);
       for (int partNumber = 1; partNumber <= numParts; partNumber += 1) {
+        progress.progress();
         long size = Math.min(length - offset, uploadPartSize);
         UploadPartRequest part;
         part = writeOperations.newUploadPartRequest(
@@ -525,7 +553,7 @@ public class CommitOperations {
 
       commitData.bindCommitData(parts);
       statistics.commitUploaded(length);
-      progress.progress();
+      // clear the threw flag.
       threw = false;
       return commitData;
     } finally {
@@ -536,6 +564,11 @@ public class CommitOperations {
           LOG.error("Failed to abort upload {} to {}", uploadId, destKey, e);
         }
       }
+      if (threw) {
+        tracker.failed();
+      }
+      // close tracker and so report statistics of success/failure
+      tracker.close();
     }
   }
 
@@ -572,6 +605,29 @@ public class CommitOperations {
    */
   public CommitContext initiateCommitOperation(Path path) throws IOException {
     return new CommitContext(writeOperations.initiateCommitOperation(path));
+  }
+
+  /**
+   * Get the magic file length of a file.
+   * If the FS doesn't support the API, the attribute is missing or
+   * the parse to long fails, then Optional.empty() is returned.
+   * Static for some easier testability.
+   * @param fs filesystem
+   * @param path path
+   * @return either a length or None.
+   * @throws IOException on error
+   * */
+  public static Optional<Long> extractMagicFileLength(FileSystem fs, Path path)
+      throws IOException {
+    byte[] bytes;
+    try {
+      bytes = fs.getXAttr(path, XA_MAGIC_MARKER);
+    } catch (UnsupportedOperationException e) {
+      // FS doesn't support xattr.
+      LOG.debug("Filesystem {} doesn't support XAttr API", fs);
+      return Optional.empty();
+    }
+    return HeaderProcessing.extractXAttrLongValue(bytes);
   }
 
   /**

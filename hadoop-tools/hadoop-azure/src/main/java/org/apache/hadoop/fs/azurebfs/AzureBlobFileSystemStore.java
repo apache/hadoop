@@ -46,6 +46,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -102,6 +103,7 @@ import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
+import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
@@ -125,6 +127,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PAT
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 
 /**
@@ -132,7 +135,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AzureBlobFileSystemStore implements Closeable {
+public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystemStore.class);
 
   private AbfsClient client;
@@ -599,6 +602,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     return new AbfsOutputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withWriteBufferSize(bufferSize)
             .enableFlush(abfsConfiguration.isFlushEnabled())
+            .enableSmallWriteOptimization(abfsConfiguration.isSmallWriteOptimizationEnabled())
             .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())
             .withAppendBlob(isAppendBlob)
@@ -630,6 +634,13 @@ public class AzureBlobFileSystemStore implements Closeable {
   public AbfsInputStream openFileForRead(final Path path,
       final FileSystem.Statistics statistics, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
+    return openFileForRead(path, Optional.empty(), statistics, tracingContext);
+  }
+
+  public AbfsInputStream openFileForRead(final Path path,
+      final Optional<Configuration> options,
+      final FileSystem.Statistics statistics, TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForRead", "getPathStatus")) {
       LOG.debug("openFileForRead filesystem: {} path: {}",
               client.getFileSystem(),
@@ -658,20 +669,27 @@ public class AzureBlobFileSystemStore implements Closeable {
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics,
               relativePath, contentLength,
-              populateAbfsInputStreamContext(),
+              populateAbfsInputStreamContext(options),
               eTag, tracingContext);
     }
   }
 
-  private AbfsInputStreamContext populateAbfsInputStreamContext() {
+  private AbfsInputStreamContext populateAbfsInputStreamContext(
+      Optional<Configuration> options) {
+    boolean bufferedPreadDisabled = options
+        .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
+        .orElse(false);
     return new AbfsInputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
             .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
             .withTolerateOobAppends(abfsConfiguration.getTolerateOobAppends())
+            .withReadSmallFilesCompletely(abfsConfiguration.readSmallFilesCompletely())
+            .withOptimizeFooterRead(abfsConfiguration.optimizeFooterRead())
             .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
             .withShouldReadBufferSizeAlways(
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
+            .withBufferedPreadDisabled(bufferedPreadDisabled)
             .build();
   }
 
@@ -866,8 +884,8 @@ public class AzureBlobFileSystemStore implements Closeable {
    * @param tracingContext Tracks identifiers for request header
    * @return the entries in the path.
    * */
-  public FileStatus[] listStatus(final Path path, TracingContext tracingContext)
-      throws IOException {
+  @Override
+  public FileStatus[] listStatus(final Path path, TracingContext tracingContext) throws IOException {
     return listStatus(path, null, tracingContext);
   }
 
@@ -883,8 +901,17 @@ public class AzureBlobFileSystemStore implements Closeable {
    * @return the entries in the path start from  "startFrom" in lexical order.
    * */
   @InterfaceStability.Unstable
-  public FileStatus[] listStatus(final Path path, final String startFrom,
-      TracingContext tracingContext) throws IOException {
+  @Override
+  public FileStatus[] listStatus(final Path path, final String startFrom, TracingContext tracingContext) throws IOException {
+    List<FileStatus> fileStatuses = new ArrayList<>();
+    listStatus(path, startFrom, fileStatuses, true, null, tracingContext);
+    return fileStatuses.toArray(new FileStatus[fileStatuses.size()]);
+  }
+
+  @Override
+  public String listStatus(final Path path, final String startFrom,
+      List<FileStatus> fileStatuses, final boolean fetchAll,
+      String continuation, TracingContext tracingContext) throws IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue = true;
@@ -895,16 +922,16 @@ public class AzureBlobFileSystemStore implements Closeable {
             startFrom);
 
     final String relativePath = getRelativePath(path);
-    String continuation = null;
 
-    // generate continuation token if a valid startFrom is provided.
-    if (startFrom != null && !startFrom.isEmpty()) {
-      continuation = getIsNamespaceEnabled(tracingContext)
-              ? generateContinuationTokenForXns(startFrom)
-              : generateContinuationTokenForNonXns(relativePath, startFrom);
+    if (continuation == null || continuation.isEmpty()) {
+      // generate continuation token if a valid startFrom is provided.
+      if (startFrom != null && !startFrom.isEmpty()) {
+        continuation = getIsNamespaceEnabled(tracingContext)
+            ? generateContinuationTokenForXns(startFrom)
+            : generateContinuationTokenForNonXns(relativePath, startFrom);
+      }
     }
 
-    ArrayList<FileStatus> fileStatuses = new ArrayList<>();
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
         AbfsRestOperation op = client.listPath(relativePath, false,
@@ -959,7 +986,8 @@ public class AzureBlobFileSystemStore implements Closeable {
 
         perfInfo.registerSuccess(true);
         countAggregate++;
-        shouldContinue = continuation != null && !continuation.isEmpty();
+        shouldContinue =
+            fetchAll && continuation != null && !continuation.isEmpty();
 
         if (!shouldContinue) {
           perfInfo.registerAggregates(startAggregate, countAggregate);
@@ -967,7 +995,7 @@ public class AzureBlobFileSystemStore implements Closeable {
       }
     } while (shouldContinue);
 
-    return fileStatuses.toArray(new FileStatus[fileStatuses.size()]);
+    return continuation;
   }
 
   // generate continuation token for xns account

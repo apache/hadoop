@@ -116,6 +116,36 @@ for both files and directories, MUST always return `true` to the `isEncrypted()`
 predicate. This can be done by setting the `encrypted` flag to true when creating
 the `FileStatus` instance.
 
+
+### `msync()`
+
+Synchronize metadata state of the client with the latest state of the metadata
+service of the FileSystem.
+
+In highly available FileSystems standby service can be used as a read-only
+metadata replica. This call is essential to guarantee consistency of
+reads from the standby replica and to avoid stale reads.
+
+It is currently only implemented for HDFS and others will just throw
+`UnsupportedOperationException`.
+
+#### Preconditions
+
+
+#### Postconditions
+
+This call internally records the state of the metadata service at the time of
+the call. This guarantees consistency of subsequent reads from any metadata
+replica. It assures the client will never access the state of the metadata that
+preceded the recorded state.
+
+#### HDFS implementation notes
+
+HDFS supports `msync()` in HA mode by calling the Active NameNode and requesting
+its latest journal transaction ID. For more details see HDFS documentation
+[Consistent Reads from HDFS Observer NameNode](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/ObserverNameNode.html)
+
+
 ### `Path getHomeDirectory()`
 
 The function `getHomeDirectory` returns the home directory for the FileSystem
@@ -634,10 +664,14 @@ For instance, HDFS may raise an `InvalidPathException`.
 
     result = FSDataOutputStream
 
-The updated (valid) FileSystem must contains all the parent directories of the path, as created by `mkdirs(parent(p))`.
+A zero byte file MUST exist at the end of the specified path, visible to all.
+
+The updated (valid) FileSystem MUST contain all the parent directories of the path, as created by `mkdirs(parent(p))`.
 
 The result is `FSDataOutputStream`, which through its operations may generate new filesystem states with updated values of
 `FS.Files[p]`
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
@@ -647,10 +681,18 @@ The result is `FSDataOutputStream`, which through its operations may generate ne
  clients creating files with `overwrite==true` to fail if the file is created
  by another client between the two tests.
 
-* S3A, Swift and potentially other Object Stores do not currently change the FS state
+* S3A, Swift and potentially other Object Stores do not currently change the `FS` state
 until the output stream `close()` operation is completed.
-This MAY be a bug, as it allows >1 client to create a file with `overwrite==false`,
- and potentially confuse file/directory logic
+This is a significant difference between the behavior of object stores
+and that of filesystems, as it allows &gt;1 client to create a file with `overwrite=false`,
+and potentially confuse file/directory logic. In particular, using `create()` to acquire
+an exclusive lock on a file (whoever creates the file without an error is considered
+the holder of the lock) may not not a safe algorithm to use when working with object stores.
+
+* Object stores may create an empty file as a marker when a file is created.
+However, object stores with `overwrite=true` semantics may not implement this atomically,
+so creating files with `overwrite=false` cannot be used as an implicit exclusion
+mechanism between processes.
 
 * The Local FileSystem raises a `FileNotFoundException` when trying to create a file over
 a directory, hence it is listed as an exception that MAY be raised when
@@ -661,6 +703,8 @@ this precondition fails.
 ### `FSDataOutputStreamBuilder createFile(Path p)`
 
 Make a `FSDataOutputStreamBuilder` to specify the parameters to create a file.
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
@@ -687,16 +731,20 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 
 #### Postconditions
 
-    FS
+    FS' = FS
     result = FSDataOutputStream
 
 Return: `FSDataOutputStream`, which can update the entry `FS.Files[p]`
 by appending data to the existing list.
 
+The behavior of the returned stream is covered in [Output](outputstream.html).
+
 ### `FSDataOutputStreamBuilder appendFile(Path p)`
 
 Make a `FSDataOutputStreamBuilder` to specify the parameters to append to an
 existing file.
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 

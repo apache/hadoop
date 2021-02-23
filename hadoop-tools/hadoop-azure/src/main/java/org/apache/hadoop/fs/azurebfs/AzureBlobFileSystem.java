@@ -26,13 +26,17 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.AccessDeniedException;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,6 +52,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
+import org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -75,6 +81,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -83,6 +91,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
@@ -187,6 +197,12 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
+    // bufferSize is unused.
+    return open(path, Optional.empty());
+  }
+
+  private FSDataInputStream open(final Path path,
+      final Optional<Configuration> options) throws IOException {
     statIncrement(CALL_OPEN);
     Path qualifiedPath = makeQualified(path);
 
@@ -194,13 +210,26 @@ public class AzureBlobFileSystem extends FileSystem {
       TracingContext tracingContext = new TracingContext(clientCorrelationID,
           fileSystemID, HdfsOperationConstants.OPEN, tracingContextFormat,
           listener);
-      InputStream inputStream = abfsStore
-          .openFileForRead(qualifiedPath, statistics, tracingContext);
+      InputStream inputStream = abfsStore.openFileForRead(qualifiedPath,
+          options, statistics, tracingContext);
       return new FSDataInputStream(inputStream);
     } catch(AzureBlobFileSystemException ex) {
       checkException(path, ex);
       return null;
     }
+  }
+
+  @Override
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final Path path, final OpenFileParameters parameters) throws IOException {
+    LOG.debug("AzureBlobFileSystem.openFileWithOptions path: {}", path);
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
+        parameters.getMandatoryKeys(),
+        Collections.emptySet(),
+        "for " + path);
+    return LambdaUtils.eval(
+        new CompletableFuture<>(), () ->
+            open(path, Optional.of(parameters.getOptions())));
   }
 
   @Override
@@ -1061,6 +1090,22 @@ public class AzureBlobFileSystem extends FileSystem {
     return super.exists(f);
   }
 
+  @Override
+  public RemoteIterator<FileStatus> listStatusIterator(Path path)
+      throws IOException {
+    LOG.debug("AzureBlobFileSystem.listStatusIterator path : {}", path);
+    if (abfsStore.getAbfsConfiguration().enableAbfsListIterator()) {
+      TracingContext tracingContext = new TracingContext(clientCorrelationID,
+          fileSystemID, HdfsOperationConstants.LISTSTATUS, true,
+          tracingContextFormat, listener);
+      AbfsListStatusRemoteIterator abfsLsItr =
+          new AbfsListStatusRemoteIterator(getFileStatus(path), abfsStore, tracingContext);
+      return RemoteIterators.typeCastingRemoteIterator(abfsLsItr);
+    } else {
+      return super.listStatusIterator(path);
+    }
+  }
+
   private FileStatus tryGetFileStatus(final Path f) {
     try {
       return getFileStatus(f);
@@ -1201,7 +1246,8 @@ public class AzureBlobFileSystem extends FileSystem {
    * @param allowedErrorCodesList varargs list of error codes.
    * @throws IOException if the exception error code is not on the allowed list.
    */
-  private void checkException(final Path path,
+  @VisibleForTesting
+  static void checkException(final Path path,
                               final AzureBlobFileSystemException exception,
                               final AzureServiceErrorCode... allowedErrorCodesList) throws IOException {
     if (exception instanceof AbfsRestOperationException) {
@@ -1210,16 +1256,21 @@ public class AzureBlobFileSystem extends FileSystem {
       if (ArrayUtils.contains(allowedErrorCodesList, ere.getErrorCode())) {
         return;
       }
-      int statusCode = ere.getStatusCode();
-
       //AbfsRestOperationException.getMessage() contains full error info including path/uri.
-      if (statusCode == HttpURLConnection.HTTP_NOT_FOUND) {
-        throw (IOException) new FileNotFoundException(ere.getMessage())
+      String message = ere.getMessage();
+
+      switch (ere.getStatusCode()) {
+      case HttpURLConnection.HTTP_NOT_FOUND:
+        throw (IOException) new FileNotFoundException(message)
             .initCause(exception);
-      } else if (statusCode == HttpURLConnection.HTTP_CONFLICT) {
-        throw (IOException) new FileAlreadyExistsException(ere.getMessage())
+      case HttpURLConnection.HTTP_CONFLICT:
+        throw (IOException) new FileAlreadyExistsException(message)
             .initCause(exception);
-      } else {
+      case HttpURLConnection.HTTP_FORBIDDEN:
+      case HttpURLConnection.HTTP_UNAUTHORIZED:
+        throw (IOException) new AccessDeniedException(message)
+            .initCause(exception);
+      default:
         throw ere;
       }
     } else if (exception instanceof SASTokenProviderException) {

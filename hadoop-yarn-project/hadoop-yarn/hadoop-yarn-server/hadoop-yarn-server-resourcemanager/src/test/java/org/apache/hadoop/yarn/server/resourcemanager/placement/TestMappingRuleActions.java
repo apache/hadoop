@@ -166,9 +166,10 @@ public class TestMappingRuleActions {
         "%var", "value");
     MappingRuleAction reject = new MappingRuleActions.RejectAction();
 
-    assertEquals("PlaceToQueueAction{queueName='queue'}", place.toString());
+    assertEquals("PlaceToQueueAction{queueName='queue',allowCreate=true}",
+        place.toString());
     assertEquals("VariableUpdateAction{variableName='%var'" +
-            ", variableValue='value'}", varUpdate.toString());
+        ", variableValue='value'}", varUpdate.toString());
     assertEquals("RejectAction", reject.toString());
   }
 }

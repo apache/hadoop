@@ -1636,6 +1636,27 @@ public class ContainerLaunch implements Callable<Integer> {
     nmVars.addAll(Apps.getEnvVarsFromInputProperty(
         YarnConfiguration.NM_ADMIN_USER_ENV, defEnvStr, conf));
 
+    if (!Shell.WINDOWS) {
+      // maybe force path components
+      String forcePath = conf.get(YarnConfiguration.NM_ADMIN_FORCE_PATH,
+          YarnConfiguration.DEFAULT_NM_ADMIN_FORCE_PATH);
+      if (!forcePath.isEmpty()) {
+        String userPath = environment.get(Environment.PATH.name());
+        environment.remove(Environment.PATH.name());
+        if (userPath == null || userPath.isEmpty()) {
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              forcePath, File.pathSeparator);
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              "$PATH", File.pathSeparator);
+        } else {
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              forcePath, File.pathSeparator);
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              userPath, File.pathSeparator);
+        }
+      }
+    }
+
     // TODO: Remove Windows check and use this approach on all platforms after
     // additional testing.  See YARN-358.
     if (Shell.WINDOWS) {

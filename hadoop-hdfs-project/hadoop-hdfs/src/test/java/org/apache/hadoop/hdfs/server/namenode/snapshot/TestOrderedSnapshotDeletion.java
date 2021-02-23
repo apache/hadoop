@@ -92,18 +92,25 @@ public class TestOrderedSnapshotDeletion {
     assertXAttrSet("s2", hdfs, null);
     hdfs.deleteSnapshot(snapshottableDir, "s0");
     assertXAttrSet("s2", hdfs, null);
-    hdfs.deleteSnapshot(snapshottableDir, "s1");
-    hdfs.deleteSnapshot(snapshottableDir, "s2");
+    hdfs.deleteSnapshot(snapshottableDir,
+        getDeletedSnapshotName(hdfs, snapshottableDir, "s1"));
+    hdfs.deleteSnapshot(snapshottableDir,
+        getDeletedSnapshotName(hdfs, snapshottableDir, "s2"));
   }
 
-  static void assertMarkedAsDeleted(Path snapshotRoot, MiniDFSCluster cluster)
-      throws IOException {
+  static void assertMarkedAsDeleted(Path snapshotRoot, Path snapshottableDir,
+      MiniDFSCluster cluster) throws IOException {
+    final String snapName =
+        getDeletedSnapshotName(cluster.getFileSystem(), snapshottableDir,
+            snapshotRoot.getName());
+    final Path snapPathNew =
+        SnapshotTestHelper.getSnapshotRoot(snapshottableDir, snapName);
     // Check if the path exists
-    Assert.assertNotNull(cluster.getFileSystem().getFileStatus(snapshotRoot));
+    Assert.assertNotNull(cluster.getFileSystem().getFileStatus(snapPathNew));
 
     // Check xAttr for snapshotRoot
     final INode inode = cluster.getNamesystem().getFSDirectory()
-        .getINode(snapshotRoot.toString());
+        .getINode(snapPathNew.toString());
     final XAttrFeature f = inode.getXAttrFeature();
     final XAttr xAttr = f.getXAttr(XATTR_SNAPSHOT_DELETED);
     Assert.assertNotNull(xAttr);
@@ -114,7 +121,7 @@ public class TestOrderedSnapshotDeletion {
 
     // Check inode
     Assert.assertTrue(inode instanceof Snapshot.Root);
-    Assert.assertTrue(((Snapshot.Root)inode).isMarkedAsDeleted());
+    Assert.assertTrue(((Snapshot.Root) inode).isMarkedAsDeleted());
   }
 
   static void assertNotMarkedAsDeleted(Path snapshotRoot,
@@ -139,12 +146,16 @@ public class TestOrderedSnapshotDeletion {
   void assertXAttrSet(String snapshot,
                       DistributedFileSystem hdfs, XAttr newXattr)
       throws IOException {
-    hdfs.deleteSnapshot(snapshottableDir, snapshot);
+    String snapName = getDeletedSnapshotName(hdfs, snapshottableDir, snapshot);
+    hdfs.deleteSnapshot(snapshottableDir, snapName);
     // Check xAttr for parent directory
-    Path snapshotRoot = SnapshotTestHelper.getSnapshotRoot(snapshottableDir,
-        snapshot);
-    assertMarkedAsDeleted(snapshotRoot, cluster);
-
+    Path snapshotRoot =
+        SnapshotTestHelper.getSnapshotRoot(snapshottableDir, snapshot);
+    assertMarkedAsDeleted(snapshotRoot, snapshottableDir, cluster);
+    // Check xAttr for parent directory
+    snapName = getDeletedSnapshotName(hdfs, snapshottableDir, snapshot);
+    snapshotRoot =
+        SnapshotTestHelper.getSnapshotRoot(snapshottableDir, snapName);
     // Make sure its not user visible
     if (cluster.getNameNode().getConf().getBoolean(DFSConfigKeys.
             DFS_NAMENODE_XATTRS_ENABLED_KEY,
@@ -260,5 +271,12 @@ public class TestOrderedSnapshotDeletion {
     hdfs.mkdirs(sub1);
     hdfs.createSnapshot(snapshottableDir, "s1");
     assertXAttrSet("s1", hdfs, newXAttr);
+  }
+
+  public static String getDeletedSnapshotName(DistributedFileSystem hdfs,
+      Path snapshottableDir, String snapshot) throws IOException {
+    return Arrays.stream(hdfs.getSnapshotListing(snapshottableDir))
+        .filter(p -> p.getFullPath().getName().startsWith(snapshot)).findFirst()
+        .get().getFullPath().getName();
   }
 }

@@ -168,11 +168,6 @@ public class LeafQueue extends AbstractCSQueue {
 
   }
 
-  protected void setupQueueConfigs(Resource clusterResource)
-      throws IOException {
-    setupQueueConfigs(clusterResource, csContext.getConfiguration());
-  }
-
   @SuppressWarnings("checkstyle:nowhitespaceafter")
   protected void setupQueueConfigs(Resource clusterResource,
       CapacitySchedulerConfiguration conf) throws
@@ -200,26 +195,18 @@ public class LeafQueue extends AbstractCSQueue {
       usersManager.setUserLimit(conf.getUserLimit(getQueuePath()));
       usersManager.setUserLimitFactor(conf.getUserLimitFactor(getQueuePath()));
 
-      maxApplications = conf.getMaximumApplicationsPerQueue(getQueuePath());
-      if (maxApplications < 0) {
-        int maxGlobalPerQueueApps = schedConf
-            .getGlobalMaximumApplicationsPerQueue();
-        if (maxGlobalPerQueueApps > 0) {
-          maxApplications = maxGlobalPerQueueApps;
-        } else {
-          int maxSystemApps = schedConf.
-              getMaximumSystemApplications();
-          maxApplications =
-              (int) (maxSystemApps * queueCapacities.getAbsoluteCapacity());
-        }
-      }
-      maxApplicationsPerUser = Math.min(maxApplications,
-          (int) (maxApplications * (usersManager.getUserLimit() / 100.0f)
-              * usersManager.getUserLimitFactor()));
-
       maxAMResourcePerQueuePercent =
           conf.getMaximumApplicationMasterResourcePerQueuePercent(
               getQueuePath());
+
+      maxApplications = conf.getMaximumApplicationsPerQueue(getQueuePath());
+      if (maxApplications < 0) {
+        int maxGlobalPerQueueApps =
+            csContext.getConfiguration().getGlobalMaximumApplicationsPerQueue();
+        if (maxGlobalPerQueueApps > 0) {
+          maxApplications = maxGlobalPerQueueApps;
+        }
+      }
 
       priorityAcls = conf.getPriorityAcls(getQueuePath(),
           scheduler.getMaxClusterLevelAppPriority());
@@ -537,6 +524,13 @@ public class LeafQueue extends AbstractCSQueue {
 
     writeLock.lock();
     try {
+      // We skip reinitialize for dynamic queues, when this is called, and
+      // new queue is different from this queue, we will make this queue to be
+      // static queue.
+      if (newlyParsedQueue != this) {
+        this.setDynamicQueue(false);
+      }
+
       // Sanity check
       if (!(newlyParsedQueue instanceof LeafQueue) || !newlyParsedQueue
           .getQueuePath().equals(getQueuePath())) {
@@ -560,11 +554,6 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       setupQueueConfigs(clusterResource, configuration);
-
-      // queue metrics are updated, more resource may be available
-      // activate the pending applications if possible
-      activateApplications();
-
     } finally {
       writeLock.unlock();
     }
@@ -639,7 +628,8 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       // Check submission limits for queues
-      if (getNumApplications() >= getMaxApplications()) {
+      //TODO recalculate max applications because they can depend on capacity
+      if (getNumApplications() >= getMaxApplications() && !(this instanceof AutoCreatedLeafQueue)) {
         String msg =
             "Queue " + getQueuePath() + " already has " + getNumApplications()
                 + " applications,"
@@ -650,7 +640,8 @@ public class LeafQueue extends AbstractCSQueue {
 
       // Check submission limits for the user on this queue
       User user = usersManager.getUserAndAddIfAbsent(userName);
-      if (user.getTotalApplications() >= getMaxApplicationsPerUser()) {
+      //TODO recalculate max applications because they can depend on capacity
+      if (user.getTotalApplications() >= getMaxApplicationsPerUser() &&  !(this instanceof AutoCreatedLeafQueue)) {
         String msg = "Queue " + getQueuePath() + " already has " + user
             .getTotalApplications() + " applications from user " + userName
             + " cannot accept submission of application: " + applicationId;
@@ -717,16 +708,33 @@ public class LeafQueue extends AbstractCSQueue {
           queueCapacities.getMaxAMResourcePercentage(nodePartition)
               * effectiveUserLimit * usersManager.getUserLimitFactor(),
           minimumAllocation);
+
+      if (getUserLimitFactor() == -1) {
+        userAMLimit = Resources.multiplyAndNormalizeUp(
+            resourceCalculator, queuePartitionResource,
+            queueCapacities.getMaxAMResourcePercentage(nodePartition),
+            minimumAllocation);
+      }
+
       userAMLimit =
           Resources.min(resourceCalculator, lastClusterResource,
               userAMLimit,
               Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
 
-      Resource preWeighteduserAMLimit = Resources.multiplyAndNormalizeUp(
+      Resource preWeighteduserAMLimit =
+          Resources.multiplyAndNormalizeUp(
           resourceCalculator, queuePartitionResource,
           queueCapacities.getMaxAMResourcePercentage(nodePartition)
               * preWeightedUserLimit * usersManager.getUserLimitFactor(),
           minimumAllocation);
+
+      if (getUserLimitFactor() == -1) {
+        preWeighteduserAMLimit = Resources.multiplyAndNormalizeUp(
+            resourceCalculator, queuePartitionResource,
+            queueCapacities.getMaxAMResourcePercentage(nodePartition),
+            minimumAllocation);
+      }
+
       preWeighteduserAMLimit =
           Resources.min(resourceCalculator, lastClusterResource,
               preWeighteduserAMLimit,
@@ -1893,13 +1901,40 @@ public class LeafQueue extends AbstractCSQueue {
         currentResourceLimits.getLimit()));
   }
 
+  private void updateAbsoluteCapacitiesAndRelatedFields() {
+    updateAbsoluteCapacities();
+    CapacitySchedulerConfiguration schedulerConf = csContext.getConfiguration();
+
+    // If maxApplications not set, use the system total max app, apply newly
+    // calculated abs capacity of the queue.
+    if (maxApplications <= 0) {
+      int maxSystemApps = schedulerConf.
+          getMaximumSystemApplications();
+      maxApplications =
+          (int) (maxSystemApps * queueCapacities.getAbsoluteCapacity());
+    }
+    maxApplicationsPerUser =
+        Math.min(maxApplications,
+        (int) (maxApplications * (usersManager.getUserLimit() / 100.0f)
+            * usersManager.getUserLimitFactor()));
+
+    if (getUserLimitFactor() == -1) {
+      maxApplicationsPerUser = maxApplications;
+    }
+  }
+
   @Override
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits currentResourceLimits) {
     writeLock.lock();
     try {
-      updateCurrentResourceLimits(currentResourceLimits, clusterResource);
       lastClusterResource = clusterResource;
+
+      updateAbsoluteCapacitiesAndRelatedFields();
+
+      super.updateEffectiveResources(clusterResource);
+
+      updateCurrentResourceLimits(currentResourceLimits, clusterResource);
 
       // Update headroom info based on new cluster resource value
       // absoluteMaxCapacity now,  will be replaced with absoluteMaxAvailCapacity

@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
@@ -42,6 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 /**
  * Operations to update the store.
@@ -56,19 +58,19 @@ public interface WriteOperations {
 
   /**
    * Execute a function with retry processing.
+   * @param <T> type of return value
    * @param action action to execute (used in error messages)
    * @param path path of work (used in error messages)
    * @param idempotent does the operation have semantics
    * which mean that it can be retried even if was already executed?
    * @param operation operation to execute
-   * @param <T> type of return value
    * @return the result of the call
    * @throws IOException any IOE raised, or translated exception
    */
   <T> T retry(String action,
       String path,
       boolean idempotent,
-      Invoker.Operation<T> operation)
+      CallableRaisingIOE<T> operation)
       throws IOException;
 
   /**
@@ -76,10 +78,13 @@ public interface WriteOperations {
    * @param destKey destination key
    * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
+   * @param headers optional map of custom headers.
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(String destKey,
-      InputStream inputStream, long length);
+      InputStream inputStream,
+      long length,
+      @Nullable Map<String, String> headers);
 
   /**
    * Create a {@link PutObjectRequest} request to upload a file.
@@ -149,13 +154,14 @@ public interface WriteOperations {
    * Abort a multipart upload operation.
    * @param destKey destination key of the upload
    * @param uploadId multipart operation Id
+   * @param shouldRetry should failures trigger a retry?
    * @param retrying callback invoked on every retry
    * @throws IOException failure to abort
    * @throws FileNotFoundException if the abort ID is unknown
    */
   @Retries.RetryTranslated
   void abortMultipartUpload(String destKey, String uploadId,
-      Invoker.Retried retrying)
+      boolean shouldRetry, Invoker.Retried retrying)
       throws IOException;
 
   /**

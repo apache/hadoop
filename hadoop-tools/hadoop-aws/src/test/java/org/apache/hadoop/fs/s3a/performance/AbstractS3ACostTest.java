@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -31,16 +32,19 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
+import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.expect;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
@@ -82,6 +86,18 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   private boolean isDeleting;
 
   private OperationCostValidator costValidator;
+
+  /**
+   * Is bulk deletion enabled?
+   */
+  private boolean isBulkDelete;
+
+  /**
+   * Which statistic measures marker deletion?
+   * this is the bulk delete statistic by default;
+   * if that is disabled it becomes the single delete counter.
+   */
+  private Statistic deleteMarkerStatistic;
 
   public AbstractS3ACostTest(
       final boolean s3guard,
@@ -149,23 +165,24 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
         .isEqualTo(isKeepingMarkers()
             ? DirectoryPolicy.MarkerPolicy.Keep
             : DirectoryPolicy.MarkerPolicy.Delete);
+    // All counter statistics of the filesystem are added as metrics.
+    // Durations too, as they have counters of success and failure.
+    OperationCostValidator.Builder builder = OperationCostValidator.builder(
+        getFileSystem());
+    EnumSet.allOf(Statistic.class).stream()
+        .filter(s ->
+            s.getType() == StatisticTypeEnum.TYPE_COUNTER
+                || s.getType() == StatisticTypeEnum.TYPE_DURATION)
+        .forEach(s -> builder.withMetric(s));
+    costValidator = builder.build();
 
-    // insert new metrics so as to keep the list sorted
-    costValidator = OperationCostValidator.builder(getFileSystem())
-        .withMetrics(
-            DIRECTORIES_CREATED,
-            DIRECTORIES_DELETED,
-            FAKE_DIRECTORIES_DELETED,
-            FILES_DELETED,
-            INVOCATION_COPY_FROM_LOCAL_FILE,
-            OBJECT_COPY_REQUESTS,
-            OBJECT_DELETE_REQUESTS,
-            OBJECT_DELETE_OBJECTS,
-            OBJECT_LIST_REQUESTS,
-            OBJECT_METADATA_REQUESTS,
-            OBJECT_PUT_BYTES,
-            OBJECT_PUT_REQUESTS)
-        .build();
+    // determine bulk delete settings
+    final Configuration fsConf = getFileSystem().getConf();
+    isBulkDelete = fsConf.getBoolean(Constants.ENABLE_MULTI_DELETE,
+        true);
+    deleteMarkerStatistic = isBulkDelete()
+        ? OBJECT_BULK_DELETE_REQUEST
+        : OBJECT_DELETE_REQUEST;
   }
 
   public void assumeUnguarded() {
@@ -369,8 +386,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * Execute a closure expecting an exception.
    * @param clazz type of exception
    * @param text text to look for in exception (optional)
-   * @param head expected head request count.
-   * @param list expected list request count.
+   * @param cost expected cost declaration.
    * @param eval closure to evaluate
    * @param <T> return type of closure
    * @param <E> exception type
@@ -459,7 +475,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
   /**
    * Execute a closure expecting a specific number of HEAD/LIST calls
-   * on <i>raw</i> S3 stores only.
+   * on <i>raw</i> S3 stores only. The operation is always evaluated.
    * @param cost expected cost
    * @param eval closure to evaluate
    * @param <T> return type of closure
@@ -468,7 +484,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   protected <T> T verifyRaw(
       OperationCost cost,
       Callable<T> eval) throws Exception {
-    return verifyMetrics(eval, whenRaw(cost));
+    return verifyMetrics(eval,
+        whenRaw(cost), OperationCostValidator.always());
   }
 
   /**
@@ -646,5 +663,21 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
                 + "\n" + ContractTestUtils.ls(
                     getFileSystem(), status.getPath())))
         .isEqualTo(expected);
+  }
+
+  /**
+   * Is bulk deletion enabled?
+   */
+  protected boolean isBulkDelete() {
+    return isBulkDelete;
+  }
+
+  /**
+   * Which statistic measures marker deletion?
+   * this is the bulk delete statistic by default;
+   * if that is disabled it becomes the single delete counter.
+   */
+  protected Statistic getDeleteMarkerStatistic() {
+    return deleteMarkerStatistic;
   }
 }

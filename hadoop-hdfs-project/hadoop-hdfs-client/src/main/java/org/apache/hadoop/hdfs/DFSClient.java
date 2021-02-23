@@ -188,8 +188,8 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.TraceScope;
+import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -648,7 +648,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       clientRunning = false;
       // close dead node detector thread
       if (!disabledStopDeadNodeDetectorThreadForTest) {
-        clientContext.stopDeadNodeDetectorThread();
+        clientContext.unreference();
       }
 
       // close connections to the namenode
@@ -3440,5 +3440,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   private boolean isDeadNodeDetectionEnabled() {
     return clientContext.isDeadNodeDetectionEnabled();
+  }
+
+  /**
+   * Obtain DeadNodeDetector of the current client.
+   */
+  public DeadNodeDetector getDeadNodeDetector() {
+    return clientContext.getDeadNodeDetector();
   }
 }

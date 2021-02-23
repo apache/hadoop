@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
@@ -253,6 +254,10 @@ public class Client {
   // Command line options
   private Options opts;
 
+  private final AtomicBoolean stopSignalReceived;
+  private final AtomicBoolean isRunning;
+  private final Object objectLock = new Object();
+
   private static final String shellCommandPath = "shellCommands";
   private static final String shellArgsPath = "shellArgs";
   private static final String appMasterJarPath = "AppMaster.jar";
@@ -413,6 +418,8 @@ public class Client {
     opts.addOption("application_tags", true, "Application tags.");
     opts.addOption("localize_files", true, "List of files, separated by comma"
         + " to be localized for the command");
+    stopSignalReceived = new AtomicBoolean(false);
+    isRunning = new AtomicBoolean(false);
   }
 
   /**
@@ -670,8 +677,8 @@ public class Client {
    * @throws YarnException
    */
   public boolean run() throws IOException, YarnException {
-
     LOG.info("Running Client");
+    isRunning.set(true);
     yarnClient.start();
     // set the client start time.
     clientStartTime = System.currentTimeMillis();
@@ -1116,15 +1123,22 @@ public class Client {
 
     boolean res = false;
     boolean needForceKill = false;
-    while (true) {
+    while (isRunning.get()) {
       // Check app status every 1 second.
       try {
-        Thread.sleep(APP_MONITOR_INTERVAL);
+        synchronized (objectLock) {
+          objectLock.wait(APP_MONITOR_INTERVAL);
+        }
+        needForceKill = stopSignalReceived.get();
       } catch (InterruptedException e) {
         LOG.warn("Thread sleep in monitoring loop interrupted");
         // if the application is to be killed when client times out;
         // then set needForceKill to true
         break;
+      } finally {
+        if (needForceKill) {
+          break;
+        }
       }
 
       // Get application report for the appId we are interested in 
@@ -1176,6 +1190,8 @@ public class Client {
     if (needForceKill) {
       forceKillApplication(appId);
     }
+
+    isRunning.set(false);
 
     return res;
   }
@@ -1387,5 +1403,30 @@ public class Client {
       resources.put(key, resourceValue);
     }
     return resources;
+  }
+
+  @VisibleForTesting
+  protected void sendStopSignal() {
+    LOG.info("Sending stop Signal to Client");
+    stopSignalReceived.set(true);
+    synchronized (objectLock) {
+      objectLock.notifyAll();
+    }
+    int waitCount = 0;
+    LOG.info("Waiting for Client to exit loop");
+    while (isRunning.get()) {
+      try {
+        Thread.sleep(50);
+      } catch (InterruptedException ie) {
+        // do nothing
+      } finally {
+        if (++waitCount > 2000) {
+          break;
+        }
+      }
+    }
+    LOG.info("Stopping yarnClient within the DS Client");
+    yarnClient.stop();
+    LOG.info("done stopping Client");
   }
 }

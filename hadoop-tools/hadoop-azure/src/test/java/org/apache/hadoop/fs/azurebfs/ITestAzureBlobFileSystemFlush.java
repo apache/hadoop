@@ -46,6 +46,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APPEND_BLOB_KEY;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasStreamCapabilities;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksStreamCapabilities;
 
 /**
  * Test flush operation.
@@ -332,11 +334,12 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     final Path testFilePath = path(methodName.getMethodName());
 
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, false)) {
-      assertFalse(stream.hasCapability(StreamCapabilities.HFLUSH));
-      assertFalse(stream.hasCapability(StreamCapabilities.HSYNC));
-      assertFalse(stream.hasCapability(StreamCapabilities.DROPBEHIND));
-      assertFalse(stream.hasCapability(StreamCapabilities.READAHEAD));
-      assertFalse(stream.hasCapability(StreamCapabilities.UNBUFFER));
+      assertLacksStreamCapabilities(stream,
+          StreamCapabilities.HFLUSH,
+          StreamCapabilities.HSYNC,
+          StreamCapabilities.DROPBEHIND,
+          StreamCapabilities.READAHEAD,
+          StreamCapabilities.UNBUFFER);
     }
   }
 
@@ -346,11 +349,13 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     byte[] buffer = getRandomBytesArray();
     final Path testFilePath = path(methodName.getMethodName());
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, true)) {
-      assertTrue(stream.hasCapability(StreamCapabilities.HFLUSH));
-      assertTrue(stream.hasCapability(StreamCapabilities.HSYNC));
-      assertFalse(stream.hasCapability(StreamCapabilities.DROPBEHIND));
-      assertFalse(stream.hasCapability(StreamCapabilities.READAHEAD));
-      assertFalse(stream.hasCapability(StreamCapabilities.UNBUFFER));
+      assertHasStreamCapabilities(stream,
+          StreamCapabilities.HFLUSH,
+          StreamCapabilities.HSYNC);
+      assertLacksStreamCapabilities(stream,
+          StreamCapabilities.DROPBEHIND,
+          StreamCapabilities.READAHEAD,
+          StreamCapabilities.UNBUFFER);
     }
   }
 

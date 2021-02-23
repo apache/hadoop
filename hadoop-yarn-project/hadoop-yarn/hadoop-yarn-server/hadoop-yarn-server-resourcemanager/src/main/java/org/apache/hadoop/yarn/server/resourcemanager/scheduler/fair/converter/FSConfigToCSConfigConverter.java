@@ -17,13 +17,18 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_JSON;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSQueueConverter.QUEUE_MAX_AM_SHARE_DISABLED;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -55,6 +60,7 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import com.fasterxml.jackson.core.JsonGenerator;
 
 /**
  * Converts Fair Scheduler configuration (site and fair-scheduler.xml)
@@ -64,17 +70,13 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 public class FSConfigToCSConfigConverter {
   public static final Logger LOG = LoggerFactory.getLogger(
       FSConfigToCSConfigConverter.class.getName());
+  public static final String MAPPING_RULES_JSON =
+      "mapping-rules.json";
   private static final String YARN_SITE_XML = "yarn-site.xml";
   private static final String CAPACITY_SCHEDULER_XML =
       "capacity-scheduler.xml";
   private static final String FAIR_SCHEDULER_XML =
       "fair-scheduler.xml";
-  private static final String MAPPING_RULES_JSON =
-      "mapping-rules.json";
-
-  public static final String WARNING_TEXT =
-      "WARNING: This feature is experimental and not intended " +
-          "for production use!";
 
   private Resource clusterResource;
   private boolean preemptionEnabled = false;
@@ -99,6 +101,8 @@ public class FSConfigToCSConfigConverter {
   private boolean consoleMode = false;
   private boolean convertPlacementRules = true;
   private String outputDirectory;
+  private boolean rulesToFile;
+  private boolean usePercentages;
 
   public FSConfigToCSConfigConverter(FSConfigToCSConfigRuleHandler
       ruleHandler, ConversionOptions conversionOptions) {
@@ -106,7 +110,6 @@ public class FSConfigToCSConfigConverter {
     this.conversionOptions = conversionOptions;
     this.yarnSiteOutputStream = System.out;
     this.capacitySchedulerOutputStream = System.out;
-    this.mappingRulesOutputStream = System.out;
     this.placementConverter = new QueuePlacementConverter();
   }
 
@@ -116,6 +119,8 @@ public class FSConfigToCSConfigConverter {
     this.clusterResource = getClusterResource(params);
     this.convertPlacementRules = params.isConvertPlacementRules();
     this.outputDirectory = params.getOutputDirectory();
+    this.rulesToFile = params.isPlacementRulesToFile();
+    this.usePercentages = params.isUsePercentages();
     prepareOutputFiles(params.isConsole());
     loadConversionRules(params.getConversionRulesConfig());
     Configuration inputYarnSiteConfig = getInputYarnSiteConfig(params);
@@ -127,9 +132,9 @@ public class FSConfigToCSConfigConverter {
   private void prepareOutputFiles(boolean console)
       throws FileNotFoundException {
     if (console) {
-      LOG.info("Console mode is enabled, " + YARN_SITE_XML + " and" +
-          " " + CAPACITY_SCHEDULER_XML + " will be only emitted " +
-          "to the console!");
+      LOG.info("Console mode is enabled, {}, {} and {} will be only emitted " +
+          "to the console!",
+          YARN_SITE_XML, CAPACITY_SCHEDULER_XML, MAPPING_RULES_JSON);
       this.consoleMode = true;
       return;
     }
@@ -218,8 +223,6 @@ public class FSConfigToCSConfigConverter {
 
   @VisibleForTesting
   void convert(Configuration inputYarnSiteConfig) throws Exception {
-    System.out.println(WARNING_TEXT);
-
     // initialize Fair Scheduler
     RMContext ctx = new RMContextImpl();
     PlacementManager placementManager = new PlacementManager();
@@ -253,6 +256,10 @@ public class FSConfigToCSConfigConverter {
     convertYarnSiteXml(inputYarnSiteConfig);
     convertCapacitySchedulerXml(fs);
 
+    if (convertPlacementRules) {
+      performRuleConversion(fs);
+    }
+
     if (consoleMode) {
       System.out.println("======= " + CAPACITY_SCHEDULER_XML + " =======");
     }
@@ -263,10 +270,6 @@ public class FSConfigToCSConfigConverter {
       System.out.println("======= " + YARN_SITE_XML + " =======");
     }
     convertedYarnSiteConfig.writeXml(yarnSiteOutputStream);
-
-    if (convertPlacementRules) {
-      performRuleConversion(fs);
-    }
   }
 
   private void convertYarnSiteXml(Configuration inputYarnSiteConfig) {
@@ -299,6 +302,7 @@ public class FSConfigToCSConfigConverter {
         .withQueueMaxAppsDefault(queueMaxAppsDefault)
         .withConversionOptions(conversionOptions)
         .withDrfUsed(drfUsed)
+        .withPercentages(usePercentages)
         .build();
 
     queueConverter.convertQueueHierarchy(rootQueue);
@@ -313,25 +317,56 @@ public class FSConfigToCSConfigConverter {
         fs.getRMContext().getQueuePlacementManager();
 
     if (placementManager.getPlacementRules().size() > 0) {
-      if (!consoleMode) {
-        File mappingRulesFile = new File(outputDirectory,
-            MAPPING_RULES_JSON);
-        this.mappingRulesOutputStream =
-            new FileOutputStream(mappingRulesFile);
-      } else {
-        System.out.println("======= " + MAPPING_RULES_JSON + " =======");
-      }
+      mappingRulesOutputStream = getOutputStreamForJson();
 
       MappingRulesDescription desc =
           placementConverter.convertPlacementPolicy(placementManager,
-              ruleHandler, capacitySchedulerConfig);
+              ruleHandler, capacitySchedulerConfig, usePercentages);
 
       ObjectMapper mapper = new ObjectMapper();
+      // close output stream if we write to a file, leave it open otherwise
+      if (!consoleMode && rulesToFile) {
+        mapper.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, true);
+      } else {
+        mapper.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
+      }
       ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
 
+      if (consoleMode && rulesToFile) {
+        System.out.println("======= " + MAPPING_RULES_JSON + " =======");
+      }
       writer.writeValue(mappingRulesOutputStream, desc);
+
+      capacitySchedulerConfig.set(MAPPING_RULE_FORMAT,
+          MAPPING_RULE_FORMAT_JSON);
+      capacitySchedulerConfig.setOverrideWithQueueMappings(true);
+      if (!rulesToFile) {
+        String json =
+            ((ByteArrayOutputStream)mappingRulesOutputStream)
+            .toString(StandardCharsets.UTF_8.displayName());
+        capacitySchedulerConfig.set(MAPPING_RULE_JSON, json);
+      }
     } else {
       LOG.info("No rules to convert");
+    }
+  }
+
+  /*
+   * Console    RulesToFile   OutputStream
+   * true       true          System.out / PrintStream
+   * true       false         ByteArrayOutputStream
+   * false      true          FileOutputStream
+   * false      false         ByteArrayOutputStream
+   */
+  private OutputStream getOutputStreamForJson() throws FileNotFoundException {
+    if (consoleMode && rulesToFile) {
+      return System.out;
+    } else if (rulesToFile) {
+      File mappingRulesFile = new File(outputDirectory,
+          MAPPING_RULES_JSON);
+      return new FileOutputStream(mappingRulesFile);
+    } else {
+      return new ByteArrayOutputStream();
     }
   }
 
@@ -465,11 +500,6 @@ public class FSConfigToCSConfigConverter {
   @VisibleForTesting
   void setPlacementConverter(QueuePlacementConverter converter) {
     this.placementConverter = converter;
-  }
-
-  @VisibleForTesting
-  void setMappingRulesOutputStream(OutputStream outputStream) {
-    this.mappingRulesOutputStream = outputStream;
   }
 
   @VisibleForTesting

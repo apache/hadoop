@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
@@ -79,8 +80,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.impl.FunctionsRaisingIOE;
-import org.apache.hadoop.fs.impl.WrappedIOException;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -450,7 +451,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     owner = fs;
     conf = owner.getConf();
     StoreContext context = owner.createStoreContext();
-    instrumentation = context.getInstrumentation().getS3GuardInstrumentation();
+    instrumentation = context.getInstrumentation()
+        .getS3GuardInstrumentation();
     username = context.getUsername();
     executor = context.createThrottledExecutor();
     ttlTimeProvider = Preconditions.checkNotNull(
@@ -638,8 +640,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.debug("Subtree path {} is deleted; this will be a no-op", path);
       return;
     }
-    deleteEntries(new InternalIterators.PathFromRemoteStatusIterator(
-        new DescendantsIterator(this, meta)),
+    deleteEntries(RemoteIterators.mappingRemoteIterator(
+        new DescendantsIterator(this, meta),
+        FileStatus::getPath),
         operationState);
   }
 
@@ -648,8 +651,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public void deletePaths(Collection<Path> paths,
       final BulkOperationState operationState)
       throws IOException {
-    deleteEntries(
-        new InternalIterators.RemoteIteratorFromIterator<>(paths.iterator()),
+    deleteEntries(RemoteIterators.remoteIteratorFromIterable(paths),
         operationState);
   }
 
@@ -826,7 +828,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       for (Item item : wrapWithRetries(items)) {
         metas.add(itemToPathMetadata(item, username));
       }
-    } catch (WrappedIOException e) {
+    } catch (UncheckedIOException e) {
       // failure in the iterators; unwrap.
       throw e.getCause();
     }
@@ -1634,7 +1636,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       Set<Path> clearedParentPathSet = new HashSet<>();
       // declare the operation to delete a batch as a function so
       // as to keep the code consistent across multiple uses.
-      FunctionsRaisingIOE.CallableRaisingIOE<Void> deleteBatchOperation =
+      CallableRaisingIOE<Void> deleteBatchOperation =
           () -> {
             // lowest path entries get deleted first.
             deletionBatch.sort(PathOrderComparators.TOPMOST_PATH_LAST);
