@@ -150,7 +150,6 @@ public class AuthenticatedURL {
         cookieHeaders = new HashMap<>();
         cookieHeaders.put("Cookie", Arrays.asList(cookie.toString()));
       }
-      LOG.trace("Setting token value to {} ({})", authCookie, oldCookie);
     }
 
     private void setAuthCookieValue(String value) {
