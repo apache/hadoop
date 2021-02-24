@@ -1582,6 +1582,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       } else {
         // A finished container
         launchedContainers.remove(containerId);
+        updatedExistContainers.remove(containerId);
         if (completedContainers.add(containerId)) {
           newlyCompletedContainers.add(remoteContainer);
         }
@@ -1595,6 +1596,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         findLostContainers(numRemoteRunningContainers, containerStatuses);
     for (ContainerStatus remoteContainer : lostContainers) {
       ContainerId containerId = remoteContainer.getContainerId();
+      updatedExistContainers.remove(containerId);
       if (completedContainers.add(containerId)) {
         newlyCompletedContainers.add(remoteContainer);
       }
