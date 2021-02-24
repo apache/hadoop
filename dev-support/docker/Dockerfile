@@ -70,12 +70,11 @@ RUN apt-get -q update \
         make \
         pinentry-curses \
         pkg-config \
-        python \
-        python2.7 \
-        python-pip \
-        python-pkg-resources \
-        python-setuptools \
-        python-wheel \
+        python3 \
+        python3-pip \
+        python3-pkg-resources \
+        python3-setuptools \
+        python3-wheel \
         rsync \
         shellcheck \
         software-properties-common \
@@ -134,19 +133,8 @@ RUN apt-get -q update \
     && rm -rf /var/lib/apt/lists/*
 ENV FINDBUGS_HOME /usr
 
-####
-# Install pylint at fixed version (2.0.0 removed python2 support)
-# https://github.com/PyCQA/pylint/issues/2294
-####
-RUN pip2 install \
-    configparser==4.0.2 \
-    pylint==1.9.2 \
-    isort==4.3.21
-
-####
-# Install dateutil.parser
-####
-RUN pip2 install python-dateutil==2.7.3
+# Install pylint and python-dateutil
+RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 
 ###
 # Install node.js 8.17.0 for web UI framework (4.2.6 ships with Xenial)
