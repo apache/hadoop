@@ -1317,6 +1317,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String DEFAULT_INTRAQUEUE_PREEMPTION_ORDER_POLICY = "userlimit_first";
 
   /**
+   * Flag to determine whether or not to preempt containers from apps where some
+   * used resources are less than the user's user limit.
+   */
+  public static final String CROSS_QUEUE_PREEMPTION_CONSERVATIVE_DRF =
+      PREEMPTION_CONFIG_PREFIX + "conservative-drf";
+  public static final Boolean DEFAULT_CROSS_QUEUE_PREEMPTION_CONSERVATIVE_DRF =
+      false;
+
+  public static final String IN_QUEUE_PREEMPTION_CONSERVATIVE_DRF =
+      PREEMPTION_CONFIG_PREFIX + INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX +
+      "conservative-drf";
+  public static final Boolean DEFAULT_IN_QUEUE_PREEMPTION_CONSERVATIVE_DRF =
+      true;
+
+  /**
    * Maximum application for a queue to be used when application per queue is
    * not defined.To be consistent with previous version the default value is set
    * as UNDEFINED.

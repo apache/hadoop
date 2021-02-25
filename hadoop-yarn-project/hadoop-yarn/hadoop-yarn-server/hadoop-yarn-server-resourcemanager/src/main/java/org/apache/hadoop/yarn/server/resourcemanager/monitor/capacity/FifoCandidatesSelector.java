@@ -111,7 +111,9 @@ public class FifoCandidatesSelector
                   .tryPreemptContainerAndDeductResToObtain(rc,
                       preemptionContext, resToObtainByPartition, c,
                       clusterResource, selectedCandidates,
-                      totalPreemptionAllowed, false);
+                      totalPreemptionAllowed,
+                      preemptionContext.getCrossQueuePreemptionConservativeDRF()
+                      );
               if (!preempted) {
                 continue;
               }
@@ -187,7 +189,8 @@ public class FifoCandidatesSelector
       boolean preempted = CapacitySchedulerPreemptionUtils
           .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
               resToObtainByPartition, c, clusterResource, preemptMap,
-              totalPreemptionAllowed, false);
+              totalPreemptionAllowed,
+              preemptionContext.getCrossQueuePreemptionConservativeDRF());
       if (preempted) {
         Resources.subtractFrom(skippedAMSize, c.getAllocatedResource());
       }
@@ -222,7 +225,8 @@ public class FifoCandidatesSelector
       // Try to preempt this container
       CapacitySchedulerPreemptionUtils.tryPreemptContainerAndDeductResToObtain(
           rc, preemptionContext, resToObtainByPartition, c, clusterResource,
-          selectedContainers, totalPreemptionAllowed, false);
+          selectedContainers, totalPreemptionAllowed,
+          preemptionContext.getCrossQueuePreemptionConservativeDRF());
 
       if (!preemptionContext.isObserveOnly()) {
         preemptionContext.getRMContext().getDispatcher().getEventHandler()
@@ -265,7 +269,8 @@ public class FifoCandidatesSelector
       // Try to preempt this container
       CapacitySchedulerPreemptionUtils.tryPreemptContainerAndDeductResToObtain(
           rc, preemptionContext, resToObtainByPartition, c, clusterResource,
-          selectedContainers, totalPreemptionAllowed, false);
+          selectedContainers, totalPreemptionAllowed,
+          preemptionContext.getCrossQueuePreemptionConservativeDRF());
     }
   }
 }

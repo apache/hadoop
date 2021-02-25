@@ -109,6 +109,9 @@ public class ProportionalCapacityPreemptionPolicy
   private float minimumThresholdForIntraQueuePreemption;
   private IntraQueuePreemptionOrderPolicy intraQueuePreemptionOrderPolicy;
 
+  private boolean crossQueuePreemptionConservativeDRF;
+  private boolean inQueuePreemptionConservativeDRF;
+
   // Current configuration
   private CapacitySchedulerConfiguration csConfig;
 
@@ -221,6 +224,18 @@ public class ProportionalCapacityPreemptionPolicy
                 CapacitySchedulerConfiguration.DEFAULT_INTRAQUEUE_PREEMPTION_ORDER_POLICY)
             .toUpperCase());
 
+    crossQueuePreemptionConservativeDRF =  config.getBoolean(
+        CapacitySchedulerConfiguration.
+        CROSS_QUEUE_PREEMPTION_CONSERVATIVE_DRF,
+        CapacitySchedulerConfiguration.
+        DEFAULT_CROSS_QUEUE_PREEMPTION_CONSERVATIVE_DRF);
+
+    inQueuePreemptionConservativeDRF =  config.getBoolean(
+        CapacitySchedulerConfiguration.
+        IN_QUEUE_PREEMPTION_CONSERVATIVE_DRF,
+        CapacitySchedulerConfiguration.
+        DEFAULT_IN_QUEUE_PREEMPTION_CONSERVATIVE_DRF);
+
     candidatesSelectionPolicies = new ArrayList<>();
 
     // Do we need white queue-priority preemption policy?
@@ -281,7 +296,11 @@ public class ProportionalCapacityPreemptionPolicy
         "select_based_on_reserved_containers = " +
           selectCandidatesForResevedContainers + "\n" +
         "additional_res_balance_based_on_reserved_containers = " +
-          additionalPreemptionBasedOnReservedResource);
+          additionalPreemptionBasedOnReservedResource + "\n" +
+        "cross-queue-preemption.conservative-drf = " +
+          crossQueuePreemptionConservativeDRF + "\n" +
+        "in-queue-preemption.conservative-drf = " +
+          inQueuePreemptionConservativeDRF);
 
     csConfig = config;
   }
@@ -392,7 +411,7 @@ public class ProportionalCapacityPreemptionPolicy
 
     return leafQueueNames;
   }
-  
+
   /**
    * This method selects and tracks containers to be preemptionCandidates. If a container
    * is in the target list for more than maxWaitTime it is killed.
@@ -726,5 +745,15 @@ public class ProportionalCapacityPreemptionPolicy
   @Override
   public IntraQueuePreemptionOrderPolicy getIntraQueuePreemptionOrderPolicy() {
     return intraQueuePreemptionOrderPolicy;
+  }
+
+  @Override
+  public boolean getCrossQueuePreemptionConservativeDRF() {
+    return crossQueuePreemptionConservativeDRF;
+  }
+
+  @Override
+  public boolean getInQueuePreemptionConservativeDRF() {
+    return inQueuePreemptionConservativeDRF;
   }
 }
