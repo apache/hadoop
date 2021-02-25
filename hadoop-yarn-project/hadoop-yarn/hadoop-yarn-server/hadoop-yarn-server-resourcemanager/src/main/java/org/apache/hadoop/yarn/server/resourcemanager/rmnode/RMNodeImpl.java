@@ -1466,6 +1466,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   // For test only.
   @VisibleForTesting
+  public Map<ContainerId, ContainerStatus> getUpdatedExistContainers() {
+    return this.updatedExistContainers;
+  }
+  // For test only.
+  @VisibleForTesting
   public Set<ContainerId> getLaunchedContainers() {
     return this.launchedContainers;
   }
