@@ -848,6 +848,11 @@ public abstract class AbstractYarnScheduler
     writeLock.lock();
     try {
       SchedulerNode node = getSchedulerNode(nm.getNodeID());
+      if (node == null) {
+        LOG.info("Node: " + nm.getNodeID() + " has already been taken out of " +
+            "scheduling. Skip updating its resource");
+        return;
+      }
       Resource newResource = resourceOption.getResource();
       final int timeout = resourceOption.getOverCommitTimeout();
       Resource oldResource = node.getTotalResource();
