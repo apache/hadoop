@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -32,6 +33,8 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.io.IOUtils;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
 
 public class ITestAbfsInputStreamStatistics
     extends AbstractAbfsIntegrationTest {
@@ -89,42 +92,41 @@ public class ITestAbfsInputStreamStatistics
    * Test to check statistics from seek operation in AbfsInputStream.
    */
   @Test
-  public void testSeekStatistics() throws IOException {
+  public void testSeekStatistics() throws Exception {
     describe("Testing the values of statistics from seek operations in "
         + "AbfsInputStream");
 
-    AzureBlobFileSystem fs = getFileSystem();
+    Configuration config = getRawConfiguration();
+    config.set(AZURE_READ_BUFFER_SIZE, String.valueOf(ONE_MB - 1));
+    AzureBlobFileSystem fs = getFileSystem(config);
     AzureBlobFileSystemStore abfss = fs.getAbfsStore();
     Path seekStatPath = path(getMethodName());
 
     AbfsOutputStream out = null;
     AbfsInputStream in = null;
 
-    int readBufferSize = getConfiguration().getReadBufferSize();
-    byte[] buf = new byte[readBufferSize + 1];
-
     try {
       out = createAbfsOutputStreamWithFlushEnabled(fs, seekStatPath);
 
-      //Writing buffer to file
-      out.write(buf);
+      //Writing a default buffer in a file.
+      out.write(defBuffer);
       out.hflush();
       in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
 
       /*
-       * Reading from file. After read, fCursor = readBufferSize
-       * Last valid offset in file is readBufferSize
+       * Writing 1MB buffer to the file, this would make the fCursor(Current
+       * position of cursor) to the end of file.
        */
-      int result = in.read(buf, 0, readBufferSize);
+      int result = in.read(defBuffer, 0, ONE_MB - 1);
       LOG.info("Result of read : {}", result);
 
       /*
-       * Seeking to start of file and then back to readBufferSize position would
-       * result in a backward and a forward seek respectively 10 times.
+       * Seeking to start of file and then back to end would result in a
+       * backward and a forward seek respectively 10 times.
        */
       for (int i = 0; i < OPERATIONS; i++) {
         in.seek(0);
-        in.seek(readBufferSize);
+        in.seek(ONE_MB - 1);
       }
 
       AbfsInputStreamStatisticsImpl stats =
@@ -143,8 +145,8 @@ public class ITestAbfsInputStreamStatistics
        * for OPERATION times, total forward seeks would be OPERATIONS.
        *
        * negativeBytesBackwardsOnSeek - Since we are doing backward seeks from
-       * last byte of file over readBufferSize bytes each time, this would mean
-       * the bytes from backward seek would be OPERATIONS * readBufferSize.
+       * end of file in a ONE_MB file each time, this would mean the bytes from
+       * backward seek would be OPERATIONS * ONE_MB.
        *
        * bytesSkippedOnSeek - Since, we move from start to end in seek, but
        * our fCursor(position of cursor) always remain at end of file, this
@@ -162,7 +164,7 @@ public class ITestAbfsInputStreamStatistics
       assertEquals("Mismatch in forwardSeekOps value", OPERATIONS,
           stats.getForwardSeekOperations());
       assertEquals("Mismatch in bytesBackwardsOnSeek value",
-          OPERATIONS * readBufferSize, stats.getBytesBackwardsOnSeek());
+          OPERATIONS * (ONE_MB - 1), stats.getBytesBackwardsOnSeek());
       assertEquals("Mismatch in bytesSkippedOnSeek value",
           0, stats.getBytesSkippedOnSeek());
       assertEquals("Mismatch in seekInBuffer value", 2 * OPERATIONS,
