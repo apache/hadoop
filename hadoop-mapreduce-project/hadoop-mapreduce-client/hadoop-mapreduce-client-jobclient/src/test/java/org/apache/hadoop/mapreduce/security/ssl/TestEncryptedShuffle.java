@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
 import org.junit.Before;
@@ -48,20 +49,19 @@ import java.io.Writer;
 public class TestEncryptedShuffle {
 
   private static File testRootDir;
-  private static File dfsFolder;
-  private String classpathDir;
 
   @BeforeClass
   public static void setUp() throws Exception {
     testRootDir =
         GenericTestUtils.setupTestRootDir(TestEncryptedShuffle.class);
-    dfsFolder = new File(testRootDir, "dfs");
   }
 
   @Before
   public void createCustomYarnClasspath() throws Exception {
     classpathDir = KeyStoreTestUtil.getClasspathDir(TestEncryptedShuffle.class);
     new File(classpathDir, "core-site.xml").delete();
+    dfsFolder = new File(testRootDir, String.format("dfs-%d",
+        Time.monotonicNow()));
   }
 
   @After
@@ -71,8 +71,10 @@ public class TestEncryptedShuffle {
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, classpathDir);
   }
 
+  private String classpathDir;
   private MiniDFSCluster dfsCluster = null;
   private MiniMRClientCluster mrCluster = null;
+  private File dfsFolder;
 
   private void startCluster(Configuration  conf) throws Exception {
     if (System.getProperty("hadoop.log.dir") == null) {

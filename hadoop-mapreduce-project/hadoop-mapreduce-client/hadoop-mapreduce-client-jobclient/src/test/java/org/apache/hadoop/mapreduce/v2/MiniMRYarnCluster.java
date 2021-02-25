@@ -78,6 +78,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     this(testName, 1);
   }
 
+  @SuppressWarnings("deprecation")
   public MiniMRYarnCluster(String testName, int noOfNMs) {
     this(testName, noOfNMs, false);
   }
