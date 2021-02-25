@@ -65,6 +65,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
 public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   private static final String SERVER_SIDE_ENCRYPTION_ALGORITHM = "AES256";
+  private static final String CHARSET_UTF_8 = "UTF-8";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -101,7 +102,7 @@ public class AbfsClient implements Closeable {
       this.clientProvidedEncryptionKey = encryptionKey;
       try {
         MessageDigest digester = MessageDigest.getInstance("SHA-256");
-        digester.update(encryptionKey.getBytes());
+        digester.update(encryptionKey.getBytes(CHARSET_UTF_8));
         this.clientProvidedEncryptionKeySHA = Base64.getEncoder().encodeToString(digester.digest());
       } catch (NoSuchAlgorithmException e) {
         throw new IOException(e);

@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
@@ -54,15 +55,13 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY_SHA256;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
@@ -72,6 +71,9 @@ public class ITestAbfsClientCustomerProvidedKey
     extends AbstractAbfsIntegrationTest {
 
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
+  private static final int INT_512 = 512;
+  private static final int INT_50 = 50;
+
   private final IdentityTransformerInterface identityTransformer;
 
   public ITestAbfsClientCustomerProvidedKey() throws Exception {
@@ -125,7 +127,7 @@ public class ITestAbfsClientCustomerProvidedKey
     fs.create(new Path("/test1"));
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .listPath("/test1", false, 50, null);
+        .listPath("/test1", false, INT_50, null);
     assertCPKHeaders(abfsRestOperation, false);
   }
 
@@ -136,7 +138,7 @@ public class ITestAbfsClientCustomerProvidedKey
     fs.create(new Path("/test1"));
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .listPath("/test1", false, 50, null);
+        .listPath("/test1", false, INT_50, null);
     assertCPKHeaders(abfsRestOperation, false);
   }
 
@@ -316,7 +318,7 @@ public class ITestAbfsClientCustomerProvidedKey
     byte[] fileContent = getRandomBytesArray(fileSize);
     createFileWithContent(fs, "/test1", fileContent);
     AbfsClient abfsClient = fs.getAbfsClient();
-    int length = 512;
+    int length = INT_512;
     byte[] buffer = new byte[length * 4];
     AbfsRestOperation abfsRestOperation = abfsClient
         .read("/test1", 0, buffer, 0, length, null, null);
@@ -331,7 +333,7 @@ public class ITestAbfsClientCustomerProvidedKey
     byte[] fileContent = getRandomBytesArray(fileSize);
     createFileWithContent(fs, "/test1", fileContent);
     AbfsClient abfsClient = fs.getAbfsClient();
-    int length = 512;
+    int length = INT_512;
     byte[] buffer = new byte[length * 4];
     AbfsRestOperation abfsRestOperation = abfsClient
         .read("/test1", 0, buffer, 0, length, null, null);
@@ -446,6 +448,13 @@ public class ITestAbfsClientCustomerProvidedKey
 
   @Test
   public void testCheckAccessWithCPK() throws Exception {
+    boolean isHNSEnabled = getConfiguration()
+        .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
+        isHNSEnabled);
+    Assume.assumeTrue("AuthType has to be OAuth",
+        getAuthType() == AuthType.OAuth);
+
     boolean isWithCPK = true;
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
@@ -458,6 +467,13 @@ public class ITestAbfsClientCustomerProvidedKey
 
   @Test
   public void testCheckAccessWithoutCPK() throws Exception {
+    boolean isHNSEnabled = getConfiguration()
+        .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
+        isHNSEnabled);
+    Assume.assumeTrue("AuthType has to be OAuth",
+        getAuthType() == AuthType.OAuth);
+
     boolean isWithCPK = true;
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
