@@ -25,6 +25,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
@@ -45,19 +46,16 @@ import java.util.Properties;
  * The DFS filesystem is formated before the testcase starts and after it ends.
  */
 public abstract class ClusterMapReduceTestCase {
-  private static final String TEST_ROOT_DEFAULT_PATH =
-      System.getProperty("test.build.data", "target/test-dir");
-  private static Path testRootDir;
+  private static File testRootDir;
+  private static File dfsFolder;
 
   private MiniDFSCluster dfsCluster = null;
   private MiniMRClientCluster mrCluster = null;
 
   protected static void setupClassBase(Class<?> testClass) throws Exception {
     // setup the test root directory
-    testRootDir = GenericTestUtils.setupTestRootDir(testClass,
-        TEST_ROOT_DEFAULT_PATH);
-    System.setProperty(GenericTestUtils.SYSPROP_TEST_DATA_DIR,
-        testRootDir.toString());
+    testRootDir = GenericTestUtils.setupTestRootDir(testClass);
+    dfsFolder = new File(testRootDir, "dfs");
   }
 
 
@@ -93,9 +91,9 @@ public abstract class ClusterMapReduceTestCase {
           conf.set((String) entry.getKey(), (String) entry.getValue());
         }
       }
-      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
-      .format(reformatDFS).racks(null).build();
-
+      dfsCluster =
+          new MiniDFSCluster.Builder(conf, dfsFolder)
+              .numDataNodes(2).format(reformatDFS).racks(null).build();
       mrCluster = MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
     }
   }
@@ -151,7 +149,7 @@ public abstract class ClusterMapReduceTestCase {
    * @return path to the root directory for the testcase.
    */
   protected Path getTestRootDir() {
-    return testRootDir;
+    return new Path(testRootDir.getPath());
   }
 
   /**

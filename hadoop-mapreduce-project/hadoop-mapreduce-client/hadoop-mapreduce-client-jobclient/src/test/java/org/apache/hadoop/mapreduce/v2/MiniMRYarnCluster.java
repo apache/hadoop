@@ -87,6 +87,10 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     super(testName, 1, noOfNMs, 4, 4, enableAHS);
   }
 
+  public static String copyAppJarIntoTestDir(String testSubdir) {
+    return JarFinder.getJar(LocalContainerLauncher.class, testSubdir);
+  }
+
   public static String getResolvedMRHistoryWebAppURLWithoutScheme(
       Configuration conf, boolean isSSLEnabled) {
     InetSocketAddress address = null;

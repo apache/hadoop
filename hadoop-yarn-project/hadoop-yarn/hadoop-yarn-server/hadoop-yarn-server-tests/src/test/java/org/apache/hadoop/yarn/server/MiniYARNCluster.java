@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -173,7 +174,9 @@ public class MiniYARNCluster extends CompositeService {
     this.numLogDirs = numLogDirs;
     this.enableAHS = enableAHS;
     String testSubDir = testName.replace("$", "").concat("-yarn");
-    File targetWorkDirRoot = GenericTestUtils.getTestDir();
+    File targetWorkDirRoot = GenericTestUtils.getTestDir(testName);
+    // make sure that the folder exists
+    targetWorkDirRoot.mkdirs();
     File targetWorkDir = new File(targetWorkDirRoot, testSubDir);
     try {
       FileContext.getLocalFSFileContext().delete(

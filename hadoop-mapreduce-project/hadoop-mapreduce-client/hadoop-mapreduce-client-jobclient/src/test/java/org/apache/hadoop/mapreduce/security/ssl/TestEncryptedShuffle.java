@@ -47,17 +47,15 @@ import java.io.Writer;
 
 public class TestEncryptedShuffle {
 
-  private static final String TEST_ROOT_DEFAULT_PATH =
-      System.getProperty("test.build.data", "target/test-dir");
-
-  private static Path testRootDir;
+  private static File testRootDir;
+  private static File dfsFolder;
   private String classpathDir;
 
   @BeforeClass
   public static void setUp() throws Exception {
     testRootDir =
-        GenericTestUtils.setupTestRootDir(TestEncryptedShuffle.class,
-            TEST_ROOT_DEFAULT_PATH);
+        GenericTestUtils.setupTestRootDir(TestEncryptedShuffle.class);
+    dfsFolder = new File(testRootDir, "dfs");
   }
 
   @Before
@@ -69,7 +67,7 @@ public class TestEncryptedShuffle {
   @After
   public void cleanUpMiniClusterSpecialConfig() throws Exception {
     new File(classpathDir, "core-site.xml").delete();
-    String keystoresDir = new File(testRootDir.toString()).getAbsolutePath();
+    String keystoresDir = testRootDir.getAbsolutePath();
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, classpathDir);
   }
 
@@ -78,7 +76,7 @@ public class TestEncryptedShuffle {
 
   private void startCluster(Configuration  conf) throws Exception {
     if (System.getProperty("hadoop.log.dir") == null) {
-      System.setProperty("hadoop.log.dir", testRootDir.toString());
+      System.setProperty("hadoop.log.dir", testRootDir.getAbsolutePath());
     }
     conf.set("dfs.block.access.token.enable", "false");
     conf.set("dfs.permissions", "true");
@@ -88,7 +86,7 @@ public class TestEncryptedShuffle {
             YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH))
         + File.pathSeparator + classpathDir;
     conf.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH, cp);
-    dfsCluster = new MiniDFSCluster.Builder(conf).build();
+    dfsCluster = new MiniDFSCluster.Builder(conf, dfsFolder).build();
     FileSystem fileSystem = dfsCluster.getFileSystem();
     fileSystem.mkdirs(new Path("/tmp"));
     fileSystem.mkdirs(new Path("/user"));
@@ -125,7 +123,7 @@ public class TestEncryptedShuffle {
     throws Exception {
     try {
       Configuration conf = new Configuration();
-      String keystoresDir = new File(testRootDir.toString()).getAbsolutePath();
+      String keystoresDir = testRootDir.getAbsolutePath();
       String sslConfsDir =
         KeyStoreTestUtil.getClasspathDir(TestEncryptedShuffle.class);
       KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfsDir, conf,
