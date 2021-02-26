@@ -30,6 +30,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +63,11 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMRJobClient.class);
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    setupClassBase(TestMRJobClient.class);
+  }
 
   private Job runJob(Configuration conf) throws Exception {
     String input = "hello1\nhello2\nhello3\n";
