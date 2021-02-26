@@ -646,7 +646,7 @@ public class CommonNodeLabelsManager extends AbstractService {
           host.labels.addAll(labels);
           for (Node node : host.nms.values()) {
             replaceNodeForLabels(node.nodeId, node.labels, labels);
-            if (node.labels != null && labels != null) {
+            if (node.labels != null) {
               replaceLabelsForNode(node.nodeId, node.labels, labels);
             }
             node.labels = null;
