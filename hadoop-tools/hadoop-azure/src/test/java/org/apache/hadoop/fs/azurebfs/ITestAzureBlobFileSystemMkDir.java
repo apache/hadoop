@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -104,5 +105,18 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
         CONNECTIONS_MADE,
         totalConnectionMadeBeforeTest + mkdirRequestCount,
         fs.getInstrumentationMap());
+  }
+
+  @Test
+  public void testMkdirExistingDirNoOp()
+      throws IOException, InterruptedException {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testDir = new Path("/newDirectory");
+    fs.mkdirs(testDir);
+    long timeCreated = fs.getFileStatus(testDir).getModificationTime();
+    Thread.sleep(1);
+    fs.mkdirs(testDir);
+    assertEquals("mkdirs existing dir should not modify properties",
+        timeCreated, fs.getFileStatus(testDir).getModificationTime());
   }
 }

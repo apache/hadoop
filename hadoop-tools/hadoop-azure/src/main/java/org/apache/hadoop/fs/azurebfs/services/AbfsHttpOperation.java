@@ -95,6 +95,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return httpOp;
   }
 
+  public void hardSetStatusCode(int httpStatus) {
+    this.statusCode = httpStatus;
+  }
+
   /**
    * Constructor for FixedResult instance, avoiding connection init.
    * @param url request url
