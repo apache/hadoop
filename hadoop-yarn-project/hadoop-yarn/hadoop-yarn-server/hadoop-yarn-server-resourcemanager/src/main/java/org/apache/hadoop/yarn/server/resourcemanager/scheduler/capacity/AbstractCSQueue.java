@@ -1633,4 +1633,13 @@ public abstract class AbstractCSQueue implements CSQueue {
       writeLock.unlock();
     }
   }
+
+  protected String getCapacityOrWeightString() {
+    if (queueCapacities.getWeight() != -1) {
+      return "weight=" + queueCapacities.getWeight() + ", " +
+          "normalizedWeight=" + queueCapacities.getNormalizedWeight();
+    } else {
+      return "capacity=" + queueCapacities.getCapacity();
+    }
+  }
 }
