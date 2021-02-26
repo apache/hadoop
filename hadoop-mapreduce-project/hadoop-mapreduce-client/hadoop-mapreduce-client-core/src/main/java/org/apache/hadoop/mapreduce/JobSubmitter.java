@@ -185,7 +185,10 @@ class JobSubmitter {
         TokenCache.setShuffleSecretKey(shuffleKey.getEncoded(),
             job.getCredentials());
       }
-      if (CryptoUtils.isEncryptedSpillEnabled(conf)) {
+      SpillKeyProvider spillKeyProvider =
+          CryptoUtils.initSpillKeyProvider(conf);
+      if (spillKeyProvider.isEncryptionEnabled()) {
+        spillKeyProvider.addEncryptedSpillKey(job.getCredentials());
         conf.setInt(MRJobConfig.MR_AM_MAX_ATTEMPTS, 1);
         LOG.warn("Max job attempts set to 1 since encrypted intermediate" +
                 "data spill is enabled");

@@ -17,19 +17,32 @@
  */
 package org.apache.hadoop.mapreduce;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.ClusterMapReduceTestCase;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +60,10 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -62,6 +79,84 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMRJobClient.class);
+  /**
+   * A Map between method name and the configurations of the job.
+   */
+  private static final Map<String, Supplier<Properties>> CONF_SUPPLIER_MAP =
+      new HashMap<>();
+  /**
+   * Default Properties Supplier returns null.
+   */
+  private static final Supplier<Properties> DEFAULT_CONF_SUPPLIER = () -> null;
+  private static final Path TEST_ROOT_DIR =
+      new Path(System.getProperty("test.build.data", "target/test-dir"));
+  private static final Path TEST_DIR = new Path(TEST_ROOT_DIR,
+      TestMRJobClient.class.getName() + "-tmpDir");
+  private static final String STAGING_DIR =
+      new Path(TEST_DIR, "staging").toString();
+
+  /**
+   * Add custom configurations for the test units to .
+   */
+  @BeforeClass
+  public static void setUpJUnitClass() {
+    // add common configuration to base properties
+    Properties baseProps = new Properties();
+    baseProps.setProperty(MRJobConfig.MR_AM_STAGING_DIR, STAGING_DIR);
+
+    CONF_SUPPLIER_MAP.put("testJobEncryptedKMSSpillKey",
+        () -> {
+          final File kmsDir = new File(STAGING_DIR);
+          final Properties spillHdfsKMSProps = new Properties();
+          spillHdfsKMSProps.putAll(baseProps);
+          spillHdfsKMSProps.setProperty(YarnConfiguration.RM_PRINCIPAL,
+              "testuser/localhost@apache.org");
+          spillHdfsKMSProps.setProperty(
+              MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, "true");
+          spillHdfsKMSProps.setProperty(
+              MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_CLASS,
+              SpillHdfsKMSKeyProvider.class.getName());
+          spillHdfsKMSProps.setProperty(
+              CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+              getKeyProviderURI(kmsDir));
+          spillHdfsKMSProps.setProperty(
+              MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_KEY_NAME,
+              MRJobConfig
+                  .DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_KEY_NAME);
+          spillHdfsKMSProps.setProperty(
+              MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_EDEK,
+              MRJobConfig
+                  .DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_EDEK);
+          return spillHdfsKMSProps;
+        });
+  }
+
+  @AfterClass
+  public static void cleanup() throws Exception {
+    File dir = new File(TEST_DIR.toString());
+    if (dir.exists()) {
+      FileUtils.deleteDirectory(dir);
+    }
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    // prepare STAGING_DIR
+    File dir = new File(STAGING_DIR);
+    if (dir.exists()) {
+      FileUtils.deleteDirectory(dir);
+    }
+    dir.mkdirs();
+    Properties props =
+        CONF_SUPPLIER_MAP.getOrDefault(getTestName(),
+            DEFAULT_CONF_SUPPLIER).get();
+    startCluster(true, props);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    super.tearDown();
+  }
 
   private Job runJob(Configuration conf) throws Exception {
     String input = "hello1\nhello2\nhello3\n";
@@ -103,12 +198,49 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     }
   }
 
+  protected static String getKeyProviderURI(File testRootDir) {
+    return JavaKeyStoreProvider.SCHEME_NAME + "://file" +
+        new Path(testRootDir.toString(), "test.jks").toUri();
+  }
+
   private static class BadOutputFormat extends TextOutputFormat<Object, Object> {
     @Override
     public void checkOutputSpecs(JobContext job) throws IOException {
       throw new IOException();
     }
   }
+
+  /**
+   * Tests the Secret key will be added to the job when the KMS key provider is
+   * being enabled.
+   *
+   * @throws Exception when failed to find the edek secretkey.
+   */
+  @Test
+  public void testJobEncryptedKMSSpillKey() throws Exception {
+    final JobConf jobConf = createJobConf();
+    final Text spillEdek =
+        new Text(jobConf.get(
+            MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_EDEK,
+            MRJobConfig
+                .DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_EDEK));
+    final String encryptionKeyName =
+        jobConf.get(
+            MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_KEY_NAME);
+    try (KeyProvider keyProvider =
+             getDfsCluster().getNameNode().getNamesystem().getProvider()) {
+      KeyProvider.Options options = KeyProvider.options(jobConf);
+      keyProvider.createKey(encryptionKeyName, options);
+      keyProvider.flush();
+    }
+    Job job = MapReduceTestUtil.createJob(jobConf, getInputDir(),
+        getOutputDir(), 1, 1, "testJobEncryptedSpillKey_Job");
+    job.setJobName("mapreduce");
+    job.setPriority(JobPriority.NORMAL);
+    job.waitForCompletion(true);
+    Assert.assertNotNull(job.getCredentials().getSecretKey(spillEdek));
+  }
+
   @Test
   public void testJobSubmissionSpecsAndFiles() throws Exception {
     Configuration conf = createJobConf();

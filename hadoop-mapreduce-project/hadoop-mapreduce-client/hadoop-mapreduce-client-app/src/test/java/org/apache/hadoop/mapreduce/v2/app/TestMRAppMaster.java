@@ -43,14 +43,21 @@ import java.util.Map;
 import org.junit.Assert;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.SpillHdfsKMSKeyProvider;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.EventType;
 import org.apache.hadoop.mapreduce.jobhistory.EventWriter;
@@ -77,6 +84,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -542,6 +550,83 @@ public class TestMRAppMaster {
         1, ExitUtil.getFirstExitException().status);
   }
 
+  @Test
+  public void testKMSEncryptedSpillKeys() throws Exception {
+    String encryptionKeyName = MRJobConfig
+        .DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_KEY_NAME;
+    MiniDFSCluster dfsCluster = null;
+    Path dfsBaseDir = null;
+    try {
+      UserGroupInformation testAppMasterUser =
+          UserGroupInformation.getCurrentUser();
+      String userName = testAppMasterUser.getUserName();
+
+      dfsBaseDir = new Path(stagingDir, "dfsBase");
+      FileSystemTestHelper fsHelper =
+          new FileSystemTestHelper(dfsBaseDir.toString());
+      Configuration hdfsConfig = new HdfsConfiguration();
+      hdfsConfig.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
+          fsHelper.getTestRootDir());
+      // set the KMS dir
+      File kmsDir = new File(fsHelper.getTestRootDir()).getAbsoluteFile();
+      hdfsConfig.set(
+          CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+          getKeyProviderURI(kmsDir));
+      dfsCluster = new MiniDFSCluster.Builder(hdfsConfig).numDataNodes(2)
+          .format(true)
+          .racks(null)
+          .manageDataDfsDirs(true)
+          .checkExitOnShutdown(false) // it is expected to fail. no check exit.
+          .build();
+      dfsCluster.waitActive();
+      FileSystemTestHelper.addFileSystemForTesting(
+          dfsCluster.getFileSystem().getUri(),
+          dfsCluster.getFileSystem().getConf(),
+          dfsCluster.getFileSystem());
+
+      // initialize the keyProvider
+      try (KeyProvider keyProvider =
+               dfsCluster.getNameNode().getNamesystem().getProvider()) {
+        KeyProvider.Options options = KeyProvider.options(hdfsConfig);
+        keyProvider.createKey(encryptionKeyName, options);
+        keyProvider.flush();
+      }
+
+      // set the job configurations
+      JobConf jConf = new JobConf(hdfsConfig);
+      jConf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
+      jConf.set(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_CLASS,
+          SpillHdfsKMSKeyProvider.class.getName());
+      jConf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
+      jConf.set(JHAdminConfig.MR_HS_JHIST_FORMAT, "json");
+
+      // start the App
+      String applicationAttemptIdStr = "appattempt_1317529182569_0004_000002";
+      String containerIdStr = "container_1317529182569_0004_000002_1";
+      ApplicationAttemptId applicationAttemptId =
+          ApplicationAttemptId.fromString(applicationAttemptIdStr);
+      ContainerId containerId = ContainerId.fromString(containerIdStr);
+      MRAppMaster appMaster =
+          new MRAppMasterTest(applicationAttemptId, containerId, "host",
+              -1, -1, System.currentTimeMillis(), false, false);
+      LambdaTestUtils.intercept(
+          IOException.class,
+          "Was asked to shut down",
+          () -> MRAppMaster.initAndStartAppMaster(appMaster, jConf, userName));
+      byte[] spillKey = appMaster.getEncryptedSpillKey();
+      Assert.assertNotEquals(spillKey.length, 1, 0);
+      Assert.assertEquals(
+          SpillHdfsKMSKeyProvider.class.getName(),
+          appMaster.getConfig().get(
+              MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_CLASS));
+    } finally {
+      if (dfsCluster != null) {
+        // shutdown dfsCluster and delete the base folder
+        dfsCluster.shutdown(true);
+      }
+    }
+  }
+
   private void verifyFailedStatus(MRAppMasterTest appMaster,
       String expectedJobState) {
     ArgumentCaptor<JobHistoryEvent> captor = ArgumentCaptor
@@ -553,6 +638,11 @@ public class TestMRAppMaster {
     assertTrue(event instanceof JobUnsuccessfulCompletionEvent);
     assertThat(((JobUnsuccessfulCompletionEvent) event).getStatus())
         .isEqualTo(expectedJobState);
+  }
+
+  protected String getKeyProviderURI(File testRootDir) {
+    return JavaKeyStoreProvider.SCHEME_NAME + "://file" +
+        new Path(testRootDir.toString(), "test.jks").toUri();
   }
 }
 class MRAppMasterTest extends MRAppMaster {

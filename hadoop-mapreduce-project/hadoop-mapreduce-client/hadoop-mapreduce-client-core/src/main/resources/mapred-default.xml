@@ -2086,6 +2086,14 @@
 </property>
 
 <property>
+  <name>mapreduce.job.encrypted-intermediate-data.keyprovider.class</name>
+  <value>org.apache.hadoop.mapreduce.SpillDefaultKeyProvider</value>
+  <description>Implementation that allows encryption for intermediate data.
+  Default is org.apache.hadoop.mapreduce.SpillDefaultKeyProvider which uses
+  keygenerator to encrypt the spilled data.</description>
+</property>
+
+<property>
   <name>mapreduce.job.encrypted-intermediate-data-key-size-bits</name>
   <value>128</value>
   <description>Mapreduce encrypt data key size default is 128</description>
@@ -2096,6 +2104,28 @@
   <value>128</value>
   <description>Buffer size for intermediate encrypt data in kb
   default is 128</description>
+</property>
+
+<property>
+  <name>mapreduce.job.encrypted-intermediate-data.keyprovider.keygen.algorithm</name>
+  <value>HmacSHA1</value>
+  <description>The algorithm used by the keygenerator for intermediate encrypt
+  data. Default is HmacSHA1.</description>
+</property>
+
+<property>
+  <name>mapreduce.job.encrypted-intermediate-data.keyprovider.key-name</name>
+  <value>am-spill-key</value>
+  <description>The name of the KMS-key loaded to encrypt the spilled data.
+  This is only used when KMS key provider is the implementation of the
+  intermediate data encryption. Default is am-spill-key.</description>
+</property>
+
+<property>
+  <name>mapreduce.job.encrypted-intermediate-data.keyprovider.edek</name>
+  <value>AMEncryptedSpillEdek</value>
+  <description>The encrypted key version of the Spilled data, when Spilled
+  KMS-Key-provider is enabled. Default is AMEncryptedSpillEdek.</description>
 </property>
 
 <property>

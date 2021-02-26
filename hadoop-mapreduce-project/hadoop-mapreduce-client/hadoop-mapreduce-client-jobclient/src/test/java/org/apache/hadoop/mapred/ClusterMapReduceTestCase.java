@@ -22,6 +22,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
+import org.junit.rules.TestName;
 
 import java.io.IOException;
 import java.util.Map;
@@ -43,6 +45,17 @@ import java.util.Properties;
  * The DFS filesystem is formated before the testcase starts and after it ends.
  */
 public abstract class ClusterMapReduceTestCase {
+  @Rule
+  public TestName testName = new TestName();
+
+  public String getTestName() {
+    return testName.getMethodName();
+  }
+
+  public MiniDFSCluster getDfsCluster() {
+    return dfsCluster;
+  }
+
   private MiniDFSCluster dfsCluster = null;
   private MiniMRCluster mrCluster = null;
 
@@ -80,7 +93,7 @@ public abstract class ClusterMapReduceTestCase {
       }
       dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
       .format(reformatDFS).racks(null).build();
-
+      dfsCluster.waitActive();
       ConfigurableMiniMRCluster.setConfiguration(props);
       //noinspection deprecation
       mrCluster = new ConfigurableMiniMRCluster(2,

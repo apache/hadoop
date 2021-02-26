@@ -17,8 +17,15 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -28,10 +35,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.SpillDefaultKeyProvider;
+import org.apache.hadoop.mapreduce.SpillKeyProvider;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -69,15 +77,20 @@ public class TestMRIntermediateDataEncryption {
   // Where output goes.
   private static final Path OUTPUT = new Path("/test/output");
   private static final int NUM_LINES = 1000;
-  private static MiniMRClientCluster mrCluster = null;
-  private static MiniDFSCluster dfsCluster = null;
-  private static FileSystem fs = null;
+  private static final Map<Class<? extends SpillKeyProvider>,
+      MiniMRClientCluster> MR_CLUSTER_MAP = new ConcurrentHashMap<>();
+  private static final Map<Class<? extends SpillKeyProvider>,
+      MiniDFSCluster> DFS_CLUSTER_MAP = new ConcurrentHashMap<>();
   private static final int NUM_NODES = 2;
 
   private final String testTitle;
   private final int numMappers;
   private final int numReducers;
   private final boolean isUber;
+
+  private MiniMRClientCluster mrCluster = null;
+  private MiniDFSCluster dfsCluster = null;
+  private FileSystem fs = null;
 
   /**
    * List of arguments to run the JunitTest.
@@ -96,6 +109,46 @@ public class TestMRIntermediateDataEncryption {
   }
 
   /**
+   * Sets the properties of the DFS and Yarn clusters.
+   * @return configuration to start the clusters enabling intermediate
+   *         encryption.
+   */
+  protected Configuration setupClustersConf() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
+    // Set the jvm arguments.
+    conf.set(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS,
+        JVM_SECURITY_EGD_OPT);
+    final String childJVMOpts =
+        JVM_SECURITY_EGD_OPT + " " + conf.get("mapred.child.java.opts", " ");
+    conf.set("mapred.child.java.opts", childJVMOpts);
+    return conf;
+  }
+
+  /**
+   * Creates and initializes Yarn and DFS Clusters if they are not already
+   * created.
+   * @param providerKlass the spill class used for spill.
+   * @throws Exception when failed
+   */
+  protected synchronized void initClusters(
+      Class<? extends SpillKeyProvider> providerKlass) throws Exception {
+    if (!DFS_CLUSTER_MAP.containsKey(providerKlass)) {
+      Configuration conf = setupClustersConf();
+      MiniDFSCluster miniDFSCluster =
+          new MiniDFSCluster.Builder(conf).numDataNodes(NUM_NODES).build();
+      miniDFSCluster.waitActive();
+      MiniMRClientCluster miniMRCluster =
+          MiniMRClientClusterFactory.create(getClass(), NUM_NODES, conf);
+      miniMRCluster.start();
+      DFS_CLUSTER_MAP.put(providerKlass, miniDFSCluster);
+      MR_CLUSTER_MAP.put(providerKlass, miniMRCluster);
+    }
+    setDFSCluster(DFS_CLUSTER_MAP.get(providerKlass));
+    setMRCluster(MR_CLUSTER_MAP.get(providerKlass));
+  }
+
+  /**
    * Initialized the parametrized JUnit test.
    * @param testName the name of the unit test to be executed.
    * @param mappers number of mappers in the tests.
@@ -110,45 +163,28 @@ public class TestMRIntermediateDataEncryption {
     this.isUber = uberEnabled;
   }
 
-  @BeforeClass
-  public static void setupClass() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
-
-    // Set the jvm arguments.
-    conf.set(MRJobConfig.MR_AM_ADMIN_COMMAND_OPTS,
-        JVM_SECURITY_EGD_OPT);
-    final String childJVMOpts = JVM_SECURITY_EGD_OPT
-        + " " + conf.get("mapred.child.java.opts", " ");
-    conf.set("mapred.child.java.opts", childJVMOpts);
-
-
-    // Start the mini-MR and mini-DFS clusters.
-    dfsCluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(NUM_NODES).build();
-    mrCluster =
-        MiniMRClientClusterFactory.create(
-            TestMRIntermediateDataEncryption.class, NUM_NODES, conf);
-    mrCluster.start();
-  }
 
   @AfterClass
   public static void tearDown() throws IOException {
-    if (fs != null) {
-      fs.close();
+    for (MiniMRClientCluster mrCluster : MR_CLUSTER_MAP.values()) {
+      if (mrCluster != null) {
+        mrCluster.stop();
+      }
     }
-    if (mrCluster != null) {
-      mrCluster.stop();
+    for (MiniDFSCluster dfsCluster : DFS_CLUSTER_MAP.values()) {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
     }
-    if (dfsCluster != null) {
-      dfsCluster.shutdown();
-    }
+    MR_CLUSTER_MAP.clear();
+    DFS_CLUSTER_MAP.clear();
   }
 
   @Before
   public void setup() throws Exception {
+    initClusters(getSpillKeyKlass());
     LOG.info("Starting TestMRIntermediateDataEncryption#{}.......", testTitle);
-    fs = dfsCluster.getFileSystem();
+    setFs(getDFSCluster().getFileSystem());
     if (fs.exists(INPUT_DIR) && !fs.delete(INPUT_DIR, true)) {
       throw new IOException("Could not delete " + INPUT_DIR);
     }
@@ -173,7 +209,8 @@ public class TestMRIntermediateDataEncryption {
 
   @Test(timeout=600000)
   public void testMerge() throws Exception {
-    JobConf job = new JobConf(mrCluster.getConfig());
+    JobConf job = new JobConf(getMRCluster().getConfig());
+    setupSpillKeyProviderConf(job);
     job.setJobName("Test");
     JobClient client = new JobClient(job);
     RunningJob submittedJob = null;
@@ -194,7 +231,10 @@ public class TestMRIntermediateDataEncryption {
     job.setInt("mapreduce.reduce.maxattempts", 1);
     job.setInt("mapred.test.num_lines", NUM_LINES);
     job.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, isUber);
-    job.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
+    assertTrue(job.getBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA,
+        false));
+    assertEquals(getSpillKeyKlass().getName(),
+        job.get(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_CLASS));
     submittedJob = client.submitJob(job);
     submittedJob.waitForCompletion();
     assertTrue("The submitted job is completed", submittedJob.isComplete());
@@ -220,6 +260,16 @@ public class TestMRIntermediateDataEncryption {
       writer.close();
       os.close();
     }
+  }
+
+  /**
+   * Set properties for the JobConf.
+   * @param jobConf the configuration of the current job.
+   * @throws Exception when failed to init the configuration values.
+   */
+  protected void setupSpillKeyProviderConf(JobConf jobConf) throws Exception {
+    jobConf.set(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEYPROVIDER_CLASS,
+        getSpillKeyKlass().getName());
   }
 
   private void verifyOutput(FileSystem fileSystem,
@@ -261,6 +311,37 @@ public class TestMRIntermediateDataEncryption {
     assertEquals((long)(mappers * numLines), numValidRecords);
     // Make sure there is no extraneous invalid record.
     assertEquals(0, numInvalidRecords);
+    //check intermediate output for encrypted spills
+    File testWorkDir = ((MiniMRYarnClusterAdapter) (getMRCluster()))
+        .getMiniMRYarnCluster().getTestWorkDir();
+    List<String> fileouts = new ArrayList<>();
+    getIntermediateOutput(testWorkDir, fileouts);
+    for (String file : fileouts) {
+      BufferedReader br = new BufferedReader(new FileReader(file));
+      // check the third line is plain text or not
+      boolean isPlainText = false;
+      for (int i = 0; i < 3; i++) {
+        String line = br.readLine();
+        if (line.contains("\t000000001\t000000001")) {
+          isPlainText = true;
+        }
+      }
+      assertFalse("File.out is in plain text and was not encrypted!",
+          isPlainText);
+    }
+  }
+
+  private void getIntermediateOutput(File testDir, List<String> listOfFiles) {
+    if (testDir.getName().equals("file.out")) {
+      listOfFiles.add(testDir.getAbsolutePath());
+      return;
+    }
+    File[] list = testDir.listFiles();
+    if (list != null) {
+      for (int i = 0; i < list.length; i++) {
+        getIntermediateOutput(list[i], listOfFiles);
+      }
+    }
   }
 
   /**
@@ -323,5 +404,33 @@ public class TestMRIntermediateDataEncryption {
           .getInt("mapred.test.num_lines", 10000);
       return partitionNumber;
     }
+  }
+
+  public FileSystem getFs() {
+    return fs;
+  }
+
+  public void setFs(FileSystem fs) {
+    this.fs = fs;
+  }
+
+  public void setDFSCluster(MiniDFSCluster miniDFSCluster) {
+    dfsCluster = miniDFSCluster;
+  }
+
+  public void setMRCluster(MiniMRClientCluster miniMRClientCluster) {
+    mrCluster = miniMRClientCluster;
+  }
+
+  protected Class<? extends SpillKeyProvider> getSpillKeyKlass() {
+    return SpillDefaultKeyProvider.class;
+  }
+
+  public MiniDFSCluster getDFSCluster() {
+    return dfsCluster;
+  }
+
+  public MiniMRClientCluster getMRCluster() {
+    return mrCluster;
   }
 }

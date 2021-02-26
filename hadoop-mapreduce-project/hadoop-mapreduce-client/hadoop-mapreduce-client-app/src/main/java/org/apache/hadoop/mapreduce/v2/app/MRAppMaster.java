@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Paths;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,8 +37,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.crypto.KeyGenerator;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -185,7 +182,6 @@ public class MRAppMaster extends CompositeService {
    * Priority of the MRAppMaster shutdown hook.
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  public static final String INTERMEDIATE_DATA_ENCRYPTION_ALGO = "HmacSHA1";
 
   private Clock clock;
   private final long startTime;
@@ -609,6 +605,10 @@ public class MRAppMaster extends CompositeService {
     return jobCredentials;
   }
 
+  @VisibleForTesting
+  protected byte[] getEncryptedSpillKey() {
+    return encryptedSpillKey;
+  }
   /**
    * clean up staging directories for the job.
    * @throws IOException
@@ -786,25 +786,12 @@ public class MRAppMaster extends CompositeService {
    * @param conf
    */
   protected void initJobCredentialsAndUGI(Configuration conf) {
-
     try {
       this.currentUser = UserGroupInformation.getCurrentUser();
       this.jobCredentials = ((JobConf)conf).getCredentials();
-      if (CryptoUtils.isEncryptedSpillEnabled(conf)) {
-        int keyLen = conf.getInt(
-                MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS,
-                MRJobConfig
-                        .DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS);
-        KeyGenerator keyGen =
-                KeyGenerator.getInstance(INTERMEDIATE_DATA_ENCRYPTION_ALGO);
-        keyGen.init(keyLen);
-        encryptedSpillKey = keyGen.generateKey().getEncoded();
-      } else {
-        encryptedSpillKey = new byte[] {0};
-      }
+      this.encryptedSpillKey =
+          CryptoUtils.processEncryptedSpillKeyFromConf((JobConf)conf, false);
     } catch (IOException e) {
-      throw new YarnRuntimeException(e);
-    } catch (NoSuchAlgorithmException e) {
       throw new YarnRuntimeException(e);
     }
   }
