@@ -196,6 +196,8 @@ public class AbfsRestOperation {
         Thread.currentThread().interrupt();
       }
     }
+    System.out.println(result.getStatusCode() + " " + result.getStorageErrorCode() + " " +
+        result.getStorageErrorMessage());
 
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
@@ -293,10 +295,6 @@ public class AbfsRestOperation {
       AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 
-    if (operationType == AbfsRestOperationType.CreatePath) {
-      setResultMkdirSuccess(httpOperation);
-    }
-
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation.toString());
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
@@ -317,25 +315,6 @@ public class AbfsRestOperation {
   private void incrementCounter(AbfsStatistic statistic, long value) {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
-    }
-  }
-
-  private void setResultMkdirSuccess(AbfsHttpOperation httpOperation) {
-    if (httpOperation.getStatusCode() == 409 && httpOperation
-        .getResponseHeader("x-ms-existing-resource-type").equals("directory")) {
-      String urlQuery = url.getQuery();
-      int index = urlQuery.indexOf(QUERY_PARAM_RESOURCE);
-      if (index == -1)
-        return;
-      int startIndex = index + QUERY_PARAM_RESOURCE.length() + 1;
-      int endIndex = urlQuery.indexOf('&');
-      if (endIndex == -1){
-        endIndex = urlQuery.length();
-      }
-      String resourceType = urlQuery.substring(startIndex, endIndex);
-      if (resourceType.equals("directory")) {
-        httpOperation.hardSetStatusCode(HTTP_OK);
-      }
     }
   }
 }

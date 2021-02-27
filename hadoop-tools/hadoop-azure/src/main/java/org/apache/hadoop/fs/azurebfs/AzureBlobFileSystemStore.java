@@ -116,6 +116,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.client.utils.URIBuilder;
 
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
@@ -128,6 +129,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESOURCE;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -594,18 +596,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createDirectory", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
-      LOG.debug("createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
-              client.getFileSystem(),
-              path,
-              permission,
-              umask,
-              isNamespaceEnabled);
+      LOG.debug(
+          "createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
+          client.getFileSystem(), path, permission, umask, isNamespaceEnabled);
 
-      final AbfsRestOperation op = client
-          .createPath(getRelativePath(path), false, false,
-              isNamespaceEnabled ? getOctalNotation(permission) : null,
-              isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
-      perfInfo.registerResult(op.getResult()).registerSuccess(true);
+      AbfsRestOperation op = client
+            .createPath(getRelativePath(path), false, false,
+                isNamespaceEnabled ? getOctalNotation(permission) : null,
+                isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
+        perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
 
