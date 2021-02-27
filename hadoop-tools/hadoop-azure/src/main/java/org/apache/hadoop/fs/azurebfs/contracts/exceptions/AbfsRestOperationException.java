@@ -23,12 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Exception to wrap Azure service error responses.
@@ -39,7 +34,6 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
   private final int statusCode;
   private final AzureServiceErrorCode errorCode;
   private final String errorMessage;
-  private Map<String, List<String>> responseHeaders = null;
 
   public AbfsRestOperationException(
       final int statusCode,
@@ -64,7 +58,6 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
     this.statusCode = statusCode;
     this.errorCode = AzureServiceErrorCode.getAzureServiceCode(this.statusCode, errorCode);
     this.errorMessage = errorMessage;
-    this.responseHeaders = abfsHttpOperation.getResponseHeaders();
   }
 
   public AbfsRestOperationException(final HttpException innerException) {
@@ -86,10 +79,6 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
   public String getErrorMessage() {
     return this.errorMessage;
   }
-
-//  public String getResponseHeader(String header) {
-//    return responseHeaders.get(header);
-//  }
 
   private static String formatMessage(final AbfsHttpOperation abfsHttpOperation) {
     // HEAD request response doesn't have StorageErrorCode, StorageErrorMessage.

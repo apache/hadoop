@@ -26,7 +26,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -94,10 +93,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     AbfsHttpOperationWithFixedResult httpOp
         = new AbfsHttpOperationWithFixedResult(url, method, httpStatus);
     return httpOp;
-  }
-
-  public void hardSetStatusCode(int httpStatus) {
-    this.statusCode = httpStatus;
   }
 
   /**
@@ -169,10 +164,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public String getResponseHeader(String httpHeader) {
     return connection.getHeaderField(httpHeader);
-  }
-
-  public Map<String, List<String>> getResponseHeaders() {
-    return connection.getHeaderFields();
   }
 
   // Returns a trace message for the request

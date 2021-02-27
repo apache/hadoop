@@ -196,8 +196,6 @@ public class AbfsRestOperation {
         Thread.currentThread().interrupt();
       }
     }
-    System.out.println(result.getStatusCode() + " " + result.getStorageErrorCode() + " " +
-        result.getStorageErrorMessage());
 
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
