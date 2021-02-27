@@ -601,11 +601,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               umask,
               isNamespaceEnabled);
 
-      AbfsRestOperation op = client
-            .createPath(getRelativePath(path), false, false,
-                isNamespaceEnabled ? getOctalNotation(permission) : null,
-                isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
-        perfInfo.registerResult(op.getResult()).registerSuccess(true);
+      final AbfsRestOperation op = client.createPath(getRelativePath(path), false, false,
+              isNamespaceEnabled ? getOctalNotation(permission) : null,
+              isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
+      perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
 
