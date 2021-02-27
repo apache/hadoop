@@ -1610,9 +1610,9 @@ public class TestBalancer {
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, blockSize);
     // limit the worker thread count of Balancer to have only 1 queue per DN
     conf.setInt(DFSConfigKeys.DFS_BALANCER_MOVERTHREADS_KEY, 1);
-    // limit the bandwitdh to 1 packet per sec to emulate slow block moves
+    // limit the bandwidth to 4MB per sec to emulate slow block moves
     conf.setLong(DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY,
-        64 * 1024);
+        4 * 1024 * 1024);
     // set client socket timeout to have an IN_PROGRESS notification back from
     // the DataNode about the copy in every second.
     conf.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 2000L);
@@ -1643,31 +1643,21 @@ public class TestBalancer {
       List<NameNodeConnector> connectors = Collections.emptyList();
       try {
         BalancerParameters bParams = BalancerParameters.DEFAULT;
+        // set maxIdleIterations to 1 for NO_MOVE_PROGRESS to be
+        // reported when there is no block move
         connectors = NameNodeConnector.newNameNodeConnectors(
             DFSUtil.getInternalNsRpcUris(conf), Balancer.class.getSimpleName(),
-            Balancer.BALANCER_ID_PATH, conf, bParams.getMaxIdleIteration());
+            Balancer.BALANCER_ID_PATH, conf, 1);
         for (NameNodeConnector nnc : connectors) {
           LOG.info("NNC to work on: " + nnc);
           Balancer b = new Balancer(nnc, bParams, conf);
-          long startTime = Time.monotonicNow();
           Result r = b.runOneIteration();
-          long runtime = Time.monotonicNow() - startTime;
-          assertEquals("We expect ExitStatus.IN_PROGRESS to be reported.",
-              ExitStatus.IN_PROGRESS, r.exitStatus);
-          // accept runtime if it is under 3.5 seconds, as we need to wait for
-          // IN_PROGRESS report from DN, and some spare to be able to finish.
-          // NOTE: This can be a source of flaky tests, if the box is busy,
-          // assertion here is based on the following: Balancer is already set
-          // up, iteration gets the blocks from the NN, and makes the decision
-          // to move 2 blocks. After that the PendingMoves are scheduled, and
-          // DataNode heartbeats in for the Balancer every second, iteration is
-          // two seconds long. This means that it will fail if the setup and the
-          // heartbeat from the DataNode takes more than 500ms, as the iteration
-          // should end at the 3rd second from start. As the number of
-          // operations seems to be pretty low, and all comm happens locally, I
-          // think the possibility of a failure due to node busyness is low.
-          assertTrue("Unexpected iteration runtime: " + runtime + "ms > 3.5s",
-              runtime < 3500);
+          // Since no block cannot be moved in 2 seconds (i.e.,
+          // 4MB/s * 2s = 8MB < 10MB), NO_MOVE_PROGRESS will be reported.
+          // When a block move is not canceled in 2 seconds properly and then
+          // a block is moved unexpectedly, IN_PROGRESS will be reported.
+          assertEquals("We expect ExitStatus.NO_MOVE_PROGRESS to be reported.",
+              ExitStatus.NO_MOVE_PROGRESS, r.exitStatus);
         }
       } finally {
         for (NameNodeConnector nnc : connectors) {
