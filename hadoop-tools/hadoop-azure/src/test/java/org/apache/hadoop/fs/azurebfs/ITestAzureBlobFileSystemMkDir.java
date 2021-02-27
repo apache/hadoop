@@ -45,8 +45,9 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     Path path = new Path("testFolder");
     assertMkdirs(fs, path); //checks that mkdirs returns true
     long timeCreated = fs.getFileStatus(path).getModificationTime();
-    assertMkdirs(fs, path);
-    assertEquals(timeCreated, fs.getFileStatus(path).getModificationTime());
+    assertMkdirs(fs, path); //call to existing dir should return success
+    assertEquals("LMT should not be updated for existing dir", timeCreated,
+        fs.getFileStatus(path).getModificationTime());
   }
 
   @Test
