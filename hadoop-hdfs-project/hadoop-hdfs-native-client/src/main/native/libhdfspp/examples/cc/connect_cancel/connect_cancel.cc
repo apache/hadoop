@@ -29,6 +29,8 @@
 #include <thread>
 #include <iostream>
 
+#include "x-platform/syscall.h"
+
 // Simple example of how to cancel an async connect call.
 // Here Control-C (SIGINT) is caught in order to invoke the FS level cancel and
 // properly tear down the process.  Valgrind should show no leaked memory on exit
@@ -46,10 +48,10 @@ const std::string catch_exit("Exiting the signal handler.\n");
 // It's possible that the write interleaves with another write call,
 // but it won't corrupt the stack or heap.
 static void sighandler_direct_stdout(const std::string &msg) {
-  std::cout.write(msg.c_str(), msg.size());
-  // In production you'd want to check std::cout.failbit, but error handling code will
-  // need to be fairly application specific if it's going to properly
-  // avoid reentrant calls to malloc.
+  XPlatform::Syscall::WriteToStdout(msg);
+  // In production you'd want to check the result of the above call,
+  // but error handling code will need to be fairly application
+  // specific if it's going to properly avoid reentrant calls to malloc.
 }
 
 // Signal handler to make a SIGINT call cancel rather than exit().

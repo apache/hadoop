@@ -29,6 +29,7 @@
 
 #include "hdfspp/hdfs_ext.h"
 #include "common/util_c.h"
+#include "x-platform/c_api.h"
 
 #define ERROR_BUFFER_SIZE 1024
 
@@ -45,7 +46,7 @@ static void sighandler_direct_stdout(const char *msg) {
   if(!msg) {
     return;
   }
-  printf("%s", msg);
+  x_platform_syscall_write_to_stdout(msg);
 }
 
 static void sig_catch(int val) {
