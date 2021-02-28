@@ -32,9 +32,9 @@ class Syscall {
    * Writes the given string to the application's
    * standard output stream.
    *
-   * @param message	The string to write to stdout.
-   * @returns		A boolean indicating whether the write
-   *				was successful.
+   * @param message The string to write to stdout.
+   * @returns A boolean indicating whether the write
+   * was successful.
    */
   static bool WriteToStdout(const std::string& message);
 
@@ -42,9 +42,9 @@ class Syscall {
    * Writes the given char pointer to the application's
    * standard output stream.
    *
-   * @param message	The char pointer to write to stdout.
-   * @returns		A boolean indicating whether the write
-   *				was successful.
+   * @param message The char pointer to write to stdout.
+   * @returns A boolean indicating whether the write
+   * was successful.
    */
   static int WriteToStdout(const char* message);
 
