@@ -24,7 +24,6 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +33,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -168,11 +168,26 @@ public class AbfsRestOperation {
   }
 
   /**
+   * Execute a AbfsRestOperation. Track the Duration of a request if
+   * abfsCounters isn't null.
+   *
+   * @throws AzureBlobFileSystemException
+   */
+  public void execute() throws AzureBlobFileSystemException {
+    if (abfsCounters != null) {
+      try (DurationTracker ignored = abfsCounters.startRequest(method)) {
+        completeExecute();
+      }
+    } else {
+      completeExecute();
+    }
+  }
+
+  /**
    * Executes the REST operation with retry, by issuing one or more
    * HTTP operations.
    */
-   @VisibleForTesting
-   public void execute() throws AzureBlobFileSystemException {
+  private void completeExecute() throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
     String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
     if (latencyHeader != null && !latencyHeader.isEmpty()) {
@@ -259,6 +274,8 @@ public class AbfsRestOperation {
           && httpOperation.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
         incrementCounter(AbfsStatistic.BYTES_RECEIVED,
             httpOperation.getBytesReceived());
+      } else if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+        incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
     } catch (UnknownHostException ex) {
       String hostname = null;
