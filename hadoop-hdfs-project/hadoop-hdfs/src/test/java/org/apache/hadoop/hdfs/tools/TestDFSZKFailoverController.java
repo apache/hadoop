@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.MockNameNodeResourceChecker;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.net.ServerSocketUtil;
+import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
@@ -86,14 +87,16 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
         ServerSocketUtil.getPort(10023, 100));
     conf.setInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY + ".ns1.nn2",
         ServerSocketUtil.getPort(10024, 100));
+  }
 
+  private void startCluster() throws Exception {
     // prefer non-ephemeral port to avoid port collision on restartNameNode
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
-    .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1")
-            .setIpcPort(ServerSocketUtil.getPort(10021, 100)))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2")
-            .setIpcPort(ServerSocketUtil.getPort(10022, 100))));
+        .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+            .addNN(new MiniDFSNNTopology.NNConf("nn1")
+                .setIpcPort(ServerSocketUtil.getPort(10021, 100)))
+            .addNN(new MiniDFSNNTopology.NNConf("nn2")
+                .setIpcPort(ServerSocketUtil.getPort(10022, 100))));
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(topology)
         .numDataNodes(0)
@@ -106,16 +109,16 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
 
     thr1.start();
     waitForHAState(0, HAServiceState.ACTIVE);
-    
+
     ctx.addThread(thr2 = new ZKFCThread(ctx, 1));
     thr2.start();
-    
+
     // Wait for the ZKFCs to fully start up
     ZKFCTestUtil.waitForHealthState(thr1.zkfc,
         HealthMonitor.State.SERVICE_HEALTHY, ctx);
     ZKFCTestUtil.waitForHealthState(thr2.zkfc,
         HealthMonitor.State.SERVICE_HEALTHY, ctx);
-    
+
     fs = HATestUtil.configureFailoverFs(cluster, conf);
   }
   
@@ -140,11 +143,26 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     }
   }
 
+  @Test(timeout=60000)
+  /**
+   * Ensure the cluster simply starts with a hdfs jceks credential provider
+   * configured. HDFS-14013.
+   */
+  public void testZFFCStartsWithCredentialProviderReferencingHDFS()
+      throws Exception{
+    // Create a provider path on HDFS
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH,
+        "jceks://hdfs/tmp/test.jceks");
+    //
+    startCluster();
+  }
+
   /**
    * Test that thread dump is captured after NN state changes.
    */
   @Test(timeout=60000)
   public void testThreadDumpCaptureAfterNNStateChange() throws Exception {
+    startCluster();
     MockNameNodeResourceChecker mockResourceChecker =
         new MockNameNodeResourceChecker(conf);
     mockResourceChecker.setResourcesAvailable(false);
@@ -162,6 +180,7 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
    */
   @Test(timeout=60000)
   public void testFailoverAndBackOnNNShutdown() throws Exception {
+    startCluster();
     Path p1 = new Path("/dir1");
     Path p2 = new Path("/dir2");
 
@@ -194,6 +213,7 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   
   @Test(timeout=30000)
   public void testManualFailover() throws Exception {
+    startCluster();
     thr2.zkfc.getLocalTarget().getZKFCProxy(conf, 15000).gracefulFailover();
     waitForHAState(0, HAServiceState.STANDBY);
     waitForHAState(1, HAServiceState.ACTIVE);
@@ -205,6 +225,7 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
 
   @Test(timeout=30000)
   public void testWithoutBindAddressSet() throws Exception {
+    startCluster();
     DFSZKFailoverController zkfc = DFSZKFailoverController.create(
         conf);
 
@@ -215,6 +236,7 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
 
   @Test(timeout=30000)
   public void testWithBindAddressSet() throws Exception {
+    startCluster();
     conf.set(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY, WILDCARD_ADDRESS);
     DFSZKFailoverController zkfc = DFSZKFailoverController.create(
         conf);
@@ -223,9 +245,10 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     assertEquals("Bind address " + addr + " is not wildcard.",
         addr, WILDCARD_ADDRESS);
   }
-  
+
   @Test(timeout=30000)
   public void testManualFailoverWithDFSHAAdmin() throws Exception {
+    startCluster();
     DFSHAAdmin tool = new DFSHAAdmin();
     tool.setConf(conf);
     assertEquals(0, 
