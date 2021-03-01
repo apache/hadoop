@@ -45,11 +45,16 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Set;
 
 public class TestCapacitySchedulerWeightMode {
-  private final int GB = 1024;
+  private static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+  private static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final String A1 = A + ".a1";
+  private static final String B1 = B + ".b1";
+  private static final String B2 = B + ".b2";
 
   private YarnConfiguration conf;
 
@@ -91,14 +96,12 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setLabeledQueueWeight(A, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(A, 10);
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setLabeledQueueWeight(A, "x", 100);
     conf.setLabeledQueueWeight(A, "y", 50);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setLabeledQueueWeight(B, RMNodeLabelsManager.NO_LABEL, 9);
     conf.setMaximumCapacity(B, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
@@ -106,7 +109,6 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(B, "z", 100);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
     conf.setQueues(A, new String[] { "a1" });
     conf.setLabeledQueueWeight(A1, RMNodeLabelsManager.NO_LABEL, 100);
     conf.setMaximumCapacity(A1, 100);
@@ -116,12 +118,10 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(A1, "y", 100);
 
     conf.setQueues(B, new String[] { "b1", "b2" });
-    final String B1 = B + ".b1";
     conf.setLabeledQueueWeight(B1, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B1, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
-    final String B2 = B + ".b2";
     conf.setLabeledQueueWeight(B2, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B2, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
@@ -155,14 +155,12 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setLabeledQueueWeight(A, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(A, 10);
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setLabeledQueueWeight(A, "x", 100);
     conf.setLabeledQueueWeight(A, "y", 50);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setLabeledQueueWeight(B, RMNodeLabelsManager.NO_LABEL, 9);
     conf.setMaximumCapacity(B, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
@@ -170,7 +168,6 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(B, "z", 100);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
     conf.setQueues(A, new String[] { "a1" });
     conf.setCapacityByLabel(A1, RMNodeLabelsManager.NO_LABEL, 100);
     conf.setMaximumCapacity(A1, 100);
@@ -180,12 +177,10 @@ public class TestCapacitySchedulerWeightMode {
     conf.setCapacityByLabel(A1, "y", 100);
 
     conf.setQueues(B, new String[] { "b1", "b2" });
-    final String B1 = B + ".b1";
     conf.setCapacityByLabel(B1, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B1, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
-    final String B2 = B + ".b2";
     conf.setCapacityByLabel(B2, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B2, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
@@ -219,14 +214,12 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacityByLabel(A, RMNodeLabelsManager.NO_LABEL, 10);
     conf.setMaximumCapacity(A, 10);
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setCapacityByLabel(A, "x", 100);
     conf.setCapacityByLabel(A, "y", 50);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacityByLabel(B, RMNodeLabelsManager.NO_LABEL, 90);
     conf.setMaximumCapacity(B, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
@@ -234,7 +227,6 @@ public class TestCapacitySchedulerWeightMode {
     conf.setCapacityByLabel(B, "z", 100);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
     conf.setQueues(A, new String[] { "a1" });
     conf.setCapacityByLabel(A1, RMNodeLabelsManager.NO_LABEL, 100);
     conf.setMaximumCapacity(A1, 100);
@@ -244,12 +236,10 @@ public class TestCapacitySchedulerWeightMode {
     conf.setCapacityByLabel(A1, "y", 100);
 
     conf.setQueues(B, new String[] { "b1", "b2" });
-    final String B1 = B + ".b1";
     conf.setCapacityByLabel(B1, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B1, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
-    final String B2 = B + ".b2";
     conf.setCapacityByLabel(B2, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B2, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
@@ -295,6 +285,57 @@ public class TestCapacitySchedulerWeightMode {
   public void testContainerAllocateWithComplexLabelsWeightAndPercentMixed2() throws Exception {
     internalTestContainerAlloationWithNodeLabel(
         getCSConfWithLabelsParentUsePctChildUseWeight(conf));
+  }
+
+  /**
+   * This checks whether the parent prints the correct log about the
+   * configured mode.
+   */
+  @Test(timeout = 300000)
+  public void testGetCapacityOrWeightStringUsingWeights() throws IOException {
+    try (MockRM rm = new MockRM(
+        getCSConfWithQueueLabelsWeightOnly(conf))) {
+      rm.start();
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+      String capacityOrWeightString = ((ParentQueue) cs.getQueue(A))
+          .getCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, true);
+
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+          .getCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, true);
+
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+          .getExtendedCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, true);
+    }
+  }
+
+  /**
+   * This checks whether the parent prints the correct log about the
+   * configured mode.
+   */
+  @Test(timeout = 300000)
+  public void testGetCapacityOrWeightStringParentPctLeafWeights()
+      throws IOException {
+    try (MockRM rm = new MockRM(
+        getCSConfWithLabelsParentUseWeightChildUsePct(conf))) {
+      rm.start();
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+      String capacityOrWeightString = ((ParentQueue) cs.getQueue(A))
+          .getCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, true);
+
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+          .getCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, false);
+
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+          .getExtendedCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, false);
+    }
   }
 
   private void internalTestContainerAlloationWithNodeLabel(Configuration csConf)
@@ -448,5 +489,16 @@ public class TestCapacitySchedulerWeightMode {
         Assert.assertEquals(host, c.getAllocatedNode().getHost());
       }
     }
+  }
+
+  private void validateCapacityOrWeightString(String capacityOrWeightString,
+      boolean shouldContainWeight) {
+    Assert.assertEquals(shouldContainWeight,
+        capacityOrWeightString.contains("weight"));
+    Assert.assertEquals(shouldContainWeight,
+        capacityOrWeightString.contains("normalizedWeight"));
+    Assert.assertEquals(!shouldContainWeight,
+        capacityOrWeightString.contains("capacity"));
+
   }
 }

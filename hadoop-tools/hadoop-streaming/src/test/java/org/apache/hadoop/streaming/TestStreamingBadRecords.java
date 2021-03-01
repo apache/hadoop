@@ -31,13 +31,13 @@ import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
+import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterMapReduceTestCase;
 import org.apache.hadoop.mapred.Counters;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SkipBadRecords;
 import org.apache.hadoop.mapred.Utils;
@@ -65,7 +65,12 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
   private static final String badReducer = 
     UtilTest.makeJavaCommand(BadApp.class, new String[]{"true"});
   private static final int INPUTSIZE=100;
-  
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    setupClassBase(TestStreamingBadRecords.class);
+  }
+
   public TestStreamingBadRecords() throws IOException
   {
     UtilTest utilTest = new UtilTest(getClass().getName());
