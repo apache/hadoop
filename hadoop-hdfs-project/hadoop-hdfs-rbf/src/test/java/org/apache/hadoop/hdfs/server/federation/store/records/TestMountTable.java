@@ -266,7 +266,7 @@ public class TestMountTable {
       fail("Mount table entry should be created failed.");
     } catch (Exception e) {
       GenericTestUtils.assertExceptionContains(
-          MountTable.ERROR_MSG_INVAILD_DEST_NS, e);
+          MountTable.ERROR_MSG_INVALID_DEST_NS, e);
     }
 
     destinations.clear();
