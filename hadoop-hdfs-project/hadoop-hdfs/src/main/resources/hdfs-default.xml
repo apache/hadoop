@@ -2347,6 +2347,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.max.nodes.to.report</name>
+  <value>5</value>
+  <description>
+    Number of nodes to include in JSON report. We will return nodes with
+    the highest number of votes from peers.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.outliers.report.interval</name>
   <value>30m</value>
   <description>
@@ -2383,6 +2392,15 @@
   <value>20</value>
   <description>
     Threshold in milliseconds below which a disk is definitely not slow.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.max.disks.to.report</name>
+  <value>5</value>
+  <description>
+    Number of disks to include in JSON report per operation. We will return
+    disks with the highest latency.
   </description>
 </property>
 
