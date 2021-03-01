@@ -529,6 +529,7 @@ class DataStreamer extends Daemon {
   private static final int CONGESTION_BACK_OFF_MAX_TIME_IN_MS =
       CONGESTION_BACKOFF_MEAN_TIME_IN_MS * 10;
   private int lastCongestionBackoffTime;
+  private int maxPipelineRecoveryRetries;
 
   protected final LoadingCache<DatanodeInfo, DatanodeInfo> excludedNodes;
   private final String[] favoredNodes;
@@ -557,6 +558,7 @@ class DataStreamer extends Daemon {
     this.excludedNodes = initExcludedNodes(conf.getExcludedNodesCacheExpiry());
     this.errorState = new ErrorState(conf.getDatanodeRestartTimeout());
     this.addBlockFlags = flags;
+    this.maxPipelineRecoveryRetries = conf.getMaxPipelineRecoveryRetries();
   }
 
   /**
@@ -1263,14 +1265,18 @@ class DataStreamer extends Daemon {
       packetSendTime.clear();
     }
 
-    // If we had to recover the pipeline five times in a row for the
+    // If we had to recover the pipeline more than the value
+    // defined by maxPipelineRecoveryRetries in a row for the
     // same packet, this client likely has corrupt data or corrupting
     // during transmission.
-    if (!errorState.isRestartingNode() && ++pipelineRecoveryCount > 5) {
+    if (!errorState.isRestartingNode() && ++pipelineRecoveryCount >
+        maxPipelineRecoveryRetries) {
       LOG.warn("Error recovering pipeline for writing " +
-          block + ". Already retried 5 times for the same packet.");
+          block + ". Already retried " + maxPipelineRecoveryRetries
+          + " times for the same packet.");
       lastException.set(new IOException("Failing write. Tried pipeline " +
-          "recovery 5 times without success."));
+          "recovery " + maxPipelineRecoveryRetries
+          + " times without success."));
       streamerClosed = true;
       return false;
     }

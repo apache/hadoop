@@ -83,6 +83,9 @@ public interface HdfsClientConfigKeys {
       "dfs.namenode.kerberos.principal";
   String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY = "dfs.client-write-packet-size";
   int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
+  String  DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES =
+      "dfs.client.pipeline.recovery.max-retries";
+  int     DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES_DEFAULT = 5;
   String  DFS_CLIENT_SOCKET_TIMEOUT_KEY = "dfs.client.socket-timeout";
   String  DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY =
       "dfs.client.socket.send.buffer.size";

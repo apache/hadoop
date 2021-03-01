@@ -107,6 +107,7 @@ public class DfsClientConf {
 
   private final int maxFailoverAttempts;
   private final int maxRetryAttempts;
+  private final int maxPipelineRecoveryRetries;
   private final int failoverSleepBaseMillis;
   private final int failoverSleepMaxMillis;
   private final int maxBlockAcquireFailures;
@@ -294,6 +295,10 @@ public class DfsClientConf {
     Preconditions.checkArgument(clientShortCircuitNum <= 5,
             HdfsClientConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_NUM +
                     "can't be more then 5.");
+    maxPipelineRecoveryRetries = conf.getInt(
+        HdfsClientConfigKeys.DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES,
+        HdfsClientConfigKeys.DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES_DEFAULT
+    );
   }
 
   private ByteArrayManager.Conf loadWriteByteArrayManagerConf(
@@ -696,6 +701,13 @@ public class DfsClientConf {
    */
   public ShortCircuitConf getShortCircuitConf() {
     return shortCircuitConf;
+  }
+
+  /**
+   *@return the maxPipelineRecoveryRetries
+   */
+  public int getMaxPipelineRecoveryRetries() {
+    return maxPipelineRecoveryRetries;
   }
 
   /**
