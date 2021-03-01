@@ -163,6 +163,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   public String getResponseHeader(String httpHeader) {
+    System.out.println(connection.getHeaderFields());
     return connection.getHeaderField(httpHeader);
   }
 
