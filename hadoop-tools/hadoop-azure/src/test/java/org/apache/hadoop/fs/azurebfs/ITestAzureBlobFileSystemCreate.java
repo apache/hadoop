@@ -50,7 +50,6 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -306,17 +305,6 @@ public class ITestAzureBlobFileSystemCreate extends
         CONNECTIONS_MADE,
         totalConnectionMadeBeforeTest + createRequestCount,
         fs.getInstrumentationMap());
-  }
-
-  @Test
-  public void createFileWithExistingDirName() throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem();
-    assertMkdirs(fs, TEST_FOLDER_PATH);
-//    intercept(FileAlreadyExistsException.class,
-//        () -> fs.create(TEST_FOLDER_PATH));
-    FSDataOutputStream out = fs.create(TEST_FOLDER_PATH);
-    System.out.println(out.toString());
-//    assertIsFile(fs, TEST_FOLDER_PATH);
   }
 
   /**

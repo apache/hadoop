@@ -200,7 +200,8 @@ public class AbfsConfiguration{
   private boolean enableConditionalCreateOverwrite;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_ENABLE_MKDIR_OVERWRITE, DefaultValue = true)
+      FS_AZURE_ENABLE_MKDIR_OVERWRITE, DefaultValue =
+      DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE)
   private boolean mkdirOverwrite;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,

@@ -36,8 +36,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_EXISTING_RESOURCE_TYPE;
-
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
