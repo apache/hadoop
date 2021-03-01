@@ -676,6 +676,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.slowpeer.low.threshold.ms";
   public static final long DFS_DATANODE_SLOWPEER_LOW_THRESHOLD_MS_DEFAULT =
       5L;
+  public static final String DFS_DATANODE_MAX_NODES_TO_REPORT_KEY =
+      "dfs.datanode.max.nodes.to.report";
+  public static final int DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT =
+      5;
   public static final String DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY =
       "dfs.datanode.min.outlier.detection.disks";
   public static final long DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT =
@@ -684,6 +688,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.slowdisk.low.threshold.ms";
   public static final long DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT =
       20L;
+  public static final String DFS_DATANODE_MAX_DISKS_TO_REPORT_KEY =
+      "dfs.datanode.max.disks.to.report";
+  public static final int DFS_DATANODE_MAX_DISKS_TO_REPORT_DEFAULT =
+      5;
   public static final String  DFS_DATANODE_HOST_NAME_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_DATANODE_HOST_NAME_KEY;
   public static final String  DFS_NAMENODE_CHECKPOINT_DIR_KEY =
