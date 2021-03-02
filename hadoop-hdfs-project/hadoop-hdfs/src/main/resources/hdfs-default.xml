@@ -4371,6 +4371,15 @@
 </property>
 
 <property>
+  <name>dfs.client.pipeline.recovery.max-retries</name>
+  <value>5</value>
+  <description>
+    if the DFS client encounters errors in write pipeline,
+    retry up to the number defined by this property before giving up.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.socket-timeout</name>
   <value>60000</value>
   <description>
