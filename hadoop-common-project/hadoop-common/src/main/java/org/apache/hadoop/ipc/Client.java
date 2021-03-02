@@ -542,17 +542,8 @@ public class Client implements AutoCloseable {
        */
       private void handleTimeout(SocketTimeoutException e, int waiting)
           throws IOException {
-        int timeout = 0;
-        if (rpcTimeout > 0) {
-          // effective rpc timeout is rounded up to multiple of pingInterval
-          // if pingInterval < rpcTimeout.
-          timeout = (doPing && pingInterval < rpcTimeout) ?
-              pingInterval : rpcTimeout;
-        } else {
-          timeout = pingInterval;
-        }
         if (shouldCloseConnection.get() || !running.get() ||
-            (timeout <= waiting)) {
+            (0 < rpcTimeout && rpcTimeout <= waiting)) {
           throw e;
         } else {
           sendPing();
