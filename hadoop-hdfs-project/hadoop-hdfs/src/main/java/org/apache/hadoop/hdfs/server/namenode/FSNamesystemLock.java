@@ -101,6 +101,16 @@ class FSNamesystemLock {
   private final AtomicLong timeStampOfLastReadLockReportMs = new AtomicLong(0);
   /** Longest time (ms) a read lock was held since the last report. */
   private final AtomicLong longestReadLockHeldIntervalMs = new AtomicLong(0);
+  /**
+   * The number of time the read lock
+   * has been held longer than the threshold.
+   */
+  private final AtomicLong numReadLockLongHold = new AtomicLong(0);
+  /**
+   * The number of time the write lock
+   * has been held for longer than the threshold.
+   */
+  private final AtomicLong numWriteLockLongHold = new AtomicLong(0);
 
   @VisibleForTesting
   static final String OP_NAME_OTHER = "OTHER";
@@ -168,6 +178,7 @@ class FSNamesystemLock {
     final long readLockIntervalMs =
         TimeUnit.NANOSECONDS.toMillis(readLockIntervalNanos);
     if (needReport && readLockIntervalMs >= this.readLockReportingThresholdMs) {
+      numReadLockLongHold.incrementAndGet();
       long localLongestReadLock;
       do {
         localLongestReadLock = longestReadLockHeldIntervalMs.get();
@@ -224,6 +235,7 @@ class FSNamesystemLock {
     LogAction logAction = LogThrottlingHelper.DO_NOT_LOG;
     if (needReport &&
         writeLockIntervalMs >= this.writeLockReportingThresholdMs) {
+      numWriteLockLongHold.incrementAndGet();
       logAction = writeLockReportLogger
           .record("write", currentTimeMs, writeLockIntervalMs);
     }
@@ -261,6 +273,28 @@ class FSNamesystemLock {
 
   public Condition newWriteLockCondition() {
     return coarseLock.writeLock().newCondition();
+  }
+
+  /**
+   * Returns the number of time the read lock
+   * has been held longer than the threshold.
+   *
+   * @return long - Number of time the read lock
+   * has been held longer than the threshold
+   */
+  public long getNumOfReadLockLongHold() {
+    return numReadLockLongHold.get();
+  }
+
+  /**
+   * Returns the number of time the write lock
+   * has been held longer than the threshold.
+   *
+   * @return long - Number of time the write lock
+   * has been held longer than the threshold.
+   */
+  public long getNumOfWriteLockLongHold() {
+    return numWriteLockLongHold.get();
   }
 
   /**
