@@ -485,10 +485,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
-      op = IOStatisticsBinding.trackDuration((IOStatisticsStore) ioStatistics,
-          StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
-          () -> client.read(path, position, b, offset, length,
-              tolerateOobAppends ? "*" : eTag, cachedSasToken.get()));
+      op = client.read(path, position, b, offset, length,
+          tolerateOobAppends ? "*" : eTag, cachedSasToken.get());
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();
