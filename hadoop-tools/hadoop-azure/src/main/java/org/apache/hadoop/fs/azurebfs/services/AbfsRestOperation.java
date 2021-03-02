@@ -171,7 +171,6 @@ public class AbfsRestOperation {
    * Execute a AbfsRestOperation. Track the Duration of a request if
    * abfsCounters isn't null.
    *
-   * @throws AzureBlobFileSystemException
    */
   public void execute() throws AzureBlobFileSystemException {
     if (abfsCounters != null) {

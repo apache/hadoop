@@ -39,9 +39,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.StoreStatisticNames;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
