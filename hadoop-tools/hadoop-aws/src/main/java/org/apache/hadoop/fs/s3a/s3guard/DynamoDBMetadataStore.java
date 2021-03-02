@@ -909,9 +909,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
         // this is a root entry: do not add it.
         break;
       }
-      // add it to the ancestor state, failing if it is already there and
-      // of a different type.
-      DDBPathMetadata oldEntry = ancestorState.put(path, entry);
+      // look up the ancestor state
+      DDBPathMetadata oldEntry = ancestorState.get(path);
       boolean addAncestors = true;
       if (oldEntry != null) {
         // check for and warn if the existing bulk operation has an inconsistent
@@ -927,8 +926,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
           LOG.warn("Overwriting a S3Guard file created in the operation: {}",
               oldEntry);
           LOG.warn("With new entry: {}", entry);
-          // restore the old state
-          ancestorState.put(path, oldEntry);
           // then raise an exception
           throw new PathIOException(path.toString(),
               String.format("%s old %s new %s",
@@ -942,6 +939,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
           // and we skip the the subsequent parent scan as we've already been
           // here
           addAncestors = false;
+        }
+      } else {
+        // entry not found in the ancestor state.
+        // add it if it is a directory
+        if (entry.getFileStatus().isDirectory()) {
+          ancestorState.put(path, entry);
         }
       }
       // add the entry to the ancestry map as an explicitly requested entry.

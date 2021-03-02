@@ -70,14 +70,6 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
   private final boolean verbose;
 
   /**
-   * For DDB the BulkOperation tracking eliminates the need for this cache,
-   * but it is retained here for the local store and to allow for
-   * ease of moving to operations which may update the store in parallel with
-   * writing.
-   */
-  private final Set<Path> dirCache = new HashSet<>();
-
-  /**
    * Import.
    * @param filesystem Unguarded FS to scan.
    * @param store store to update
@@ -155,7 +147,6 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
         if (isDirectory) {
           child = DynamoDBMetadataStore.makeDirStatus(path,
               located.getOwner());
-          dirCache.add(path);
           // and update the dir count
           countOfDirsWritten++;
         } else {
@@ -248,9 +239,6 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
     Path parent = fileStatus.getPath().getParent();
     int count = 0;
     while (parent != null) {
-      if (dirCache.contains(parent)) {
-        return count;
-      }
       final ITtlTimeProvider timeProvider
           = getFilesystem().getTtlTimeProvider();
       final PathMetadata pmd = S3Guard.getWithTtl(getStore(), parent,
@@ -263,7 +251,6 @@ class ImportOperation extends ExecutingStoreOperation<Long> {
             operationState);
         count++;
       }
-      dirCache.add(parent);
       parent = parent.getParent();
     }
     return count;

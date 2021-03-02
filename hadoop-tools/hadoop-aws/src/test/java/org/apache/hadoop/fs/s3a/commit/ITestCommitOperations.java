@@ -705,8 +705,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
       LOG.info("Commit #2");
       writes.reset();
       commitContext.commitOrFail(commits.get(1));
-      assertPathExists("subdirectory", subdir);
-      assertPathExists("destFile2", destFile2);
+
       final String secondCommitContextString = commitContext.toString();
       LOG.info("Second Commit state {}", secondCommitContextString);
 
@@ -724,11 +723,11 @@ public class ITestCommitOperations extends AbstractCommitITest {
                 + "; second commit ancestors: " + secondCommitContextString,
             2);
       }
-
+      assertPathExists("subdirectory", subdir);
+      assertPathExists("destFile2", destFile2);
       LOG.info("Commit #3");
       writes.reset();
       commitContext.commitOrFail(commits.get(2));
-      assertPathExists("destFile3", destFile3);
       if (writesOnFirstCommit != 0) {
         // this file is in the same dir as destFile2, so only its entry
         // is added
@@ -737,6 +736,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
                 + "first commit had " + writesOnFirstCommit,
             1);
       }
+      assertPathExists("destFile3", destFile3);
     }
     resetFailures();
   }
