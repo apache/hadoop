@@ -4632,7 +4632,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return blockManager.getMissingReplOneBlocksCount();
   }
   
-  @Metric({"ExpiredHeartbeats", "Number of expired heartbeats"})
+  @Metric(value = {"ExpiredHeartbeats", "Number of expired heartbeats"},
+      type = Metric.Type.COUNTER)
   public int getExpiredHeartbeats() {
     return datanodeStatistics.getExpiredHeartbeats();
   }

@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 
@@ -143,7 +143,7 @@ public class TestDatanodeReport {
       assertReports(1, DatanodeReportType.DEAD, client, datanodes, null);
 
       Thread.sleep(5000);
-      assertGauge("ExpiredHeartbeats", 1, getMetrics("FSNamesystem"));
+      assertCounter("ExpiredHeartbeats", 1, getMetrics("FSNamesystem"));
     } finally {
       cluster.shutdown();
     }
