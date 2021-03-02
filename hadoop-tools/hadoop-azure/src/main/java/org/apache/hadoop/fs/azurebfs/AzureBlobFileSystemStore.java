@@ -483,16 +483,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final FsPermission umask) throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
-      boolean enableSingleWriter = isSingleWriterKey(path.toString());
       LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} "
-              + "isNamespaceEnabled: {} enableSingleWriter: {}",
+              + "isNamespaceEnabled: {}",
               client.getFileSystem(),
               path,
               overwrite,
               permission,
               umask,
-              isNamespaceEnabled,
-              enableSingleWriter);
+              isNamespaceEnabled);
 
       String relativePath = getRelativePath(path);
       boolean isAppendBlob = false;
@@ -528,12 +526,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
+      SelfRenewingLease lease = maybeCreateLease(relativePath);
+
       return new AbfsOutputStream(
           client,
           statistics,
           relativePath,
           0,
-          populateAbfsOutputStreamContext(isAppendBlob, enableSingleWriter));
+          populateAbfsOutputStreamContext(isAppendBlob, lease));
     }
   }
 
@@ -606,7 +606,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   private AbfsOutputStreamContext populateAbfsOutputStreamContext(boolean isAppendBlob,
-      boolean enableSingleWriter) {
+      SelfRenewingLease lease) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
@@ -620,8 +620,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withAppendBlob(isAppendBlob)
             .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
-            .withSingleWriterEnabled(enableSingleWriter)
-            .withLeaseRefs(leaseRefs)
+            .withLease(lease)
             .build();
   }
 
@@ -742,12 +741,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         isAppendBlob = true;
       }
 
+      SelfRenewingLease lease = maybeCreateLease(relativePath);
+
       return new AbfsOutputStream(
           client,
           statistics,
           relativePath,
           offset,
-          populateAbfsOutputStreamContext(isAppendBlob, enableSingleWriter));
+          populateAbfsOutputStreamContext(isAppendBlob, lease));
     }
   }
 
@@ -1741,6 +1742,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     // remove the empty string, since isKeyForDirectory returns true for empty strings
     // and we don't want to default to enabling single writer dirs
     this.azureSingleWriterDirSet.remove("");
+  }
+
+  private SelfRenewingLease maybeCreateLease(String relativePath)
+      throws AzureBlobFileSystemException {
+    boolean enableSingleWriter = isSingleWriterKey(relativePath);
+    if (!enableSingleWriter) {
+      return null;
+    }
+    SelfRenewingLease lease = new SelfRenewingLease(client, relativePath,
+        abfsConfiguration.getLeaseDuration());
+    leaseRefs.put(lease, null);
+    return lease;
   }
 
   @VisibleForTesting

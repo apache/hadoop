@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.util.Map;
-
 /**
  * Class to hold extra output stream configs.
  */
@@ -41,9 +39,7 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private int maxWriteRequestsToQueue;
 
-  private boolean enableSingleWriter;
-
-  private Map<SelfRenewingLease, Object> leaseRefs;
+  private SelfRenewingLease lease;
 
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -100,13 +96,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsOutputStreamContext withSingleWriterEnabled(final boolean enableSingleWriter) {
-    this.enableSingleWriter = enableSingleWriter;
-    return this;
-  }
-
-  public AbfsOutputStreamContext withLeaseRefs(final Map<SelfRenewingLease, Object> leaseRefs) {
-    this.leaseRefs = leaseRefs;
+  public AbfsOutputStreamContext withLease(final SelfRenewingLease lease) {
+    this.lease = lease;
     return this;
   }
 
@@ -142,13 +133,14 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this.enableSmallWriteOptimization;
   }
 
-  public boolean isEnableSingleWriter() {
-    return this.enableSingleWriter;
+  public SelfRenewingLease getLease() {
+    return this.lease;
   }
 
-  public void addLease(SelfRenewingLease lease) {
-    if (this.leaseRefs != null) {
-      this.leaseRefs.put(lease, null);
+  public String getLeaseId() {
+    if (this.lease == null) {
+      return null;
     }
+    return this.lease.getLeaseID();
   }
 }

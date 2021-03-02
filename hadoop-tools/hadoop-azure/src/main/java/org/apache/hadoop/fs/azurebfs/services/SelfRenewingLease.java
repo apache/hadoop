@@ -23,20 +23,19 @@ import java.net.HttpURLConnection;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableScheduledFuture;
 import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.INFINITE_LEASE_DURATION;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_FUTURE_EXISTS;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THREADS;
@@ -55,14 +54,15 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THR
 public final class SelfRenewingLease {
   private static final Logger LOG = LoggerFactory.getLogger(SelfRenewingLease.class);
 
-  static final int LEASE_DURATION = 60; // Lease duration in seconds
-  static final int LEASE_RENEWAL_PERIOD = 40; // Lease renewal interval in seconds
+  static final float LEASE_RENEWAL_PERCENT_OF_DURATION = 0.67f; // Lease renewal percent of duration
 
   static final int LEASE_ACQUIRE_RETRY_INTERVAL = 10; // Retry interval for acquiring lease in secs
   static final int LEASE_ACQUIRE_MAX_RETRIES = 7; // Number of retries for acquiring lease
 
   private final AbfsClient client;
   private final String path;
+  private final int duration;
+  private final int renewalPeriod;
 
   // Lease status variables
   private volatile boolean leaseFreed;
@@ -80,10 +80,12 @@ public final class SelfRenewingLease {
     }
   }
 
-  public SelfRenewingLease(AbfsClient client, Path path) throws AzureBlobFileSystemException {
+  public SelfRenewingLease(AbfsClient client, String path, int duration) throws AzureBlobFileSystemException {
     this.leaseFreed = false;
     this.client = client;
-    this.path = getRelativePath(path);
+    this.path = path;
+    this.duration = duration;
+    this.renewalPeriod = (int) (LEASE_RENEWAL_PERCENT_OF_DURATION * this.duration);
 
     if (client.getNumLeaseThreads() < 1) {
       throw new LeaseException(ERR_NO_LEASE_THREADS);
@@ -101,7 +103,9 @@ public final class SelfRenewingLease {
       throw new LeaseException(exception);
     }
 
-    renewLease(LEASE_RENEWAL_PERIOD);
+    if (duration != INFINITE_LEASE_DURATION) {
+      renewLease(renewalPeriod);
+    }
 
     LOG.debug("Acquired lease {} on {}", leaseID, path);
   }
@@ -112,7 +116,7 @@ public final class SelfRenewingLease {
     if (future != null && !future.isDone()) {
       throw new LeaseException(ERR_LEASE_FUTURE_EXISTS);
     }
-    future = client.schedule(() -> client.acquireLease(path, LEASE_DURATION),
+    future = client.schedule(() -> client.acquireLease(path, duration),
         delay, TimeUnit.SECONDS);
     client.addCallback(future, new FutureCallback<AbfsRestOperation>() {
       @Override
@@ -210,10 +214,5 @@ public final class SelfRenewingLease {
 
   public String getLeaseID() {
     return leaseID;
-  }
-
-  private String getRelativePath(final Path path) {
-    Preconditions.checkNotNull(path, "path");
-    return path.toUri().getPath();
   }
 }

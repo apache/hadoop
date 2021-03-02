@@ -51,7 +51,6 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
@@ -149,11 +148,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.maxRequestsThatCanBeQueued = abfsOutputStreamContext
         .getMaxWriteRequestsToQueue();
 
-    if (abfsOutputStreamContext.isEnableSingleWriter()) {
-      lease = new SelfRenewingLease(client, new Path(path));
-      this.leaseId = lease.getLeaseID();
-      abfsOutputStreamContext.addLease(lease);
-    }
+    this.lease = abfsOutputStreamContext.getLease();
+    this.leaseId = abfsOutputStreamContext.getLeaseId();
 
     this.threadExecutor
         = new ThreadPoolExecutor(maxConcurrentRequestCount,

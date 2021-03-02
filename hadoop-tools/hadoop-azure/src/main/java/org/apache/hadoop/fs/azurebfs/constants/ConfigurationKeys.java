@@ -93,6 +93,10 @@ public final class ConfigurationKeys {
   /** Provides a number of threads to use for lease operations for single writer directories.
    *  Must be set to a minimum of 1 if single writer directories are to be used. Default is 0. **/
   public static final String FS_AZURE_LEASE_THREADS = "fs.azure.lease.threads";
+  /** Provides a lease duration in seconds. Must be between 15 and 60 seconds or -1 for infinite
+   *  lease duration. For finite durations, leases will be renewed automatically for single
+   *  writer directories. **/
+  public static final String FS_AZURE_LEASE_DURATION = "fs.azure.lease.duration";
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
   public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.read.alwaysReadBufferSize";
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";
