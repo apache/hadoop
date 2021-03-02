@@ -2664,7 +2664,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .append(", createFlag=").append(flag)
           .append(", blockSize=").append(blockSize)
           .append(", supportedVersions=")
-          .append(Arrays.toString(supportedVersions));
+          .append(Arrays.toString(supportedVersions))
+          .append(", ecPolicyName=").append(ecPolicyName)
+          .append(", storagePolicy=").append(storagePolicy);
       NameNode.stateChangeLog.debug(builder.toString());
     }
     if (!DFSUtil.isValidName(src) ||
