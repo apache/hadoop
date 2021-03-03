@@ -565,6 +565,26 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     }
   }
 
+  @Test
+  public void testAutoQueueCreationDepthLimitFromStaticParent()
+      throws Exception {
+    startScheduler();
+
+    // a is the first existing queue here and it is static, therefore
+    // the distance is 2
+    createQueue("root.a.a-auto.a1-auto");
+    Assert.assertNotNull(cs.getQueue("root.a.a-auto.a1-auto"));
+
+    try {
+      createQueue("root.a.a-auto.a2-auto.a3-auto");
+      Assert.fail("Queue creation should not succeed because the distance " +
+          "from the first static parent is above limit");
+    } catch (SchedulerDynamicEditException ignored) {
+
+    }
+
+  }
+
   private LeafQueue createQueue(String queuePath) throws YarnException {
     return autoQueueHandler.autoCreateQueue(
         CSQueueUtils.extractQueuePath(queuePath));
