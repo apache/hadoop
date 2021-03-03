@@ -42,6 +42,8 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.SecurityUtil;
@@ -118,6 +120,8 @@ public class Mover {
   private final int retryMaxAttempts;
   private final AtomicInteger retryCount;
   private final Map<Long, Set<DatanodeInfo>> excludedPinnedBlocks;
+  private final MoverMetrics metrics;
+  private final NameNodeConnector nnc;
 
   private final BlockStoragePolicy[] blockStoragePolicies;
 
@@ -155,6 +159,8 @@ public class Mover {
     this.blockStoragePolicies = new BlockStoragePolicy[1 <<
         BlockStoragePolicySuite.ID_BIT_LENGTH];
     this.excludedPinnedBlocks = excludedPinnedBlocks;
+    this.nnc = nnc;
+    this.metrics = MoverMetrics.create(this);
   }
 
   void init() throws IOException {
@@ -194,6 +200,10 @@ public class Mover {
     } finally {
       dispatcher.shutdownNow();
     }
+  }
+
+  public NameNodeConnector getNnc() {
+    return nnc;
   }
 
   DBlock newDBlock(LocatedBlock lb, List<MLocation> locations,
@@ -296,6 +306,7 @@ public class Mover {
      *         round
      */
     private Result processNamespace() throws IOException {
+      metrics.setProcessingNamespace(true);
       getSnapshottableDirs();
       Result result = new Result();
       for (Path target : targetPaths) {
@@ -322,6 +333,7 @@ public class Mover {
         retryCount.set(0);
       }
       result.updateHasRemaining(hasFailed);
+      metrics.setProcessingNamespace(false);
       return result;
     }
 
@@ -374,6 +386,7 @@ public class Mover {
             // the full path is a snapshot path but it is also included in the
             // current directory tree, thus ignore it.
             processFile(fullPath, (HdfsLocatedFileStatus) status, result);
+            metrics.incrFilesProcessed();
           }
         } catch (IOException e) {
           LOG.warn("Failed to check the status of " + parent
@@ -521,6 +534,7 @@ public class Mover {
         final PendingMove pm = source.addPendingMove(db, target);
         if (pm != null) {
           dispatcher.executePendingMove(pm);
+          metrics.incrBlocksScheduled();
           return true;
         }
       }
@@ -539,6 +553,7 @@ public class Mover {
             final PendingMove pm = source.addPendingMove(db, target);
             if (pm != null) {
               dispatcher.executePendingMove(pm);
+              metrics.incrBlocksScheduled();
               return true;
             }
           }
@@ -649,6 +664,11 @@ public class Mover {
     // TODO: Need to limit the size of the pinned blocks to limit memory usage
     Map<Long, Set<DatanodeInfo>> excludedPinnedBlocks = new HashMap<>();
     LOG.info("namenodes = " + namenodes);
+
+    DefaultMetricsSystem.initialize("Mover");
+    JvmMetrics.create("Mover",
+        conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
+        DefaultMetricsSystem.instance());
 
     checkKeytabAndInit(conf);
     List<NameNodeConnector> connectors = Collections.emptyList();
