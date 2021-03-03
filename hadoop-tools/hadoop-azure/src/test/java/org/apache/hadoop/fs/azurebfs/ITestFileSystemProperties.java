@@ -20,13 +20,13 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
 
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 /**
  * Test FileSystemProperties.

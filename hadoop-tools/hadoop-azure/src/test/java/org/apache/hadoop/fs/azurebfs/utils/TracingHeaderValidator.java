@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.assertj.core.api.Assertions;
+
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 
 public class TracingHeaderValidator implements Listener {
   private String clientCorrelationID;

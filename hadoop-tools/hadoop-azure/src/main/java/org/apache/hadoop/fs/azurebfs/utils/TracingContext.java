@@ -20,11 +20,12 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.util.UUID;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
-
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
 public class TracingContext {
   private final String clientCorrelationID;

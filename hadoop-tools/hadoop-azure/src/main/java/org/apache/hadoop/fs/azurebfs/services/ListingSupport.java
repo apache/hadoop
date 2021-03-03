@@ -33,6 +33,7 @@ public interface ListingSupport {
 
   /**
    * @param path The list path.
+   * @param tracingContext TracingContext instance to track identifiers
    * @return the entries in the path.
    * @throws IOException in case of error
    */
@@ -50,6 +51,7 @@ public interface ListingSupport {
    *                  non-existent entry in lexical order: listStatus
    *                  (Path("/folder"), "cfile") will return
    *                  "/folder/hfile" and "/folder/ifile".
+   * @param tracingContext TracingContext instance to track identifiers
    * @return the entries in the path start from  "startFrom" in lexical order.
    * @throws IOException in case of error
    */
@@ -72,6 +74,7 @@ public interface ListingSupport {
    *                     filled with just one page os results or the entire
    *                     result.
    * @param continuation Contiuation token. null means start rom the begining.
+   * @param tracingContext TracingContext instance to track identifiers
    * @return Continuation tokem
    * @throws IOException in case of error
    */

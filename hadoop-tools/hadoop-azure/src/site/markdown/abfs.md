@@ -744,10 +744,10 @@ input is invalid.
 
 #### <a name="tracingcontextformat"></a> 1. Correlation IDs Display Options
 
-Config `fs.azure.tracingcontext.format` provides an option to select the
- format of IDs included in the `request-id-header`. This config accepts a
-  String value corresponding to the following enum options.
-  `SINGLE_ID_FORMAT`: clientRequestId
+Config `fs.azure.tracingcontext.format` provides an option to select the format
+of IDs included in the `request-id-header`. This config accepts a String value
+corresponding to the following enum options.
+  `SINGLE_ID_FORMAT` : clientRequestId
   `ALL_ID_FORMAT` : all IDs (default)
   `TWO_ID_FORMAT` : clientCorrelationId:clientRequestId
 
