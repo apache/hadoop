@@ -27,7 +27,7 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
  * Metrics for HDFS Mover of a blockpool.
  */
 @Metrics(about="Mover metrics", context="dfs")
-class MoverMetrics {
+final class MoverMetrics {
 
   private final Mover mover;
 

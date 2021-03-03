@@ -1246,18 +1246,8 @@ public class TestMover {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
     conf.setInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY, 1);
-    conf.setInt(
-        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 1);
-    // set a fairly large block size to run into the limitation
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, blockSize);
-    // set a somewhat grater than zero max iteration time to have the move time
-    // to surely exceed it
-    conf.setLong(DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_KEY, 200L);
-    conf.setInt(DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY, 1);
-    // set client socket timeout to have an IN_PROGRESS notification back from
-    // the DataNode about the copy in every second.
-    conf.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000L);
 
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(2)
@@ -1271,10 +1261,10 @@ public class TestMover {
 
     final String file = "/testMaxIterationTime.dat";
     final Path path = new Path(file);
-    short rep_factor = 1;
+    short repFactor = 1;
     int seed = 0xFAFAFA;
     // write to DISK
-    DFSTestUtil.createFile(fs, path, 4L * blockSize, rep_factor, seed);
+    DFSTestUtil.createFile(fs, path, 4L * blockSize, repFactor, seed);
 
     // move to ARCHIVE
     fs.setStoragePolicy(new Path(file), "COLD");
