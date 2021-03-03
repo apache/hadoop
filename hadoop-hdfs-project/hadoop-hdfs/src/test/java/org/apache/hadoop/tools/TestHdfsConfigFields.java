@@ -80,8 +80,6 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add("dfs.namenode.tolerate.heartbeat.multiplier");
     configurationPropsToSkipCompare
-        .add("dfs.namenode.stripe.min");
-    configurationPropsToSkipCompare
         .add("dfs.namenode.replqueue.threshold-pct");
 
     // Removed by HDFS-6440
