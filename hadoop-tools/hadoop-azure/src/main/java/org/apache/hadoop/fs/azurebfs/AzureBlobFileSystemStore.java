@@ -483,8 +483,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final FsPermission umask) throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled();
-      LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} "
-              + "isNamespaceEnabled: {}",
+      LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
               client.getFileSystem(),
               path,
               overwrite,
@@ -709,12 +708,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public OutputStream openFileForWrite(final Path path, final FileSystem.Statistics statistics, final boolean overwrite) throws
           AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForWrite", "getPathStatus")) {
-      boolean enableSingleWriter = isSingleWriterKey(path.toString());
-      LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {} enableSingleWriter: {}",
+      LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {}",
               client.getFileSystem(),
               path,
-              overwrite,
-              enableSingleWriter);
+              overwrite);
 
       String relativePath = getRelativePath(path);
 
