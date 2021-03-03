@@ -24,6 +24,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,6 +48,7 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
 
   // requires concurrent access from caller threads and syncing thread.
   private final BlockingQueue<Edit> editPendingQ;
+  private final BlockingQueue<EditSyncEx> logSyncNotifyQ;
 
   // only accessed by syncing thread so no synchronization required.
   // queue is unbounded because it's effectively limited by the size
@@ -63,6 +65,7 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
             DFS_NAMENODE_EDITS_ASYNC_LOGGING_PENDING_QUEUE_SIZE_DEFAULT);
 
     editPendingQ = new ArrayBlockingQueue<>(editPendingQSize);
+    logSyncNotifyQ = new LinkedBlockingQueue<>();
   }
 
   private boolean isSyncThreadAlive() {
@@ -227,8 +230,33 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
     return syncWaitQ.isEmpty() ? editPendingQ.take() : editPendingQ.poll();
   }
 
+  private static class EditSyncEx {
+    final Edit edit;
+    final RuntimeException ex;
+    EditSyncEx(Edit edit, RuntimeException ex) {
+      this.edit = edit;
+      this.ex = ex;
+    }
+  }
+
+  private class LogSyncNotifyThread extends Thread {
+    volatile boolean stopped = false;
+
+    @Override
+    public void run() {
+      try {
+        while (!stopped) {
+          EditSyncEx editSyncEx = logSyncNotifyQ.take();
+          editSyncEx.edit.logSyncNotify(editSyncEx.ex);
+        }
+      } catch(InterruptedException ie) {} // just swallow it
+    }
+  }
+
   @Override
   public void run() {
+    final LogSyncNotifyThread logSyncNotifyThread = new LogSyncNotifyThread();
+    logSyncNotifyThread.start();
     try {
       while (true) {
         boolean doSync;
@@ -251,12 +279,14 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
             syncEx = ex;
           }
           while ((edit = syncWaitQ.poll()) != null) {
-            edit.logSyncNotify(syncEx);
+            logSyncNotifyQ.put(new EditSyncEx(edit, syncEx));
           }
         }
       }
     } catch (InterruptedException ie) {
       LOG.info(Thread.currentThread().getName() + " was interrupted, exiting");
+      logSyncNotifyThread.stopped = true;
+      logSyncNotifyThread.interrupt();
     } catch (Throwable t) {
       terminate(t);
     }
