@@ -3396,6 +3396,10 @@ public class CapacityScheduler extends
     return null;
   }
 
+  public CSConfigurationProvider getCsConfProvider() {
+    return csConfProvider;
+  }
+
   @Override
   public void resetSchedulerMetrics() {
     CapacitySchedulerMetrics.destroy();
