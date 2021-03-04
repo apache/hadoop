@@ -33,6 +33,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
+import static org.apache.hadoop.fs.s3a.Constants.RENAME_REDUCED_PROBES;
+import static org.apache.hadoop.fs.s3a.Constants.RENAME_REDUCED_PROBES_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
@@ -78,6 +80,9 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     Path srcDir = new Path(baseDir, "1/2/3/4/5/6");
     final Path srcFilePath = file(new Path(srcDir, "source.txt"));
 
+    boolean renameReducedProbes = getConfiguration()
+        .getBoolean(RENAME_REDUCED_PROBES, RENAME_REDUCED_PROBES_DEFAULT);
+
     // create a new source file.
     // Explicitly use a new path object to guarantee that the parent paths
     // are different object instances and so equals() rather than ==
@@ -95,13 +100,25 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     Path destDir = dir(new Path(destBaseDir, "a/b/c/d"));
     Path destFilePath = new Path(destDir, "dest.txt");
 
+    OperationCost renameCost;
+    if (renameReducedProbes) {
+      // reduced probes swap a LIST for a HEAD;
+      renameCost = FILE_STATUS_FILE_PROBE
+          .plus(GET_FILE_STATUS_FNFE)
+          .plus(FILE_STATUS_FILE_PROBE)
+          .plus(FILE_STATUS_DIR_PROBE)
+          .plus(COPY_OP);
+    } else {
+      renameCost = RENAME_SINGLE_FILE_DIFFERENT_DIR;
+    }
+
     // rename the source file to the destination file.
     // this tests file rename, not dir rename
     // as srcFile2 exists, the parent dir of srcFilePath must not be created.
     final int directoriesInPath = directoriesInPath(destDir);
     verifyMetrics(() ->
             execRename(srcFilePath, destFilePath),
-        whenRaw(RENAME_SINGLE_FILE_DIFFERENT_DIR),
+        whenRaw(renameCost),
         with(DIRECTORIES_CREATED, 0),
         with(DIRECTORIES_DELETED, 0),
         // keeping: only the core delete operation is issued.

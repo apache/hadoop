@@ -41,7 +41,10 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
+import static org.apache.hadoop.fs.s3a.Constants.RENAME_REDUCED_PROBES;
+import static org.apache.hadoop.fs.s3a.Constants.RENAME_REDUCED_PROBES_DEFAULT;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.S3A_TEST_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
@@ -57,6 +60,8 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
       ITestS3AContractRename.class);
 
   private final boolean authoritative;
+
+  private boolean renameReducedProbes;
 
   /**
    * Parameterization.
@@ -102,6 +107,13 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     Assume.assumeTrue(
         "Skipping auth mode tests when the FS doesn't have a metastore",
         !authoritative || ((S3AFileSystem) getFileSystem()).hasMetadataStore());
+    renameReducedProbes = getFileSystem().getConf()
+        .getBoolean(RENAME_REDUCED_PROBES, RENAME_REDUCED_PROBES_DEFAULT);
+    S3AContract contract = (S3AContract) getContract();
+    contract.getConf().setBoolean(
+        contract.getConfKey(RENAME_CREATES_DEST_DIRS),
+        renameReducedProbes);
+
   }
 
   @Override
@@ -168,5 +180,11 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     describe("validating results");
     validateAncestorsMoved(src, dest, nestedFile);
 
+  }
+
+  @Override
+  public void testRenameFileUnderFileSubdir() throws Exception {
+    assume("reduced s3 probes", !renameReducedProbes);
+    super.testRenameFileUnderFileSubdir();
   }
 }

@@ -289,6 +289,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private long readAhead;
   private S3AInputPolicy inputPolicy;
   private ChangeDetectionPolicy changeDetectionPolicy;
+
+  /** Reduce probes during rename(). */
+  private boolean renameReducedProbes;
+
+  /** Raise exceptions in rename() failures. */
+  private boolean renameRaisesExceptions;
+
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private volatile boolean isClosed = false;
   private MetadataStore metadataStore;
@@ -456,6 +463,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Input fadvise policy = {}", inputPolicy);
       changeDetectionPolicy = ChangeDetectionPolicy.getPolicy(conf);
       LOG.debug("Change detection policy = {}", changeDetectionPolicy);
+
+      // read in rename options.
+      renameReducedProbes = conf.getBoolean(RENAME_REDUCED_PROBES,
+          RENAME_REDUCED_PROBES_DEFAULT);
+      renameRaisesExceptions = conf.getBoolean(RENAME_RAISES_EXCEPTIONS,
+          RENAME_RAISE_EXCEPTIONS_DEFAULT);
+
       boolean magicCommitterEnabled = conf.getBoolean(
           CommitConstants.MAGIC_COMMITTER_ENABLED,
           CommitConstants.DEFAULT_MAGIC_COMMITTER_ENABLED);
@@ -1462,9 +1476,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (RenameFailedException e) {
       LOG.info("{}", e.getMessage());
       LOG.debug("rename failure", e);
+      if (renameRaisesExceptions) {
+        throw e;
+      }
       return e.getExitCode();
     } catch (FileNotFoundException e) {
       LOG.debug(e.toString());
+      if (renameRaisesExceptions) {
+        throw e;
+      }
       return false;
     }
   }
@@ -1544,17 +1564,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (!pathToKey(parent).isEmpty()
           && !parent.equals(src.getParent())) {
         try {
-          // only look against S3 for directories; saves
-          // a HEAD request on all normal operations.
+          // non-reduce probes: look for a directory being
+          // present.
+          // reduced probes: just make sure it isn't a file.
+          final Set<StatusProbeEnum> probes =
+              renameReducedProbes
+                  ? StatusProbeEnum.FILE
+                  : StatusProbeEnum.DIRECTORIES;
           S3AFileStatus dstParentStatus = innerGetFileStatus(parent,
-              false, StatusProbeEnum.DIRECTORIES);
+              false, probes);
           if (!dstParentStatus.isDirectory()) {
             throw new RenameFailedException(src, dst,
                 "destination parent is not a directory");
           }
         } catch (FileNotFoundException e2) {
-          throw new RenameFailedException(src, dst,
-              "destination has no parent ");
+          if (!renameReducedProbes) {
+            throw (RenameFailedException)(new RenameFailedException(src, dst,
+                "Destination parent directory not found: " + parent)
+                .initCause(e2));
+          }
         }
       }
     }
