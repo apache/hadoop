@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.UUID;
 
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -73,6 +72,8 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
 
   @Test
   public void createDirWithExistingFilename() throws Exception {
+    Assume.assumeFalse("Ignore test until default overwrite is set to false",
+        DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE);
     final AzureBlobFileSystem fs = getFileSystem();
     Path path = new Path("testFilePath");
     fs.create(path);
