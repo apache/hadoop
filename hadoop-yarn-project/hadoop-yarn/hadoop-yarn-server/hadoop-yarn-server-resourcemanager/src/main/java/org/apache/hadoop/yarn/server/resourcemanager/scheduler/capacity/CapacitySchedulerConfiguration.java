@@ -2201,6 +2201,18 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       1500L;
 
   /**
+   * Time in milliseconds between invocations
+   * of QueueConfigurationAutoRefreshPolicy.
+   */
+  @Private
+  public static final String QUEUE_AUTO_REFRESH_MONITORING_INTERVAL =
+      PREFIX + "queue.auto.refresh.monitoring-interval";
+
+  @Private
+  public static final long DEFAULT_QUEUE_AUTO_REFRESH_MONITORING_INTERVAL =
+      5000L;
+
+  /**
    * Queue Management computation policy for Auto Created queues
    * @param queue The queue's path
    * @return Configured policy class name
