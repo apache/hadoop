@@ -436,7 +436,8 @@ class BPServiceActor implements Runnable {
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
           "uccessfully sent block report 0x" +
-          Long.toHexString(reportId) + ",  containing " + reports.length +
+          Long.toHexString(reportId) + " to namenode: " + nnAddr +
+          ",  containing " + reports.length +
           " storage report(s), of which we sent " + numReportsSent + "." +
           " The reports had " + totalBlockCount +
           " total blocks and used " + numRPCs +
