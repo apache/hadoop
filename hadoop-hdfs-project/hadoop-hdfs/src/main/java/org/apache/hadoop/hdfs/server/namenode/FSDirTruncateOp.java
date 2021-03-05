@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.RecoverLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -111,6 +112,8 @@ final class FSDirTruncateOp {
               + truncatedBlock.getNumBytes();
           if (newLength == truncateLength) {
             return new TruncateResult(false, fsd.getAuditFileInfo(iip));
+          } else {
+            throw new RetriableException(src + " is being truncated.");
           }
         }
       }
