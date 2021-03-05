@@ -1187,7 +1187,6 @@ Source `src` must exist:
 
     exists(FS, src) else raise FileNotFoundException
 
-
 `dest` cannot be a descendant of `src`:
 
     if isDescendant(FS, src, dest) : raise IOException
@@ -1282,6 +1281,15 @@ The outcome is as a normal rename, with the additional (implicit) feature
 that the parent directories of the destination also exist.
 
     exists(FS', parent(dest))
+
+*S3A FileSystem*
+
+The outcome is as a normal rename, with the additional (implicit) feature that
+the parent directories of the destination then exist:
+`exists(FS', parent(dest))`
+
+There is a check for and rejection if the `parent(dest)` is a file, but
+no checks for any other ancestors.
 
 *Other Filesystems (including Swift) *
 

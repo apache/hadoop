@@ -1126,6 +1126,40 @@ We also recommend using applications/application
 options which do  not rename files when committing work or when copying data
 to S3, but instead write directly to the final destination.
 
+## Rename not behaving as "expected"
+
+S3 is not a filesystem. The S3A connector mimics rename by
+
+* HEAD then LIST of source path
+* HEAD then LIST of destination path
+* File-by-file copy of source objects to destination.
+  Parallelized, with page listings of directory objects and issuing of DELETE requests.
+* Post-delete recreation of destination parent directory marker, if needed.  
+
+This is slow (O(data)) and unsafe if the calling code expects atomic renaming.
+This is why the [S3A Committers](committers.md) or similar are needed to safely
+commit output.
+
+There is also the risk of race conditions arising if many processes/threads
+are working with the same directory tree.
+To reduce this risk, the S3A connector does not verify the parent directory
+of the destination of a rename is a directory -only that it is _not_ a file.
+You can rename a directory or file deep under a file if you try -after which
+there is no guarantee of the files being found in listings. Try not to do that.
+
+For extra debugging of rename issues, it is possible to configure the connector
+to raise exceptions on failures where it would normally just return `false`,
+leaving the application to report an error of the form
+"something failed but we don't know what"
+
+```xml
+<property>
+  <name>fs.s3a.rename.raises.exceptions</name>
+  <value>true</value>
+</property> 
+```
+
+Consider setting this when troubleshooting rename issues. 
 
 ## <a name="encryption"></a> S3 Server Side Encryption
 

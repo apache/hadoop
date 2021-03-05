@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -38,13 +39,13 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.RENAME_REDUCED_PROBES;
-import static org.apache.hadoop.fs.s3a.Constants.RENAME_REDUCED_PROBES_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISES_EXCEPTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISE_EXCEPTIONS_DEFAULT;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.S3A_TEST_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
@@ -60,8 +61,6 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
       ITestS3AContractRename.class);
 
   private final boolean authoritative;
-
-  private boolean renameReducedProbes;
 
   /**
    * Parameterization.
@@ -107,20 +106,12 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     Assume.assumeTrue(
         "Skipping auth mode tests when the FS doesn't have a metastore",
         !authoritative || ((S3AFileSystem) getFileSystem()).hasMetadataStore());
-    renameReducedProbes = getFileSystem().getConf()
-        .getBoolean(RENAME_REDUCED_PROBES, RENAME_REDUCED_PROBES_DEFAULT);
-    S3AContract contract = (S3AContract) getContract();
-    contract.getConf().setBoolean(
-        contract.getConfKey(RENAME_CREATES_DEST_DIRS),
-        renameReducedProbes);
-
   }
 
   @Override
   public void testRenameDirIntoExistingDir() throws Throwable {
-    describe("Verify renaming a dir into an existing dir puts the files"
-             +" from the source dir into the existing dir"
-             +" and leaves existing files alone");
+    describe("S3A rename into an existing directory returns false;"
+        + " fails if exceptions are to be raised");
     FileSystem fs = getFileSystem();
     String sourceSubdir = "source";
     Path srcDir = path(sourceSubdir);
@@ -134,9 +125,19 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     writeDataset(fs, destFilePath, destDataset, destDataset.length, 1024,
         false);
     assertIsFile(destFilePath);
+    boolean renameRaisesExceptions = fs.getConf().getBoolean(
+        RENAME_RAISES_EXCEPTIONS,
+        RENAME_RAISE_EXCEPTIONS_DEFAULT);
 
-    boolean rename = fs.rename(srcDir, destDir);
-    assertFalse("s3a doesn't support rename to non-empty directory", rename);
+    try {
+      boolean rename = fs.rename(srcDir, destDir);
+      assertFalse("Should have raised an exception", renameRaisesExceptions);
+      assertFalse("s3a doesn't support rename to non-empty directory", rename);
+    } catch (IOException e) {
+      if (!renameRaisesExceptions) {
+        throw e;
+      }
+    }
   }
 
   /**
@@ -184,7 +185,6 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
 
   @Override
   public void testRenameFileUnderFileSubdir() throws Exception {
-    assume("reduced s3 probes", !renameReducedProbes);
-    super.testRenameFileUnderFileSubdir();
+    skip("Rename deep paths under files is allowed");
   }
 }

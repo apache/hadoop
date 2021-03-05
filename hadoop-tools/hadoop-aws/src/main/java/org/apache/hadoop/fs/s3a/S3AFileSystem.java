@@ -290,9 +290,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3AInputPolicy inputPolicy;
   private ChangeDetectionPolicy changeDetectionPolicy;
 
-  /** Reduce probes during rename(). */
-  private boolean renameReducedProbes;
-
   /** Raise exceptions in rename() failures. */
   private boolean renameRaisesExceptions;
 
@@ -465,8 +462,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Change detection policy = {}", changeDetectionPolicy);
 
       // read in rename options.
-      renameReducedProbes = conf.getBoolean(RENAME_REDUCED_PROBES,
-          RENAME_REDUCED_PROBES_DEFAULT);
       renameRaisesExceptions = conf.getBoolean(RENAME_RAISES_EXCEPTIONS,
           RENAME_RAISE_EXCEPTIONS_DEFAULT);
 
@@ -1482,10 +1477,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return e.getExitCode();
     } catch (FileNotFoundException e) {
       LOG.debug(e.toString());
-      if (renameRaisesExceptions) {
-        throw e;
-      }
-      return false;
+      throw e;
     }
   }
 
@@ -1538,9 +1530,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // whether or not it can be the destination of the rename.
       if (srcStatus.isDirectory()) {
         if (dstStatus.isFile()) {
-          throw new RenameFailedException(src, dst,
-              "source is a directory and dest is a file")
-              .withExitCode(srcStatus.isFile());
+          throw new FileAlreadyExistsException(
+              "Failed to rename " + src + " to " + dst
+               +"; source is a directory and dest is a file");
         } else if (dstStatus.isEmptyDirectory() != Tristate.TRUE) {
           throw new RenameFailedException(src, dst,
               "Destination is a non-empty directory")
@@ -1551,9 +1543,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // source is a file. The destination must be a directory,
         // empty or not
         if (dstStatus.isFile()) {
-          throw new RenameFailedException(src, dst,
-              "Cannot rename onto an existing file")
-              .withExitCode(false);
+          throw new FileAlreadyExistsException(
+              "Failed to rename " + src + " to " + dst
+                  + "; destination file exists");
         }
       }
 
@@ -1564,25 +1556,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (!pathToKey(parent).isEmpty()
           && !parent.equals(src.getParent())) {
         try {
-          // non-reduce probes: look for a directory being
-          // present.
-          // reduced probes: just make sure it isn't a file.
-          final Set<StatusProbeEnum> probes =
-              renameReducedProbes
-                  ? StatusProbeEnum.FILE
-                  : StatusProbeEnum.DIRECTORIES;
+          // make sure parent isn't a file.
+          // don't look for parent being a dir as there is a risk
+          // of a race between dest dir cleanup and rename in different
+          // threads.
           S3AFileStatus dstParentStatus = innerGetFileStatus(parent,
-              false, probes);
+              false, StatusProbeEnum.FILE);
+          // if this doesn't raise an exception then it's one of
+          // raw S3: parent is a file: error
+          // guarded S3: parent is a file or a dir.
           if (!dstParentStatus.isDirectory()) {
             throw new RenameFailedException(src, dst,
                 "destination parent is not a directory");
           }
-        } catch (FileNotFoundException e2) {
-          if (!renameReducedProbes) {
-            throw (RenameFailedException)(new RenameFailedException(src, dst,
-                "Destination parent directory not found: " + parent)
-                .initCause(e2));
-          }
+        } catch (FileNotFoundException expected) {
+          // nothing was found. Don't worry about it;
+          // expect rename to implicitly create the parent dir (raw S3)
+          // or the s3guard parents (guarded)
+
         }
       }
     }

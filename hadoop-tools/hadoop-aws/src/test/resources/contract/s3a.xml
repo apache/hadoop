@@ -48,13 +48,18 @@
   </property>
 
   <property>
-    <name>fs.contract.rename-returns-false-if-source-missing</name>
+    <name>fs.contract.rename-creates-dest-dirs</name>
     <value>true</value>
   </property>
 
   <property>
+    <name>fs.contract.rename-returns-false-if-source-missing</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <name>fs.contract.rename-returns-false-if-dest-exists</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
