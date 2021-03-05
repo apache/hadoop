@@ -257,7 +257,7 @@ public class TestCapacitySchedulerWeightMode {
    */
   @Test(timeout = 300000)
   public void testContainerAllocateWithComplexLabelsWeightOnly() throws Exception {
-    internalTestContainerAlloationWithNodeLabel(
+    internalTestContainerAllocationWithNodeLabel(
         getCSConfWithQueueLabelsWeightOnly(conf));
   }
 
@@ -270,7 +270,7 @@ public class TestCapacitySchedulerWeightMode {
    */
   @Test(timeout = 300000)
   public void testContainerAllocateWithComplexLabelsWeightAndPercentMixed1() throws Exception {
-    internalTestContainerAlloationWithNodeLabel(
+    internalTestContainerAllocationWithNodeLabel(
         getCSConfWithLabelsParentUseWeightChildUsePct(conf));
   }
 
@@ -283,7 +283,7 @@ public class TestCapacitySchedulerWeightMode {
    */
   @Test(timeout = 300000)
   public void testContainerAllocateWithComplexLabelsWeightAndPercentMixed2() throws Exception {
-    internalTestContainerAlloationWithNodeLabel(
+    internalTestContainerAllocationWithNodeLabel(
         getCSConfWithLabelsParentUsePctChildUseWeight(conf));
   }
 
@@ -338,8 +338,43 @@ public class TestCapacitySchedulerWeightMode {
     }
   }
 
-  private void internalTestContainerAlloationWithNodeLabel(Configuration csConf)
-      throws Exception {
+  @Test
+  public void testQueueInfoWeight() throws Exception {
+    MockRM rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(
+        conf);
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {"a", "b", "default"});
+    csConf.setNonLabeledQueueWeight("root.a", 1);
+    csConf.setNonLabeledQueueWeight("root.b", 2);
+    csConf.setNonLabeledQueueWeight("root.default", 3);
+
+    // Check queue info capacity
+    CapacityScheduler cs =
+        (CapacityScheduler)rm.getRMContext().getScheduler();
+    cs.reinitialize(csConf, rm.getRMContext());
+
+    LeafQueue a = (LeafQueue)
+        cs.getQueue("root.a");
+    Assert.assertNotNull(a);
+    Assert.assertEquals(a.getQueueCapacities().getWeight(),
+        a.getQueueInfo(false,
+        false).getWeight(), 1e-6);
+
+    LeafQueue b = (LeafQueue)
+        cs.getQueue("root.b");
+    Assert.assertNotNull(b);
+    Assert.assertEquals(b.getQueueCapacities().getWeight(),
+        b.getQueueInfo(false,
+        false).getWeight(), 1e-6);
+    rm.close();
+  }
+
+  private void internalTestContainerAllocationWithNodeLabel(
+      Configuration csConf) throws Exception {
     /*
      * Queue structure:
      *                      root (*)

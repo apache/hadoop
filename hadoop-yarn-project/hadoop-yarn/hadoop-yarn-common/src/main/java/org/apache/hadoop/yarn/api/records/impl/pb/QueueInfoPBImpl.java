@@ -125,6 +125,18 @@ public class QueueInfoPBImpl extends QueueInfo {
   }
 
   @Override
+  public float getWeight() {
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasWeight()) ? p.getWeight() : -1;
+  }
+
+  @Override
+  public void setWeight(float weight) {
+    maybeInitBuilder();
+    builder.setWeight(weight);
+  }
+
+  @Override
   public void setChildQueues(List<QueueInfo> childQueues) {
     if (childQueues == null) {
       builder.clearChildQueues();

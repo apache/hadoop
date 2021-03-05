@@ -59,7 +59,7 @@ public abstract class QueueInfo {
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
       String defaultNodeLabelExpression, QueueStatistics queueStatistics,
-      boolean preemptionDisabled) {
+      boolean preemptionDisabled, float weight) {
     QueueInfo queueInfo = Records.newRecord(QueueInfo.class);
     queueInfo.setQueueName(queueName);
     queueInfo.setCapacity(capacity);
@@ -72,6 +72,7 @@ public abstract class QueueInfo {
     queueInfo.setDefaultNodeLabelExpression(defaultNodeLabelExpression);
     queueInfo.setQueueStatistics(queueStatistics);
     queueInfo.setPreemptionDisabled(preemptionDisabled);
+    queueInfo.setWeight(weight);
     return queueInfo;
   }
 
@@ -82,14 +83,14 @@ public abstract class QueueInfo {
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
       String defaultNodeLabelExpression, QueueStatistics queueStatistics,
-      boolean preemptionDisabled,
+      boolean preemptionDisabled, float weight,
       Map<String, QueueConfigurations> queueConfigurations) {
     QueueInfo queueInfo = QueueInfo.newInstance(queueName, capacity,
         maximumCapacity, currentCapacity,
         childQueues, applications,
         queueState, accessibleNodeLabels,
         defaultNodeLabelExpression, queueStatistics,
-        preemptionDisabled);
+        preemptionDisabled, weight);
     queueInfo.setQueueConfigurations(queueConfigurations);
     return queueInfo;
   }
@@ -101,7 +102,7 @@ public abstract class QueueInfo {
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
       String defaultNodeLabelExpression, QueueStatistics queueStatistics,
-      boolean preemptionDisabled,
+      boolean preemptionDisabled, float weight,
       Map<String, QueueConfigurations> queueConfigurations,
       boolean intraQueuePreemptionDisabled) {
     QueueInfo queueInfo = QueueInfo.newInstance(queueName, capacity,
@@ -109,7 +110,7 @@ public abstract class QueueInfo {
         childQueues, applications,
         queueState, accessibleNodeLabels,
         defaultNodeLabelExpression, queueStatistics,
-        preemptionDisabled, queueConfigurations);
+        preemptionDisabled, weight, queueConfigurations);
     queueInfo.setIntraQueuePreemptionDisabled(intraQueuePreemptionDisabled);
     return queueInfo;
   }
@@ -137,6 +138,18 @@ public abstract class QueueInfo {
   @Private
   @Unstable
   public abstract void setCapacity(float capacity);
+
+  /**
+   * Get the <em>configured weight</em> of the queue.
+   * @return <em>configured weight</em> of the queue
+   */
+  @Public
+  @Stable
+  public abstract float getWeight();
+
+  @Private
+  @Unstable
+  public abstract void setWeight(float weight);
   
   /**
    * Get the <em>maximum capacity</em> of the queue.
