@@ -601,8 +601,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               umask,
               isNamespaceEnabled);
 
+      boolean overwrite =
+          !isNamespaceEnabled || abfsConfiguration.isEnabledMkdirOverwrite();
       final AbfsRestOperation op = client.createPath(getRelativePath(path),
-          false, abfsConfiguration.isEnabledMkdirOverwrite(),
+          false, overwrite,
               isNamespaceEnabled ? getOctalNotation(permission) : null,
               isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);

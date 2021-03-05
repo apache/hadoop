@@ -45,7 +45,8 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testCreateDirWithExistingDir() throws Exception {
-    Assume.assumeTrue(DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE);
+    Assume.assumeTrue(DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE || !getFileSystem()
+        .getIsNamespaceEnabled());
     final AzureBlobFileSystem fs = getFileSystem();
     Path path = new Path("testFolder");
     assertMkdirs(fs, path);
@@ -73,7 +74,8 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
   @Test
   public void createDirWithExistingFilename() throws Exception {
     Assume.assumeFalse("Ignore test until default overwrite is set to false",
-        DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE);
+        DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE && getFileSystem()
+            .getIsNamespaceEnabled());
     final AzureBlobFileSystem fs = getFileSystem();
     Path path = new Path("testFilePath");
     fs.create(path);

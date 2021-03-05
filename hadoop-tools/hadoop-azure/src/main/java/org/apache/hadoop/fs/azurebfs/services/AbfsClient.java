@@ -308,17 +308,8 @@ public class AbfsClient implements Closeable {
       if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         String existingResource =
             op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
-        if (existingResource != null) {
-          if (existingResource.equals(DIRECTORY)) {
-            return op; //don't throw ex on mkdirs for existing directory
-          }
-        } else {
-          if (permission == null) { // non-hns account
-            if (getPathStatus(path, false).getResult()
-                .getResponseHeader(X_MS_RESOURCE_TYPE).equals(DIRECTORY)) {
-              return op;
-            }
-          }
+        if (existingResource != null && existingResource.equals(DIRECTORY)) {
+          return op; //don't throw ex on mkdirs for existing directory
         }
       }
       throw ex;
