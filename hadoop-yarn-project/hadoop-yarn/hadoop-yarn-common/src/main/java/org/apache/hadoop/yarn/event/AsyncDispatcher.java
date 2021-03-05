@@ -20,11 +20,11 @@ package org.apache.hadoop.yarn.event;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -268,11 +268,16 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   }
 
   class GenericEventHandler implements EventHandler<Event> {
-    private void printEventQueueDetails(BlockingQueue<Event> queue) {
-      Map<Enum, Long> counterMap = eventQueue.stream().
-              collect(Collectors.
-                      groupingBy(e -> e.getType(), Collectors.counting())
-              );
+    private void printEventQueueDetails() {
+      Iterator<Event> iterator = eventQueue.iterator();
+      Map<Enum, Long> counterMap = new HashMap<>();
+      while (iterator.hasNext()) {
+        Enum eventType = iterator.next().getType();
+        if (!counterMap.containsKey(eventType)) {
+          counterMap.put(eventType, 0L);
+        }
+        counterMap.put(eventType, counterMap.get(eventType) + 1);
+      }
       for (Map.Entry<Enum, Long> entry : counterMap.entrySet()) {
         long num = entry.getValue();
         LOG.info("Event type: " + entry.getKey()
@@ -295,7 +300,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       if (qSize != 0 && qSize % detailsInterval == 0
               && lastEventDetailsQueueSizeLogged != qSize) {
         lastEventDetailsQueueSizeLogged = qSize;
-        printEventQueueDetails(eventQueue);
+        printEventQueueDetails();
         printTrigger = true;
       }
       int remCapacity = eventQueue.remainingCapacity();
