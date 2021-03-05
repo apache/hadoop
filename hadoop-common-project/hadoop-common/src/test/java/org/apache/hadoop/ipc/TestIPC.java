@@ -1456,7 +1456,7 @@ public class TestIPC {
   @Test
   public void testClientGetTimeout() throws IOException {
     Configuration config = new Configuration();
-    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY, 0);
+    config.setInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY, 0);
     assertThat(Client.getTimeout(config)).isEqualTo(-1);
   }
 
