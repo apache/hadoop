@@ -2383,9 +2383,10 @@
 
 <property>
   <name>ipc.client.rpc-timeout.ms</name>
-  <value>0</value>
+  <value>120000</value>
   <description>Timeout on waiting response from server, in milliseconds.
-  If ipc.client.ping is set to true and this rpc-timeout is greater than
+  If this rpc-timeout is 0, it means no timeout. If this rpc-timeout is greater
+  than 0, and ipc.client.ping is set to true, and this rpc-timeout is greater than
   the value of ipc.ping.interval, the effective value of the rpc-timeout is
   rounded up to multiple of ipc.ping.interval.
   </description>
