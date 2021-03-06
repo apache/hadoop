@@ -1438,6 +1438,12 @@ public class FSEditLog implements LogsPurgeable {
    * Transitions from IN_SEGMENT state to BETWEEN_LOG_SEGMENTS state.
    */
   public synchronized void endCurrentLogSegment(boolean writeEndTxn) {
+
+    if (getLastWrittenTxId() == getSyncTxId()) {
+      LOG.info("No more edits after last sync: {}", getSyncTxId());
+      return;
+    }
+
     LOG.info("Ending log segment " + curSegmentTxId +
         ", " + getLastWrittenTxId());
     Preconditions.checkState(isSegmentOpen(),
