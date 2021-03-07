@@ -931,10 +931,12 @@ class BPServiceActor implements Runnable {
 
   void triggerBlockReport(BlockReportOptions options) {
     if (options.isIncremental()) {
-      LOG.info(bpos.toString() + ": scheduling an incremental block report.");
+      LOG.info(bpos.toString() + ": scheduling an incremental block report " +
+         "to namenode: " + nnAddr + ".");
       ibrManager.triggerIBR(true);
     } else {
-      LOG.info(bpos.toString() + ": scheduling a full block report.");
+      LOG.info(bpos.toString() + ": scheduling a full block report " +
+         "to namenode: " + nnAddr + ".");
       synchronized(ibrManager) {
         scheduler.forceFullBlockReportNow();
         ibrManager.notifyAll();
