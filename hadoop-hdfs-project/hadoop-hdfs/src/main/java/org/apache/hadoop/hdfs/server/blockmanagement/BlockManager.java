@@ -199,6 +199,8 @@ public class BlockManager implements BlockStatsMXBean {
   private final long startupDelayBlockDeletionInMs;
   private final BlockReportLeaseManager blockReportLeaseManager;
   private ObjectName mxBeanName;
+  /** The number of times the block report queue is full */
+  private final AtomicLong blockReportQueueFullCount = new AtomicLong(0);
 
   /** Used by metrics */
   public long getPendingReconstructionBlocksCount() {
@@ -294,6 +296,11 @@ public class BlockManager implements BlockStatsMXBean {
   /** Used by metrics. */
   public long getTotalECBlockGroups() {
     return blocksMap.getECBlockGroups();
+  }
+
+  /** Used by metrics. */
+  public long getBlockReportQueueFullCount() {
+    return blockReportQueueFullCount.get();
   }
 
   /**
@@ -5373,6 +5380,7 @@ public class BlockManager implements BlockStatsMXBean {
         if (!isAlive() && namesystem.isRunning()) {
           ExitUtil.terminate(1, getName()+" is not running");
         }
+        blockReportQueueFullCount.incrementAndGet();
         long now = Time.monotonicNow();
         if (now - lastFull > 4000) {
           lastFull = now;

@@ -5426,6 +5426,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return getErasureCodingPolicyManager().getEnabledPoliciesMetric();
   }
 
+  @Metric(value = {"BlockReportQueueFullCount", "The number of " +
+          "times the block report queue is full"},
+          type = Metric.Type.COUNTER)
+  public long getBlockReportQueueFullCount() {
+    return blockManager.getBlockReportQueueFullCount();
+  }
+
   @Override
   public long getBlockDeletionStartTime() {
     return startTime + blockManager.getStartupDelayBlockDeletionInMs();
