@@ -175,15 +175,13 @@ public class ContainerLaunch implements Callable<Integer> {
     return var;
   }
 
-  private Map<String, String> expandAllEnvironmentVars(
-      ContainerLaunchContext launchContext, Path containerLogDir) {
-    Map<String, String> environment = launchContext.getEnvironment();
+  private void expandAllEnvironmentVars(
+      Map<String, String> environment, Path containerLogDir) {
     for (Entry<String, String> entry : environment.entrySet()) {
       String value = entry.getValue();
       value = expandEnvironment(value, containerLogDir);
       entry.setValue(value);
     }
-    return environment;
   }
 
   @Override
@@ -218,8 +216,10 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       launchContext.setCommands(newCmds);
 
-      Map<String, String> environment = expandAllEnvironmentVars(
-          launchContext, containerLogDir);
+      // The actual expansion of environment variables happens after calling
+      // sanitizeEnv.  This allows variables specified in NM_ADMIN_USER_ENV
+      // to reference user or container-defined variables.
+      Map<String, String> environment = launchContext.getEnvironment();
       // /////////////////////////// End of variable expansion
 
       // Use this to track variables that are added to the environment by nm.
@@ -282,6 +282,8 @@ public class ContainerLaunch implements Callable<Integer> {
         sanitizeEnv(environment, containerWorkDir, appDirs, userLocalDirs,
             containerLogDirs, localResources, nmPrivateClasspathJarDir,
             nmEnvVars);
+
+        expandAllEnvironmentVars(environment, containerLogDir);
 
         prepareContainer(localResources, containerLocalDirs);
 
@@ -1564,13 +1566,13 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     // variables here will be forced in, even if the container has
-    // specified them.
+    // specified them.  Note: we do not track these in nmVars, to
+    // allow them to be ordered properly if they reference variables
+    // defined by the user.
     String defEnvStr = conf.get(YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV);
     Apps.setEnvFromInputProperty(environment,
         YarnConfiguration.NM_ADMIN_USER_ENV, defEnvStr, conf,
         File.pathSeparator);
-    nmVars.addAll(Apps.getEnvVarsFromInputProperty(
-        YarnConfiguration.NM_ADMIN_USER_ENV, defEnvStr, conf));
 
     if (!Shell.WINDOWS) {
       // maybe force path components
