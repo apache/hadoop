@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.RenameFailedException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 
@@ -54,8 +53,6 @@ import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISES_EXCEPTIONS;
-import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISE_EXCEPTIONS_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
@@ -586,17 +583,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     head(srcKey);
     Path dest = markerDir;
     // renamed into the dest dir
-
-    try {
-      assertFalse("rename(" + src + ", " + dest + ") should have failed",
-          getFileSystem().rename(src, dest));
-    } catch (RenameFailedException e) {
-      if (!fs.getConf().getBoolean(
-          RENAME_RAISES_EXCEPTIONS,
-          RENAME_RAISE_EXCEPTIONS_DEFAULT)) {
-        throw e;
-      }
-    }
+    assertFalse("rename(" + src + ", " + dest + ") should have failed",
+        getFileSystem().rename(src, dest));
     // source is still there
     assertIsDirectory(src);
     head(srcKey);

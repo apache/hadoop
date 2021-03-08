@@ -32,8 +32,6 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISES_EXCEPTIONS;
-import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISE_EXCEPTIONS_DEFAULT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
@@ -51,8 +49,6 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
 
   @Rule
   public TestName methodName = new TestName();
-
-  private boolean renameDowngradesExceptions;
 
   private void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
@@ -72,9 +68,6 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     assumeNotNull(fs);
     basePath = fs.makeQualified(
         S3ATestUtils.createTestPath(new Path("s3afilesystemcontract")));
-    renameDowngradesExceptions = !fs.getConf().getBoolean(
-        RENAME_RAISES_EXCEPTIONS,
-        RENAME_RAISE_EXCEPTIONS_DEFAULT);
   }
 
   @Override
@@ -119,60 +112,6 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     createFile(dst);
     intercept(FileAlreadyExistsException.class,
         () -> rename(src, dst, false, true, true));
-  }
-
-  @Test
-  public void testMoveDirUnderParent() throws Throwable {
-    try {
-      super.testMoveDirUnderParent();
-    } catch (RenameFailedException e) {
-      if (renameDowngradesExceptions) {
-        throw e;
-      }
-    }
-  }
-
-  @Test
-  public void testRenameChildDirForbidden() throws Exception {
-    try {
-      super.testRenameChildDirForbidden();
-    } catch (RenameFailedException e) {
-      if (renameDowngradesExceptions) {
-        throw e;
-      }
-    }
-  }
-
-  @Test
-  public void testRenameRootDirForbidden() throws Exception {
-    try {
-      super.testRenameRootDirForbidden();
-    } catch (RenameFailedException e) {
-      if (renameDowngradesExceptions) {
-        throw e;
-      }
-    }
-  }
-
-  @Test
-  public void testMoveFileUnderParent() throws Throwable {
-    try {
-      super.testMoveFileUnderParent();
-    } catch (RenameFailedException e) {
-      if (renameDowngradesExceptions) {
-        throw e;
-      }
-    }
-  }
-  @Test
-  public void testRenameDirToSelf() throws Throwable {
-    try {
-      super.testRenameDirToSelf();
-    } catch (RenameFailedException e) {
-      if (renameDowngradesExceptions) {
-        throw e;
-      }
-    }
   }
 
   @Test

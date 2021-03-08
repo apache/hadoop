@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -43,8 +42,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISES_EXCEPTIONS;
-import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISE_EXCEPTIONS_DEFAULT;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.S3A_TEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
@@ -110,8 +107,7 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
 
   @Override
   public void testRenameDirIntoExistingDir() throws Throwable {
-    describe("S3A rename into an existing directory returns false;"
-        + " fails if exceptions are to be raised");
+    describe("S3A rename into an existing directory returns false");
     FileSystem fs = getFileSystem();
     String sourceSubdir = "source";
     Path srcDir = path(sourceSubdir);
@@ -125,19 +121,9 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     writeDataset(fs, destFilePath, destDataset, destDataset.length, 1024,
         false);
     assertIsFile(destFilePath);
-    boolean renameRaisesExceptions = fs.getConf().getBoolean(
-        RENAME_RAISES_EXCEPTIONS,
-        RENAME_RAISE_EXCEPTIONS_DEFAULT);
 
-    try {
-      boolean rename = fs.rename(srcDir, destDir);
-      assertFalse("Should have raised an exception", renameRaisesExceptions);
-      assertFalse("s3a doesn't support rename to non-empty directory", rename);
-    } catch (IOException e) {
-      if (!renameRaisesExceptions) {
-        throw e;
-      }
-    }
+    boolean rename = fs.rename(srcDir, destDir);
+    assertFalse("s3a doesn't support rename to non-empty directory", rename);
   }
 
   /**

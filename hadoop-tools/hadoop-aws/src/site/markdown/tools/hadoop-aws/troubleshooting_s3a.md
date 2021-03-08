@@ -1147,20 +1147,6 @@ of the destination of a rename is a directory -only that it is _not_ a file.
 You can rename a directory or file deep under a file if you try -after which
 there is no guarantee of the files being found in listings. Try not to do that.
 
-For extra debugging of rename issues, it is possible to configure the connector
-to raise exceptions on failures where it would normally just return `false`,
-leaving the application to report an error of the form
-"something failed but we don't know what"
-
-```xml
-<property>
-  <name>fs.s3a.rename.raises.exceptions</name>
-  <value>true</value>
-</property> 
-```
-
-Consider setting this when troubleshooting rename issues. 
-
 ## <a name="encryption"></a> S3 Server Side Encryption
 
 ### `AWSS3IOException` `KMS.NotFoundException` "Invalid arn" when using SSE-KMS

@@ -925,21 +925,6 @@ public final class Constants {
   public static final boolean CHANGE_DETECT_REQUIRE_VERSION_DEFAULT = true;
 
   /**
-   * Rather than return false on rename failures, should
-   * an exception be raised? This very much breaks the
-   * FileSystem APIs, but it is very useful. {@value}.
-   */
-  public static final String RENAME_RAISES_EXCEPTIONS =
-      "fs.s3a.rename.raises.exceptions";
-
-  /**
-   * Rather than return false on rename failures, should
-   * an exception be raised? This very much breaks the
-   * FileSystem APIs, but it is very useful. {@value}.
-   */
-  public static final boolean RENAME_RAISE_EXCEPTIONS_DEFAULT = false;
-
-  /**
    * Number of times to retry any repeatable S3 client request on failure,
    * excluding throttling requests: {@value}.
    */

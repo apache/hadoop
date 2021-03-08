@@ -289,10 +289,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private long readAhead;
   private S3AInputPolicy inputPolicy;
   private ChangeDetectionPolicy changeDetectionPolicy;
-
-  /** Raise exceptions in rename() failures. */
-  private boolean renameRaisesExceptions;
-
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private volatile boolean isClosed = false;
   private MetadataStore metadataStore;
@@ -460,11 +456,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Input fadvise policy = {}", inputPolicy);
       changeDetectionPolicy = ChangeDetectionPolicy.getPolicy(conf);
       LOG.debug("Change detection policy = {}", changeDetectionPolicy);
-
-      // read in rename options.
-      renameRaisesExceptions = conf.getBoolean(RENAME_RAISES_EXCEPTIONS,
-          RENAME_RAISE_EXCEPTIONS_DEFAULT);
-
       boolean magicCommitterEnabled = conf.getBoolean(
           CommitConstants.MAGIC_COMMITTER_ENABLED,
           CommitConstants.DEFAULT_MAGIC_COMMITTER_ENABLED);
@@ -1471,9 +1462,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (RenameFailedException e) {
       LOG.info("{}", e.getMessage());
       LOG.debug("rename failure", e);
-      if (!e.getExitCode() && renameRaisesExceptions) {
-        throw e;
-      }
       return e.getExitCode();
     }
   }
