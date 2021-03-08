@@ -196,7 +196,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
       }
 
       S3AFileSystem fs = getFileSystem();
-      assertFalse("Renaming deleted file should have failed",
+      intercept(FileNotFoundException.class, () ->
           fs.rename(dir2[0], dir1[0]));
       assertTrue("Renaming over existing file should have succeeded",
           fs.rename(dir1[0], dir0[0]));

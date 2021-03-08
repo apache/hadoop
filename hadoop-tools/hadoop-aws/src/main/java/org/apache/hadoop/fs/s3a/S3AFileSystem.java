@@ -1471,13 +1471,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (RenameFailedException e) {
       LOG.info("{}", e.getMessage());
       LOG.debug("rename failure", e);
-      if (renameRaisesExceptions) {
+      if (!e.getExitCode() && renameRaisesExceptions) {
         throw e;
       }
       return e.getExitCode();
-    } catch (FileNotFoundException e) {
-      LOG.debug(e.toString());
-      throw e;
     }
   }
 

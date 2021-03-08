@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.FileNotFoundException;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,21 +27,21 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISES_EXCEPTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.RENAME_RAISE_EXCEPTIONS_DEFAULT;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
 
 /**
  *  Tests a live S3 system. If your keys and bucket aren't specified, all tests
  *  are marked as passed.
- *
- *  This uses BlockJUnit4ClassRunner because FileSystemContractBaseTest from
- *  TestCase which uses the old Junit3 runner that doesn't ignore assumptions
- *  properly making it impossible to skip the tests if we don't have a valid
- *  bucket.
- **/
+ */
 public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
 
   protected static final Logger LOG =
@@ -49,6 +51,8 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
 
   @Rule
   public TestName methodName = new TestName();
+
+  private boolean renameDowngradesExceptions;
 
   private void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
@@ -68,6 +72,9 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     assumeNotNull(fs);
     basePath = fs.makeQualified(
         S3ATestUtils.createTestPath(new Path("s3afilesystemcontract")));
+    renameDowngradesExceptions = !fs.getConf().getBoolean(
+        RENAME_RAISES_EXCEPTIONS,
+        RENAME_RAISE_EXCEPTIONS_DEFAULT);
   }
 
   @Override
@@ -77,7 +84,7 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
 
   @Test
   public void testMkdirsWithUmask() throws Exception {
-    // not supported
+    skip("Not supported");
   }
 
   @Test
@@ -103,8 +110,92 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
   }
 
   @Test
+  public void testRenameDirectoryAsExistingFile() throws Exception {
+    assumeTrue(renameSupported());
+
+    Path src = path("testRenameDirectoryAsExistingFile/dir");
+    fs.mkdirs(src);
+    Path dst = path("testRenameDirectoryAsExistingFileNew/newfile");
+    createFile(dst);
+    intercept(FileAlreadyExistsException.class,
+        () -> rename(src, dst, false, true, true));
+  }
+
+  @Test
   public void testMoveDirUnderParent() throws Throwable {
-    // not support because
-    // Fails if dst is a directory that is not empty.
+    try {
+      super.testMoveDirUnderParent();
+    } catch (RenameFailedException e) {
+      if (renameDowngradesExceptions) {
+        throw e;
+      }
+    }
+  }
+
+  @Test
+  public void testRenameChildDirForbidden() throws Exception {
+    try {
+      super.testRenameChildDirForbidden();
+    } catch (RenameFailedException e) {
+      if (renameDowngradesExceptions) {
+        throw e;
+      }
+    }
+  }
+
+  @Test
+  public void testRenameRootDirForbidden() throws Exception {
+    try {
+      super.testRenameRootDirForbidden();
+    } catch (RenameFailedException e) {
+      if (renameDowngradesExceptions) {
+        throw e;
+      }
+    }
+  }
+
+  @Test
+  public void testMoveFileUnderParent() throws Throwable {
+    try {
+      super.testMoveFileUnderParent();
+    } catch (RenameFailedException e) {
+      if (renameDowngradesExceptions) {
+        throw e;
+      }
+    }
+  }
+  @Test
+  public void testRenameDirToSelf() throws Throwable {
+    try {
+      super.testRenameDirToSelf();
+    } catch (RenameFailedException e) {
+      if (renameDowngradesExceptions) {
+        throw e;
+      }
+    }
+  }
+
+  @Test
+  public void testRenameDirectoryMoveToNonExistentDirectory()
+      throws Exception {
+    skip("does not fail");
+  }
+
+  @Test
+  public void testRenameFileMoveToNonExistentDirectory() throws Exception {
+    skip("does not fail");
+  }
+
+  @Test
+  public void testRenameFileAsExistingFile() throws Exception {
+    intercept(FileAlreadyExistsException.class,
+        () -> super.testRenameFileAsExistingFile());
+  }
+
+  @Test
+  public void testRenameNonExistentPath() throws Exception {
+    intercept(FileNotFoundException.class,
+        () -> super.testRenameNonExistentPath());
+
   }
 }
