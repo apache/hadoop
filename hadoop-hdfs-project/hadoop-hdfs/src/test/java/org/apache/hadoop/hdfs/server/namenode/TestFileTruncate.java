@@ -34,6 +34,8 @@ import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -219,9 +221,8 @@ public class TestFileTruncate {
     fs.delete(dir, true);
   }
 
-
   /**
-   * Test truncate twice together on a file
+   * Test truncate twice together on a file.
    */
   @Test(timeout=90000)
   public void testTruncateTwiceTogether() throws Exception {
@@ -239,9 +240,9 @@ public class TestFileTruncate {
       public void delay() {
         try {
           // Bigger than soft lease period.
-          Thread.sleep(65000);
+          Thread.sleep(5000);
         } catch (InterruptedException e) {
-          e.printStackTrace();
+          // Ignore
         }
       }
     };
@@ -249,35 +250,41 @@ public class TestFileTruncate {
     DataNodeFaultInjector.set(injector);
 
     // Truncate by using different client name.
-    Thread t = new Thread(() ->
-        {
-          String hdfsCacheDisableKey = "fs.hdfs.impl.disable.cache";
-          boolean originCacheDisable =
-              conf.getBoolean(hdfsCacheDisableKey, false);
-          try {
-            conf.setBoolean(hdfsCacheDisableKey, true);
-            FileSystem fs1 = FileSystem.get(conf);
-            fs1.truncate(p, data.length-1);
-            } catch (IOException e) {
-              // ignore
-            } finally{
-              conf.setBoolean(hdfsCacheDisableKey, originCacheDisable);
-            }
-        });
+    Thread t = new Thread(() -> {
+      String hdfsCacheDisableKey = "fs.hdfs.impl.disable.cache";
+      boolean originCacheDisable =
+          conf.getBoolean(hdfsCacheDisableKey, false);
+      try {
+        conf.setBoolean(hdfsCacheDisableKey, true);
+        FileSystem fs1 = FileSystem.get(conf);
+        fs1.truncate(p, data.length-1);
+        } catch (IOException e) {
+          // ignore
+        } finally{
+          conf.setBoolean(hdfsCacheDisableKey, originCacheDisable);
+        }
+      });
     t.start();
     t.join();
-    Thread.sleep(60000);
-    try {
-      fs.truncate(p, data.length - 2);
-    } catch (IOException e) {
-      //GenericTestUtils.assertExceptionContains("is being truncated.", e);
-    }
+    NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
+        .setLeasePeriod(LOW_SOFTLIMIT, LOW_HARDLIMIT);
+
+    LambdaTestUtils.intercept(RemoteException.class,
+        "/testTruncateTwiceTogether/file is being truncated",
+        () -> fs.truncate(p, data.length - 2));
 
     // wait for block recovery
     checkBlockRecovery(p);
     assertFileLength(p, data.length - 1);
+
+    DataNodeFaultInjector.set(originInjector);
+    NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
+        .setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
+            conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+                DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000);
     fs.delete(dir, true);
   }
+
   /**
    * Truncate files and then run other operations such as
    * rename, set replication, set permission, etc.
@@ -691,10 +698,10 @@ public class TestFileTruncate {
     {
       try {
         fs.truncate(p, 0);
-        fail("Truncate must fail since a trancate is already in pregress.");
+        fail("Truncate must fail since a truncate is already in progress.");
       } catch (IOException expected) {
         GenericTestUtils.assertExceptionContains(
-            "Failed to TRUNCATE_FILE", expected);
+            "/dir/testTruncateFailure is being truncated", expected);
       }
     }
 
