@@ -876,6 +876,41 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         b.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
   }
 
+  @Test
+  public void testQueueInfoIfAmbiguousQueueNames() throws Exception {
+    startScheduler();
+
+    AbstractCSQueue b = (AbstractCSQueue) cs.
+        getQueue("root.b");
+    Assert.assertFalse(b.isDynamicQueue());
+    Assert.assertEquals("root.b",
+        b.getQueueInfo().getQueuePath());
+
+    createQueue("root.a.b.b");
+
+    AbstractCSQueue bAutoParent = (AbstractCSQueue) cs.
+        getQueue("root.a.b");
+    Assert.assertTrue(bAutoParent.isDynamicQueue());
+    Assert.assertTrue(bAutoParent.hasChildQueues());
+    Assert.assertEquals("root.a.b",
+        bAutoParent.getQueueInfo().getQueuePath());
+
+    AbstractCSQueue bAutoLeafQueue =
+        (AbstractCSQueue) cs.getQueue("root.a.b.b");
+    Assert.assertTrue(bAutoLeafQueue.isDynamicQueue());
+    Assert.assertFalse(bAutoLeafQueue.hasChildQueues());
+    Assert.assertEquals("root.a.b.b",
+        bAutoLeafQueue.getQueueInfo().getQueuePath());
+
+    // Make sure all queue name are ambiguous
+    Assert.assertEquals("b",
+        b.getQueueInfo().getQueueName());
+    Assert.assertEquals("b",
+        bAutoParent.getQueueInfo().getQueueName());
+    Assert.assertEquals("b",
+        bAutoLeafQueue.getQueueInfo().getQueueName());
+  }
+
   protected LeafQueue createQueue(String queuePath) throws YarnException {
     return autoQueueHandler.autoCreateQueue(
         CSQueueUtils.extractQueuePath(queuePath));

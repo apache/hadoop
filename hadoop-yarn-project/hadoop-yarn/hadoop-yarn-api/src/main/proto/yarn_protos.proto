@@ -610,6 +610,7 @@ message QueueInfoProto {
   repeated QueueConfigurationsMapProto queueConfigurationsMap = 12;
   optional bool intraQueuePreemptionDisabled = 13;
   optional float weight = 14;
+  optional string queuePath = 15;
 }
 
 message QueueConfigurationsProto {
