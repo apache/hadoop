@@ -1718,7 +1718,9 @@ public class TestYarnCLI {
     Set<String> nodeLabels = new HashSet<String>();
     nodeLabels.add("GPU");
     nodeLabels.add("JDK_7");
-    QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
+    QueueInfo queueInfo = QueueInfo.
+        newInstance("queueA", "root.queueA",
+            0.4f, 0.8f, 0.5f,
         null, null, QueueState.RUNNING, nodeLabels,
         "GPU", null, false, -1.0f, null,
         false);
@@ -1730,6 +1732,7 @@ public class TestYarnCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Queue Information : ");
     pw.println("Queue Name : " + "queueA");
+    pw.println("Queue Path : " + "root.queueA");
     pw.println("\tState : " + "RUNNING");
     pw.println("\tCapacity : " + "40.00%");
     pw.println("\tCurrent Capacity : " + "50.00%");
@@ -1888,7 +1891,9 @@ public class TestYarnCLI {
   @Test
   public void testGetQueueInfoWithEmptyNodeLabel() throws Exception {
     QueueCLI cli = createAndGetQueueCLI();
-    QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
+    QueueInfo queueInfo = QueueInfo.
+        newInstance("queueA", "root.queueA",
+            0.4f, 0.8f, 0.5f,
         null, null, QueueState.RUNNING, null, null, null,
         true, -1.0f, null, true);
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
@@ -1899,6 +1904,7 @@ public class TestYarnCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Queue Information : ");
     pw.println("Queue Name : " + "queueA");
+    pw.println("Queue Path : " + "root.queueA");
     pw.println("\tState : " + "RUNNING");
     pw.println("\tCapacity : " + "40.00%");
     pw.println("\tCurrent Capacity : " + "50.00%");

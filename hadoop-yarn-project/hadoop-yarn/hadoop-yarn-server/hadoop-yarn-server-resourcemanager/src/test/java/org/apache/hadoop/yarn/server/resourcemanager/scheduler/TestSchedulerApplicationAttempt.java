@@ -216,7 +216,8 @@ public class TestSchedulerApplicationAttempt {
 
   private Queue createQueue(String name, Queue parent, float capacity) {
     QueueMetrics metrics = QueueMetrics.forQueue(name, parent, false, conf);
-    QueueInfo queueInfo = QueueInfo.newInstance(name, capacity, 1.0f, 0, null,
+    QueueInfo queueInfo = QueueInfo.newInstance(name,
+        "root." + name, capacity, 1.0f, 0, null,
         null, QueueState.RUNNING, null, "", null, false, -1.0f, null, false);
     ActiveUsersManager activeUsersManager = new ActiveUsersManager(metrics);
     Queue queue = mock(Queue.class);

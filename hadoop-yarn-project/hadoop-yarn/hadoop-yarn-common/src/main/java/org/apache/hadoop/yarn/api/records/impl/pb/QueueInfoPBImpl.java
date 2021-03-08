@@ -102,6 +102,12 @@ public class QueueInfoPBImpl extends QueueInfo {
   }
 
   @Override
+  public String getQueuePath() {
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasQueuePath()) ? p.getQueuePath() : null;
+  }
+
+  @Override
   public QueueState getQueueState() {
     QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasState()) {
@@ -164,6 +170,16 @@ public class QueueInfoPBImpl extends QueueInfo {
       return;
     }
     builder.setQueueName(queueName);
+  }
+
+  @Override
+  public void setQueuePath(String queuePath) {
+    maybeInitBuilder();
+    if (queuePath == null) {
+      builder.clearQueuePath();
+      return;
+    }
+    builder.setQueuePath(queuePath);
   }
 
   @Override

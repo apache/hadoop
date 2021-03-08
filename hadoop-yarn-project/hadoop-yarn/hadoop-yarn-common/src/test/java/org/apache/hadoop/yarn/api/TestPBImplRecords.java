@@ -432,7 +432,8 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(ContainerUpdateResponse.class);
     // genByNewInstance does not apply to QueueInfo, cause
     // it is recursive(has sub queues)
-    typeValueCache.put(QueueInfo.class, QueueInfo.newInstance("root", 1.0f,
+    typeValueCache.put(QueueInfo.class, QueueInfo.
+        newInstance("root", "root", 1.0f,
         1.0f, 0.1f, null, null, QueueState.RUNNING, ImmutableSet.of("x", "y"),
         "x && y", null, false, -1.0f, null, false));
     generateByNewInstance(QueueStatistics.class);

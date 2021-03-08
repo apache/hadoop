@@ -125,6 +125,8 @@ public class QueueCLI extends YarnCLI {
   private void printQueueInfo(PrintWriter writer, QueueInfo queueInfo) {
     writer.print("Queue Name : ");
     writer.println(queueInfo.getQueueName());
+    writer.print("Queue Path : ");
+    writer.println(queueInfo.getQueuePath());
 
     writer.print("\tState : ");
     writer.println(queueInfo.getQueueState());
