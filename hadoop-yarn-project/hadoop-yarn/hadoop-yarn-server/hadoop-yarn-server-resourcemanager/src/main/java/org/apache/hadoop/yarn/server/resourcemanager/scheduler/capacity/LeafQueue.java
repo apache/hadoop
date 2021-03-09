@@ -614,6 +614,9 @@ public class LeafQueue extends AbstractCSQueue {
     // Careful! Locking order is important!
     validateSubmitApplication(applicationId, userName, queue);
 
+    // Signal for expired auto deletion.
+    updateLastSubmittedTimeStamp();
+
     // Inform the parent queue
     try {
       getParent().submitApplication(applicationId, userName, queue);
@@ -2401,5 +2404,12 @@ public class LeafQueue extends AbstractCSQueue {
       readLock.unlock();
     }
     return appsToReturn;
+  }
+
+  @Override
+  public boolean isEligibleForAutoDeletion() {
+    return isDynamicQueue() && getNumApplications() == 0
+        && csContext.getConfiguration().
+        isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
 }

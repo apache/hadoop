@@ -2200,6 +2200,74 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final long DEFAULT_QUEUE_MANAGEMENT_MONITORING_INTERVAL =
       1500L;
 
+  @Private
+  public static final boolean
+      DEFAULT_AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE = true;
+
+  @Private
+  public static final String AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE =
+      AUTO_QUEUE_CREATION_V2_PREFIX + "queue-auto-removal.enable";
+
+  // 300s for expired default
+  @Private
+  public static final long
+      DEFAULT_AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME = 300;
+
+  @Private
+  public static final String AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME =
+      PREFIX + AUTO_QUEUE_CREATION_V2_PREFIX + "queue-expiration-time";
+
+  /**
+   * If true, auto created queue with weight mode
+   * will be deleted when queue is expired.
+   * @param queuePath the queue's path for auto deletion check
+   * @return true if auto created queue's deletion when expired is enabled
+   * else false. Default
+   * is true.
+   */
+  @Private
+  public boolean isAutoExpiredDeletionEnabled(String queuePath) {
+    boolean isAutoExpiredDeletionEnabled = getBoolean(
+        getQueuePrefix(queuePath) +
+            AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE,
+        DEFAULT_AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE);
+    return isAutoExpiredDeletionEnabled;
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoExpiredDeletionEnabled(String queuePath,
+      boolean autoRemovalEnable) {
+    setBoolean(getQueuePrefix(queuePath) +
+            AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE,
+        autoRemovalEnable);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoExpiredDeletionTime(long time) {
+    setLong(AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME, time);
+  }
+
+  @Private
+  @VisibleForTesting
+  public long getAutoExpiredDeletionTime() {
+    return getLong(AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME,
+        DEFAULT_AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME);
+  }
+
+  /**
+   * Time in milliseconds between invocations
+   * of QueueConfigurationAutoRefreshPolicy.
+   */
+  @Private
+  public static final String QUEUE_AUTO_REFRESH_MONITORING_INTERVAL =
+      PREFIX + "queue.auto.refresh.monitoring-interval";
+
+  @Private
+  public static final long DEFAULT_QUEUE_AUTO_REFRESH_MONITORING_INTERVAL =
+      5000L;
+
   /**
    * Queue Management computation policy for Auto Created queues
    * @param queue The queue's path

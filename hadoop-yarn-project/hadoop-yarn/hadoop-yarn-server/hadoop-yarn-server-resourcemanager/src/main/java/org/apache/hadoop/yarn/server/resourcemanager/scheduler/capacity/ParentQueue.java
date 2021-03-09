@@ -570,14 +570,37 @@ public class ParentQueue extends AbstractCSQueue {
 
       CSQueue newQueue = createNewQueue(childQueuePath, isLeaf);
       this.childQueues.add(newQueue);
+      updateLastSubmittedTimeStamp();
 
-      // Call updateClusterResource
-      // , which will deal with all effectiveMin/MaxResource
+      // Call updateClusterResource.
+      // Which will deal with all effectiveMin/MaxResource
       // Calculation
       this.updateClusterResource(csContext.getClusterResource(),
           new ResourceLimits(this.csContext.getClusterResource()));
 
       return newQueue;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+
+  // New method to remove child queue
+  public void removeChildQueue(CSQueue queue)
+      throws SchedulerDynamicEditException {
+    writeLock.lock();
+    try {
+      // Now we can do remove and update
+      this.childQueues.remove(queue);
+      this.scheduler.getCapacitySchedulerQueueManager()
+          .removeQueue(queue.getQueuePath());
+
+      // Call updateClusterResource,
+      // which will deal with all effectiveMin/MaxResource
+      // Calculation
+      this.updateClusterResource(csContext.getClusterResource(),
+          new ResourceLimits(this.csContext.getClusterResource()));
+
     } finally {
       writeLock.unlock();
     }
@@ -1606,5 +1629,12 @@ public class ParentQueue extends AbstractCSQueue {
   // This is a locking free method
   Map<String, Float> getEffectiveMinRatioPerResource() {
     return effectiveMinRatioPerResource;
+  }
+
+  @Override
+  public boolean isEligibleForAutoDeletion() {
+    return isDynamicQueue() && getChildQueues().size() == 0 &&
+        csContext.getConfiguration().
+            isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
 }

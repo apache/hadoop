@@ -143,9 +143,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsU
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .QueueManagementChangeEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AutoCreatedQueueDeletionEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ReleaseContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -2106,8 +2106,32 @@ public class CapacityScheduler extends
       }
     }
     break;
+    case AUTO_QUEUE_DELETION:
+      try {
+        AutoCreatedQueueDeletionEvent autoCreatedQueueDeletionEvent =
+            (AutoCreatedQueueDeletionEvent) event;
+        removeAutoCreatedQueue(autoCreatedQueueDeletionEvent.
+            getCheckQueue());
+      } catch (SchedulerDynamicEditException sde) {
+        LOG.error("Dynamic queue deletion cannot be applied for "
+            + "queue : ", sde);
+      }
+      break;
     default:
       LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
+    }
+  }
+
+  private void removeAutoCreatedQueue(CSQueue checkQueue)
+      throws SchedulerDynamicEditException{
+    writeLock.lock();
+    try {
+      if (checkQueue instanceof AbstractCSQueue
+          && ((AbstractCSQueue) checkQueue).isInactiveDynamicQueue()) {
+        removeQueue(checkQueue);
+      }
+    } finally {
+      writeLock.unlock();
     }
   }
 
@@ -2559,6 +2583,44 @@ public class CapacityScheduler extends
       this.queueManager.removeQueue(queueName);
       LOG.info(
           "Removal of AutoCreatedLeafQueue " + queueName + " has succeeded");
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public void removeQueue(CSQueue queue)
+      throws SchedulerDynamicEditException {
+    writeLock.lock();
+    try {
+      LOG.info("Removing queue: " + queue.getQueuePath());
+      if (!((AbstractCSQueue)queue).isDynamicQueue()) {
+        throw new SchedulerDynamicEditException(
+            "The queue that we are asked "
+                + "to remove (" + queue.getQueuePath()
+                + ") is not a DynamicQueue");
+      }
+
+      if (!((AbstractCSQueue) queue).isEligibleForAutoDeletion()) {
+        LOG.warn("Queue " + queue.getQueuePath() +
+            " is marked for deletion, but not eligible for deletion");
+        return;
+      }
+
+      ParentQueue parentQueue = (ParentQueue)queue.getParent();
+      if (parentQueue != null) {
+        ((ParentQueue) queue.getParent()).removeChildQueue(queue);
+      } else {
+        throw new SchedulerDynamicEditException(
+            "The queue " + queue.getQueuePath()
+                + " can't be removed because it's parent is null");
+      }
+
+      if (parentQueue.childQueues.contains(queue) ||
+          queueManager.getQueue(queue.getQueuePath()) != null) {
+        throw new SchedulerDynamicEditException(
+            "The queue " + queue.getQueuePath()
+                + " has not been removed normally.");
+      }
     } finally {
       writeLock.unlock();
     }
@@ -3394,6 +3456,10 @@ public class CapacityScheduler extends
       return (MutableConfigurationProvider) csConfProvider;
     }
     return null;
+  }
+
+  public CSConfigurationProvider getCsConfProvider() {
+    return csConfProvider;
   }
 
   @Override

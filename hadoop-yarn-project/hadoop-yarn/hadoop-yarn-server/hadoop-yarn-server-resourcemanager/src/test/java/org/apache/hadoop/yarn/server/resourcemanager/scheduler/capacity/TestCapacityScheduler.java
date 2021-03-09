@@ -1146,6 +1146,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     QueueInfo queueInfo = resourceManager.getResourceScheduler().getQueueInfo("a", true, true);
     Assert.assertEquals("Queue Name should be a", "a",
         queueInfo.getQueueName());
+    Assert.assertEquals("Queue Path should be root.a", "root.a",
+        queueInfo.getQueuePath());
     Assert.assertEquals("Child Queues size should be 2", 2,
         queueInfo.getChildQueues().size());
 
@@ -4362,12 +4364,16 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     QueueInfo queueInfoA = cs.getQueueInfo("a", true, false);
     Assert.assertEquals("Queue Name should be a", "a",
         queueInfoA.getQueueName());
+    Assert.assertEquals("Queue Path should be root.a", "root.a",
+        queueInfoA.getQueuePath());
     Assert.assertEquals("Default Node Label Expression should be x", "x",
         queueInfoA.getDefaultNodeLabelExpression());
 
     QueueInfo queueInfoB = cs.getQueueInfo("b", true, false);
     Assert.assertEquals("Queue Name should be b", "b",
         queueInfoB.getQueueName());
+    Assert.assertEquals("Queue Path should be root.b", "root.b",
+        queueInfoB.getQueuePath());
     Assert.assertEquals("Default Node Label Expression should be y", "y",
         queueInfoB.getDefaultNodeLabelExpression());
   }
