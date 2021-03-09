@@ -24,12 +24,16 @@ import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.EnumSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -482,6 +486,45 @@ public class ITestAbfsClientCustomerProvidedKey
     AbfsRestOperation abfsRestOperation = abfsClient
         .checkAccess("/test1", "rwx");
     assertCPKHeaders(abfsRestOperation, false);
+  }
+
+  @Test
+  public void testWriteReadAndVerify() throws Exception {
+    final AzureBlobFileSystem fs = getAbfs(true);
+    int fileSize = 2 * ONE_MB;
+    byte[] fileContent = getRandomBytesArray(fileSize);
+    String fileName = methodName.getMethodName();
+    Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+    try (FSDataInputStream iStream = fs.open(testFilePath)) {
+      byte[] buffer = new byte[fileSize];
+      int bytesRead = iStream.read(buffer, 0, fileSize);
+      assertEquals(bytesRead, fileSize);
+      for (int i = 0; i < fileSize; i++) {
+        assertEquals(fileContent[i], buffer[i]);
+      }
+    }
+  }
+
+  @Test
+  public void testSetGetXAttr() throws Exception {
+    final AzureBlobFileSystem fs = getAbfs(true);
+    String fileName = methodName.getMethodName();
+    fs.create(new Path(fileName));
+    String valSent = "testValue";
+    String attrName = "testXAttr";
+    fs.setXAttr(new Path(fileName), attrName,
+        valSent.getBytes(StandardCharsets.UTF_8),
+        EnumSet.of(XAttrSetFlag.CREATE));
+    byte[] valBytes = fs.getXAttr(new Path(fileName), attrName);
+    String valRecieved = new String(valBytes);
+    assertEquals(valSent, valRecieved);
+    valSent = "new value";
+    fs.setXAttr(new Path(fileName), attrName,
+        valSent.getBytes(StandardCharsets.UTF_8),
+        EnumSet.of(XAttrSetFlag.REPLACE));
+    valBytes = fs.getXAttr(new Path(fileName), attrName);
+    valRecieved = new String(valBytes);
+    assertEquals(valSent, valRecieved);
   }
 
   private void assertCPKHeaders(AbfsRestOperation abfsRestOperation,
