@@ -92,7 +92,7 @@ public class SLSFairScheduler extends FairScheduler
             FairScheduler.class);
         schedulerMetrics.init(this, conf);
       } catch (Exception e) {
-        e.printStackTrace();
+        LOG.error("Caught exception while initializing schedulerMetrics", e);
       }
     }
   }
@@ -122,7 +122,7 @@ public class SLSFairScheduler extends FairScheduler
           updateQueueWithAllocateRequest(allocation, attemptId,
               resourceRequests, containerIds);
         } catch (IOException e) {
-          e.printStackTrace();
+          LOG.error("Caught exception while executing finally block", e);
         }
       }
     } else {
@@ -332,7 +332,7 @@ public class SLSFairScheduler extends FairScheduler
         schedulerMetrics.tearDown();
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Caught exception while stopping service", e);
     }
     super.serviceStop();
   }
