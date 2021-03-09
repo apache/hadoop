@@ -26,6 +26,7 @@ import java.util.List;
 
 import com.amazonaws.services.s3.model.PartETag;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +53,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitOperations.extractMagicFileLength;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -216,13 +218,13 @@ public class ITestCommitOperations extends AbstractCommitITest {
 
   @Test
   public void testCommitEmptyFile() throws Throwable {
-    describe("create then commit an empty file");
+    describe("create then commit an empty magic file");
     createCommitAndVerify("empty-commit.txt", new byte[0]);
   }
 
   @Test
   public void testCommitSmallFile() throws Throwable {
-    describe("create then commit an empty file");
+    describe("create then commit a small magic file");
     createCommitAndVerify("small-commit.txt", DATASET);
   }
 
@@ -288,6 +290,64 @@ public class ITestCommitOperations extends AbstractCommitITest {
     commit("child.txt", pendingChildPath, expectedDestPath, 0, 0);
   }
 
+  /**
+   * Verify that that when a marker file is renamed, its
+   * magic marker attribute is lost.
+   */
+  @Test
+  public void testMarkerFileRename()
+      throws Exception {
+    S3AFileSystem fs = getFileSystem();
+    Path destFile = methodPath();
+    Path destDir = destFile.getParent();
+    fs.delete(destDir, true);
+    Path magicDest = makeMagic(destFile);
+    Path magicDir = magicDest.getParent();
+    fs.mkdirs(magicDir);
+
+    // use the builder API to verify it works exactly the
+    // same.
+    try (FSDataOutputStream stream = fs.createFile(magicDest)
+        .overwrite(true)
+        .recursive()
+        .build()) {
+      assertIsMagicStream(stream);
+      stream.write(DATASET);
+    }
+    Path magic2 = new Path(magicDir, "magic2");
+    // rename the marker
+    fs.rename(magicDest, magic2);
+
+    // the renamed file has no header
+    Assertions.assertThat(extractMagicFileLength(fs, magic2))
+        .describedAs("XAttribute " + XA_MAGIC_MARKER + " of " + magic2)
+        .isEmpty();
+    // abort the upload, which is driven by the .pending files
+    // there must be 1 deleted file; during test debugging with aborted
+    // runs there may be more.
+    Assertions.assertThat(newCommitOperations()
+        .abortPendingUploadsUnderPath(destDir))
+        .describedAs("Aborting all pending uploads under %s", destDir)
+        .isGreaterThanOrEqualTo(1);
+  }
+
+  /**
+   * Assert that an output stream is magic.
+   * @param stream stream to probe.
+   */
+  protected void assertIsMagicStream(final FSDataOutputStream stream) {
+    Assertions.assertThat(stream.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT))
+        .describedAs("Stream capability %s in stream %s",
+            STREAM_CAPABILITY_MAGIC_OUTPUT, stream)
+        .isTrue();
+  }
+
+  /**
+   * Create a file through the magic commit mechanism.
+   * @param filename file to create (with __magic path.)
+   * @param data data to write
+   * @throws Exception failure
+   */
   private void createCommitAndVerify(String filename, byte[] data)
       throws Exception {
     S3AFileSystem fs = getFileSystem();
@@ -295,19 +355,30 @@ public class ITestCommitOperations extends AbstractCommitITest {
     fs.delete(destFile.getParent(), true);
     Path magicDest = makeMagic(destFile);
     assertPathDoesNotExist("Magic file should not exist", magicDest);
+    long dataSize = data != null ? data.length : 0;
     try(FSDataOutputStream stream = fs.create(magicDest, true)) {
-      assertTrue(stream.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT));
-      if (data != null && data.length > 0) {
+      assertIsMagicStream(stream);
+      if (dataSize > 0) {
         stream.write(data);
       }
       stream.close();
     }
     FileStatus status = getFileStatusEventually(fs, magicDest,
         CONSISTENCY_WAIT);
-    assertEquals("Non empty marker file: " + status, 0, status.getLen());
-
+    assertEquals("Magic marker file is not zero bytes: " + status,
+        0, 0);
+    Assertions.assertThat(extractMagicFileLength(fs,
+        magicDest))
+        .describedAs("XAttribute " + XA_MAGIC_MARKER + " of " + magicDest)
+        .isNotEmpty()
+        .hasValue(dataSize);
     commit(filename, destFile, HIGH_THROTTLE, 0);
     verifyFileContents(fs, destFile, data);
+    // the destination file doesn't have the attribute
+    Assertions.assertThat(extractMagicFileLength(fs,
+        destFile))
+        .describedAs("XAttribute " + XA_MAGIC_MARKER + " of " + destFile)
+        .isEmpty();
   }
 
   /**

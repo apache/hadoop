@@ -48,6 +48,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -192,10 +193,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  MountVolumeMap getMountVolumeMap() {
-    return volumes.getMountVolumeMap();
-  }
-
   @Override // FsDatasetSpi
   public Block getStoredBlock(String bpid, long blkid)
       throws IOException {
@@ -248,7 +245,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     return info.getMetadataInputStream(0);
   }
-    
+
   final DataNode datanode;
   private final DataNodeMetrics dataNodeMetrics;
   final DataStorage dataStorage;
@@ -994,6 +991,20 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         smallBufferSize, conf);
   }
 
+  /**
+   * Link the block and meta files for the given block to the given destination.
+   * @return the new meta and block files.
+   * @throws IOException
+   */
+  static File[] hardLinkBlockFiles(long blockId, long genStamp,
+      ReplicaInfo srcReplica, File destRoot) throws IOException {
+    final File destDir = DatanodeUtil.idToBlockDir(destRoot, blockId);
+    // blockName is same as the filename for the block
+    final File dstFile = new File(destDir, srcReplica.getBlockName());
+    final File dstMeta = FsDatasetUtil.getMetaFile(dstFile, genStamp);
+    return hardLinkBlockFiles(srcReplica, dstMeta, dstFile);
+  }
+
   static File[] copyBlockFiles(ReplicaInfo srcReplica, File dstMeta,
                                File dstFile, boolean calculateChecksum,
                                int smallBufferSize, final Configuration conf)
@@ -1024,6 +1035,34 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
     return new File[] {dstMeta, dstFile};
+  }
+
+  static File[] hardLinkBlockFiles(ReplicaInfo srcReplica, File dstMeta,
+      File dstFile)
+      throws IOException {
+    // Create parent folder if not exists.
+    srcReplica.getFileIoProvider()
+        .mkdirs(srcReplica.getVolume(), dstFile.getParentFile());
+    try {
+      HardLink.createHardLink(
+          new File(srcReplica.getBlockURI()), dstFile);
+    } catch (IOException e) {
+      throw new IOException("Failed to hardLink "
+          + srcReplica + " block file to "
+          + dstFile, e);
+    }
+    try {
+      HardLink.createHardLink(
+          new File(srcReplica.getMetadataURI()), dstMeta);
+    } catch (IOException e) {
+      throw new IOException("Failed to hardLink "
+          + srcReplica + " metadata to "
+          + dstMeta, e);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.info("Linked " + srcReplica.getBlockURI() + " to " + dstFile);
+    }
+    return new File[]{dstMeta, dstFile};
   }
 
   /**
@@ -1058,12 +1097,34 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     FsVolumeReference volumeRef = null;
+    boolean shouldConsiderSameMountVolume =
+        shouldConsiderSameMountVolume(replicaInfo.getVolume(),
+            targetStorageType, targetStorageId);
+    boolean useVolumeOnSameMount = false;
+
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
-      volumeRef = volumes.getNextVolume(targetStorageType, targetStorageId,
-          block.getNumBytes());
+      if (shouldConsiderSameMountVolume) {
+        volumeRef = volumes.getVolumeByMount(targetStorageType,
+            ((FsVolumeImpl) replicaInfo.getVolume()).getMount(),
+            block.getNumBytes());
+        if (volumeRef != null) {
+          useVolumeOnSameMount = true;
+        }
+      }
+      if (!useVolumeOnSameMount) {
+        volumeRef = volumes.getNextVolume(
+            targetStorageType,
+            targetStorageId,
+            block.getNumBytes()
+        );
+      }
     }
     try {
-      moveBlock(block, replicaInfo, volumeRef);
+      moveBlock(block, replicaInfo, volumeRef, useVolumeOnSameMount);
+      datanode.getMetrics().incrReplaceBlockOpOnSameHost();
+      if (useVolumeOnSameMount) {
+        datanode.getMetrics().incrReplaceBlockOpOnSameMount();
+      }
     } finally {
       if (volumeRef != null) {
         volumeRef.close();
@@ -1075,19 +1136,53 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
+   * When configuring DISK/ARCHIVE on same volume,
+   * check if we should find the counterpart on the same disk mount.
+   */
+  @VisibleForTesting
+  boolean shouldConsiderSameMountVolume(FsVolumeSpi fsVolume,
+      StorageType targetStorageType, String targetStorageID) {
+    if (targetStorageID != null && !targetStorageID.isEmpty()) {
+      return false;
+    }
+    if (!(fsVolume instanceof FsVolumeImpl)
+        || ((FsVolumeImpl) fsVolume).getMount().isEmpty()) {
+      return false;
+    }
+    StorageType sourceStorageType = fsVolume.getStorageType();
+    // Source/dest storage types are different
+    if (sourceStorageType == targetStorageType) {
+      return false;
+    }
+    // Source/dest storage types are either DISK or ARCHIVE.
+    return StorageType.allowSameDiskTiering(sourceStorageType)
+        && StorageType.allowSameDiskTiering(targetStorageType);
+  }
+
+  /**
    * Moves a block from a given volume to another.
    *
    * @param block       - Extended Block
    * @param replicaInfo - ReplicaInfo
    * @param volumeRef   - Volume Ref - Closed by caller.
+   * @param moveBlockToLocalMount   - Whether we use shortcut
+   *                               to move block on same mount.
    * @return newReplicaInfo
    * @throws IOException
    */
   @VisibleForTesting
   ReplicaInfo moveBlock(ExtendedBlock block, ReplicaInfo replicaInfo,
-      FsVolumeReference volumeRef) throws IOException {
-    ReplicaInfo newReplicaInfo = copyReplicaToVolume(block, replicaInfo,
-        volumeRef);
+      FsVolumeReference volumeRef, boolean moveBlockToLocalMount)
+      throws IOException {
+    ReplicaInfo newReplicaInfo;
+    if (moveBlockToLocalMount) {
+      newReplicaInfo = moveReplicaToVolumeOnSameMount(block, replicaInfo,
+          volumeRef);
+    } else {
+      newReplicaInfo = copyReplicaToVolume(block, replicaInfo,
+          volumeRef);
+    }
+
     finalizeNewReplica(newReplicaInfo, block);
     removeOldReplica(replicaInfo, newReplicaInfo, block.getBlockPoolId());
     return newReplicaInfo;
@@ -1125,6 +1220,33 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // Copy files to temp dir first
     ReplicaInfo newReplicaInfo = targetVolume.moveBlockToTmpLocation(block,
         replicaInfo, smallBufferSize, conf);
+    return newReplicaInfo;
+  }
+
+  /**
+   * Shortcut to use hardlink to move blocks on same mount.
+   * This is useful when moving blocks between storage types on same disk mount.
+   * Two cases need to be considered carefully:
+   * 1) Datanode restart in the middle should not cause data loss.
+   *    We use hardlink to avoid this.
+   * 2) Finalized blocks can be reopened to append.
+   *    This is already handled by dataset lock and gen stamp.
+   *    See HDFS-12942
+   *
+   * @param block       - Extended Block
+   * @param replicaInfo - ReplicaInfo
+   * @param volumeRef   - Volume Ref - Closed by caller.
+   * @return newReplicaInfo new replica object created in specified volume.
+   * @throws IOException
+   */
+  @VisibleForTesting
+  ReplicaInfo moveReplicaToVolumeOnSameMount(ExtendedBlock block,
+      ReplicaInfo replicaInfo,
+      FsVolumeReference volumeRef) throws IOException {
+    FsVolumeImpl targetVolume = (FsVolumeImpl) volumeRef.getVolume();
+    // Move files to temp dir first
+    ReplicaInfo newReplicaInfo = targetVolume.hardLinkBlockToTmpLocation(block,
+        replicaInfo);
     return newReplicaInfo;
   }
 
@@ -1177,7 +1299,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     try {
-      moveBlock(block, replicaInfo, volumeRef);
+      moveBlock(block, replicaInfo, volumeRef, false);
     } finally {
       if (volumeRef != null) {
         volumeRef.close();
@@ -3402,7 +3524,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInfo r = getBlockReplica(block);
     return r.getPinning(localFS);
   }
-  
+
+  @Override
+  public MountVolumeMap getMountVolumeMap() {
+    return volumes.getMountVolumeMap();
+  }
+
   @Override
   public boolean isDeletingBlock(String bpid, long blockId) {
     synchronized(deletingBlock) {

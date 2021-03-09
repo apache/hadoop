@@ -17,7 +17,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM ubuntu:bionic
+FROM ubuntu:focal
 
 WORKDIR /root
 
@@ -54,6 +54,7 @@ RUN apt-get -q update \
         gcc \
         git \
         gnupg-agent \
+        hugo \
         libbcprov-java \
         libbz2-dev \
         libcurl4-openssl-dev \
@@ -68,16 +69,18 @@ RUN apt-get -q update \
         locales \
         make \
         maven \
+        nodejs \
+        node-yarn \
+        npm \
         openjdk-11-jdk \
         openjdk-8-jdk \
         pinentry-curses \
         pkg-config \
-        python \
-        python2.7 \
-        python-pip \
-        python-pkg-resources \
-        python-setuptools \
-        python-wheel \
+        python3 \
+        python3-pip \
+        python3-pkg-resources \
+        python3-setuptools \
+        python3-wheel \
         rsync \
         shellcheck \
         software-properties-common \
@@ -96,7 +99,7 @@ ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-arm64
 ENV FINDBUGS_HOME /usr
 
 #######
-# Install Boost 1.72 (1.65 ships with Bionic)
+# Install Boost 1.72 (1.71 ships with Focal)
 #######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/boost-library \
@@ -111,7 +114,7 @@ RUN mkdir -p /opt/boost-library \
     && rm -rf /opt/boost-library
 
 ######
-# Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
+# Install Google Protobuf 3.7.1 (3.6.1 ships with Focal)
 ######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
@@ -121,6 +124,7 @@ RUN mkdir -p /opt/protobuf-src \
     && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
     && cd /opt/protobuf-src \
     && ./configure --prefix=/opt/protobuf \
+    && make "-j$(nproc)" \
     && make install \
     && cd /root \
     && rm -rf /opt/protobuf-src
@@ -128,39 +132,15 @@ ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ####
-# Install pylint at fixed version (2.0.0 removed python2 support)
-# https://github.com/PyCQA/pylint/issues/2294
+# Install pylint and python-dateutil
 ####
-RUN pip2 install \
-    astroid==1.6.6 \
-    isort==4.3.21 \
-    configparser==4.0.2 \
-    pylint==1.9.2
+RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 
 ####
-# Install dateutil.parser
+# Install bower
 ####
-RUN pip2 install python-dateutil==2.7.3
-
-###
-# Install node.js 10.x for web UI framework (4.2.6 ships with Xenial)
-###
 # hadolint ignore=DL3008
-RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g bower@1.8.8
-
-###
-## Install Yarn 1.22.5 for web UI framework
-####
-RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
-    && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list \
-    && apt-get -q update \
-    && apt-get install -y --no-install-recommends yarn=1.22.5-1 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN npm install -g bower@1.8.8
 
 ###
 # Install phantomjs built for aarch64
@@ -186,12 +166,6 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 # So tell Yetus not to read the rest of the file:
 # YETUS CUT HERE
 ###
-
-# Hugo static website generator (for new hadoop site docs)
-RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-ARM64.deb \
-    && dpkg --install hugo.deb \
-    && rm hugo.deb
-
 
 # Add a welcome message and environment checks.
 COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh

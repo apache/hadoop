@@ -168,11 +168,6 @@ public class LeafQueue extends AbstractCSQueue {
 
   }
 
-  protected void setupQueueConfigs(Resource clusterResource)
-      throws IOException {
-    setupQueueConfigs(clusterResource, csContext.getConfiguration());
-  }
-
   @SuppressWarnings("checkstyle:nowhitespaceafter")
   protected void setupQueueConfigs(Resource clusterResource,
       CapacitySchedulerConfiguration conf) throws
@@ -273,9 +268,8 @@ public class LeafQueue extends AbstractCSQueue {
       usersManager.updateUserWeights();
 
       LOG.info(
-          "Initializing " + getQueuePath() + "\n" + "capacity = "
-              + queueCapacities.getCapacity()
-              + " [= (float) configuredCapacity / 100 ]" + "\n"
+          "Initializing " + getQueuePath() + "\n" +
+              getExtendedCapacityOrWeightString() + "\n"
               + "absoluteCapacity = " + queueCapacities.getAbsoluteCapacity()
               + " [= parentAbsoluteCapacity * capacity ]" + "\n"
               + "maxCapacity = " + queueCapacities.getMaximumCapacity()
@@ -491,7 +485,7 @@ public class LeafQueue extends AbstractCSQueue {
   public String toString() {
     readLock.lock();
     try {
-      return getQueuePath() + ": " + "capacity=" + queueCapacities.getCapacity()
+      return getQueuePath() + ": " + getCapacityOrWeightString()
           + ", " + "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity()
           + ", " + "usedResources=" + queueUsage.getUsed() + ", "
           + "usedCapacity=" + getUsedCapacity() + ", " + "absoluteUsedCapacity="
@@ -504,7 +498,19 @@ public class LeafQueue extends AbstractCSQueue {
     } finally {
       readLock.unlock();
     }
+  }
 
+  protected String getExtendedCapacityOrWeightString() {
+    if (queueCapacities.getWeight() != -1) {
+      return "weight = " + queueCapacities.getWeight()
+          + " [= (float) configuredCapacity (with w suffix)] " + "\n"
+          + "normalizedWeight = " + queueCapacities.getNormalizedWeight()
+          + " [= (float) configuredCapacity / sum(configuredCapacity of " +
+          "all queues under the parent)]";
+    } else {
+      return "capacity = " + queueCapacities.getCapacity()
+          + " [= (float) configuredCapacity / 100 ]";
+    }
   }
 
   @VisibleForTesting
@@ -529,6 +535,13 @@ public class LeafQueue extends AbstractCSQueue {
 
     writeLock.lock();
     try {
+      // We skip reinitialize for dynamic queues, when this is called, and
+      // new queue is different from this queue, we will make this queue to be
+      // static queue.
+      if (newlyParsedQueue != this) {
+        this.setDynamicQueue(false);
+      }
+
       // Sanity check
       if (!(newlyParsedQueue instanceof LeafQueue) || !newlyParsedQueue
           .getQueuePath().equals(getQueuePath())) {
@@ -552,11 +565,6 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       setupQueueConfigs(clusterResource, configuration);
-
-      // queue metrics are updated, more resource may be available
-      // activate the pending applications if possible
-      activateApplications();
-
     } finally {
       writeLock.unlock();
     }
@@ -605,6 +613,9 @@ public class LeafQueue extends AbstractCSQueue {
       String queue)  throws AccessControlException {
     // Careful! Locking order is important!
     validateSubmitApplication(applicationId, userName, queue);
+
+    // Signal for expired auto deletion.
+    updateLastSubmittedTimeStamp();
 
     // Inform the parent queue
     try {
@@ -711,16 +722,33 @@ public class LeafQueue extends AbstractCSQueue {
           queueCapacities.getMaxAMResourcePercentage(nodePartition)
               * effectiveUserLimit * usersManager.getUserLimitFactor(),
           minimumAllocation);
+
+      if (getUserLimitFactor() == -1) {
+        userAMLimit = Resources.multiplyAndNormalizeUp(
+            resourceCalculator, queuePartitionResource,
+            queueCapacities.getMaxAMResourcePercentage(nodePartition),
+            minimumAllocation);
+      }
+
       userAMLimit =
           Resources.min(resourceCalculator, lastClusterResource,
               userAMLimit,
               Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
 
-      Resource preWeighteduserAMLimit = Resources.multiplyAndNormalizeUp(
+      Resource preWeighteduserAMLimit =
+          Resources.multiplyAndNormalizeUp(
           resourceCalculator, queuePartitionResource,
           queueCapacities.getMaxAMResourcePercentage(nodePartition)
               * preWeightedUserLimit * usersManager.getUserLimitFactor(),
           minimumAllocation);
+
+      if (getUserLimitFactor() == -1) {
+        preWeighteduserAMLimit = Resources.multiplyAndNormalizeUp(
+            resourceCalculator, queuePartitionResource,
+            queueCapacities.getMaxAMResourcePercentage(nodePartition),
+            minimumAllocation);
+      }
+
       preWeighteduserAMLimit =
           Resources.min(resourceCalculator, lastClusterResource,
               preWeighteduserAMLimit,
@@ -1899,9 +1927,14 @@ public class LeafQueue extends AbstractCSQueue {
       maxApplications =
           (int) (maxSystemApps * queueCapacities.getAbsoluteCapacity());
     }
-    maxApplicationsPerUser = Math.min(maxApplications,
+    maxApplicationsPerUser =
+        Math.min(maxApplications,
         (int) (maxApplications * (usersManager.getUserLimit() / 100.0f)
             * usersManager.getUserLimitFactor()));
+
+    if (getUserLimitFactor() == -1) {
+      maxApplicationsPerUser = maxApplications;
+    }
   }
 
   @Override
@@ -2371,5 +2404,12 @@ public class LeafQueue extends AbstractCSQueue {
       readLock.unlock();
     }
     return appsToReturn;
+  }
+
+  @Override
+  public boolean isEligibleForAutoDeletion() {
+    return isDynamicQueue() && getNumApplications() == 0
+        && csContext.getConfiguration().
+        isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
 }

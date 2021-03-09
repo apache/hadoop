@@ -24,6 +24,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
@@ -34,7 +35,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 @InterfaceStability.Stable
 public class FSDataOutputStream extends DataOutputStream
     implements Syncable, CanSetDropBehind, StreamCapabilities,
-      IOStatisticsSource {
+      IOStatisticsSource, Abortable {
   private final OutputStream wrappedStream;
 
   private static class PositionCache extends FilterOutputStream {
@@ -126,10 +127,7 @@ public class FSDataOutputStream extends DataOutputStream
 
   @Override
   public boolean hasCapability(String capability) {
-    if (wrappedStream instanceof StreamCapabilities) {
-      return ((StreamCapabilities) wrappedStream).hasCapability(capability);
-    }
-    return false;
+    return StoreImplementationUtils.hasCapability(wrappedStream, capability);
   }
 
   @Override  // Syncable
@@ -169,5 +167,22 @@ public class FSDataOutputStream extends DataOutputStream
   @Override
   public IOStatistics getIOStatistics() {
     return IOStatisticsSupport.retrieveIOStatistics(wrappedStream);
+  }
+
+  /**
+   * Invoke {@code abort()} on the wrapped stream if it
+   * is Abortable, otherwise raise an
+   * {@code UnsupportedOperationException}.
+   * @throws UnsupportedOperationException if not available.
+   * @return the result.
+   */
+  @Override
+  public AbortableResult abort() {
+    if (wrappedStream instanceof Abortable) {
+      return ((Abortable) wrappedStream).abort();
+    } else {
+      throw new UnsupportedOperationException(
+          FSExceptionMessages.ABORTABLE_UNSUPPORTED);
+    }
   }
 }

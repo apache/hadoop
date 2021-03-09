@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
+
 /**
  * Interface for a source of duration tracking.
  *
@@ -36,12 +38,16 @@ public interface DurationTrackerFactory {
    * by the given count.
    *
    * The expected use is within a try-with-resources clause.
+   *
+   * The default implementation returns a stub duration tracker.
    * @param key statistic key prefix
    * @param count  #of times to increment the matching counter in this
    * operation.
    * @return an object to close after an operation completes.
    */
-  DurationTracker trackDuration(String key, long count);
+  default DurationTracker trackDuration(String key, long count) {
+    return stubDurationTracker();
+  }
 
   /**
    * Initiate a duration tracking operation by creating/returning

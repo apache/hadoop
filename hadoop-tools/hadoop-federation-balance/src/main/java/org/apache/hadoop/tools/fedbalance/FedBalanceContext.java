@@ -176,21 +176,34 @@ public class FedBalanceContext implements Writable {
 
   @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder("FedBalance context:");
-    builder.append(" src=").append(src);
-    builder.append(", dst=").append(dst);
+    StringBuilder builder = new StringBuilder();
+    builder.append("Move ").append(src).append(" to ").append(dst);
     if (useMountReadOnly) {
-      builder.append(", router-mode=true");
-      builder.append(", mount-point=").append(mount);
+      builder.append(" using router mode, mount point=").append(mount)
+          .append(".");
     } else {
-      builder.append(", router-mode=false");
+      builder.append(" using normal federation mode.");
     }
-    builder.append(", forceCloseOpenFiles=").append(forceCloseOpenFiles);
-    builder.append(", trash=").append(trashOpt.name());
-    builder.append(", map=").append(mapNum);
-    builder.append(", bandwidth=").append(bandwidthLimit);
-    builder.append(", delayDuration=").append(delayDuration);
-    builder.append(", diffThreshold=").append(diffThreshold);
+    builder.append(" Submit distcp job with map=").append(mapNum)
+        .append(" and bandwidth=").append(bandwidthLimit).append(".");
+    builder.append(" When the diff count is no greater than ")
+        .append(diffThreshold);
+    if (forceCloseOpenFiles) {
+      builder.append(", force close all open files.");
+    } else {
+      builder.append(", wait until there is no open files.");
+    }
+    switch (trashOpt) {
+    case DELETE:
+      builder.append(" Delete the src after the job is complete.");
+      break;
+    case TRASH:
+      builder.append(" Move the src to trash after the job is complete.");
+      break;
+    default:
+      break;
+    }
+    builder.append(" Delay duration is ").append(delayDuration).append("ms.");
     return builder.toString();
   }
 

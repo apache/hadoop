@@ -214,7 +214,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     S3ATestUtils.MetricDiff invocationDiff = new S3ATestUtils.MetricDiff(fs,
         Statistic.INVOCATION_GET_DELEGATION_TOKEN);
     S3ATestUtils.MetricDiff issueDiff = new S3ATestUtils.MetricDiff(fs,
-        Statistic.DELEGATION_TOKEN_ISSUED);
+        Statistic.DELEGATION_TOKENS_ISSUED);
     Token<AbstractS3ATokenIdentifier> token =
         requireNonNull(fs.getDelegationToken(""),
             "no token from filesystem " + fs);
@@ -371,7 +371,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
 
       S3ATestUtils.MetricDiff issueDiff = new S3ATestUtils.MetricDiff(
           delegatedFS,
-          Statistic.DELEGATION_TOKEN_ISSUED);
+          Statistic.DELEGATION_TOKENS_ISSUED);
 
       // verify that the FS returns the existing token when asked
       // so that chained deployments will work

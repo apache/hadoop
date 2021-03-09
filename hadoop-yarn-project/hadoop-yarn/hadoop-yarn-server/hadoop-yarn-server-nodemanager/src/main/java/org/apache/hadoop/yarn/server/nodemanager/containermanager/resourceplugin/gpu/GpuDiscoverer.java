@@ -284,11 +284,12 @@ public class GpuDiscoverer extends Configured {
       binaryPath = configuredBinaryFile;
       // If path exists but file name is incorrect don't execute the file
       String fileName = binaryPath.getName();
-      if (DEFAULT_BINARY_NAME.equals(fileName)) {
+      if (!DEFAULT_BINARY_NAME.equals(fileName)) {
         String msg = String.format("Please check the configuration value of"
-             +" %s. It should point to an %s binary.",
+             +" %s. It should point to an %s binary, which is now %s",
              YarnConfiguration.NM_GPU_PATH_TO_EXEC,
-             DEFAULT_BINARY_NAME);
+             DEFAULT_BINARY_NAME,
+             fileName);
         throwIfNecessary(new YarnException(msg), config);
         LOG.warn(msg);
       }

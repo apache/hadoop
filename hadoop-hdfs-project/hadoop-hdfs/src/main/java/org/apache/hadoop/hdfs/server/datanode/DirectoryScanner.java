@@ -322,7 +322,8 @@ public class DirectoryScanner implements Runnable {
    * Start the scanner. The scanner will run every
    * {@link DFSConfigKeys#DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY} seconds.
    */
-  void start() {
+  @VisibleForTesting
+  public void start() {
     shouldRun.set(true);
     long firstScanTime = ThreadLocalRandom.current().nextLong(scanPeriodMsecs);
 
@@ -505,8 +506,7 @@ public class DirectoryScanner implements Runnable {
         }
         // Block file and/or metadata file exists on the disk
         // Block exists in memory
-        if (info.getVolume().getStorageType() != StorageType.PROVIDED
-            && info.getBlockFile() == null) {
+        if (info.getBlockFile() == null) {
           // Block metadata file exits and block file is missing
           addDifference(diffRecord, statsRecord, info);
         } else if (info.getGenStamp() != memBlock.getGenerationStamp()

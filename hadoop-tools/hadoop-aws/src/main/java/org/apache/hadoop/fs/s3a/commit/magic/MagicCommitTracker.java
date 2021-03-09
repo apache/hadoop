@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
@@ -36,6 +38,8 @@ import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.X_HEADER_MAGIC_MARKER;
 
 /**
  * Put tracker for Magic commits.
@@ -122,13 +126,6 @@ public class MagicCommitTracker extends PutTracker {
     Preconditions.checkArgument(!parts.isEmpty(),
         "No uploaded parts to save");
 
-    // put a 0-byte file with the name of the original under-magic path
-    PutObjectRequest originalDestPut = writer.createPutObjectRequest(
-        originalDestKey,
-        new ByteArrayInputStream(EMPTY),
-        0);
-    writer.uploadObject(originalDestPut);
-
     // build the commit summary
     SinglePendingCommit commitData = new SinglePendingCommit();
     commitData.touch(System.currentTimeMillis());
@@ -150,9 +147,19 @@ public class MagicCommitTracker extends PutTracker {
     PutObjectRequest put = writer.createPutObjectRequest(
         pendingPartKey,
         new ByteArrayInputStream(bytes),
-        bytes.length);
+        bytes.length, null);
     writer.uploadObject(put);
 
+    // Add the final file length as a header
+    Map<String, String> headers = new HashMap<>();
+    headers.put(X_HEADER_MAGIC_MARKER, Long.toString(bytesWritten));
+    // now put a 0-byte file with the name of the original under-magic path
+    PutObjectRequest originalDestPut = writer.createPutObjectRequest(
+        originalDestKey,
+        new ByteArrayInputStream(EMPTY),
+        0,
+        headers);
+    writer.uploadObject(originalDestPut);
     return false;
   }
 

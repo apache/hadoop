@@ -112,6 +112,14 @@ public class DistCpProcedure extends BalanceProcedure {
   @VisibleForTesting
   static boolean enabledForTest = false;
 
+  public static void enableForTest() {
+    enabledForTest = true;
+  }
+
+  public static void disableForTest() {
+    enabledForTest = false;
+  }
+
   public DistCpProcedure() {
   }
 

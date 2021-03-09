@@ -292,6 +292,7 @@ public class BalanceProcedureScheduler {
     for (BalanceJob job : jobs) {
       recoverQueue.add(job);
       jobSet.put(job, job);
+      LOG.info("Recover federation balance job {}.", job);
     }
   }
 

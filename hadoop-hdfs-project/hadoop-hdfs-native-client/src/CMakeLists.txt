@@ -22,6 +22,8 @@ project(hadoop_hdfs_native_client)
 
 enable_testing()
 
+set(CMAKE_CXX_STANDARD 17)
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../hadoop-common-project/hadoop-common)
 include(HadoopCommon)
 

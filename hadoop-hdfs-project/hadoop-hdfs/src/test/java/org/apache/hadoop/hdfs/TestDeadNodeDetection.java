@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.net.URI;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -43,6 +44,11 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for dead node detection in DFSClient.
@@ -318,6 +324,49 @@ public class TestDeadNodeDetection {
       // reset disabledProbeThreadForTest
       DeadNodeDetector.setDisabledProbeThreadForTest(false);
     }
+  }
+
+  @Test
+  public void testCloseDeadNodeDetector() throws Exception {
+    DistributedFileSystem dfs0 = (DistributedFileSystem) FileSystem
+        .newInstance(new URI("hdfs://127.0.0.1:2001/"), conf);
+    DistributedFileSystem dfs1 = (DistributedFileSystem) FileSystem
+        .newInstance(new URI("hdfs://127.0.0.1:2001/"), conf);
+    // The DeadNodeDetector is shared by different DFSClients.
+    DeadNodeDetector detector = dfs0.getClient().getDeadNodeDetector();
+    assertNotNull(detector);
+    assertSame(detector, dfs1.getClient().getDeadNodeDetector());
+    // Close one client. The dead node detector should be alive.
+    dfs0.close();
+    detector = dfs0.getClient().getDeadNodeDetector();
+    assertNotNull(detector);
+    assertSame(detector, dfs1.getClient().getDeadNodeDetector());
+    assertTrue(detector.isAlive());
+    // Close all clients. The dead node detector should be closed.
+    dfs1.close();
+    detector = dfs0.getClient().getDeadNodeDetector();
+    assertNull(detector);
+    assertSame(detector, dfs1.getClient().getDeadNodeDetector());
+    // Create a new client. The dead node detector should be alive.
+    dfs1 = (DistributedFileSystem) FileSystem
+        .newInstance(new URI("hdfs://127.0.0.1:2001/"), conf);
+    DeadNodeDetector newDetector = dfs0.getClient().getDeadNodeDetector();
+    assertNotNull(newDetector);
+    assertTrue(newDetector.isAlive());
+    assertNotSame(detector, newDetector);
+    dfs1.close();
+  }
+
+  @Test
+  public void testDeadNodeDetectorThreadsShutdown() throws Exception {
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .newInstance(new URI("hdfs://127.0.0.1:2001/"), conf);
+    DeadNodeDetector detector = dfs.getClient().getDeadNodeDetector();
+    assertNotNull(detector);
+    dfs.close();
+    assertTrue(detector.isThreadsShutdown());
+    detector = dfs.getClient().getDeadNodeDetector();
+    assertNull(detector);
   }
 
   private void createFile(FileSystem fs, Path filePath) throws IOException {

@@ -321,7 +321,7 @@ public class FSConfigToCSConfigConverter {
 
       MappingRulesDescription desc =
           placementConverter.convertPlacementPolicy(placementManager,
-              ruleHandler, capacitySchedulerConfig);
+              ruleHandler, capacitySchedulerConfig, usePercentages);
 
       ObjectMapper mapper = new ObjectMapper();
       // close output stream if we write to a file, leave it open otherwise
@@ -339,6 +339,7 @@ public class FSConfigToCSConfigConverter {
 
       capacitySchedulerConfig.set(MAPPING_RULE_FORMAT,
           MAPPING_RULE_FORMAT_JSON);
+      capacitySchedulerConfig.setOverrideWithQueueMappings(true);
       if (!rulesToFile) {
         String json =
             ((ByteArrayOutputStream)mappingRulesOutputStream)

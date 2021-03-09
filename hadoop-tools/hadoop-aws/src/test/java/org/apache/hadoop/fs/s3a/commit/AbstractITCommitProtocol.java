@@ -1335,11 +1335,12 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
         = outputFormat.getRecordWriter(tContext);
     IntWritable iw = new IntWritable(1);
     recordWriter.write(iw, iw);
+    long expectedLength = 4;
     Path dest = recordWriter.getDest();
-    validateTaskAttemptPathDuringWrite(dest);
+    validateTaskAttemptPathDuringWrite(dest, expectedLength);
     recordWriter.close(tContext);
     // at this point
-    validateTaskAttemptPathAfterWrite(dest);
+    validateTaskAttemptPathAfterWrite(dest, expectedLength);
     assertTrue("Committer does not have data to commit " + committer,
         committer.needsTaskCommit(tContext));
     commitTask(committer, tContext);
@@ -1750,9 +1751,11 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    * Validate the path of a file being written to during the write
    * itself.
    * @param p path
+   * @param expectedLength
    * @throws IOException IO failure
    */
-  protected void validateTaskAttemptPathDuringWrite(Path p) throws IOException {
+  protected void validateTaskAttemptPathDuringWrite(Path p,
+      final long expectedLength) throws IOException {
 
   }
 
@@ -1760,9 +1763,11 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    * Validate the path of a file being written to after the write
    * operation has completed.
    * @param p path
+   * @param expectedLength
    * @throws IOException IO failure
    */
-  protected void validateTaskAttemptPathAfterWrite(Path p) throws IOException {
+  protected void validateTaskAttemptPathAfterWrite(Path p,
+      final long expectedLength) throws IOException {
 
   }
 

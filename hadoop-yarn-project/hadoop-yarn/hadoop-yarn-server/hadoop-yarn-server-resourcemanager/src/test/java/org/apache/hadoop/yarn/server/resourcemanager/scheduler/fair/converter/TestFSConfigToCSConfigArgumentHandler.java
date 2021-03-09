@@ -612,11 +612,11 @@ public class TestFSConfigToCSConfigArgumentHandler {
     if (enabled) {
       args = getArgumentsAsArrayWithDefaults("-f",
           FSConfigConverterTestCommons.FS_ALLOC_FILE,
-          "-p", "-m");
+          "-p");
     } else {
       args = getArgumentsAsArrayWithDefaults("-f",
           FSConfigConverterTestCommons.FS_ALLOC_FILE,
-          "-p");
+          "-p", "-sp");
     }
     FSConfigToCSConfigArgumentHandler argumentHandler =
         new FSConfigToCSConfigArgumentHandler(conversionOptions,
@@ -631,9 +631,10 @@ public class TestFSConfigToCSConfigArgumentHandler {
     FSConfigToCSConfigConverterParams params = captor.getValue();
 
     if (enabled) {
-      assertTrue("-m switch had no effect", params.isConvertPlacementRules());
+      assertTrue("Conversion should be enabled by default",
+          params.isConvertPlacementRules());
     } else {
-      assertFalse("Placement rule conversion was enabled",
+      assertFalse("-sp switch had no effect",
           params.isConvertPlacementRules());
     }
   }

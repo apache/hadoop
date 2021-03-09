@@ -791,8 +791,16 @@ public class UsersManager implements AbstractUsersManager {
     // IGNORE_PARTITION_EXCLUSIVITY allocation.
     Resource maxUserLimit = Resources.none();
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
-      maxUserLimit = Resources.multiplyAndRoundDown(queueCapacity,
-          getUserLimitFactor());
+      // If user-limit-factor set to -1, we should disabled user limit.
+      if (getUserLimitFactor() != -1) {
+        maxUserLimit = Resources.multiplyAndRoundDown(queueCapacity,
+            getUserLimitFactor());
+      } else {
+        maxUserLimit = lQueue.
+            getEffectiveMaxCapacityDown(
+                nodePartition, lQueue.getMinimumAllocation());
+      }
+
     } else if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
       maxUserLimit = partitionResource;
     }

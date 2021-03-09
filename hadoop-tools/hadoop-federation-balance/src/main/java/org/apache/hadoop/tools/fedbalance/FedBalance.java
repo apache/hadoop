@@ -59,9 +59,9 @@ public class FedBalance extends Configured implements Tool {
       LoggerFactory.getLogger(FedBalance.class);
   private static final String SUBMIT_COMMAND = "submit";
   private static final String CONTINUE_COMMAND = "continue";
-  private static final String NO_MOUNT = "no-mount";
-  private static final String DISTCP_PROCEDURE = "distcp-procedure";
-  private static final String TRASH_PROCEDURE = "trash-procedure";
+  public static final String NO_MOUNT = "no-mount";
+  public static final String DISTCP_PROCEDURE = "distcp-procedure";
+  public static final String TRASH_PROCEDURE = "trash-procedure";
 
   public static final String FED_BALANCE_DEFAULT_XML =
       "hdfs-fedbalance-default.xml";
@@ -70,7 +70,7 @@ public class FedBalance extends Configured implements Tool {
   /**
    * This class helps building the balance job.
    */
-  private class Builder {
+  private final class Builder {
     /* Force close all open files while there is no diff. */
     private boolean forceCloseOpen = false;
     /* Max number of concurrent maps to use for copy. */
@@ -88,7 +88,7 @@ public class FedBalance extends Configured implements Tool {
     /* The dst input. This specifies the dst path. */
     private final String inputDst;
 
-    Builder(String inputSrc, String inputDst) {
+    private Builder(String inputSrc, String inputDst) {
       this.inputSrc = inputSrc;
       this.inputDst = inputDst;
     }

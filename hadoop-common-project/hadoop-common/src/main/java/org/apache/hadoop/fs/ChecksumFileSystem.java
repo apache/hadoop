@@ -46,6 +46,7 @@ import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
 
 /****************************************************************
  * Abstract Checksumed FileSystem.
@@ -479,12 +480,15 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
 
     /**
      * Probe the inner stream for a capability.
-     *
+     * Syncable operations are rejected before being passed down.
      * @param capability string to query the stream support for.
      * @return true if a capability is known to be supported.
      */
     @Override
     public boolean hasCapability(final String capability) {
+      if (isProbeForSyncable(capability)) {
+        return false;
+      }
       return datas.hasCapability(capability);
     }
   }

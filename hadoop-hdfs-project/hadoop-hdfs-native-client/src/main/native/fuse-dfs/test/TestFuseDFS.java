@@ -21,7 +21,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.*;
 
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -50,7 +50,7 @@ public class TestFuseDFS {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFuseDFS.class);
   {
-    GenericTestUtils.setLogLevel(LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(LOG, Level.TRACE);
   }
 
   /** Dump the given intput stream to stderr */

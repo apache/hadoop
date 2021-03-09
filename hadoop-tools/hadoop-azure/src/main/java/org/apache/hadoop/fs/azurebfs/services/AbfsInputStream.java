@@ -70,6 +70,14 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
   private final boolean alwaysReadBufferSize;
+  /*
+   * By default the pread API will do a seek + read as in FSInputStream.
+   * The read data will be kept in a buffer. When bufferedPreadDisabled is true,
+   * the pread API will read only the specified amount of data from the given
+   * offset and the buffer will not come into use at all.
+   * @see #read(long, byte[], int, int)
+   */
+  private final boolean bufferedPreadDisabled;
 
   private boolean firstRead = true;
   // SAS tokens can be re-used until they expire
@@ -117,6 +125,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.readAheadEnabled = true;
     this.alwaysReadBufferSize
         = abfsInputStreamContext.shouldReadBufferSizeAlways();
+    this.bufferedPreadDisabled = abfsInputStreamContext
+        .isBufferedPreadDisabled();
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
@@ -133,6 +143,41 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   public String getPath() {
     return path;
+  }
+
+  @Override
+  public int read(long position, byte[] buffer, int offset, int length)
+      throws IOException {
+    // When bufferedPreadDisabled = true, this API does not use any shared buffer,
+    // cursor position etc. So this is implemented as NOT synchronized. HBase
+    // kind of random reads on a shared file input stream will greatly get
+    // benefited by such implementation.
+    // Strict close check at the begin of the API only not for the entire flow.
+    synchronized (this) {
+      if (closed) {
+        throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+      }
+    }
+    LOG.debug("pread requested offset = {} len = {} bufferedPreadDisabled = {}",
+        offset, length, bufferedPreadDisabled);
+    if (!bufferedPreadDisabled) {
+      return super.read(position, buffer, offset, length);
+    }
+    validatePositionedReadArgs(position, buffer, offset, length);
+    if (length == 0) {
+      return 0;
+    }
+    if (streamStatistics != null) {
+      streamStatistics.readOperationStarted();
+    }
+    int bytesRead = readRemote(position, buffer, offset, length);
+    if (statistics != null) {
+      statistics.incrementBytesRead(bytesRead);
+    }
+    if (streamStatistics != null) {
+      streamStatistics.bytesRead(bytesRead);
+    }
+    return bytesRead;
   }
 
   @Override

@@ -29,6 +29,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -128,7 +129,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   // either at this level or anywhere in the queue's hierarchy.
   private volatile boolean defaultAppLifetimeWasSpecifiedInConfig = false;
 
-  protected enum CapacityConfigType {
+  public enum CapacityConfigType {
     // FIXME, from what I can see, Percentage mode can almost apply to weighted
     // and percentage mode at the same time, there's only small area need to be
     // changed, we need to rename "PERCENTAGE" to "PERCENTAGE" and "WEIGHT"
@@ -151,6 +152,13 @@ public abstract class AbstractCSQueue implements CSQueue {
   private Map<String, Float> userWeights = new HashMap<String, Float>();
   private int maxParallelApps;
 
+  // is it a dynamic queue?
+  private boolean dynamicQueue = false;
+
+  // The timestamp of the last submitted application to this queue.
+  // Only applies to dynamic queues.
+  private long lastSubmittedTimestamp;
+
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     this(cs, cs.getConfiguration(), queueName, parent, old);
@@ -172,7 +180,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.metrics = old != null ?
         (CSQueueMetrics) old.getMetrics() :
         CSQueueMetrics.forQueue(getQueuePath(), parent,
-            cs.getConfiguration().getEnableUserMetrics(), cs.getConf());
+            cs.getConfiguration().getEnableUserMetrics(), configuration);
 
     this.csContext = cs;
     this.minimumAllocation = csContext.getMinimumResourceCapability();
@@ -192,6 +200,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock = lock.writeLock();
   }
 
+  @VisibleForTesting
   protected void setupConfigurableCapacities() {
     setupConfigurableCapacities(csContext.getConfiguration());
   }
@@ -345,11 +354,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     return defaultLabelExpression;
   }
 
-  void setupQueueConfigs(Resource clusterResource)
-      throws IOException {
-    setupQueueConfigs(clusterResource, csContext.getConfiguration());
-  }
-
   protected void setupQueueConfigs(Resource clusterResource,
       CapacitySchedulerConfiguration configuration) throws
       IOException {
@@ -405,7 +409,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       QueueState parentState = (parent == null) ? null : parent.getState();
       initializeQueueState(previous, configuredState, parentState);
 
-      authorizer = YarnAuthorizationProvider.getInstance(csContext.getConf());
+      authorizer = YarnAuthorizationProvider.getInstance(configuration);
 
       this.acls = configuration.getAcls(getQueuePath());
 
@@ -437,7 +441,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       }
 
       this.reservationsContinueLooking =
-          csContext.getConfiguration().getReservationContinueLook();
+          configuration.getReservationContinueLook();
 
       this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this,
           configuration);
@@ -712,6 +716,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     // TODO, improve this
     QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
     queueInfo.setQueueName(queueName);
+    queueInfo.setQueuePath(queuePath);
     queueInfo.setAccessibleNodeLabels(accessibleLabels);
     queueInfo.setCapacity(queueCapacities.getCapacity());
     queueInfo.setMaximumCapacity(queueCapacities.getMaximumCapacity());
@@ -723,6 +728,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueInfo.setIntraQueuePreemptionDisabled(
         getIntraQueuePreemptionDisabled());
     queueInfo.setQueueConfigurations(getQueueConfigurations());
+    queueInfo.setWeight(queueCapacities.getWeight());
     return queueInfo;
   }
 
@@ -1536,8 +1542,13 @@ public abstract class AbstractCSQueue implements CSQueue {
       leafQueue.setMaxApplications(maxApplications);
 
       int maxApplicationsPerUser = Math.min(maxApplications,
-          (int) (maxApplications * (leafQueue.getUsersManager().getUserLimit()
-              / 100.0f) * leafQueue.getUsersManager().getUserLimitFactor()));
+          (int) (maxApplications
+              * (leafQueue.getUsersManager().getUserLimit() / 100.0f)
+              * leafQueue.getUsersManager().getUserLimitFactor()));
+      if (leafQueue.getUsersManager().getUserLimitFactor() == -1) {
+        maxApplicationsPerUser =  maxApplications;
+      }
+
       leafQueue.setMaxApplicationsPerUser(maxApplicationsPerUser);
       LOG.info("LeafQueue:" + leafQueue.getQueuePath() + ", maxApplications="
           + maxApplications + ", maxApplicationsPerUser="
@@ -1609,4 +1620,75 @@ public abstract class AbstractCSQueue implements CSQueue {
       }
     }
   }
+
+  public boolean isDynamicQueue() {
+    readLock.lock();
+
+    try {
+      return dynamicQueue;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public void setDynamicQueue(boolean dynamicQueue) {
+    writeLock.lock();
+
+    try {
+      this.dynamicQueue = dynamicQueue;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  protected String getCapacityOrWeightString() {
+    if (queueCapacities.getWeight() != -1) {
+      return "weight=" + queueCapacities.getWeight() + ", " +
+          "normalizedWeight=" + queueCapacities.getNormalizedWeight();
+    } else {
+      return "capacity=" + queueCapacities.getCapacity();
+    }
+  }
+
+  public boolean isEligibleForAutoDeletion() {
+    return false;
+  }
+
+  public boolean isInactiveDynamicQueue() {
+    long idleDurationSeconds =
+        (Time.monotonicNow() - getLastSubmittedTimestamp())/1000;
+    return isDynamicQueue() && isEligibleForAutoDeletion() &&
+        (idleDurationSeconds > this.csContext.getConfiguration().
+            getAutoExpiredDeletionTime());
+  }
+
+  public void updateLastSubmittedTimeStamp() {
+    writeLock.lock();
+    try {
+      this.lastSubmittedTimestamp = Time.monotonicNow();
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public long getLastSubmittedTimestamp() {
+    readLock.lock();
+
+    try {
+      return lastSubmittedTimestamp;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @VisibleForTesting
+  public void setLastSubmittedTimestamp(long lastSubmittedTimestamp) {
+    writeLock.lock();
+    try {
+      this.lastSubmittedTimestamp = lastSubmittedTimestamp;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
 }

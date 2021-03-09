@@ -151,6 +151,12 @@ public interface FSNamesystemMBean {
   public int getNumDecomDeadDataNodes();
 
   /**
+   * @return Number of in-service data nodes, where NumInServiceDataNodes =
+   * NumLiveDataNodes - NumDecomLiveDataNodes - NumInMaintenanceLiveDataNodes
+   */
+  int getNumInServiceLiveDataNodes();
+
+  /**
    * Number of failed data volumes across all live data nodes.
    * @return number of failed data volumes across all live data nodes
    */

@@ -76,7 +76,7 @@ public class TestDistCpProcedure {
 
   @BeforeClass
   public static void beforeClass() throws IOException {
-    DistCpProcedure.enabledForTest = true;
+    DistCpProcedure.enableForTest();
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -92,7 +92,7 @@ public class TestDistCpProcedure {
 
   @AfterClass
   public static void afterClass() {
-    DistCpProcedure.enabledForTest = false;
+    DistCpProcedure.disableForTest();
     if (cluster != null) {
       cluster.shutdown();
     }

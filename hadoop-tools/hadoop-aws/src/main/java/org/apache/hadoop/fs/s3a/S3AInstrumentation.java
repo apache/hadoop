@@ -120,7 +120,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AInstrumentation implements Closeable, MetricsSource,
-    CountersAndGauges, IOStatisticsSource, DurationTrackerFactory {
+    CountersAndGauges, IOStatisticsSource {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3AInstrumentation.class);
 
@@ -1350,7 +1350,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           .withGauges(
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
-          .withDurationTracking(ACTION_EXECUTOR_ACQUIRED)
+          .withDurationTracking(
+              ACTION_EXECUTOR_ACQUIRED,
+              INVOCATION_ABORT.getSymbol(),
+              OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(),
+              MULTIPART_UPLOAD_COMPLETED.getSymbol())
           .build();
       setIOStatistics(st);
       // these are extracted to avoid lookups on heavily used counters.

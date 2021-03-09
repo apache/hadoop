@@ -38,6 +38,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class StoreStatisticNames {
 
   /** {@value}. */
+  public static final String OP_ABORT = "op_abort";
+
+  /** {@value}. */
   public static final String OP_APPEND = "op_append";
 
   /** {@value}. */
@@ -129,6 +132,24 @@ public final class StoreStatisticNames {
 
   /** {@value}. */
   public static final String OP_TRUNCATE = "op_truncate";
+
+  /* The XAttr API */
+
+  /** Invoke {@code getXAttrs(Path path)}: {@value}. */
+  public static final String OP_XATTR_GET_MAP = "op_xattr_get_map";
+
+  /** Invoke {@code getXAttr(Path, String)}: {@value}. */
+  public static final String OP_XATTR_GET_NAMED = "op_xattr_get_named";
+
+  /**
+   * Invoke {@code getXAttrs(Path path, List<String> names)}: {@value}.
+   */
+  public static final String OP_XATTR_GET_NAMED_MAP =
+      "op_xattr_get_named_map";
+
+  /** Invoke {@code listXAttrs(Path path)}: {@value}. */
+  public static final String OP_XATTR_LIST = "op_xattr_list";
+
 
   /** {@value}. */
   public static final String DELEGATION_TOKENS_ISSUED
@@ -306,9 +327,6 @@ public final class StoreStatisticNames {
 
   public static final String STORE_IO_THROTTLE_RATE
       = "store_io_throttle_rate";
-
-  public static final String DELEGATION_TOKEN_ISSUED
-      = "delegation_token_issued";
 
   public static final String MULTIPART_UPLOAD_INSTANTIATED
       = "multipart_instantiated";

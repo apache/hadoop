@@ -102,13 +102,12 @@ public class FSConfigToCSConfigArgumentHandler {
         "Disables checking whether a placement rule is terminal to maintain" +
         " backward compatibility with configs that were made before YARN-8967.",
         false),
-    CONVERT_PLACEMENT_RULES("convert placement rules",
-        "m", "convert-placement-rules",
-        "Convert Fair Scheduler placement rules to Capacity" +
-        " Scheduler mapping rules", false),
     SKIP_VERIFICATION("skip verification", "s",
         "skip-verification",
         "Skips the verification of the converted configuration", false),
+    SKIP_PLACEMENT_RULES_CONVERSION("skip placement rules conversion",
+        "sp", "skip-convert-placement-rules",
+        "Do not convert placement rules", false),
     ENABLE_ASYNC_SCHEDULER("enable asynchronous scheduler", "a", "enable-async-scheduler",
       "Enables the Asynchronous scheduler which decouples the CapacityScheduler" +
         " scheduling from Node Heartbeats.", false),
@@ -253,7 +252,8 @@ public class FSConfigToCSConfigArgumentHandler {
     String outputDir =
         cliParser.getOptionValue(CliOption.OUTPUT_DIR.shortSwitch);
     boolean convertPlacementRules =
-        cliParser.hasOption(CliOption.CONVERT_PLACEMENT_RULES.shortSwitch);
+        !cliParser.hasOption(
+            CliOption.SKIP_PLACEMENT_RULES_CONVERSION.shortSwitch);
 
     checkFile(CliOption.YARN_SITE, yarnSiteXmlFile);
     checkFile(CliOption.FAIR_SCHEDULER, fairSchedulerXmlFile);

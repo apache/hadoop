@@ -62,7 +62,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCK
  * Detect the dead nodes in advance, and share this information among all the
  * DFSInputStreams in the same client.
  */
-public class DeadNodeDetector implements Runnable {
+public class DeadNodeDetector extends Daemon {
   public static final Logger LOG =
       LoggerFactory.getLogger(DeadNodeDetector.class);
 
@@ -269,6 +269,37 @@ public class DeadNodeDetector implements Runnable {
         break;
       }
     }
+  }
+
+  /**
+   * Shutdown all the threads.
+   */
+  public void shutdown() {
+    threadShutDown(this);
+    threadShutDown(probeDeadNodesSchedulerThr);
+    threadShutDown(probeSuspectNodesSchedulerThr);
+    probeDeadNodesThreadPool.shutdown();
+    probeSuspectNodesThreadPool.shutdown();
+    rpcThreadPool.shutdown();
+  }
+
+  private static void threadShutDown(Thread thread) {
+    if (thread != null && thread.isAlive()) {
+      thread.interrupt();
+      try {
+        thread.join();
+      } catch (InterruptedException e) {
+      }
+    }
+  }
+
+  @VisibleForTesting
+  boolean isThreadsShutdown() {
+    return !this.isAlive() && !probeDeadNodesSchedulerThr.isAlive()
+        && !probeSuspectNodesSchedulerThr.isAlive()
+        && probeDeadNodesThreadPool.isShutdown()
+        && probeSuspectNodesThreadPool.isShutdown()
+        && rpcThreadPool.isShutdown();
   }
 
   @VisibleForTesting

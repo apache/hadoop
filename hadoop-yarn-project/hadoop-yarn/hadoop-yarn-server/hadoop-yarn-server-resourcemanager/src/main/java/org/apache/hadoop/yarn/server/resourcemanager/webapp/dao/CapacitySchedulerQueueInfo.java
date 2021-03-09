@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.
     CapacitySchedulerConfiguration.RESOURCE_PATTERN;
@@ -56,15 +57,15 @@ public class CapacitySchedulerQueueInfo {
   @XmlTransient
   static final float EPSILON = 1e-8f;
 
-  @XmlTransient
   protected String queuePath;
-
   protected float capacity;
   protected float usedCapacity;
   protected float maxCapacity;
   protected float absoluteCapacity;
   protected float absoluteMaxCapacity;
   protected float absoluteUsedCapacity;
+  protected float weight;
+  protected float normalizedWeight;
   protected int numApplications;
   protected String queueName;
   protected boolean isAbsoluteResource;
@@ -86,6 +87,10 @@ public class CapacitySchedulerQueueInfo {
   protected String orderingPolicyInfo;
   protected boolean autoCreateChildQueueEnabled;
   protected LeafQueueTemplateInfo leafQueueTemplate;
+  protected String mode;
+  protected String queueType;
+  protected String creationMethod;
+  protected String autoCreationEligibility;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -107,6 +112,8 @@ public class CapacitySchedulerQueueInfo {
         cap(q.getAbsoluteMaximumCapacity(), 0f, 1f) * 100;
     absoluteUsedCapacity =
         cap(q.getAbsoluteUsedCapacity(), 0f, 1f) * 100;
+    weight = q.getQueueCapacities().getWeight();
+    normalizedWeight = q.getQueueCapacities().getNormalizedWeight();
     numApplications = q.getNumApplications();
     allocatedContainers = q.getMetrics().getAllocatedContainers();
     pendingContainers = q.getMetrics().getPendingContainers();
@@ -127,6 +134,12 @@ public class CapacitySchedulerQueueInfo {
     QueueCapacities qCapacities = q.getQueueCapacities();
     QueueResourceQuotas qResQuotas = q.getQueueResourceQuotas();
     populateQueueCapacities(qCapacities, qResQuotas);
+
+    mode = CapacitySchedulerInfoHelper.getMode(q);
+    queueType = CapacitySchedulerInfoHelper.getQueueType(q);
+    creationMethod = CapacitySchedulerInfoHelper.getCreationMethod(q);
+    autoCreationEligibility = CapacitySchedulerInfoHelper
+        .getAutoCreationEligibility(q);
 
     ResourceUsage queueResourceUsage = q.getQueueResourceUsage();
     populateQueueResourceUsage(queueResourceUsage);
@@ -305,5 +318,21 @@ public class CapacitySchedulerQueueInfo {
 
   public LeafQueueTemplateInfo getLeafQueueTemplate() {
     return leafQueueTemplate;
+  }
+
+  public String getMode() {
+    return mode;
+  }
+
+  public String getQueueType() {
+    return queueType;
+  }
+
+  public float getWeight() {
+    return weight;
+  }
+
+  public float getNormalizedWeight() {
+    return normalizedWeight;
   }
 }

@@ -29,6 +29,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetBucketEncryptionResult;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -47,6 +48,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_ETAG;
 import static org.hamcrest.Matchers.nullValue;
 
 /**
@@ -171,6 +173,9 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     assertNotEquals("file 1 checksum", 0, checksum1.getLength());
     assertEquals("checksums of empty files", checksum1,
         fs.getFileChecksum(touchFile("file2"), 0));
+    Assertions.assertThat(fs.getXAttr(file1, XA_ETAG))
+        .describedAs("etag from xattr")
+        .isEqualTo(checksum1.getBytes());
   }
 
   /**
@@ -222,6 +227,9 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     createFile(fs, file4, true,
         "hello, world".getBytes(StandardCharsets.UTF_8));
     assertNotEquals(checksum2, fs.getFileChecksum(file4, 0));
+    Assertions.assertThat(fs.getXAttr(file3, XA_ETAG))
+        .describedAs("etag from xattr")
+        .isEqualTo(checksum1.getBytes());
   }
 
   /**

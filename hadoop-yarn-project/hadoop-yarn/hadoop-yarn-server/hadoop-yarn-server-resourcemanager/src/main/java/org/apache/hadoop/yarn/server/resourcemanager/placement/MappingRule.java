@@ -106,7 +106,11 @@ public class MappingRule {
 
     switch (type) {
     case USER_MAPPING:
-      matcher = MappingRuleMatchers.createUserMatcher(source);
+      if (source.equals("%user")) {
+        matcher = MappingRuleMatchers.createAllMatcher();
+      } else {
+        matcher = MappingRuleMatchers.createUserMatcher(source);
+      }
       break;
     case GROUP_MAPPING:
       matcher = MappingRuleMatchers.createUserGroupMatcher(source);

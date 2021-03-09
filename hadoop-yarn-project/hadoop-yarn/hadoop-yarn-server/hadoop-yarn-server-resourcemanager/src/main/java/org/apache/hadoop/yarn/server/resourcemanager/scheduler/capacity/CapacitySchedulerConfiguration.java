@@ -526,7 +526,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     throwExceptionForUnexpectedWeight(weight, queue, label);
     return weight;
   }
-  
+
   public float getNonLabeledQueueCapacity(String queue) {
     String configuredCapacity = get(getQueuePrefix(queue) + CAPACITY);
     boolean absoluteResourceConfigured = (configuredCapacity != null)
@@ -1743,6 +1743,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String DEFAULT_INTRAQUEUE_PREEMPTION_ORDER_POLICY = "userlimit_first";
 
   /**
+   * Flag to determine whether or not to preempt containers from apps where some
+   * used resources are less than the user's user limit.
+   */
+  public static final String CROSS_QUEUE_PREEMPTION_CONSERVATIVE_DRF =
+      PREEMPTION_CONFIG_PREFIX + "conservative-drf";
+  public static final Boolean DEFAULT_CROSS_QUEUE_PREEMPTION_CONSERVATIVE_DRF =
+      false;
+
+  public static final String IN_QUEUE_PREEMPTION_CONSERVATIVE_DRF =
+      PREEMPTION_CONFIG_PREFIX + INTRA_QUEUE_PREEMPTION_CONFIG_PREFIX +
+      "conservative-drf";
+  public static final Boolean DEFAULT_IN_QUEUE_PREEMPTION_CONSERVATIVE_DRF =
+      true;
+
+  /**
    * Should we allow queues continue grow after all queue reaches their
    * guaranteed capacity.
    */
@@ -2009,6 +2024,25 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       AUTO_CREATE_CHILD_QUEUE_PREFIX + "enabled";
 
   @Private
+  private static final String AUTO_QUEUE_CREATION_V2_PREFIX =
+      "auto-queue-creation-v2.";
+
+  @Private
+  public static final String AUTO_QUEUE_CREATION_V2_ENABLED =
+      AUTO_QUEUE_CREATION_V2_PREFIX + "enabled";
+
+  @Private
+  public static final String AUTO_QUEUE_CREATION_V2_MAX_QUEUES =
+      AUTO_QUEUE_CREATION_V2_PREFIX + "max-queues";
+
+  @Private
+  public static final int
+      DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES = 1000;
+
+  @Private
+  public static final boolean DEFAULT_AUTO_QUEUE_CREATION_ENABLED = false;
+
+  @Private
   public static final String AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX =
       "leaf-queue-template";
 
@@ -2042,6 +2076,20 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setBoolean(getQueuePrefix(queuePath) +
             AUTO_CREATE_CHILD_QUEUE_ENABLED,
         autoCreationEnabled);
+  }
+
+  public void setAutoQueueCreationV2Enabled(String queuePath,
+      boolean autoQueueCreation) {
+    setBoolean(
+        getQueuePrefix(queuePath) + AUTO_QUEUE_CREATION_V2_ENABLED,
+        autoQueueCreation);
+  }
+
+  public boolean isAutoQueueCreationV2Enabled(String queuePath) {
+    boolean isAutoQueueCreation = getBoolean(
+        getQueuePrefix(queuePath) + AUTO_QUEUE_CREATION_V2_ENABLED,
+        DEFAULT_AUTO_QUEUE_CREATION_ENABLED);
+    return isAutoQueueCreation;
   }
 
   /**
@@ -2105,6 +2153,28 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         DEFAULT_AUTO_CREATE_QUEUE_MAX_QUEUES);
   }
 
+  /**
+   * Get the max number of queues that are allowed to be created under
+   * a parent queue which allowed auto creation v2.
+   *
+   * @param queuePath the parent queue's path
+   * @return the max number of queues allowed to be auto created,
+   * in new auto created.
+   */
+  @Private
+  public int getAutoCreatedQueuesV2MaxChildQueuesLimit(String queuePath) {
+    return getInt(getQueuePrefix(queuePath) +
+            AUTO_QUEUE_CREATION_V2_MAX_QUEUES,
+        DEFAULT_AUTO_QUEUE_CREATION_V2_MAX_QUEUES);
+  }
+
+  @VisibleForTesting
+  public void setAutoCreatedQueuesV2MaxChildQueuesLimit(String queuePath,
+      int maxQueues) {
+    setInt(getQueuePrefix(queuePath) +
+        AUTO_QUEUE_CREATION_V2_MAX_QUEUES, maxQueues);
+  }
+
   @Private
   public static final String AUTO_CREATED_QUEUE_MANAGEMENT_POLICY =
       AUTO_CREATE_CHILD_QUEUE_PREFIX + "management-policy";
@@ -2129,6 +2199,74 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @Private
   public static final long DEFAULT_QUEUE_MANAGEMENT_MONITORING_INTERVAL =
       1500L;
+
+  @Private
+  public static final boolean
+      DEFAULT_AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE = true;
+
+  @Private
+  public static final String AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE =
+      AUTO_QUEUE_CREATION_V2_PREFIX + "queue-auto-removal.enable";
+
+  // 300s for expired default
+  @Private
+  public static final long
+      DEFAULT_AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME = 300;
+
+  @Private
+  public static final String AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME =
+      PREFIX + AUTO_QUEUE_CREATION_V2_PREFIX + "queue-expiration-time";
+
+  /**
+   * If true, auto created queue with weight mode
+   * will be deleted when queue is expired.
+   * @param queuePath the queue's path for auto deletion check
+   * @return true if auto created queue's deletion when expired is enabled
+   * else false. Default
+   * is true.
+   */
+  @Private
+  public boolean isAutoExpiredDeletionEnabled(String queuePath) {
+    boolean isAutoExpiredDeletionEnabled = getBoolean(
+        getQueuePrefix(queuePath) +
+            AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE,
+        DEFAULT_AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE);
+    return isAutoExpiredDeletionEnabled;
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoExpiredDeletionEnabled(String queuePath,
+      boolean autoRemovalEnable) {
+    setBoolean(getQueuePrefix(queuePath) +
+            AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE,
+        autoRemovalEnable);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoExpiredDeletionTime(long time) {
+    setLong(AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME, time);
+  }
+
+  @Private
+  @VisibleForTesting
+  public long getAutoExpiredDeletionTime() {
+    return getLong(AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME,
+        DEFAULT_AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME);
+  }
+
+  /**
+   * Time in milliseconds between invocations
+   * of QueueConfigurationAutoRefreshPolicy.
+   */
+  @Private
+  public static final String QUEUE_AUTO_REFRESH_MONITORING_INTERVAL =
+      PREFIX + "queue.auto.refresh.monitoring-interval";
+
+  @Private
+  public static final long DEFAULT_QUEUE_AUTO_REFRESH_MONITORING_INTERVAL =
+      5000L;
 
   /**
    * Queue Management computation policy for Auto Created queues

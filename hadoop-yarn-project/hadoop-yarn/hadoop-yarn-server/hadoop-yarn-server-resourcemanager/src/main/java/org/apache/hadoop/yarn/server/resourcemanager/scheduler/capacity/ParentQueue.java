@@ -31,6 +31,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -108,11 +109,18 @@ public class ParentQueue extends AbstractCSQueue {
 
   public ParentQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
+    this(cs, cs.getConfiguration(), queueName, parent, old);
+  }
+
+  private ParentQueue(CapacitySchedulerContext cs,
+      CapacitySchedulerConfiguration csConf, String queueName, CSQueue parent,
+      CSQueue old)
+      throws IOException {
     super(cs, queueName, parent, old);
     this.scheduler = cs;
     this.rootQueue = (parent == null);
 
-    float rawCapacity = cs.getConfiguration().getNonLabeledQueueCapacity(getQueuePath());
+    float rawCapacity = csConf.getNonLabeledQueueCapacity(getQueuePath());
 
     if (rootQueue &&
         (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
@@ -125,7 +133,7 @@ public class ParentQueue extends AbstractCSQueue {
     this.allowZeroCapacitySum =
         cs.getConfiguration().getAllowZeroCapacitySum(getQueuePath());
 
-    setupQueueConfigs(cs.getClusterResource());
+    setupQueueConfigs(cs.getClusterResource(), csConf);
 
     LOG.info("Initialized parent-queue " + queueName +
         " name=" + queueName +
@@ -139,11 +147,12 @@ public class ParentQueue extends AbstractCSQueue {
         queueOrderingPolicy.getConfigName();
   }
 
-  protected void setupQueueConfigs(Resource clusterResource)
+  protected void setupQueueConfigs(Resource clusterResource,
+      CapacitySchedulerConfiguration csConf)
       throws IOException {
     writeLock.lock();
     try {
-      super.setupQueueConfigs(clusterResource);
+      super.setupQueueConfigs(clusterResource, csConf);
       StringBuilder aclsString = new StringBuilder();
       for (Map.Entry<AccessType, AccessControlList> e : acls.entrySet()) {
         aclsString.append(e.getKey() + ":" + e.getValue().getAclString());
@@ -158,13 +167,13 @@ public class ParentQueue extends AbstractCSQueue {
       }
 
       // Initialize queue ordering policy
-      queueOrderingPolicy = csContext.getConfiguration().getQueueOrderingPolicy(
+      queueOrderingPolicy = csConf.getQueueOrderingPolicy(
           getQueuePath(), parent == null ?
               null :
               ((ParentQueue) parent).getQueueOrderingPolicyConfigName());
       queueOrderingPolicy.setQueues(childQueues);
 
-      LOG.info(queueName + ", capacity=" + this.queueCapacities.getCapacity()
+      LOG.info(queueName + ", " + getCapacityOrWeightString()
           + ", absoluteCapacity=" + this.queueCapacities.getAbsoluteCapacity()
           + ", maxCapacity=" + this.queueCapacities.getMaximumCapacity()
           + ", absoluteMaxCapacity=" + this.queueCapacities
@@ -247,14 +256,11 @@ public class ParentQueue extends AbstractCSQueue {
           + "double check, details:" + diagMsg.toString());
     }
 
-    if (weightIsSet) {
+    if (weightIsSet || queues.isEmpty()) {
       return QueueCapacityType.WEIGHT;
     } else if (absoluteMinResSet) {
       return QueueCapacityType.ABSOLUTE_RESOURCE;
-    } else if (percentageIsSet) {
-      return QueueCapacityType.PERCENT;
     } else {
-      // When all values equals to 0, consider it is a percent mode.
       return QueueCapacityType.PERCENT;
     }
   }
@@ -456,13 +462,159 @@ public class ParentQueue extends AbstractCSQueue {
 
   public String toString() {
     return queueName + ": " +
-        "numChildQueue= " + childQueues.size() + ", " + 
-        "capacity=" + queueCapacities.getCapacity() + ", " +  
+        "numChildQueue= " + childQueues.size() + ", " +
+        getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
         "usedResources=" + queueUsage.getUsed() + 
         "usedCapacity=" + getUsedCapacity() + ", " + 
         "numApps=" + getNumApplications() + ", " + 
         "numContainers=" + getNumContainers();
+  }
+
+  private CapacitySchedulerConfiguration getConfForAutoCreatedQueue(
+      String childQueuePath, boolean isLeaf) {
+    // Copy existing config
+    CapacitySchedulerConfiguration dupCSConfig =
+        new CapacitySchedulerConfiguration(
+        csContext.getConfiguration(), false);
+    if (isLeaf) {
+      // set to -1, to disable it
+      dupCSConfig.setUserLimitFactor(childQueuePath, -1);
+
+      // Set Max AM percentage to a higher value
+      dupCSConfig.setMaximumApplicationMasterResourcePerQueuePercent(
+          childQueuePath, 0.5f);
+    }
+
+    return dupCSConfig;
+  }
+
+  private CSQueue createNewQueue(String childQueuePath, boolean isLeaf)
+      throws SchedulerDynamicEditException {
+    try {
+      AbstractCSQueue childQueue;
+      String queueShortName = childQueuePath.substring(
+          childQueuePath.lastIndexOf(".") + 1);
+
+      if (isLeaf) {
+        childQueue = new LeafQueue(csContext,
+            getConfForAutoCreatedQueue(childQueuePath, isLeaf), queueShortName,
+            this, null);
+      } else{
+        childQueue = new ParentQueue(csContext,
+            getConfForAutoCreatedQueue(childQueuePath, isLeaf), queueShortName,
+            this, null);
+      }
+      childQueue.setDynamicQueue(true);
+      // It should be sufficient now, we don't need to set more, because weights
+      // related setup will be handled in updateClusterResources
+
+      return childQueue;
+    } catch (IOException e) {
+      throw new SchedulerDynamicEditException(e.toString());
+    }
+  }
+
+  public ParentQueue addDynamicParentQueue(String queuePath)
+      throws SchedulerDynamicEditException {
+    return (ParentQueue) addDynamicChildQueue(queuePath, false);
+  }
+
+  public LeafQueue addDynamicLeafQueue(String queuePath)
+      throws SchedulerDynamicEditException {
+    return (LeafQueue) addDynamicChildQueue(queuePath, true);
+  }
+
+  // New method to add child queue
+  private CSQueue addDynamicChildQueue(String childQueuePath, boolean isLeaf)
+      throws SchedulerDynamicEditException {
+    writeLock.lock();
+    try {
+      // Check if queue exists, if queue exists, write a warning message (this
+      // should not happen, since it will be handled before calling this method)
+      // , but we will move on.
+      CSQueue queue =
+          csContext.getCapacitySchedulerQueueManager().getQueueByFullName(
+              childQueuePath);
+      if (queue != null) {
+        LOG.warn(
+            "This should not happen, trying to create queue=" + childQueuePath
+                + ", however the queue already exists");
+        return queue;
+      }
+
+      // Check if the max queue limit is exceeded.
+      int maxQueues = csContext.getConfiguration().
+          getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePath());
+      if (childQueues.size() >= maxQueues) {
+        throw new SchedulerDynamicEditException(
+            "Cannot auto create queue " + childQueuePath + ". Max Child "
+                + "Queue limit exceeded which is configured as: " + maxQueues
+                + " and number of child queues is: " + childQueues.size());
+      }
+
+      // First, check if we allow creation or not
+      boolean weightsAreUsed = false;
+      try {
+        weightsAreUsed = getCapacityConfigurationTypeForQueues(childQueues)
+            == QueueCapacityType.WEIGHT;
+      } catch (IOException e) {
+        LOG.warn("Caught Exception during auto queue creation", e);
+      }
+      if (!weightsAreUsed) {
+        throw new SchedulerDynamicEditException(
+            "Trying to create new queue=" + childQueuePath
+                + " but not all the queues under parent=" + this.getQueuePath()
+                + " are using weight-based capacity. Failed to created queue");
+      }
+
+      CSQueue newQueue = createNewQueue(childQueuePath, isLeaf);
+      this.childQueues.add(newQueue);
+      updateLastSubmittedTimeStamp();
+
+      // Call updateClusterResource.
+      // Which will deal with all effectiveMin/MaxResource
+      // Calculation
+      this.updateClusterResource(csContext.getClusterResource(),
+          new ResourceLimits(this.csContext.getClusterResource()));
+
+      return newQueue;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+
+  // New method to remove child queue
+  public void removeChildQueue(CSQueue queue)
+      throws SchedulerDynamicEditException {
+    writeLock.lock();
+    try {
+      // Now we can do remove and update
+      this.childQueues.remove(queue);
+      this.scheduler.getCapacitySchedulerQueueManager()
+          .removeQueue(queue.getQueuePath());
+
+      // Call updateClusterResource,
+      // which will deal with all effectiveMin/MaxResource
+      // Calculation
+      this.updateClusterResource(csContext.getClusterResource(),
+          new ResourceLimits(this.csContext.getClusterResource()));
+
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
+   * Check whether this queue supports adding additional child queues
+   * dynamically.
+   * @return true, if queue is eligible to create additional queues dynamically,
+   * false otherwise
+   */
+  public boolean isEligibleForAutoQueueCreation() {
+    return isDynamicQueue() || csContext.getConfiguration().
+        isAutoQueueCreationV2Enabled(getQueuePath());
   }
   
   @Override
@@ -470,6 +622,13 @@ public class ParentQueue extends AbstractCSQueue {
       Resource clusterResource) throws IOException {
     writeLock.lock();
     try {
+      // We skip reinitialize for dynamic queues, when this is called, and
+      // new queue is different from this queue, we will make this queue to be
+      // static queue.
+      if (newlyParsedQueue != this) {
+        this.setDynamicQueue(false);
+      }
+
       // Sanity check
       if (!(newlyParsedQueue instanceof ParentQueue) || !newlyParsedQueue
           .getQueuePath().equals(getQueuePath())) {
@@ -481,7 +640,7 @@ public class ParentQueue extends AbstractCSQueue {
       ParentQueue newlyParsedParentQueue = (ParentQueue) newlyParsedQueue;
 
       // Set new configs
-      setupQueueConfigs(clusterResource);
+      setupQueueConfigs(clusterResource, csContext.getConfiguration());
 
       // Re-configure existing child queues and add new ones
       // The CS has already checked to ensure all existing child queues are present!
@@ -537,6 +696,10 @@ public class ParentQueue extends AbstractCSQueue {
         Map.Entry<String, CSQueue> e = itr.next();
         String queueName = e.getKey();
         if (!newChildQueues.containsKey(queueName)) {
+          if (((AbstractCSQueue)e.getValue()).isDynamicQueue()) {
+            // Don't remove dynamic queue if we cannot find it in the config.
+            continue;
+          }
           itr.remove();
         }
       }
@@ -1045,11 +1208,26 @@ public class ParentQueue extends AbstractCSQueue {
       // below calculation for effective capacities
       updateAbsoluteCapacities();
 
+      // Normalize all dynamic queue queue's weight to 1 for all accessible node
+      // labels, this is important because existing node labels could keep
+      // changing when new node added, or node label mapping changed. We need
+      // this to ensure auto created queue can access all labels.
+      for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
+        for (CSQueue queue : childQueues) {
+          // For dynamic queue, we will set weight to 1 every time, because it
+          // is possible new labels added to the parent.
+          if (((AbstractCSQueue) queue).isDynamicQueue()) {
+            queue.getQueueCapacities().setWeight(nodeLabel, 1f);
+          }
+        }
+      }
+
       // Normalize weight of children
       if (getCapacityConfigurationTypeForQueues(childQueues)
           == QueueCapacityType.WEIGHT) {
         for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
           float sumOfWeight = 0;
+
           for (CSQueue queue : childQueues) {
             float weight = Math.max(0,
                 queue.getQueueCapacities().getWeight(nodeLabel));
@@ -1451,5 +1629,12 @@ public class ParentQueue extends AbstractCSQueue {
   // This is a locking free method
   Map<String, Float> getEffectiveMinRatioPerResource() {
     return effectiveMinRatioPerResource;
+  }
+
+  @Override
+  public boolean isEligibleForAutoDeletion() {
+    return isDynamicQueue() && getChildQueues().size() == 0 &&
+        csContext.getConfiguration().
+            isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
 }

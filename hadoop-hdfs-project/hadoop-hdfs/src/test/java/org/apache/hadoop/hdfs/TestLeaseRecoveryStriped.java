@@ -35,11 +35,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +71,7 @@ public class TestLeaseRecoveryStriped {
   private static final int bytesPerChecksum = 512;
 
   static {
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(DFSStripedOutputStream.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(BlockRecoveryWorker.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.DEBUG);

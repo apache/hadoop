@@ -28,12 +28,18 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RouterFederationRename.RouterRenameOption;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -50,6 +56,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -165,6 +173,7 @@ import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolServerSi
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedureScheduler;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
@@ -238,6 +247,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /** DN type -> full DN report. */
   private final LoadingCache<DatanodeReportType, DatanodeInfo[]> dnCache;
 
+  /** Specify the option of router federation rename. */
+  private RouterRenameOption routerRenameOption;
+  /** Schedule the router federation rename jobs. */
+  private BalanceProcedureScheduler fedRenameScheduler;
   /**
    * Construct a router RPC server.
    *
@@ -397,6 +410,57 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
                 .forEach((key) -> this.dnCache.refresh(key)),
             0,
             dnCacheExpire, TimeUnit.MILLISECONDS);
+    initRouterFedRename();
+  }
+
+  /**
+   * Init the router federation rename environment. Each router has its own
+   * journal path.
+   * In HA mode the journal path is:
+   *   JOURNAL_BASE/nsId/namenodeId
+   * e.g.
+   *   /journal/router-namespace/host0
+   * In non-ha mode the journal path is based on ip and port:
+   *   JOURNAL_BASE/host_port
+   * e.g.
+   *   /journal/0.0.0.0_8888
+   */
+  private void initRouterFedRename() throws IOException {
+    routerRenameOption = RouterRenameOption.valueOf(
+        conf.get(DFS_ROUTER_FEDERATION_RENAME_OPTION,
+            DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT).toUpperCase());
+    switch (routerRenameOption) {
+    case DISTCP:
+      RouterFederationRename.checkConfiguration(conf);
+      Configuration sConf = new Configuration(conf);
+      URI journalUri;
+      try {
+        journalUri = new URI(sConf.get(SCHEDULER_JOURNAL_URI));
+      } catch (URISyntaxException e) {
+        throw new IOException("Bad journal uri. Please check configuration for "
+            + SCHEDULER_JOURNAL_URI);
+      }
+      Path child;
+      String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+      String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+      InetSocketAddress listenAddress = this.rpcServer.getListenerAddress();
+      if (nsId == null || namenodeId == null) {
+        child = new Path(
+            listenAddress.getHostName() + "_" + listenAddress.getPort());
+      } else {
+        child = new Path(nsId, namenodeId);
+      }
+      String routerJournal = new Path(journalUri.toString(), child).toString();
+      sConf.set(SCHEDULER_JOURNAL_URI, routerJournal);
+      fedRenameScheduler = new BalanceProcedureScheduler(sConf);
+      fedRenameScheduler.init(true);
+      break;
+    case NONE:
+      fedRenameScheduler = null;
+      break;
+    default:
+      break;
+    }
   }
 
   @Override
@@ -432,7 +496,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     if (securityManager != null) {
       this.securityManager.stop();
     }
+    if (this.fedRenameScheduler != null) {
+      fedRenameScheduler.shutDown();
+    }
     super.serviceStop();
+  }
+
+  boolean isEnableRenameAcrossNamespace() {
+    return routerRenameOption != RouterRenameOption.NONE;
+  }
+
+  BalanceProcedureScheduler getFedRenameScheduler() {
+    return this.fedRenameScheduler;
   }
 
   /**
@@ -1887,6 +1962,17 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
     return routerProto.getGroupsForUser(user);
+  }
+
+  public int getRouterFederationRenameCount() {
+    return clientProto.getRouterFederationRenameCount();
+  }
+
+  public int getSchedulerJobCount() {
+    if (fedRenameScheduler == null) {
+      return 0;
+    }
+    return fedRenameScheduler.getAllJobs().size();
   }
 
   /**
