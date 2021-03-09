@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -85,6 +86,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   protected final Map<Class<? extends Enum>, EventHandler> eventDispatchers;
   private boolean exitOnDispatchException = true;
 
+  private Map<Class<? extends Enum>,
+      EventTypeMetrics> eventTypeMetricsMap;
+
   /**
    * The thread name for dispatcher.
    */
@@ -98,6 +102,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     super("Dispatcher");
     this.eventQueue = eventQueue;
     this.eventDispatchers = new HashMap<Class<? extends Enum>, EventHandler>();
+    this.eventTypeMetricsMap = new HashMap<Class<? extends Enum>,
+        EventTypeMetrics>();
   }
 
   /**
@@ -135,7 +141,15 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
             return;
           }
           if (event != null) {
-            dispatch(event);
+            if (eventTypeMetricsMap.get(event.getType().getClass()) != null) {
+              long startTime = System.nanoTime();
+              dispatch(event);
+              eventTypeMetricsMap.get(event.getType().getClass())
+                  .incr(event.getType(),
+                       (System.nanoTime() - startTime) / 1000);
+            } else {
+              dispatch(event);
+            }
             if (printTrigger) {
               //Log the latest dispatch event type
               // may cause the too many events queued
@@ -368,5 +382,10 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
   protected boolean isStopped() {
     return stopped;
+  }
+
+  public void addMetrics(EventTypeMetrics metrics,
+      Class<? extends Enum> eventClass) {
+    eventTypeMetricsMap.put(eventClass, metrics);
   }
 }
