@@ -46,11 +46,10 @@ public class TestHistoryViewerPrinter {
 
   private final String LINE_SEPARATOR = System.lineSeparator();
 
-  private static Locale DEFAULT_LOCALE;
+  private static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
   @BeforeClass
   public static void setUp() throws Exception {
-    DEFAULT_LOCALE = Locale.getDefault();
     Locale.setDefault(Locale.ENGLISH);
   }
 
