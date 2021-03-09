@@ -39,8 +39,6 @@ import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableS3GuardInTestBucket;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -49,10 +47,11 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
- * HADOOP-16721: race condition with delete and rename underneath the same destination
- * directory.
- * This test suite recreates the failure using semaphores to guarantee the failure
- * condition is encountered -then verifies that the rename operation is successful.
+ * HADOOP-16721: race condition with delete and rename underneath the
+ * same destination directory.
+ * This test suite recreates the failure using semaphores to
+ * guarantee the failure condition is encountered
+ * -then verifies that the rename operation is successful.
  */
 public class ITestRenameDeleteRace extends AbstractS3ATestBase {
 
@@ -87,9 +86,28 @@ public class ITestRenameDeleteRace extends AbstractS3ATestBase {
     return conf;
   }
 
+  /**
+   * This test uses a subclass of S3AFileSystem to recreate the race between
+   * subdirectory delete and rename.
+   * The JUnit thread performs the rename, while an executor-submitted
+   * thread performs the delete.
+   * Semaphores are used to
+   * -block the JUnit thread from initiating the rename until the delete
+   * has finished the delete phase, and has reached the
+   * {@code maybeCreateFakeParentDirectory()} call.
+   * A second semaphore is used to block the delete thread from
+   * listing and recreating the deleted directory until after
+   * the JUnit thread has completed.
+   * Together, the two semaphores guarantee that the rename()
+   * call will be made at exactly the moment when the destination
+   * directory no longer exists.
+   */
   @Test
   public void testDeleteRenameRaceCondition() throws Throwable {
     describe("verify no race between delete and rename");
+
+    // the normal FS is used for path setup, verification
+    // and the rename call.
     final S3AFileSystem fs = getFileSystem();
     final Path path = path(getMethodName());
     Path srcDir = new Path(path, "src");
@@ -115,38 +133,45 @@ public class ITestRenameDeleteRace extends AbstractS3ATestBase {
     // source subfile
     ContractTestUtils.touch(fs, srcSubfile);
 
+    // this is the FS used for delete()
     final BlockingFakeDirMarkerFS blockingFS
         = new BlockingFakeDirMarkerFS();
     blockingFS.initialize(fs.getUri(), fs.getConf());
     // get the semaphore; this ensures that the next attempt to create
     // a fake marker blocks
+    blockingFS.blockFakeDirCreation();
     try {
-      blockingFS.blockBeforCreatingMarker.acquire();
       final CompletableFuture<Path> future = submit(EXECUTOR, () -> {
         LOG.info("deleting {}", destSubdir1);
         blockingFS.delete(destSubdir1, true);
         return destSubdir1;
       });
 
-      // wait for the delete to complete the deletion phase
-      blockingFS.signalCreatingFakeParentDirectory.acquire();
-
-      // there is now no destination directory
-      assertPathDoesNotExist("should have been implicitly deleted", destDir);
+      // wait for the blocking FS to return from the DELETE call.
+      blockingFS.awaitFakeDirCreation();
 
       try {
-        // Now attempt the rename in the normal FS.
+        // there is now no destination directory
+        assertPathDoesNotExist("should have been implicitly deleted",
+            destDir);
+
+        // attempt the rename in the normal FS.
         LOG.info("renaming {} to {}", srcSubdir2, destSubdir2);
         Assertions.assertThat(fs.rename(srcSubdir2, destSubdir2))
             .describedAs("rename(%s, %s)", srcSubdir2, destSubdir2)
             .isTrue();
+        // dest dir implicitly exists.
+        assertPathExists("must now exist", destDir);
       } finally {
-        blockingFS.blockBeforCreatingMarker.release();
+        // release the remaining semaphore so that the deletion thread exits.
+        blockingFS.allowFakeDirCreationToProceed();
       }
 
       // now let the delete complete
       LOG.info("Waiting for delete {} to finish", destSubdir1);
       waitForCompletion(future);
+
+      // everything still exists
       assertPathExists("must now exist", destDir);
       assertPathExists("must now exist", new Path(destSubdir2, "subfile2"));
       assertPathDoesNotExist("Src dir deleted", srcSubdir2);
@@ -161,6 +186,7 @@ public class ITestRenameDeleteRace extends AbstractS3ATestBase {
    * Subclass of S3A FS whose execution of maybeCreateFakeParentDirectory
    * can be choreographed with another thread so as to reliably
    * create the delete/rename race condition.
+   * This class is only intended for "single shot" API calls.
    */
   private final class BlockingFakeDirMarkerFS extends S3AFileSystem {
 
@@ -174,7 +200,7 @@ public class ITestRenameDeleteRace extends AbstractS3ATestBase {
     /**
      * Semaphore to acquire before the marker can be listed/created.
      */
-    private final Semaphore blockBeforCreatingMarker = new Semaphore(1);
+    private final Semaphore blockBeforeCreatingMarker = new Semaphore(1);
 
     private BlockingFakeDirMarkerFS() {
       signalCreatingFakeParentDirectory.acquireUninterruptibly();
@@ -188,13 +214,34 @@ public class ITestRenameDeleteRace extends AbstractS3ATestBase {
       signalCreatingFakeParentDirectory.release();
       // acquire the semaphore and then create any fake directory
       LOG.info("blocking for creation");
-      blockBeforCreatingMarker.acquireUninterruptibly();
+      blockBeforeCreatingMarker.acquireUninterruptibly();
       try {
         LOG.info("probing for/creating markers");
         super.maybeCreateFakeParentDirectory(path);
       } finally {
-        blockBeforCreatingMarker.release();
+        // and release the marker for completeness.
+        blockBeforeCreatingMarker.release();
       }
+    }
+
+    /**
+     * Block until fake dir creation is invoked.
+     */
+    public void blockFakeDirCreation() throws InterruptedException {
+      blockBeforeCreatingMarker.acquire();
+    }
+
+    /**
+     * wait for the blocking FS to return from the DELETE call.
+     */
+    public void awaitFakeDirCreation() throws InterruptedException {
+      LOG.info("Blocking until maybeCreateFakeParentDirectory() is reached");
+      signalCreatingFakeParentDirectory.acquire();
+    }
+
+    public void allowFakeDirCreationToProceed() {
+      LOG.info("Allowing the fake directory LIST/PUT to proceed.");
+      blockBeforeCreatingMarker.release();
     }
   }
 
