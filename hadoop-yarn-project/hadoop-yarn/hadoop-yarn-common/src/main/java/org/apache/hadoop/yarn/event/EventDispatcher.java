@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.event;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -47,11 +50,14 @@ public class EventDispatcher<T extends Event> extends
   private final Thread eventProcessor;
   private volatile boolean stopped = false;
   private boolean shouldExitOnError = true;
+  private EventTypeMetrics metrics;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(EventDispatcher.class);
   private static final Marker FATAL =
       MarkerFactory.getMarker("FATAL");
+
+  private Clock clock = new MonotonicClock();
 
   private final class EventProcessor implements Runnable {
     @Override
@@ -68,7 +74,14 @@ public class EventDispatcher<T extends Event> extends
         }
 
         try {
-          handler.handle(event);
+          if (metrics != null) {
+            long startTime = clock.getTime();
+            handler.handle(event);
+            metrics.increment(event.getType(),
+                clock.getTime() - startTime);
+          } else {
+            handler.handle(event);
+          }
         } catch (Throwable t) {
           // An error occurred, but we are shutting down anyway.
           // If it was an InterruptedException, the very act of
@@ -136,4 +149,9 @@ public class EventDispatcher<T extends Event> extends
   public void disableExitOnError() {
     shouldExitOnError = false;
   }
+
+  public void setMetrics(EventTypeMetrics metrics) {
+    this.metrics = metrics;
+  }
+
 }
