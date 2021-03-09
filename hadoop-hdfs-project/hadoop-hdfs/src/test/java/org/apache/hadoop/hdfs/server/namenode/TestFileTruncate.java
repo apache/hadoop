@@ -701,7 +701,7 @@ public class TestFileTruncate {
         fail("Truncate must fail since a truncate is already in progress.");
       } catch (IOException expected) {
         GenericTestUtils.assertExceptionContains(
-            "/dir/testTruncateFailure is being truncated", expected);
+            "Failed to TRUNCATE_FILE", expected);
       }
     }
 
