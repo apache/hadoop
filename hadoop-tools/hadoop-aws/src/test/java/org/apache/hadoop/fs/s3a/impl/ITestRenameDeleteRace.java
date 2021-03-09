@@ -41,6 +41,7 @@ import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableS3GuardInTestBucket;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
@@ -53,10 +54,10 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
  * This test suite recreates the failure using semaphores to guarantee the failure
  * condition is encountered -then verifies that the rename operation is successful.
  */
-public class ITestlRenameDeleteRace extends AbstractS3ATestBase {
+public class ITestRenameDeleteRace extends AbstractS3ATestBase {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestlRenameDeleteRace.class);
+      LoggerFactory.getLogger(ITestRenameDeleteRace.class);
 
 
   /** Many threads for scale performance: {@value}. */
@@ -75,16 +76,14 @@ public class ITestlRenameDeleteRace extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    String bucketName = getTestBucketName(conf);
 
-    removeBaseAndBucketOverrides(bucketName, conf,
-        S3_METADATA_STORE_IMPL,
-        DIRECTORY_MARKER_POLICY);
     // use the keep policy to ensure that surplus markers exist
     // to complicate failures
     conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_DELETE);
-    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
-
+    removeBaseAndBucketOverrides(getTestBucketName(conf),
+        conf,
+        DIRECTORY_MARKER_POLICY);
+    disableS3GuardInTestBucket(conf);
     return conf;
   }
 
@@ -107,7 +106,9 @@ public class ITestlRenameDeleteRace extends AbstractS3ATestBase {
     Path srcSubfile = new Path(srcSubdir2, "subfile2");
     Path destSubdir2 = new Path(destDir, "subdir2");
 
-    // creates subfile1 and all parents
+    // creates subfile1 and all parents, so that
+    // dest/subdir1/subfile1 exists as a file;
+    // dest/subdir1 and dest are directories without markers
     ContractTestUtils.touch(fs, subfile1);
     assertIsDirectory(destDir);
 
@@ -167,8 +168,8 @@ public class ITestlRenameDeleteRace extends AbstractS3ATestBase {
      * Block for entry into maybeCreateFakeParentDirectory(); will be released
      * then.
      */
-    private final Semaphore signalCreatingFakeParentDirectory = new Semaphore(
-        1);
+    private final Semaphore signalCreatingFakeParentDirectory =
+        new Semaphore(1);
 
     /**
      * Semaphore to acquire before the marker can be listed/created.
