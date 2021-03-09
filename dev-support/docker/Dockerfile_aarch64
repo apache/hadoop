@@ -97,10 +97,10 @@ ENV MAVEN_HOME /usr
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-arm64
 
 #######
-# Install SpotBugs 4.0.6
+# Install SpotBugs 4.2.2
 #######
 RUN mkdir -p /opt/spotbugs \
-    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.0.6/spotbugs-4.0.6.tgz \
+    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.2.2/spotbugs-4.2.2.tgz \
       -o /opt/spotbugs.tgz \
     && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
     && chmod +x /opt/spotbugs/bin/*

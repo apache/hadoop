@@ -113,8 +113,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <maven-checkstyle-plugin.version>3.1.0</maven-checkstyle-plugin.version>
     <checkstyle.version>8.29</checkstyle.version>
     <dependency-check-maven.version>1.4.3</dependency-check-maven.version>
-    <spotbugs.version>4.0.6</spotbugs.version>
-    <spotbugs-maven-plugin.version>4.0.4</spotbugs-maven-plugin.version>
+    <spotbugs.version>4.2.2</spotbugs.version>
+    <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
 
     <shell-executable>bash</shell-executable>
 
