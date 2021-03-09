@@ -212,7 +212,6 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   @Before
   public void setUp() throws Exception {
     ResourceUtils.resetResourceTypes(new Configuration());
-    DefaultMetricsSystem.setMiniClusterMode(true);
     resourceManager = new ResourceManager() {
       @Override
       protected RMNodeLabelsManager createNodeLabelManager() {

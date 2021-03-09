@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -53,7 +52,6 @@ public class TestSchedulerHealth {
   private ResourceManager resourceManager;
 
   public void setup() {
-    DefaultMetricsSystem.setMiniClusterMode(true);
     resourceManager = new ResourceManager() {
       @Override
       protected RMNodeLabelsManager createNodeLabelManager() {
