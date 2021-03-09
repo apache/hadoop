@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
-import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -63,7 +62,6 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
@@ -451,23 +449,11 @@ public class ResourceManager extends CompositeService
   }
 
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
-    EventDispatcher dispatcher = new
-        EventDispatcher(this.scheduler, "SchedulerEventDispatcher");
-    dispatcher.
-        setMetrics(GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), SchedulerEventType.class));
-    return dispatcher;
+    return new EventDispatcher(this.scheduler, "SchedulerEventDispatcher");
   }
 
   protected Dispatcher createDispatcher() {
-    AsyncDispatcher dispatcher = new AsyncDispatcher("RM Event dispatcher");
-    GenericEventTypeMetrics genericEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-        create(dispatcher.getName(), NodesListManagerEventType.class);
-    // We can add more
-    dispatcher.addMetrics(genericEventTypeMetrics,
-        genericEventTypeMetrics.getEnumClass());
-    return dispatcher;
+    return new AsyncDispatcher("RM Event dispatcher");
   }
 
   protected ResourceScheduler createScheduler() {
