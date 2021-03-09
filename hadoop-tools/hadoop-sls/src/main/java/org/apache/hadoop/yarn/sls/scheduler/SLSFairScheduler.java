@@ -66,7 +66,8 @@ public class SLSFairScheduler extends FairScheduler
       new ConcurrentHashMap<>();
 
   // logger
-  private static final Logger LOG = LoggerFactory.getLogger(SLSCapacityScheduler.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SLSFairScheduler.class);
 
   public SchedulerMetrics getSchedulerMetrics() {
     return schedulerMetrics;
