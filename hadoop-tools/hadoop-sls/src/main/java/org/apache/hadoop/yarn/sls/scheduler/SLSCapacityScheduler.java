@@ -119,6 +119,9 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
                 containerIds, strings,
                 strings2, updateRequests);
         return allocation;
+      } catch (Exception e) {
+        LOG.error("Caught exception from allocate", e);
+        throw e;
       } finally {
         context.stop();
         schedulerMetrics.increaseSchedulerAllocationCounter();
