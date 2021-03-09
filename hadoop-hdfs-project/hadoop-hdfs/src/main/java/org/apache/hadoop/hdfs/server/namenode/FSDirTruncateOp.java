@@ -24,6 +24,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.RecoverLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 
-import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -113,7 +113,9 @@ final class FSDirTruncateOp {
           if (newLength == truncateLength) {
             return new TruncateResult(false, fsd.getAuditFileInfo(iip));
           } else {
-            throw new RetriableException(src + " is being truncated.");
+            throw new AlreadyBeingCreatedException(
+                RecoverLeaseOp.TRUNCATE_FILE.getExceptionMessage(src,
+                    clientName, clientMachine, src + " is being truncated."));
           }
         }
       }
