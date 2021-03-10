@@ -153,17 +153,6 @@ public class CommonConfigurationKeysPublic {
   public static final String FS_PROTECTED_DIRECTORIES =
       "fs.protected.directories";
 
-  /**
-   *  Used to enable get protected directories from config file.
-   *  By default it is disabled
-   */
-  public static final String FS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY=
-      "fs.protected.directories.config.file.enable";
-
-  /** Default value for FS_PROTECTED_DIRECTORIES_FILE_ENABLE_KEY */
-  public static final boolean FS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT=
-      false;
-
   // TBD: Code is still using hardcoded values (e.g. "fs.automatic.close")
   // instead of constant (e.g. FS_AUTOMATIC_CLOSE_KEY)
   //

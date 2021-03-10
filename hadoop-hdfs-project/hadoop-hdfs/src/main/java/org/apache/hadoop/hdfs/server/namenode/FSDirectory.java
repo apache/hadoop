@@ -86,10 +86,10 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
@@ -392,8 +392,8 @@ public class FSDirectory implements Closeable {
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE,
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT);
      this.isProtectedDirsConfigEnable = conf.getBoolean(
-        FS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
-        FS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT);
+         DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
+         DFS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT);
 
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
@@ -534,8 +534,8 @@ public class FSDirectory implements Closeable {
   static SortedSet<String> parseProtectedDirectories(Configuration conf) {
     return parseProtectedDirectories(
         conf.getBoolean(
-        FS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
-        FS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT),
+            DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
+            DFS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT),
         conf.getTrimmed(FS_PROTECTED_DIRECTORIES));
   }
 

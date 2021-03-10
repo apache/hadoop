@@ -1546,6 +1546,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       false;
 
   /**
+   * Used to enable get protected directories from config file. By default it is disabled
+   */
+  public static final String DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY =
+      "dfs.protected.directories.config.file.enable";
+
+  /**
+   * Default value for DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY
+   */
+  public static final boolean DFS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT =
+      false;
+
+  /**
    *  HDFS-15548 to allow DISK/ARCHIVE configured on the same disk mount.
    *  The default ratio will be applied if DISK/ARCHIVE are configured
    *  on same disk mount.

@@ -46,6 +46,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
@@ -116,10 +117,10 @@ public class TestProtectedDirectories {
       throws Throwable {
     // Initialize the configuration.
     conf.setBoolean(
-        CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
+        DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
         true);
     conf.set(
-        CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES,
+        FS_PROTECTED_DIRECTORIES,
         configFile);
 
     generateConfigFile(configFile,
@@ -325,10 +326,10 @@ public class TestProtectedDirectories {
     Configuration conf = new HdfsConfiguration();
 
     conf.setBoolean(
-        CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
+        DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
         true);
     conf.set(
-        CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES,
+        FS_PROTECTED_DIRECTORIES,
         configFile);
 
     Collection<Path> protectedPaths = Arrays.asList(new Path("/a"), new Path(
@@ -359,10 +360,10 @@ public class TestProtectedDirectories {
     Configuration conf = new HdfsConfiguration();
 
     conf.setBoolean(
-        CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
+        DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
         true);
     conf.set(
-        CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES,
+        FS_PROTECTED_DIRECTORIES,
         configFile);
 
     Collection<Path> protectedPaths = Arrays.asList(new Path("/a"), new Path(

@@ -6069,6 +6069,14 @@
   </property>
 
   <property>
+    <name>dfs.protected.directories.config.file.enable</name>
+    <value>false</value>
+    <description>whether to get the protected directories from a special
+      configuration file which set on fs.protected.directories.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.storage.default.policy</name>
     <value>HOT</value>
     <description>
