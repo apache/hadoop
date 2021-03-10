@@ -94,12 +94,12 @@ RUN apt-get -q update \
 # OpenJDK 7
 #######
 # hadolint ignore=DL3008
-RUN add-apt-repository ppa:openjdk-r/ppa
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends openjdk-7-jdk \
+RUN curl -L -s -S https://cdn.azul.com/zulu/bin/zulu7.38.0.11-ca-jdk7.0.262-linux_amd64.deb \
+      -o /opt/jdk7.deb \
+    && apt-get -q install /opt/jdk7.deb \
+    && rm -rf /opt/jdk7.deb \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-RUN update-java-alternatives --set java-1.7.0-openjdk-amd64
 
 ######
 # Install cmake 3.1.0 (3.5.1 ships with Xenial)
