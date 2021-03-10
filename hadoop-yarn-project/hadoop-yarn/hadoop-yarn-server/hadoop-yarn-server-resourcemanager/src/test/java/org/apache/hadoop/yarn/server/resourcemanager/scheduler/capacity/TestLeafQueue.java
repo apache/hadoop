@@ -162,9 +162,13 @@ public class TestLeafQueue {
   private void setUpInternal(ResourceCalculator rC, boolean withNodeLabels)
       throws Exception {
     CapacityScheduler spyCs = new CapacityScheduler();
-    spyCs.setActivitiesManagerEnabled(false);
     queues = new CSQueueStore();
     cs = spy(spyCs);
+
+    //All stub calls on the spy object of the 'cs' field should happen
+    //before cs.start() is invoked. See YARN-10672 for more details.
+    when(cs.getNumClusterNodes()).thenReturn(3);
+
     rmContext = TestUtils.getMockRMContext();
     spyRMContext = spy(rmContext);
 
@@ -231,7 +235,6 @@ public class TestLeafQueue {
     when(spyRMContext.getScheduler()).thenReturn(cs);
     when(spyRMContext.getYarnConfiguration())
         .thenReturn(new YarnConfiguration());
-    when(cs.getNumClusterNodes()).thenReturn(3);
     cs.start();
   }
 
