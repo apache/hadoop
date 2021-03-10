@@ -93,10 +93,9 @@ RUN apt-get -q update \
 #######
 # OpenJDK 7
 #######
-# hadolint ignore=DL3008
 RUN curl -L -s -S https://cdn.azul.com/zulu/bin/zulu7.38.0.11-ca-jdk7.0.262-linux_amd64.deb \
       -o /opt/jdk7.deb \
-    && apt-get -q install /opt/jdk7.deb \
+    && apt-get -q install -y --no-install-recommends /opt/jdk7.deb \
     && rm -rf /opt/jdk7.deb \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
