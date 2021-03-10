@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +25,7 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -81,5 +83,32 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
         .getHomeSubcluster(getApplicationSubmissionContext(), null);
     Assert.assertEquals("sc5", chosen.getId());
   }
+
+  @Test
+  public void testZeroSubClustersWithPositiveWeight() throws Exception {
+    Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
+    Map<SubClusterIdInfo, Float> amrmWeights = new HashMap<>();
+    // Set negative value to all subclusters
+    for (int i = 0; i < 5; i++) {
+      SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
+
+      SubClusterInfo sci = mock(SubClusterInfo.class);
+      when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
+      when(sci.getSubClusterId()).thenReturn(sc.toId());
+      getActiveSubclusters().put(sc.toId(), sci);
+      routerWeights.put(sc, 0.0f);
+      amrmWeights.put(sc, -1.0f);
+    }
+    getPolicyInfo().setRouterPolicyWeights(routerWeights);
+    getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
+    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
+        getPolicyInfo(), getActiveSubclusters());
+
+    intercept(FederationPolicyException.class,
+        "No Active Subcluster with weight vector greater than zero",
+        () -> ((FederationRouterPolicy) getPolicy())
+            .getHomeSubcluster(getApplicationSubmissionContext(), null));
+  }
+
 
 }

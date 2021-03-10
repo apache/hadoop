@@ -789,12 +789,38 @@ to 100 MB). The default value will be 8388608 (8 MB).
 bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to
 100 MB). The default value will be 4194304 (4 MB).
 
+`fs.azure.read.alwaysReadBufferSize`: Read request size configured by
+`fs.azure.read.request.size` will be honoured only when the reads done are in
+sequential pattern. When the read pattern is detected to be random, read size
+will be same as the buffer length provided by the calling process.
+This config when set to true will force random reads to also read in same
+request sizes as sequential reads. This is a means to have same read patterns
+as of ADLS Gen1, as it does not differentiate read patterns and always reads by
+the configured read request size. The default value for this config will be
+false, where reads for the provided buffer length is done when random read
+pattern is detected.
+
 `fs.azure.readaheadqueue.depth`: Sets the readahead queue depth in
 AbfsInputStream. In case the set value is negative the read ahead queue depth
 will be set as Runtime.getRuntime().availableProcessors(). By default the value
 will be -1. To disable readaheads, set this value to 0. If your workload is
  doing only random reads (non-sequential) or you are seeing throttling, you
   may try setting this value to 0.
+
+`fs.azure.read.readahead.blocksize`: To set the read buffer size for the read
+aheads. Specify the value in bytes. The value should be between 16384 to
+104857600 both inclusive (16 KB to 100 MB). The default value will be
+4194304 (4 MB).
+
+`fs.azure.buffered.pread.disable`: By default the positional read API will do a
+seek and read on input stream. This read will fill the buffer cache in
+AbfsInputStream and update the cursor positions. If this optimization is true
+it will skip usage of buffer and do a lock free REST call for reading from blob.
+This optimization is very much helpful for HBase kind of short random read over
+a shared AbfsInputStream instance.
+Note: This is not a config which can be set at cluster level. It can be used as
+an option on FutureDataInputStreamBuilder.
+See FileSystem#openFile(Path path)
 
 To run under limited memory situations configure the following. Especially
 when there are too many writes from the same process. 
@@ -832,7 +858,7 @@ Please refer the following links for further information.
 listStatus API fetches the FileStatus information from server in a page by page
 manner. The config `fs.azure.list.max.results` used to set the maxResults URI
  param which sets the pagesize(maximum results per call). The value should
- be >  0. By default this will be 500. Server has a maximum value for this
+ be >  0. By default this will be 5000. Server has a maximum value for this
  parameter as 5000. So even if the config is above 5000 the response will only
 contain 5000 entries. Please refer the following link for further information.
 https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list

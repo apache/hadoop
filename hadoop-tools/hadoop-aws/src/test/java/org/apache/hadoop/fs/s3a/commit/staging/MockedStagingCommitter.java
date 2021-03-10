@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.ClientErrors;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.ClientResults;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -76,7 +77,8 @@ class MockedStagingCommitter extends StagingCommitter {
 
   @Override
   protected void maybeCreateSuccessMarker(JobContext context,
-      List<String> filenames)
+      List<String> filenames,
+      final IOStatisticsSnapshot ioStatistics)
       throws IOException {
      //skipped
   }

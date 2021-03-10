@@ -74,6 +74,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     this(testName, 1);
   }
 
+  @SuppressWarnings("deprecation")
   public MiniMRYarnCluster(String testName, int noOfNMs) {
     this(testName, noOfNMs, false);
   }
@@ -82,6 +83,10 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     super(testName, 1, noOfNMs, 4, 4, enableAHS);
     historyServerWrapper = new JobHistoryServerWrapper();
     addService(historyServerWrapper);
+  }
+
+  public static String copyAppJarIntoTestDir(String testSubdir) {
+    return JarFinder.getJar(LocalContainerLauncher.class, testSubdir);
   }
 
   public static String getResolvedMRHistoryWebAppURLWithoutScheme(

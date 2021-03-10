@@ -147,14 +147,14 @@ public final class ShutdownHookManager {
           shutdownTimeout,
           TIME_UNIT_DEFAULT)) {
         // timeout waiting for the
-        LOG.error("ShutdownHookManger shutdown forcefully after"
+        LOG.error("ShutdownHookManager shutdown forcefully after"
             + " {} seconds.", shutdownTimeout);
         EXECUTOR.shutdownNow();
       }
-      LOG.debug("ShutdownHookManger completed shutdown.");
+      LOG.debug("ShutdownHookManager completed shutdown.");
     } catch (InterruptedException ex) {
       // interrupted.
-      LOG.error("ShutdownHookManger interrupted while waiting for " +
+      LOG.error("ShutdownHookManager interrupted while waiting for " +
           "termination.", ex);
       EXECUTOR.shutdownNow();
       Thread.currentThread().interrupt();

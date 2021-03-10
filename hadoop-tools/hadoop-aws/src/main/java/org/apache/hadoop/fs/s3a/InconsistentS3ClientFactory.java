@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.services.s3.AmazonS3;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -40,12 +41,21 @@ public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
    * Logs a warning that this is being done.
    * @param credentials credentials to use
    * @param awsConf  AWS configuration
+   * @param metrics metric collector
+   * @param endpoint AWS endpoint
+   * @param pathStyleAccess should path style access be supported?
    * @return an inconsistent client.
    */
   @Override
   protected AmazonS3 newAmazonS3Client(AWSCredentialsProvider credentials,
-      ClientConfiguration awsConf) {
+      ClientConfiguration awsConf,
+      final RequestMetricCollector metrics,
+      final String endpoint,
+      final boolean pathStyleAccess) {
     LOG.warn("** FAILURE INJECTION ENABLED.  Do not run in production! **");
-    return new InconsistentAmazonS3Client(credentials, awsConf, getConf());
+    InconsistentAmazonS3Client s3
+        = new InconsistentAmazonS3Client(credentials, awsConf, getConf());
+    configureAmazonS3Client(s3, endpoint, pathStyleAccess);
+    return s3;
   }
 }

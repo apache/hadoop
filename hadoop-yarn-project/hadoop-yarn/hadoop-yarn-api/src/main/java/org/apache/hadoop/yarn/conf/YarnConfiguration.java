@@ -1238,6 +1238,15 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_ADMIN_USER_ENV = NM_PREFIX + "admin-env";
   public static final String DEFAULT_NM_ADMIN_USER_ENV = "MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX";
 
+  /**
+   * PATH components that will be prepended to the user's path.
+   * If this is defined and the user does not define PATH, NM will also
+   * append ":$PATH" to prevent this from eclipsing the PATH defined in
+   * the container. This feature is only available for Linux.
+   * */
+  public static final String NM_ADMIN_FORCE_PATH = NM_PREFIX + "force.path";
+  public static final String DEFAULT_NM_ADMIN_FORCE_PATH = "";
+
   /** Environment variables that containers may override rather than use NodeManager's default.*/
   public static final String NM_ENV_WHITELIST = NM_PREFIX + "env-whitelist";
   public static final String DEFAULT_NM_ENV_WHITELIST = StringUtils.join(",",
@@ -2440,6 +2449,18 @@ public class YarnConfiguration extends Configuration {
   /** Host pid namespace for containers is disabled by default. */
   public static final boolean DEFAULT_NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
       false;
+
+  public static final String YARN_HTTP_WEBAPP_EXTERNAL_CLASSES =
+      "yarn.http.rmwebapp.external.classes";
+
+  public static final String YARN_HTTP_WEBAPP_SCHEDULER_PAGE =
+      "yarn.http.rmwebapp.scheduler.page.class";
+
+  public static final String YARN_HTTP_WEBAPP_CUSTOM_DAO_CLASSES =
+      "yarn.http.rmwebapp.custom.dao.classes";
+
+  public static final String YARN_HTTP_WEBAPP_CUSTOM_UNWRAPPED_DAO_CLASSES =
+      "yarn.http.rmwebapp.custom.unwrapped.dao.classes";
 
   /**
    * Whether or not users are allowed to request that Docker containers honor

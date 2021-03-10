@@ -143,7 +143,8 @@ public class StripedDataStreamer extends DataStreamer {
 
       // set up the pipeline again with the remaining nodes. when a striped
       // data streamer comes here, it must be in external error state.
-      assert getErrorState().hasExternalError();
+      assert getErrorState().hasExternalError()
+          || getErrorState().doWaitForRestart();
       success = createBlockOutputStream(nodes, nodeStorageTypes,
           nodeStorageIDs, newGS, true);
 

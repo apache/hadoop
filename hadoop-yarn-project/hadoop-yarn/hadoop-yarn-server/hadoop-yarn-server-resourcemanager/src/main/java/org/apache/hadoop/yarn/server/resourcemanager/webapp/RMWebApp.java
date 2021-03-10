@@ -55,6 +55,7 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     bind(RMWebServices.class);
     bind(GenericExceptionHandler.class);
     bind(RMWebApp.class).toInstance(this);
+    bindExternalClasses();
 
     if (rm != null) {
       bind(ResourceManager.class).toInstance(rm);
@@ -96,6 +97,16 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     } else
       return super.getRedirectPath();
   }
+
+  private void bindExternalClasses() {
+    YarnConfiguration yarnConf = new YarnConfiguration(rm.getConfig());
+    Class<?>[] externalClasses = yarnConf
+        .getClasses(YarnConfiguration.YARN_HTTP_WEBAPP_EXTERNAL_CLASSES);
+    for (Class<?> c : externalClasses) {
+      bind(c);
+    }
+  }
+
 
   private String buildRedirectPath() {
     // make a copy of the original configuration so not to mutate it. Also use

@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.SampleStat;
+import org.apache.hadoop.util.Time;
+
 import static org.apache.hadoop.metrics2.lib.Interns.*;
 
 /**
@@ -47,7 +49,9 @@ public class MutableStat extends MutableMetric {
   private final SampleStat prevStat = new SampleStat();
   private final SampleStat.MinMax minMax = new SampleStat.MinMax();
   private long numSamples = 0;
+  private long snapshotTimeStamp = 0;
   private boolean extended = false;
+  private boolean updateTimeStamp = false;
 
   /**
    * Construct a sample statistics metric
@@ -101,6 +105,13 @@ public class MutableStat extends MutableMetric {
   }
 
   /**
+   * Set whether to update the snapshot time or not.
+   * @param updateTimeStamp enable update stats snapshot timestamp
+   */
+  public synchronized void setUpdateTimeStamp(boolean updateTimeStamp) {
+    this.updateTimeStamp = updateTimeStamp;
+  }
+  /**
    * Add a number of samples and their sum to the running stat
    *
    * Note that although use of this method will preserve accurate mean values,
@@ -115,7 +126,7 @@ public class MutableStat extends MutableMetric {
   }
 
   /**
-   * Add a snapshot to the metric
+   * Add a snapshot to the metric.
    * @param value of the metric
    */
   public synchronized void add(long value) {
@@ -142,6 +153,9 @@ public class MutableStat extends MutableMetric {
         if (numSamples > 0) {
           intervalStat.copyTo(prevStat);
           intervalStat.reset();
+          if (updateTimeStamp) {
+            snapshotTimeStamp = Time.monotonicNow();
+          }
         }
         clearChanged();
       }
@@ -164,6 +178,12 @@ public class MutableStat extends MutableMetric {
     minMax.reset();
   }
 
+  /**
+   * Return the SampleStat snapshot timestamp
+   */
+  public long getSnapshotTimeStamp() {
+    return snapshotTimeStamp;
+  }
   @Override
   public String toString() {
     return lastStat().toString();

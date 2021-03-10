@@ -28,4 +28,19 @@
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.contract.supports-hflush</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.supports-hsync</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.contract.metadata_updated_on_hsync</name>
+    <value>false</value>
+  </property>
+
 </configuration>

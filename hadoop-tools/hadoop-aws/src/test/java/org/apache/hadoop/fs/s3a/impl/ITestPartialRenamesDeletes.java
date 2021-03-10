@@ -58,8 +58,9 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.FILES_DELETE_REJECTED;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
@@ -76,6 +77,7 @@ import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndel
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.toPathList;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.extractCause;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.LambdaTestUtils.eval;
 
@@ -666,7 +668,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);
-    MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUESTS);
+    MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUEST);
+    MetricDiff bulkDeleteVerbCount = new MetricDiff(roleFS,
+        OBJECT_BULK_DELETE_REQUEST);
     MetricDiff deleteObjectCount = new MetricDiff(roleFS,
         OBJECT_DELETE_OBJECTS);
 
@@ -675,12 +679,15 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     if (multiDelete) {
       // multi-delete status checks
       extractCause(MultiObjectDeleteException.class, ex);
-      deleteVerbCount.assertDiffEquals("Wrong delete request count", 1);
+      deleteVerbCount.assertDiffEquals("Wrong delete request count", 0);
+      bulkDeleteVerbCount.assertDiffEquals("Wrong bulk delete request count",
+          1);
       deleteObjectCount.assertDiffEquals("Number of keys in delete request",
           readOnlyFiles.size());
       rejectionCount.assertDiffEquals("Wrong rejection count",
           readOnlyFiles.size());
-      reset(rejectionCount, deleteVerbCount, deleteObjectCount);
+      reset(rejectionCount, deleteVerbCount, deleteObjectCount,
+          bulkDeleteVerbCount);
     }
     // all the files are still there? (avoid in scale test due to cost)
     if (!scaleTest) {
@@ -689,9 +696,13 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     describe("Trying to delete upper-level directory");
     ex = expectDeleteForbidden(basePath);
+    String iostats = ioStatisticsSourceToString(roleFS);
+
     if (multiDelete) {
       // multi-delete status checks
-      deleteVerbCount.assertDiffEquals("Wrong delete count", 1);
+      deleteVerbCount.assertDiffEquals("Wrong delete request count", 0);
+      bulkDeleteVerbCount.assertDiffEquals(
+          "Wrong count of delete operations in " + iostats, 1);
       MultiObjectDeleteException mde = extractCause(
           MultiObjectDeleteException.class, ex);
       List<MultiObjectDeleteSupport.KeyPath> undeletedKeyPaths =

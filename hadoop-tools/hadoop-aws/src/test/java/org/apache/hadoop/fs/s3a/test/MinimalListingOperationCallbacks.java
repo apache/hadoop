@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.s3a.S3ListRequest;
 import org.apache.hadoop.fs.s3a.S3ListResult;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 
 /**
  * Stub implementation of {@link ListingOperationCallbacks}.
@@ -37,16 +38,16 @@ public class MinimalListingOperationCallbacks
 
   @Override
   public CompletableFuture<S3ListResult> listObjectsAsync(
-      S3ListRequest request)
-      throws IOException {
+      final S3ListRequest request,
+      final DurationTrackerFactory trackerFactory) throws IOException {
     return null;
   }
 
   @Override
   public CompletableFuture<S3ListResult> continueListObjectsAsync(
-      S3ListRequest request,
-      S3ListResult prevResult)
-      throws IOException {
+      final S3ListRequest request,
+      final S3ListResult prevResult,
+      final DurationTrackerFactory trackerFactory) throws IOException {
     return null;
   }
 
@@ -82,4 +83,5 @@ public class MinimalListingOperationCallbacks
   public boolean allowAuthoritative(Path p) {
     return false;
   }
+
 }

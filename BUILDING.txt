@@ -63,15 +63,12 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
 * Protocol Buffers 3.7.1 (required to build native code)
-  $ mkdir -p /opt/protobuf-3.7-src \
-        && curl -L -s -S \
-          https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
-          -o /opt/protobuf-3.7.1.tar.gz \
-        && tar xzf /opt/protobuf-3.7.1.tar.gz --strip-components 1 -C /opt/protobuf-3.7-src \
-        && cd /opt/protobuf-3.7-src \
-        && ./configure\
-        && make install \
-        && rm -rf /opt/protobuf-3.7-src
+  $ curl -L -s -S https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz -o protobuf-3.7.1.tar.gz
+  $ mkdir protobuf-3.7-src
+  $ tar xzf protobuf-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7-src && cd protobuf-3.7-src
+  $ ./configure
+  $ make -j$(nproc)
+  $ sudo make install
 
 Optional packages:
 
@@ -96,7 +93,7 @@ Maven main modules:
          - hadoop-project               (Parent POM for all Hadoop Maven modules.             )
                                         (All plugins & dependencies versions are defined here.)
          - hadoop-project-dist          (Parent POM for modules that generate distributions.)
-         - hadoop-annotations           (Generates the Hadoop doclet used to generated the Javadocs)
+         - hadoop-annotations           (Generates the Hadoop doclet used to generate the Javadocs)
          - hadoop-assemblies            (Maven assemblies used by the different modules)
          - hadoop-maven-plugins         (Maven plugins used in project)
          - hadoop-build-tools           (Build tools like checkstyle, etc.)
@@ -113,7 +110,7 @@ Maven main modules:
 ----------------------------------------------------------------------------------
 Where to run Maven from?
 
-  It can be run from any module. The only catch is that if not run from utrunk
+  It can be run from any module. The only catch is that if not run from trunk
   all modules that are not part of the build run must be installed in the local
   Maven cache or available in a Maven repository.
 
@@ -169,7 +166,6 @@ Maven build goals:
     we silently build a version of libhadoop.so that cannot make use of snappy.
     This option is recommended if you plan on making use of snappy and want
     to get more repeatable builds.
-
   * Use -Dsnappy.prefix to specify a nonstandard location for the libsnappy
     header files and library files. You do not need this option if you have
     installed snappy using a package manager.

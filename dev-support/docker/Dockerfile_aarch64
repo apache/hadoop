@@ -17,7 +17,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 WORKDIR /root
 
@@ -35,24 +35,26 @@ ENV DEBCONF_TERSE true
 ######
 # Install common dependencies from packages. Versions here are either
 # sufficient or irrelevant.
-#
-# WARNING: DO NOT PUT JAVA APPS HERE! Otherwise they will install default
-# Ubuntu Java.  See Java section below!
 ######
 # hadolint ignore=DL3008
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends \
+        ant \
         apt-utils \
+        bats \
         build-essential \
         bzip2 \
         clang \
+        cmake \
         curl \
         doxygen \
+        findbugs \
         fuse \
         g++ \
         gcc \
         git \
         gnupg-agent \
+        libbcprov-java \
         libbz2-dev \
         libcurl4-openssl-dev \
         libfuse-dev \
@@ -65,56 +67,35 @@ RUN apt-get -q update \
         libzstd1-dev \
         locales \
         make \
+        maven \
+        openjdk-11-jdk \
+        openjdk-8-jdk \
         pinentry-curses \
         pkg-config \
-        python \
-        python2.7 \
-        python-pip \
-        python-pkg-resources \
-        python-setuptools \
-        python-wheel \
+        python3 \
+        python3-pip \
+        python3-pkg-resources \
+        python3-setuptools \
+        python3-wheel \
         rsync \
+        shellcheck \
         software-properties-common \
-        snappy \
         sudo \
         valgrind \
         zlib1g-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-
-#######
-# OpenJDK 8
-#######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends openjdk-8-jdk libbcprov-java \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
+######
+# Set env vars required to build Hadoop
+######
+ENV MAVEN_HOME /usr
+# JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-arm64
+ENV FINDBUGS_HOME /usr
 
 ######
-# Install cmake 3.1.0 (3.5.1 ships with Xenial)
-# There is no cmake binary available for aarch64. Build from source.
-######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/cmake/src \
-    && curl -L -s -S \
-      https://cmake.org/files/v3.1/cmake-3.1.0-1-src.tar.bz2 \
-      -o /opt/cmake/cmake-src.tar.bz2 \
-    && tar xvjf /opt/cmake/cmake-src.tar.bz2 -C /opt/cmake/src \
-    && cd /opt/cmake/src \
-    && tar xvjf cmake-3.1.0.tar.bz2 \
-    && cd cmake-3.1.0 && patch -p0 -i ../cmake-3.1.0-1.patch && mkdir .build && cd .build \
-    && ../bootstrap --parallel=2 \
-    && make -j2 && ./bin/cpack \
-    && tar xzf cmake-3.1.0-Linux-aarch64.tar.gz --strip-components 1 -C /opt/cmake \
-    && cd /opt/cmake && rm -rf /opt/cmake/src
-ENV CMAKE_HOME /opt/cmake
-ENV PATH "${PATH}:/opt/cmake/bin"
-
-######
-# Install Google Protobuf 3.7.1 (2.6.0 ships with Xenial)
+# Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
 ######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
@@ -130,60 +111,10 @@ RUN mkdir -p /opt/protobuf-src \
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
-######
-# Install Apache Maven 3.3.9 (3.3.9 ships with Xenial)
-######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends maven \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV MAVEN_HOME /usr
-
-######
-# Install findbugs 3.0.1 (3.0.1 ships with Xenial)
-# Ant is needed for findbugs
-######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends findbugs ant \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV FINDBUGS_HOME /usr
-
 ####
-# Install shellcheck (0.4.6, the latest as of 2017-09-26)
+# Install pylint and python-dateutil
 ####
-# hadolint ignore=DL3008
-RUN add-apt-repository -y ppa:hvr/ghc \
-    && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends shellcheck \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-####
-# Install bats (0.4.0, the latest as of 2017-09-26, ships with Xenial)
-####
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends bats \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-####
-# Install pylint at fixed version (2.0.0 removed python2 support)
-# https://github.com/PyCQA/pylint/issues/2294
-####
-RUN pip2 install \
-    astroid==1.6.6 \
-    isort==4.3.21 \
-    configparser==4.0.2 \
-    pylint==1.9.2
-
-####
-# Install dateutil.parser
-####
-RUN pip2 install python-dateutil==2.7.3
+RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 
 ###
 # Install node.js 10.x for web UI framework (4.2.6 ships with Xenial)

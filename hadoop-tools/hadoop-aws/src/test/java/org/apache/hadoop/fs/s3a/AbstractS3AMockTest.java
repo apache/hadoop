@@ -26,7 +26,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 
@@ -71,8 +70,6 @@ public abstract class AbstractS3AMockTest {
     // test we don't issue request to AWS DynamoDB service.
     conf.setClass(S3_METADATA_STORE_IMPL, NullMetadataStore.class,
         MetadataStore.class);
-    // FS is always magic
-    conf.setBoolean(CommitConstants.MAGIC_COMMITTER_ENABLED, true);
     // use minimum multipart size for faster triggering
     conf.setLong(Constants.MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.setInt(Constants.S3A_BUCKET_PROBE, 1);

@@ -51,6 +51,8 @@ public final class OperationCost {
 
   /**
    * Delete cost when deleting a marker.
+   * Note: if bulk delete is disabled, this changes to being
+   * the number of directories deleted.
    */
   public static final int DELETE_MARKER_REQUEST = DELETE_OBJECT_REQUEST;
 

@@ -79,15 +79,15 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
 
   @Override
   public void testDirectWrite() throws Exception {
-    resetStorageStatistics();
+    final long renames = getRenameOperationCount();
     super.testDirectWrite();
     assertEquals("Expected no renames for a direct write distcp", 0L,
-        getRenameOperationCount());
+        getRenameOperationCount() - renames);
   }
 
   @Override
   public void testNonDirectWrite() throws Exception {
-    resetStorageStatistics();
+    final long renames = getRenameOperationCount();
     try {
       super.testNonDirectWrite();
     } catch (FileNotFoundException e) {
@@ -96,11 +96,7 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
       // S3Guard is not enabled
     }
     assertEquals("Expected 2 renames for a non-direct write distcp", 2L,
-        getRenameOperationCount());
-  }
-
-  private void resetStorageStatistics() {
-    getFileSystem().getStorageStatistics().reset();
+        getRenameOperationCount() - renames);
   }
 
   private long getRenameOperationCount() {

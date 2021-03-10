@@ -555,6 +555,7 @@
                     <exclude>**/azurebfs/ITestAbfsReadWriteAndSeek.java</exclude>
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</exclude>
                     <exclude>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</exclude>
+                    <exclude>**/azurebfs/ITestSmallWriteOptimization.java</exclude>
                   </excludes>
 
                 </configuration>
@@ -594,6 +595,7 @@
                     <include>**/azurebfs/ITestAbfsReadWriteAndSeek.java</include>
                     <include>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</include>
                     <include>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</include>
+                    <include>**/azurebfs/ITestSmallWriteOptimization.java</include>
                   </includes>
                 </configuration>
               </execution>

@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsPerfTracker;
+import org.apache.hadoop.fs.azurebfs.utils.TestMockHelpers;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -44,11 +46,14 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.DeletePath;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -213,6 +218,12 @@ public class ITestAzureBlobFileSystemDelete extends
         this.getConfiguration());
 
     // Case 1: Not a retried case should throw error back
+    // Add asserts at AzureBlobFileSystemStore and AbfsClient levels
+    intercept(AbfsRestOperationException.class,
+        () -> fs.getAbfsStore().delete(
+            new Path("/NonExistingPath"),
+            false));
+
     intercept(AbfsRestOperationException.class,
         () -> client.deletePath(
         "/NonExistingPath",
@@ -223,13 +234,22 @@ public class ITestAzureBlobFileSystemDelete extends
     AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
+    AzureBlobFileSystemStore mockStore = mock(AzureBlobFileSystemStore.class);
+    mockStore = TestMockHelpers.setClassField(AzureBlobFileSystemStore.class, mockStore,
+        "client", mockClient);
+    mockStore = TestMockHelpers.setClassField(AzureBlobFileSystemStore.class,
+        mockStore,
+        "abfsPerfTracker",
+        TestAbfsPerfTracker.getAPerfTrackerInstance(this.getConfiguration()));
+    doCallRealMethod().when(mockStore).delete(new Path("/NonExistingPath"), false);
 
     // Case 2: Mimic retried case
     // Idempotency check on Delete always returns success
-    AbfsRestOperation idempotencyRetOp = mock(AbfsRestOperation.class);
-    AbfsHttpOperation http200Op = mock(AbfsHttpOperation.class);
-    when(http200Op.getStatusCode()).thenReturn(HTTP_OK);
-    when(idempotencyRetOp.getResult()).thenReturn(http200Op);
+    AbfsRestOperation idempotencyRetOp = TestAbfsClient.getRestOp(
+        DeletePath, mockClient, HTTP_METHOD_DELETE,
+        TestAbfsClient.getTestUrl(mockClient, "/NonExistingPath"),
+        TestAbfsClient.getTestRequestHeaders(mockClient));
+    idempotencyRetOp.hardSetResult(HTTP_OK);
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     when(mockClient.deletePath("/NonExistingPath", false,
@@ -244,6 +264,9 @@ public class ITestAzureBlobFileSystemDelete extends
         .describedAs("Idempotency check reports successful "
             + "delete. 200OK should be returned")
         .isEqualTo(idempotencyRetOp.getResult().getStatusCode());
+
+    // Call from AzureBlobFileSystemStore should not fail either
+    mockStore.delete(new Path("/NonExistingPath"), false);
   }
 
 }

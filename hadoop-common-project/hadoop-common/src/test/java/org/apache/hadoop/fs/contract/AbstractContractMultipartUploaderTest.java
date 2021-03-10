@@ -51,6 +51,7 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyPathExists;
 import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -106,6 +107,8 @@ public abstract class AbstractContractMultipartUploaderTest extends
         CompletableFuture<Integer> f
             = uploader.abortUploadsUnderPath(teardown);
         f.get();
+        LOG.info("Statistics {}",
+            ioStatisticsSourceToString(uploader));
       } catch (Exception e) {
         LOG.warn("Exeception in teardown", e);
       }

@@ -480,8 +480,9 @@ final class BlockChecksumHelper {
         // Before populating the blockChecksum at this index, record the byte
         // offset where it will begin.
         blockChecksumPositions[idx] = blockChecksumBuf.getLength();
+        ExtendedBlock block = null;
         try {
-          ExtendedBlock block = getInternalBlock(numDataUnits, idx);
+          block = getInternalBlock(numDataUnits, idx);
 
           LiveBlockInfo liveBlkInfo = liveDns.get((byte) idx);
           if (liveBlkInfo == null) {
@@ -502,7 +503,9 @@ final class BlockChecksumHelper {
             break; // done with the computation, simply return.
           }
         } catch (IOException e) {
-          LOG.warn("Failed to get the checksum", e);
+          LOG.warn("Failed to get the checksum for block {} at index {} "
+              + "in blockGroup {}", block, idx, blockGroup, e);
+          throw e;
         }
       }
 

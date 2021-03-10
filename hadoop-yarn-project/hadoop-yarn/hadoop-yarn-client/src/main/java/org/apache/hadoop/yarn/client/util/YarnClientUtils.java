@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -39,7 +38,6 @@ import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
-import org.ietf.jgss.Oid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -222,8 +220,6 @@ public abstract class YarnClientUtils {
           @Override
           public String run() throws Exception {
             try {
-              // This Oid for Kerberos GSS-API mechanism.
-              Oid mechOid = KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID");
               GSSManager manager = GSSManager.getInstance();
               // GSS name for server
               GSSName serverName = manager.createName("HTTP@" + server,
@@ -231,8 +227,9 @@ public abstract class YarnClientUtils {
               // Create a GSSContext for authentication with the service.
               // We're passing client credentials as null since we want them to
               // be read from the Subject.
+              // We're passing Oid as null to use the default.
               GSSContext gssContext = manager.createContext(
-                  serverName.canonicalize(mechOid), mechOid, null,
+                  serverName.canonicalize(null), null, null,
                   GSSContext.DEFAULT_LIFETIME);
               gssContext.requestMutualAuth(true);
               gssContext.requestCredDeleg(true);
@@ -245,8 +242,7 @@ public abstract class YarnClientUtils {
               LOG.debug("Got valid challenge for host {}", serverName);
               return new String(BASE_64_CODEC.encode(outToken),
                   StandardCharsets.US_ASCII);
-            } catch (GSSException | IllegalAccessException
-                | NoSuchFieldException | ClassNotFoundException e) {
+            } catch (GSSException e) {
               LOG.error("Error: ", e);
               throw new AuthenticationException(e);
             }

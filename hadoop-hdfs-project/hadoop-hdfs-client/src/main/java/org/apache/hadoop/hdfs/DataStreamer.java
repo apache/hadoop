@@ -483,6 +483,7 @@ class DataStreamer extends Daemon {
   private volatile BlockConstructionStage stage;  // block construction stage
   protected long bytesSent = 0; // number of bytes that've been sent
   private final boolean isLazyPersistFile;
+  private long lastPacket;
 
   /** Nodes have been used in the pipeline before and have failed. */
   private final List<DatanodeInfo> failed = new ArrayList<>();
@@ -632,6 +633,7 @@ class DataStreamer extends Daemon {
     response = new ResponseProcessor(nodes);
     response.start();
     stage = BlockConstructionStage.DATA_STREAMING;
+    lastPacket = Time.monotonicNow();
   }
 
   protected void endBlock() {
@@ -653,7 +655,6 @@ class DataStreamer extends Daemon {
    */
   @Override
   public void run() {
-    long lastPacket = Time.monotonicNow();
     TraceScope scope = null;
     while (!streamerClosed && dfsClient.clientRunning) {
       // if the Responder encountered an error, shutdown Responder
@@ -666,44 +667,35 @@ class DataStreamer extends Daemon {
         // process datanode IO errors if any
         boolean doSleep = processDatanodeOrExternalError();
 
-        final int halfSocketTimeout = dfsClient.getConf().getSocketTimeout()/2;
         synchronized (dataQueue) {
           // wait for a packet to be sent.
-          long now = Time.monotonicNow();
-          while ((!shouldStop() && dataQueue.size() == 0 &&
-              (stage != BlockConstructionStage.DATA_STREAMING ||
-                  now - lastPacket < halfSocketTimeout)) || doSleep) {
-            long timeout = halfSocketTimeout - (now-lastPacket);
-            timeout = timeout <= 0 ? 1000 : timeout;
-            timeout = (stage == BlockConstructionStage.DATA_STREAMING)?
-                timeout : 1000;
+          while ((!shouldStop() && dataQueue.isEmpty()) || doSleep) {
+            long timeout = 1000;
+            if (stage == BlockConstructionStage.DATA_STREAMING) {
+              timeout = sendHeartbeat();
+            }
             try {
               dataQueue.wait(timeout);
             } catch (InterruptedException  e) {
               LOG.debug("Thread interrupted", e);
             }
             doSleep = false;
-            now = Time.monotonicNow();
           }
           if (shouldStop()) {
             continue;
           }
           // get packet to be sent.
-          if (dataQueue.isEmpty()) {
-            one = createHeartbeatPacket();
-          } else {
-            try {
-              backOffIfNecessary();
-            } catch (InterruptedException e) {
-              LOG.debug("Thread interrupted", e);
-            }
-            one = dataQueue.getFirst(); // regular data packet
-            SpanId[] parents = one.getTraceParents();
-            if (parents.length > 0) {
-              scope = dfsClient.getTracer().
-                  newScope("dataStreamer", parents[0]);
-              scope.getSpan().setParents(parents);
-            }
+          try {
+            backOffIfNecessary();
+          } catch (InterruptedException e) {
+            LOG.debug("Thread interrupted", e);
+          }
+          one = dataQueue.getFirst(); // regular data packet
+          SpanId[] parents = one.getTraceParents();
+          if (parents.length > 0) {
+            scope = dfsClient.getTracer().
+                newScope("dataStreamer", parents[0]);
+            scope.getSpan().setParents(parents);
           }
         }
 
@@ -731,17 +723,8 @@ class DataStreamer extends Daemon {
 
         if (one.isLastPacketInBlock()) {
           // wait for all data packets have been successfully acked
-          synchronized (dataQueue) {
-            while (!shouldStop() && ackQueue.size() != 0) {
-              try {
-                // wait for acks to arrive from datanodes
-                dataQueue.wait(1000);
-              } catch (InterruptedException  e) {
-                LOG.debug("Thread interrupted", e);
-              }
-            }
-          }
-          if (shouldStop()) {
+          waitForAllAcks();
+          if(shouldStop()) {
             continue;
           }
           stage = BlockConstructionStage.PIPELINE_CLOSE;
@@ -770,8 +753,7 @@ class DataStreamer extends Daemon {
         // write out data to remote datanode
         try (TraceScope ignored = dfsClient.getTracer().
             newScope("DataStreamer#writeTo", spanId)) {
-          one.writeTo(blockStream);
-          blockStream.flush();
+          sendPacket(one);
         } catch (IOException e) {
           // HDFS-3398 treat primary DN is down since client is unable to
           // write to primary DN. If a failed or restarting node has already
@@ -782,7 +764,6 @@ class DataStreamer extends Daemon {
           errorState.markFirstNodeIfNotMarked();
           throw e;
         }
-        lastPacket = Time.monotonicNow();
 
         // update bytesSent
         long tmpBytesSent = one.getLastByteOffsetBlock();
@@ -797,11 +778,7 @@ class DataStreamer extends Daemon {
         // Is this block full?
         if (one.isLastPacketInBlock()) {
           // wait for the close packet has been acked
-          synchronized (dataQueue) {
-            while (!shouldStop() && ackQueue.size() != 0) {
-              dataQueue.wait(1000);// wait for acks to arrive from datanodes
-            }
-          }
+          waitForAllAcks();
           if (shouldStop()) {
             continue;
           }
@@ -840,6 +817,48 @@ class DataStreamer extends Daemon {
       }
     }
     closeInternal();
+  }
+
+  private void waitForAllAcks() throws IOException {
+    // wait until all data packets have been successfully acked
+    synchronized (dataQueue) {
+      while (!shouldStop() && !ackQueue.isEmpty()) {
+        try {
+          // wait for acks to arrive from datanodes
+          dataQueue.wait(sendHeartbeat());
+        } catch (InterruptedException  e) {
+          LOG.debug("Thread interrupted ", e);
+        }
+      }
+    }
+  }
+
+  private void sendPacket(DFSPacket packet) throws IOException {
+    // write out data to remote datanode
+    try {
+      packet.writeTo(blockStream);
+      blockStream.flush();
+    } catch (IOException e) {
+      // HDFS-3398 treat primary DN is down since client is unable to
+      // write to primary DN. If a failed or restarting node has already
+      // been recorded by the responder, the following call will have no
+      // effect. Pipeline recovery can handle only one node error at a
+      // time. If the primary node fails again during the recovery, it
+      // will be taken out then.
+      errorState.markFirstNodeIfNotMarked();
+      throw e;
+    }
+    lastPacket = Time.monotonicNow();
+  }
+
+  private long sendHeartbeat() throws IOException {
+    final long heartbeatInterval = dfsClient.getConf().getSocketTimeout()/2;
+    long timeout = heartbeatInterval - (Time.monotonicNow() - lastPacket);
+    if (timeout <= 0) {
+      sendPacket(createHeartbeatPacket());
+      timeout = heartbeatInterval;
+    }
+    return timeout;
   }
 
   private void closeInternal() {

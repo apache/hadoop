@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -239,9 +239,9 @@ public class DirectoryCollection {
       throw new YarnRuntimeException(e);
     }
 
-    localDirs = new CopyOnWriteArrayList<>(dirs);
-    errorDirs = new CopyOnWriteArrayList<>();
-    fullDirs = new CopyOnWriteArrayList<>();
+    localDirs = new ArrayList<>(Arrays.asList(dirs));
+    errorDirs = new ArrayList<>();
+    fullDirs = new ArrayList<>();
     directoryErrorInfo = new ConcurrentHashMap<>();
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -287,7 +287,7 @@ public class DirectoryCollection {
   List<String> getFailedDirs() {
     this.readLock.lock();
     try {
-      return ImmutableList.copyOf(
+      return Collections.unmodifiableList(
           DirectoryCollection.concat(errorDirs, fullDirs));
     } finally {
       this.readLock.unlock();
@@ -315,7 +315,7 @@ public class DirectoryCollection {
   List<String> getErroredDirs() {
     this.readLock.lock();
     try {
-      return Collections.unmodifiableList(errorDirs);
+      return ImmutableList.copyOf(errorDirs);
     } finally {
       this.readLock.unlock();
     }

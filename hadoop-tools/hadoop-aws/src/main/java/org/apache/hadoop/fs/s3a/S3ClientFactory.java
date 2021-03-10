@@ -26,6 +26,7 @@ import com.amazonaws.services.s3.AmazonS3;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 /**
  * Factory for creation of {@link AmazonS3} client instances.
@@ -41,12 +42,14 @@ public interface S3ClientFactory {
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @param credentialSet credentials to use
    * @param userAgentSuffix optional suffix for the UA field.
+   * @param statisticsFromAwsSdk binding for AWS stats - may be null
    * @return S3 client
    * @throws IOException IO problem
    */
   AmazonS3 createS3Client(URI name,
       String bucket,
       AWSCredentialsProvider credentialSet,
-      String userAgentSuffix) throws IOException;
+      String userAgentSuffix,
+      StatisticsFromAwsSdk statisticsFromAwsSdk) throws IOException;
 
 }

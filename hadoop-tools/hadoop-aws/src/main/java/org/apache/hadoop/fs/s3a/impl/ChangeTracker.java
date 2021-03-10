@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
@@ -39,6 +37,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.NoVersionAttributeException;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
@@ -72,7 +71,7 @@ public class ChangeTracker {
    * Mismatch counter; expected to be wired up to StreamStatistics except
    * during testing.
    */
-  private final AtomicLong versionMismatches;
+  private final ChangeTrackerStatistics versionMismatches;
 
   /**
    * Revision identifier (e.g. eTag or versionId, depending on change
@@ -90,7 +89,7 @@ public class ChangeTracker {
    */
   public ChangeTracker(final String uri,
       final ChangeDetectionPolicy policy,
-      final AtomicLong versionMismatches,
+      final ChangeTrackerStatistics versionMismatches,
       final S3ObjectAttributes s3ObjectAttributes) {
     this.policy = checkNotNull(policy);
     this.uri = uri;
@@ -111,8 +110,8 @@ public class ChangeTracker {
   }
 
   @VisibleForTesting
-  public AtomicLong getVersionMismatches() {
-    return versionMismatches;
+  public long getVersionMismatches() {
+    return versionMismatches.getVersionMismatches();
   }
 
   /**
@@ -177,7 +176,7 @@ public class ChangeTracker {
       if (revisionId != null) {
         // the requirements of the change detection policy wasn't met: the
         // object was not returned.
-        versionMismatches.incrementAndGet();
+        versionMismatches.versionMismatchError();
         throw new RemoteFileChangedException(uri, operation,
             String.format(CHANGE_REPORTED_BY_S3
                     + " during %s"
@@ -235,7 +234,7 @@ public class ChangeTracker {
       // This isn't really going to be hit due to
       // https://github.com/aws/aws-sdk-java/issues/1644
       if (serviceException.getStatusCode() == SC_PRECONDITION_FAILED) {
-        versionMismatches.incrementAndGet();
+        versionMismatches.versionMismatchError();
         throw new RemoteFileChangedException(uri, operation, String.format(
             RemoteFileChangedException.PRECONDITIONS_FAILED
                 + " on %s."
@@ -292,10 +291,10 @@ public class ChangeTracker {
               uri,
               pos,
               operation,
-              versionMismatches.get());
+              versionMismatches.getVersionMismatches());
       if (pair.left) {
         // an mismatch has occurred: note it.
-        versionMismatches.incrementAndGet();
+        versionMismatches.versionMismatchError();
       }
       if (pair.right != null) {
         // there's an exception to raise: do it

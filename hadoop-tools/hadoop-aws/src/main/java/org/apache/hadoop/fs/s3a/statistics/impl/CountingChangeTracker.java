@@ -16,24 +16,38 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl.statistics;
+package org.apache.hadoop.fs.s3a.statistics.impl;
 
-import java.io.Closeable;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 
 /**
- * Statistics for the S3A multipart uploader.
+ * A change tracker which increments an atomic long.
  */
-public interface S3AMultipartUploaderStatistics extends Closeable {
+public class CountingChangeTracker implements
+    ChangeTrackerStatistics {
 
-  void instantiated();
+  /**
+   * The counter which is updated on every mismatch.
+   */
+  private final AtomicLong counter;
 
-  void uploadStarted();
+  public CountingChangeTracker(final AtomicLong counter) {
+    this.counter = counter;
+  }
 
-  void partPut(long lengthInBytes);
+  public CountingChangeTracker() {
+    this(new AtomicLong());
+  }
 
-  void uploadCompleted();
+  @Override
+  public void versionMismatchError() {
+    counter.incrementAndGet();
+  }
 
-  void uploadAborted();
-
-  void abortUploadsUnderPathInvoked();
+  @Override
+  public long getVersionMismatches() {
+    return counter.get();
+  }
 }

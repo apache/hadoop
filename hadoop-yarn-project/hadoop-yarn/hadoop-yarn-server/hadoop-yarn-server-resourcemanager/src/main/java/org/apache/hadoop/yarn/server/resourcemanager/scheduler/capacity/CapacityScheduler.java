@@ -703,8 +703,11 @@ public class CapacityScheduler extends
     Set<String> distinguishRuleSet = CapacitySchedulerConfigValidator
             .validatePlacementRules(placementRuleStrs);
 
-    // add UserGroupMappingPlacementRule if absent
-    distinguishRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
+    // add UserGroupMappingPlacementRule if empty,default value of
+    // yarn.scheduler.queue-placement-rules is user-group
+    if (distinguishRuleSet.isEmpty()) {
+      distinguishRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
+    }
 
     placementRuleStrs = new ArrayList<>(distinguishRuleSet);
 

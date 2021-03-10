@@ -38,11 +38,11 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetricsCustomResource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -344,7 +344,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
   private Map<String, Long> verifyQueueMetricsForCustomResources(
       FSLeafQueue schedulable) {
-    QueueMetricsCustomResource maxAMShareCustomResources =
+    CustomResourceMetricValue maxAMShareCustomResources =
         schedulable.getMetrics().getCustomResources().getMaxAMShare();
     Map<String, Long> customResourceValues = maxAMShareCustomResources
         .getValues();
