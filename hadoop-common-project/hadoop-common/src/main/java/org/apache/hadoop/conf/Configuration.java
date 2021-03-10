@@ -223,6 +223,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+
 public class Configuration implements Iterable<Map.Entry<String,String>>,
                                       Writable {
   private static final Logger LOG =
