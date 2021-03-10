@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
@@ -166,6 +167,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.outputStreamID = getOutputStreamID();
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setStreamID(outputStreamID);
+    this.tracingContext.setOperation(HdfsOperationConstants.WRITE);
   }
 
   private String getOutputStreamID() {
