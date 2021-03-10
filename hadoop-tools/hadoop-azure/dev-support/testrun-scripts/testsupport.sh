@@ -209,6 +209,7 @@ runtests=0
         threadcount=$OPTARG
         ;;
       *|?|h)
+      # shellcheck disable=SC2128
         if [[ -z "$combinations" ]]; then
           combinations=( $( ls $combconfsdir/*.xml ))
         fi
