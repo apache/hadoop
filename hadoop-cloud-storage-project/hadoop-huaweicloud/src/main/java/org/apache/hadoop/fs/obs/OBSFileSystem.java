@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.obs;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import com.obs.services.ObsClient;
 import com.obs.services.exception.ObsException;
 import com.obs.services.model.AccessControlList;
@@ -53,6 +52,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -169,7 +169,7 @@ public final class OBSFileSystem extends FileSystem {
   /**
    * Bounded thread pool for multipart upload.
    */
-  private ListeningExecutorService boundedMultipartUploadThreadPool;
+  private ExecutorService boundedMultipartUploadThreadPool;
 
   /**
    * Bounded thread pool for copy.
