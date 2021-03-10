@@ -122,4 +122,9 @@ public class DataNodeFaultInjector {
    * Used as a hook to inject intercept when BPOfferService hold lock.
    */
   public void delayWhenOfferServiceHoldLock() {}
+
+  /**
+   * Just delay a while.
+   */
+  public void delay() {}
 }
