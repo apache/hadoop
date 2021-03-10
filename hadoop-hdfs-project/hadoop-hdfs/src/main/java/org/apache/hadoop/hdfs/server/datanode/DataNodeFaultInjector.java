@@ -137,4 +137,9 @@ public class DataNodeFaultInjector {
    * Used as a hook to inject intercept when re-register.
    */
   public void blockUtilSendFullBlockReport() {}
+
+  /**
+   * Just delay a while.
+   */
+  public void delay() {}
 }
