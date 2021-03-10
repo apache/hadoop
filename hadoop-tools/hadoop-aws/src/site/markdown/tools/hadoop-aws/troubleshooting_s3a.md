@@ -1143,7 +1143,7 @@ S3 is not a filesystem. The S3A connector mimics file and directory rename by
   Directory markers are not checked for, nor that the path has any children,
 * File-by-file copy of source objects to destination.
   Parallelized, with page listings of directory objects and issuing of DELETE requests.
-* Post-delete recreation of source parent directory marker, if needed.  
+* Post-delete recreation of source parent directory marker, if needed.
 
 This is slow (`O(data)`) and can cause timeouts on code which is required
 to send regular progress reports/heartbeats -for example, distCp.

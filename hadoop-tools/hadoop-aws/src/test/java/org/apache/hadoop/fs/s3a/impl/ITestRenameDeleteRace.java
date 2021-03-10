@@ -24,7 +24,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.AmazonClientException;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -65,7 +65,7 @@ public class ITestRenameDeleteRace extends AbstractS3ATestBase {
   /**
    * For submitting work.
    */
-  private static final ListeningExecutorService EXECUTOR =
+  private static final BlockingThreadPoolExecutorService EXECUTOR =
       BlockingThreadPoolExecutorService.newInstance(
           EXECUTOR_THREAD_COUNT,
           EXECUTOR_THREAD_COUNT * 2,
