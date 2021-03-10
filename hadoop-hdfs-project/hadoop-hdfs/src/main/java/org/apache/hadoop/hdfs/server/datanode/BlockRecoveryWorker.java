@@ -119,6 +119,7 @@ public class BlockRecoveryWorker {
       List<BlockRecord> syncList = new ArrayList<>(locs.length);
       int errorCount = 0;
       int candidateReplicaCnt = 0;
+      DataNodeFaultInjector.get().delay();
 
       // Check generation stamps, replica size and state. Replica must satisfy
       // the following criteria to be included in syncList for recovery:
