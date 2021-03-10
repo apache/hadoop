@@ -32,8 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.XAttrSetFlag;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -41,6 +39,9 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
@@ -324,8 +325,11 @@ public class ITestAbfsClientCustomerProvidedKey
     AbfsClient abfsClient = fs.getAbfsClient();
     int length = INT_512;
     byte[] buffer = new byte[length * 4];
+    final AbfsRestOperation op = abfsClient.getPathStatus("/test1", false);
+    final String eTag = op.getResult().getResponseHeader(
+        HttpHeaderConfigurations.ETAG);
     AbfsRestOperation abfsRestOperation = abfsClient
-        .read("/test1", 0, buffer, 0, length, null, null);
+        .read("/test1", 0, buffer, 0, length, eTag, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
   }
 
@@ -339,8 +343,11 @@ public class ITestAbfsClientCustomerProvidedKey
     AbfsClient abfsClient = fs.getAbfsClient();
     int length = INT_512;
     byte[] buffer = new byte[length * 4];
+    final AbfsRestOperation op = abfsClient.getPathStatus("/test1", false);
+    final String eTag = op.getResult().getResponseHeader(
+        HttpHeaderConfigurations.ETAG);
     AbfsRestOperation abfsRestOperation = abfsClient
-        .read("/test1", 0, buffer, 0, length, null, null);
+        .read("/test1", 0, buffer, 0, length, eTag, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
   }
 
@@ -606,6 +613,9 @@ public class ITestAbfsClientCustomerProvidedKey
     if (withCPK) {
       conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName(),
           "testkey");
+    } else {
+      conf.unset(
+          FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName());
     }
     return (AzureBlobFileSystem) FileSystem.newInstance(conf);
   }
