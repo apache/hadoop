@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -62,11 +61,11 @@ public class TestProtectedDirectories {
       TestProtectedDirectories.class);
 
   // Using /test/build/data/tmp directory to store temprory files
-  final String PATH_TEST_DIR = new File(System.getProperty(
+  private final String pathTestDir = new File(System.getProperty(
       "test.build.data", "/tmp")).getAbsolutePath();
 
-  String configFile = PATH_TEST_DIR + "/protected.dir.config";
-  String newConfigFile = PATH_TEST_DIR + "/protected.dir.config_new";
+  private String configFile = pathTestDir + "/protected.dir.config";
+  private String newConfigFile = pathTestDir + "/protected.dir.config_new";
 
 
   @Rule
@@ -124,7 +123,8 @@ public class TestProtectedDirectories {
         configFile);
 
     generateConfigFile(configFile,
-        protectedDirs.stream().map(Path::toString).collect(Collectors.toList()));
+        protectedDirs.stream().map(Path::toString)
+            .collect(Collectors.toList()));
 
     return setupTestCluster(conf, protectedDirs, unProtectedDirs);
   }
@@ -342,9 +342,10 @@ public class TestProtectedDirectories {
 
     FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
 
-    TreeSet<String> protectedPathSet = new TreeSet<>(FSDirectory.normalizePaths(
-        protectedPaths.stream().map(Path::toString).collect(Collectors.toList()),
-        FS_PROTECTED_DIRECTORIES));
+    TreeSet<String> protectedPathSet = new TreeSet<>(
+        FSDirectory.normalizePaths(protectedPaths.stream().map(Path::toString)
+                .collect(Collectors.toList()),
+            FS_PROTECTED_DIRECTORIES));
 
     // verify
     assertEquals(conf.get(FS_PROTECTED_DIRECTORIES), configFile);
@@ -716,12 +717,13 @@ public class TestProtectedDirectories {
   }
 
   /**
-   * generate the configuration file with protectedPaths
+   * generate the configuration file with protectedPaths.
    * @param file
    * @param protectedPaths
    * @throws IOException
    */
-  private void generateConfigFile(String file, Collection<String> protectedPaths)
+  private void generateConfigFile(String file,
+      Collection<String> protectedPaths)
       throws IOException {
     try (FileWriter ifw = new FileWriter(file)) {
       for (String dir : protectedPaths) {

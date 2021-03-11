@@ -1546,7 +1546,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       false;
 
   /**
-   * Used to enable get protected directories from config file. By default it is disabled
+   * whether to get the protected directories from a special configuration file
+   * which set on fs.protected.directories. By default it is disabled.
    */
   public static final String DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY =
       "dfs.protected.directories.config.file.enable";

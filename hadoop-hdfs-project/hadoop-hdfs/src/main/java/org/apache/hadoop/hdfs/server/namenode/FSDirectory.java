@@ -391,9 +391,9 @@ public class FSDirectory implements Closeable {
     this.isProtectedSubDirectoriesEnable = conf.getBoolean(
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE,
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT);
-     this.isProtectedDirsConfigEnable = conf.getBoolean(
-         DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
-         DFS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT);
+    this.isProtectedDirsConfigEnable = conf.getBoolean(
+        DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
+        DFS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT);
 
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
@@ -556,7 +556,7 @@ public class FSDirectory implements Closeable {
     Collection<String> protectedDirs =
         configFileEnabled
             ? ProtectedDirsConfigReader.
-                parseProtectedProtectedDirsFromConfig(protectedDirsStringOrConfig)
+            parseProtectedProtectedDirsFromConfig(protectedDirsStringOrConfig)
             : StringUtils
                 .getTrimmedStringCollection(protectedDirsStringOrConfig);
     return parseProtectedDirectories(protectedDirs);

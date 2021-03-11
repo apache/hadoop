@@ -1,17 +1,21 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements.  See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership.  The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with the License.  You may obtain
- * a copy of the License at
- *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * <p/>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
- * the License.
+ * <p/>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package org.apache.hadoop.hdfs.util;
 
 import static org.junit.Assert.assertEquals;
@@ -33,10 +37,10 @@ import org.junit.Test;
 public class TestProtectedDirsConfigReader {
 
   // Using /test/build/data/tmp directory to store temprory files
-  final String PATH_TEST_DIR = new File(System.getProperty(
+  private final String pathTestDir = new File(System.getProperty(
       "test.build.data", "/tmp")).getAbsolutePath();
 
-  String configFile = PATH_TEST_DIR + "/protected.dir.config";
+  private String configFile = pathTestDir + "/protected.dir.config";
 
   @Before
   public void setUp() throws Exception {
@@ -85,16 +89,16 @@ public class TestProtectedDirsConfigReader {
    * Test creating a new ProtectedDirConfigFileReader with nonexistent files
    */
   @Test
-  public void testCreateProtectedDirConfigFileReaderWithNonexistentFile() throws Exception {
+  public void testCreateReaderWithNonexistentFile() throws Exception {
     try {
       new ProtectedDirsConfigReader(
-          PATH_TEST_DIR + "/doesnt-exist");
+          pathTestDir + "/doesnt-exist");
       Assert.fail("Should throw FileNotFoundException");
     } catch (NoSuchFileException ex) {
       // Exception as expected
     }
     Set<String> dirs = ProtectedDirsConfigReader.
-        parseProtectedProtectedDirsFromConfig(PATH_TEST_DIR + "/doesnt-exist");
+        parseProtectedProtectedDirsFromConfig(pathTestDir + "/doesnt-exist");
     assertEquals(0, dirs.size());
   }
 
@@ -115,7 +119,8 @@ public class TestProtectedDirsConfigReader {
     // TestCase1: Check if lines beginning with # are ignored
     assertEquals(0, dirsLen);
 
-    // TestCase2: Check if given path names are reported by getProtectedProtectedDirs
+    // TestCase2: Check if given path names are reported
+    // by getProtectedProtectedDirs.
     assertFalse(hfp.getProtectedProtectedDirs().contains("/dire1/dire2"));
   }
 
@@ -123,7 +128,8 @@ public class TestProtectedDirsConfigReader {
    * Check if only comments can be written to paths file
    */
   @Test
-  public void testProtectedDirConfigFileReaderWithCommentsOnly() throws Exception {
+  public void testProtectedDirConfigFileReaderWithCommentsOnly()
+      throws Exception {
     FileWriter cfw = new FileWriter(configFile);
 
     cfw.write("#PROTECTED-DIRS-LIST\n");
