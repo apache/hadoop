@@ -29,14 +29,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import javax.activation.UnsupportedDataTypeException;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class AbfsListStatusRemoteIterator
     implements RemoteIterator<FileStatus> {
@@ -51,12 +49,12 @@ public class AbfsListStatusRemoteIterator
   private final FileStatus fileStatus;
   private final ListingSupport listingSupport;
   private final ArrayBlockingQueue<Object> iteratorsQueue;
+  private final TracingContext tracingContext;
 
   private volatile boolean isAsyncInProgress = false;
   private boolean isIterationComplete = false;
   private String continuation;
   private Iterator<FileStatus> currIterator;
-  private TracingContext tracingContext;
 
   public AbfsListStatusRemoteIterator(final FileStatus fileStatus,
       final ListingSupport listingSupport, TracingContext tracingContext) {
