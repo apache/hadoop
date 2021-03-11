@@ -828,6 +828,16 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Disable S3Guard from the test bucket in a configuration.
+   * @param conf configuration.
+   */
+  public static void disableS3GuardInTestBucket(Configuration conf) {
+    removeBaseAndBucketOverrides(getTestBucketName(conf), conf,
+        S3_METADATA_STORE_IMPL,
+        DIRECTORY_MARKER_POLICY);
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+  }
+  /**
    * Call a function; any exception raised is logged at info.
    * This is for test teardowns.
    * @param log log to use.
