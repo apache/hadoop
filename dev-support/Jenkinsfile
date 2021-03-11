@@ -156,6 +156,11 @@ pipeline {
                         # use emoji vote so it is easier to find the broken line
                         YETUS_ARGS+=("--github-use-emoji-vote")
 
+                        # Use both Java 7 and 8
+                        YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
+                        YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/zulu-7-amd64")
+                        YETUS_ARGS+=("--multijdktests=compile")
+
                         "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''
                 }
