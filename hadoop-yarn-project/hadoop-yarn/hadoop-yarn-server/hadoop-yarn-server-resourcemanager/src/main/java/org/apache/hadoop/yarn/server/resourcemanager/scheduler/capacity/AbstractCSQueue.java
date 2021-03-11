@@ -29,6 +29,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -153,6 +154,10 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   // is it a dynamic queue?
   private boolean dynamicQueue = false;
+
+  // The timestamp of the last submitted application to this queue.
+  // Only applies to dynamic queues.
+  private long lastSubmittedTimestamp;
 
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -711,6 +716,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     // TODO, improve this
     QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
     queueInfo.setQueueName(queueName);
+    queueInfo.setQueuePath(queuePath);
     queueInfo.setAccessibleNodeLabels(accessibleLabels);
     queueInfo.setCapacity(queueCapacities.getCapacity());
     queueInfo.setMaximumCapacity(queueCapacities.getMaximumCapacity());
@@ -722,6 +728,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueInfo.setIntraQueuePreemptionDisabled(
         getIntraQueuePreemptionDisabled());
     queueInfo.setQueueConfigurations(getQueueConfigurations());
+    queueInfo.setWeight(queueCapacities.getWeight());
     return queueInfo;
   }
 
@@ -1633,4 +1640,55 @@ public abstract class AbstractCSQueue implements CSQueue {
       writeLock.unlock();
     }
   }
+
+  protected String getCapacityOrWeightString() {
+    if (queueCapacities.getWeight() != -1) {
+      return "weight=" + queueCapacities.getWeight() + ", " +
+          "normalizedWeight=" + queueCapacities.getNormalizedWeight();
+    } else {
+      return "capacity=" + queueCapacities.getCapacity();
+    }
+  }
+
+  public boolean isEligibleForAutoDeletion() {
+    return false;
+  }
+
+  public boolean isInactiveDynamicQueue() {
+    long idleDurationSeconds =
+        (Time.monotonicNow() - getLastSubmittedTimestamp())/1000;
+    return isDynamicQueue() && isEligibleForAutoDeletion() &&
+        (idleDurationSeconds > this.csContext.getConfiguration().
+            getAutoExpiredDeletionTime());
+  }
+
+  public void updateLastSubmittedTimeStamp() {
+    writeLock.lock();
+    try {
+      this.lastSubmittedTimestamp = Time.monotonicNow();
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public long getLastSubmittedTimestamp() {
+    readLock.lock();
+
+    try {
+      return lastSubmittedTimestamp;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @VisibleForTesting
+  public void setLastSubmittedTimestamp(long lastSubmittedTimestamp) {
+    writeLock.lock();
+    try {
+      this.lastSubmittedTimestamp = lastSubmittedTimestamp;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
 }

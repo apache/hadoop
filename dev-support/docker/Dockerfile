@@ -44,7 +44,6 @@ RUN apt-get -q update \
         cmake \
         curl \
         doxygen \
-        findbugs \
         fuse \
         g++ \
         gcc \
@@ -72,10 +71,11 @@ RUN apt-get -q update \
         openjdk-8-jdk \
         pinentry-curses \
         pkg-config \
-        python \
-        python2.7 \
-        python-pkg-resources \
-        python-setuptools \
+        python3 \
+        python3-pip \
+        python3-pkg-resources \
+        python3-setuptools \
+        python3-wheel \
         rsync \
         shellcheck \
         software-properties-common \
@@ -91,7 +91,16 @@ RUN apt-get -q update \
 ENV MAVEN_HOME /usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
-ENV FINDBUGS_HOME /usr
+
+#######
+# Install SpotBugs 4.2.2
+#######
+RUN mkdir -p /opt/spotbugs \
+    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.2.2/spotbugs-4.2.2.tgz \
+      -o /opt/spotbugs.tgz \
+    && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
+    && chmod +x /opt/spotbugs/bin/*
+ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
 # Install Boost 1.72 (1.71 ships with Focal)
@@ -108,18 +117,6 @@ RUN mkdir -p /opt/boost-library \
     && cd /root \
     && rm -rf /opt/boost-library
 
-####
-# Install pip (deprecated from Focal toolchain)
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/pip \
-    && curl -L https://bootstrap.pypa.io/2.7/get-pip.py > get-pip.py \
-    && mv get-pip.py /opt/pip \
-    && cd /opt/pip \
-    && python2.7 get-pip.py "pip < 21.0" \
-    && cd /root \
-    && rm -rf /opt/pip
-
 ######
 # Install Google Protobuf 3.7.1 (3.6.1 ships with Focal)
 ######
@@ -131,6 +128,7 @@ RUN mkdir -p /opt/protobuf-src \
     && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
     && cd /opt/protobuf-src \
     && ./configure --prefix=/opt/protobuf \
+    && make "-j$(nproc)" \
     && make install \
     && cd /root \
     && rm -rf /opt/protobuf-src
@@ -138,19 +136,9 @@ ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ####
-# Install pylint at fixed version (2.0.0 removed python2 support)
-# https://github.com/PyCQA/pylint/issues/2294
+# Install pylint and python-dateutil
 ####
-RUN pip2 install \
-    astroid==1.6.6 \
-    isort==4.3.21 \
-    configparser==4.0.2 \
-    pylint==1.9.2
-
-####
-# Install dateutil.parser
-####
-RUN pip2 install python-dateutil==2.7.3
+RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 
 ####
 # Install bower
@@ -183,7 +171,7 @@ RUN mkdir -p /opt/isa-l-src \
     && cd /opt/isa-l-src \
     && ./autogen.sh \
     && ./configure \
-    && make \
+    && make "-j$(nproc)" \
     && make install \
     && cd /root \
     && rm -rf /opt/isa-l-src

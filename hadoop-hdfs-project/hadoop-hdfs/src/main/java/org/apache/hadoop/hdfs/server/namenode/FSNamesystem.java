@@ -124,7 +124,8 @@ import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
-import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.*;
+
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics.TOPMETRICS_METRICS_SOURCE_NAME;
@@ -329,11 +330,6 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
@@ -2431,6 +2427,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws  IOException
    */
   void setStoragePolicy(String src, String policyName) throws IOException {
+    if (policyName.equalsIgnoreCase(
+            HdfsConstants.ALLNVDIMM_STORAGE_POLICY_NAME)) {
+      requireEffectiveLayoutVersionForFeature(Feature.NVDIMM_SUPPORT);
+    }
     final String operationName = "setStoragePolicy";
     checkOperation(OperationCategory.WRITE);
     checkStoragePolicyEnabled("set storage policy", true);
@@ -2664,7 +2664,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .append(", createFlag=").append(flag)
           .append(", blockSize=").append(blockSize)
           .append(", supportedVersions=")
-          .append(Arrays.toString(supportedVersions));
+          .append(Arrays.toString(supportedVersions))
+          .append(", ecPolicyName=").append(ecPolicyName)
+          .append(", storagePolicy=").append(storagePolicy);
       NameNode.stateChangeLog.debug(builder.toString());
     }
     if (!DFSUtil.isValidName(src) ||
@@ -2821,7 +2823,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     TRUNCATE_FILE,
     RECOVER_LEASE;
     
-    private String getExceptionMessage(String src, String holder,
+    public String getExceptionMessage(String src, String holder,
         String clientMachine, String reason) {
       return "Failed to " + this + " " + src + " for " + holder +
           " on " + clientMachine + " because " + reason;
@@ -3570,6 +3572,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     if (type != null) {
       requireEffectiveLayoutVersionForFeature(Feature.QUOTA_BY_STORAGE_TYPE);
+    }
+    if (type == StorageType.NVDIMM) {
+      requireEffectiveLayoutVersionForFeature(Feature.NVDIMM_SUPPORT);
     }
     checkOperation(OperationCategory.WRITE);
     final String operationName = getQuotaCommand(nsQuota, ssQuota);
@@ -4627,7 +4632,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return blockManager.getMissingReplOneBlocksCount();
   }
   
-  @Metric({"ExpiredHeartbeats", "Number of expired heartbeats"})
+  @Metric(value = {"ExpiredHeartbeats", "Number of expired heartbeats"},
+      type = Metric.Type.COUNTER)
   public int getExpiredHeartbeats() {
     return datanodeStatistics.getExpiredHeartbeats();
   }
@@ -4822,6 +4828,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "acquire FSNameSystemLock"})
   public int getFsLockQueueLength() {
     return fsLock.getQueueLength();
+  }
+
+  @Metric(value = {"ReadLockLongHoldCount", "The number of time " +
+          "the read lock has been held for longer than the threshold"},
+          type = Metric.Type.COUNTER)
+  public long getNumOfReadLockLongHold() {
+    return fsLock.getNumOfReadLockLongHold();
+  }
+
+  @Metric(value = {"WriteLockLongHoldCount", "The number of time " +
+          "the write lock has been held for longer than the threshold"},
+          type = Metric.Type.COUNTER)
+  public long getNumOfWriteLockLongHold() {
+    return fsLock.getNumOfWriteLockLongHold();
   }
 
   int getNumberOfDatanodes(DatanodeReportType type) {
@@ -5577,6 +5597,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   @Override // FSNamesystemMBean
+  @Metric({"NumInServiceLiveDataNodes",
+      "Number of live datanodes which are currently in service"})
+  public int getNumInServiceLiveDataNodes() {
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    int liveInService = live.size();
+    for (DatanodeDescriptor node : live) {
+      liveInService -= node.isInMaintenance() ? 1 : 0;
+    }
+    return liveInService;
+  }
+
+  @Override // FSNamesystemMBean
   @Metric({"VolumeFailuresTotal",
       "Total number of volume failures across all Datanodes"})
   public int getVolumeFailuresTotal() {
@@ -6225,8 +6258,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   void loadSecretManagerState(SecretManagerSection s,
       List<SecretManagerSection.DelegationKey> keys,
-      List<SecretManagerSection.PersistToken> tokens) throws IOException {
-    dtSecretManager.loadSecretManagerState(new SecretManagerState(s, keys, tokens));
+      List<SecretManagerSection.PersistToken> tokens,
+      StartupProgress.Counter counter) throws IOException {
+    dtSecretManager.loadSecretManagerState(new SecretManagerState(s, keys, tokens),
+            counter);
   }
 
   /**
@@ -8210,7 +8245,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     checkErasureCodingSupported(operationName);
     boolean success = false;
-    LOG.info("Disable the erasure coding policy " + ecPolicyName);
     try {
       writeLock();
       try {
@@ -8524,25 +8558,37 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Check if snapshot roots are created for all existing snapshottable
    * directories. Create them if not.
    */
-  void checkAndProvisionSnapshotTrashRoots() throws IOException {
-    SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
-    if (dirStatusList == null) {
-      return;
-    }
-    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
-      String currDir = dirStatus.getFullPath().toString();
-      if (!currDir.endsWith(Path.SEPARATOR)) {
-        currDir += Path.SEPARATOR;
+  @Override
+  public void checkAndProvisionSnapshotTrashRoots() {
+    if (isSnapshotTrashRootEnabled) {
+      try {
+        SnapshottableDirectoryStatus[] dirStatusList =
+            getSnapshottableDirListing();
+        if (dirStatusList == null) {
+          return;
+        }
+        for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+          String currDir = dirStatus.getFullPath().toString();
+          if (!currDir.endsWith(Path.SEPARATOR)) {
+            currDir += Path.SEPARATOR;
+          }
+          String trashPath = currDir + FileSystem.TRASH_PREFIX;
+          HdfsFileStatus fileStatus = getFileInfo(trashPath, false, false, false);
+          if (fileStatus == null) {
+            LOG.info("Trash doesn't exist for snapshottable directory {}. " + "Creating trash at {}", currDir, trashPath);
+            PermissionStatus permissionStatus =
+                new PermissionStatus(getRemoteUser().getShortUserName(), null,
+                    SHARED_TRASH_PERMISSION);
+            mkdirs(trashPath, permissionStatus, false);
+          }
+        }
+      } catch (IOException e) {
+        final String msg =
+            "Could not provision Trash directory for existing "
+                + "snapshottable directories. Exiting Namenode.";
+        ExitUtil.terminate(1, msg);
       }
-      String trashPath = currDir + FileSystem.TRASH_PREFIX;
-      HdfsFileStatus fileStatus = getFileInfo(trashPath, false, false, false);
-      if (fileStatus == null) {
-        LOG.info("Trash doesn't exist for snapshottable directory {}. "
-            + "Creating trash at {}", currDir, trashPath);
-        PermissionStatus permissionStatus = new PermissionStatus(getRemoteUser()
-            .getShortUserName(), null, SHARED_TRASH_PERMISSION);
-        mkdirs(trashPath, permissionStatus, false);
-      }
+
     }
   }
 

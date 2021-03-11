@@ -37,9 +37,9 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure.Policy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * This class tests that data nodes are correctly replaced on failure.
@@ -54,7 +54,7 @@ public class TestReplaceDatanodeOnFailure {
   final private static String RACK1 = "/rack1";
 
   {
-    GenericTestUtils.setLogLevel(DataTransferProtocol.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataTransferProtocol.LOG, Level.TRACE);
   }
 
   /** Test DEFAULT ReplaceDatanodeOnFailure policy. */

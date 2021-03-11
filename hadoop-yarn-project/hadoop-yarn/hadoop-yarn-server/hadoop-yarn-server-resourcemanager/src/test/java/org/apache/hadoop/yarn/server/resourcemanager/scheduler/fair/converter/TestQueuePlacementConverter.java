@@ -369,6 +369,51 @@ public class TestQueuePlacementConverter {
   }
 
   @Test
+  public void testParentSetToRootInWeightModeUserPolicy() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  @Test
+  public void testParentSetToRootInWeightModePrimaryGroupPolicy() {
+    PrimaryGroupPlacementRule fsRule = mock(PrimaryGroupPlacementRule.class);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  @Test
+  public void testParentSetToRootInWeightModePrimaryGroupUserPolicy() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    PrimaryGroupPlacementRule parent = mock(PrimaryGroupPlacementRule.class);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  @Test
+  public void testParentSetToRootInWeightModeSecondaryGroupPolicy() {
+    SecondaryGroupExistingPlacementRule fsRule =
+        mock(SecondaryGroupExistingPlacementRule.class);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  @Test
+  public void testParentSetToRootInWeightModeSecondaryGroupUserPolicy() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    SecondaryGroupExistingPlacementRule parent =
+        mock(SecondaryGroupExistingPlacementRule.class);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  private void testParentSetToRootInWeightMode(FSPlacementRule fsRule) {
+    initPlacementManagerMock(fsRule);
+
+    MappingRulesDescription desc = convertInWeightMode();
+    Rule rule = desc.getRules().get(0);
+
+    assertEquals("Parent queue", "root", rule.getParentQueue());
+  }
+
+  @Test
   public void testConvertNestedPrimaryGroupRuleWithParentCreate() {
     UserPlacementRule fsRule = mock(UserPlacementRule.class);
     PrimaryGroupPlacementRule parent = mock(PrimaryGroupPlacementRule.class);

@@ -173,7 +173,7 @@ public class ParentQueue extends AbstractCSQueue {
               ((ParentQueue) parent).getQueueOrderingPolicyConfigName());
       queueOrderingPolicy.setQueues(childQueues);
 
-      LOG.info(queueName + ", capacity=" + this.queueCapacities.getCapacity()
+      LOG.info(queueName + ", " + getCapacityOrWeightString()
           + ", absoluteCapacity=" + this.queueCapacities.getAbsoluteCapacity()
           + ", maxCapacity=" + this.queueCapacities.getMaximumCapacity()
           + ", absoluteMaxCapacity=" + this.queueCapacities
@@ -462,8 +462,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   public String toString() {
     return queueName + ": " +
-        "numChildQueue= " + childQueues.size() + ", " + 
-        "capacity=" + queueCapacities.getCapacity() + ", " +  
+        "numChildQueue= " + childQueues.size() + ", " +
+        getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
         "usedResources=" + queueUsage.getUsed() + 
         "usedCapacity=" + getUsedCapacity() + ", " + 
@@ -543,6 +543,16 @@ public class ParentQueue extends AbstractCSQueue {
         return queue;
       }
 
+      // Check if the max queue limit is exceeded.
+      int maxQueues = csContext.getConfiguration().
+          getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePath());
+      if (childQueues.size() >= maxQueues) {
+        throw new SchedulerDynamicEditException(
+            "Cannot auto create queue " + childQueuePath + ". Max Child "
+                + "Queue limit exceeded which is configured as: " + maxQueues
+                + " and number of child queues is: " + childQueues.size());
+      }
+
       // First, check if we allow creation or not
       boolean weightsAreUsed = false;
       try {
@@ -560,14 +570,37 @@ public class ParentQueue extends AbstractCSQueue {
 
       CSQueue newQueue = createNewQueue(childQueuePath, isLeaf);
       this.childQueues.add(newQueue);
+      updateLastSubmittedTimeStamp();
 
-      // Call updateClusterResource
-      // , which will deal with all effectiveMin/MaxResource
+      // Call updateClusterResource.
+      // Which will deal with all effectiveMin/MaxResource
       // Calculation
       this.updateClusterResource(csContext.getClusterResource(),
           new ResourceLimits(this.csContext.getClusterResource()));
 
       return newQueue;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+
+  // New method to remove child queue
+  public void removeChildQueue(CSQueue queue)
+      throws SchedulerDynamicEditException {
+    writeLock.lock();
+    try {
+      // Now we can do remove and update
+      this.childQueues.remove(queue);
+      this.scheduler.getCapacitySchedulerQueueManager()
+          .removeQueue(queue.getQueuePath());
+
+      // Call updateClusterResource,
+      // which will deal with all effectiveMin/MaxResource
+      // Calculation
+      this.updateClusterResource(csContext.getClusterResource(),
+          new ResourceLimits(this.csContext.getClusterResource()));
+
     } finally {
       writeLock.unlock();
     }
@@ -1596,5 +1629,12 @@ public class ParentQueue extends AbstractCSQueue {
   // This is a locking free method
   Map<String, Float> getEffectiveMinRatioPerResource() {
     return effectiveMinRatioPerResource;
+  }
+
+  @Override
+  public boolean isEligibleForAutoDeletion() {
+    return isDynamicQueue() && getChildQueues().size() == 0 &&
+        csContext.getConfiguration().
+            isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
 }

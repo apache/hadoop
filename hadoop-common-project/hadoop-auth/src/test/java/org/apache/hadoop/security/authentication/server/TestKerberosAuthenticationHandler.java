@@ -301,11 +301,10 @@ public class TestKerberosAuthenticationHandler
         GSSContext gssContext = null;
         try {
           String servicePrincipal = KerberosTestUtils.getServerPrincipal();
-          Oid oid =
-              KerberosUtil.getOidInstance("NT_GSS_KRB5_PRINCIPAL");
+          Oid oid = KerberosUtil.NT_GSS_KRB5_PRINCIPAL_OID;
           GSSName serviceName = gssManager.createName(servicePrincipal,
               oid);
-          oid = KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID");
+          oid = KerberosUtil.GSS_KRB5_MECH_OID;
           gssContext = gssManager.createContext(serviceName, oid, null,
                                                   GSSContext.DEFAULT_LIFETIME);
           gssContext.requestCredDeleg(true);

@@ -50,7 +50,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,6 +60,7 @@ import org.mockito.stubbing.Answer;
 import java.util.function.Supplier;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.event.Level;
 
 /**
  * This class tests the DFS positional read functionality in a single node
@@ -278,7 +278,7 @@ public class TestPread {
   @Test
   public void testPreadDFSNoChecksum() throws IOException {
     Configuration conf = new Configuration();
-    GenericTestUtils.setLogLevel(DataTransferProtocol.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DataTransferProtocol.LOG, Level.TRACE);
     dfsPreadTest(conf, false, false);
     dfsPreadTest(conf, true, false);
   }

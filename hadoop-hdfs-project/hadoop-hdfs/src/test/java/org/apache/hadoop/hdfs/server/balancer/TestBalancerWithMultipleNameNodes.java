@@ -61,7 +61,7 @@ public class TestBalancerWithMultipleNameNodes {
   static final Logger LOG = Balancer.LOG;
   {
     GenericTestUtils.setLogLevel(LOG, Level.TRACE);
-    DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
 
   

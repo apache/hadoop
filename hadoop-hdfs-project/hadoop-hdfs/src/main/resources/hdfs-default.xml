@@ -2347,6 +2347,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.max.nodes.to.report</name>
+  <value>5</value>
+  <description>
+    Number of nodes to include in JSON report. We will return nodes with
+    the highest number of votes from peers.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.outliers.report.interval</name>
   <value>30m</value>
   <description>
@@ -2367,6 +2376,31 @@
     profiled for DataNode disk statistics. The default value of 0 disables
     disk statistics. Set to an integer value between 1 and 100 to enable disk
     statistics.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.min.outlier.detection.disks</name>
+  <value>5</value>
+  <description>
+    Minimum number of disks to run outlier detection.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.slowdisk.low.threshold.ms</name>
+  <value>20</value>
+  <description>
+    Threshold in milliseconds below which a disk is definitely not slow.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.max.disks.to.report</name>
+  <value>5</value>
+  <description>
+    Number of disks to include in JSON report per operation. We will return
+    disks with the highest latency.
   </description>
 </property>
 
@@ -4337,6 +4371,15 @@
 </property>
 
 <property>
+  <name>dfs.client.pipeline.recovery.max-retries</name>
+  <value>5</value>
+  <description>
+    if the DFS client encounters errors in write pipeline,
+    retry up to the number defined by this property before giving up.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.socket-timeout</name>
   <value>60000</value>
   <description>
@@ -6090,6 +6133,21 @@
         data blocks exist and the configured ratio is small, which will
         prevent the volume from taking new blocks
         until capacity is balanced out.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.same-disk-tiering.capacity-ratio.percentage</name>
+    <value></value>
+    <description>
+      Disk capacity ratio of DISK or ARCHIVE volume
+      when dfs.datanode.same-disk-tiering is turned on
+      This will override the value of
+      dfs.datanode.reserve-for-archive.default.percentage .
+      Example value:
+      [0.3]/disk1/archive,[0.7]/disk1/disk,[0.4]/disk2/archive,[0.6]/disk2/disk
+      This is only effective for configured
+      DISK/ARCHIVE volumes in dfs.datanode.data.dir.
     </description>
   </property>
 

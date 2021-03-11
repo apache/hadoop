@@ -49,6 +49,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected float weight;
   protected float normalizedWeight;
   protected String queueName;
+  private String queuePath;
   protected CapacitySchedulerQueueInfoList queues;
   protected QueueCapacitiesInfo capacities;
   protected CapacitySchedulerHealthInfo health;
@@ -69,6 +70,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
   public CapacitySchedulerInfo(CSQueue parent, CapacityScheduler cs) {
     this.queueName = parent.getQueueName();
+    this.queuePath = parent.getQueuePath();
     this.usedCapacity = parent.getUsedCapacity() * 100;
     this.capacity = parent.getCapacity() * 100;
     float max = parent.getMaximumCapacity();
@@ -132,6 +134,10 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
   public String getQueueName() {
     return this.queueName;
+  }
+
+  public String getQueuePath() {
+    return this.queuePath;
   }
 
   public ResourceInfo getMaximumAllocation() {

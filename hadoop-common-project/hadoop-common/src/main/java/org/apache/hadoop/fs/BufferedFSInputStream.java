@@ -21,6 +21,7 @@ import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.util.StringJoiner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -152,5 +153,13 @@ public class BufferedFSInputStream extends BufferedInputStream
   @Override
   public IOStatistics getIOStatistics() {
     return retrieveIOStatistics(in);
+  }
+
+  @Override
+  public String toString() {
+    return new StringJoiner(", ",
+        BufferedFSInputStream.class.getSimpleName() + "[", "]")
+        .add("in=" + in)
+        .toString();
   }
 }

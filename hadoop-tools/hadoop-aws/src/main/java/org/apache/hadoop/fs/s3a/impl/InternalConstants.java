@@ -116,5 +116,5 @@ public final class InternalConstants {
    * problems related to region/endpoint setup, it is currently
    * disabled.
    */
-  public static final boolean AWS_SDK_METRICS_ENABLED = false;
+  public static final boolean AWS_SDK_METRICS_ENABLED = true;
 }

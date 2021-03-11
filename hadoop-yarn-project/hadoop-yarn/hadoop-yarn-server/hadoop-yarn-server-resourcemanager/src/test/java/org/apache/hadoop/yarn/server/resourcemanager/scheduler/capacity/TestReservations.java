@@ -105,7 +105,6 @@ public class TestReservations {
     CapacityScheduler spyCs = new CapacityScheduler();
     cs = spy(spyCs);
     rmContext = TestUtils.getMockRMContext();
-
   }
 
   private void setup(CapacitySchedulerConfiguration csConf) throws Exception {
@@ -114,6 +113,9 @@ public class TestReservations {
 
   private void setup(CapacitySchedulerConfiguration csConf,
       boolean addUserLimits) throws Exception {
+    //All stub calls on the spy object of the 'cs' field should happen
+    //before cs.start() is invoked. See YARN-10672 for more details.
+    when(cs.getNumClusterNodes()).thenReturn(3);
 
     csConf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     final String newRoot = "root" + System.currentTimeMillis();
@@ -156,8 +158,6 @@ public class TestReservations {
     cs.setRMContext(spyRMContext);
     cs.init(csConf);
     cs.start();
-
-    when(cs.getNumClusterNodes()).thenReturn(3);
   }
 
   private static final String A = "a";

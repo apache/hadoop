@@ -194,6 +194,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     String secondaryGroup = null;
     Iterator<String> it = groupsSet.iterator();
     String primaryGroup = it.next();
+
     while (it.hasNext()) {
       String group = it.next();
       if (this.queueManager.getQueue(group) != null) {
@@ -203,8 +204,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     }
 
     if (secondaryGroup == null && LOG.isDebugEnabled()) {
-      LOG.debug("User {} is not associated with any Secondary " +
-          "Group. Hence it may use the 'default' queue", user);
+      LOG.debug("User {} is not associated with any Secondary group", user);
     }
 
     vctx.put("%primary_group", primaryGroup);
@@ -217,7 +217,21 @@ public class CSMappingPlacementRule extends PlacementRule {
     VariableContext vctx = new VariableContext();
 
     vctx.put("%user", user);
-    vctx.put("%specified", asc.getQueue());
+    //If the specified matches the default it means NO queue have been specified
+    //as per ClientRMService#submitApplication which sets the queue to default
+    //when no queue is provided.
+    //To place queues specifically to default, users must use root.default
+    if (!asc.getQueue().equals(YarnConfiguration.DEFAULT_QUEUE_NAME)) {
+      vctx.put("%specified", asc.getQueue());
+    } else {
+      //Adding specified as empty will prevent it to be undefined and it won't
+      //try to place the application to a queue named '%specified', queue path
+      //validation will reject the empty path or the path with empty parts,
+      //so we sill still hit the fallback action of this rule if no queue
+      //is specified
+      vctx.put("%specified", "");
+    }
+
     vctx.put("%application", asc.getApplicationName());
     vctx.put("%default", "root.default");
     try {
@@ -233,6 +247,12 @@ public class CSMappingPlacementRule extends PlacementRule {
   private String validateAndNormalizeQueue(
       String queueName, boolean allowCreate) throws YarnException {
     MappingQueuePath path = new MappingQueuePath(queueName);
+
+    if (path.hasEmptyPart()) {
+      throw new YarnException("Invalid path returned by rule: '" +
+          queueName + "'");
+    }
+
     String leaf = path.getLeafName();
     String parent = path.getParent();
 
@@ -329,14 +349,19 @@ public class CSMappingPlacementRule extends PlacementRule {
       MappingRule rule, VariableContext variables) {
     MappingRuleResult result = rule.evaluate(variables);
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Evaluated rule '{}' with result: '{}'", rule, result);
+    }
+
     if (result.getResult() == MappingRuleResultType.PLACE) {
       try {
         result.updateNormalizedQueue(validateAndNormalizeQueue(
             result.getQueue(), result.isCreateAllowed()));
       } catch (Exception e) {
-        LOG.info("Cannot place to queue '{}' returned by mapping rule. " +
-            "Reason: {}", result.getQueue(), e.getMessage());
         result = rule.getFallback();
+        LOG.info("Cannot place to queue '{}' returned by mapping rule. " +
+            "Reason: '{}' Fallback operation: '{}'",
+            result.getQueue(), e.getMessage(), result);
       }
     }
 
@@ -379,7 +404,6 @@ public class CSMappingPlacementRule extends PlacementRule {
         asc.getApplicationName(), appQueue, overrideWithQueueMappings);
     if (appQueue != null &&
         !appQueue.equals(YarnConfiguration.DEFAULT_QUEUE_NAME) &&
-        !appQueue.equals(YarnConfiguration.DEFAULT_QUEUE_FULL_NAME) &&
         !overrideWithQueueMappings &&
         !recovery) {
       LOG.info("Have no jurisdiction over application submission '{}', " +
@@ -444,6 +468,12 @@ public class CSMappingPlacementRule extends PlacementRule {
       if (ret == null || !ret.getQueue().equals(asc.getQueue())) {
         return null;
       }
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Placement final result '{}' for application '{}'",
+          (ret == null ? "null" : ret.getFullQueuePath()),
+          asc.getApplicationId());
     }
 
     return ret;

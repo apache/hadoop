@@ -24,6 +24,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -50,6 +51,7 @@ public class SFTPFileSystem extends FileSystem {
 
   private SFTPConnectionPool connectionPool;
   private URI uri;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   private static final int DEFAULT_SFTP_PORT = 22;
   private static final int DEFAULT_MAX_CONNECTION = 5;
@@ -83,6 +85,7 @@ public class SFTPFileSystem extends FileSystem {
       "Destination path %s already exist, cannot rename!";
   public static final String E_FAILED_GETHOME = "Failed to get home directory";
   public static final String E_FAILED_DISCONNECT = "Failed to disconnect";
+  public static final String E_FS_CLOSED = "FileSystem is closed!";
 
   /**
    * Set configuration from UI.
@@ -138,8 +141,9 @@ public class SFTPFileSystem extends FileSystem {
    * @throws IOException
    */
   private ChannelSftp connect() throws IOException {
-    Configuration conf = getConf();
+    checkNotClosed();
 
+    Configuration conf = getConf();
     String host = conf.get(FS_SFTP_HOST, null);
     int port = conf.getInt(FS_SFTP_HOST_PORT, DEFAULT_SFTP_PORT);
     String user = conf.get(FS_SFTP_USER_PREFIX + host, null);
@@ -700,6 +704,31 @@ public class SFTPFileSystem extends FileSystem {
       return status;
     } finally {
       disconnect(channel);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (closed.getAndSet(true)) {
+      return;
+    }
+    try {
+      super.close();
+    } finally {
+      if (connectionPool != null) {
+        connectionPool.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Verify that the input stream is open. Non blocking; this gives
+   * the last state of the volatile {@link #closed} field.
+   * @throws IOException if the connection is closed.
+   */
+  private void checkNotClosed() throws IOException {
+    if (closed.get()) {
+      throw new IOException(uri + ": " + E_FS_CLOSED);
     }
   }
 

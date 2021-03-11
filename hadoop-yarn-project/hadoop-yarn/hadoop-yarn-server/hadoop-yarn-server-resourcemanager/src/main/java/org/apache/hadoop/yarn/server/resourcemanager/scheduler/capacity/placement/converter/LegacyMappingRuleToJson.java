@@ -138,10 +138,6 @@ public class LegacyMappingRuleToJson {
    * @return JSON Format of the provided mapping rules, null if no rules are set
    */
   public String convert() {
-    if (userGroupMappingRules == null && applicationNameMappingRules == null) {
-      return null;
-    }
-
     //creating the basic JSON config structure
     ObjectNode rootNode = objectMapper.createObjectNode();
     ArrayNode rulesNode = objectMapper.createArrayNode();

@@ -79,7 +79,7 @@ public class SlowPeerTracker {
    * Number of nodes to include in JSON report. We will return nodes with
    * the highest number of votes from peers.
    */
-  private static final int MAX_NODES_TO_REPORT = 5;
+  private final int maxNodesToReport;
 
   /**
    * Information about peers that have reported a node as being slow.
@@ -103,6 +103,9 @@ public class SlowPeerTracker {
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS) * 3;
+    this.maxNodesToReport = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY,
+        DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_DEFAULT);
   }
 
   /**
@@ -193,7 +196,7 @@ public class SlowPeerTracker {
    */
   public String getJson() {
     Collection<ReportForJson> validReports = getJsonReports(
-        MAX_NODES_TO_REPORT);
+        maxNodesToReport);
     try {
       return WRITER.writeValueAsString(validReports);
     } catch (JsonProcessingException e) {

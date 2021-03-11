@@ -39,7 +39,6 @@ import org.apache.hadoop.security.authorize.ProxyServers;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.apache.log4j.Level;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -48,6 +47,7 @@ import org.mockito.Mockito;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -85,7 +85,7 @@ public class TestAuditLogger {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestAuditLogger.class);
   static {
-    GenericTestUtils.setLogLevel(LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(LOG, Level.TRACE);
   }
 
   private static final short TEST_PERMISSION = (short) 0654;

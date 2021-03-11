@@ -230,6 +230,22 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * Creates a directory for the data/logs of the unit test.
+   * It first deletes the directory if it exists.
+   *
+   * @param testClass the unit test class.
+   * @return the Path of the root directory.
+   */
+  public static File setupTestRootDir(Class<?> testClass) {
+    File testRootDir = getTestDir(testClass.getSimpleName());
+    if (testRootDir.exists()) {
+      FileUtil.fullyDelete(testRootDir);
+    }
+    testRootDir.mkdirs();
+    return testRootDir;
+  }
+
+  /**
    * Get the (created) base directory for tests.
    * @return the absolute directory
    */

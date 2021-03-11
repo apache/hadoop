@@ -74,4 +74,13 @@
         <Class name="org.apache.hadoop.fs.azure.FileMetadata" />
         <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS" />
     </Match>
+
+  <!-- continuation is returned from an external http call. Keeping this
+  outside synchronized block since the same is costly. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator" />
+    <Field name="continuation" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+
  </FindBugsFilter>

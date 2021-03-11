@@ -1446,6 +1446,13 @@ public class FairScheduler extends
             + " ms instead");
       }
 
+      boolean globalAmPreemption = conf.getBoolean(
+          FairSchedulerConfiguration.AM_PREEMPTION,
+          FairSchedulerConfiguration.DEFAULT_AM_PREEMPTION);
+      if (!globalAmPreemption) {
+        LOG.info("AM preemption is DISABLED globally");
+      }
+
       rootMetrics = FSQueueMetrics.forQueue("root", null, true, conf);
       fsOpDurations = FSOpDurations.getInstance(true);
 

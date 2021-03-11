@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY;
@@ -739,7 +741,49 @@ public class DataNode extends ReconfigurableBase
       }
     }
 
+    validateVolumesWithSameDiskTiering(results);
+
     return results;
+  }
+
+  /**
+   * Check conflict with same disk tiering feature
+   * and throws exception.
+   *
+   * TODO: We can add feature to
+   *   allow refreshing volume with capacity ratio,
+   *   and solve the case of replacing volume on same mount.
+   */
+  private void validateVolumesWithSameDiskTiering(ChangedVolumes
+      changedVolumes) throws IOException {
+    if (dnConf.getConf().getBoolean(DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT)
+        && data.getMountVolumeMap() != null) {
+      // Check if mount already exist.
+      for (StorageLocation location : changedVolumes.newLocations) {
+        if (StorageType.allowSameDiskTiering(location.getStorageType())) {
+          File dir = new File(location.getUri());
+          // Get the first parent dir that exists to check disk mount point.
+          while (!dir.exists()) {
+            dir = dir.getParentFile();
+            if (dir == null) {
+              throw new IOException("Invalid path: "
+                  + location + ": directory does not exist");
+            }
+          }
+          DF df = new DF(dir, dnConf.getConf());
+          String mount = df.getMount();
+          if (data.getMountVolumeMap().hasMount(mount)) {
+            String errMsg = "Disk mount " + mount
+                + " already has volume, when trying to add "
+                + location + ". Please try removing mounts first"
+                + " or restart datanode.";
+            LOG.error(errMsg);
+            throw new IOException(errMsg);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -1445,7 +1489,7 @@ public class DataNode extends ReconfigurableBase
 
     if (dnConf.diskStatsEnabled) {
       diskMetrics = new DataNodeDiskMetrics(this,
-          dnConf.outliersReportIntervalMs);
+          dnConf.outliersReportIntervalMs, getConf());
     }
   }
 

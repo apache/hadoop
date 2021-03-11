@@ -225,6 +225,7 @@ import org.slf4j.Logger;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 
 import javax.annotation.Nonnull;
 
@@ -530,7 +531,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         QuotaByStorageTypeExceededException.class,
         AclException.class,
         FSLimitException.PathComponentTooLongException.class,
-        FSLimitException.MaxDirectoryItemsExceededException.class);
+        FSLimitException.MaxDirectoryItemsExceededException.class,
+        DisallowedDatanodeException.class);
 
     clientRpcServer.addSuppressedLoggingExceptions(StandbyException.class,
         UnresolvedPathException.class);
@@ -2256,10 +2258,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     try {
       if (ecPolicyName == null) {
         ecPolicyName = defaultECPolicyName;
-        LOG.trace("No policy name is specified, " +
+        LOG.debug("No policy name is specified, " +
             "set the default policy name instead");
       }
-      LOG.trace("Set erasure coding policy " + ecPolicyName + " on " + src);
+      LOG.debug("Set erasure coding policy {} on {}", ecPolicyName, src);
       namesystem.setErasureCodingPolicy(src, ecPolicyName, cacheEntry != null);
       success = true;
     } finally {
@@ -2489,6 +2491,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     boolean success = false;
     try {
+      LOG.debug("Unset erasure coding policy on {}", src);
       namesystem.unsetErasureCodingPolicy(src, cacheEntry != null);
       success = true;
     } finally {
