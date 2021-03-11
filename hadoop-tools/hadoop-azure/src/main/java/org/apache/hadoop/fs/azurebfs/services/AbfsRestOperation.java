@@ -209,36 +209,46 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
+
     try {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
 
-      try {
-        switch (client.getAuthType()) {
-        case Custom:
-        case OAuth:
-          LOG.debug("Authenticating request with OAuth2 access token");
-          httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-              client.getAccessToken());
-          break;
-        case SAS:
-          // do nothing; the SAS token should already be appended to the query string
-          break;
-        case SharedKey:
-          // sign the HTTP request
-          LOG.debug("Signing request with shared key");
-          // sign the HTTP request
-          client.getSharedKeyCredentials().signRequest(
-              httpOperation.getConnection(),
-              hasRequestBody ? bufferLength : 0);
-          break;
-        }
-      } catch (Exception e) {
-        httpOperation = null;
-        throw e;
+      switch (client.getAuthType()) {
+      case Custom:
+      case OAuth:
+        LOG.debug("Authenticating request with OAuth2 access token");
+        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+            client.getAccessToken());
+        break;
+      case SAS:
+        // do nothing; the SAS token should already be appended to the query string
+        break;
+      case SharedKey:
+        // sign the HTTP request
+        LOG.debug("Signing request with shared key");
+        // sign the HTTP request
+        client.getSharedKeyCredentials().signRequest(
+            httpOperation.getConnection(),
+            hasRequestBody ? bufferLength : 0);
+        break;
       }
+    } catch (IOException e) {
+      if (LOG.isDebugEnabled()) {
+        if (httpOperation != null) {
+          LOG.debug("Auth failure: " + httpOperation.toString());
+        } else {
+          LOG.debug("Auth failure: " + method + ", " + url);
+        }
+      }
+      if (e instanceof HttpException) {
+        throw new AbfsRestOperationException((HttpException) e);
+      }
+      throw new AbfsRestOperationException(-1, null, e.getMessage(), e);
+    }
 
+    try {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
