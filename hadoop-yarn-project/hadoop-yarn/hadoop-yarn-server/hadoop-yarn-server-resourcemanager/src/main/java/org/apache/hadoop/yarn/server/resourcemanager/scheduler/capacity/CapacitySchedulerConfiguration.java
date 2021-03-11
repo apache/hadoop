@@ -777,7 +777,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (!configuredWeightAsCapacity(configureValue)) {
       return -1f;
     } else {
-      return Float.valueOf(
+      return Float.parseFloat(
           configureValue.substring(0, configureValue.indexOf(WEIGHT_SUFFIX)));
     }
   }
