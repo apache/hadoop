@@ -115,7 +115,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
       ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-              fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0,
+              fs.getFileSystemID(), HdfsOperationConstants.WRITE, false, 0,
               ((AbfsOutputStream) stream.getWrappedStream())
                   .getStreamID()));
       stream.write(b);

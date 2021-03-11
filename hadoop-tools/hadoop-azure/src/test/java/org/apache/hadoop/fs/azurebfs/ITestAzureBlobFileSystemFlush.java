@@ -320,7 +320,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     ((AbfsOutputStream) out.getWrappedStream()).registerListener(
         new TracingHeaderValidator(
             fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
-            fs.getFileSystemID(), HdfsOperationConstants.CREATE, false, 0,
+            fs.getFileSystemID(), HdfsOperationConstants.WRITE, false, 0,
             ((AbfsOutputStream) out.getWrappedStream()).getStreamID()));
     out.write(buf);
     out.hsync();

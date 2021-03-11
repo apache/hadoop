@@ -19,12 +19,14 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
+import org.junit.AssumptionViolatedException;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -159,15 +161,21 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     // removeaclentries, removedefaultacl, removeacl
 
     for (AbstractAbfsIntegrationTest testClass : testClasses.keySet()) {
-      testClass.setup();
-      testClasses.get(testClass).invoke(testClass);
-      testClass.teardown();
+      try {
+        testClass.setup();
+        testClasses.get(testClass).invoke(testClass);
+        testClass.teardown();
+      } catch (InvocationTargetException e) {
+        if (!(e.getCause() instanceof AssumptionViolatedException)) {
+          throw new IOException(testClasses.get(testClass).getName() +
+              " failed tracing context validation test");
+        }
+      }
     }
     testExternalOps();
   }
 
   @Test
-  //rename this test
   public void testExternalOps() throws Exception {
     //validate tracing header for access, hasPathCapability
     AzureBlobFileSystem fs = getFileSystem();
