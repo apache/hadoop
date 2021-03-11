@@ -167,8 +167,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         testClass.teardown();
       } catch (InvocationTargetException e) {
         if (!(e.getCause() instanceof AssumptionViolatedException)) {
-          throw new IOException(testClasses.get(testClass).getName() +
-              " failed tracing context validation test");
+          throw new IOException(testClasses.get(testClass).getName()
+              + " failed tracing context validation test");
         }
       }
     }
