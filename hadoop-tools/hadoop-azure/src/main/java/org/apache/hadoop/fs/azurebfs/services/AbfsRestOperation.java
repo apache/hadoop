@@ -66,7 +66,6 @@ public class AbfsRestOperation {
   private int bufferOffset;
   private int bufferLength;
   private int retryCount = 0;
-  private boolean isAuthFailure = false;
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
@@ -220,21 +219,19 @@ public class AbfsRestOperation {
         case Custom:
         case OAuth:
           LOG.debug("Authenticating request with OAuth2 access token");
-          httpOperation.getConnection()
-              .setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-                  client.getAccessToken());
+          httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+              client.getAccessToken());
           break;
         case SAS:
-          // do nothing; the SAS token should already be appended to the
-          // query string
+          // do nothing; the SAS token should already be appended to the query string
           break;
         case SharedKey:
           // sign the HTTP request
           LOG.debug("Signing request with shared key");
           // sign the HTTP request
-          client.getSharedKeyCredentials()
-              .signRequest(httpOperation.getConnection(),
-                  hasRequestBody ? bufferLength : 0);
+          client.getSharedKeyCredentials().signRequest(
+              httpOperation.getConnection(),
+              hasRequestBody ? bufferLength : 0);
           break;
         }
       } catch (Exception e) {
@@ -295,7 +292,7 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
-        AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
+      AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation.toString());
