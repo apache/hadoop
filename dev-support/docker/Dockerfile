@@ -85,6 +85,22 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+######
+# Set env vars required to build Hadoop
+######
+ENV MAVEN_HOME /usr
+# JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+
+#######
+# Install SpotBugs 4.2.2
+#######
+RUN mkdir -p /opt/spotbugs \
+    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.2.2/spotbugs-4.2.2.tgz \
+      -o /opt/spotbugs.tgz \
+    && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
+    && chmod +x /opt/spotbugs/bin/*
+ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
 # OpenJDK 8
@@ -123,17 +139,6 @@ RUN apt-get -q update \
 ENV MAVEN_HOME /usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
-
-######
-# Install findbugs 3.1.0 (3.1.0 ships with Bionic)
-# Ant is needed for findbugs
-######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends findbugs ant \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV FINDBUGS_HOME /usr
 
 # Install pylint and python-dateutil
 RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
