@@ -150,6 +150,7 @@
     <snakeyaml.version>1.16</snakeyaml.version>
     <hbase.one.version>1.2.6</hbase.one.version>
     <hbase.two.version>2.0.0-beta-1</hbase.two.version>
+    <woodstox.version>5.3.0</woodstox.version>
   </properties>
 
   <dependencyManagement>
@@ -952,7 +953,7 @@
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
         <artifactId>woodstox-core</artifactId>
-        <version>5.0.3</version>
+        <version>${woodstox.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
