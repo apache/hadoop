@@ -209,30 +209,29 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
-
     try {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
 
-      switch (client.getAuthType()) {
-      case Custom:
-      case OAuth:
-        LOG.debug("Authenticating request with OAuth2 access token");
-        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-            client.getAccessToken());
-        break;
-      case SAS:
-        // do nothing; the SAS token should already be appended to the query string
-        break;
-      case SharedKey:
-        // sign the HTTP request
-        LOG.debug("Signing request with shared key");
-        // sign the HTTP request
-        client.getSharedKeyCredentials().signRequest(
-            httpOperation.getConnection(),
-            hasRequestBody ? bufferLength : 0);
-        break;
+      switch(client.getAuthType()) {
+        case Custom:
+        case OAuth:
+          LOG.debug("Authenticating request with OAuth2 access token");
+          httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+              client.getAccessToken());
+          break;
+        case SAS:
+          // do nothing; the SAS token should already be appended to the query string
+          break;
+        case SharedKey:
+          // sign the HTTP request
+          LOG.debug("Signing request with shared key");
+          // sign the HTTP request
+          client.getSharedKeyCredentials().signRequest(
+              httpOperation.getConnection(),
+              hasRequestBody ? bufferLength : 0);
+          break;
       }
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
@@ -242,9 +241,10 @@ public class AbfsRestOperation {
           LOG.debug("Auth failure: " + method + ", " + url);
         }
       }
-      if (e instanceof HttpException) {
+      if (e instanceof HttpException) { //access token fetch error
         throw new AbfsRestOperationException((HttpException) e);
       }
+      //http op init error
       throw new AbfsRestOperationException(-1, null, e.getMessage(), e);
     }
 
@@ -271,9 +271,7 @@ public class AbfsRestOperation {
       }
     } catch (UnknownHostException ex) {
       String hostname = null;
-      if (httpOperation != null) {
-        hostname = httpOperation.getHost();
-      }
+      hostname = httpOperation.getHost();
       LOG.warn("Unknown host name: %s. Retrying to resolve the host name...",
           hostname);
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -282,11 +280,7 @@ public class AbfsRestOperation {
       return false;
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
-        if (httpOperation != null) {
-          LOG.debug("HttpRequestFailure: " + httpOperation.toString(), ex);
-        } else {
-          LOG.debug("HttpRequestFailure: " + method + "," + url, ex);
-        }
+        LOG.debug("HttpRequestFailure: " + httpOperation.toString(), ex);
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
