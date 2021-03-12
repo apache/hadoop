@@ -235,16 +235,8 @@ public class AbfsRestOperation {
       }
     } catch (IOException e) {
       if (LOG.isDebugEnabled()) {
-        if (httpOperation != null) {
-          LOG.debug("Auth failure: " + httpOperation.toString());
-        } else {
-          LOG.debug("Auth failure: " + method + ", " + url);
-        }
+        LOG.debug("Auth failure: {}, {}", method, url);
       }
-      if (e instanceof HttpException) { //AAD access token fetch error
-        throw new AbfsRestOperationException((HttpException) e);
-      }
-      //http op init error
       throw new AbfsRestOperationException(-1, null, e.getMessage(), e);
     }
 
