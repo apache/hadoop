@@ -909,9 +909,10 @@ class DataStreamer extends Daemon {
               dataQueue.wait(1000); // when we receive an ack, we notify on
               long duration = Time.monotonicNow() - begin;
               if (duration > writeTimeout) {
-                LOG.error("No ack received, took {}ms (threshold={}ms). File being"
-                        + " written: {}, block: {}, Write pipeline datanodes: {}.", duration,
-                    writeTimeout, src, block, nodes);
+                LOG.error("No ack received, took {}ms (threshold={}ms). "
+                    + "File being written: {}, block: {}, "
+                    + "Write pipeline datanodes: {}.",
+                    duration, writeTimeout, src, block, nodes);
                 throw new InterruptedIOException("No ack received. ");
               }
               // dataQueue
