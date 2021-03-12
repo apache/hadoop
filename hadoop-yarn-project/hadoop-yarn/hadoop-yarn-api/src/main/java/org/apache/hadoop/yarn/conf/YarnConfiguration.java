@@ -1838,6 +1838,8 @@ public class YarnConfiguration extends Configuration {
    * marked as offline. Values can range from 0.0 to 100.0. If the value is
    * greater than or equal to 100, NM will check for full disk. This applies to
    * nm-local-dirs and nm-log-dirs.
+   *
+   * This applies when disk-utilization-threshold.enabled is true.
    */
   public static final String NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
       NM_DISK_HEALTH_CHECK_PREFIX + "max-disk-utilization-per-disk-percentage";
@@ -1846,6 +1848,17 @@ public class YarnConfiguration extends Configuration {
    */
   public static final float DEFAULT_NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
       90.0F;
+
+  /**
+   * Enable/Disable the disk utilisation percentage
+   * threshold for disk health checker.
+   */
+  public static final String NM_DISK_UTILIZATION_THRESHOLD_ENABLED =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+          "disk-utilization-threshold.enabled";
+
+  public static final
+      boolean DEFAULT_NM_DISK_UTILIZATION_THRESHOLD_ENABLED = true;
 
   /**
    * The low threshold percentage of disk space used when an offline disk is
@@ -1862,9 +1875,23 @@ public class YarnConfiguration extends Configuration {
   /**
    * The minimum space that must be available on a local dir for it to be used.
    * This applies to nm-local-dirs and nm-log-dirs.
+   *
+   * This applies when disk-free-space-threshold.enabled is true.
    */
   public static final String NM_MIN_PER_DISK_FREE_SPACE_MB =
       NM_DISK_HEALTH_CHECK_PREFIX + "min-free-space-per-disk-mb";
+
+  /**
+   * Enable/Disable the minimum disk free
+   * space threshold for disk health checker.
+   */
+  public static final String NM_DISK_FREE_SPACE_THRESHOLD_ENABLED =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+          "disk-free-space-threshold.enabled";
+
+  public static final boolean
+      DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED = true;
+
   /**
    * The minimum space that must be available on an offline
    * disk for it to be marked as online.  The value should not be less

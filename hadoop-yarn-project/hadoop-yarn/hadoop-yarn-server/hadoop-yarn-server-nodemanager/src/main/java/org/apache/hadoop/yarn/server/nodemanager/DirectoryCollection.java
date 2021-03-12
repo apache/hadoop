@@ -61,6 +61,9 @@ public class DirectoryCollection {
 
   private final Configuration conf;
   private final DiskValidator diskValidator;
+
+  private boolean diskUtilizationThresholdEnabled;
+  private boolean diskFreeSpaceThresholdEnabled;
   /**
    * The enum defines disk failure type.
    */
@@ -241,6 +244,17 @@ public class DirectoryCollection {
     } catch (Exception e) {
       throw new YarnRuntimeException(e);
     }
+
+    diskUtilizationThresholdEnabled = conf.
+        getBoolean(YarnConfiguration.
+                NM_DISK_UTILIZATION_THRESHOLD_ENABLED,
+            YarnConfiguration.
+                DEFAULT_NM_DISK_UTILIZATION_THRESHOLD_ENABLED);
+    diskFreeSpaceThresholdEnabled = conf.
+        getBoolean(YarnConfiguration.
+                NM_DISK_FREE_SPACE_THRESHOLD_ENABLED,
+            YarnConfiguration.
+                DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED);
 
     localDirs = new ArrayList<>(Arrays.asList(dirs));
     errorDirs = new ArrayList<>();
@@ -523,7 +537,9 @@ public class DirectoryCollection {
             diskUtilizationPercentageCutoffHigh : diskUtilizationPercentageCutoffLow;
         long diskFreeSpaceCutoff = goodDirs.contains(dir) ?
             diskFreeSpaceCutoffLow : diskFreeSpaceCutoffHigh;
-        if (isDiskUsageOverPercentageLimit(testDir,
+
+        if (diskUtilizationThresholdEnabled
+            && isDiskUsageOverPercentageLimit(testDir,
             diskUtilizationPercentageCutoff)) {
           msg =
               "used space above threshold of "
@@ -532,7 +548,8 @@ public class DirectoryCollection {
           ret.put(dir,
             new DiskErrorInformation(DiskErrorCause.DISK_FULL, msg));
           continue;
-        } else if (isDiskFreeSpaceUnderLimit(testDir, diskFreeSpaceCutoff)) {
+        } else if (diskFreeSpaceThresholdEnabled
+            && isDiskFreeSpaceUnderLimit(testDir, diskFreeSpaceCutoff)) {
           msg =
               "free space below limit of " + diskFreeSpaceCutoff
                   + "MB";
@@ -642,6 +659,28 @@ public class DirectoryCollection {
   @VisibleForTesting
   long getDiskUtilizationSpaceCutoffHigh() {
     return diskFreeSpaceCutoffHigh;
+  }
+
+  @VisibleForTesting
+  boolean getDiskUtilizationThresholdEnabled() {
+    return diskUtilizationThresholdEnabled;
+  }
+
+  @VisibleForTesting
+  boolean getDiskFreeSpaceThresholdEnabled() {
+    return diskFreeSpaceThresholdEnabled;
+  }
+
+  @VisibleForTesting
+  void setDiskUtilizationThresholdEnabled(boolean
+      utilizationEnabled) {
+    diskUtilizationThresholdEnabled = utilizationEnabled;
+  }
+
+  @VisibleForTesting
+  void setDiskFreeSpaceThresholdEnabled(boolean
+      freeSpaceEnabled) {
+    diskFreeSpaceThresholdEnabled = freeSpaceEnabled;
   }
 
   public void setDiskUtilizationSpaceCutoff(long freeSpaceCutoff) {
