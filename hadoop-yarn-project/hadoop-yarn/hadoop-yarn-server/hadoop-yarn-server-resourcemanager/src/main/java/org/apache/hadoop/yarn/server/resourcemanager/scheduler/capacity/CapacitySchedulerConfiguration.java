@@ -331,6 +331,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       "reservation-policy";
 
   @Private
+  /** Ratio of nodes available for an app to make an reservation on. */
+  // Default no limit.
+  public static final String RESERVABLE_NODES
+      =  PREFIX  + "reservable-nodes";
+  public static final float DEFAULT_RESERVABLE_NODES = 1.0f;
+
+  @Private
   public static final String RESERVATION_AGENT_NAME = "reservation-agent";
 
   @Private
@@ -859,6 +866,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public boolean getReservationContinueLook() {
     return getBoolean(RESERVE_CONT_LOOK_ALL_NODES,
         DEFAULT_RESERVE_CONT_LOOK_ALL_NODES);
+  }
+
+  public float getReservableNodes() {
+    float reservableNodes =
+        getFloat( RESERVABLE_NODES, DEFAULT_RESERVABLE_NODES);
+    return reservableNodes;
+  }
+
+  public void setReservableNodes(float reservableNodes) {
+    setFloat(RESERVABLE_NODES, reservableNodes);
   }
   
   private static String getAclKey(QueueACL acl) {
