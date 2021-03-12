@@ -173,6 +173,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MsyncR
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.OpenFilesBatchResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RecoverLeaseRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshProtectedDirectoriesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCacheDirectiveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2RequestProto;
@@ -288,6 +289,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   private final static RefreshNodesRequestProto VOID_REFRESH_NODES_REQUEST =
       RefreshNodesRequestProto.newBuilder().build();
+
+  private final static RefreshProtectedDirectoriesRequestProto
+      VOID_REFRESH_PROTECTED_DIR_REQUEST =
+      RefreshProtectedDirectoriesRequestProto.newBuilder().build();
 
   private final static FinalizeUpgradeRequestProto
       VOID_FINALIZE_UPGRADE_REQUEST =
@@ -1180,6 +1185,16 @@ public class ClientNamenodeProtocolTranslatorPB implements
             .build();
     try {
       rpcProxy.setBalancerBandwidth(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void refreshProtectedDirectories() throws IOException {
+    try {
+      rpcProxy.refreshProtectedDirectories(null,
+          VOID_REFRESH_PROTECTED_DIR_REQUEST);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

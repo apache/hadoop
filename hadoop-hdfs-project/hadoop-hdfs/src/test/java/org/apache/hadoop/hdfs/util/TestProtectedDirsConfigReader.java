@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.nio.file.NoSuchFileException;
 import java.util.Set;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,20 +38,16 @@ import org.junit.Test;
 public class TestProtectedDirsConfigReader {
 
   // Using /test/build/data/tmp directory to store temprory files
-  private final String pathTestDir = new File(System.getProperty(
-      "test.build.data", "/tmp")).getAbsolutePath();
+  private final String pathTestDir =  GenericTestUtils
+      .getTestDir().getAbsolutePath();
 
   private String configFile = pathTestDir + "/protected.dir.config";
 
-  @Before
-  public void setUp() throws Exception {
-  }
 
   @After
   public void tearDown() throws Exception {
     // Delete test files after running tests
     new  File(configFile).delete();
-
   }
 
   /*
@@ -97,9 +94,6 @@ public class TestProtectedDirsConfigReader {
     } catch (NoSuchFileException ex) {
       // Exception as expected
     }
-    Set<String> dirs = ProtectedDirsConfigReader.
-        parseProtectedProtectedDirsFromConfig(pathTestDir + "/doesnt-exist");
-    assertEquals(0, dirs.size());
   }
 
 

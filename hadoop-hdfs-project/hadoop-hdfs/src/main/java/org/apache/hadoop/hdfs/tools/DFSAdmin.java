@@ -458,6 +458,7 @@ public class DFSAdmin extends FsShell {
     "\t[-deleteBlockPool datanode_host:ipc_port blockpoolId [force]]\n"+
     "\t[-setBalancerBandwidth <bandwidth in bytes per second>]\n" +
     "\t[-getBalancerBandwidth <datanode_host:ipc_port>]\n" +
+    "\t[-refreshProtectedDirectories]\n" +
     "\t[-fetchImage <local directory>]\n" +
     "\t[-allowSnapshot <snapshotDir>]\n" +
     "\t[-disallowSnapshot <snapshotDir>]\n" +
@@ -1092,6 +1093,48 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Command to ask the namenode to set protected directories
+   * Usage: hdfs dfsadmin -refreshProtectedDirectories
+   * @exception IOException
+   */
+  public int refreshProtectedDirectories() throws IOException {
+    int exitCode = -1;
+
+    DistributedFileSystem dfs = getDFS();
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
+
+    if (isHaEnabled) {
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
+              nsId, ClientProtocol.class);
+      List<IOException> exceptions = new ArrayList<>();
+      for (ProxyAndInfo<ClientProtocol> proxy: proxies) {
+        try{
+          proxy.getProxy().refreshProtectedDirectories();
+          System.out.println("Refresh protected directories successful for " +
+              proxy.getAddress());
+        }catch (IOException ioe){
+          System.out.println("Refresh protected directories failed for " +
+              proxy.getAddress());
+          exceptions.add(ioe);
+        }
+      }
+      if(!exceptions.isEmpty()){
+        throw MultipleIOException.createIOException(exceptions);
+      }
+    } else {
+      dfs.refreshProtectedDirectories();
+      System.out.println("Refresh nodes successful");
+    }
+    exitCode = 0;
+
+    return exitCode;
+  }
+
+  /**
    * Download the most recent fsimage from the name node, and save it to a local
    * file in the given directory.
    * 
@@ -1256,6 +1299,9 @@ public class DFSAdmin extends FsShell {
         "\tduring HDFS block balancing.\n\n" +
         "\t--- NOTE: This value is not persistent on the DataNode.---\n";
 
+    String refreshProtectedDirectories = "-refreshProtectedDirectories:\n" +
+        "\tRefresh protected directories form config.\n";
+
     String fetchImage = "-fetchImage <local directory>:\n" +
       "\tDownloads the most recent fsimage from the Name Node and saves it in" +
       "\tthe specified local directory.\n";
@@ -1353,6 +1399,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(setBalancerBandwidth);
     } else if ("getBalancerBandwidth".equals(cmd)) {
       System.out.println(getBalancerBandwidth);
+    } else if ("refreshProtectedDirectories".equals(cmd)) {
+      System.out.println(refreshProtectedDirectories);
     } else if ("fetchImage".equals(cmd)) {
       System.out.println(fetchImage);
     } else if ("allowSnapshot".equalsIgnoreCase(cmd)) {
@@ -1400,6 +1448,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(deleteBlockPool);
       System.out.println(setBalancerBandwidth);
       System.out.println(getBalancerBandwidth);
+      System.out.println(refreshProtectedDirectories);
       System.out.println(fetchImage);
       System.out.println(allowSnapshot);
       System.out.println(disallowSnapshot);
@@ -2189,6 +2238,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-getBalancerBandwidth".equalsIgnoreCase(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-getBalancerBandwidth <datanode_host:ipc_port>]");
+    } else if ("-refreshProtectedDirectories".equalsIgnoreCase(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-refreshProtectedDirectories]");
     } else if ("-fetchImage".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-fetchImage <local directory>]");
@@ -2349,6 +2401,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-refreshProtectedDirectories".equalsIgnoreCase(cmd)) {
+      if (argv.length != 1) {
+        printUsage(cmd);
+        return exitCode;
+      }
     } else if ("-fetchImage".equals(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
@@ -2438,6 +2495,8 @@ public class DFSAdmin extends FsShell {
         exitCode = setBalancerBandwidth(argv, i);
       } else if ("-getBalancerBandwidth".equals(cmd)) {
         exitCode = getBalancerBandwidth(argv, i);
+      } else if ("-refreshProtectedDirectories".equals(cmd)) {
+        exitCode = refreshProtectedDirectories();
       } else if ("-fetchImage".equals(cmd)) {
         exitCode = fetchImage(argv, i);
       } else if ("-shutdownDatanode".equals(cmd)) {

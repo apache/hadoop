@@ -2013,6 +2013,15 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
+   * Requests the namenode to refresh protected directories from config.
+   *
+   * @throws IOException
+   */
+  public void refreshProtectedDirectories() throws IOException {
+    dfs.refreshProtectedDirectories();
+  }
+
+  /**
    * Get a canonical service name for this file system. If the URI is logical,
    * the hostname part of the URI will be returned.
    * @return a service string that uniquely identifies this file system.

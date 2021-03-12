@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.util;
 
 import java.io.*;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -29,6 +30,7 @@ import java.util.HashSet;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
 public class ProtectedDirsConfigReader {
@@ -38,14 +40,16 @@ public class ProtectedDirsConfigReader {
 
   private Set<String> currentDirectories;
 
-  public ProtectedDirsConfigReader(String configFile) throws IOException {
-    currentDirectories = new HashSet<String>();
+  public ProtectedDirsConfigReader(String configFile)
+      throws IOException {
+    currentDirectories = new HashSet<>();
     loadConfig(configFile);
   }
 
   private void readFileToSet(String filename,
       Set<String> set) throws IOException {
-    File file = new File(filename);
+    URI uri = URI.create(filename);
+    File file = uri.isAbsolute() ? new File(uri) : new File(filename);
     InputStream fis = Files.newInputStream(file.toPath());
     readFileToSetWithFileInputStream(filename, fis, set);
   }
@@ -83,7 +87,8 @@ public class ProtectedDirsConfigReader {
     }
   }
 
-  private synchronized void loadConfig(String configFile) throws IOException {
+  private synchronized void loadConfig(String configFile)
+      throws IOException {
     LOG.info("Loading protected directories");
     Set<String> newDirs = new HashSet<String>();
 
@@ -102,21 +107,32 @@ public class ProtectedDirsConfigReader {
     return currentDirectories;
   }
 
-  public static Set<String> parseProtectedProtectedDirsFromConfig(
-      String configFile) {
-    try {
-      ProtectedDirsConfigReader reader =
-          new ProtectedDirsConfigReader(configFile);
-      return reader.getProtectedProtectedDirs();
-    } catch (NoSuchFileException ex) {
-      LOG.warn("The protected directories config flle is not found in " +
-          configFile);
-      return new HashSet<String>();
-    } catch (IOException ex) {
-      LOG.error(
-          "Error in ProtectedDirsConfigReader.parseProtectedProtectedDirsFromConfig",
-          ex);
-      return new HashSet<String>();
+  public static Set<String> parseProtectedDirsFromConfig(
+      String protectedDirsString) {
+    if (protectedDirsString == null) {
+      return new HashSet<>();
     }
+
+    Set<String> dirs = new HashSet<>();
+    for (String pathStr :
+        StringUtils.getTrimmedStringCollection(protectedDirsString)) {
+      if (!pathStr.startsWith("file://")) {
+        dirs.add(pathStr);
+      } else {
+        try {
+          ProtectedDirsConfigReader reader =
+              new ProtectedDirsConfigReader(pathStr);
+          dirs.addAll(reader.getProtectedProtectedDirs());
+        } catch (NoSuchFileException ex) {
+          LOG.warn("The protected directories config flle is not found in " +
+              pathStr);
+        } catch (IOException ex) {
+          LOG.error(
+              "Error in parseProtectedDirsFromConfig",
+              ex);
+        }
+      }
+    }
+    return dirs;
   }
 }

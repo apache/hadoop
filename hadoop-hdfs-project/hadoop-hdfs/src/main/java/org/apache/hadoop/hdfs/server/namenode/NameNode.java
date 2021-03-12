@@ -171,7 +171,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT;
@@ -320,7 +319,6 @@ public class NameNode extends ReconfigurableBase implements
       .newTreeSet(Lists.newArrayList(
           DFS_HEARTBEAT_INTERVAL_KEY,
           DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
-          FS_PROTECTED_DIRECTORIES,
           HADOOP_CALLER_CONTEXT_ENABLED_KEY,
           DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
           DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY,
@@ -2170,8 +2168,6 @@ public class NameNode extends ReconfigurableBase implements
       return reconfHeartbeatInterval(datanodeManager, property, newVal);
     } else if (property.equals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY)) {
       return reconfHeartbeatRecheckInterval(datanodeManager, property, newVal);
-    } else if (property.equals(FS_PROTECTED_DIRECTORIES)) {
-      return reconfProtectedDirectories(newVal);
     } else if (property.equals(HADOOP_CALLER_CONTEXT_ENABLED_KEY)) {
       return reconfCallerContextEnabled(newVal);
     } else if (property.equals(ipcClientRPCBackoffEnable)) {
@@ -2296,9 +2292,6 @@ public class NameNode extends ReconfigurableBase implements
     }
   }
 
-  private String reconfProtectedDirectories(String newVal) {
-    return getNamesystem().getFSDirectory().setProtectedDirectories(newVal);
-  }
 
   private String reconfCallerContextEnabled(String newVal) {
     Boolean callerContextEnabled;

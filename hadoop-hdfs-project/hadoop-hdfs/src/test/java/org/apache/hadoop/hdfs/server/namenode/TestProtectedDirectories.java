@@ -20,7 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.net.URI;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -45,7 +48,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
@@ -61,11 +63,11 @@ public class TestProtectedDirectories {
       TestProtectedDirectories.class);
 
   // Using /test/build/data/tmp directory to store temprory files
-  private final String pathTestDir = new File(System.getProperty(
-      "test.build.data", "/tmp")).getAbsolutePath();
+  private final String pathTestDir = GenericTestUtils.getTestDir()
+      .getAbsolutePath();
 
-  private String configFile = pathTestDir + "/protected.dir.config";
-  private String newConfigFile = pathTestDir + "/protected.dir.config_new";
+  private String configFile = "file://" + pathTestDir + "/protected.dir.config";
+  private String newConfigFile = configFile + "_new";
 
 
   @Rule
@@ -75,8 +77,8 @@ public class TestProtectedDirectories {
   @After
   public void tearDown() throws Exception {
     // Delete test files after running tests
-    new File(configFile).delete();
-    new File(newConfigFile).delete();
+    new File(URI.create(configFile)).delete();
+    new File(URI.create(newConfigFile)).delete();
   }
 
   /**
@@ -93,8 +95,7 @@ public class TestProtectedDirectories {
                                       Collection<Path> unProtectedDirs)
       throws Throwable {
     // Initialize the configuration.
-    conf.set(
-        CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES,
+    conf.set(FS_PROTECTED_DIRECTORIES,
         Joiner.on(",").skipNulls().join(protectedDirs));
 
     return setupTestCluster(conf, protectedDirs, unProtectedDirs);
@@ -105,28 +106,37 @@ public class TestProtectedDirectories {
    * the given list of directories
    * and set fs.protected.directories.config.file.enable = true.
    * @param conf
-   * @param protectedDirs
+   * @param configFile
+   * @param protectedDirsPaths
+   * @param protectedDirsPathsInFile
    * @param unProtectedDirs
    * @return
    * @throws IOException
    */
-  public MiniDFSCluster setupTestCase2(Configuration conf,
-      Collection<Path> protectedDirs,
-      Collection<Path> unProtectedDirs)
+  public MiniDFSCluster setupTestMixtureConfigureCase(Configuration conf,
+      String configFile,
+      Collection<String> protectedDirsPaths,
+      Collection<String> protectedDirsPathsInFile,
+      Collection<String> unProtectedDirs)
       throws Throwable {
+
+    // Store protectedDirsInFile to configFile
+    storeProtectedDirs2Config(configFile, protectedDirsPathsInFile);
+
     // Initialize the configuration.
-    conf.setBoolean(
-        DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
-        true);
+    List<String> confStrList = new ArrayList<>(protectedDirsPaths);
+    if (configFile != null) {
+      confStrList.add(configFile);
+    }
     conf.set(
         FS_PROTECTED_DIRECTORIES,
-        configFile);
+        Joiner.on(",").skipNulls().join(confStrList));
 
-    generateConfigFile(configFile,
-        protectedDirs.stream().map(Path::toString)
-            .collect(Collectors.toList()));
-
-    return setupTestCluster(conf, protectedDirs, unProtectedDirs);
+    return setupTestCluster(conf,
+        protectedDirsPaths.stream().map(Path::new).collect(
+            Collectors.toList()),
+        unProtectedDirs.stream().map(Path::new).collect(
+            Collectors.toList()));
   }
 
   /**
@@ -299,122 +309,24 @@ public class TestProtectedDirectories {
 
     NameNode nn = cluster.getNameNode();
 
-    // change properties
-    nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, protectedPathsStrNew);
-
     FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
+
+    // change properties
+     conf.setStrings(FS_PROTECTED_DIRECTORIES, protectedPathsStrNew);
+    fsDirectory.refreshProtectedDirectories(conf);
+
     // verify change
     assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
         protectedPathsNew, fsDirectory.getProtectedDirectories());
 
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        protectedPathsStrNew, nn.getConf().get(FS_PROTECTED_DIRECTORIES));
-
     // revert to default
-    nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, null);
+    conf.unset(FS_PROTECTED_DIRECTORIES);
+    fsDirectory.refreshProtectedDirectories(conf);
 
     // verify default
     assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
         new TreeSet<String>(), fsDirectory.getProtectedDirectories());
 
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        null, nn.getConf().get(FS_PROTECTED_DIRECTORIES));
-  }
-
-  @Test
-  public void testConfigureProtectedPathsFromConfigFile() throws Throwable {
-    Configuration conf = new HdfsConfiguration();
-
-    conf.setBoolean(
-        DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
-        true);
-    conf.set(
-        FS_PROTECTED_DIRECTORIES,
-        configFile);
-
-    Collection<Path> protectedPaths = Arrays.asList(new Path("/a"), new Path(
-        "/b"), new Path("/c"));
-
-    MiniDFSCluster cluster = setupTestCase2(conf, protectedPaths,
-        Collections.EMPTY_LIST);
-
-    NameNode nn = cluster.getNameNode();
-
-    FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
-
-    TreeSet<String> protectedPathSet = new TreeSet<>(
-        FSDirectory.normalizePaths(protectedPaths.stream().map(Path::toString)
-                .collect(Collectors.toList()),
-            FS_PROTECTED_DIRECTORIES));
-
-    // verify
-    assertEquals(conf.get(FS_PROTECTED_DIRECTORIES), configFile);
-
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        protectedPathSet,
-        fsDirectory.getProtectedDirectories());
-
-  }
-
-  @Test
-  public void testReconfigureProtectedPathsFromConfigFile() throws Throwable {
-    Configuration conf = new HdfsConfiguration();
-
-    conf.setBoolean(
-        DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
-        true);
-    conf.set(
-        FS_PROTECTED_DIRECTORIES,
-        configFile);
-
-    Collection<Path> protectedPaths = Arrays.asList(new Path("/a"), new Path(
-        "/b"), new Path("/c"));
-
-    MiniDFSCluster cluster = setupTestCase2(conf, protectedPaths,
-        Collections.EMPTY_LIST);
-
-    NameNode nn = cluster.getNameNode();
-
-    FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
-
-    SortedSet<String> protectedPathsNew = new TreeSet<>(
-        FSDirectory.normalizePaths(Arrays.asList("/aa", "/bb", "/cc"),
-            FS_PROTECTED_DIRECTORIES));
-
-    generateConfigFile(configFile, protectedPathsNew);
-
-    // refresh the content of the configuration file
-    nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, configFile);
-
-    // verify change
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        protectedPathsNew, fsDirectory.getProtectedDirectories());
-
-    protectedPathsNew = new TreeSet<>(
-        FSDirectory.normalizePaths(Arrays.asList("/dd", "/ee", "/ff"),
-            FS_PROTECTED_DIRECTORIES));
-
-    generateConfigFile(newConfigFile, protectedPathsNew);
-
-    // refresh the path of the configuration file
-    nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, newConfigFile);
-
-    // verify change
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        protectedPathsNew, fsDirectory.getProtectedDirectories());
-
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        newConfigFile, nn.getConf().get(FS_PROTECTED_DIRECTORIES));
-
-    // revert to default
-    nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, null);
-
-    // verify
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        new TreeSet<String>(), fsDirectory.getProtectedDirectories());
-
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        null, nn.getConf().get(FS_PROTECTED_DIRECTORIES));
   }
 
   @Test
@@ -663,6 +575,104 @@ public class TestProtectedDirectories {
         paths.size(), is(0));
   }
 
+
+  @Test
+  public void testMixtureConfigureProtectedPaths() throws Throwable {
+    Configuration conf = new HdfsConfiguration();
+
+    Collection<String> protectedPaths = Arrays.asList("/a", "/b", "/c");
+
+    Collection<String> protectedPathsInFile = Arrays.asList("/d", "/e", "/f");
+
+    MiniDFSCluster cluster = setupTestMixtureConfigureCase(conf,
+        configFile,
+        protectedPaths,
+        protectedPathsInFile,
+        Collections.EMPTY_LIST);
+
+    NameNode nn = cluster.getNameNode();
+
+    FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
+
+    TreeSet<String> allProtectedPathSet = new TreeSet<>(protectedPaths);
+
+    allProtectedPathSet.addAll(protectedPathsInFile);
+
+    // verify
+    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
+        allProtectedPathSet,
+        fsDirectory.getProtectedDirectories());
+
+  }
+
+  @Test
+  public void testReconfigureProtectedPathsFromFile() throws Throwable {
+    Configuration conf = new HdfsConfiguration();
+
+    Collection<String> protectedPaths = Arrays.asList("/a", "/b", "/c");
+
+    Collection<String> protectedPathsInFile = Arrays.asList("/d", "/e", "/f");
+
+    MiniDFSCluster cluster = setupTestMixtureConfigureCase(conf,
+        configFile,
+        protectedPaths,
+        protectedPathsInFile,
+        Collections.EMPTY_LIST);
+
+    NameNode nn = cluster.getNameNode();
+
+    FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
+
+    SortedSet<String> protectedPathsNew = new TreeSet<>(
+        FSDirectory.normalizePaths(Arrays.asList("/aa", "/bb", "/cc"),
+            FS_PROTECTED_DIRECTORIES));
+
+    //  update protectedPathsNew to th config file
+    storeProtectedDirs2Config(configFile, protectedPathsNew);
+
+    // refresh the content of the configuration file
+    fsDirectory.refreshProtectedDirectories(conf);
+
+    TreeSet<String> allProtectedPathSet = new TreeSet<>(protectedPaths);
+    allProtectedPathSet.addAll(protectedPathsNew);
+
+    // verify change
+    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
+        allProtectedPathSet, fsDirectory.getProtectedDirectories());
+
+    // prepare protectedPaths in newConfigFile
+    protectedPathsNew = new TreeSet<>(
+        FSDirectory.normalizePaths(Arrays.asList("/dd", "/ee", "/ff"),
+            FS_PROTECTED_DIRECTORIES));
+    storeProtectedDirs2Config(newConfigFile, protectedPathsNew);
+
+    // set fs.protected.directories to file:///path/to/newConfigFile
+    conf.set(FS_PROTECTED_DIRECTORIES, newConfigFile);
+    fsDirectory.refreshProtectedDirectories(conf);
+
+    // verify change
+    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
+        protectedPathsNew, fsDirectory.getProtectedDirectories());
+
+    // revert to default
+    conf.unset(FS_PROTECTED_DIRECTORIES);
+    fsDirectory.refreshProtectedDirectories(conf);
+
+    // verify
+    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
+        new TreeSet<String>(), fsDirectory.getProtectedDirectories());
+  }
+
+  private void storeProtectedDirs2Config(Configuration conf, String file,
+      Collection<String> protectedPaths) throws IOException {
+    conf.set(FS_PROTECTED_DIRECTORIES,  "file://" + file);
+    FileWriter ifw = new FileWriter(file);
+    for (String dir : protectedPaths) {
+      ifw.write(dir + "\n");
+    }
+    ifw.close();
+  }
+
   /**
    * Return true if the path was successfully deleted. False if it
    * failed with AccessControlException. Any other exceptions are
@@ -717,15 +727,15 @@ public class TestProtectedDirectories {
   }
 
   /**
-   * generate the configuration file with protectedPaths.
+   * store protectedPaths to the configuration file  .
    * @param file
    * @param protectedPaths
    * @throws IOException
    */
-  private void generateConfigFile(String file,
+  private void storeProtectedDirs2Config(String file,
       Collection<String> protectedPaths)
       throws IOException {
-    try (FileWriter ifw = new FileWriter(file)) {
+    try (FileWriter ifw = new FileWriter(new File(URI.create(file)))) {
       for (String dir : protectedPaths) {
         ifw.write(dir + "\n");
       }

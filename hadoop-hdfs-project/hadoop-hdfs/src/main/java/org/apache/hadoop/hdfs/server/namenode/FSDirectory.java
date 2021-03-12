@@ -88,8 +88,6 @@ import java.util.concurrent.RecursiveAction;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
@@ -175,7 +173,6 @@ public class FSDirectory implements Closeable {
   // Each entry in this set must be a normalized path.
   private volatile SortedSet<String> protectedDirectories;
   private final boolean isProtectedSubDirectoriesEnable;
-  private final boolean isProtectedDirsConfigEnable;
 
   private final boolean isPermissionEnabled;
   private final boolean isPermissionContentSummarySubAccess;
@@ -391,9 +388,6 @@ public class FSDirectory implements Closeable {
     this.isProtectedSubDirectoriesEnable = conf.getBoolean(
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE,
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT);
-    this.isProtectedDirsConfigEnable = conf.getBoolean(
-        DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
-        DFS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT);
 
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
@@ -533,33 +527,8 @@ public class FSDirectory implements Closeable {
   @VisibleForTesting
   static SortedSet<String> parseProtectedDirectories(Configuration conf) {
     return parseProtectedDirectories(
-        conf.getBoolean(
-            DFS_PROTECTED_DIRECTORIES_CONFIG_FILE_ENABLE_KEY,
-            DFS_PROTECTED_DIRECTORIES_FILE_ENABLE_DEFAULT),
-        conf.getTrimmed(FS_PROTECTED_DIRECTORIES));
-  }
-
-  /**
-   * Parse configuration setting dfs.namenode.protected.directories to retrieve
-   * the set of protected directories.
-   *
-   * @param configFileEnabled
-   * @param protectedDirsStringOrConfig
-   *          a comma separated String representing a bunch of paths
-   *          or a config file.
-   * @return a TreeSet
-   */
-  @VisibleForTesting
-  static SortedSet<String> parseProtectedDirectories(
-      final boolean configFileEnabled,
-      final String protectedDirsStringOrConfig) {
-    Collection<String> protectedDirs =
-        configFileEnabled
-            ? ProtectedDirsConfigReader.
-            parseProtectedProtectedDirsFromConfig(protectedDirsStringOrConfig)
-            : StringUtils
-                .getTrimmedStringCollection(protectedDirsStringOrConfig);
-    return parseProtectedDirectories(protectedDirs);
+        ProtectedDirsConfigReader.parseProtectedDirsFromConfig(
+                conf.getTrimmed(FS_PROTECTED_DIRECTORIES)));
   }
 
   private static SortedSet<String> parseProtectedDirectories(
@@ -578,25 +547,15 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Set directories that cannot be removed unless empty, even by an
+   * Refresh directories that cannot be removed unless empty, even by an
    * administrator.
    *
-   * @param protectedDirsStringOrConfig
-   *          comma separated list of protected directories
-   *          or a config file
    */
-  String setProtectedDirectories(String protectedDirsStringOrConfig) {
-    if (protectedDirsStringOrConfig == null) {
-      protectedDirectories = new TreeSet<>();
-    } else {
-      protectedDirectories = parseProtectedDirectories(
-          isProtectedDirsConfigEnable,
-          protectedDirsStringOrConfig);
-    }
-
-    return isProtectedDirsConfigEnable ? protectedDirsStringOrConfig
-        : Joiner.on(",").skipNulls().join(protectedDirectories);
+  void refreshProtectedDirectories(Configuration newConf) {
+    LOG.info("Refresh protected directories from config file");
+    protectedDirectories = parseProtectedDirectories(newConf);
   }
+
 
   BlockManager getBlockManager() {
     return getFSNamesystem().getBlockManager();

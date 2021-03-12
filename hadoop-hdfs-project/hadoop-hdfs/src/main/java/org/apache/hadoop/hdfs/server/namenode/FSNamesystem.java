@@ -4981,6 +4981,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, operationName, null);
   }
 
+  void refreshProtectedDirectories() throws IOException {
+    String operationName = "refreshProtectedDirs";
+    checkOperation(OperationCategory.UNCHECKED);
+    checkSuperuserPrivilege(operationName);
+    getFSDirectory().refreshProtectedDirectories(new HdfsConfiguration());
+    logAuditEvent(true, operationName, null);
+  }
+
   boolean setSafeMode(SafeModeAction action) throws IOException {
     String operationName = action.toString().toLowerCase();
     boolean error = false;

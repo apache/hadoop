@@ -1453,7 +1453,19 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     namesystem.setBalancerBandwidth(bandwidth);
   }
-  
+
+  /**
+   * Tell namenode to refresh protected directories from config
+   *
+   * @throws IOException
+   */
+  @Override // ClientProtocol
+  public void refreshProtectedDirectories() throws IOException {
+    checkNNStartup();
+    namesystem.refreshProtectedDirectories();
+  }
+
+
   @Override // ClientProtocol
   public ContentSummary getContentSummary(String path) throws IOException {
     checkNNStartup();

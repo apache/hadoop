@@ -1189,6 +1189,14 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public void refreshProtectedDirectories() throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+    RemoteMethod method = new RemoteMethod("refreshProtectedDirectories");
+    final Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    rpcClient.invokeConcurrent(nss, method, true, true);
+  }
+
+  @Override
   public ContentSummary getContentSummary(String path) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 

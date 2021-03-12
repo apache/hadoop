@@ -1042,6 +1042,15 @@ public interface ClientProtocol {
   void setBalancerBandwidth(long bandwidth) throws IOException;
 
   /**
+   * Tell namenode to use a new, non-persistent  value for
+   * protected directories include file & exclude file
+   *
+   * @throws IOException
+   */
+  @Idempotent
+  void refreshProtectedDirectories() throws IOException;
+
+  /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    *
