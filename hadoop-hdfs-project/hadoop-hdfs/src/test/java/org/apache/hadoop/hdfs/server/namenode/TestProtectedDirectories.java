@@ -663,16 +663,6 @@ public class TestProtectedDirectories {
         new TreeSet<String>(), fsDirectory.getProtectedDirectories());
   }
 
-  private void storeProtectedDirs2Config(Configuration conf, String file,
-      Collection<String> protectedPaths) throws IOException {
-    conf.set(FS_PROTECTED_DIRECTORIES,  "file://" + file);
-    FileWriter ifw = new FileWriter(file);
-    for (String dir : protectedPaths) {
-      ifw.write(dir + "\n");
-    }
-    ifw.close();
-  }
-
   /**
    * Return true if the path was successfully deleted. False if it
    * failed with AccessControlException. Any other exceptions are
