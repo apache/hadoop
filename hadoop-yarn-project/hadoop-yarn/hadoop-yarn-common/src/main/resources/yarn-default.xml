@@ -1797,11 +1797,26 @@
   </property>
 
   <property>
+    <description>Enable/Disable the disk utilisation percentage
+      threshold for disk health checker.</description>
+    <name>yarn.nodemanager.disk-health-checker.disk-utilization-threshold.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description> Enable/Disable the minimum disk free
+      space threshold for disk health checker.</description>
+    <name>yarn.nodemanager.disk-health-checker.disk-free-space-threshold.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>The maximum percentage of disk space utilization allowed after 
     which a disk is marked as bad. Values can range from 0.0 to 100.0. 
     If the value is greater than or equal to 100, the nodemanager will check 
     for full disk. This applies to yarn.nodemanager.local-dirs and
-    yarn.nodemanager.log-dirs.</description>
+    yarn.nodemanager.log-dirs when
+      yarn.nodemanager.disk-health-checker.disk-utilization-threshold.enabled is true.</description>
     <name>yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage</name>
     <value>90.0</value>
   </property>
@@ -1821,7 +1836,8 @@
     <description>The minimum space in megabytes that must be available on a disk for
     it to be used. If space on a disk falls below this threshold, it will be marked
     as bad. This applies to yarn.nodemanager.local-dirs and
-    yarn.nodemanager.log-dirs.</description>
+    yarn.nodemanager.log-dirs when
+      yarn.nodemanager.disk-health-checker.disk-free-space-threshold.enabled is true.</description>
     <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb</name>
     <value>0</value>
   </property>
