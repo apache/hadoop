@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -235,7 +234,8 @@ public class AbfsRestOperation {
       }
     } catch (IOException e) {
       LOG.debug("Auth failure: {}, {}", method, url);
-      throw new AbfsRestOperationException(-1, null, e.getMessage(), e);
+      throw new AbfsRestOperationException(-1, null,
+          "Auth failure: " + e.getMessage(), e);
     }
 
     try {

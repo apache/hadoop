@@ -20,14 +20,17 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.assertj.core.api.Assertions;
+import org.junit.Assert;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import org.junit.Assert;
-import org.junit.Test;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -113,5 +116,34 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
         "Number of token fetch retries (" + RetryTestTokenProvider.reTryCount
             + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
             + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
+  }
+
+  @Test
+  public void testAuthFailException() throws Exception {
+    Configuration config = new Configuration(getRawConfiguration());
+    String accountName = config.get("fs.azure.abfs.account.name");
+    // Setup to configure custom token provider
+    config.set("fs.azure.account.auth.type." + accountName, "Custom");
+    config.set("fs.azure.account.oauth.provider.type." + accountName,
+        "org.apache.hadoop.fs" + ".azurebfs.oauth2.RetryTestTokenProvider");
+    // Stop filesystem creation as it will lead to calls to store.
+    config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
+
+    final AzureBlobFileSystem fs = getFileSystem(config);
+    try {
+      fs.getFileStatus(new Path("/"));
+      fail();
+    } catch (AbfsRestOperationException e) {
+      String errorDesc = "Rest operation exception should be thrown instantly"
+          + " post AAD failure";
+      Assertions.assertThat(e.getStatusCode())
+          .describedAs("Incorrect status code. " + errorDesc).isEqualTo(-1);
+      Assertions.assertThat(e.getErrorCode())
+          .describedAs("Incorrect error code. " + errorDesc)
+          .isEqualTo(AzureServiceErrorCode.UNKNOWN);
+      Assertions.assertThat(e.getErrorMessage())
+          .describedAs("Incorrect error message. " + errorDesc)
+          .contains("Auth failure: ");
+    }
   }
 }
