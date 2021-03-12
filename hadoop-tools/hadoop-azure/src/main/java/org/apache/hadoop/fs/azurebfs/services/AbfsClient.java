@@ -185,7 +185,7 @@ public class AbfsClient implements Closeable {
     return requestHeaders;
   }
 
-  private void addServerSideEncryptionHeaders(
+  private void addCustomerProvidedKeyHeaders(
       final List<AbfsHttpHeader> requestHeaders) {
     if (clientProvidedEncryptionKey != null) {
       requestHeaders.add(
@@ -307,7 +307,7 @@ public class AbfsClient implements Closeable {
                                       final boolean isAppendBlob, final String eTag) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (isFile) {
-      addServerSideEncryptionHeaders(requestHeaders);
+      addCustomerProvidedKeyHeaders(requestHeaders);
     }
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
@@ -442,7 +442,7 @@ public class AbfsClient implements Closeable {
       AppendRequestParameters reqParams, final String cachedSasToken)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addServerSideEncryptionHeaders(requestHeaders);
+    addCustomerProvidedKeyHeaders(requestHeaders);
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -526,7 +526,7 @@ public class AbfsClient implements Closeable {
                                  boolean isClose, final String cachedSasToken)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addServerSideEncryptionHeaders(requestHeaders);
+    addCustomerProvidedKeyHeaders(requestHeaders);
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -555,7 +555,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation setPathProperties(final String path, final String properties)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addServerSideEncryptionHeaders(requestHeaders);
+    addCustomerProvidedKeyHeaders(requestHeaders);
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -580,7 +580,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation getPathStatus(final String path, final boolean includeProperties) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addServerSideEncryptionHeaders(requestHeaders);
+    addCustomerProvidedKeyHeaders(requestHeaders);
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String operation = SASTokenProvider.GET_PROPERTIES_OPERATION;
@@ -608,7 +608,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
                                 final int bufferLength, final String eTag, String cachedSasToken) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addServerSideEncryptionHeaders(requestHeaders);
+    addCustomerProvidedKeyHeaders(requestHeaders);
     requestHeaders.add(new AbfsHttpHeader(RANGE,
             String.format("bytes=%d-%d", position, position + bufferLength - 1)));
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
