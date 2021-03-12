@@ -132,10 +132,9 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     final AzureBlobFileSystem fs = getFileSystem(config);
     try {
       fs.getFileStatus(new Path("/"));
-      fail();
+      fail("Should fail at auth token fetch call");
     } catch (AbfsRestOperationException e) {
-      String errorDesc = "Rest operation exception should be thrown instantly"
-          + " post AAD failure";
+      String errorDesc = "Should throw RestOp exception on AAD failure";
       Assertions.assertThat(e.getStatusCode())
           .describedAs("Incorrect status code. " + errorDesc).isEqualTo(-1);
       Assertions.assertThat(e.getErrorCode())
