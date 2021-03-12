@@ -234,9 +234,7 @@ public class AbfsRestOperation {
           break;
       }
     } catch (IOException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Auth failure: {}, {}", method, url);
-      }
+      LOG.debug("Auth failure: {}, {}", method, url);
       throw new AbfsRestOperationException(-1, null, e.getMessage(), e);
     }
 
@@ -272,7 +270,7 @@ public class AbfsRestOperation {
       return false;
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("HttpRequestFailure: " + httpOperation.toString(), ex);
+        LOG.debug("HttpRequestFailure: {}, {}", httpOperation.toString(), ex);
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
