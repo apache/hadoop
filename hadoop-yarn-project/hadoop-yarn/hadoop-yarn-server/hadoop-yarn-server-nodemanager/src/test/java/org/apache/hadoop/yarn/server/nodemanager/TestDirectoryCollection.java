@@ -177,6 +177,105 @@ public class TestDirectoryCollection {
   }
 
   @Test
+  public void testDiskSpaceUtilizationThresholdEnabled() throws IOException {
+
+    String dirA = new File(testDir, "dirA").getPath();
+    String[] dirs = {dirA};
+    DirectoryCollection dc = new DirectoryCollection(dirs, 0.0F);
+
+    // Disable disk utilization threshold.
+    dc.setDiskUtilizationThresholdEnabled(false);
+    Assert.assertFalse(dc.getDiskUtilizationThresholdEnabled());
+
+    dc.checkDirs();
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+    Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
+    // Enable disk utilization threshold.
+    dc.setDiskUtilizationThresholdEnabled(true);
+    Assert.assertTrue(dc.getDiskUtilizationThresholdEnabled());
+
+    dc.checkDirs();
+    Assert.assertEquals(0, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(1, dc.getFailedDirs().size());
+    Assert.assertEquals(1, dc.getFullDirs().size());
+    Assert.assertNotNull(dc.getDirectoryErrorInfo(dirA));
+    Assert.assertEquals(DirectoryCollection.DiskErrorCause.DISK_FULL,
+        dc.getDirectoryErrorInfo(dirA).cause);
+
+    // no good dirs
+    Assert.assertEquals(0,
+        dc.getGoodDirsDiskUtilizationPercentage());
+
+    dc = new DirectoryCollection(dirs, 100.0F);
+    int utilizedSpacePerc =
+        (int) ((testDir.getTotalSpace() - testDir.getUsableSpace()) * 100 /
+            testDir.getTotalSpace());
+    dc.checkDirs();
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+    Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
+    Assert.assertEquals(utilizedSpacePerc,
+        dc.getGoodDirsDiskUtilizationPercentage());
+
+    dc = new DirectoryCollection(dirs,
+        testDir.getTotalSpace() / (1024 * 1024));
+
+    // Disable disk utilization threshold.
+    dc.setDiskUtilizationThresholdEnabled(false);
+    Assert.assertFalse(dc.getDiskUtilizationThresholdEnabled());
+
+    // Disable disk free space threshold.
+    dc.setDiskFreeSpaceThresholdEnabled(false);
+    Assert.assertFalse(dc.getDiskFreeSpaceThresholdEnabled());
+    dc.checkDirs();
+
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+    Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
+    dc = new DirectoryCollection(dirs,
+        testDir.getTotalSpace() / (1024 * 1024));
+
+    // Enable disk free space threshold.
+    dc.setDiskFreeSpaceThresholdEnabled(true);
+    Assert.assertTrue(dc.getDiskFreeSpaceThresholdEnabled());
+
+    dc.checkDirs();
+
+    Assert.assertEquals(0, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(1, dc.getFailedDirs().size());
+    Assert.assertEquals(1, dc.getFullDirs().size());
+    Assert.assertNotNull(dc.getDirectoryErrorInfo(dirA));
+    // no good dirs
+    Assert.assertEquals(0, dc.getGoodDirsDiskUtilizationPercentage());
+
+    dc = new DirectoryCollection(dirs, 100.0F, 100.0F, 0);
+    utilizedSpacePerc =
+        (int)((testDir.getTotalSpace() - testDir.getUsableSpace()) * 100 /
+            testDir.getTotalSpace());
+    dc.checkDirs();
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+    Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
+    Assert.assertEquals(utilizedSpacePerc,
+        dc.getGoodDirsDiskUtilizationPercentage());
+  }
+
+  @Test
   public void testDiskLimitsCutoffSetters() throws IOException {
 
     String[] dirs = { "dir" };
