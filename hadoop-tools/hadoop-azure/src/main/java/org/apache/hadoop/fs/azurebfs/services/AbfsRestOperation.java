@@ -241,7 +241,7 @@ public class AbfsRestOperation {
           LOG.debug("Auth failure: " + method + ", " + url);
         }
       }
-      if (e instanceof HttpException) { //access token fetch error
+      if (e instanceof HttpException) { //AAD access token fetch error
         throw new AbfsRestOperationException((HttpException) e);
       }
       //http op init error
@@ -285,13 +285,6 @@ public class AbfsRestOperation {
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
-      }
-
-      // once HttpException is thrown by AzureADAuthenticator,
-      // it indicates the policy in AzureADAuthenticator determined
-      // retry is not needed
-      if (ex instanceof HttpException) {
-        throw new AbfsRestOperationException((HttpException) ex);
       }
 
       return false;
