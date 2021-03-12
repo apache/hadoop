@@ -36,7 +36,7 @@ import java.util.Set;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class MockQueueHierarchyBuilder {
+public class MockQueueHierarchyBuilder {
   private static final String ROOT = "root";
   private static final String QUEUE_SEP = ".";
   private List<String> queuePaths = Lists.newArrayList();

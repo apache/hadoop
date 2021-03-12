@@ -16,28 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
-public enum MappingRuleResultType {
-  /**
-   * Represents a result where we simply ignore the current rule
-   * and move onto the next one.
-   */
-  SKIP,
+import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 
+public interface MappingRuleMatcher {
   /**
-   * Represents a result where the application gets rejected.
+   * Returns true if the matcher matches the current context.
+   * @param variables The variable context, which contains all the variables
+   * @return true if this matcher matches to the provided variable set
    */
-  REJECT,
-
-  /**
-   * Represents a result where the application gets placed into a queue.
-   */
-  PLACE,
-
-  /**
-   * Special placement, which means the application is to be placed to the
-   * queue marked by %default variable.
-   */
-  PLACE_TO_DEFAULT
+  boolean match(VariableContext variables);
 }

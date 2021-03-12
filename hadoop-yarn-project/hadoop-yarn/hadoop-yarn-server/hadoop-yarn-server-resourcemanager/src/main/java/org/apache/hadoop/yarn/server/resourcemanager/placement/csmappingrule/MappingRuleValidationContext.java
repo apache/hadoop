@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
@@ -30,7 +30,7 @@ import java.util.Set;
  * interface should contain all validation related data and functions, this way
  * schedulers or engines can be changed without changing the MappingRules.
  */
-interface MappingRuleValidationContext {
+public interface MappingRuleValidationContext {
   /**
    * This method should determine if the provided queue path can result in
    * a possible placement. It should fail if the provided path cannot be placed
