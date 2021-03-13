@@ -225,7 +225,7 @@ com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.9.9
 com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.9.9
 com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.9.9
 com.fasterxml.uuid:java-uuid-generator:3.1.4
-com.fasterxml.woodstox:woodstox-core:5.0.3
+com.fasterxml.woodstox:woodstox-core:5.3.0
 com.github.davidmoten:rxjava-extras:0.8.0.17
 com.github.stephenc.jcip:jcip-annotations:1.0-1
 com.google:guice:4.0
@@ -366,7 +366,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanage
 
 com.github.luben:zstd-jni:1.4.3-1
 dnsjava:dnsjava:2.1.7
-org.codehaus.woodstox:stax2-api:3.1.4
+org.codehaus.woodstox:stax2-api:4.2.1
 
 
 BSD 3-Clause
