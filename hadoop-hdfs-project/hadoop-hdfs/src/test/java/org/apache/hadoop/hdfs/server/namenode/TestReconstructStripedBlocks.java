@@ -43,6 +43,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.junit.Assert;
@@ -428,6 +432,94 @@ public class TestReconstructStripedBlocks {
       DFSTestUtil.verifyClientStats(conf, dfsCluster);
     } finally {
       dfsCluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testRecoveryTasksForBlockGroupsLimit() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1000);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
+        1000);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT_ENABLED,
+        true);
+    long limit = 2;
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT, limit);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 1).build();
+    try {
+      cluster.waitActive();
+      cluster.getFileSystem().enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+      final int numBlocks = 6;
+      DFSTestUtil.createStripedFile(cluster, filePath,
+          dirPath, numBlocks, 1, true);
+      // all blocks will be located at first GROUP_SIZE DNs, the last DN is
+      // empty because of the util function createStripedFile
+
+      // make sure the file is complete in NN
+      final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
+          .getINode4Write(filePath.toString()).asFile();
+      assertFalse(fileNode.isUnderConstruction());
+      assertTrue(fileNode.isStriped());
+      BlockInfo[] blocks = fileNode.getBlocks();
+      assertEquals(numBlocks, blocks.length);
+
+      BlockManager bm = cluster.getNamesystem().getBlockManager();
+
+      BlockInfo firstBlock = fileNode.getBlocks()[0];
+      DatanodeStorageInfo[] storageInfos = bm.getStorages(firstBlock);
+
+      // make numOfMissed internal blocks missed
+      for (int i = 0; i < 1; i++) {
+        DatanodeDescriptor missedNode = storageInfos[i].getDatanodeDescriptor();
+        assertEquals(numBlocks, missedNode.numBlocks());
+        bm.getDatanodeManager().removeDatanode(missedNode);
+      }
+      BlockManagerTestUtil.updateState(bm);
+      DFSTestUtil.verifyClientStats(conf, cluster);
+      assertEquals( numBlocks, bm.getLowRedundancyBlocksCount());
+      // all the reconstruction work will be scheduled on the last DN
+      DataNode lastDn = cluster.getDataNodes().get(groupSize);
+      DatanodeDescriptor last = bm.getDatanodeManager().getDatanode
+          (lastDn.getDatanodeId());
+      BlockManagerTestUtil.getComputedDatanodeWork(bm);
+      int count = 0;
+      while (bm.getPendingReconstructionBlocksCount() > 0) {
+        count++;
+        assertEquals("Counting the number of outstanding EC tasks", limit,
+            last.getNumberOfBlocksToBeErasureCoded());
+        assertEquals(limit, bm.getPendingReconstructionBlocksCount());
+        assertEquals(limit, bm.getReconstructECBlockGroupCount());
+        List<BlockECReconstructionInfo> reconstruction =
+            last.getErasureCodeCommand((int) limit);
+
+        for (BlockECReconstructionInfo info : reconstruction) {
+          String poolId = cluster.getNamesystem().getBlockPoolId();
+          // let two datanodes (other than the one that already has the data) to
+          // report to NN
+          DatanodeRegistration dnR = lastDn.getDNRegistrationForBP(poolId);
+          StorageReceivedDeletedBlocks[] report = {
+              new StorageReceivedDeletedBlocks(
+                  new DatanodeStorage("Fake-storage-ID-Ignored"),
+                  new ReceivedDeletedBlockInfo[]{new ReceivedDeletedBlockInfo(
+                      info.getExtendedBlock().getLocalBlock(),
+                      ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, "")})
+          };
+          cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, report);
+        }
+        bm.flushBlockOps();
+        BlockManagerTestUtil.updateState(bm);
+        DFSTestUtil.verifyClientStats(conf, cluster);
+        BlockManagerTestUtil.getComputedDatanodeWork(bm);
+      }
+      assertEquals(numBlocks/limit, count);
+      BlockManagerTestUtil.updateState(bm);
+      DFSTestUtil.verifyClientStats(conf, cluster);
+      assertEquals(0, last.getNumberOfBlocksToBeErasureCoded());
+      assertEquals(0, bm.getPendingReconstructionBlocksCount());
+    } finally {
+      cluster.shutdown();
     }
   }
 }
