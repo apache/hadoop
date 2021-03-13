@@ -1455,7 +1455,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   /**
-   * Tell namenode to refresh protected directories from config
+   * Tell namenode to refresh protected directories from config.
    *
    * @throws IOException
    */

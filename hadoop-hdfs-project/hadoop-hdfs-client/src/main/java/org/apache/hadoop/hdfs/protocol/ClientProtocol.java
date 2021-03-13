@@ -1042,8 +1042,7 @@ public interface ClientProtocol {
   void setBalancerBandwidth(long bandwidth) throws IOException;
 
   /**
-   * Tell namenode to use a new, non-persistent  value for
-   * protected directories include file & exclude file
+   * Tell namenode to refresh protected directories from config.
    *
    * @throws IOException
    */

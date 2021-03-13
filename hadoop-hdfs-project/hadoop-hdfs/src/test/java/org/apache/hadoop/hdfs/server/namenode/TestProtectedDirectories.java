@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.net.URI;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
@@ -106,7 +105,7 @@ public class TestProtectedDirectories {
    * the given list of directories
    * and set fs.protected.directories.config.file.enable = true.
    * @param conf
-   * @param configFile
+   * @param protectedDirsConfigFile
    * @param protectedDirsPaths
    * @param protectedDirsPathsInFile
    * @param unProtectedDirs
@@ -114,19 +113,19 @@ public class TestProtectedDirectories {
    * @throws IOException
    */
   public MiniDFSCluster setupTestMixtureConfigureCase(Configuration conf,
-      String configFile,
+      String protectedDirsConfigFile,
       Collection<String> protectedDirsPaths,
       Collection<String> protectedDirsPathsInFile,
       Collection<String> unProtectedDirs)
       throws Throwable {
 
     // Store protectedDirsInFile to configFile
-    storeProtectedDirs2Config(configFile, protectedDirsPathsInFile);
+    storeProtectedDirs2Config(protectedDirsConfigFile, protectedDirsPathsInFile);
 
     // Initialize the configuration.
     List<String> confStrList = new ArrayList<>(protectedDirsPaths);
-    if (configFile != null) {
-      confStrList.add(configFile);
+    if (protectedDirsConfigFile != null) {
+      confStrList.add(protectedDirsConfigFile);
     }
     conf.set(
         FS_PROTECTED_DIRECTORIES,
@@ -312,7 +311,7 @@ public class TestProtectedDirectories {
     FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
 
     // change properties
-     conf.setStrings(FS_PROTECTED_DIRECTORIES, protectedPathsStrNew);
+    conf.setStrings(FS_PROTECTED_DIRECTORIES, protectedPathsStrNew);
     fsDirectory.refreshProtectedDirectories(conf);
 
     // verify change

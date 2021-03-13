@@ -25,19 +25,17 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileWriter;
 import java.nio.file.NoSuchFileException;
-import java.util.Set;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Test for ProtectedDirsConfigReader
+ * Test for ProtectedDirsConfigReader.
  */
 public class TestProtectedDirsConfigReader {
 
-  // Using /test/build/data/tmp directory to store temprory files
+  // Using /test/build/data/tmp directory to store temprory files.
   private final String pathTestDir =  GenericTestUtils
       .getTestDir().getAbsolutePath();
 

@@ -458,7 +458,7 @@ public class DFSAdmin extends FsShell {
     "\t[-deleteBlockPool datanode_host:ipc_port blockpoolId [force]]\n"+
     "\t[-setBalancerBandwidth <bandwidth in bytes per second>]\n" +
     "\t[-getBalancerBandwidth <datanode_host:ipc_port>]\n" +
-    "\t[-refreshProtectedDirectories]\n" +
+      "\t[-refreshProtectedDirectories]\n" +
     "\t[-fetchImage <local directory>]\n" +
     "\t[-allowSnapshot <snapshotDir>]\n" +
     "\t[-disallowSnapshot <snapshotDir>]\n" +
@@ -1094,7 +1094,7 @@ public class DFSAdmin extends FsShell {
 
   /**
    * Command to ask the namenode to set protected directories
-   * Usage: hdfs dfsadmin -refreshProtectedDirectories
+   * Usage: hdfs dfsadmin -refreshProtectedDirectories.
    * @exception IOException
    */
   public int refreshProtectedDirectories() throws IOException {
