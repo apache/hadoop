@@ -1044,7 +1044,7 @@ public interface ClientProtocol {
   /**
    * Tell namenode to refresh protected directories from config.
    *
-   * @throws IOException
+   * @throws IOException If an I/O error occurred.
    */
   @Idempotent
   void refreshProtectedDirectories() throws IOException;

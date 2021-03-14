@@ -72,11 +72,11 @@ public class TestProtectedDirsConfigReader {
 
     ProtectedDirsConfigReader hfp = new ProtectedDirsConfigReader(configFile);
 
-    int dirsLen = hfp.getProtectedProtectedDirs().size();
+    int dirsLen = hfp.getProtectedDirectories().size();
 
     assertEquals(5, dirsLen);
-    assertTrue(hfp.getProtectedProtectedDirs().contains("/dire1/dire2"));
-    assertFalse(hfp.getProtectedProtectedDirs().contains("/dirh1/dirh2"));
+    assertTrue(hfp.getProtectedDirectories().contains("/dire1/dire2"));
+    assertFalse(hfp.getProtectedDirectories().contains("/dirh1/dirh2"));
 
   }
 
@@ -106,14 +106,14 @@ public class TestProtectedDirsConfigReader {
 
     ProtectedDirsConfigReader hfp = new ProtectedDirsConfigReader(configFile);
 
-    int dirsLen = hfp.getProtectedProtectedDirs().size();
+    int dirsLen = hfp.getProtectedDirectories().size();
 
     // TestCase1: Check if lines beginning with # are ignored
     assertEquals(0, dirsLen);
 
     // TestCase2: Check if given path names are reported
     // by getProtectedProtectedDirs.
-    assertFalse(hfp.getProtectedProtectedDirs().contains("/dire1/dire2"));
+    assertFalse(hfp.getProtectedDirectories().contains("/dire1/dire2"));
   }
 
   /*
@@ -131,10 +131,10 @@ public class TestProtectedDirsConfigReader {
 
     ProtectedDirsConfigReader hfp = new ProtectedDirsConfigReader(configFile);
 
-    int dirsLen = hfp.getProtectedProtectedDirs().size();
+    int dirsLen = hfp.getProtectedDirectories().size();
 
     assertEquals(0, dirsLen);
-    assertFalse(hfp.getProtectedProtectedDirs().contains("/dire1/dire2"));
+    assertFalse(hfp.getProtectedDirectories().contains("/dire1/dire2"));
 
   }
 
@@ -153,12 +153,12 @@ public class TestProtectedDirsConfigReader {
 
     ProtectedDirsConfigReader hfp = new ProtectedDirsConfigReader(configFile);
 
-    int dirsLen = hfp.getProtectedProtectedDirs().size();
+    int dirsLen = hfp.getProtectedDirectories().size();
 
     assertEquals(3, dirsLen);
-    assertTrue(hfp.getProtectedProtectedDirs().contains("/dirc1/dirc2/dirc3"));
-    assertFalse(hfp.getProtectedProtectedDirs().contains("/dire1/dire2"));
-    assertFalse(hfp.getProtectedProtectedDirs().contains("/dird1/dird2"));
+    assertTrue(hfp.getProtectedDirectories().contains("/dirc1/dirc2/dirc3"));
+    assertFalse(hfp.getProtectedDirectories().contains("/dire1/dire2"));
+    assertFalse(hfp.getProtectedDirectories().contains("/dird1/dird2"));
 
   }
 
@@ -177,11 +177,11 @@ public class TestProtectedDirsConfigReader {
 
     ProtectedDirsConfigReader hfp = new ProtectedDirsConfigReader(configFile);
 
-    int dirsLen = hfp.getProtectedProtectedDirs().size();
+    int dirsLen = hfp.getProtectedDirectories().size();
 
     assertEquals(4, dirsLen);
-    assertTrue(hfp.getProtectedProtectedDirs().contains("/dirb1/dirb2/dirb3"));
-    assertFalse(hfp.getProtectedProtectedDirs().contains("/dire1/dire2"));
+    assertTrue(hfp.getProtectedDirectories().contains("/dirb1/dirb2/dirb3"));
+    assertFalse(hfp.getProtectedDirectories().contains("/dire1/dire2"));
 
   }
 }

@@ -99,11 +99,11 @@ public class ProtectedDirsConfigReader {
   }
 
   /**
-   * Duplicate and empty values are removed
+   * to get protected directories.
    *
    * @return currentDirectories
    */
-  public synchronized Set<String> getProtectedProtectedDirs() {
+  public synchronized Set<String> getProtectedDirectories() {
     return currentDirectories;
   }
 
@@ -122,7 +122,7 @@ public class ProtectedDirsConfigReader {
         try {
           ProtectedDirsConfigReader reader =
               new ProtectedDirsConfigReader(pathStr);
-          dirs.addAll(reader.getProtectedProtectedDirs());
+          dirs.addAll(reader.getProtectedDirectories());
         } catch (NoSuchFileException ex) {
           LOG.warn("The protected directories config flle is not found in " +
               pathStr);

@@ -1457,7 +1457,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   /**
    * Tell namenode to refresh protected directories from config.
    *
-   * @throws IOException
+   * @throws IOException If an I/O error occurred.
    */
   @Override // ClientProtocol
   public void refreshProtectedDirectories() throws IOException {

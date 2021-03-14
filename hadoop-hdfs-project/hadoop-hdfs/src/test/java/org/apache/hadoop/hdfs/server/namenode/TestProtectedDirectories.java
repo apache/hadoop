@@ -120,7 +120,8 @@ public class TestProtectedDirectories {
       throws Throwable {
 
     // Store protectedDirsInFile to configFile
-    storeProtectedDirs2Config(protectedDirsConfigFile, protectedDirsPathsInFile);
+    storeProtectedDirs2Config(protectedDirsConfigFile,
+            protectedDirsPathsInFile);
 
     // Initialize the configuration.
     List<String> confStrList = new ArrayList<>(protectedDirsPaths);
