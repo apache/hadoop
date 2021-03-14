@@ -302,7 +302,18 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders);
-    op.execute();
+    try {
+      op.execute();
+    } catch (AzureBlobFileSystemException ex) {
+      if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        String existingResource =
+            op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
+        if (existingResource != null && existingResource.equals(DIRECTORY)) {
+          return op; //don't throw ex on mkdirs for existing directory
+        }
+      }
+      throw ex;
+    }
     return op;
   }
 
