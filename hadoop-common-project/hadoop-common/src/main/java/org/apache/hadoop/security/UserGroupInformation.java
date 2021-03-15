@@ -1928,10 +1928,9 @@ public class UserGroupInformation {
       UserGroupInformation ugi) {
     if (log.isDebugEnabled()) {
       log.debug(caption + " UGI: " + ugi);
-      Map<Text, Token<? extends TokenIdentifier>> tokenMap =
-          ugi.getCredentials().getTokenMap();
-      for (Text tokenKey : tokenMap.keySet()) {
-        log.debug("+token: {} -> {}", tokenKey, tokenMap.get(tokenKey));
+      for (Map.Entry<Text, Token<? extends TokenIdentifier>> kv :
+          ugi.getCredentials().getTokenMap().entrySet()) {
+        log.debug("+token: {} -> {}", kv.getKey(), kv.getValue());
       }
     }
   }
