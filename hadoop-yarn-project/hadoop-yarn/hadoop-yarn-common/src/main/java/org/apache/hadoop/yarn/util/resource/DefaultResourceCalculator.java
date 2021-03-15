@@ -145,4 +145,9 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   public boolean isAnyMajorResourceAboveZero(Resource resource) {
     return resource.getMemorySize() > 0;
   }
+
+  @Override
+  public boolean isAllInvalidDivisor(Resource r) {
+    return isInvalidDivisor(r);
+  }
 }
