@@ -94,7 +94,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
 
-  private SelfRenewingLease lease;
+  private AbfsLease lease;
   private String leaseId;
 
   /**

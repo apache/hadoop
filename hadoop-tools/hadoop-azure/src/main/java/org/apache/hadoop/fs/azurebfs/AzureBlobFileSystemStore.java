@@ -105,7 +105,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
-import org.apache.hadoop.fs.azurebfs.services.SelfRenewingLease;
+import org.apache.hadoop.fs.azurebfs.services.AbfsLease;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
@@ -151,7 +151,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int GET_SET_AGGREGATE_COUNT = 2;
 
-  private final Map<SelfRenewingLease, Object> leaseRefs;
+  private final Map<AbfsLease, Object> leaseRefs;
 
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
@@ -259,7 +259,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   @Override
   public void close() throws IOException {
     List<ListenableFuture<?>> futures = new ArrayList<>();
-    for (SelfRenewingLease lease : leaseRefs.keySet()) {
+    for (AbfsLease lease : leaseRefs.keySet()) {
       if (lease == null) {
         continue;
       }
@@ -525,7 +525,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
-      SelfRenewingLease lease = maybeCreateLease(relativePath);
+      AbfsLease lease = maybeCreateLease(relativePath);
 
       return new AbfsOutputStream(
           client,
@@ -605,7 +605,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   private AbfsOutputStreamContext populateAbfsOutputStreamContext(boolean isAppendBlob,
-      SelfRenewingLease lease) {
+      AbfsLease lease) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
@@ -738,7 +738,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         isAppendBlob = true;
       }
 
-      SelfRenewingLease lease = maybeCreateLease(relativePath);
+      AbfsLease lease = maybeCreateLease(relativePath);
 
       return new AbfsOutputStream(
           client,
@@ -1741,21 +1741,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.azureSingleWriterDirSet.remove("");
   }
 
-  private SelfRenewingLease maybeCreateLease(String relativePath)
+  private AbfsLease maybeCreateLease(String relativePath)
       throws AzureBlobFileSystemException {
     boolean enableSingleWriter = isSingleWriterKey(relativePath);
     if (!enableSingleWriter) {
       return null;
     }
-    SelfRenewingLease lease = new SelfRenewingLease(client, relativePath,
-        abfsConfiguration.getLeaseDuration());
+    AbfsLease lease = new AbfsLease(client, relativePath);
     leaseRefs.put(lease, null);
     return lease;
   }
 
   @VisibleForTesting
   boolean areLeasesFreed() {
-    for (SelfRenewingLease lease : leaseRefs.keySet()) {
+    for (AbfsLease lease : leaseRefs.keySet()) {
       if (lease != null && !lease.isFreed()) {
         return false;
       }

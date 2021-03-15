@@ -218,13 +218,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_LEASE_THREADS)
   private int numLeaseThreads;
 
-  @IntegerWithOutlierConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_LEASE_DURATION,
-      OutlierValue = INFINITE_LEASE_DURATION,
-      MinValue = MIN_LEASE_DURATION,
-      MaxValue = MAX_LEASE_DURATION,
-      DefaultValue = DEFAULT_LEASE_DURATION)
-  private int leaseDuration;
-
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
       DefaultValue = DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
   private boolean createRemoteFileSystemDuringInitialization;
@@ -659,10 +652,6 @@ public class AbfsConfiguration{
 
   public int getNumLeaseThreads() {
     return this.numLeaseThreads;
-  }
-
-  public int getLeaseDuration() {
-    return this.leaseDuration;
   }
 
   public boolean getCreateRemoteFileSystemDuringInitialization() {

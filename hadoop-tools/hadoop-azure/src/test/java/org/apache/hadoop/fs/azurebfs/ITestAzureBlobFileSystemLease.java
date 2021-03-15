@@ -30,10 +30,8 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_DURATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SINGLE_WRITER_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.INFINITE_LEASE_DURATION;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_ALREADY_PRESENT;
@@ -63,13 +61,11 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }
 
-  private AzureBlobFileSystem getCustomFileSystem(Path singleWriterDirs, int numLeaseThreads,
-      int leaseDuration) throws Exception {
+  private AzureBlobFileSystem getCustomFileSystem(Path singleWriterDirs, int numLeaseThreads) throws Exception {
     Configuration conf = getRawConfiguration();
     conf.setBoolean(String.format("fs.%s.impl.disable.cache", getAbfsScheme()), true);
     conf.set(FS_AZURE_SINGLE_WRITER_KEY, singleWriterDirs.toUri().getPath());
     conf.setInt(FS_AZURE_LEASE_THREADS, numLeaseThreads);
-    conf.setInt(FS_AZURE_LEASE_DURATION, leaseDuration);
     return getFileSystem(conf);
   }
 
@@ -88,8 +84,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testNoLeaseThreads() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
-    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 0,
-        TEST_LEASE_DURATION);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 0);
     fs.mkdirs(testFilePath.getParent());
     LambdaTestUtils.intercept(IOException.class, ERR_NO_LEASE_THREADS, () -> {
       try (FSDataOutputStream out = fs.create(testFilePath)) {
@@ -101,8 +96,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testOneWriter() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
-    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1,
-        TEST_LEASE_DURATION);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
 
     FSDataOutputStream out = fs.create(testFilePath);
@@ -119,8 +113,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     final Path testFilePath = new Path(new Path(path(methodName.getMethodName()), "subdir"),
         TEST_FILE);
     final AzureBlobFileSystem fs =
-        getCustomFileSystem(testFilePath.getParent().getParent(), 1,
-            TEST_LEASE_DURATION);
+        getCustomFileSystem(testFilePath.getParent().getParent(), 1);
     fs.mkdirs(testFilePath.getParent().getParent());
 
     FSDataOutputStream out = fs.create(testFilePath);
@@ -135,8 +128,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testTwoCreate() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
-    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1,
-        TEST_LEASE_DURATION);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
 
     try (FSDataOutputStream out = fs.create(testFilePath)) {
@@ -181,8 +173,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   @Test(timeout = LONG_TEST_EXECUTION_TIMEOUT)
   public void testTwoWritersCreateAppendWithSingleWriterEnabled() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
-    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1,
-        TEST_LEASE_DURATION);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
 
     twoWriters(fs, testFilePath, true);
@@ -191,8 +182,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testLeaseFreedOnClose() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
-    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1,
-        TEST_LEASE_DURATION);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
 
     FSDataOutputStream out;
@@ -209,8 +199,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testWriteAfterBreakLease() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
-    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1,
-        TEST_LEASE_DURATION);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
 
     FSDataOutputStream out;
@@ -245,8 +234,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   @Test(timeout = LONG_TEST_EXECUTION_TIMEOUT)
   public void testLeaseFreedAfterBreak() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
-    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1,
-        TEST_LEASE_DURATION);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
 
     FSDataOutputStream out = fs.create(testFilePath);
@@ -254,18 +242,13 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
 
     fs.breakLease(testFilePath);
 
-    while (!((AbfsOutputStream) out.getWrappedStream()).isLeaseFreed()) {
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-      }
-    }
-
-    LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_LEASE_NOT_PRESENT :
-        ERR_LEASE_EXPIRED, () -> {
+    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_EXPIRED, () -> {
       out.close();
       return "Expected exception on close after lease break but got " + out;
     });
+
+    Assert.assertTrue("Output stream lease should be freed",
+        ((AbfsOutputStream) out.getWrappedStream()).isLeaseFreed());
 
     Assert.assertTrue("Store leases were not freed", fs.getAbfsStore().areLeasesFreed());
   }
@@ -273,8 +256,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testInfiniteLease() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
-    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1,
-        INFINITE_LEASE_DURATION);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
 
     try (FSDataOutputStream out = fs.create(testFilePath)) {
@@ -295,8 +277,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
   public void testFileSystemClose() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
-    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1,
-        TEST_LEASE_DURATION);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
 
     FSDataOutputStream out = fs.create(testFilePath);

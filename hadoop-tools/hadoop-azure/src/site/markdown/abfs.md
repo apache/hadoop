@@ -893,10 +893,11 @@ can be specified comma separated in this config. By default, multiple
 clients will be able to write to the same file simultaneously. When writing
 to files contained within the directories specified in this config, the
 client will obtain a lease on the file that will prevent any other clients
-from writing to the file. The lease will be renewed by the client until the
-output stream is closed, after which it will be released. To revoke a client's
-write access for a file, the AzureBlobFilesystem breakLease method may be
- called.
+from writing to the file. When the output stream is closed, the lease will be
+released. To revoke a client's write access for a file, the
+AzureBlobFilesystem breakLease method may be called. If the client dies
+before the file can be closed and the lease released, breakLease will need to
+be called before another client will be able to write to the file.
 
 `fs.azure.lease.threads`: This is the size of the thread pool that will be
 used for lease operations for single writer directories. By default the value

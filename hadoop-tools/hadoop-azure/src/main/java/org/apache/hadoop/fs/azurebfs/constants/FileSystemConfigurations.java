@@ -81,7 +81,7 @@ public final class FileSystemConfigurations {
   public static final String DEFAULT_FS_AZURE_SINGLE_WRITER_DIRECTORIES = "";
   public static final int DEFAULT_LEASE_THREADS = 0;
   public static final int MIN_LEASE_THREADS = 0;
-  public static final int DEFAULT_LEASE_DURATION = 60;
+  public static final int DEFAULT_LEASE_DURATION = -1;
   public static final int INFINITE_LEASE_DURATION = -1;
   public static final int MIN_LEASE_DURATION = 15;
   public static final int MAX_LEASE_DURATION = 60;
