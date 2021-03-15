@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 
 /**
  * This class contains all the actions and some helper methods to generate them.

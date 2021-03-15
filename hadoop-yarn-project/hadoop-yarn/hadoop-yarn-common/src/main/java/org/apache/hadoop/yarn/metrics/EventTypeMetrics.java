@@ -15,14 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.metrics;
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.annotation.Metrics;
 
-public interface MappingRuleMatcher {
-  /**
-   * Returns true if the matcher matches the current context.
-   * @param variables The variable context, which contains all the variables
-   * @return true if this matcher matches to the provided variable set
-   */
-  boolean match(VariableContext variables);
+@InterfaceAudience.Private
+@Metrics(context="yarn")
+public interface EventTypeMetrics<T extends Enum<T>>
+    extends MetricsSource {
+
+  void increment(T type, long processingTimeUs);
+
+  long get(T type);
 }

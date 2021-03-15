@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
+
+import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 
 /**
  * This class implements the fallback logic for MappingRuleActions, this can

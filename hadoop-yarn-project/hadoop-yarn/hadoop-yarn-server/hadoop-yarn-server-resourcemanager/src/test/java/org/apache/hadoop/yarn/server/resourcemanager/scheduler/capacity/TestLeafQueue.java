@@ -162,9 +162,13 @@ public class TestLeafQueue {
   private void setUpInternal(ResourceCalculator rC, boolean withNodeLabels)
       throws Exception {
     CapacityScheduler spyCs = new CapacityScheduler();
-    spyCs.setActivitiesManagerEnabled(false);
     queues = new CSQueueStore();
     cs = spy(spyCs);
+
+    //All stub calls on the spy object of the 'cs' field should happen
+    //before cs.start() is invoked. See YARN-10672 for more details.
+    when(cs.getNumClusterNodes()).thenReturn(3);
+
     rmContext = TestUtils.getMockRMContext();
     spyRMContext = spy(rmContext);
 
@@ -231,7 +235,6 @@ public class TestLeafQueue {
     when(spyRMContext.getScheduler()).thenReturn(cs);
     when(spyRMContext.getYarnConfiguration())
         .thenReturn(new YarnConfiguration());
-    when(cs.getNumClusterNodes()).thenReturn(3);
     cs.start();
   }
 
@@ -4786,7 +4789,7 @@ public class TestLeafQueue {
 
     // Queue "test" consumes 100% of the cluster, so its capacity and absolute
     // capacity are both 1.0f.
-    Queue queue = createQueue("test", null, 1.0f, 1.0f, res);
+    Queue queue = createQueue("test", "root.test", null, 1.0f, 1.0f, res);
     final String user = "user1";
     FiCaSchedulerApp app =
         new FiCaSchedulerApp(appAttId, user, queue,
@@ -4803,7 +4806,7 @@ public class TestLeafQueue {
 
     // Queue "test2" is a child of root and its capacity is 50% of root. As a
     // child of root, its absolute capaicty is also 50%.
-    queue = createQueue("test2", null, 0.5f, 0.5f,
+    queue = createQueue("test2", "root.test2", null, 0.5f, 0.5f,
         Resources.divideAndCeil(dominantResourceCalculator, res, 2));
     app = new FiCaSchedulerApp(appAttId, user, queue,
         queue.getAbstractUsersManager(), rmContext);
@@ -4816,7 +4819,8 @@ public class TestLeafQueue {
 
     // Queue "test2.1" is 50% of queue "test2", which is 50% of the cluster.
     // Therefore, "test2.1" capacity is 50% and absolute capacity is 25%.
-    AbstractCSQueue qChild = createQueue("test2.1", queue, 0.5f, 0.25f,
+    AbstractCSQueue qChild =
+        createQueue("test2.1", "root.test2.1", queue, 0.5f, 0.25f,
         Resources.divideAndCeil(dominantResourceCalculator, res, 4));
     app = new FiCaSchedulerApp(appAttId, user, qChild,
         qChild.getAbstractUsersManager(), rmContext);
@@ -4828,7 +4832,7 @@ public class TestLeafQueue {
         app.getResourceUsageReport().getClusterUsagePercentage(), 0.01f);
 
     // test that queueUsagePercentage returns neither NaN nor Infinite
-    AbstractCSQueue zeroQueue = createQueue("test2.2", null,
+    AbstractCSQueue zeroQueue = createQueue("test2.2", "root.test2.2", null,
         Float.MIN_VALUE, Float.MIN_VALUE,
         Resources.multiply(res, Float.MIN_VALUE));
     app = new FiCaSchedulerApp(appAttId, user, zeroQueue,
@@ -4901,11 +4905,13 @@ public class TestLeafQueue {
     return attId;
   }
 
-  private AbstractCSQueue createQueue(String name, Queue parent, float capacity,
+  private AbstractCSQueue
+      createQueue(String name, String path, Queue parent, float capacity,
       float absCap, Resource res) {
     CSQueueMetrics metrics = CSQueueMetrics.forQueue(name, parent, false, cs.getConf());
-    QueueInfo queueInfo = QueueInfo.newInstance(name, capacity, 1.0f, 0, null,
-        null, QueueState.RUNNING, null, "", null, false, null, false);
+    QueueInfo queueInfo = QueueInfo.
+        newInstance(name, path, capacity, 1.0f, 0, null,
+        null, QueueState.RUNNING, null, "", null, false, -1.0f, null, false);
     ActiveUsersManager activeUsersManager = new ActiveUsersManager(metrics);
     AbstractCSQueue queue = mock(AbstractCSQueue.class);
     when(queue.getMetrics()).thenReturn(metrics);

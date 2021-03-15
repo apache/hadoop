@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,29 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 
-public enum MappingRuleResultType {
-  /**
-   * Represents a result where we simply ignore the current rule
-   * and move onto the next one.
-   */
-  SKIP,
+public class AutoCreatedQueueDeletionEvent extends SchedulerEvent{
+  private CSQueue checkQueue;
+  public AutoCreatedQueueDeletionEvent(CSQueue checkQueue) {
+    super(SchedulerEventType.AUTO_QUEUE_DELETION);
+    this.checkQueue = checkQueue;
+  }
 
-  /**
-   * Represents a result where the application gets rejected.
-   */
-  REJECT,
-
-  /**
-   * Represents a result where the application gets placed into a queue.
-   */
-  PLACE,
-
-  /**
-   * Special placement, which means the application is to be placed to the
-   * queue marked by %default variable.
-   */
-  PLACE_TO_DEFAULT
+  public CSQueue getCheckQueue() {
+    return checkQueue;
+  }
 }

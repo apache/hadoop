@@ -1899,6 +1899,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkNNStartup();
+    LOG.debug("*DIR* NameNode.createSnapshot: Path {} and SnapshotName {}",
+        snapshotRoot, snapshotName);
     if (!checkPathLength(snapshotRoot)) {
       throw new IOException("createSnapshot: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -1925,6 +1927,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkNNStartup();
+    LOG.debug("*DIR* NameNode.deleteSnapshot: Path {} and SnapshotName {}",
+        snapshotRoot, snapshotName);
     if (snapshotName == null || snapshotName.isEmpty()) {
       throw new IOException("The snapshot name is null or empty.");
     }
@@ -1964,6 +1968,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void renameSnapshot(String snapshotRoot, String snapshotOldName,
       String snapshotNewName) throws IOException {
     checkNNStartup();
+    LOG.debug("*DIR* NameNode.renameSnapshot: Snapshot Path {}, " +
+        "snapshotOldName {}, snapshotNewName {}", snapshotRoot,
+        snapshotOldName, snapshotNewName);
     if (snapshotNewName == null || snapshotNewName.isEmpty()) {
       throw new IOException("The new snapshot name is null or empty.");
     }

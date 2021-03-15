@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 /**
  * This class represents the outcome of an action.
