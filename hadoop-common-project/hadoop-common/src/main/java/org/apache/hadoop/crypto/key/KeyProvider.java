@@ -57,7 +57,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  * <code>KeyProvider</code> implementations must be thread safe.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
+@InterfaceStability.Stable
 public abstract class KeyProvider implements Closeable {
   public static final String DEFAULT_CIPHER_NAME =
       CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY;
