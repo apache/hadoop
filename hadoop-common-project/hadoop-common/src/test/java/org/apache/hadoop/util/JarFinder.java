@@ -165,10 +165,11 @@ public class JarFinder {
             if (!testDir.exists()) {
               testDir.mkdirs();
             }
-            File tempJar = File.createTempFile("hadoop-", "", testDir);
-            tempJar = new File(tempJar.getAbsolutePath() + ".jar");
+            File tempFile = File.createTempFile("hadoop-", "", testDir);
+            File tempJar = new File(tempFile.getAbsolutePath() + ".jar");
             createJar(baseDir, tempJar);
             tempJar.deleteOnExit();
+            tempFile.deleteOnExit();
             return tempJar.getAbsolutePath();
           }
         }
