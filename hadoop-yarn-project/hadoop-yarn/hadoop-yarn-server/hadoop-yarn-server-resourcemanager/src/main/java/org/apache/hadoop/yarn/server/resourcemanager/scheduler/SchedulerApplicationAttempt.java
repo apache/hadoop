@@ -1125,7 +1125,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           .put(ResourceInformation.VCORES.getName(), 0L);
       float queueUsagePerc = 0.0f;
       float clusterUsagePerc = 0.0f;
-      if (!calc.isInvalidDivisor(cluster)) {
+      if (!calc.isAllInvalidDivisor(cluster)) {
         float queueCapacityPerc = queue.getQueueInfo(false, false)
             .getCapacity();
         queueUsagePerc = calc.divide(cluster, usedResourceClone,

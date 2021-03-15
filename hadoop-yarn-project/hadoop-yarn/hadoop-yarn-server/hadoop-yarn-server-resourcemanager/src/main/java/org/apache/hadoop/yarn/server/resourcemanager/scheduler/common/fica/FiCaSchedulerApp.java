@@ -1123,7 +1123,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       ResourceCalculator calc =
           rmContext.getScheduler().getResourceCalculator();
       float queueUsagePerc = 0.0f;
-      if (!calc.isInvalidDivisor(totalPartitionRes)) {
+      if (!calc.isAllInvalidDivisor(totalPartitionRes)) {
         Resource effCap = ((AbstractCSQueue) getQueue())
             .getEffectiveCapacity(getAppAMNodePartitionName());
         if (!effCap.equals(Resources.none())) {
