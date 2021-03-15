@@ -44,7 +44,9 @@ import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.apache.hadoop.tools.util.DistCpTestUtils;
+import org.apache.hadoop.util.functional.RemoteIterators;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -59,6 +61,7 @@ import org.slf4j.LoggerFactory;
  * under test.  The tests in the suite cover both copying from local to remote
  * (e.g. a backup use case) and copying from remote to local (e.g. a restore use
  * case).
+ * The HDFS contract test needs to be run explicitly.
  */
 public abstract class AbstractContractDistCpTest
     extends AbstractFSContractTestBase {
@@ -611,6 +614,42 @@ public abstract class AbstractContractDistCpTest
     describe("copy file from local to remote without using direct write " +
         "option");
     directWrite(localFS, localDir, remoteFS, remoteDir, false);
+  }
+
+  @Test
+  public void testDistCpWithIterator() throws Exception {
+    describe("Build listing in distCp using the iterator option.");
+    Path source = new Path(remoteDir, "src");
+    Path dest = new Path(localDir, "dest");
+    dest = localFS.makeQualified(dest);
+    mkdirs(remoteFS, source);
+    verifyPathExists(remoteFS, "", source);
+
+    GenericTestUtils
+        .createFiles(remoteFS, source, getDepth(), getWidth(), getWidth());
+
+    DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
+        dest.toString(), "-useiterator", conf);
+
+    Assertions
+        .assertThat(RemoteIterators.toList(localFS.listFiles(dest, true)))
+        .describedAs("files").hasSize(getTotalFiles());
+  }
+
+  public int getDepth() {
+    return 3;
+  }
+
+  public int getWidth() {
+    return 10;
+  }
+
+  private int getTotalFiles() {
+    int totalFiles = 0;
+    for (int i = 1; i <= getDepth(); i++) {
+      totalFiles += Math.pow(getWidth(), i);
+    }
+    return totalFiles;
   }
 
   /**

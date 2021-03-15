@@ -79,6 +79,7 @@ import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.extractCause;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.test.LambdaTestUtils.eval;
 
 /**
@@ -161,8 +162,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   public static final int DIR_COUNT_SCALED = 4;
   public static final int DEPTH = 2;
   public static final int DEPTH_SCALED = 2;
-
-  public static final String PREFIX = "file-";
 
   /**
    * A role FS; if non-null it is closed in teardown.
@@ -908,49 +907,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       waitForCompletion(futures);
       return paths;
     }
-  }
-
-  /**
-   * Recursive method to build up lists of files and directories.
-   * @param filePaths list of file paths to add entries to.
-   * @param dirPaths list of directory paths to add entries to.
-   * @param destDir destination directory.
-   * @param depth depth of directories
-   * @param fileCount number of files.
-   * @param dirCount number of directories.
-   */
-  private static void buildPaths(
-      final List<Path> filePaths,
-      final List<Path> dirPaths,
-      final Path destDir,
-      final int depth,
-      final int fileCount,
-      final int dirCount) {
-    if (depth<=0) {
-      return;
-    }
-    // create the file paths
-    for (int i = 0; i < fileCount; i++) {
-      String name = filenameOfIndex(i);
-      Path p = new Path(destDir, name);
-      filePaths.add(p);
-    }
-    for (int i = 0; i < dirCount; i++) {
-      String name = String.format("dir-%03d", i);
-      Path p = new Path(destDir, name);
-      dirPaths.add(p);
-      buildPaths(filePaths, dirPaths, p, depth - 1, fileCount, dirCount);
-    }
-
-  }
-
-  /**
-   * Given an index, return a string to use as the filename.
-   * @param i index
-   * @return name
-   */
-  public static String filenameOfIndex(final int i) {
-    return String.format("%s%03d", PREFIX, i);
   }
 
   /**
