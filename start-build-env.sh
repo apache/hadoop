@@ -87,10 +87,20 @@ DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 # within the container and use the result on your normal
 # system.  And this also is a significant speedup in subsequent
 # builds because the dependencies are downloaded only once.
-docker run --rm=true $DOCKER_INTERACTIVE_RUN \
-  -v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}" \
-  -w "${DOCKER_HOME_DIR}/hadoop" \
-  -v "${HOME}/.m2:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}" \
-  -v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}" \
-  -u "${USER_ID}" \
+dockerargs=(--rm=true)
+dockerargs+=($DOCKER_INTERACTIVE_RUN)
+# use urandom to increase entropy
+dockerargs+=(-v "/dev/urandom:/dev/random${V_OPTS:-}")
+# mount current directory
+dockerargs+=(-v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}")
+# mount maven directory
+dockerargs+=(-v "${HOME}/.m2:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}")
+# mount gnu
+dockerargs+=(-v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}")
+# set work directory
+dockerargs+=(-w "${DOCKER_HOME_DIR}/hadoop")
+# set user
+dockerargs+=(-u "${USER_ID}")
+
+docker run "${dockerargs[@]}" \
   "hadoop-build-${USER_ID}" "$@"

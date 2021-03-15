@@ -35,6 +35,8 @@ function personality_globals
   JIRA_ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
   #shellcheck disable=SC2034
   GITHUB_REPO_DEFAULT="apache/hadoop"
+  # mount urandom to increase entropy
+  DOCKER_EXTRAARGS=("-v" "/dev/urandom:/dev/random")
 
   HADOOP_HOMEBREW_DIR=${HADOOP_HOMEBREW_DIR:-$(brew --prefix 2>/dev/null)}
   if [[ -z "${HADOOP_HOMEBREW_DIR}" ]]; then
