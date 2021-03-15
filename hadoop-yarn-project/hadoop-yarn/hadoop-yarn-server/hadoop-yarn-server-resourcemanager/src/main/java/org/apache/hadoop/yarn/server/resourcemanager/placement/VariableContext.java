@@ -55,7 +55,7 @@ public class VariableContext {
    * @param name Name of the variable to check
    * @return true if the variable is immutable
    */
-  boolean isImmutable(String name) {
+  public boolean isImmutable(String name) {
     return (immutableNames != null && immutableNames.contains(name));
   }
 

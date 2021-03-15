@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import junit.framework.TestCase;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 import org.junit.Test;
 
 import java.util.HashMap;

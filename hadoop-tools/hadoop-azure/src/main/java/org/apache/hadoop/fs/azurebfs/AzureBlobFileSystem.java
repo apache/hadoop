@@ -512,7 +512,7 @@ public class AzureBlobFileSystem extends FileSystem {
       statIncrement(DIRECTORIES_CREATED);
       return true;
     } catch (AzureBlobFileSystemException ex) {
-      checkException(f, ex, AzureServiceErrorCode.PATH_ALREADY_EXISTS);
+      checkException(f, ex);
       return true;
     }
   }
