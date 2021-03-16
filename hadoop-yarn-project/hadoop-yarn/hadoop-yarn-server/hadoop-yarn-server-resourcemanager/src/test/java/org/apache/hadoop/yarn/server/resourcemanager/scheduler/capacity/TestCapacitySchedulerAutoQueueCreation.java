@@ -571,7 +571,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
       SchedulerEvent addAppEvent = new AppAddedSchedulerEvent(
-          appId, "user", "root.");
+          appId, "user", USER0);
       newCS.handle(addAppEvent);
 
       RMAppEvent event = new RMAppEvent(appId, RMAppEventType.APP_REJECTED,
