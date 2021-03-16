@@ -1164,7 +1164,7 @@ deletion, preventing the stores' use as drop-in replacements for HDFS.
 
 ### `boolean rename(Path src, Path d)`
 
-In terms of its specification, `rename()` is one of the most complex operations within a filesystem .
+In terms of its specification, `rename()` is one of the most complex operations within a filesystem.
 
 In terms of its implementation, it is the one with the most ambiguity regarding when to return false
 versus raising an exception.
@@ -1186,7 +1186,6 @@ has been calculated.
 Source `src` must exist:
 
     exists(FS, src) else raise FileNotFoundException
-
 
 `dest` cannot be a descendant of `src`:
 
@@ -1282,6 +1281,15 @@ The outcome is as a normal rename, with the additional (implicit) feature
 that the parent directories of the destination also exist.
 
     exists(FS', parent(dest))
+
+*S3A FileSystem*
+
+The outcome is as a normal rename, with the additional (implicit) feature that
+the parent directories of the destination then exist:
+`exists(FS', parent(dest))`
+
+There is a check for and rejection if the `parent(dest)` is a file, but
+no checks for any other ancestors.
 
 *Other Filesystems (including Swift) *
 

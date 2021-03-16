@@ -25,6 +25,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.*;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -74,12 +75,12 @@ public class CSMappingPlacementRule extends PlacementRule {
   private boolean failOnConfigError = true;
 
   @VisibleForTesting
-  void setGroups(Groups groups) {
+  public void setGroups(Groups groups) {
     this.groups = groups;
   }
 
   @VisibleForTesting
-  void setFailOnConfigError(boolean failOnConfigError) {
+  public void setFailOnConfigError(boolean failOnConfigError) {
     this.failOnConfigError = failOnConfigError;
   }
 

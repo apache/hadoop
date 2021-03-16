@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
+
+import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 
 import java.util.Arrays;
 import java.util.Set;

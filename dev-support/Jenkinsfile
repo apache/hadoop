@@ -35,7 +35,7 @@ pipeline {
         DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.13.0'
+        YETUS_VERSION='11eb9b09786e401fbdeaa3be83a19a4066fd7813'
     }
 
     parameters {
@@ -60,7 +60,7 @@ pipeline {
         stage ('precommit-run') {
             steps {
                 withCredentials(
-                    [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
+                    [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
                                   passwordVariable: 'GITHUB_TOKEN',
                                   usernameVariable: 'GITHUB_USER'),
                     usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
@@ -156,6 +156,10 @@ pipeline {
 
                         # custom javadoc goals
                         YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
+
+                        # write Yetus report as GitHub comment (YETUS-1102)
+                        YETUS_ARGS+=("--github-write-comment")
+                        YETUS_ARGS+=("--github-use-emoji-vote")
 
                         "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''

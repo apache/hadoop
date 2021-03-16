@@ -819,7 +819,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-touch \[-a\] \[-m\] \[-t TIMESTAMP \] \[-c\] &lt;path&gt; \.\.\. :( )*</expected-output>
+          <expected-output>^-touch \[-a\] \[-m\] \[-t TIMESTAMP \(yyyyMMdd\:HHmmss\) \] \[-c\] &lt;path&gt; \.\.\. :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -847,11 +847,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-t\s+TIMESTAMP\s+Use specified timestamp \(in format yyyyMMddHHmmss\) instead of</expected-output>
+          <expected-output>^\s*-t\s+TIMESTAMP\s+Use specified timestamp instead of current time( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*current time( )*</expected-output>
+          <expected-output>^\s*TIMESTAMP format yyyyMMdd\:HHmmss</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
