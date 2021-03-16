@@ -19,6 +19,7 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -229,7 +230,8 @@ public class TestDecodingValidator extends TestRawCoderBase {
       validator.validate(inputChunks, erasedIndexes, recoveredChunks);
       Assert.fail("Validation should fail due to bad decoding");
     } catch (InvalidDecodingException e) {
-      // Expected
+      String expected = "Failed to validate decoding";
+      GenericTestUtils.assertExceptionContains(expected, e);
     }
   }
 }
