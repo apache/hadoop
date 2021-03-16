@@ -84,8 +84,6 @@ public class TestReconstructStripedFile {
   private int groupSize;
   private int dnNum;
 
-  private boolean isValidationEnabled;
-
   static {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(BlockManager.LOG, Level.TRACE);
@@ -115,7 +113,7 @@ public class TestReconstructStripedFile {
 
   public int getPendingTimeout() {
     return DFSConfigKeys
-            .DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT;
+        .DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT;
   }
 
   public int getBlockSize() {
@@ -144,8 +142,8 @@ public class TestReconstructStripedFile {
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
     conf.setInt(
-            DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
-            getPendingTimeout());
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
+        getPendingTimeout());
     conf.setBoolean(DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_VALIDATION_KEY,
         isValidationEnabled());
     File basedir = new File(GenericTestUtils.getRandomizedTempPath());
