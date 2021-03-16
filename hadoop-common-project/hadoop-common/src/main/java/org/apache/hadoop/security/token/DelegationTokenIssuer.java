@@ -91,7 +91,8 @@ public interface DelegationTokenIssuer {
     final String serviceName = issuer.getCanonicalServiceName();
     // Collect token of the this issuer and then of its embedded children
     if (TOKEN_LOG.isDebugEnabled()) {
-      TOKEN_LOG.debug("Search token for service {} in credentials", serviceName);
+      TOKEN_LOG.debug("Search token for service {} in credentials",
+          serviceName);
     }
     if (serviceName != null) {
       final Text service = new Text(serviceName);
