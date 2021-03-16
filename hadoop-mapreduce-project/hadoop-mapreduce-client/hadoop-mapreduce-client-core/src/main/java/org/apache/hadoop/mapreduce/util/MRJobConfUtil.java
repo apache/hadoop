@@ -17,14 +17,22 @@
  */
 package org.apache.hadoop.mapreduce.util;
 
+import java.io.File;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
 /**
  * A class that contains utility methods for MR Job configuration.
  */
 public final class MRJobConfUtil {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MRJobConfUtil.class);
   public static final String REDACTION_REPLACEMENT_VAL = "*********(redacted)";
 
   /**
@@ -129,5 +137,55 @@ public final class MRJobConfUtil {
    */
   public static double convertTaskProgressToFactor(final float progress) {
     return Math.floor(progress * MRJobConfUtil.PROGRESS_MIN_DELTA_FACTOR);
+  }
+
+  /**
+   * For unit tests, use urandom to avoid the YarnChild  process from hanging
+   * on low entropy systems.
+   */
+  private static final String TEST_JVM_SECURITY_EGD_OPT =
+      "-Djava.security.egd=file:/dev/./urandom";
+
+  public static Configuration initEncryptedIntermediateConfigsForTesting(
+      Configuration conf) {
+    Configuration config =
+        (conf == null) ? new Configuration(): conf;
+    final String childJVMOpts =
+        TEST_JVM_SECURITY_EGD_OPT.concat(" ")
+            .concat(config.get("mapred.child.java.opts", " "));
+    // Set the jvm arguments.
+    config.set("yarn.app.mapreduce.am.admin-command-opts",
+        TEST_JVM_SECURITY_EGD_OPT);
+    config.set("mapred.child.java.opts", childJVMOpts);
+    config.setBoolean("mapreduce.job.encrypted-intermediate-data", true);
+    return config;
+  }
+
+  /**
+   * Set local directories so that the generated folders is subdirectory of the
+   * test directories.
+   * @param conf
+   * @param testRootDir
+   * @return
+   */
+  public static Configuration setLocalDirectoriesConfigForTesting(
+      Configuration conf, File testRootDir) {
+    Configuration config =
+        (conf == null) ? new Configuration(): conf;
+    final File hadoopLocalDir = new File(testRootDir, "hadoop-dir");
+    // create the directory
+    if (!hadoopLocalDir.getAbsoluteFile().mkdirs()) {
+      LOG.info("{} directory already exists", hadoopLocalDir.getPath());
+    }
+    Path mapredHadoopTempDir = new Path(hadoopLocalDir.getPath());
+    Path mapredSystemDir = new Path(mapredHadoopTempDir, "system");
+    Path stagingDir = new Path(mapredHadoopTempDir, "tmp/staging");
+    // Set the temp directories a subdir of the test directory.
+    config.set("mapreduce.jobtracker.staging.root.dir", stagingDir.toString());
+    config.set("mapreduce.jobtracker.system.dir", mapredSystemDir.toString());
+    config.set("mapreduce.cluster.temp.dir", mapredHadoopTempDir.toString());
+    config.set("mapreduce.cluster.local.dir",
+        new Path(mapredHadoopTempDir, "local").toString());
+    return config;
   }
 }
