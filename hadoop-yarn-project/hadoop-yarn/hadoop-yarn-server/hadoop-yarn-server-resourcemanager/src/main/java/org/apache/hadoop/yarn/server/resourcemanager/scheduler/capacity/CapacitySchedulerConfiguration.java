@@ -1963,7 +1963,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getQueuePrefix(queuePath).replaceAll("\\.", "\\\\.")
         + USER_SETTINGS + "\\.";
     String weightKeyRegex =
-        qPathPlusPrefix + "\\w+\\." + USER_WEIGHT;
+        qPathPlusPrefix + "\\S+\\." + USER_WEIGHT;
     Map<String, String> props = getValByRegex(weightKeyRegex);
     for (Entry<String, String> e : props.entrySet()) {
       String userName =
