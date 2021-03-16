@@ -887,8 +887,8 @@ enabled for your Azure Storage account."
 The directories can be specified as comma separated values. By default the value
 is "/hbase"
 
-### <a name="singlewriteroptions"></a> Single Writer Options
-`fs.azure.singlewriter.directories`: Directories for single writer support
+### <a name="infiniteleaseoptions"></a> Infinite Lease Options
+`fs.azure.infinite-lease.directories`: Directories for infinite lease support
 can be specified comma separated in this config. By default, multiple
 clients will be able to write to the same file simultaneously. When writing
 to files contained within the directories specified in this config, the
@@ -900,8 +900,8 @@ before the file can be closed and the lease released, breakLease will need to
 be called before another client will be able to write to the file.
 
 `fs.azure.lease.threads`: This is the size of the thread pool that will be
-used for lease operations for single writer directories. By default the value
-is 0, so it must be set to at least 1 to support single writer directories.
+used for lease operations for infinite lease directories. By default the value
+is 0, so it must be set to at least 1 to support infinite lease directories.
 
 ### <a name="perfoptions"></a> Perf Options
 

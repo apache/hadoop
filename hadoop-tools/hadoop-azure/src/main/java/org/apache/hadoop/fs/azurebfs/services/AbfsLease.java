@@ -145,7 +145,7 @@ public final class AbfsLease {
       }
       client.releaseLease(path, leaseID);
     } catch (IOException e) {
-      LOG.info("Exception when trying to release lease {} on {}. Lease will need to be broken: {}",
+      LOG.warn("Exception when trying to release lease {} on {}. Lease will need to be broken: {}",
           leaseID, path, e.getMessage());
     } finally {
       // Even if releasing the lease fails (e.g. because the file was deleted),

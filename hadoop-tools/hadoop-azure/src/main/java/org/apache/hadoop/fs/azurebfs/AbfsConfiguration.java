@@ -209,9 +209,9 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
   private String azureAppendBlobDirs;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SINGLE_WRITER_KEY,
-      DefaultValue = DEFAULT_FS_AZURE_SINGLE_WRITER_DIRECTORIES)
-  private String azureSingleWriterDirs;
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_INFINITE_LEASE_KEY,
+      DefaultValue = DEFAULT_FS_AZURE_INFINITE_LEASE_DIRECTORIES)
+  private String azureInfiniteLeaseDirs;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_LEASE_THREADS,
       MinValue = MIN_LEASE_THREADS,
@@ -646,8 +646,8 @@ public class AbfsConfiguration{
     return this.azureAppendBlobDirs;
   }
 
-  public String getAzureSingleWriterDirs() {
-    return this.azureSingleWriterDirs;
+  public String getAzureInfiniteLeaseDirs() {
+    return this.azureInfiniteLeaseDirs;
   }
 
   public int getNumLeaseThreads() {

@@ -155,7 +155,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
-  private Set<String> azureSingleWriterDirSet;
+  private Set<String> azureInfiniteLeaseDirSet;
   private Trilean isNamespaceEnabled;
   private final AuthType authType;
   private final UserGroupInformation userGroupInformation;
@@ -206,7 +206,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
-    updateSingleWriterDirs();
+    updateInfiniteLeaseDirs();
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
@@ -1394,11 +1394,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
-  public boolean isSingleWriterKey(String key) {
-    if (azureSingleWriterDirSet.isEmpty()) {
+  public boolean isInfiniteLeaseKey(String key) {
+    if (azureInfiniteLeaseDirSet.isEmpty()) {
       return false;
     }
-    return isKeyForDirectorySet(key, azureSingleWriterDirSet);
+    return isKeyForDirectorySet(key, azureInfiniteLeaseDirSet);
   }
 
   /**
@@ -1690,18 +1690,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.isNamespaceEnabled = isNamespaceEnabled;
   }
 
-  private void updateSingleWriterDirs() {
-    this.azureSingleWriterDirSet = new HashSet<>(Arrays.asList(
-        abfsConfiguration.getAzureSingleWriterDirs().split(AbfsHttpConstants.COMMA)));
+  private void updateInfiniteLeaseDirs() {
+    this.azureInfiniteLeaseDirSet = new HashSet<>(Arrays.asList(
+        abfsConfiguration.getAzureInfiniteLeaseDirs().split(AbfsHttpConstants.COMMA)));
     // remove the empty string, since isKeyForDirectory returns true for empty strings
-    // and we don't want to default to enabling single writer dirs
-    this.azureSingleWriterDirSet.remove("");
+    // and we don't want to default to enabling infinite lease dirs
+    this.azureInfiniteLeaseDirSet.remove("");
   }
 
   private AbfsLease maybeCreateLease(String relativePath)
       throws AzureBlobFileSystemException {
-    boolean enableSingleWriter = isSingleWriterKey(relativePath);
-    if (!enableSingleWriter) {
+    boolean enableInfiniteLease = isInfiniteLeaseKey(relativePath);
+    if (!enableInfiniteLease) {
       return null;
     }
     AbfsLease lease = new AbfsLease(client, relativePath);

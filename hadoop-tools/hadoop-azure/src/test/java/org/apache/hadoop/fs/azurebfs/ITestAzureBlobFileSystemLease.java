@@ -30,15 +30,11 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INFINITE_LEASE_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SINGLE_WRITER_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_ALREADY_PRESENT;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_BROKEN;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_DID_NOT_MATCH;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_EXPIRED;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_ID_NOT_PRESENT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_NOT_PRESENT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_ID_SPECIFIED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THREADS;
@@ -50,7 +46,6 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_PARALLEL_ACC
 public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   private static final int TEST_EXECUTION_TIMEOUT = 30 * 1000;
   private static final int LONG_TEST_EXECUTION_TIMEOUT = 90 * 1000;
-  private static final int TEST_LEASE_DURATION = 15;
   private static final String TEST_FILE = "testfile";
   private final boolean isHNSEnabled;
 
@@ -61,16 +56,16 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }
 
-  private AzureBlobFileSystem getCustomFileSystem(Path singleWriterDirs, int numLeaseThreads) throws Exception {
+  private AzureBlobFileSystem getCustomFileSystem(Path infiniteLeaseDirs, int numLeaseThreads) throws Exception {
     Configuration conf = getRawConfiguration();
     conf.setBoolean(String.format("fs.%s.impl.disable.cache", getAbfsScheme()), true);
-    conf.set(FS_AZURE_SINGLE_WRITER_KEY, singleWriterDirs.toUri().getPath());
+    conf.set(FS_AZURE_INFINITE_LEASE_KEY, infiniteLeaseDirs.toUri().getPath());
     conf.setInt(FS_AZURE_LEASE_THREADS, numLeaseThreads);
     return getFileSystem(conf);
   }
 
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
-  public void testNoSingleWriter() throws IOException {
+  public void testNoInfiniteLease() throws IOException {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(testFilePath.getParent());
@@ -136,7 +131,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
           ERR_NO_LEASE_ID_SPECIFIED, () -> {
         try (FSDataOutputStream out2 = fs.create(testFilePath)) {
         }
-        return "Expected second create on single writer dir to fail";
+        return "Expected second create on infinite lease dir to fail";
       });
     }
     Assert.assertTrue("Store leases were not freed", fs.getAbfsStore().areLeasesFreed());
@@ -162,7 +157,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   }
 
   @Test(timeout = TEST_EXECUTION_TIMEOUT)
-  public void testTwoWritersCreateAppendNoSingleWriter() throws Exception {
+  public void testTwoWritersCreateAppendNoInfiniteLease() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getFileSystem();
     fs.mkdirs(testFilePath.getParent());
@@ -171,7 +166,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   }
 
   @Test(timeout = LONG_TEST_EXECUTION_TIMEOUT)
-  public void testTwoWritersCreateAppendWithSingleWriterEnabled() throws Exception {
+  public void testTwoWritersCreateAppendWithInfiniteLeaseEnabled() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());

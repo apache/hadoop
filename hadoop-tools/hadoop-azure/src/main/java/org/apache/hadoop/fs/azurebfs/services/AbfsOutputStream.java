@@ -118,7 +118,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
           final Statistics statistics,
           final String path,
           final long position,
-          AbfsOutputStreamContext abfsOutputStreamContext) throws AzureBlobFileSystemException {
+          AbfsOutputStreamContext abfsOutputStreamContext) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
