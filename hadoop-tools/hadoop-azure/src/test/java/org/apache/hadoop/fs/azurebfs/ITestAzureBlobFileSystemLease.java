@@ -298,45 +298,4 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
       return "Expected exception on new append after closed FS";
     });
   }
-
-  @Test(timeout = TEST_EXECUTION_TIMEOUT)
-  public void testFileSystemLeaseOps() throws Exception {
-    final Path testDir = path(methodName.getMethodName());
-    final AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(testDir);
-
-    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_ID_NOT_PRESENT, () -> {
-      fs.breakLease(testDir);
-      return "Expected exception on break lease when no lease is held";
-    });
-
-    String leaseId = fs.acquireLease(testDir, TEST_LEASE_DURATION);
-    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_ALREADY_PRESENT, () -> {
-      fs.acquireLease(testDir, TEST_LEASE_DURATION);
-      return "Expected exception on acquire lease when lease is already held";
-    });
-    fs.renewLease(testDir, leaseId);
-    fs.releaseLease(testDir, leaseId);
-    LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_LEASE_NOT_PRESENT :
-        ERR_LEASE_DID_NOT_MATCH, () -> {
-      fs.renewLease(testDir, leaseId);
-      return "Expected exception on renew lease after lease has been released";
-    });
-
-    String leaseId2 = fs.acquireLease(testDir, TEST_LEASE_DURATION);
-    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_DID_NOT_MATCH, () -> {
-      fs.renewLease(testDir, leaseId);
-      return "Expected exception on renew wrong lease ID";
-    });
-    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_DID_NOT_MATCH, () -> {
-      fs.releaseLease(testDir, leaseId);
-      return "Expected exception on release wrong lease ID";
-    });
-    fs.breakLease(testDir);
-    LambdaTestUtils.intercept(IOException.class, ERR_LEASE_BROKEN, () -> {
-      fs.renewLease(testDir, leaseId2);
-      return "Expected exception on renewing broken lease";
-    });
-    fs.releaseLease(testDir, leaseId2);
-  }
 }
