@@ -16,4 +16,11 @@
 # limitations under the License.
 #
 
-add_library(x_platform_utils_obj OBJECT utils.cc)
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+  set(SYSCALL_SRC syscall_windows.cc)
+else()
+  set(SYSCALL_SRC syscall_linux.cc)
+endif()
+
+add_library(x_platform_utils_obj OBJECT ${SYSCALL_SRC} utils.cc)
+add_library(x_platform_utils_obj_c_api OBJECT $<TARGET_OBJECTS:x_platform_utils_obj> c_api.cc)
