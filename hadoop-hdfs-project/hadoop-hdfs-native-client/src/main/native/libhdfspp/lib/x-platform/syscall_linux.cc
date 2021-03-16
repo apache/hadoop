@@ -16,26 +16,22 @@
  * limitations under the License.
  */
 
-#include "utils.h"
+#include <unistd.h>
 
-#include <filesystem>
-#include <string>
-#include <vector>
+#include <cstring>
 
-std::string XPlatform::Utils::Basename(const std::string& file_path) {
-  if (file_path.empty()) {
-    return ".";
-  }
+#include "syscall.h"
 
-  const std::filesystem::path path(file_path);
-  std::vector<std::string> parts;
-  for (const auto& part : std::filesystem::path(file_path)) {
-    parts.emplace_back(part.string());
-  }
+bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
+  return WriteToStdoutImpl(message.c_str());
+}
 
-  /* Handle the case of trailing slash */
-  if (parts.back().empty()) {
-    parts.pop_back();
-  }
-  return parts.back();
+int XPlatform::Syscall::WriteToStdout(const char* message) {
+  return WriteToStdoutImpl(message) ? 1 : 0;
+}
+
+bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
+  const auto message_len = strlen(message);
+  const auto result = write(1, message, message_len);
+  return result == static_cast<ssize_t>(message_len);
 }

@@ -16,26 +16,13 @@
  * limitations under the License.
  */
 
-#include "utils.h"
+#ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_H
+#define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_H
 
-#include <filesystem>
-#include <string>
-#include <vector>
+/**
+ * C APIs for accessing XPlatform
+ */
 
-std::string XPlatform::Utils::Basename(const std::string& file_path) {
-  if (file_path.empty()) {
-    return ".";
-  }
+int x_platform_syscall_write_to_stdout(const char* msg);
 
-  const std::filesystem::path path(file_path);
-  std::vector<std::string> parts;
-  for (const auto& part : std::filesystem::path(file_path)) {
-    parts.emplace_back(part.string());
-  }
-
-  /* Handle the case of trailing slash */
-  if (parts.back().empty()) {
-    parts.pop_back();
-  }
-  return parts.back();
-}
+#endif  // NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_H
