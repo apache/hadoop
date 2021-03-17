@@ -127,8 +127,8 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.mkdirs(testFilePath.getParent());
 
     try (FSDataOutputStream out = fs.create(testFilePath)) {
-      LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_PARALLEL_ACCESS_DETECTED :
-          ERR_NO_LEASE_ID_SPECIFIED, () -> {
+      LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_PARALLEL_ACCESS_DETECTED
+          : ERR_NO_LEASE_ID_SPECIFIED, () -> {
         try (FSDataOutputStream out2 = fs.create(testFilePath)) {
         }
         return "Expected second create on infinite lease dir to fail";
@@ -281,8 +281,8 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.close();
     Assert.assertTrue("Store leases were not freed", fs.getAbfsStore().areLeasesFreed());
 
-    LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_LEASE_NOT_PRESENT :
-        ERR_LEASE_EXPIRED, () -> {
+    LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_LEASE_NOT_PRESENT
+        : ERR_LEASE_EXPIRED, () -> {
       out.close();
       return "Expected exception on close after closed FS but got " + out;
     });
