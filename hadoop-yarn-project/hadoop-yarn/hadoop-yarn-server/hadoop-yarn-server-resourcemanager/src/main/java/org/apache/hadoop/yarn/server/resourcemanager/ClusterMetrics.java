@@ -34,6 +34,8 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.yarn.api.records.Resource;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 @InterfaceAudience.Private
 @Metrics(context="yarn")
@@ -56,13 +58,14 @@ public class ClusterMetrics {
   @Metric("Vcore Utilization") MutableGaugeLong utilizedVirtualCores;
   @Metric("Memory Capability") MutableGaugeLong capabilityMB;
   @Metric("Vcore Capability") MutableGaugeLong capabilityVirtualCores;
+  @Metric("GPU Capability") MutableGaugeLong capabilityGPUs;
 
   private static final MetricsInfo RECORD_INFO = info("ClusterMetrics",
   "Metrics for the Yarn Cluster");
   
   private static volatile ClusterMetrics INSTANCE = null;
   private static MetricsRegistry registry;
-  
+
   public static ClusterMetrics getMetrics() {
     if(!isInitialized.get()){
       synchronized (ClusterMetrics.class) {
@@ -206,10 +209,24 @@ public class ClusterMetrics {
     return capabilityVirtualCores.value();
   }
 
+  public long getCapabilityGPUs() {
+    if (capabilityGPUs == null) {
+      return 0;
+    }
+
+    return capabilityGPUs.value();
+  }
+
   public void incrCapability(Resource res) {
     if (res != null) {
       capabilityMB.incr(res.getMemorySize());
       capabilityVirtualCores.incr(res.getVirtualCores());
+      Integer gpuIndex = ResourceUtils.getResourceTypeIndex()
+          .get(ResourceInformation.GPU_URI);
+      if (gpuIndex != null) {
+        capabilityGPUs.incr(res.
+            getResourceValue(ResourceInformation.GPU_URI));
+      }
     }
   }
 
@@ -217,6 +234,12 @@ public class ClusterMetrics {
     if (res != null) {
       capabilityMB.decr(res.getMemorySize());
       capabilityVirtualCores.decr(res.getVirtualCores());
+      Integer gpuIndex = ResourceUtils.getResourceTypeIndex()
+          .get(ResourceInformation.GPU_URI);
+      if (gpuIndex != null) {
+        capabilityGPUs.decr(res.
+            getResourceValue(ResourceInformation.GPU_URI));
+      }
     }
   }
 
