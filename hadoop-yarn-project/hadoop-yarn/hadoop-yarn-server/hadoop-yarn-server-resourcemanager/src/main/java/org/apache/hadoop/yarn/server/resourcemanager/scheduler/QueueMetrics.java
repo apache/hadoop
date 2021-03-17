@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -102,12 +103,12 @@ public class QueueMetrics implements MetricsSource {
   }
 
   // put bigger capacity ahead
-  protected Map<Resource, Integer> containerAskToCount = new TreeMap<>(new Comparator<Resource>() {
+  protected Map<Resource, Integer> containerAskToCount = Collections.synchronizedMap(new TreeMap<>(new Comparator<Resource>() {
     @Override
     public int compare(Resource o1, Resource o2) {
       return o2.compareTo(o1);
     }
-  });
+  }));
 
   @Metric("App Attempt First Container Allocation Delay")
     MutableRate appAttemptFirstContainerAllocationDelay;
