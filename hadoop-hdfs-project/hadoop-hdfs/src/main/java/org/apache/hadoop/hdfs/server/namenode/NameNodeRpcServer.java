@@ -2599,7 +2599,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void startReconfiguration() throws IOException {
     checkNNStartup();
     String operationName = "startNamenodeReconfiguration";
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege(operationName, null);
     nn.startReconfigurationTask();
     namesystem.logAuditEvent(true, operationName, null);
   }
@@ -2609,7 +2609,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     checkNNStartup();
     String operationName = "getNamenodeReconfigurationStatus";
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege(operationName, null);
     ReconfigurationTaskStatus status = nn.getReconfigurationTaskStatus();
     namesystem.logAuditEvent(true, operationName, null);
     return status;
@@ -2619,7 +2619,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public List<String> listReconfigurableProperties() throws IOException {
     checkNNStartup();
     String operationName = "listNamenodeReconfigurableProperties";
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege(operationName, null);
     List<String> result = Lists.newArrayList(nn.getReconfigurableProperties());
     namesystem.logAuditEvent(true, operationName, null);
     return result;
@@ -2629,7 +2629,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public Long getNextSPSPath() throws IOException {
     checkNNStartup();
     String operationName = "getNextSPSPath";
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege(operationName, null);
     if (nn.isStandbyState()) {
       throw new StandbyException("Not supported by Standby Namenode.");
     }

@@ -103,7 +103,6 @@ public class RouterPermissionChecker extends FSPermissionChecker {
    * based on Datanode#checkSuperuserPrivilege().
    * @throws AccessControlException If the user is not authorized.
    */
-  @Override
   public void checkSuperuserPrivilege() throws  AccessControlException {
 
     // Try to get the ugi in the RPC call.

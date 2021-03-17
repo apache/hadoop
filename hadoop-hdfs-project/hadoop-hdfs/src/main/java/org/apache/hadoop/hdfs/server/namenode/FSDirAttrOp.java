@@ -82,15 +82,24 @@ public class FSDirAttrOp {
     fsd.writeLock();
     try {
       iip = fsd.resolvePath(pc, src, DirOp.WRITE);
+      // Only the owner or super user can change the group or owner
       fsd.checkOwner(pc, iip);
-      if (!pc.isSuperUser()) {
-        if (username != null && !pc.getUser().equals(username)) {
-          throw new AccessControlException("User " + pc.getUser()
-              + " is not a super user (non-super user cannot change owner).");
-        }
-        if (group != null && !pc.isMemberOfGroup(group)) {
-          throw new AccessControlException(
-              "User " + pc.getUser() + " does not belong to " + group);
+      // Only a super user can change ownership to a different user
+      // or group to a different group that the user doesn't belong to
+      if ((username != null && !pc.getUser().equals(username)) ||
+          (group != null && !pc.isMemberOfGroup(group))) {
+        try {
+          // check if the user is superuser
+          pc.checkSuperuserPrivilege(iip.getPath());
+        } catch (AccessControlException e) {
+          if (username != null && !pc.getUser().equals(username)) {
+            throw new AccessControlException("User " + pc.getUser()
+                + " is not a super user (non-super user cannot change owner).");
+          }
+          if (group != null && !pc.isMemberOfGroup(group)) {
+            throw new AccessControlException(
+                "User " + pc.getUser() + " does not belong to " + group);
+          }
         }
       }
       changed = unprotectedSetOwner(fsd, iip, username, group);
@@ -238,13 +247,20 @@ public class FSDirAttrOp {
     fsd.writeLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
-      if (fsd.isPermissionEnabled() && !pc.isSuperUser() && allowOwner) {
-        INodeDirectory parentDir= iip.getLastINode().getParent();
-        if (parentDir == null ||
-            !parentDir.getUserName().equals(pc.getUser())) {
-          throw new AccessControlException(
-              "Access denied for user " + pc.getUser() +
-              ". Superuser or owner of parent folder privilege is required");
+      if (fsd.isPermissionEnabled()) {
+        if (allowOwner && !pc.isSuperUser()) {
+          try {
+            fsd.checkOwner(pc, iip.getParentINodesInPath());
+          } catch(AccessControlException ace) {
+            throw new AccessControlException(
+                "Access denied for user " + pc.getUser() +
+                    ". Superuser or owner of parent folder privilege" +
+                    " is required");
+          }
+        } else {
+          // At this point, it must be a super user.
+          // Call the external enforcer for audit.
+          pc.checkSuperuserPrivilege(iip.getPath());
         }
       }
       INodeDirectory changed =

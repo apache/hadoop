@@ -1907,7 +1907,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void metaSave(String filename) throws IOException {
     String operationName = "metaSave";
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.READ);
     readLock();
     try {
@@ -1954,7 +1954,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
     INode.checkAbsolutePath(path);
     final String operationName = "listOpenFiles";
-    checkSuperuserPrivilege();
+    checkSuperuserPrivilege(operationName, path);
     checkOperation(OperationCategory.READ);
     BatchedListEntries<OpenFileEntry> batchedListEntries;
     String normalizedPath = new Path(path).toString(); // normalize path.
@@ -2415,7 +2415,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     if (checkSuperUser && isStoragePolicySuperuserOnly) {
       checkSuperuserPrivilege(
-          CaseUtils.toCamelCase(operationNameReadable, false));
+          CaseUtils.toCamelCase(operationNameReadable, false), null);
     }
   }
 
@@ -3582,7 +3582,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     FSPermissionChecker.setOperationType(operationName);
     try {
       if(!allowOwnerSetQuota) {
-        checkSuperuserPrivilege(pc);
+        checkSuperuserPrivilege(operationName, src);
       }
       writeLock();
       try {
@@ -4860,7 +4860,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     String operationName = "datanodeReport";
     DatanodeInfo[] arr;
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.UNCHECKED);
     readLock();
     try {
@@ -4884,7 +4884,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       ) throws IOException {
     String operationName = "getDatanodeStorageReport";
     DatanodeStorageReport[] reports;
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.UNCHECKED);
     readLock();
     try {
@@ -4907,7 +4907,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     String operationName = "saveNamespace";
     checkOperation(OperationCategory.UNCHECKED);
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
 
     boolean saved = false;
     cpLock();  // Block if a checkpointing is in progress on standby.
@@ -4940,7 +4940,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   boolean restoreFailedStorage(String arg) throws IOException {
     String operationName = getFailedStorageCommand(arg);
     boolean val = false;
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.UNCHECKED);
     cpLock();  // Block if a checkpointing is in progress on standby.
     writeLock();
@@ -4968,7 +4968,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     
   void finalizeUpgrade() throws IOException {
     String operationName = "finalizeUpgrade";
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.UNCHECKED);
     cpLock();  // Block if a checkpointing is in progress on standby.
     writeLock();
@@ -4985,7 +4985,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void refreshNodes() throws IOException {
     String operationName = "refreshNodes";
     checkOperation(OperationCategory.UNCHECKED);
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     getBlockManager().getDatanodeManager().refreshNodes(new HdfsConfiguration());
     logAuditEvent(true, operationName, null);
   }
@@ -4993,7 +4993,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void setBalancerBandwidth(long bandwidth) throws IOException {
     String operationName = "setBalancerBandwidth";
     checkOperation(OperationCategory.WRITE);
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
     logAuditEvent(true, operationName, null);
   }
@@ -5002,7 +5002,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String operationName = action.toString().toLowerCase();
     boolean error = false;
     if (action != SafeModeAction.SAFEMODE_GET) {
-      checkSuperuserPrivilege(operationName);
+      checkSuperuserPrivilege(operationName, null);
       switch(action) {
       case SAFEMODE_LEAVE: // leave safe mode
         leaveSafeMode(false);
@@ -5158,7 +5158,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   CheckpointSignature rollEditLog() throws IOException {
     String operationName = "rollEditLog";
     CheckpointSignature result = null;
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.JOURNAL);
     writeLock();
     try {
@@ -5225,14 +5225,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void checkSuperuserPrivilege() throws AccessControlException {
     if (isPermissionEnabled) {
       FSPermissionChecker pc = getPermissionChecker();
-      pc.checkSuperuserPrivilege();
+      pc.checkSuperuserPrivilege(null);
     }
   }
 
-  void checkSuperuserPrivilege(FSPermissionChecker pc)
-      throws AccessControlException {
+  void checkSuperuserPrivilege(String path) throws AccessControlException {
     if (isPermissionEnabled) {
-      pc.checkSuperuserPrivilege();
+      FSPermissionChecker pc = getPermissionChecker();
+      pc.checkSuperuserPrivilege(path);
     }
   }
 
@@ -6011,7 +6011,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   Collection<CorruptFileBlockInfo> listCorruptFileBlocks(String path,
   String[] cookieTab) throws IOException {
-    checkSuperuserPrivilege();
+    final String operationName = "listCorruptFileBlocks";
+    checkSuperuserPrivilege(operationName, path);
     checkOperation(OperationCategory.READ);
 
     int count = 0;
@@ -6939,7 +6940,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void allowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final String operationName = "allowSnapshot";
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, path);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6956,7 +6957,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void disallowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final String operationName = "disallowSnapshot";
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, path);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -7301,7 +7302,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   RollingUpgradeInfo queryRollingUpgrade() throws IOException {
     final String operationName = "queryRollingUpgrade";
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.READ);
     readLock();
     try {
@@ -7321,7 +7322,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   RollingUpgradeInfo startRollingUpgrade() throws IOException {
     final String operationName = "startRollingUpgrade";
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
@@ -7512,7 +7513,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   RollingUpgradeInfo finalizeRollingUpgrade() throws IOException {
     final String operationName = "finalizeRollingUpgrade";
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
@@ -7667,7 +7668,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolInfoStr = null;
     try {
-      checkSuperuserPrivilege();
+      checkSuperuserPrivilege(operationName, null);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7694,7 +7695,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String poolNameStr = "{poolName: " +
         (req == null ? null : req.getPoolName()) + "}";
     try {
-      checkSuperuserPrivilege();
+      checkSuperuserPrivilege(operationName, null);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7721,7 +7722,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolNameStr = "{poolName: " + cachePoolName + "}";
     try {
-      checkSuperuserPrivilege();
+      checkSuperuserPrivilege(operationName, null);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7926,8 +7927,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Metadata metadata = FSDirEncryptionZoneOp.ensureKeyIsInitialized(dir,
           keyName, src);
       final FSPermissionChecker pc = getPermissionChecker();
-      FSPermissionChecker.setOperationType(operationName);
-      checkSuperuserPrivilege(pc);
+      checkSuperuserPrivilege(operationName, src);
       checkOperation(OperationCategory.WRITE);
       writeLock();
       try {
@@ -7988,9 +7988,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "listEncryptionZones";
     boolean success = false;
     checkOperation(OperationCategory.READ);
-    final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(operationName);
-    checkSuperuserPrivilege(pc);
+    checkSuperuserPrivilege(operationName, null);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -8006,12 +8004,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   void reencryptEncryptionZone(final String zone, final ReencryptAction action,
       final boolean logRetryCache) throws IOException {
+    final String operationName = "reencryptEncryptionZone";
     boolean success = false;
     try {
       Preconditions.checkNotNull(zone, "zone is null.");
       checkOperation(OperationCategory.WRITE);
       final FSPermissionChecker pc = dir.getPermissionChecker();
-      checkSuperuserPrivilege(pc);
+      checkSuperuserPrivilege(operationName, zone);
       checkNameNodeSafeMode("NameNode in safemode, cannot " + action
           + " re-encryption on zone " + zone);
       reencryptEncryptionZoneInt(pc, zone, action, logRetryCache);
@@ -8026,9 +8025,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "listReencryptionStatus";
     boolean success = false;
     checkOperation(OperationCategory.READ);
-    final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(operationName);
-    checkSuperuserPrivilege(pc);
+    checkSuperuserPrivilege(operationName, null);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -8309,7 +8306,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public ECTopologyVerifierResult getECTopologyResultForPolicies(
       String[] policyNames) throws IOException {
     String operationName = "getECTopologyResultForPolicies";
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, null);
     checkOperation(OperationCategory.UNCHECKED);
     ECTopologyVerifierResult result;
     readLock();
@@ -8871,12 +8868,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             Arrays.asList(enabledEcPolicies));
   }
 
-  // This method logs operatoinName without super user privilege.
+  // This method logs operationName without super user privilege.
   // It should be called without holding FSN lock.
-  void checkSuperuserPrivilege(String operationName)
+  void checkSuperuserPrivilege(String operationName, String path)
       throws IOException {
     try {
-      checkSuperuserPrivilege();
+      FSPermissionChecker.setOperationType(operationName);
+      checkSuperuserPrivilege(path);
     } catch (AccessControlException ace) {
       logAuditEvent(false, operationName, null);
       throw ace;

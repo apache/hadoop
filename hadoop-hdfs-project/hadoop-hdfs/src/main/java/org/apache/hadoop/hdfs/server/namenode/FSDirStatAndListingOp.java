@@ -105,6 +105,7 @@ class FSDirStatAndListingOp {
       // superuser to receive null instead.
       try {
         iip = fsd.resolvePath(pc, srcArg, dirOp);
+        pc.checkSuperuserPrivilege(iip.getPath());
       } catch (AccessControlException ace) {
         return null;
       }
