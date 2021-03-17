@@ -70,8 +70,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
-import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.Copy;
@@ -92,6 +90,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -112,6 +111,7 @@ import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
+import org.apache.hadoop.fs.s3a.impl.GetContentSummaryOperation;
 import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
@@ -3282,7 +3282,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Callbacks from the {@link MkdirOperation}.
    */
-  private class MkdirOperationCallbacks implements
+  protected class MkdirOperationCallbacks implements
       MkdirOperation.MkdirCallbacks {
 
     @Override
@@ -3295,6 +3295,53 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public void createFakeDirectory(final String key)
         throws IOException {
       S3AFileSystem.this.createEmptyObject(key);
+    }
+  }
+
+  /**
+   * This is a very slow operation against object storage.
+   * Execute it as a single span with whatever optimizations
+   * have been implemented.
+   * {@inheritDoc}
+   */
+  @Retries.RetryTranslated
+  @Override
+  public ContentSummary getContentSummary(final Path f) throws IOException {
+    final Path path = qualify(f);
+    return trackDurationAndSpan(
+        INVOCATION_GET_CONTENT_SUMMARY, path,
+        new GetContentSummaryOperation(
+            createStoreContext(),
+            path,
+            createGetContentSummaryCallbacks()));
+  }
+
+  /**
+   * Override point: create the callbacks for getContentSummary.
+   * This does not create a new span; caller must be in one.
+   * @return an implementation of the GetContentSummaryCallbacks
+   */
+  @VisibleForTesting
+  public GetContentSummaryCallbacks createGetContentSummaryCallbacks() {
+    return new GetContentSummaryCallbacks();
+  }
+
+  /**
+   * Callbacks from the {@link GetContentSummaryOperation}.
+   */
+  protected class GetContentSummaryCallbacks implements
+      GetContentSummaryOperation.GetContentSummaryCallbacks {
+
+    @Override
+    public S3AFileStatus probePathStatus(final Path path,
+        final Set<StatusProbeEnum> probes) throws IOException {
+      return S3AFileSystem.this.innerGetFileStatus(path, false, probes);
+    }
+
+    @Override
+    public RemoteIterator<S3AFileStatus> listStatusIterator(final Path path)
+        throws IOException {
+      return S3AFileSystem.this.innerListStatus(path);
     }
   }
 

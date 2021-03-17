@@ -113,6 +113,10 @@ public enum Statistic {
       StoreStatisticNames.OP_EXISTS,
       "Calls of exists()",
       TYPE_DURATION),
+  INVOCATION_GET_CONTENT_SUMMARY(
+      StoreStatisticNames.OP_GET_CONTENT_SUMMARY,
+      "Calls of getContentSummary()",
+      TYPE_DURATION),
   INVOCATION_GET_DELEGATION_TOKEN(
       StoreStatisticNames.OP_GET_DELEGATION_TOKEN,
       "Calls of getDelegationToken()",

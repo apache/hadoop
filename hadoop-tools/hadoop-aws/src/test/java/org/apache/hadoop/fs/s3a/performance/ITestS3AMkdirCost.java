@@ -40,7 +40,7 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILESTATUS_FILE
 
 /**
  * Use metrics to assert about the cost of mkdirs.
- * Parameterized on guarded vs raw. and directory marker keep vs delete
+ * Parameterized directory marker keep vs delete
  */
 @RunWith(Parameterized.class)
 public class ITestS3AMkdirCost extends AbstractS3ACostTest {
@@ -62,10 +62,6 @@ public class ITestS3AMkdirCost extends AbstractS3ACostTest {
   public ITestS3AMkdirCost(final String name,
       final boolean keepMarkers) {
     super(false, true, false);
-  }
-
-  protected boolean shouldCreateSpanInSetup() {
-    return false;
   }
 
   /**

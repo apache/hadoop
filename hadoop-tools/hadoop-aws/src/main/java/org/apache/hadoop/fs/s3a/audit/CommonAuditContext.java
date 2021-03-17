@@ -73,7 +73,7 @@ public final class CommonAuditContext {
    * there are no problems.
    * Supplier operations must themselves be threadsafe.
    */
-  private final Map<String, Supplier<String>> map = new ConcurrentHashMap<>(1);
+  private final Map<String, Supplier<String>> evaluatedOperations = new ConcurrentHashMap<>(1);
 
   /**
    * Put a context entry.
@@ -82,7 +82,7 @@ public final class CommonAuditContext {
    * @return old value or null
    */
   public Supplier<String> put(String key, String value) {
-    return map.put(key, () -> value);
+    return evaluatedOperations.put(key, () -> value);
   }
 
   /**
@@ -90,7 +90,7 @@ public final class CommonAuditContext {
    * @param key key
    */
   public void remove(String key) {
-    map.remove(key);
+    evaluatedOperations.remove(key);
   }
 
   /**
@@ -99,7 +99,7 @@ public final class CommonAuditContext {
    * @return value or null
    */
   public String get(String key) {
-    return map.get(key).get();
+    return evaluatedOperations.get(key).get();
   }
 
   /**
@@ -108,7 +108,7 @@ public final class CommonAuditContext {
    * @return true if it is in the context.
    */
   public boolean containsKey(String key) {
-    return map.containsKey(key);
+    return evaluatedOperations.containsKey(key);
   }
 
   /**
@@ -121,6 +121,12 @@ public final class CommonAuditContext {
       ThreadLocal.withInitial(() -> createInstance());
 
   /**
+   * ThreadId.
+   */
+  private static final ThreadLocal<Long> threadId =
+      ThreadLocal.withInitial(() -> nextThreadId());
+
+  /**
    * Demand invoked to create an instance for this thread.
    * Sets a new thread ID for it.
    * @return an instance.
@@ -128,7 +134,7 @@ public final class CommonAuditContext {
   private static CommonAuditContext createInstance() {
     CommonAuditContext context = new CommonAuditContext();
     context.put(PROCESS, PROCESS_ID);
-    context.put(THREAD, Long.toHexString(nextThreadId()));
+    context.put(THREAD, currentThreadID());
     return context;
   }
 
@@ -144,4 +150,20 @@ public final class CommonAuditContext {
     return THREAD_ID_COUNTER.incrementAndGet();
   }
 
+  /**
+   * A thread ID which is unique for this process and shared across all
+   * S3A clients on the same thread, even those using different FS instances.
+   * @return a thread ID for reporting.
+   */
+  public static String currentThreadID() {
+    return Long.toHexString(threadId.get());
+  }
+
+  /**
+   * Get the evaluated operations. This is the shared map.
+   * @return the operations map.
+   */
+  public Map<String, Supplier<String>> getEvaluatedOperations() {
+    return evaluatedOperations;
+  }
 }

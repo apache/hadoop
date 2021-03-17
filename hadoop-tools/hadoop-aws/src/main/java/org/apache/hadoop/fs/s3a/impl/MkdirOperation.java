@@ -45,7 +45,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      RenameOperation.class);
+      MkdirOperation.class);
 
   private final Path dir;
 

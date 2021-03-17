@@ -100,8 +100,6 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    */
   private Statistic deleteMarkerStatistic;
 
-  private AuditSpan auditSpan;
-
   public AbstractS3ACostTest(
       final boolean s3guard,
       final boolean keepMarkers,
@@ -200,27 +198,6 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
         : OBJECT_DELETE_REQUEST;
 
     setSpanSource(fs);
-    // there's lots of internal calls going on; to avoid problems
-    // initiate a span for each test case.
-    if (shouldCreateSpanInSetup()) {
-      auditSpan = span();
-    }
-  }
-
-  @Override
-  public void teardown() throws Exception {
-    if (auditSpan != null) {
-      auditSpan.close();
-    }
-    super.teardown();
-  }
-
-  /**
-   * Should this test suite create a span during setup?
-   * @return true for a span to be created in setup and closed in teardown?
-   */
-  protected boolean shouldCreateSpanInSetup() {
-    return false;
   }
 
   public void assumeUnguarded() {

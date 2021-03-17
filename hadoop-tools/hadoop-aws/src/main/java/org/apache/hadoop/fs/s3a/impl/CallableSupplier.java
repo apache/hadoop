@@ -42,7 +42,7 @@ import static org.apache.hadoop.fs.impl.FutureIOSupport.raiseInnerCause;
  * raised by the callable and wrapping them as appropriate.
  * @param <T> return type.
  */
-public final class CallableSupplier<T> implements Supplier {
+public final class CallableSupplier<T> implements Supplier<T> {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(CallableSupplier.class);

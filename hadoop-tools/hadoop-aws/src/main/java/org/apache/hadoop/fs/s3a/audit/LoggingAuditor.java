@@ -216,6 +216,7 @@ public final class LoggingAuditor
           .withPath1(path1)
           .withPath2(path2)
           .withAttributes(attributes)
+          .withEvaluated(context.getEvaluatedOperations())
           .build();
       this.description = entry.getReferrerHeader();
     }

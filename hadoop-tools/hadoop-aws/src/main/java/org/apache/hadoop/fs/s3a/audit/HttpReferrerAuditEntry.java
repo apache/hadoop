@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -64,18 +65,17 @@ public final class HttpReferrerAuditEntry {
   private final Map<String, String> parameters;
 
   /**
+   * Parameters dynamically evaluated on the thread just before
+   * the request is made.
+   */
+  private Map<String, Supplier<String>> evaluated;
+
+  /**
    * Instantiate.
    *
    * Context and operationId are expected to be well formed
    * numeric/hex strings, at least adequate to be
    * used as individual path elements in a URL.
-   * @param context context as string
-   * @param operationId operation ID as a string
-   * @param operationName operation name
-   * @param path1 optional first path
-   * @param path2 optional second path
-   * @param attributes map of attributes to add as query parameters.
-   * @param attributes2 second map of attributes to add as query parameters.
    */
   private HttpReferrerAuditEntry(
       final Builder builder) {
@@ -84,13 +84,14 @@ public final class HttpReferrerAuditEntry {
     this.operationId = requireNonNull(builder.operationId);
     this.path1 = builder.path1;
     this.path2 = builder.path2;
+
     // clone params
     parameters = new HashMap<>();
     add(parameters, builder.attributes);
-    add(parameters, builder.attributes2);
     addParameter(parameters, OP, operationName);
     addParameter(parameters, PATH, path1);
     addParameter(parameters, PATH2, path2);
+    evaluated = builder.evaluated;
     // build the referrer up. so as to find/report problems early
     header = buildHttpReferrerString();
   }
@@ -102,24 +103,32 @@ public final class HttpReferrerAuditEntry {
    * @return a referrer string or ""
    */
   private String buildHttpReferrerString() {
-    final String queries;
+    String queries;
     // queries as ? params.
     queries = parameters.entrySet().stream()
         .map(e -> e.getKey() + "=" + e.getValue())
         .collect(Collectors.joining("&"));
-    String h;
+    // add any params which are dynamically evaluated
+    if (evaluated != null) {
+      queries = queries +
+          evaluated.entrySet().stream()
+              .map(e -> e.getKey() + "=" + e.getValue().get())
+              .collect(Collectors.joining("&"));
+    }
+
+    String header;
     try {
       final URI uri = new URI("https", AUTHORITY,
           String.format(Locale.ENGLISH, PATH_FORMAT,
               context, operationId),
           queries,
           null);
-      h = uri.toASCIIString();
+      header = uri.toASCIIString();
     } catch (URISyntaxException e) {
       warnOfUrlCreation.warn("Failed to build URI for {}/{}", e);
-      h = "";
+      header = "";
     }
-    return h;
+    return header;
   }
 
   /**
@@ -249,15 +258,19 @@ public final class HttpReferrerAuditEntry {
     private  String path2;
 
     private Map<String, String> attributes;
-    private Map<String, String> attributes2;
 
-    private int i;
+    /**
+     * Parameters dynamically evaluated on the thread just before
+     * the request is made.
+     */
+    private Map<String, Supplier<String>> evaluated;
+
     private Builder() {
     }
 
     /**
      * Build.
-     * @return
+     * @return an audit entry
      */
     public HttpReferrerAuditEntry build() {
       return new HttpReferrerAuditEntry(this);
@@ -324,12 +337,12 @@ public final class HttpReferrerAuditEntry {
     }
 
     /**
-     * Set map 2 of attributes (span attributes)
+     * Set evaluated methods.
      * @param value new value
      * @return the builder
      */
-    public Builder withAttributes2(final Map<String, String> value) {
-      attributes2 = value;
+    public Builder withEvaluated(final Map<String, Supplier<String>> value) {
+      evaluated = value;
       return this;
     }
   }
