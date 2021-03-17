@@ -22,5 +22,5 @@ else()
   set(SYSCALL_SRC syscall_linux.cc)
 endif()
 
-add_library(x_platform_utils_obj OBJECT ${SYSCALL_SRC} utils.cc)
-add_library(x_platform_utils_obj_c_api OBJECT $<TARGET_OBJECTS:x_platform_utils_obj> c_api.cc)
+add_library(x_platform_obj OBJECT ${SYSCALL_SRC} utils.cc)
+add_library(x_platform_obj_c_api OBJECT $<TARGET_OBJECTS:x_platform_obj> c-api/syscall.cc)

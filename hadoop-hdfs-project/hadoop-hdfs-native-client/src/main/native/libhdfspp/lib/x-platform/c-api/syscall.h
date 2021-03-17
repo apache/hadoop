@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_H
-#define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_H
+#ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_SYSCALL_H
+#define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_SYSCALL_H
 
 /**
  * C APIs for accessing XPlatform
@@ -25,4 +25,4 @@
 
 int x_platform_syscall_write_to_stdout(const char* msg);
 
-#endif  // NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_H
+#endif  // NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_SYSCALL_H
