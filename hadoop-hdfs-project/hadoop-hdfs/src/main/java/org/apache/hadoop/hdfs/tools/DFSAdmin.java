@@ -1001,14 +1001,14 @@ public class DFSAdmin extends FsShell {
 
   private void printOpenFiles(RemoteIterator<OpenFileEntry> openFilesIterator)
       throws IOException {
-    System.out.println(String.format("%-20s\t%-20s\t%s", "Client Host",
-          "Client Name", "Open File Path"));
+    System.out.printf("%-20s\t%-20s\t%s%n", "Client Host",
+        "Client Name", "Open File Path");
     while (openFilesIterator.hasNext()) {
       OpenFileEntry openFileEntry = openFilesIterator.next();
-      System.out.println(String.format("%-20s\t%-20s\t%20s",
+      System.out.printf("%-20s\t%-20s\t%20s%n",
           openFileEntry.getClientMachine(),
           openFileEntry.getClientName(),
-          openFileEntry.getFilePath()));
+          openFileEntry.getFilePath());
     }
   }
 
