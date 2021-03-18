@@ -416,7 +416,7 @@ public abstract class INodeAttributeProvider {
      * @throws AccessControlException - if user is not a super user or part
      * of the super user group.
      */
-    default void checkSuperUserPermissionWithContext (
+    default void checkSuperUserPermissionWithContext(
         AuthorizationContext authzContext)
         throws AccessControlException {
       UserGroupInformation callerUgi = authzContext.getCallerUgi();

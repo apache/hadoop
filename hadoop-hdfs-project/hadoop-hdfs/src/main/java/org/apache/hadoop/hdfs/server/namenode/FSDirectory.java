@@ -721,12 +721,12 @@ public class FSDirectory implements Closeable {
     INodesInPath iip = INodesInPath.resolve(rootDir, components, isRaw);
     if (isPermissionEnabled && pc != null && isRaw) {
       switch(dirOp) {
-        case READ_LINK:
-        case READ:
-          break;
-        default:
-          pc.checkSuperuserPrivilege(iip.getPath());
-          break;
+      case READ_LINK:
+      case READ:
+        break;
+      default:
+        pc.checkSuperuserPrivilege(iip.getPath());
+        break;
       }
     }
     // verify all ancestors are dirs and traversable.  note that only

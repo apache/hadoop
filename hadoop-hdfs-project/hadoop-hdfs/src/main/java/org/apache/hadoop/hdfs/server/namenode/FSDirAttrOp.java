@@ -253,7 +253,7 @@ public class FSDirAttrOp {
         } catch(AccessControlException ace) {
           throw new AccessControlException(
               "Access denied for user " + pc.getUser() +
-                  ". Superuser or owner of parent folder privilege is required");
+              ". Superuser or owner of parent folder privilege is required");
         }
       }
       INodeDirectory changed =
