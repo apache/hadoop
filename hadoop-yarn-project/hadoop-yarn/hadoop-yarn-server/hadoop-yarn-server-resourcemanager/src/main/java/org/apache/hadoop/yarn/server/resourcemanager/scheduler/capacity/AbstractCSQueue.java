@@ -114,7 +114,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   private final boolean fullPathQueueNamingPolicy = false;
 
-  // Track capacities like used-capcity/abs-used-capacity/capacity/abs-capacity,
+  // Track capacities like
+  // used-capacity/abs-used-capacity/capacity/abs-capacity,
   // etc.
   QueueCapacities queueCapacities;
 
@@ -962,7 +963,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     if (defaultAppLifetime < 0) {
       // If default lifetime was not set at this level but was set somewhere in
       // the parent's hierarchy, set default lifetime to parent queue's default
-      // only if parent queue's lifetime is less than current queueu's max
+      // only if parent queue's lifetime is less than current queue's max
       // lifetime. Otherwise, use current queue's max lifetime value for its
       // default lifetime.
       if (defaultAppLifetimeWasSpecifiedInConfig) {
@@ -1012,7 +1013,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     // At this point, the master preemption switch is enabled down to this
     // queue's level. Determine whether or not intra-queue preemption is enabled
-    // down to this queu's level and return that value.
+    // down to this queue's level and return that value.
     return configuration.getIntraQueuePreemptionDisabled(q.getQueuePath(),
         parentQ.getIntraQueuePreemptionDisabledInHierarchy());
   }
@@ -1065,7 +1066,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       // Doing this because: for non-exclusive allocation, we make sure there's
       // idle resource on the partition, to avoid wastage, such resource will be
       // leveraged as much as we can, and preemption policy will reclaim it back
-      // when partitoned-resource-request comes back.
+      // when partitioned-resource-request comes back.
       Resource currentLimitResource = getCurrentLimitResource(nodePartition,
           clusterResource, currentResourceLimits, schedulingMode);
 
@@ -1115,7 +1116,7 @@ public abstract class AbstractCSQueue implements CSQueue {
         // Can not assign to this queue
         if (LOG.isDebugEnabled()) {
           LOG.debug("Failed to assign to queue: " + getQueuePath()
-              + " nodePatrition: " + nodePartition
+              + " nodePartition: " + nodePartition
               + ", usedResources: " + queueUsage.getUsed(nodePartition)
               + ", clusterResources: " + clusterResource
               + ", reservedResources: " + resourceCouldBeUnreserved
