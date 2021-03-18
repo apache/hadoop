@@ -157,18 +157,21 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   public static final class CustomSigner implements Signer {
 
 
-    private static AtomicInteger instantiationCount = new AtomicInteger(0);
-    private static AtomicInteger invocationCount = new AtomicInteger(0);
+    private static final AtomicInteger INSTANTIATION_COUNT =
+        new AtomicInteger(0);
+    private static final AtomicInteger INVOCATION_COUNT =
+        new AtomicInteger(0);
+
     private static StoreValue lastStoreValue;
 
     public CustomSigner() {
-      int c = instantiationCount.incrementAndGet();
+      int c = INSTANTIATION_COUNT.incrementAndGet();
       LOG.info("Creating Signer #{}", c);
     }
 
     @Override
     public void sign(SignableRequest<?> request, AWSCredentials credentials) {
-      int c = invocationCount.incrementAndGet();
+      int c = INVOCATION_COUNT.incrementAndGet();
       LOG.info("Signing request #{}", c);
 
       String host = request.getEndpoint().getHost();
@@ -186,11 +189,11 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     }
 
     public static int getInstantiationCount() {
-      return instantiationCount.get();
+      return INSTANTIATION_COUNT.get();
     }
 
     public static int getInvocationCount() {
-      return invocationCount.get();
+      return INVOCATION_COUNT.get();
     }
   }
 

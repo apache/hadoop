@@ -47,7 +47,7 @@ public class ITestAWSStatisticCollection extends AbstractS3ATestBase {
   @Test
   public void testLandsatStatistics() throws Throwable {
     final Configuration conf = getConfiguration();
-    // skips the tests if the lansdat path isn't the default.
+    // skips the tests if the landsat path isn't the default.
     Path path = getLandsatCSVPath(conf);
     conf.set(ENDPOINT, DEFAULT_ENDPOINT);
     conf.unset("fs.s3a.bucket.landsat-pds.endpoint");
@@ -64,11 +64,11 @@ public class ITestAWSStatisticCollection extends AbstractS3ATestBase {
   @Test
   public void testCommonCrawlStatistics() throws Throwable {
     final Configuration conf = getConfiguration();
-    // skips the tests if the lansdat path isn't the default.
-    Path landsatPath = getLandsatCSVPath(conf);
+    // skips the tests if the landsat path isn't the default.
+    getLandsatCSVPath(conf);
 
     Path path = COMMON_CRAWL_PATH;
-    conf.set(ENDPOINT, "");
+    conf.set(ENDPOINT, DEFAULT_ENDPOINT);
 
     try (S3AFileSystem fs = (S3AFileSystem) path.getFileSystem(conf)) {
       fs.getObjectMetadata(path);
