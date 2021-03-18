@@ -341,7 +341,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   }
 
   /**
-   * Sleep briefly
+   * Sleep briefly.
    * @param eachFileProcessingTime time to sleep.
    */
   private void sleep(final int eachFileProcessingTime) {

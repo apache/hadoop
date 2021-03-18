@@ -66,11 +66,21 @@ public final class AuditConstants {
   public static final String REJECT_OUT_OF_SPAN_OPERATIONS
       = "fs.s3a.audit.reject.out.of.span.operations";
 
+  /**
+   * The host from where requests originate.
+   * example.org is used as the IETF require that it never resolves.
+   * This isn't always met by some mobile/consumer DNS services, but
+   * we don't worry about that. What is important is that
+   * a scan for "example.org" in the logs will exclusively find
+   * entries from this referrer.
+   */
+  public static final String REFERRER_ORIGIN_HOST = "h1.example.org";
+
+  /**
+   * Path to build.
+   */
   public static final String PATH_FORMAT
       = "/audit/%1$s/s/%2$s/";
-
-  public static final String REFERRER_FORMAT
-      = "http://hadoop.apache.org/" + PATH_FORMAT;
 
   /**
    * JobID query header: {@value}.
@@ -81,6 +91,13 @@ public final class AuditConstants {
    * Principal query header: {@value}.
    */
   public static final String PRINCIPAL = "pr";
+
+  /**
+   * Principal query header: {@value}.
+   */
+  public static final String FILESYSTEM_ID = "fs";
+
+  public static final String PROCESS_ID = "ps";
 
   public static final String OP = "op";
 
@@ -104,5 +121,12 @@ public final class AuditConstants {
    * Span name used during initialization.
    */
   public static final String INITIALIZE_SPAN = "initialize";
+
+  /**
+   * Operation name for any operation outside of an explicit
+   * span.
+   */
+  public static final String OUTSIDE_SPAN =
+      "outside-span";
 
 }

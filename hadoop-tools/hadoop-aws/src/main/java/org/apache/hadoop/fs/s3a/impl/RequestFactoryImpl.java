@@ -238,7 +238,6 @@ public class RequestFactoryImpl implements RequestFactory {
     }
   }
 
-
   /**
    * Create a new object metadata instance.
    * Any standard metadata headers are added here, for example:
@@ -576,7 +575,7 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     private CannedAccessControlList cannedACL = null;
 
-    /** Requester Pays. TODO: Wire up. */
+    /** Requester Pays flag. */
     private boolean requesterPays = false;
 
     /**
@@ -592,49 +591,87 @@ public class RequestFactoryImpl implements RequestFactory {
     private RequestFactoryBuilder() {
     }
 
+    /**
+     * Build the request factory.
+     * @return the factory
+     */
     public RequestFactory build() {
       return new RequestFactoryImpl(bucket, encryptionSecrets, cannedACL,
           multipartPartCountLimit, requesterPays, requestPreparer);
     }
 
-    public RequestFactoryBuilder withBucket(final String _bucket) {
-      bucket = _bucket;
+    /**
+     * Target bucket.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withBucket(final String value) {
+      bucket = value;
       return this;
     }
 
+    /**
+     * Encryption secrets.
+     * @param value new value
+     * @return the builder
+     */
     public RequestFactoryBuilder withEncryptionSecrets(
-        final EncryptionSecrets _encryptionSecrets) {
-      encryptionSecrets = _encryptionSecrets;
+        final EncryptionSecrets value) {
+      encryptionSecrets = value;
       return this;
     }
 
+    /**
+     * ACL For new objects.
+     * @param value new value
+     * @return the builder
+     */
     public RequestFactoryBuilder withCannedACL(
-        final CannedAccessControlList _cannedACL) {
-      cannedACL = _cannedACL;
+        final CannedAccessControlList value) {
+      cannedACL = value;
       return this;
     }
 
-    public RequestFactoryBuilder withRequesterPays(final boolean _requesterPays) {
-      requesterPays = _requesterPays;
+    /**
+     * Requester Pays flag.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withRequesterPays(
+        final boolean value) {
+      requesterPays = value;
       return this;
     }
 
+    /**
+     * Multipart limit.
+     * @param value new value
+     * @return the builder
+     */
     public RequestFactoryBuilder withMultipartPartCountLimit(
-        final long _multipartPartCountLimit) {
-      multipartPartCountLimit = _multipartPartCountLimit;
+        final long value) {
+      multipartPartCountLimit = value;
       return this;
     }
 
-
+    /**
+     * Callback to prepare requests.
+     *
+     * @param value new value
+     * @return the builder
+     */
     public RequestFactoryBuilder withRequestPreparer(
-        final PrepareRequest _requestPreparer) {
-      this.requestPreparer = _requestPreparer;
+        final PrepareRequest value) {
+      this.requestPreparer = value;
       return this;
     }
   }
 
   /**
-   * This is the callback to prepare a request.
+   * This is a callback for anything to "prepare" every request
+   * after creation. The S3AFileSystem's Audit Manager is expected
+   * to be wired up via this call so can audit/prepare requests
+   * after their creation.
    */
   @FunctionalInterface
   public interface PrepareRequest {

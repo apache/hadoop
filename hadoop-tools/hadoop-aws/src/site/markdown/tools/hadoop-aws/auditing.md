@@ -36,7 +36,7 @@ as hinted allow/deny security.
 * Why best effort: coverage is not complete. See limitations below.
 * Why "hinted" security? Any custom code running in the JVM could retrieve the AWS
   credential chain and so bypass this auditing mechanism.
-  
+
 ## Architecture
 
 The auditing subsystem is implemented in the package `org.apache.hadoop.fs.s3a.audit`.
@@ -64,7 +64,7 @@ This is the central class as far as actual FS operations are concerned.
 1. Activation is on a per-thread basis. A single span can be active in multiple threads
    simultaneously; other spans may be active in other threads.
 1. A single filesystem can have only one active span per thread, but different filesystem
-   instances MAY have different active spans. 
+   instances MAY have different active spans.
 1. All S3 operations performed on a thread are considered _within_
    the active span.
 1. Spans do not explicitly terminate; they just stop being invoked; eventually
@@ -180,18 +180,25 @@ which called `jobSetup()` or `taskSetup()` on the committer.
 
 ### Using the Logging Auditor
 
+The Logging Auditor is enabled by providing its classname in the option
+`fs.s3a.audit.service.classname`.
 
 ```xml
 <property>
   <name>fs.s3a.audit.service.classname</name>
-  <value>org.apache.hadoop.fs.s3a.audit.LoggingAuditororg.apache.hadoop.fs.s3a.audit.LoggingAuditor</value>
+  <value>org.apache.hadoop.fs.s3a.audit.LoggingAuditor</value>
 </property>
 ```
 
+This is the default: Requests from the s3A Client are by default sent
+with a special HTTP referrer containing auditing information.
+
+To print auditing events in the local client logs, set the associated Log4J log
+to log at debug:
 
 ```
 # Auditing
-log4j.logger.org.apache.hadoop.fs.s3a.audit=DEBUG
+log4j.logger.org.apache.hadoop.fs.s3a.audit.LoggingAuditor=DEBUG
 ```
 
 ### Integration with S3 Logging
@@ -227,16 +234,23 @@ log4j.logger.org.apache.hadoop.fs.s3a.audit=TRACE
 
 This is very noisy and not recommended in normal operation.
 
-## Implementing a custom Auditor
+## Implementing a Custom Auditor
 
-A custom auditor is a class which implements the interface `org.apache.hadoop.fs.s3a.audit.OperationAuditor`.
-This SHOULD be done by subclassing `org.apache.hadoop.fs.s3a.audit.AbstractOperationAuditor`.
+A custom auditor is a class which implements the interface
+`org.apache.hadoop.fs.s3a.audit.OperationAuditor`.
+This SHOULD be done by subclassing
+`org.apache.hadoop.fs.s3a.audit.AbstractOperationAuditor`.
 
-* It is a YARN service and follows the lifecycle: configured in `serviceInit()`, SHALL start
-any worker threads/perform startup operations in `serviceInit()` and shutdown in `serviceStop()`.
+It is a YARN service and follows the lifecycle:
+configured in `serviceInit()`;
+start any worker threads/perform startup operations
+in `serviceInit()` and shutdown in `serviceStop()`.
 
-* In use, it will be instantiated in `S3AFileSystem.initialize()` and shutdown when the FS instance
-is closed.
+In use, it will be instantiated in `S3AFileSystem.initialize()`
+and shutdown when the FS instance is closed.
+
+It will be instantiated before 
+
 
 ## Limitations
 
@@ -256,7 +270,6 @@ in particular, correlating  S3 object requests with those FS API calls, and idea
 
 ## Outstanding TODO items
 
-* Statistics for auditing
 * thread ID to go into span from common context (and so travel into helper spans)
 * Maybe: parse AWS S3 log lines for use in queries, with some test data. LineRecordReader would be the start
 * log auditor to log AWS Request ID in responses, especially error reporting. +
@@ -268,3 +281,5 @@ Tests for
 
 * RequestFactoryImpl
 * callback from AWS SDK, including handling of no request handler
+* verify that when the auditor is set to reject unaudited calls, it
+  does this.

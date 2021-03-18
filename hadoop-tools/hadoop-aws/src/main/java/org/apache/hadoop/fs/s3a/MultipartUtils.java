@@ -177,7 +177,7 @@ public final class MultipartUtils {
 
     @Retries.RetryTranslated
     private void requestNextBatch() throws IOException {
-      try (final AuditSpan span = auditSpan.activate()) {
+      try (AuditSpan span = auditSpan.activate()) {
         ListMultipartUploadsRequest req = requestFactory
             .newListMultipartUploadsRequest(prefix);
         if (!firstListing) {

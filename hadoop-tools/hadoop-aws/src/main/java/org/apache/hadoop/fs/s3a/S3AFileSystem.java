@@ -210,6 +210,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
+import static org.apache.hadoop.fs.s3a.select.SelectConstants.FS_S3A_SELECT_ENABLED;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
@@ -306,7 +307,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
   private WriteOperationHelper writeHelper;
-  private SelectBinding selectBinding;
   private boolean useListV1;
   private MagicCommitIntegration committerIntegration;
 
@@ -500,9 +500,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           this, magicCommitterEnabled);
       // header processing for rename and magic committer
       headerProcessing = new HeaderProcessing(createStoreContext());
-
-      // instantiate S3 Select support
-      selectBinding = new SelectBinding(writeHelper);
 
       boolean blockUploadEnabled = conf.getBoolean(FAST_UPLOAD, true);
 
@@ -1103,6 +1100,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException on any failure.
    */
   @VisibleForTesting
+  @AuditSpan.AuditEntryPoint
   @Retries.RetryTranslated
   public String getBucketLocation(String bucketName) throws IOException {
     final String region = trackDurationAndSpan(
@@ -1340,6 +1338,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO failure.
    */
   @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   private FSDataInputStream open(
       final Path file,
       final Optional<Configuration> options,
@@ -1519,6 +1518,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @see #setPermission(Path, FsPermission)
    */
   @Override
+  @AuditSpan.AuditEntryPoint
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
   public FSDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
@@ -1642,6 +1642,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * is not a directory.
    */
   @Override
+  @AuditSpan.AuditEntryPoint
   public FSDataOutputStream createNonRecursive(Path p,
       FsPermission permission,
       EnumSet<CreateFlag> flags,
@@ -1711,6 +1712,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException on IO failure
    * @return true if rename is successful
    */
+  @AuditSpan.AuditEntryPoint
   @Retries.RetryTranslated
   public boolean rename(Path src, Path dst) throws IOException {
     try {
@@ -2069,6 +2071,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO and object access problems.
    */
   @VisibleForTesting
+  @AuditSpan.AuditEntryPoint
   @InterfaceAudience.LimitedPrivate("utilities")
   @Retries.RetryTranslated
   @InterfaceStability.Evolving
@@ -2201,8 +2204,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException if raised in the callable
    */
   private <B> B trackDurationAndSpan(
-      Statistic statistic, Path path, CallableRaisingIOE<B> input)
-      throws IOException {
+      Statistic statistic,
+      @Nullable Path path,
+      CallableRaisingIOE<B> input) throws IOException {
     return trackDurationAndSpan(statistic,
         path != null ? path.toString(): null,
         null, input);
@@ -2719,7 +2723,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.getKey());
     incrementPutStartStatistics(len);
     try {
-      PutObjectResult result = trackDurationOfSupplier(getDurationTrackerFactory(),
+      PutObjectResult result = trackDurationOfSupplier(
+          getDurationTrackerFactory(),
           OBJECT_PUT_REQUESTS.getSymbol(), () ->
               s3.putObject(putObjectRequest));
       incrementPutCompletedStatistics(true, len);
@@ -2955,7 +2960,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException other IO Exception.
    */
   @Retries.RetryMixed
-  DeleteObjectsResult removeKeys(
+  private DeleteObjectsResult removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final boolean deleteFakeDir,
       final List<Path> undeletedObjectsOnFailure,
@@ -3003,7 +3008,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * have surfaced.
    * @throws IOException due to inability to delete a directory or file.
    */
+  @Override
   @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   public boolean delete(Path f, boolean recursive) throws IOException {
     checkNotClosed();
     final Path path = qualify(f);
@@ -3080,6 +3087,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *
    */
   @Override
+  @AuditSpan.AuditEntryPoint
   public RemoteIterator<FileStatus> listStatusIterator(Path p)
           throws FileNotFoundException, IOException {
     Path path = qualify(p);
@@ -3098,6 +3106,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws FileNotFoundException when the path does not exist;
    *         IOException see specific implementation
    */
+  @Override
+  @AuditSpan.AuditEntryPoint
   public FileStatus[] listStatus(Path f) throws FileNotFoundException,
       IOException {
     Path path = qualify(f);
@@ -3258,6 +3268,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * or is discovered on one of its ancestors.
    * @throws IOException other IO problems
    */
+  @Override
+  @AuditSpan.AuditEntryPoint
   public boolean mkdirs(Path p, FsPermission permission) throws IOException,
       FileAlreadyExistsException {
     Path path = qualify(p);
@@ -3304,8 +3316,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * have been implemented.
    * {@inheritDoc}
    */
-  @Retries.RetryTranslated
   @Override
+  @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   public ContentSummary getContentSummary(final Path f) throws IOException {
     final Path path = qualify(f);
     return trackDurationAndSpan(
@@ -3321,8 +3334,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * This does not create a new span; caller must be in one.
    * @return an implementation of the GetContentSummaryCallbacks
    */
-  @VisibleForTesting
-  public GetContentSummaryCallbacks createGetContentSummaryCallbacks() {
+  protected GetContentSummaryCallbacks createGetContentSummaryCallbacks() {
     return new GetContentSummaryCallbacks();
   }
 
@@ -3352,6 +3364,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
    */
+  @Override
+  @AuditSpan.AuditEntryPoint
   @Retries.RetryTranslated
   public FileStatus getFileStatus(final Path f) throws IOException {
     Path path = qualify(f);
@@ -3702,6 +3716,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws AmazonClientException failure in the AWS SDK
    */
   @Override
+  @AuditSpan.AuditEntryPoint
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src,
       Path dst) throws IOException {
     checkNotClosed();
@@ -3860,6 +3875,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * both the expected state of this FS and of failures while being stopped.
    */
   protected synchronized void stopAllServices() {
+    // shutting down the transfer manager also shuts
+    // down the S3 client it is bonded to.
     if (transfers != null) {
       try {
         transfers.shutdownNow(true);
@@ -3869,12 +3886,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       transfers = null;
     }
+    // At this point the S3A client is shut down,
+    // now the executor pools are closed
     HadoopExecutors.shutdown(boundedThreadPool, LOG,
         THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
     boundedThreadPool = null;
     HadoopExecutors.shutdown(unboundedThreadPool, LOG,
         THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
     unboundedThreadPool = null;
+    // other services are shutdown.
     cleanupWithLogger(LOG,
         metadataStore,
         instrumentation,
@@ -3938,6 +3958,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO failure
    */
   @Override
+  @AuditSpan.AuditEntryPoint
   public Token<AbstractS3ATokenIdentifier> getDelegationToken(String renewer)
       throws IOException {
     checkNotClosed();
@@ -4430,9 +4451,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Increments the statistic {@link Statistic#INVOCATION_GLOB_STATUS}.
    * Override superclass so as to disable symlink resolution as symlinks
    * are not supported by S3A.
+   *
+   * Although an AuditEntryPoint, the globber itself will talk do
+   * the filesystem through the filesystem API, so its operations will
+   * all appear part of separate operations.
    * {@inheritDoc}
    */
   @Override
+  @AuditSpan.AuditEntryPoint
   public FileStatus[] globStatus(
       final Path pathPattern,
       final PathFilter filter)
@@ -4452,6 +4478,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * {@inheritDoc}
    */
   @Override
+  @AuditSpan.AuditEntryPoint
   public boolean exists(Path f) throws IOException {
     final Path path = qualify(f);
     try {
@@ -4471,6 +4498,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * {@inheritDoc}
    */
   @Override
+  @AuditSpan.AuditEntryPoint
   @SuppressWarnings("deprecation")
   public boolean isDirectory(Path f) throws IOException {
     final Path path = qualify(f);
@@ -4492,6 +4520,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * {@inheritDoc}
    */
   @Override
+  @AuditSpan.AuditEntryPoint
   @SuppressWarnings("deprecation")
   public boolean isFile(Path f) throws IOException {
     final Path path = qualify(f);
@@ -4526,6 +4555,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   public EtagChecksum getFileChecksum(Path f, final long length)
       throws IOException {
     Preconditions.checkArgument(length >= 0);
@@ -4555,6 +4585,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   @Override
+  @AuditSpan.AuditEntryPoint
   public byte[] getXAttr(final Path path, final String name)
       throws IOException {
     checkNotClosed();
@@ -4566,6 +4597,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   @Override
+  @AuditSpan.AuditEntryPoint
   public Map<String, byte[]> getXAttrs(final Path path) throws IOException {
     checkNotClosed();
     try (AuditSpan span = createSpan(
@@ -4576,6 +4608,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   @Override
+  @AuditSpan.AuditEntryPoint
   public Map<String, byte[]> getXAttrs(final Path path,
       final List<String> names)
       throws IOException {
@@ -4588,6 +4621,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   @Override
+  @AuditSpan.AuditEntryPoint
   public List<String> listXAttrs(final Path path) throws IOException {
     checkNotClosed();
     try (AuditSpan span = createSpan(
@@ -4624,6 +4658,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   public RemoteIterator<LocatedFileStatus> listFiles(Path f,
       boolean recursive) throws FileNotFoundException, IOException {
     final Path path = qualify(f);
@@ -4636,11 +4671,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Recursive List of files and empty directories.
    * @param f path to list from
+   * @param recursive recursive?
    * @return an iterator.
    * @throws IOException failure
    */
   @InterfaceAudience.Private
   @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
       Path f, boolean recursive) throws IOException {
     final Path path = qualify(f);
@@ -4660,6 +4697,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @InterfaceAudience.Private
   @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectoriesForceNonAuth(
       Path f, boolean recursive) throws IOException {
     final Path path = qualify(f);
@@ -4780,6 +4818,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   @Retries.OnceTranslated("s3guard not retrying")
+  @AuditSpan.AuditEntryPoint
   public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f,
       final PathFilter filter)
       throws FileNotFoundException, IOException {
@@ -4841,6 +4880,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @InterfaceAudience.Private
   @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   public MultipartUtils.UploadIterator listUploads(@Nullable String prefix)
       throws IOException {
     // span is picked up retained in the listing.
@@ -4937,7 +4977,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     case SelectConstants.S3_SELECT_CAPABILITY:
       // select is only supported if enabled
-      return selectBinding.isEnabled();
+      return SelectBinding.isSelectEnabled(getConf());
 
     case CommonPathCapabilities.FS_CHECKSUMS:
       // capability depends on FS configuration
@@ -5014,8 +5054,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * This is a proof of concept of a select API.
-   * Once a proper factory mechanism for opening files is added to the
-   * FileSystem APIs, this will be deleted <i>without any warning</i>.
    * @param source path to source data
    * @param expression select expression
    * @param options request configuration from the builder.
@@ -5024,6 +5062,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   private FSDataInputStream select(final Path source,
       final String expression,
       final Configuration options,
@@ -5063,6 +5102,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       Invoker readInvoker = readContext.getReadInvoker();
       getObjectMetadata(path, changeTracker, readInvoker, "select");
     }
+    // instantiate S3 Select support using the current span
+    // as the active span for operations.
+    SelectBinding selectBinding = new SelectBinding(
+        createWriteOperationHelper(auditSpan));
 
     // build and execute the request
     return selectBinding.select(
@@ -5079,7 +5122,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private void requireSelectSupport(final Path source) throws
       UnsupportedOperationException {
-    if (!selectBinding.isEnabled()) {
+    if (!SelectBinding.isSelectEnabled(getConf())) {
+
       throw new UnsupportedOperationException(
           SelectConstants.SELECT_UNSUPPORTED);
     }
@@ -5118,7 +5162,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Initiate the open or select operation.
-   * This is invoked from both the FileSystem and FileContext APIs
+   * This is invoked from both the FileSystem and FileContext APIs.
+   * It's declared as an audit entry point but the span creation is pushed
+   * down into the open/select methods it ultimately calls.
    * @param rawPath path to the file
    * @param parameters open file parameters from the builder.
    * @return a future which will evaluate to the opened/selected file.
@@ -5129,6 +5175,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   @Retries.RetryTranslated
+  @AuditSpan.AuditEntryPoint
   public CompletableFuture<FSDataInputStream> openFileWithOptions(
       final Path rawPath,
       final OpenFileParameters parameters) throws IOException {
@@ -5194,6 +5241,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   @Override
+  @AuditSpan.AuditEntryPoint
   public S3AMultipartUploaderBuilder createMultipartUploader(
       final Path basePath)
       throws IOException {

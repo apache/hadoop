@@ -53,6 +53,7 @@ import static org.apache.hadoop.fs.s3a.select.SelectConstants.*;
  * This class is intended to be instantiated by the owning S3AFileSystem
  * instance to handle the construction of requests: IO is still done exclusively
  * in the filesystem.
+ *
  */
 public class SelectBinding {
 
@@ -68,12 +69,12 @@ public class SelectBinding {
 
   /**
    * Constructor.
-   * @param operations owning FS.
+   * @param operations callback to owner FS, with associated span.
    */
   public SelectBinding(final WriteOperationHelper operations) {
     this.operations = checkNotNull(operations);
     Configuration conf = getConf();
-    this.enabled = conf.getBoolean(FS_S3A_SELECT_ENABLED, true);
+    this.enabled = isSelectEnabled(conf);
     this.errorsIncludeSql = conf.getBoolean(SELECT_ERRORS_INCLUDE_SQL, false);
   }
 
@@ -87,6 +88,15 @@ public class SelectBinding {
    */
   public boolean isEnabled() {
     return enabled;
+  }
+
+  /**
+   * Static probe for select being enabled.
+   * @param conf configuration
+   * @return true iff select is enabled.
+   */
+  public static boolean isSelectEnabled(Configuration conf) {
+    return conf.getBoolean(FS_S3A_SELECT_ENABLED, true);
   }
 
   /**
@@ -419,5 +429,6 @@ public class SelectBinding {
         // backslash substitution must come last
         .replace("\\\\", "\\");
   }
+
 
 }

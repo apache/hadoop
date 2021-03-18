@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.Request;
-import com.amazonaws.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,8 +35,8 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestNotAlwaysInSpan;
+import static org.apache.hadoop.fs.s3a.audit.AuditConstants.FILESYSTEM_ID;
 import static org.apache.hadoop.fs.s3a.audit.AuditConstants.PRINCIPAL;
-import static org.apache.hadoop.fs.s3a.audit.CommonAuditContext.PROCESS_ID;
 import static org.apache.hadoop.fs.s3a.audit.CommonAuditContext.currentContext;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.extractJobID;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
@@ -66,6 +64,17 @@ public final class LoggingAuditor
       LoggerFactory.getLogger(LoggingAuditor.class);
 
   /**
+   * Counter to create unique auditor IDs.
+   */
+  private static final AtomicLong AUDITOR_ID_COUNTER = new AtomicLong(1);
+
+  /**
+   * ID of the auditor.
+   */
+  private final String auditorID = Long.toHexString(
+      AUDITOR_ID_COUNTER.getAndIncrement());
+
+  /**
    * Counter for next operation in this service.
    * Initial value is what will be used for the span ID when there
    * is no active request span.
@@ -83,9 +92,9 @@ public final class LoggingAuditor
   private final AuditSpan warningSpan;
 
   /**
-   * Prefix built up to use in log messages.
+   * Context ID.
    */
-  private final String processID;
+  private final String contextId;
 
   /**
    * Should out of scope ops be rejected?
@@ -116,9 +125,10 @@ public final class LoggingAuditor
       final IOStatisticsStore iostatistics) {
 
     super(name, iostatistics);
-    processID = PROCESS_ID;
+    contextId = auditorID;
+    attributes.put(FILESYSTEM_ID, auditorID);
     final CommonAuditContext currentContext = currentContext();
-    warningSpan = new WarningSpan("Operation without an audit span",
+    warningSpan = new WarningSpan(AuditConstants.OUTSIDE_SPAN,
         currentContext, newOperationId(), null, null);
     // add the principal
     String p;
@@ -182,12 +192,20 @@ public final class LoggingAuditor
     return warningSpan;
   }
 
-  public String getProcessID() {
-    return processID;
+  /**
+   * Get the context ID.
+   * @return ID
+   */
+  public String getContextId() {
+    return contextId;
   }
 
   /**
-   * Span which logs.
+   * Span which logs at debug and sets the HTTP referrer on
+   * invocations.
+   * Note: checkstyle complains that this should be final because
+   * it is private. This is not true, as it is subclassed in
+   * the same file.
    */
   private class LoggingAuditSpan extends AbstractAuditSpanImpl {
 
@@ -197,8 +215,6 @@ public final class LoggingAuditor
 
     private final String description;
 
-    private final CommonAuditContext context;
-
     private final String id;
 
     private LoggingAuditSpan(
@@ -207,10 +223,9 @@ public final class LoggingAuditor
         final long operationId,
         final String path1, final String path2) {
       this.operationName = name;
-      this.context = context;
-      this.id = String.format("%s-%08d", getProcessID(), operationId);
+      this.id = String.format("%s-%08d", getContextId(), operationId);
       entry = HttpReferrerAuditEntry.builder()
-          .withContext(processID)
+          .withContextId(contextId)
           .withOperationId(String.format("%08x", operationId))
           .withOperationName(name)
           .withPath1(path1)
@@ -258,21 +273,9 @@ public final class LoggingAuditor
             getDescription());
       }
       // add the referrer header
-      request.putCustomRequestHeader(HEADER_REFERRER, entry.getReferrerHeader());
+      request.putCustomRequestHeader(HEADER_REFERRER,
+          entry.getReferrerHeader());
       return request;
-    }
-
-    @Override
-    public void afterResponse(final Request<?> request,
-        final Response<?> response) {
-      final Object awsResponse = response.getAwsResponse();
-    }
-
-    @Override
-    public void afterError(final Request<?> request,
-        final Response<?> response,
-        final Exception exception) {
-
     }
 
     @Override

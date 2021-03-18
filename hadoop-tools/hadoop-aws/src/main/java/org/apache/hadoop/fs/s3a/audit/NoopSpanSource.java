@@ -23,7 +23,7 @@ import java.io.IOException;
 
 /**
  * Simple no-op source, which always returns
- * a no-op span.
+ * a new {@link NoopSpan}.
  */
 public final class NoopSpanSource implements AuditSpanSource {
 

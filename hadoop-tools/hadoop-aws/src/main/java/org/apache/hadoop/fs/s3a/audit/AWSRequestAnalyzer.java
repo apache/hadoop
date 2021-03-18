@@ -34,9 +34,22 @@ import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.*;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.MULTIPART_UPLOAD_ABORTED;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.MULTIPART_UPLOAD_COMPLETED;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.MULTIPART_UPLOAD_LIST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.MULTIPART_UPLOAD_PART_PUT;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.MULTIPART_UPLOAD_STARTED;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_BULK_DELETE_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_DELETE_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_PUT_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_SELECT_REQUESTS;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_EXISTS_PROBE;
 
 /**
  * Extract information from a request.
@@ -52,58 +65,26 @@ public class AWSRequestAnalyzer {
    */
   public RequestInfo analyze(AmazonWebServiceRequest request) {
 
-    if (request instanceof GetObjectMetadataRequest) {
-      return reading(ACTION_HTTP_HEAD_REQUEST,
-          ((GetObjectMetadataRequest) request).getKey(), 0);
-    } else if (request instanceof GetObjectRequest) {
-      GetObjectRequest r = (GetObjectRequest) request;
-      long[] range = r.getRange();
-      long size = range == null
-          ? -1
-          : range[1] - range[0];
-      return reading(ACTION_HTTP_GET_REQUEST,
-          r.getKey(),
-          size);
-    } else if (request instanceof ListObjectsV2Request) {
-      ListObjectsV2Request r = (ListObjectsV2Request) request;
-      return reading(OBJECT_LIST_REQUEST,
-          r.getPrefix(),
-          r.getMaxKeys());
-    } else if (request instanceof ListObjectsRequest) {
-      ListObjectsRequest r = (ListObjectsRequest) request;
-      return reading(OBJECT_LIST_REQUEST,
-          r.getPrefix(),
-          r.getMaxKeys());
-    } else if (request instanceof InitiateMultipartUploadRequest) {
-      return writing(MULTIPART_UPLOAD_STARTED,
-          ((InitiateMultipartUploadRequest) request).getKey(),
+    // this is where Scala's case statement would massively
+    // simplify life.
+    // Please Keep in Alphabetical Order.
+    if (request instanceof AbortMultipartUploadRequest) {
+      return writing(MULTIPART_UPLOAD_ABORTED,
+          ((AbortMultipartUploadRequest) request).getKey(),
           0);
-    } else if (request instanceof UploadPartRequest) {
-      UploadPartRequest r = (UploadPartRequest) request;
-      return writing(MULTIPART_UPLOAD_PART_PUT,
-          r.getKey(),
-          r.getPartSize());
     } else if (request instanceof CompleteMultipartUploadRequest) {
       CompleteMultipartUploadRequest r
           = (CompleteMultipartUploadRequest) request;
       return writing(MULTIPART_UPLOAD_COMPLETED,
           r.getKey(),
           r.getPartETags().size());
-    } else if (request instanceof AbortMultipartUploadRequest) {
-      return writing(MULTIPART_UPLOAD_ABORTED,
-          ((AbortMultipartUploadRequest) request).getKey(),
-          0);
-    } else if (request instanceof ListMultipartUploadsRequest) {
-      ListMultipartUploadsRequest r
-          = (ListMultipartUploadsRequest) request;
-      return reading(MULTIPART_UPLOAD_LIST,
-          r.getPrefix(),
-          r.getMaxUploads());
     } else if (request instanceof DeleteObjectRequest) {
+      // DeleteObject: single object
       return writing(OBJECT_DELETE_REQUEST,
           ((DeleteObjectRequest) request).getKey(),
           1);
     } else if (request instanceof DeleteObjectsRequest) {
+      // DeleteObjects: bulk delete
       // use first key as the path
       DeleteObjectsRequest r = (DeleteObjectsRequest) request;
       List<DeleteObjectsRequest.KeyVersion> keys
@@ -116,11 +97,54 @@ public class AWSRequestAnalyzer {
       return reading(STORE_EXISTS_PROBE,
           r.getBucketName(),
           0);
+    } else if (request instanceof GetObjectMetadataRequest) {
+      return reading(ACTION_HTTP_HEAD_REQUEST,
+          ((GetObjectMetadataRequest) request).getKey(), 0);
+    } else if (request instanceof GetObjectRequest) {
+      GetObjectRequest r = (GetObjectRequest) request;
+      long[] range = r.getRange();
+      long size = range == null
+          ? -1
+          : range[1] - range[0];
+      return reading(ACTION_HTTP_GET_REQUEST,
+          r.getKey(),
+          size);
+    } else if (request instanceof InitiateMultipartUploadRequest) {
+      return writing(MULTIPART_UPLOAD_STARTED,
+          ((InitiateMultipartUploadRequest) request).getKey(),
+          0);
+    } else if (request instanceof ListMultipartUploadsRequest) {
+      ListMultipartUploadsRequest r
+          = (ListMultipartUploadsRequest) request;
+      return reading(MULTIPART_UPLOAD_LIST,
+          r.getPrefix(),
+          r.getMaxUploads());
+    } else if (request instanceof ListObjectsRequest) {
+      ListObjectsRequest r = (ListObjectsRequest) request;
+      return reading(OBJECT_LIST_REQUEST,
+          r.getPrefix(),
+          r.getMaxKeys());
+    } else if (request instanceof ListObjectsV2Request) {
+      ListObjectsV2Request r = (ListObjectsV2Request) request;
+      return reading(OBJECT_LIST_REQUEST,
+          r.getPrefix(),
+          r.getMaxKeys());
     } else if (request instanceof PutObjectRequest) {
       PutObjectRequest r = (PutObjectRequest) request;
       return writing(OBJECT_PUT_REQUEST,
           r.getKey(),
           0);
+    } else if (request instanceof SelectObjectContentRequest) {
+      SelectObjectContentRequest r =
+          (SelectObjectContentRequest) request;
+      return writing(OBJECT_SELECT_REQUESTS,
+          r.getKey(),
+          1);
+    } else if (request instanceof UploadPartRequest) {
+      UploadPartRequest r = (UploadPartRequest) request;
+      return writing(MULTIPART_UPLOAD_PART_PUT,
+          r.getKey(),
+          r.getPartSize());
     }
     // no explicit support, return classname
     return writing(request.getClass().getName(), null, 0);
@@ -172,8 +196,8 @@ public class AWSRequestAnalyzer {
    * @param <T> type of request
    * @return true if the transfer manager creates them.
    */
-  public static final <T extends AmazonWebServiceRequest>  boolean
-      isRequestNotAlwaysInSpan(final T request) {
+  public static final <T extends AmazonWebServiceRequest> boolean
+  isRequestNotAlwaysInSpan(final T request) {
     return request instanceof CopyPartRequest
         || request instanceof CompleteMultipartUploadRequest;
   }

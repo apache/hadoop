@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
+import javax.annotation.Nullable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -45,24 +46,42 @@ public final class HttpReferrerAuditEntry {
   private static final Logger LOG =
       LoggerFactory.getLogger(HttpReferrerAuditEntry.class);
 
-  public static final String AUTHORITY = "hadoop.apache.org";
 
-  private final LogExactlyOnce warnOfUrlCreation = new LogExactlyOnce(
-      LOG);
+  /**
+   * Log for warning of problems creating headers will only log of
+   * a problem once per process instance.
+   * This is to avoid logs being flooded with errors.
+   */
+  private static final LogExactlyOnce WARN_OF_URL_CREATION =
+      new LogExactlyOnce(LOG);
 
-  private final String context;
+  /** Context ID. */
+  private final String contextId;
 
+  /** operation name. */
   private final String operationName;
 
+  /** operation ID. */
   private final String operationId;
 
+  /** optional first path. */
   private final String path1;
 
+  /** optional second path. */
   private final String path2;
 
-  private final String header;
+  /**
+   * The header as created in the constructor; used in toString().
+   * A new header is built on demand in {@link #buildHttpReferrerString()}
+   * so that evaluated attributes are dynamically evaluated
+   * in the correct thread/place.
+   */
+  private final String initialHeader;
 
-  private final Map<String, String> parameters;
+  /**
+   * Map of simple attributes.
+   */
+  private final Map<String, String> attributes;
 
   /**
    * Parameters dynamically evaluated on the thread just before
@@ -79,21 +98,21 @@ public final class HttpReferrerAuditEntry {
    */
   private HttpReferrerAuditEntry(
       final Builder builder) {
-    this.context = requireNonNull(builder.context);
+    this.contextId = requireNonNull(builder.contextId);
     this.operationName = requireNonNull(builder.operationName);
     this.operationId = requireNonNull(builder.operationId);
     this.path1 = builder.path1;
     this.path2 = builder.path2;
 
     // clone params
-    parameters = new HashMap<>();
-    add(parameters, builder.attributes);
-    addParameter(parameters, OP, operationName);
-    addParameter(parameters, PATH, path1);
-    addParameter(parameters, PATH2, path2);
+    attributes = new HashMap<>();
+    add(builder.attributes);
+    addAttribute(OP, operationName);
+    addAttribute(PATH, path1);
+    addAttribute(PATH2, path2);
     evaluated = builder.evaluated;
     // build the referrer up. so as to find/report problems early
-    header = buildHttpReferrerString();
+    initialHeader = buildHttpReferrerString();
   }
 
   /**
@@ -103,44 +122,40 @@ public final class HttpReferrerAuditEntry {
    * @return a referrer string or ""
    */
   private String buildHttpReferrerString() {
-    String queries;
-    // queries as ? params.
-    queries = parameters.entrySet().stream()
-        .map(e -> e.getKey() + "=" + e.getValue())
-        .collect(Collectors.joining("&"));
-    // add any params which are dynamically evaluated
-    if (evaluated != null) {
-      queries = queries +
-          evaluated.entrySet().stream()
-              .map(e -> e.getKey() + "=" + e.getValue().get())
-              .collect(Collectors.joining("&"));
-    }
 
     String header;
     try {
-      final URI uri = new URI("https", AUTHORITY,
+      String queries;
+      // Update any params which are dynamically evaluated
+      if (evaluated != null) {
+        evaluated.forEach((key, eval) ->
+            addAttribute(key, eval.get()));
+      }
+      // queries as ? params.
+      queries = attributes.entrySet().stream()
+          .map(e -> e.getKey() + "=" + e.getValue())
+          .collect(Collectors.joining("&"));
+      final URI uri = new URI("https", REFERRER_ORIGIN_HOST,
           String.format(Locale.ENGLISH, PATH_FORMAT,
-              context, operationId),
+              contextId, operationId),
           queries,
           null);
       header = uri.toASCIIString();
     } catch (URISyntaxException e) {
-      warnOfUrlCreation.warn("Failed to build URI for {}/{}", e);
+      WARN_OF_URL_CREATION.warn("Failed to build URI for {}/{}", e);
       header = "";
     }
     return header;
   }
 
   /**
-   * Add the map of attributes to the map of request parameters
-   * @param requestParams HTTP request parameters
-   * @param attributes attributes
+   * Add the map of attributes to the map of request parameters.
+   * @param attrs attributes to add
    */
-  private void add(final Map<String, String> requestParams,
-      final Map<String, String> attributes) {
-    if (attributes != null) {
-      attributes.entrySet()
-          .forEach(e -> addParameter(requestParams, e.getKey(), e.getValue()));
+  private void add(@Nullable final Map<String, String> attrs) {
+    if (attrs != null) {
+      attrs.entrySet()
+          .forEach(e -> addAttribute(e.getKey(), e.getValue()));
     }
   }
 
@@ -148,20 +163,18 @@ public final class HttpReferrerAuditEntry {
    * Add a query parameter if not null/empty
    * There's no need to escape here as it is done in the URI
    * constructor.
-   * @param requestParams query map
    * @param key query key
    * @param value query value
    */
-  private void addParameter(Map<String, String> requestParams,
-      String key,
+  private void addAttribute(String key,
       String value) {
     if (StringUtils.isNotEmpty(value)) {
-      requestParams.put(key, value);
+      attributes.put(key, value);
     }
   }
 
-  public String getContext() {
-    return context;
+  public String getContextId() {
+    return contextId;
   }
 
   public String getOperationName() {
@@ -192,7 +205,7 @@ public final class HttpReferrerAuditEntry {
   public String toString() {
     return new StringJoiner(", ",
         HttpReferrerAuditEntry.class.getSimpleName() + "[", "]")
-        .add(header)
+        .add(initialHeader)
         .toString();
   }
 
@@ -237,26 +250,25 @@ public final class HttpReferrerAuditEntry {
    * Context and operationId are expected to be well formed
    * numeric/hex strings, at least adequate to be
    * used as individual path elements in a URL.
-   * @param context
-   * @param operationId operation ID as a string
-   * @param operationName operation name
-   * @param path1 optional first path
-   * @param path2 optional second path
-   * @param attributes map of attributes to add as query parameters.
-   * @param attributes2 second map of attributes to add as query parameters.
    */
   public static final class Builder {
 
-    private  String context;
+    /** Context ID. */
+    private String contextId;
 
-    private  String operationName;
+    /** operation name. */
+    private String operationName;
 
-    private  String operationId;
+    /** operation ID. */
+    private String operationId;
 
-    private  String path1;
+    /** optional first path. */
+    private String path1;
 
-    private  String path2;
+    /** optional second path. */
+    private String path2;
 
+    /** Map of attributes to add as query parameters. */
     private Map<String, String> attributes;
 
     /**
@@ -270,19 +282,19 @@ public final class HttpReferrerAuditEntry {
 
     /**
      * Build.
-     * @return an audit entry
+     * @return an HttpReferrerAuditEntry
      */
     public HttpReferrerAuditEntry build() {
       return new HttpReferrerAuditEntry(this);
     }
 
     /**
-     * Set context as string
+     * Set context ID.
      * @param value context
      * @return the builder
      */
-    public Builder withContext(final String value) {
-      context = value;
+    public Builder withContextId(final String value) {
+      contextId = value;
       return this;
     }
 
@@ -321,13 +333,13 @@ public final class HttpReferrerAuditEntry {
      * @param value new value
      * @return the builder
      */
-    public Builder withPath2(final String _path2) {
-      path2 = _path2;
+    public Builder withPath2(final String value) {
+      path2 = value;
       return this;
     }
 
     /**
-     * Set map 1 of attributes (common context) 
+     * Set map of attributes.
      * @param value new value
      * @return the builder
      */

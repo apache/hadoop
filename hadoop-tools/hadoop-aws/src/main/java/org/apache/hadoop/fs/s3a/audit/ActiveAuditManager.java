@@ -225,7 +225,8 @@ public final class ActiveAuditManager
   }
 
   @Override
-  public <T extends AmazonWebServiceRequest> T beforeExecution(final T request) {
+  public <T extends AmazonWebServiceRequest> T beforeExecution(
+      final T request) {
     // identify the span
     AuditSpanCallbacks span;
     span = request.getHandlerContext(AUDIT_SPAN_HANDLER_CONTEXT);
@@ -281,7 +282,7 @@ public final class ActiveAuditManager
   }
 
   /**
-   * Return a stub audit manager
+   * Return a stub audit manager.
    * @return an audit manager.
    */
   public static AuditManager stubAuditManager() {

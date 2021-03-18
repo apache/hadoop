@@ -22,8 +22,8 @@
  * However, it is very unstable as we evolve how best to audit/trace
  * operation.
  *
- * An audit service is instantiated when an S3A Filesystem is initialized during
- * creation.
+ * An audit service is instantiated when an S3A Filesystem is initialized
+ * during creation.
  * The choice of service is determined in the configuration option
  * {@link org.apache.hadoop.fs.s3a.audit.AuditConstants#AUDIT_SERVICE_CLASSNAME}.
  * The service MUST implement the interface

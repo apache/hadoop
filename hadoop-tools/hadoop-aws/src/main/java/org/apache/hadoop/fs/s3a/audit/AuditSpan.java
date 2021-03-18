@@ -19,14 +19,9 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.Closeable;
-import java.io.IOException;
-
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.Request;
-import com.amazonaws.Response;
-import com.amazonaws.SdkBaseException;
-
-import org.apache.hadoop.fs.s3a.Retries;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * This is a span created by an {@link OperationAuditor}.
@@ -63,5 +58,16 @@ public interface AuditSpan extends Closeable, AuditSpanCallbacks {
    */
   default boolean isValidSpan() {
     return true;
+  }
+
+  /**
+   * A marker simply to highlight which of the methods in the
+   * FS are audit entry points.
+   * - S3A Code SHOULD NOT invoke audit entry points internally
+   * - All external methods MUST be audit entry points.
+   */
+  @Documented
+  @Retention(RetentionPolicy.SOURCE)
+  @interface AuditEntryPoint {
   }
 }

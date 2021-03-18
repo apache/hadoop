@@ -127,6 +127,9 @@ public class WriteOperationHelper implements WriteOperations {
    */
   private final S3AStatisticsContext statisticsContext;
 
+  /**
+   * Store Context; extracted from owner.
+   */
   private final StoreContext storeContext;
 
   /**
@@ -694,8 +697,10 @@ public class WriteOperationHelper implements WriteOperations {
    * @return the request
    */
   public SelectObjectContentRequest newSelectRequest(Path path) {
-    return getRequestFactory().newSelectRequest(
-        storeContext.pathToKey(path));
+    try (AuditSpan span = getAuditSpan()) {
+      return getRequestFactory().newSelectRequest(
+          storeContext.pathToKey(path));
+    }
   }
 
   /**

@@ -1395,7 +1395,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    * Remove JobID from the current thread's context.
    */
   protected final void resetCommonContext() {
-    currentContext().put(AuditConstants.JOB_ID, uuid);
+    currentContext().remove(AuditConstants.JOB_ID);
   }
 
   protected AuditSpanSource getAuditSpanSource() {

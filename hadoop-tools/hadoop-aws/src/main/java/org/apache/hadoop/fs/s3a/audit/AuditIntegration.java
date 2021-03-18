@@ -41,11 +41,8 @@ public final class AuditIntegration {
       AuditSpan auditSpan,
       CallableRaisingIOE<T> operation) {
     return () -> {
-      auditSpan.activate();
-      try {
+      try (AuditSpan span = auditSpan.activate()) {
         return operation.apply();
-      } finally {
-        auditSpan.deactivate();
       }
     };
   }
@@ -61,11 +58,8 @@ public final class AuditIntegration {
       AuditSpan auditSpan,
       InvocationRaisingIOE operation) {
     return () -> {
-      auditSpan.activate();
-      try {
-        operation.apply();;
-      } finally {
-        auditSpan.deactivate();
+      try (AuditSpan span = auditSpan.activate()) {
+        operation.apply();
       }
     };
   }

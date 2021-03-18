@@ -46,7 +46,7 @@ public final class CommonAuditContext {
   }
 
   /**
-   * Process ID; currently built from UUID and timestamp
+   * Process ID; currently built from UUID and timestamp.
    */
   public static final String PROCESS_ID;
 
@@ -60,7 +60,6 @@ public final class CommonAuditContext {
         .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
         .toFormatter();
     PROCESS_ID = UUID.randomUUID().toString() + "-" + now.format(formatter);
-
   }
 
   /**
@@ -73,7 +72,8 @@ public final class CommonAuditContext {
    * there are no problems.
    * Supplier operations must themselves be threadsafe.
    */
-  private final Map<String, Supplier<String>> evaluatedOperations = new ConcurrentHashMap<>(1);
+  private final Map<String, Supplier<String>> evaluatedOperations =
+      new ConcurrentHashMap<>();
 
   /**
    * Put a context entry.
@@ -103,7 +103,7 @@ public final class CommonAuditContext {
   }
 
   /**
-   * Does the context contain a specific key
+   * Does the context contain a specific key?
    * @param key key
    * @return true if it is in the context.
    */
@@ -117,14 +117,14 @@ public final class CommonAuditContext {
    * The S3A committers all have a strong reference, so if they are
    * retained, context is retained.
    */
-  private static final ThreadLocal<CommonAuditContext> activeContext =
+  private static final ThreadLocal<CommonAuditContext> ACTIVE_CONTEXT =
       ThreadLocal.withInitial(() -> createInstance());
 
   /**
    * ThreadId.
    */
-  private static final ThreadLocal<Long> threadId =
-      ThreadLocal.withInitial(() -> nextThreadId());
+  private static final ThreadLocal<String> THREAD_ID =
+      ThreadLocal.withInitial(() -> Long.toHexString(nextThreadId()));
 
   /**
    * Demand invoked to create an instance for this thread.
@@ -143,9 +143,13 @@ public final class CommonAuditContext {
    * @return the context of this thread.
    */
   public static CommonAuditContext currentContext() {
-    return activeContext.get();
+    return ACTIVE_CONTEXT.get();
   }
 
+  /**
+   * Generate a new thread ID.
+   * @return a number unique for this process.
+   */
   private static long nextThreadId() {
     return THREAD_ID_COUNTER.incrementAndGet();
   }
@@ -156,11 +160,12 @@ public final class CommonAuditContext {
    * @return a thread ID for reporting.
    */
   public static String currentThreadID() {
-    return Long.toHexString(threadId.get());
+    return THREAD_ID.get();
   }
 
   /**
-   * Get the evaluated operations. This is the shared map.
+   * Get the evaluated operations. This is the map
+   * unique to this context.
    * @return the operations map.
    */
   public Map<String, Supplier<String>> getEvaluatedOperations() {
