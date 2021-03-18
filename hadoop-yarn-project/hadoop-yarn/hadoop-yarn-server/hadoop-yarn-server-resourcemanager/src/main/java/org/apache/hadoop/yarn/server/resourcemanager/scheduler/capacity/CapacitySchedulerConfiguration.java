@@ -477,6 +477,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return maxApplicationsPerQueue;
   }
 
+  @VisibleForTesting
+  public void setMaximumApplicationsPerQueue(String queue,
+      int numMaxApps) {
+    setInt(getQueuePrefix(queue) + MAXIMUM_APPLICATIONS_SUFFIX,
+            numMaxApps);
+  }
+
   /**
    * Get the maximum am resource percent per queue setting.
    * @param queue name of the queue

@@ -1489,6 +1489,44 @@ public abstract class AbstractCSQueue implements CSQueue {
     return ret;
   }
 
+  void updateMaxAppRelatedField(CapacitySchedulerConfiguration conf,
+      LeafQueue leafQueue, String label) {
+    int maxApplications = conf.getMaximumApplicationsPerQueue(queuePath);
+    if (maxApplications < 0) {
+      int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
+      if (maxGlobalPerQueueApps > 0) {
+        // In absolute mode, should
+        // shrink when change to corresponding label capacity.
+        maxApplications = this.capacityConfigType
+            != CapacityConfigType.ABSOLUTE_RESOURCE ?
+          maxGlobalPerQueueApps :
+            (int) (maxGlobalPerQueueApps * queueCapacities
+                .getAbsoluteCapacity(label));
+      } else{
+        maxApplications = (int) (conf.getMaximumSystemApplications()
+            * queueCapacities.getAbsoluteCapacity(label));
+      }
+    }
+    leafQueue.setMaxApplications(maxApplications);
+
+    int maxApplicationsPerUser = Math.min(maxApplications,
+        (int) (maxApplications
+            * (leafQueue.getUsersManager().getUserLimit() / 100.0f)
+            * leafQueue.getUsersManager().getUserLimitFactor()));
+    if (leafQueue.getUsersManager().getUserLimitFactor() == -1) {
+      maxApplicationsPerUser =  maxApplications;
+    }
+
+    leafQueue.setMaxApplicationsPerUser(maxApplicationsPerUser);
+    LOG.info("LeafQueue:" + leafQueue.getQueuePath() +
+        "update max app related, maxApplications="
+        + maxApplications + ", maxApplicationsPerUser="
+        + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
+        .getAbsoluteCapacity(label) + ", Cap: " + queueCapacities
+        .getCapacity(label) + ", MaxCap : " + queueCapacities
+        .getMaximumCapacity(label));
+  }
+
   private void deriveCapacityFromAbsoluteConfigurations(String label,
       Resource clusterResource, ResourceCalculator rc) {
 
@@ -1522,42 +1560,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueCapacities.setAbsoluteMaximumCapacity(label,
         queueCapacities.getMaximumCapacity(label) * parent.getQueueCapacities()
             .getAbsoluteMaximumCapacity(label));
-
-    // Re-visit max applications for a queue based on absolute capacity if
-    // needed.
-    if (this instanceof LeafQueue) {
-      LeafQueue leafQueue = (LeafQueue) this;
-      CapacitySchedulerConfiguration conf = csContext.getConfiguration();
-      int maxApplications = conf.getMaximumApplicationsPerQueue(queuePath);
-      if (maxApplications < 0) {
-        int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
-        if (maxGlobalPerQueueApps > 0) {
-          maxApplications = (int) (maxGlobalPerQueueApps * queueCapacities
-              .getAbsoluteCapacity(label));
-        } else{
-          maxApplications =
-              (int) (conf.getMaximumSystemApplications() * queueCapacities
-                  .getAbsoluteCapacity(label));
-        }
-      }
-      leafQueue.setMaxApplications(maxApplications);
-
-      int maxApplicationsPerUser = Math.min(maxApplications,
-          (int) (maxApplications
-              * (leafQueue.getUsersManager().getUserLimit() / 100.0f)
-              * leafQueue.getUsersManager().getUserLimitFactor()));
-      if (leafQueue.getUsersManager().getUserLimitFactor() == -1) {
-        maxApplicationsPerUser =  maxApplications;
-      }
-
-      leafQueue.setMaxApplicationsPerUser(maxApplicationsPerUser);
-      LOG.info("LeafQueue:" + leafQueue.getQueuePath() + ", maxApplications="
-          + maxApplications + ", maxApplicationsPerUser="
-          + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
-          .getAbsoluteCapacity(label) + ", Cap: " + queueCapacities
-          .getCapacity(label) + ", MaxCap : " + queueCapacities
-          .getMaximumCapacity(label));
-    }
   }
 
   void updateEffectiveResources(Resource clusterResource) {
@@ -1603,6 +1605,13 @@ public abstract class AbstractCSQueue implements CSQueue {
         // percentage, we have to calculate percentage and update.
         ResourceCalculator rc = this.csContext.getResourceCalculator();
         deriveCapacityFromAbsoluteConfigurations(label, clusterResource, rc);
+        // Re-visit max applications for a queue based on absolute capacity if
+        // needed.
+        if (this instanceof LeafQueue) {
+          LeafQueue leafQueue = (LeafQueue) this;
+          CapacitySchedulerConfiguration conf = csContext.getConfiguration();
+          updateMaxAppRelatedField(conf, leafQueue, label);
+        }
       } else{
         queueResourceQuotas.setEffectiveMinResource(label, Resources
             .multiply(resourceByLabel,
