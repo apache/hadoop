@@ -45,7 +45,6 @@ import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 
 import org.apache.hadoop.tools.util.DistCpTestUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
