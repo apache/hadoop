@@ -166,6 +166,17 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   }
 
   /**
+   * This method is retained to maintain backward compatibility.
+   * Please use the new method {@link #checkSuperuserPrivilege(String)} to make
+   * sure that the external enforcers have the correct context to audit.
+   *
+   * @throws AccessControlException if the caller is not a super user.
+   */
+  public void checkSuperuserPrivilege() throws AccessControlException {
+    checkSuperuserPrivilege(null);
+  }
+
+  /**
    * Checks if the caller has super user privileges.
    * Throws {@link AccessControlException} for non super users.
    *

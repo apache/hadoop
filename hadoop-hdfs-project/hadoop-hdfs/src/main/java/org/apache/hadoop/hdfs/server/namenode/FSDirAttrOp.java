@@ -247,20 +247,13 @@ public class FSDirAttrOp {
     fsd.writeLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
-      if (fsd.isPermissionEnabled()) {
-        if (allowOwner && !pc.isSuperUser()) {
-          try {
-            fsd.checkOwner(pc, iip.getParentINodesInPath());
-          } catch(AccessControlException ace) {
-            throw new AccessControlException(
-                "Access denied for user " + pc.getUser() +
-                    ". Superuser or owner of parent folder privilege" +
-                    " is required");
-          }
-        } else {
-          // At this point, it must be a super user.
-          // Call the external enforcer for audit.
-          pc.checkSuperuserPrivilege(iip.getPath());
+      if (fsd.isPermissionEnabled() && !pc.isSuperUser() && allowOwner) {
+        try {
+          fsd.checkOwner(pc, iip.getParentINodesInPath());
+        } catch(AccessControlException ace) {
+          throw new AccessControlException(
+              "Access denied for user " + pc.getUser() +
+                  ". Superuser or owner of parent folder privilege is required");
         }
       }
       INodeDirectory changed =
