@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools.contract;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_DISTCP_JOB_ID;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -43,6 +44,8 @@ import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 
+import org.apache.hadoop.tools.util.DistCpTestUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -462,6 +465,17 @@ public abstract class AbstractContractDistCpTest
   public void testLargeFilesFromRemote() throws Exception {
     describe("copy multiple large files from remote to local");
     largeFiles(remoteFS, remoteDir, localFS, localDir);
+  }
+
+  @Test
+  public void testSetJobId() throws Exception {
+    describe("check jobId is set in the conf");
+    remoteFS.create(new Path(remoteDir, "file1")).close();
+    DistCpTestUtils
+        .assertRunDistCp(DistCpConstants.SUCCESS, remoteDir.toString(),
+            localDir.toString(), null, conf);
+    assertNotNull("DistCp job id isn't set",
+        conf.get(CONF_LABEL_DISTCP_JOB_ID));
   }
 
   /**
