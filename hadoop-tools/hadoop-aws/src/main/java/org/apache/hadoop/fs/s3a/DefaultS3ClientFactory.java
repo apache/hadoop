@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.URI;
 
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.s3.AmazonS3;
@@ -49,7 +48,7 @@ import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROT
 /**
  * The default {@link S3ClientFactory} implementation.
  * This calls the AWS SDK to configure and create an
- * {@link AmazonS3Client} that communicates with the S3 service.
+ * {@code AmazonS3Client} that communicates with the S3 service.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -57,8 +56,6 @@ public class DefaultS3ClientFactory extends Configured
     implements S3ClientFactory {
 
   private static final String S3_SERVICE_NAME = "s3";
-  private static final String S3_SIGNER = "S3SignerType";
-  private static final String S3_V4_SIGNER = "AWSS3V4SignerType";
 
   /**
    * Subclasses refer to this.
@@ -68,10 +65,7 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * Create the client by preparing the AwsConf configuration
-   * and then invoking {@link #buildAmazonS3Client(AWSCredentialsProvider, ClientConfiguration, S3ClientCreationParameters, String, boolean)}
-   * <p>
-   * If the AWS stats are not null then a {@link AwsStatisticsCollector}.
-   * is created to bind to the two.
+   * and then invoking {@code buildAmazonS3Client()}
    */
   @Override
   public AmazonS3 createS3Client(
@@ -105,7 +99,7 @@ public class DefaultS3ClientFactory extends Configured
   }
 
   /**
-   * Use the Builder API to create a an AWS S3 client.
+   * Use the Builder API to create an AWS S3 client.
    * <p>
    * This has a more complex endpoint configuration mechanism
    * which initially caused problems; the
