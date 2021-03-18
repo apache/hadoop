@@ -65,7 +65,7 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * Create the client by preparing the AwsConf configuration
-   * and then invoking {@code buildAmazonS3Client()}
+   * and then invoking {@code buildAmazonS3Client()}.
    */
   @Override
   public AmazonS3 createS3Client(
