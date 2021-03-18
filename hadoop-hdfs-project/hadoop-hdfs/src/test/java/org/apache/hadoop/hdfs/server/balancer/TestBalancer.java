@@ -1024,14 +1024,14 @@ public class TestBalancer {
 
           // clean all lists
           b.resetData(conf);
-          if (r.exitStatus == ExitStatus.IN_PROGRESS) {
+          if (r.getExitStatus() == ExitStatus.IN_PROGRESS) {
             done = false;
-          } else if (r.exitStatus != ExitStatus.SUCCESS) {
+          } else if (r.getExitStatus() != ExitStatus.SUCCESS) {
             //must be an error statue, return.
-            return r.exitStatus.getExitCode();
+            return r.getExitStatus().getExitCode();
           } else {
             if (iteration > 0) {
-              assertTrue(r.bytesAlreadyMoved > 0);
+              assertTrue(r.getBytesAlreadyMoved() > 0);
             }
           }
         }
@@ -1657,7 +1657,7 @@ public class TestBalancer {
           // When a block move is not canceled in 2 seconds properly and then
           // a block is moved unexpectedly, IN_PROGRESS will be reported.
           assertEquals("We expect ExitStatus.NO_MOVE_PROGRESS to be reported.",
-              ExitStatus.NO_MOVE_PROGRESS, r.exitStatus);
+              ExitStatus.NO_MOVE_PROGRESS, r.getExitStatus());
         }
       } finally {
         for (NameNodeConnector nnc : connectors) {
@@ -2297,7 +2297,20 @@ public class TestBalancer {
       maxUsage = Math.max(maxUsage, datanodeReport[i].getDfsUsed());
     }
 
-    assertEquals(200, balancerResult.bytesAlreadyMoved);
+    // The 95% usage DN will have 9 blocks of 100B and 1 block of 50B - all for the same file.
+    // The HDFS balancer will choose a block to move from this node randomly. More likely it will
+    // be 100B block. Since 100B is greater than DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY which is 99L,
+    // it will stop here. Total bytes moved from this 95% DN will be 1 block of size 100B.
+    // However, chances are the first block selected to be moved from this 95% DN is the 50B block.
+    // After this block is moved, the total moved size so far would be 50B which is smaller than
+    // DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY (99L), hence it will try to move another block.
+    // The second block will always be of size 100B. So total bytes moved from this 95% DN will be
+    // 2 blocks of size (100B + 50B) 150B.
+    // Hence, overall total blocks moved by HDFS balancer would be either of these 2 options:
+    // a) 2 blocks of total size (100B + 100B)
+    // b) 3 blocks of total size (50B + 100B + 100B)
+    assertTrue(balancerResult.getBytesAlreadyMoved() == 200
+        || balancerResult.getBytesAlreadyMoved() == 250);
     // 100% and 95% used nodes will be balanced, so top used will be 900
     assertEquals(900, maxUsage);
   }
