@@ -173,8 +173,10 @@ public class NodeResourceMonitorImpl extends AbstractService implements
 
         float nodeGpuUtilization = 0F;
         try {
-          nodeGpuUtilization =
-              gpuNodeResourceUpdateHandler.getNodeGpuUtilization();
+          if (gpuNodeResourceUpdateHandler != null) {
+            nodeGpuUtilization =
+                gpuNodeResourceUpdateHandler.getNodeGpuUtilization();
+          }
         } catch (Exception e) {
           LOG.error("Get Node GPU Utilization error: " + e);
         }
