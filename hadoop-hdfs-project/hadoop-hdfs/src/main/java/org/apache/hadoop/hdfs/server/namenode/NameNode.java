@@ -1269,10 +1269,12 @@ public class NameNode extends ReconfigurableBase implements
       }
 
       fsImage.format(fsn, clusterId, force);
+      fsn.close();
     } catch (IOException ioe) {
       LOG.warn("Encountered exception during format", ioe);
-      fsImage.close();
       throw ioe;
+    } finally {
+      fsImage.close();
     }
     return false;
   }
