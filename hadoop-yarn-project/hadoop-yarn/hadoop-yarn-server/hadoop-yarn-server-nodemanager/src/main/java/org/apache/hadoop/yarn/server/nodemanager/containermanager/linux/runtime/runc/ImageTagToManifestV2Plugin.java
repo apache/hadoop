@@ -154,9 +154,14 @@ public class ImageTagToManifestV2Plugin extends AbstractService
         StandardCharsets.UTF_8));
   }
 
-  /** Read the image properties file to get the hash from the manifest
-   * prefix line.  Other image metadata lines are optional and ignored
+  /**
+   * Read the image properties file to get the hash from the manifest
+   * prefix line.  Other image metadata lines are optional and are ignored
    * for now.
+   *
+   * @param br The HDFS image hash reader for the image property file.
+   * @return The manifest hash.
+   * @throws IOException when unable to read the hash.
    */
   protected static String readImageToHashFile(BufferedReader br)
       throws IOException {
