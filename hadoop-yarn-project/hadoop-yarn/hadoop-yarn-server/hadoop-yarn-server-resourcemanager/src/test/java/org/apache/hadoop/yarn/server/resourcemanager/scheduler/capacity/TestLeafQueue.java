@@ -60,6 +60,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -79,6 +80,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -131,6 +133,7 @@ public class TestLeafQueue {
   CapacityScheduler cs;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
+  private RMApp rmApp;
   
   CSQueue root;
   private CSQueueStore queues;
@@ -174,7 +177,7 @@ public class TestLeafQueue {
 
     ConcurrentMap<ApplicationId, RMApp> spyApps = 
         spy(new ConcurrentHashMap<ApplicationId, RMApp>());
-    RMApp rmApp = mock(RMApp.class);
+    rmApp = mock(RMApp.class);
     when(rmApp.getRMAppAttempt(any())).thenReturn(null);
     amResourceRequest = mock(ResourceRequest.class);
     when(amResourceRequest.getCapability()).thenReturn(
@@ -466,7 +469,12 @@ public class TestLeafQueue {
   public void testAppAttemptMetrics() throws Exception {
     CSMaxRunningAppsEnforcer enforcer = mock(CSMaxRunningAppsEnforcer.class);
     cs.setMaxRunningAppsEnforcer(enforcer);
-
+    ApplicationSubmissionContext applicationSubmissionContext =
+        mock(ApplicationSubmissionContext.class);
+    when(applicationSubmissionContext.getUnmanagedAM()).thenReturn(false);
+    when(rmApp.getApplicationSubmissionContext())
+        .thenReturn(applicationSubmissionContext);
+    when(rmApp.getCurrentAppAttempt()).thenReturn(mock(RMAppAttempt.class));
     // Manipulate queue 'a'
     LeafQueue a = stubLeafQueue((LeafQueue) queues.get(B));
 
@@ -495,17 +503,18 @@ public class TestLeafQueue {
     // Attempt the same application again
     final ApplicationAttemptId appAttemptId_1 = TestUtils
         .getMockApplicationAttemptId(0, 2);
-    FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a, null,
-        spyRMContext);
-    app_1.setAMResource(Resource.newInstance(100, 1));
-    a.submitApplicationAttempt(app_1, user_0); // same user
+    FiCaSchedulerApp app1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
+        null, spyRMContext);
+    app1.getAppSchedulingInfo().setUnmanagedAM(false);
+    app1.setAMResource(Resource.newInstance(100, 1));
+    a.submitApplicationAttempt(app1, user_0); // same user
 
     assertEquals(1, a.getMetrics().getAppsSubmitted());
     assertEquals(1, a.getMetrics().getAppsPending());
     assertEquals(1, a.getUser(user_0).getActiveApplications());
-    assertEquals(app_1.getAMResource().getMemorySize(), a.getMetrics()
+    assertEquals(app1.getAMResource().getMemorySize(), a.getMetrics()
         .getUsedAMResourceMB());
-    assertEquals(app_1.getAMResource().getVirtualCores(), a.getMetrics()
+    assertEquals(app1.getAMResource().getVirtualCores(), a.getMetrics()
         .getUsedAMResourceVCores());
     
     event = new AppAttemptRemovedSchedulerEvent(appAttemptId_0,
@@ -522,6 +531,74 @@ public class TestLeafQueue {
 
     QueueMetrics userMetrics = a.getMetrics().getUserMetrics(user_0);
     assertEquals(1, userMetrics.getAppsSubmitted());
+  }
+
+  @Test
+  public void testUnmanagedAppAttemptMetrics() throws Exception {
+    CSMaxRunningAppsEnforcer enforcer = mock(CSMaxRunningAppsEnforcer.class);
+    cs.setMaxRunningAppsEnforcer(enforcer);
+    // Manipulate queue 'a'
+    LeafQueue a = stubLeafQueue((LeafQueue) queues.get(B));
+
+    // Users
+    final String user0 = "user_0";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId0 = TestUtils
+        .getMockApplicationAttemptId(0, 1);
+
+    ApplicationSubmissionContext applicationSubmissionContext =
+        ApplicationSubmissionContext.newInstance(
+            appAttemptId0.getApplicationId(), "test", a.getQueuePath(),
+            Priority.newInstance(0), null, true, true,
+            2, null, "test");
+
+    AppAddedSchedulerEvent addAppEvent =
+        new AppAddedSchedulerEvent(user0, applicationSubmissionContext, false,
+            null);
+    cs.handle(addAppEvent);
+    AppAttemptAddedSchedulerEvent addAttemptEvent =
+        new AppAttemptAddedSchedulerEvent(appAttemptId0, false);
+    cs.handle(addAttemptEvent);
+
+    AppAttemptRemovedSchedulerEvent event = new AppAttemptRemovedSchedulerEvent(
+        appAttemptId0, RMAppAttemptState.FAILED, false);
+    cs.handle(event);
+
+    assertEquals(0, a.getMetrics().getUnmanagedAppsPending());
+    assertEquals(0, a.getMetrics().getUnmanagedAppsFailed());
+
+    // Attempt the same application again
+    final ApplicationAttemptId appAttemptId1 = TestUtils
+        .getMockApplicationAttemptId(0, 2);
+    FiCaSchedulerApp app1 = new FiCaSchedulerApp(appAttemptId1, user0, a,
+        null, spyRMContext);
+
+    app1.setAMResource(Resource.newInstance(100, 1));
+    a.submitApplicationAttempt(app1, user0); // same user
+
+    assertEquals(1, a.getMetrics().getUnmanagedAppsSubmitted());
+    assertEquals(1, a.getMetrics().getUnmanagedAppsPending());
+    assertEquals(1, a.getUser(user0).getActiveApplications());
+    assertEquals(app1.getAMResource().getMemorySize(), a.getMetrics()
+        .getUsedAMResourceMB());
+    assertEquals(app1.getAMResource().getVirtualCores(), a.getMetrics()
+        .getUsedAMResourceVCores());
+
+    event = new AppAttemptRemovedSchedulerEvent(appAttemptId0,
+        RMAppAttemptState.FINISHED, false);
+    cs.handle(event);
+    AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
+        appAttemptId0.getApplicationId(), RMAppState.FINISHED);
+    cs.handle(rEvent);
+
+    assertEquals(1, a.getMetrics().getUnmanagedAppsSubmitted());
+    assertEquals(0, a.getMetrics().getUnmanagedAppsPending());
+    assertEquals(0, a.getMetrics().getUnmanagedAppsFailed());
+    assertEquals(1, a.getMetrics().getUnmanagedAppsCompleted());
+
+    QueueMetrics userMetrics = a.getMetrics().getUserMetrics(user0);
+    assertEquals(1, userMetrics.getUnmanagedAppsSubmitted());
   }
 
   @Test
