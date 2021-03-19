@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
+import org.apache.commons.lang3.builder.CompareToBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteLocationContext;
 
@@ -98,5 +99,18 @@ public class FederationNamespaceInfo extends RemoteLocationContext {
         .append(getClusterId())
         .append(getBlockPoolId())
         .toHashCode();
+  }
+
+  @Override
+  public int compareTo(RemoteLocationContext info) {
+    if (info instanceof FederationNamespaceInfo) {
+      FederationNamespaceInfo other = (FederationNamespaceInfo) info;
+      return new CompareToBuilder()
+          .append(nameserviceId, other.nameserviceId)
+          .append(clusterId, other.clusterId)
+          .append(blockPoolId, other.blockPoolId)
+          .toComparison();
+    }
+    return super.compareTo(info);
   }
 }
