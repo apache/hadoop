@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit;
+package org.apache.hadoop.fs.s3a.audit.impl;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -31,12 +31,19 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
+import org.apache.hadoop.fs.s3a.audit.AuditConstants;
+import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
+import org.apache.hadoop.fs.s3a.audit.CommonAuditContext;
+import org.apache.hadoop.fs.s3a.audit.HttpReferrerAuditEntry;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestNotAlwaysInSpan;
 import static org.apache.hadoop.fs.s3a.audit.AuditConstants.FILESYSTEM_ID;
 import static org.apache.hadoop.fs.s3a.audit.AuditConstants.PRINCIPAL;
+import static org.apache.hadoop.fs.s3a.audit.AuditConstants.THREAD0;
 import static org.apache.hadoop.fs.s3a.audit.CommonAuditContext.currentContext;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.extractJobID;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
@@ -50,12 +57,6 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURE
 @InterfaceAudience.Private
 public final class LoggingAuditor
     extends AbstractOperationAuditor {
-
-  /**
-   * What to look for in logs for ops outside any audit.
-   * {@value}.
-   */
-  public static final String UNAUDITED_OPERATION = "unaudited operation";
 
   /**
    * This is where the context gets logged to.
@@ -121,6 +122,13 @@ public final class LoggingAuditor
     return nextOperationId.getAndIncrement();
   }
 
+  /**
+   * Create the auditor.
+   * The UGI current user is used to provide the principal;
+   * this will be cached and provided in the referrer header.
+   * @param name service name.
+   * @param iostatistics statistics to update.
+   */
   public LoggingAuditor(final String name,
       final IOStatisticsStore iostatistics) {
 
@@ -161,6 +169,17 @@ public final class LoggingAuditor
   }
 
   @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "LoggingAuditor{");
+    sb.append("auditorID='").append(auditorID).append('\'');
+    sb.append(", contextId='").append(contextId).append('\'');
+    sb.append(", rejectOutOfSpan=").append(rejectOutOfSpan);
+    sb.append('}');
+    return sb.toString();
+  }
+
+  @Override
   public AuditSpan createSpan(final String name,
       @Nullable final String path1,
       @Nullable final String path2) {
@@ -174,17 +193,10 @@ public final class LoggingAuditor
 
   /**
    * Get/Prepare the active context for a span.
-   * Includes patching in the principal if unset.
    * @return the common audit context.
    */
   private CommonAuditContext prepareActiveContext() {
-    final CommonAuditContext currentContext = currentContext();
-    // put principal in current context if unset.
-    if (!currentContext.containsKey(PRINCIPAL)) {
-      currentContext.put(PRINCIPAL, principal);
-    }
-
-    return currentContext;
+    return currentContext();
   }
 
   @Override
@@ -209,7 +221,7 @@ public final class LoggingAuditor
    */
   private class LoggingAuditSpan extends AbstractAuditSpanImpl {
 
-    private final HttpReferrerAuditEntry entry;
+    private final HttpReferrerAuditEntry referrer;
 
     private final String operationName;
 
@@ -224,16 +236,20 @@ public final class LoggingAuditor
         final String path1, final String path2) {
       this.operationName = name;
       this.id = String.format("%s-%08d", getContextId(), operationId);
-      entry = HttpReferrerAuditEntry.builder()
+      referrer = HttpReferrerAuditEntry.builder()
           .withContextId(contextId)
           .withOperationId(String.format("%08x", operationId))
           .withOperationName(name)
           .withPath1(path1)
           .withPath2(path2)
           .withAttributes(attributes)
+          .withAttribute(THREAD0,
+              CommonAuditContext.currentThreadID())     // thread at the time of creation.
+          .withAttribute(PRINCIPAL, principal)          // principal when the auditor was created.
           .withEvaluated(context.getEvaluatedOperations())
           .build();
-      this.description = entry.getReferrerHeader();
+
+      this.description = referrer.getReferrerHeader();
     }
 
     public void start() {
@@ -266,15 +282,17 @@ public final class LoggingAuditor
     @Override
     public <T extends AmazonWebServiceRequest> T beforeExecution(
         final T request) {
+      // add the referrer header
+      final String header = referrer.getReferrerHeader();
+      request.putCustomRequestHeader(HEADER_REFERRER,
+          header);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("{} Executing {} with {}; {}", id,
+        LOG.debug("{} Executing {} with {}; {}",
+            id,
             getOperationName(),
             analyzer.analyze(request),
-            getDescription());
+            header);
       }
-      // add the referrer header
-      request.putCustomRequestHeader(HEADER_REFERRER,
-          entry.getReferrerHeader());
       return request;
     }
 
@@ -286,6 +304,14 @@ public final class LoggingAuditor
       sb.append("description='").append(description).append('\'');
       sb.append('}');
       return sb.toString();
+    }
+
+    /**
+     * Get the referrer; visible for tests.
+     * @return the referrer.
+     */
+    HttpReferrerAuditEntry getReferrer() {
+      return referrer;
     }
   }
 
@@ -352,13 +378,13 @@ public final class LoggingAuditor
       LOG.warn("{} {}",
           getId(), error);
       final String unaudited = getId() + " "
-          + UNAUDITED_OPERATION + " " + error;
+          + AuditConstants.UNAUDITED_OPERATION + " " + error;
       if (isRequestNotAlwaysInSpan(request)) {
         // can get by auditing during a copy, so don't overreact
         LOG.debug(unaudited);
       } else {
         final RuntimeException ex = new AuditFailureException(unaudited);
-        LOG.info(unaudited, ex);
+        LOG.debug(unaudited, ex);
         if (rejectOutOfSpan) {
           throw ex;
         }

@@ -79,7 +79,6 @@ public class ITestS3AMkdirCost extends AbstractS3ACostTest {
         // full probe on dest plus list only on parent.
         with(OBJECT_METADATA_REQUESTS,
             0),
-
         with(OBJECT_LIST_REQUEST,  FILESTATUS_DIR_PROBE_L));
   }
 

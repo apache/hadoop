@@ -22,8 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 
-import com.amazonaws.services.s3.model.ObjectMetadata;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
@@ -85,16 +83,6 @@ public interface ContextAccessors {
    * @return possibly new path.
    */
   Path makeQualified(Path path);
-
-  /**
-   * Retrieve the object metadata.
-   *
-   * @param key key to retrieve.
-   * @return metadata
-   * @throws IOException IO and object access problems.
-   */
-  @Retries.RetryTranslated
-  ObjectMetadata getObjectMetadata(String key) throws IOException;
 
   /**
    * Return the active audit span.

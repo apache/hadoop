@@ -16,10 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit;
+package org.apache.hadoop.fs.s3a.audit.impl;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
+import org.apache.hadoop.fs.s3a.audit.AuditSpanSource;
 
 /**
  * Simple no-op source, which always returns

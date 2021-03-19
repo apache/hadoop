@@ -83,7 +83,7 @@ public abstract class ExecutingStoreOperation<T>
    * @return the result.
    * @throws IOException IO problem
    */
-  public abstract T execute() throws IOException ;
+  public abstract T execute() throws IOException;
 
   /**
    * Check that the operation has not been invoked twice.

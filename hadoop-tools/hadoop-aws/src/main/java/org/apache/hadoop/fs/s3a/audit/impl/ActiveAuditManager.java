@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit;
+package org.apache.hadoop.fs.s3a.audit.impl;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -28,14 +28,20 @@ import com.amazonaws.Request;
 import com.amazonaws.Response;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.handlers.RequestHandler2;
-import com.amazonaws.services.s3.transfer.Transfer;
-import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
+import org.apache.hadoop.fs.s3a.audit.AuditConstants;
+import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
+import org.apache.hadoop.fs.s3a.audit.AuditIntegration;
+import org.apache.hadoop.fs.s3a.audit.AuditManager;
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
+import org.apache.hadoop.fs.s3a.audit.AuditSpanCallbacks;
+import org.apache.hadoop.fs.s3a.audit.OperationAuditor;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.service.CompositeService;
 
@@ -60,10 +66,10 @@ public final class ActiveAuditManager
     implements AuditSpanCallbacks, AuditManager {
 
   /**
-   * This is where the context gets logged to.
+   * Logging.
    */
   private static final Logger LOG =
-      LoggerFactory.getLogger(LoggingAuditor.class);
+      LoggerFactory.getLogger(ActiveAuditManager.class);
 
   /**
    * Audit service.
@@ -107,11 +113,12 @@ public final class ActiveAuditManager
   protected void serviceInit(final Configuration conf) throws Exception {
     super.serviceInit(conf);
     // create and register the service so it follows the same lifecycle
-    auditService = AbstractOperationAuditor.createInstance(
+    auditService = AuditIntegration.createAuditor(
         getConfig(),
         AuditConstants.AUDIT_SERVICE_CLASSNAME,
         iostatistics);
     addService(auditService);
+    LOG.debug("Audit manager initialized with audit service {}", auditService);
   }
 
   @Override
@@ -119,6 +126,7 @@ public final class ActiveAuditManager
     super.serviceStart();
     setUnboundedSpan(new WrappingAuditSpan(
         auditService.getUnbondedSpan(), false));
+    LOG.debug("Started audit service {}", auditService);
   }
 
   /**
@@ -186,6 +194,11 @@ public final class ActiveAuditManager
         name, path1, path2));
   }
 
+  /**
+   * Return a request handler for the AWS SDK which
+   * relays to this class.
+   * @return a request handler.
+   */
   @Override
   public List<RequestHandler2> createRequestHandlers() {
 
@@ -194,18 +207,6 @@ public final class ActiveAuditManager
     List<RequestHandler2> requestHandlers = new ArrayList<>();
     requestHandlers.add(new SdkRequestHandler());
     return requestHandlers;
-  }
-
-  @Override
-  public TransferStateChangeListener createStateChangeListener() {
-    final AuditSpan span = getActiveThreadSpan();
-    return new TransferStateChangeListener() {
-      @Override
-      public void transferStateChanged(final Transfer transfer,
-          final Transfer.TransferState state) {
-        setActiveThreadSpan(span);
-      }
-    };
   }
 
   /**
@@ -263,30 +264,6 @@ public final class ActiveAuditManager
       throws AuditFailureException, SdkBaseException {
 
     getActiveThreadSpan().afterError(request, response, exception);
-  }
-
-  /**
-   * Create and start an audit manager.
-   * @param conf configuration
-   * @param iostatistics IOStatistics source.
-   * @return audit manager.
-   */
-  public static AuditManager createAuditManager(
-      Configuration conf,
-      IOStatisticsStore iostatistics) {
-    ActiveAuditManager auditManager = new ActiveAuditManager(
-        requireNonNull(iostatistics));
-    auditManager.init(conf);
-    auditManager.start();
-    return auditManager;
-  }
-
-  /**
-   * Return a stub audit manager.
-   * @return an audit manager.
-   */
-  public static AuditManager stubAuditManager() {
-    return new NoopAuditManager();
   }
 
   /**

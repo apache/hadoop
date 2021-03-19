@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
-import javax.annotation.Nullable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -45,7 +44,6 @@ public final class HttpReferrerAuditEntry {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(HttpReferrerAuditEntry.class);
-
 
   /**
    * Log for warning of problems creating headers will only log of
@@ -104,10 +102,10 @@ public final class HttpReferrerAuditEntry {
     this.path1 = builder.path1;
     this.path2 = builder.path2;
 
-    // clone params
-    attributes = new HashMap<>();
-    add(builder.attributes);
+    // copy the parameters from the builder and extend
+    attributes = builder.attributes;
     addAttribute(OP, operationName);
+    addAttribute(OP_ID, operationId);
     addAttribute(PATH, path1);
     addAttribute(PATH2, path2);
     evaluated = builder.evaluated;
@@ -117,6 +115,8 @@ public final class HttpReferrerAuditEntry {
 
   /**
    * Build the referrer string.
+   * This includes dynamically evaluating all of the evaluated
+   * attributes.
    * If there is an error creating the string it will be logged once
    * per entry, and "" returned.
    * @return a referrer string or ""
@@ -127,11 +127,10 @@ public final class HttpReferrerAuditEntry {
     try {
       String queries;
       // Update any params which are dynamically evaluated
-      if (evaluated != null) {
-        evaluated.forEach((key, eval) ->
-            addAttribute(key, eval.get()));
-      }
-      // queries as ? params.
+      evaluated.forEach((key, eval) ->
+          addAttribute(key, eval.get()));
+      // now build the query parameters from all attributes, static and
+      // evaluated.
       queries = attributes.entrySet().stream()
           .map(e -> e.getKey() + "=" + e.getValue())
           .collect(Collectors.joining("&"));
@@ -146,17 +145,6 @@ public final class HttpReferrerAuditEntry {
       header = "";
     }
     return header;
-  }
-
-  /**
-   * Add the map of attributes to the map of request parameters.
-   * @param attrs attributes to add
-   */
-  private void add(@Nullable final Map<String, String> attrs) {
-    if (attrs != null) {
-      attrs.entrySet()
-          .forEach(e -> addAttribute(e.getKey(), e.getValue()));
-    }
   }
 
   /**
@@ -269,13 +257,14 @@ public final class HttpReferrerAuditEntry {
     private String path2;
 
     /** Map of attributes to add as query parameters. */
-    private Map<String, String> attributes;
+    private final Map<String, String> attributes = new HashMap<>();
 
     /**
      * Parameters dynamically evaluated on the thread just before
      * the request is made.
      */
-    private Map<String, Supplier<String>> evaluated;
+    private final Map<String, Supplier<String>> evaluated =
+        new HashMap<>();
 
     private Builder() {
     }
@@ -339,22 +328,45 @@ public final class HttpReferrerAuditEntry {
     }
 
     /**
-     * Set map of attributes.
+     * Add all attributes to the current map.
      * @param value new value
      * @return the builder
      */
     public Builder withAttributes(final Map<String, String> value) {
-      attributes = value;
+      attributes.putAll(value);
       return this;
     }
 
     /**
-     * Set evaluated methods.
+     * Add an attribute to the current map.
+     * Replaces any with the existing key.
+n     * @param value new value
+     * @return the builder
+     */
+    public Builder withAttribute(String key, String value) {
+      attributes.put(key, value);
+      return this;
+    }
+
+    /**
+     * Add all evaluated attributes to the current map.
      * @param value new value
      * @return the builder
      */
     public Builder withEvaluated(final Map<String, Supplier<String>> value) {
-      evaluated = value;
+      evaluated.putAll(value);
+      return this;
+    }
+    /**
+     * Add an evaluated attribute to the current map.
+     * Replaces any with the existing key.
+     * Set evaluated methods.
+     * @param key key
+     * @param value new value
+     * @return the builder
+     */
+    public Builder withEvaluated(String key, Supplier<String> value) {
+      evaluated.put(key, value);
       return this;
     }
   }

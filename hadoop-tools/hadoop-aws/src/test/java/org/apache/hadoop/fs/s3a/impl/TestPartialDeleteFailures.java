@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,9 +40,9 @@ import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpan;
-import org.apache.hadoop.fs.s3a.audit.NoopSpan;
 import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
 
+import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.NOOP_SPAN;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.ACCESS_DENIED;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.toPathList;
@@ -261,14 +260,8 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public ObjectMetadata getObjectMetadata(final String key)
-        throws IOException {
-      return new ObjectMetadata();
-    }
-
-    @Override
     public AuditSpan getActiveAuditSpan() {
-      return NoopSpan.INSTANCE;
+      return NOOP_SPAN;
     }
 
     @Override

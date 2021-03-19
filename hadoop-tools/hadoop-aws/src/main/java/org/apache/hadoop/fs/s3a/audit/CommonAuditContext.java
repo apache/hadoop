@@ -29,11 +29,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditConstants.PROCESS;
-import static org.apache.hadoop.fs.s3a.audit.AuditConstants.THREAD;
+import static org.apache.hadoop.fs.s3a.audit.AuditConstants.THREAD1;
 
 /**
  * The common audit context is a map of common context information
  * which can be used with any audit span.
+ * This context is shared across all S3A Filesystems within the
+ * thread, irrespective of who the UGI owner is.
  * Audit spans will be created with a reference to the current
  * context of their thread;
  * That reference is retained even as they are moved across threads, so
@@ -86,6 +88,16 @@ public final class CommonAuditContext {
   }
 
   /**
+   * Put a context entry dynamically evaluated on demand.
+   * @param key key
+   * @param value new value
+   * @return old value or null
+   */
+  public Supplier<String> put(String key, Supplier<String> value) {
+    return evaluatedOperations.put(key, value);
+  }
+
+  /**
    * Remove a context entry.
    * @param key key
    */
@@ -116,25 +128,28 @@ public final class CommonAuditContext {
    * Use a weak reference just to keep memory costs down.
    * The S3A committers all have a strong reference, so if they are
    * retained, context is retained.
+   * If a span retains the context, then it will also stay valid until
+   * the span is finalized.
    */
   private static final ThreadLocal<CommonAuditContext> ACTIVE_CONTEXT =
       ThreadLocal.withInitial(() -> createInstance());
 
   /**
-   * ThreadId.
+   * Thread local thread ID.
    */
   private static final ThreadLocal<String> THREAD_ID =
-      ThreadLocal.withInitial(() -> Long.toHexString(nextThreadId()));
+      ThreadLocal.withInitial(() -> String.format("%04x", nextThreadId()));
 
   /**
-   * Demand invoked to create an instance for this thread.
-   * Sets a new thread ID for it.
+   * Demand invoked to create the instance for this thread.
    * @return an instance.
    */
   private static CommonAuditContext createInstance() {
     CommonAuditContext context = new CommonAuditContext();
+    // process ID is fixed.
     context.put(PROCESS, PROCESS_ID);
-    context.put(THREAD, currentThreadID());
+    // thread 1 is dynamic
+    context.put(THREAD1, () -> currentThreadID());
     return context;
   }
 

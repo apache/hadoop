@@ -197,7 +197,7 @@ public class AWSRequestAnalyzer {
    * @return true if the transfer manager creates them.
    */
   public static final <T extends AmazonWebServiceRequest> boolean
-  isRequestNotAlwaysInSpan(final T request) {
+      isRequestNotAlwaysInSpan(final T request) {
     return request instanceof CopyPartRequest
         || request instanceof CompleteMultipartUploadRequest;
   }

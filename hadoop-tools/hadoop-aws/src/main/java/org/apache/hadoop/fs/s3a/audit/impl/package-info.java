@@ -15,28 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.fs.s3a.audit;
-
-import com.amazonaws.handlers.HandlerContextKey;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-
 /**
- * Internal constants; not intended for public use.
+ * The internal implementations of auditing support.
+ * This package is not for use by extensions.
  */
 @InterfaceAudience.Private
-public final class AuditInternalConstants {
+@InterfaceStability.Unstable
+package org.apache.hadoop.fs.s3a.audit.impl;
 
-  private AuditInternalConstants() {
-  }
-
-  /**
-   * Handler key for audit span callbacks.
-   * This is used to bind the handler in the AWS code.
-   */
-  public static final HandlerContextKey<AuditSpanCallbacks>
-      AUDIT_SPAN_HANDLER_CONTEXT =
-      new HandlerContextKey<AuditSpanCallbacks>(
-          "org.apache.hadoop.fs.s3a.audit.AuditSpanCallbacks");
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

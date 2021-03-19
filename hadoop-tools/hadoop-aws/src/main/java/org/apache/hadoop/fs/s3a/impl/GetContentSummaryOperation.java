@@ -31,13 +31,18 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
  * GetContentSummary operation.
  * This is based on {@code FileSystem.get#getContentSummary};
  * its still doing sequential treewalk with the efficiency
  * issues.
- * 
+ *
  * Changes:
  * 1. On the recursive calls there
  * is no probe to see if the path is a file: we know the
@@ -45,9 +50,13 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
  * 2. If a subdirectory is not found during the walk, that
  * does not trigger an error. The directory is clearly
  * not part of the content any more.
+ *
+ * The Operation serves up IOStatistics; this counts
+ * the cost of all the list operations, but not the
+ * initial HEAD probe to see if the path is a file.
  */
 public class GetContentSummaryOperation extends
-    ExecutingStoreOperation<ContentSummary> {
+    ExecutingStoreOperation<ContentSummary> implements IOStatisticsSource {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       GetContentSummaryOperation.class);
@@ -62,6 +71,18 @@ public class GetContentSummaryOperation extends
    */
   private final GetContentSummaryCallbacks callbacks;
 
+  /**
+   * IOStatistics to serve up.
+   */
+  private final IOStatisticsSnapshot iostatistics =
+      new IOStatisticsSnapshot();
+
+  /**
+   * Constructor.
+   * @param storeContext context.
+   * @param path path to summarize
+   * @param callbacks callbacks for S3 access.
+   */
   public GetContentSummaryOperation(
       final StoreContext storeContext,
       final Path path,
@@ -69,6 +90,11 @@ public class GetContentSummaryOperation extends
     super(storeContext);
     this.path = path;
     this.callbacks = callbacks;
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    return iostatistics;
   }
 
   /**
@@ -87,11 +113,18 @@ public class GetContentSummaryOperation extends
       return new ContentSummary.Builder().length(length).
           fileCount(1).directoryCount(0).spaceConsumed(length).build();
     }
-    return getDirSummary(path);
+    final ContentSummary summary = getDirSummary(path);
+    // Log the IOStatistics at debug so the cost of the operation
+    // can be made visible.
+    LOG.debug("IOStatistics of getContentSummary({}):\n{}", path, iostatistics);
+    return summary;
   }
 
   /**
    * Return the {@link ContentSummary} of a given directory.
+   * This is a recursive operation (as the original is);
+   * it'd be more efficient of stack and heap if it managed its
+   * own stack.
    * @param dir dir to scan
    * @throws FileNotFoundException if the path does not resolve
    * @throws IOException IO failure
@@ -123,6 +156,8 @@ public class GetContentSummaryOperation extends
         fileCount += 1;
       }
     }
+    // Add the list's IOStatistics
+    iostatistics.aggregate(retrieveIOStatistics(it));
     return new ContentSummary.Builder().length(totalLength).
         fileCount(fileCount).directoryCount(dirCount).
         spaceConsumed(totalLength).build();

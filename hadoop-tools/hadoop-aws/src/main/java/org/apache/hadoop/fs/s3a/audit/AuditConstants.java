@@ -28,6 +28,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public final class AuditConstants {
 
+  /**
+   * What to look for in logs for ops outside any audit.
+   * {@value}.
+   */
+  public static final String UNAUDITED_OPERATION = "unaudited operation";
+
   private AuditConstants() {
   }
 
@@ -41,13 +47,13 @@ public final class AuditConstants {
    * Classname of the logging auditor: {@value}.
    */
   public static final String LOGGING_AUDIT_SERVICE =
-      "org.apache.hadoop.fs.s3a.audit.LoggingAuditor";
+      "org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor";
 
   /**
    * Classname of the No-op auditor: {@value}.
    */
   public static final String NOOP_AUDIT_SERVICE =
-      "org.apache.hadoop.fs.s3a.audit.NoopAuditor";
+      "org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor";
 
   /**
    * List of extra AWS SDK request handlers: {@value}.
@@ -74,18 +80,43 @@ public final class AuditConstants {
    * a scan for "example.org" in the logs will exclusively find
    * entries from this referrer.
    */
-  public static final String REFERRER_ORIGIN_HOST = "h1.example.org";
+  public static final String REFERRER_ORIGIN_HOST = "audit.example.org";
 
   /**
-   * Path to build.
+   * Format of path to build: {@value}.
    */
-  public static final String PATH_FORMAT
-      = "/audit/%1$s/s/%2$s/";
+  public static final String PATH_FORMAT = "/%1$s/%2$s/";
 
   /**
    * JobID query header: {@value}.
    */
   public static final String JOB_ID = "job";
+
+
+  /**
+   * Header: FileSystem ID: {@value}.
+   */
+  public static final String FILESYSTEM_ID = "fs";
+
+  /**
+   * Header: operation: {@value}.
+   */
+  public static final String OP = "op";
+
+  /**
+   * Header: operation ID: {@value}.
+   */
+  public static final String OP_ID = "opid";
+
+  /**
+   * Header: first path of operation: {@value}.
+   */
+  public static final String PATH = "path";
+
+  /**
+   * Header: second path of operation: {@value}.
+   */
+  public static final String PATH2 = "path2";
 
   /**
    * Principal query header: {@value}.
@@ -93,29 +124,19 @@ public final class AuditConstants {
   public static final String PRINCIPAL = "pr";
 
   /**
-   * Principal query header: {@value}.
+   * Header: Process ID: {@value}.
    */
-  public static final String FILESYSTEM_ID = "fs";
-
-  public static final String PROCESS_ID = "ps";
-
-  public static final String OP = "op";
-
-  public static final String PATH = "path";
-
-  public static final String PATH2 = "path2";
-
   public static final String PROCESS = "ps";
 
   /**
-   * Thread header: {@value}.
+   * Thread 0: the thread which created a span {@value}.
    */
-  public static final String THREAD = "tr";
+  public static final String THREAD0 = "t0";
 
   /**
-   * Thread header: {@value}.
+   * Thread 1: the thread making the S3 request: {@value}.
    */
-  public static final String THREAD2 = "t2";
+  public static final String THREAD1 = "t1";
 
   /**
    * Span name used during initialization.

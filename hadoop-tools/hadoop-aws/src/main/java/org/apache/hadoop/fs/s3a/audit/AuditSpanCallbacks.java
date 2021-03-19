@@ -85,7 +85,7 @@ public interface AuditSpanCallbacks {
   default void afterError(Request<?> request,
       Response<?> response,
       Exception exception)
-      throws AuditFailureException, SdkBaseException{
+      throws AuditFailureException, SdkBaseException {
   }
 
 }

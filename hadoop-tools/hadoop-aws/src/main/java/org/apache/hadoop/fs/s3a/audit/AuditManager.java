@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.audit;
 import java.util.List;
 
 import com.amazonaws.handlers.RequestHandler2;
-import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.service.Service;
@@ -53,13 +52,4 @@ public interface AuditManager extends Service, AuditSpanSource,
    */
   List<RequestHandler2> createRequestHandlers();
 
-  /**
-   * Return a transfer state change callback which
-   * fixes the active span context to be that in which
-   * the state change listener was created.
-   * This ensures that copy operations get bounded
-   * to the correct span.
-   * @return a state change listener.
-   */
-  TransferStateChangeListener createStateChangeListener();
 }

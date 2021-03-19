@@ -16,13 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit;
+package org.apache.hadoop.fs.s3a.audit.impl;
 
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.audit.OperationAuditor;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.service.AbstractService;
 
@@ -59,44 +55,6 @@ public abstract class AbstractOperationAuditor extends AbstractService
    */
   public IOStatisticsStore getIOStatistics() {
     return iostatistics;
-  }
-
-  /**
-   * Create, and initialize and an audit service.
-   * The service start operation is not called: that is left to
-   * the caller.
-   * @param conf configuration to read the key from and to use to init
-   * the service.
-   * @param key key containing the classname
-   * @param store IOStatistics store.
-   * @return instantiated class.
-   * @throws IOException failure to initialise.
-   */
-  @SuppressWarnings("ClassReferencesSubclass")
-  public static OperationAuditor createInstance(
-      Configuration conf,
-      String key,
-      IOStatisticsStore store) throws IOException {
-    try {
-      final Class<? extends OperationAuditor> auditClassname
-          = conf.getClass(
-          key,
-          LoggingAuditor.class,
-          OperationAuditor.class);
-      final Constructor<? extends OperationAuditor> constructor
-          = auditClassname.getConstructor(String.class,
-          IOStatisticsStore.class);
-      final OperationAuditor instance = constructor.newInstance(
-          auditClassname.getCanonicalName(), store);
-      instance.init(conf);
-      return instance;
-    } catch (NoSuchMethodException | InstantiationException
-        | RuntimeException
-        | IllegalAccessException | InvocationTargetException e) {
-      throw new IOException("Failed to instantiate class "
-          + "defined in " + key,
-          e);
-    }
   }
 
 }

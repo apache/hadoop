@@ -218,9 +218,10 @@ public class WriteOperationHelper implements WriteOperations {
 
   /**
    * Activate the audit span.
+   * @return the span
    */
-  private void activateAuditSpan() {
-    auditSpan.activate();
+  private AuditSpan activateAuditSpan() {
+    return auditSpan.activate();
   }
 
   /**
@@ -346,8 +347,7 @@ public class WriteOperationHelper implements WriteOperations {
       throw new PathIOException(destKey,
           "No upload parts in multipart upload");
     }
-    activateAuditSpan();
-    try {
+    try (AuditSpan span = activateAuditSpan()) {
       CompleteMultipartUploadResult uploadResult;
       uploadResult = invoker.retry("Completing multipart upload", destKey,
           true,
@@ -362,8 +362,6 @@ public class WriteOperationHelper implements WriteOperations {
       owner.finishedWrite(destKey, length, uploadResult.getETag(),
           uploadResult.getVersionId(), operationState);
       return uploadResult;
-    } finally {
-      getAuditSpan().deactivate();
     }
   }
 

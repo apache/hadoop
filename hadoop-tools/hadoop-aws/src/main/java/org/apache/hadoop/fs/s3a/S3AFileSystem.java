@@ -79,6 +79,8 @@ import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
+
+import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -97,10 +99,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.audit.AuditIntegration;
 import org.apache.hadoop.fs.s3a.audit.AuditManager;
 import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanSource;
-import org.apache.hadoop.fs.s3a.audit.ActiveAuditManager;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
@@ -210,7 +212,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
-import static org.apache.hadoop.fs.s3a.select.SelectConstants.FS_S3A_SELECT_ENABLED;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtDebug;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
@@ -334,11 +336,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private DirectoryPolicy directoryPolicy;
 
   /**
-   * Header processing for XAttr.
-   */
-  private HeaderProcessing headerProcessing;
-
-  /**
    * Context accessors for re-use.
    */
   private final ContextAccessors contextAccessors = new ContextAccessorsImpl();
@@ -356,7 +353,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * be replaced with a configured one.
    */
   private AuditManager auditManager =
-      ActiveAuditManager.stubAuditManager();
+      AuditIntegration.stubAuditManager();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -498,8 +495,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           magicCommitterEnabled ? "is" : "is not");
       committerIntegration = new MagicCommitIntegration(
           this, magicCommitterEnabled);
-      // header processing for rename and magic committer
-      headerProcessing = new HeaderProcessing(createStoreContext());
 
       boolean blockUploadEnabled = conf.getBoolean(FAST_UPLOAD, true);
 
@@ -785,7 +780,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withEndpoint(conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT))
         .withMetrics(statisticsContext.newStatisticsFromAwsSdk())
         .withPathStyleAccess(conf.getBoolean(PATH_STYLE_ACCESS, false))
-        .withUserAgentSuffix(uaSuffix);
+        .withUserAgentSuffix(uaSuffix)
+        .withRequestHandlers(auditManager.createRequestHandlers());
 
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
         .createS3Client(getUri(),
@@ -799,7 +795,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException failure to instantiate/initialize.
    */
   protected void initializeAuditService() throws IOException {
-    auditManager = ActiveAuditManager.createAuditManager(
+    auditManager = AuditIntegration.createAuditManager(
         getConf(),
         instrumentation.getIOStatistics());
   }
@@ -3866,6 +3862,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } finally {
       stopAllServices();
     }
+    // Log IOStatistics at debug.
+    if (LOG.isDebugEnabled()) {
+      // robust extract and convert to string
+      LOG.debug("Statistics for {}: {}", uri,
+          IOStatisticsLogging.ioStatisticsToPrettyString(getIOStatistics()));
+    }
   }
 
   /**
@@ -4103,8 +4105,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               getRequestFactory().newCopyObjectRequest(srcKey, dstKey, srcom);
           changeTracker.maybeApplyConstraint(copyObjectRequest);
           incrementStatistic(OBJECT_COPY_REQUESTS);
-          Copy copy = transfers.copy(copyObjectRequest,
-              getAuditManager().createStateChangeListener());
+          Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           CopyOutcome copyOutcome = CopyOutcome.waitForCopy(copy);
           InterruptedException interruptedException =
@@ -4578,10 +4579,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Get header processing support.
-   * @return the header processing of this instance.
+   * @return a new header processing instance.
    */
   private HeaderProcessing getHeaderProcessing() {
-    return headerProcessing;
+    return new HeaderProcessing(createStoreContext(),
+        createHeaderProcessingCallbacks());
   }
 
   @Override
@@ -4631,6 +4633,29 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
   }
 
+  /**
+   * Create the callbacks.
+   * @return An implementation of the header processing
+   * callbacks.
+   */
+  protected HeaderProcessing.HeaderProcessingCallbacks
+      createHeaderProcessingCallbacks() {
+    return new HeaderProcessingCallbacksImpl();
+  }
+
+  /**
+   * Operations needed for Header Processing.
+   */
+  protected final class HeaderProcessingCallbacksImpl implements
+      HeaderProcessing.HeaderProcessingCallbacks {
+
+    @Override
+    public ObjectMetadata getObjectMetadata(final String key)
+        throws IOException {
+      return once("getObjectMetadata", key, () ->
+          S3AFileSystem.this.getObjectMetadata(key));
+    }
+  }
   /**
    * {@inheritDoc}.
    *
@@ -5332,13 +5357,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public Path makeQualified(final Path path) {
       return S3AFileSystem.this.makeQualified(path);
-    }
-
-    @Override
-    public ObjectMetadata getObjectMetadata(final String key)
-        throws IOException {
-      return once("getObjectMetadata", key, () ->
-          S3AFileSystem.this.getObjectMetadata(key));
     }
 
     @Override

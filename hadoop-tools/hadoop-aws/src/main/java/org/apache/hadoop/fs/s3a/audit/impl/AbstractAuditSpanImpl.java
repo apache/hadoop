@@ -16,13 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit;
+package org.apache.hadoop.fs.s3a.audit.impl;
 
-public abstract class AbstractAuditSpanImpl implements AuditSpan{
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
+
+/**
+ * Base class for the audit spans implementations..
+ */
+public abstract class AbstractAuditSpanImpl implements AuditSpan {
 
   protected AbstractAuditSpanImpl() {
   }
 
+  /**
+   * Invoke {@link AuditSpan#deactivate()}.
+   * This is final: subclasses MUST override the
+   * {@code deactivate()} method.
+   */
   @Override
   public final void close() {
     deactivate();

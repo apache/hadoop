@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit;
+package org.apache.hadoop.fs.s3a.audit.impl;
 
 /**
  * Simple no-op span.
  */
-public final class NoopSpan implements AuditSpan {
+public final class NoopSpan extends AbstractAuditSpanImpl {
 
   private final String name;
 
@@ -34,6 +34,12 @@ public final class NoopSpan implements AuditSpan {
    */
   public static final NoopSpan INSTANCE = new NoopSpan();
 
+  /**
+   * Create a no-op span.
+   * @param name name
+   * @param path1 path
+   * @param path2 path 2
+   */
   public NoopSpan(final String name, final String path1, final String path2) {
     this.name = name;
     this.path1 = path1;

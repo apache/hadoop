@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 
@@ -246,12 +247,16 @@ public class HeaderProcessing extends AbstractStoreOperation {
   public static final String CONTENT_TYPE_X_DIRECTORY =
       "application/x-directory";
 
+  private final HeaderProcessingCallbacks callbacks;
   /**
    * Construct.
    * @param storeContext store context.
+   * @param callbacks callbacks to the store
    */
-  public HeaderProcessing(final StoreContext storeContext) {
+  public HeaderProcessing(final StoreContext storeContext,
+      final HeaderProcessingCallbacks callbacks) {
     super(storeContext);
+    this.callbacks = callbacks;
   }
 
   /**
@@ -269,18 +274,17 @@ public class HeaderProcessing extends AbstractStoreOperation {
       final Path path,
       final Statistic statistic) throws IOException {
     StoreContext context = getStoreContext();
-    ContextAccessors accessors = context.getContextAccessors();
-    String objectKey = accessors.pathToKey(path);
+    String objectKey = context.pathToKey(path);
     ObjectMetadata md;
     String symbol = statistic.getSymbol();
     S3AStatisticsContext instrumentation = context.getInstrumentation();
     try {
       md = trackDuration(instrumentation, symbol, () ->
-              accessors.getObjectMetadata(objectKey));
+              callbacks.getObjectMetadata(objectKey));
     } catch (FileNotFoundException e) {
       // no entry. It could be a directory, so try again.
       md = trackDuration(instrumentation, symbol, () ->
-          accessors.getObjectMetadata(objectKey + "/"));
+          callbacks.getObjectMetadata(objectKey + "/"));
     }
     // all user metadata
     Map<String, String> rawHeaders = md.getUserMetadata();
@@ -513,4 +517,16 @@ public class HeaderProcessing extends AbstractStoreOperation {
         .forEach(e -> dest.addUserMetadata(e.getKey(), e.getValue()));
   }
 
+  public interface HeaderProcessingCallbacks {
+
+    /**
+     * Retrieve the object metadata.
+     *
+     * @param key key to retrieve.
+     * @return metadata
+     * @throws IOException IO and object access problems.
+     */
+    @Retries.RetryTranslated
+    ObjectMetadata getObjectMetadata(String key) throws IOException;
+  }
 }

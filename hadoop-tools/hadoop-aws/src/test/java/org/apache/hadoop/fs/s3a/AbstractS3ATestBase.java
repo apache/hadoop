@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanSource;
-import org.apache.hadoop.fs.s3a.audit.NoopSpan;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.io.IOUtils;
@@ -44,6 +43,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
+import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.noopSpan;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
@@ -263,9 +263,8 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
         return source.createSpan(getMethodName(), null, null);
       } catch (Exception e) {
         LOG.info("Span collection failure", e);
-        return NoopSpan.INSTANCE;
       }
     }
-    return NoopSpan.INSTANCE;
+    return noopSpan(getMethodName(), null, null);
   }
 }
