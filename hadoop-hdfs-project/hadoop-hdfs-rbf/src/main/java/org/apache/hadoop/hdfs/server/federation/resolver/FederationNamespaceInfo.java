@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
 import org.apache.commons.lang3.builder.CompareToBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdfs.server.federation.router.RemoteLocationContext;
 
@@ -80,24 +81,29 @@ public class FederationNamespaceInfo extends RemoteLocationContext {
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (obj == this) {
       return true;
     }
-    if (obj instanceof FederationNamespaceInfo) {
-      FederationNamespaceInfo other = (FederationNamespaceInfo) obj;
-      return this.getNameserviceId().equals(other.getNameserviceId()) &&
-          this.getClusterId().equals(other.getClusterId()) &&
-          this.getBlockPoolId().equals(other.getBlockPoolId());
+    if (obj.getClass() != getClass()) {
+      return false;
     }
-    return false;
+    FederationNamespaceInfo other = (FederationNamespaceInfo) obj;
+    return new EqualsBuilder()
+        .append(nameserviceId, other.nameserviceId)
+        .append(clusterId, other.clusterId)
+        .append(blockPoolId, other.blockPoolId)
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
     return new HashCodeBuilder(17, 31)
-        .append(getNameserviceId())
-        .append(getClusterId())
-        .append(getBlockPoolId())
+        .append(nameserviceId)
+        .append(clusterId)
+        .append(blockPoolId)
         .toHashCode();
   }
 
