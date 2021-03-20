@@ -48,6 +48,17 @@ class Syscall {
    */
   static int WriteToStdout(const char* message);
 
+  /**
+   * Checks whether the {@link str} argument matches the {@link pattern}
+   * argument, which is a shell wildcard pattern.
+   *
+   * @param pattern The wildcard pattern to use.
+   * @param str The string to match.
+   * @returns A boolean indicating whether the given {@link str}
+   * matches {@link pattern}.
+   */
+  static bool FnMatch(const std::string& pattern, const std::string& str);
+
  private:
   static bool WriteToStdoutImpl(const char* message);
 };

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include <fnmatch.h>
 #include <unistd.h>
 
 #include <cstring>
@@ -28,6 +29,11 @@ bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
 
 int XPlatform::Syscall::WriteToStdout(const char* message) {
   return WriteToStdoutImpl(message) ? 1 : 0;
+}
+
+bool XPlatform::Syscall::FnMatch(const std::string& pattern,
+                                 const std::string& str) {
+  return fnmatch(pattern.c_str(), str.c_str(), 0) == 0;
 }
 
 bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
