@@ -25,9 +25,7 @@
 #include <limits>
 #include <future>
 #include <tuple>
-#include <iostream>
 #include <pwd.h>
-#include <fnmatch.h>
 
 #include <boost/asio/ip/tcp.hpp>
 
