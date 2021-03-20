@@ -380,7 +380,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     String operationName = "fsck";
     try {
       if(blockIds != null) {
-        namenode.getNamesystem().checkSuperuserPrivilege(operationName);
+        namenode.getNamesystem().checkSuperuserPrivilege(operationName, path);
         StringBuilder sb = new StringBuilder();
         sb.append("FSCK started by " +
             UserGroupInformation.getCurrentUser() + " from " +

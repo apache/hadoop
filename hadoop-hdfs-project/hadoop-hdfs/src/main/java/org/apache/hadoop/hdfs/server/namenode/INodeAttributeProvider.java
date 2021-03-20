@@ -407,7 +407,7 @@ public abstract class INodeAttributeProvider {
     }
 
     /**
-     * Checks if the user belongs to superuser group.
+     * Checks if the user is a superuser or belongs to superuser group.
      * It throws an AccessControlException if user is not a superuser.
      *
      * @param authzContext an {@link AuthorizationContext} object encapsulating

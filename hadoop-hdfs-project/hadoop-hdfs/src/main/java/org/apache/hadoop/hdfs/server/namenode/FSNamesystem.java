@@ -2415,7 +2415,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     if (checkSuperUser && isStoragePolicySuperuserOnly) {
       checkSuperuserPrivilege(
-          CaseUtils.toCamelCase(operationNameReadable, false), null);
+          CaseUtils.toCamelCase(operationNameReadable, false));
     }
   }
 
@@ -7699,7 +7699,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String poolNameStr = "{poolName: " +
         (req == null ? null : req.getPoolName()) + "}";
     try {
-      checkSuperuserPrivilege(operationName);
+      checkSuperuserPrivilege(operationName, poolNameStr);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7726,7 +7726,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolNameStr = "{poolName: " + cachePoolName + "}";
     try {
-      checkSuperuserPrivilege(operationName);
+      checkSuperuserPrivilege(operationName, poolNameStr);
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
@@ -7992,7 +7992,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "listEncryptionZones";
     boolean success = false;
     checkOperation(OperationCategory.READ);
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, dir.rootDir.getFullPathName());
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -8029,7 +8029,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "listReencryptionStatus";
     boolean success = false;
     checkOperation(OperationCategory.READ);
-    checkSuperuserPrivilege(operationName);
+    checkSuperuserPrivilege(operationName, dir.rootDir.getFullPathName());
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -8882,7 +8882,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         FSPermissionChecker pc = getPermissionChecker();
         pc.checkSuperuserPrivilege(path);
       } catch(AccessControlException ace){
-        logAuditEvent(false, operationName, null);
+        logAuditEvent(false, operationName, path);
         throw ace;
       }
     }

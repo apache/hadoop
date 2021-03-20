@@ -84,8 +84,10 @@ public class FSDirAttrOp {
       iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       // Only the owner or super user can change the group or owner
       fsd.checkOwner(pc, iip);
-      // Only a super user can change ownership to a different user
-      // or group to a different group that the user doesn't belong to
+      // superuser: can change owner to a different user,
+      // change owner group to any group
+      // owner: can't change owner to a different user but can change owner
+      // group to different group that the user belongs to.
       if ((username != null && !pc.getUser().equals(username)) ||
           (group != null && !pc.isMemberOfGroup(group))) {
         try {
@@ -247,6 +249,8 @@ public class FSDirAttrOp {
     fsd.writeLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
+      // Here, the assumption is that the caller of this method has
+      // already checked for super user privilege
       if (fsd.isPermissionEnabled() && !pc.isSuperUser() && allowOwner) {
         try {
           fsd.checkOwner(pc, iip.getParentINodesInPath());
