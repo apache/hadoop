@@ -634,10 +634,10 @@ public class Balancer {
   }
 
   static class Result {
-    final ExitStatus exitStatus;
-    final long bytesLeftToMove;
-    final long bytesBeingMoved;
-    final long bytesAlreadyMoved;
+    private final ExitStatus exitStatus;
+    private final long bytesLeftToMove;
+    private final long bytesBeingMoved;
+    private final long bytesAlreadyMoved;
 
     Result(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved,
         long bytesAlreadyMoved) {
@@ -645,6 +645,22 @@ public class Balancer {
       this.bytesLeftToMove = bytesLeftToMove;
       this.bytesBeingMoved = bytesBeingMoved;
       this.bytesAlreadyMoved = bytesAlreadyMoved;
+    }
+
+    public ExitStatus getExitStatus() {
+      return exitStatus;
+    }
+
+    public long getBytesLeftToMove() {
+      return bytesLeftToMove;
+    }
+
+    public long getBytesBeingMoved() {
+      return bytesBeingMoved;
+    }
+
+    public long getBytesAlreadyMoved() {
+      return bytesAlreadyMoved;
     }
 
     void print(int iteration, NameNodeConnector nnc, PrintStream out) {
