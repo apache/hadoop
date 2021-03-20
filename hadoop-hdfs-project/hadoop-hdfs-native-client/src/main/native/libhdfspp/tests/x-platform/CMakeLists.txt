@@ -25,9 +25,9 @@ else(WIN32)
 endif(WIN32)
 
 target_include_directories(x_platform_utils_test PRIVATE ${LIBHDFSPP_LIB_DIR})
-target_link_libraries(x_platform_utils_test GTest::gmock_main)
+target_link_libraries(x_platform_utils_test gmock_main)
 add_test(x_platform_utils_test x_platform_utils_test)
 
 target_include_directories(x_platform_syscall_test PRIVATE ${LIBHDFSPP_LIB_DIR})
-target_link_libraries(x_platform_syscall_test GTest::gmock_main)
+target_link_libraries(x_platform_syscall_test gmock_main)
 add_test(x_platform_syscall_test x_platform_syscall_test)
