@@ -18,9 +18,16 @@
 
 if(WIN32)
     add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_obj> utils_common_test.cc utils_test_main.cc utils_win_test.cc)
+    add_executable(x_platform_syscall_test $<TARGET_OBJECTS:x_platform_obj> syscall_common_test.cc utils_test_main.cc syscall_win_test.cc)
 else(WIN32)
     add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_obj> utils_common_test.cc utils_test_main.cc utils_nix_test.cc)
+    add_executable(x_platform_syscall_test $<TARGET_OBJECTS:x_platform_obj> syscall_common_test.cc utils_test_main.cc syscall_nix_test.cc)
 endif(WIN32)
+
 target_include_directories(x_platform_utils_test PRIVATE ${LIBHDFSPP_LIB_DIR})
-target_link_libraries(x_platform_utils_test gmock_main)
+target_link_libraries(x_platform_utils_test GTest::gmock_main)
 add_test(x_platform_utils_test x_platform_utils_test)
+
+target_include_directories(x_platform_syscall_test PRIVATE ${LIBHDFSPP_LIB_DIR})
+target_link_libraries(x_platform_syscall_test GTest::gmock_main)
+add_test(x_platform_syscall_test x_platform_syscall_test)
