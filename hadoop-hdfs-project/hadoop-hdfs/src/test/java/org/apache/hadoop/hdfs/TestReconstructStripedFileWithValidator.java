@@ -54,10 +54,13 @@ public class TestReconstructStripedFileWithValidator
   @Test(timeout = 120000)
   public void testValidatorWithBadDecoding()
       throws Exception {
+    MiniDFSCluster cluster = getCluster();
+
     cluster.getDataNodes().stream()
         .map(DataNode::getMetrics)
         .map(DataNodeMetrics::getECInvalidReconstructionTasks)
         .forEach(n -> Assert.assertEquals(0, (long) n));
+
     DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
     DataNodeFaultInjector badDecodingInjector = new DataNodeFaultInjector() {
       private final AtomicBoolean flag = new AtomicBoolean(false);
@@ -75,6 +78,7 @@ public class TestReconstructStripedFileWithValidator
       }
     };
     DataNodeFaultInjector.set(badDecodingInjector);
+
     int fileLen =
         (getEcPolicy().getNumDataUnits() + getEcPolicy().getNumParityUnits())
             * getBlockSize() + getBlockSize() / 10;
@@ -84,6 +88,7 @@ public class TestReconstructStripedFileWithValidator
           fileLen,
           ReconstructionType.DataOnly,
           getEcPolicy().getNumParityUnits());
+
       long count = cluster.getDataNodes().stream()
           .map(DataNode::getMetrics)
           .map(DataNodeMetrics::getECInvalidReconstructionTasks)

@@ -97,7 +97,7 @@ public class TestReconstructStripedFile {
   }
 
   private Configuration conf;
-  MiniDFSCluster cluster;
+  private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   // Map: DatanodeID -> datanode index in cluster
   private Map<DatanodeID, Integer> dnMap = new HashMap<>();
@@ -118,6 +118,10 @@ public class TestReconstructStripedFile {
 
   public int getBlockSize() {
     return blockSize;
+  }
+
+  public MiniDFSCluster getCluster() {
+    return cluster;
   }
 
   @Before
