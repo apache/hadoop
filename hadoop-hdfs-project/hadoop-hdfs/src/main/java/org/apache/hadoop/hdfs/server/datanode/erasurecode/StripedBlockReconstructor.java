@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.io.erasurecode.rawcoder.InvalidDecodingException;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -134,7 +135,12 @@ class StripedBlockReconstructor extends StripedReconstructor
       resetBuffers(inputs);
 
       DataNodeFaultInjector.get().badDecoding(outputs);
-      getValidator().validate(inputs, erasedIndices, outputs);
+      try {
+        getValidator().validate(inputs, erasedIndices, outputs);
+      } catch (InvalidDecodingException e) {
+        getDatanode().getMetrics().incrECInvalidReconstructionTasks();
+        throw e;
+      }
     } else {
       decode(inputs, erasedIndices, outputs);
     }

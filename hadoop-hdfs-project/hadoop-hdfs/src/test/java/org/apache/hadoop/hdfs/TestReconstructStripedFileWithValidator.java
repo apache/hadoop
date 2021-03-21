@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +54,10 @@ public class TestReconstructStripedFileWithValidator
   @Test(timeout = 120000)
   public void testValidatorWithBadDecoding()
       throws Exception {
+    cluster.getDataNodes().stream()
+        .map(DataNode::getMetrics)
+        .map(DataNodeMetrics::getECInvalidReconstructionTasks)
+        .forEach(n -> Assert.assertEquals(0, (long) n));
     DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
     DataNodeFaultInjector badDecodingInjector = new DataNodeFaultInjector() {
       private final AtomicBoolean flag = new AtomicBoolean(false);
@@ -77,6 +84,11 @@ public class TestReconstructStripedFileWithValidator
           fileLen,
           ReconstructionType.DataOnly,
           getEcPolicy().getNumParityUnits());
+      long count = cluster.getDataNodes().stream()
+          .map(DataNode::getMetrics)
+          .map(DataNodeMetrics::getECInvalidReconstructionTasks)
+          .filter(n -> n == 1).count();
+      Assert.assertEquals(1, count);
     } finally {
       DataNodeFaultInjector.set(oldInjector);
     }

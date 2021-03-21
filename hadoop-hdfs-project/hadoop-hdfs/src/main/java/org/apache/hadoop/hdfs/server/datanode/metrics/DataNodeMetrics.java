@@ -152,6 +152,8 @@ public class DataNodeMetrics {
   MutableCounterLong ecReconstructionTasks;
   @Metric("Count of erasure coding failed reconstruction tasks")
   MutableCounterLong ecFailedReconstructionTasks;
+  @Metric("Count of erasure coding invalidated reconstruction tasks")
+  private MutableCounterLong ecInvalidReconstructionTasks;
   @Metric("Nanoseconds spent by decoding tasks")
   MutableCounterLong ecDecodingTimeNanos;
   @Metric("Bytes read by erasure coding worker")
@@ -541,6 +543,14 @@ public class DataNodeMetrics {
 
   public void incrECFailedReconstructionTasks() {
     ecFailedReconstructionTasks.incr();
+  }
+
+  public void incrECInvalidReconstructionTasks() {
+    ecInvalidReconstructionTasks.incr();
+  }
+
+  public long getECInvalidReconstructionTasks() {
+    return ecInvalidReconstructionTasks.value();
   }
 
   public void incrDataNodeActiveXceiversCount() {

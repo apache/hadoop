@@ -97,7 +97,7 @@ public class TestReconstructStripedFile {
   }
 
   private Configuration conf;
-  private MiniDFSCluster cluster;
+  MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   // Map: DatanodeID -> datanode index in cluster
   private Map<DatanodeID, Integer> dnMap = new HashMap<>();
