@@ -81,9 +81,7 @@ public class DecodingValidator {
       int remaining = validInput.remaining();
 
       // Init buffer
-      if (buffer == null) {
-        buffer = allocateBuffer(isDirect, capacity);
-      } else if (buffer.isDirect() != isDirect
+      if (buffer == null || buffer.isDirect() != isDirect
           || buffer.capacity() < remaining) {
         buffer = allocateBuffer(isDirect, capacity);
       }
