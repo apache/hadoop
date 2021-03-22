@@ -1165,6 +1165,96 @@ public class TestBlockManager {
     return builder.build();
   }
 
+  /**
+   * During the test in safemode, the DN only reports the block once in full.
+   */
+  @Test
+  public void testSafeModeOneFullBR() throws Exception {
+    // pretend to be in safemode
+    doReturn(true).when(fsn).isInStartupSafeMode();
+
+    DatanodeDescriptor node = nodes.get(0);
+    DatanodeStorageInfo ds = node.getStorageInfos()[0];
+    node.setAlive(true);
+    DatanodeRegistration nodeReg =  new DatanodeRegistration(node, null, null, "");
+
+    // register new node
+    bm.getDatanodeManager().registerDatanode(nodeReg);
+    bm.getDatanodeManager().addDatanode(node);
+    assertEquals(node, bm.getDatanodeManager().getDatanode(node));
+    assertEquals(0, ds.getBlockReportCount());
+    // Build a incremental report
+    List<ReceivedDeletedBlockInfo> rdbiList = new ArrayList<>();
+    // Build a full report
+    BlockListAsLongs.Builder builder = BlockListAsLongs.builder();
+
+    // blk_42 is finalized.
+    long receivedBlockId = 42;  // arbitrary
+    BlockInfo receivedBlock = addBlockToBM(receivedBlockId);
+    rdbiList.add(new ReceivedDeletedBlockInfo(new Block(receivedBlock),
+            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null));
+    builder.add(new FinalizedReplica(receivedBlock, null, null));
+
+    // blk_43 is under construction.
+    long receivingBlockId = 43;
+    BlockInfo receivingBlock = addUcBlockToBM(receivingBlockId);
+    rdbiList.add(new ReceivedDeletedBlockInfo(new Block(receivingBlock),
+            ReceivedDeletedBlockInfo.BlockStatus.RECEIVING_BLOCK, null));
+    builder.add(new ReplicaBeingWritten(receivingBlock, null, null, null));
+
+    // blk_44 has 2 records in IBR. It's finalized. So full BR has 1 record.
+    long receivingReceivedBlockId = 44;
+    BlockInfo receivingReceivedBlock = addBlockToBM(receivingReceivedBlockId);
+    rdbiList.add(new ReceivedDeletedBlockInfo(new Block(receivingReceivedBlock),
+            ReceivedDeletedBlockInfo.BlockStatus.RECEIVING_BLOCK, null));
+    rdbiList.add(new ReceivedDeletedBlockInfo(new Block(receivingReceivedBlock),
+            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null));
+    builder.add(new FinalizedReplica(receivingReceivedBlock, null, null));
+
+    // blk_45 is not in full BR, because it's deleted.
+    long ReceivedDeletedBlockId = 45;
+    rdbiList.add(new ReceivedDeletedBlockInfo(
+            new Block(ReceivedDeletedBlockId),
+            ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null));
+    rdbiList.add(new ReceivedDeletedBlockInfo(
+            new Block(ReceivedDeletedBlockId),
+            ReceivedDeletedBlockInfo.BlockStatus.DELETED_BLOCK, null));
+
+    // blk_46 exists in DN for a long time, so it's in full BR, but not in IBR.
+    long existedBlockId = 46;
+    BlockInfo existedBlock = addBlockToBM(existedBlockId);
+    builder.add(new FinalizedReplica(existedBlock, null, null));
+
+    long leaseId = bm.requestBlockReportLeaseId(nodeReg);
+    assertTrue(leaseId != 0);
+
+    // process IBR and full BR
+    StorageReceivedDeletedBlocks srdb =
+            new StorageReceivedDeletedBlocks(new DatanodeStorage(ds.getStorageID()),
+                    rdbiList.toArray(new ReceivedDeletedBlockInfo[rdbiList.size()]));
+    bm.processIncrementalBlockReport(node, srdb);
+    // Make sure it's the first full report
+    assertEquals(0, ds.getBlockReportCount());
+    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
+            builder.build(),
+            new BlockReportContext(1, 0, System.nanoTime(), 0, true));
+    assertEquals(1, ds.getBlockReportCount());
+
+    // verify the storage info is correct
+    assertTrue(bm.getStoredBlock(new Block(receivedBlockId)).findStorageInfo
+            (ds) >= 0);
+    assertTrue(bm.getStoredBlock(new Block(receivingBlockId))
+            .getUnderConstructionFeature().getNumExpectedLocations() > 0);
+    assertTrue(bm.getStoredBlock(new Block(receivingReceivedBlockId))
+            .findStorageInfo(ds) >= 0);
+    assertNull(bm.getStoredBlock(new Block(ReceivedDeletedBlockId)));
+    assertTrue(bm.getStoredBlock(new Block(existedBlock)).findStorageInfo
+            (ds) >= 0);
+
+    leaseId = bm.requestBlockReportLeaseId(nodeReg);
+    assertTrue(leaseId == 0);
+  }
+
   @Test
   public void testUCBlockNotConsideredMissing() throws Exception {
     DatanodeDescriptor node = nodes.get(0);
