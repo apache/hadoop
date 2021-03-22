@@ -153,10 +153,10 @@ class LocalFetcher<K,V> extends Fetcher<K, V> {
     FileSystem localFs = FileSystem.getLocal(job).getRaw();
     FSDataInputStream inStream = localFs.open(mapOutputFileName);
     try {
+      inStream.seek(ir.startOffset);
       inStream =
           IntermediateEncryptedStream.wrapIfNecessary(job, inStream,
               mapOutputFileName);
-      inStream.seek(ir.startOffset + CryptoUtils.cryptoPadding(job));
       mapOutput.shuffle(LOCALHOST, inStream, compressedLength,
           decompressedLength, metrics, reporter);
     } finally {
