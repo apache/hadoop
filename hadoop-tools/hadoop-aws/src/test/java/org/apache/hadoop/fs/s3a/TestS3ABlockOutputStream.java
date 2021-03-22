@@ -30,6 +30,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MULTIPART_SIZE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -43,8 +44,11 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
 
   private S3ABlockOutputStream stream;
 
-  @Before
-  public void setUp() throws Exception {
+  /**
+   * Create an S3A Builder all mocked up from component pieces
+   * @return stream builder.
+   */
+  private S3ABlockOutputStream.BlockOutputStreamBuilder mockS3ABuilder() {
     ExecutorService executorService = mock(ExecutorService.class);
     Progressable progressable = mock(Progressable.class);
     S3ADataBlocks.BlockFactory blockFactory =
@@ -52,10 +56,25 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     long blockSize = Constants.DEFAULT_MULTIPART_SIZE;
     WriteOperationHelper oHelper = mock(WriteOperationHelper.class);
     PutTracker putTracker = mock(PutTracker.class);
-    stream = spy(new S3ABlockOutputStream(fs, "", executorService,
-      progressable, blockSize, blockFactory, null, oHelper,
-      putTracker));
+    final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
+        S3ABlockOutputStream.builder()
+            .withBlockFactory(blockFactory)
+            .withBlockSize(blockSize)
+            .withExecutorService(executorService)
+            .withKey("")
+            .withProgress(progressable)
+            .withPutTracker(putTracker)
+            .withWriteOperations(oHelper);
+    return builder;
   }
+
+  @Before
+  public void setUp() throws Exception {
+    final S3ABlockOutputStream.BlockOutputStreamBuilder
+        builder = mockS3ABuilder();
+    stream = spy(new S3ABlockOutputStream(builder));
+  }
+
 
   @Test
   public void testFlushNoOpWhenStreamClosed() throws Exception {
@@ -108,4 +127,31 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     // This will ensure abort() can be called with try-with-resource.
     stream.close();
   }
+
+
+  /**
+   * Unless configured to downgrade, the stream will raise exceptions on
+   * Syncable API calls.
+   */
+  @Test
+  public void testSyncableUnsupported() throws Exception {
+    intercept(UnsupportedOperationException.class, () -> stream.hflush());
+    intercept(UnsupportedOperationException.class, () -> stream.hsync());
+  }
+
+  /**
+   * When configured to downgrade, the stream downgrades on.
+   * Syncable API calls.
+   */
+  @Test
+  public void testSyncableDowngrade() throws Exception {
+    final S3ABlockOutputStream.BlockOutputStreamBuilder
+        builder = mockS3ABuilder();
+    builder.withDowngradeSyncableExceptions(true);
+    stream = spy(new S3ABlockOutputStream(builder));
+
+    stream.hflush();
+    stream.hsync();
+  }
+
 }

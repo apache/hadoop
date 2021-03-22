@@ -1348,20 +1348,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String destKey = putTracker.getDestKey();
     final BlockOutputStreamStatistics outputStreamStatistics
         = statisticsContext.newOutputStreamStatistics();
-    return new FSDataOutputStream(
-        new S3ABlockOutputStream(this,
-            destKey,
+    final S3ABlockOutputStream.BlockOutputStreamBuilder builder =
+        S3ABlockOutputStream.builder()
+        .withKey(destKey)
+        .withBlockFactory(blockFactory)
+        .withBlockSize(partSize)
+        .withStatistics(outputStreamStatistics)
+        .withProgress(progress)
+        .withPutTracker(putTracker)
+        .withWriteOperations(getWriteOperationHelper())
+        .withExecutorService(
             new SemaphoredDelegatingExecutor(
                 boundedThreadPool,
                 blockOutputActiveBlocks,
                 true,
-                outputStreamStatistics),
-            progress,
-            partSize,
-            blockFactory,
-            outputStreamStatistics,
-            getWriteOperationHelper(),
-            putTracker),
+                outputStreamStatistics))
+        .withDowngradeSyncableExceptions(
+            getConf().getBoolean(
+                DOWNGRADE_SYNCABLE_EXCEPTIONS,
+                DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT));
+    return new FSDataOutputStream(
+        new S3ABlockOutputStream(builder),
         null);
   }
 
