@@ -28,6 +28,8 @@ import com.amazonaws.Request;
 import com.amazonaws.Response;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.handlers.RequestHandler2;
+import com.amazonaws.services.s3.transfer.Transfer;
+import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -207,6 +209,18 @@ public final class ActiveAuditManager
     List<RequestHandler2> requestHandlers = new ArrayList<>();
     requestHandlers.add(new SdkRequestHandler());
     return requestHandlers;
+  }
+
+  @Override
+  public TransferStateChangeListener createStateChangeListener() {
+    final AuditSpan span = getActiveThreadSpan();
+    return new TransferStateChangeListener() {
+      @Override
+      public void transferStateChanged(final Transfer transfer,
+          final Transfer.TransferState state) {
+        setActiveThreadSpan(span);
+      }
+    };
   }
 
   /**

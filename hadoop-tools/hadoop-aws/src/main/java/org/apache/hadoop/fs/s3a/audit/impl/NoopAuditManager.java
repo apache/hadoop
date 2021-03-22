@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.amazonaws.handlers.RequestHandler2;
+import com.amazonaws.services.s3.transfer.Transfer;
+import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.s3a.audit.AuditManager;
@@ -61,4 +63,12 @@ public class NoopAuditManager extends AbstractService
     return new ArrayList<>();
   }
 
+  @Override
+  public TransferStateChangeListener createStateChangeListener() {
+    return new TransferStateChangeListener() {
+      public void transferStateChanged(final Transfer transfer,
+          final Transfer.TransferState state) {
+      }
+    };
+  }
 }
