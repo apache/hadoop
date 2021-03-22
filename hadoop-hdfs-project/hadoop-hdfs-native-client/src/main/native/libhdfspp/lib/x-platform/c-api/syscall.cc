@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "syscall.h"
+#include "x-platform/syscall.h"
 
 extern "C" int x_platform_syscall_write_to_stdout(const char* msg) {
   return XPlatform::Syscall::WriteToStdout(msg) ? 1 : 0;
