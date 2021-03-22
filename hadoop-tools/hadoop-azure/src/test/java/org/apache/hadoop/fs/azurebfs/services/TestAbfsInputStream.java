@@ -572,10 +572,12 @@ public class TestAbfsInputStream extends
     config.unset("fs.azure.readaheadqueue.depth");
     AzureBlobFileSystem fs = getFileSystem(config);
     Path testFile = new Path("/testFile");
-    createTestFile(testFile, 1, config);
+    fs.create(testFile);
     FSDataInputStream in = fs.open(testFile);
-    Assertions.assertThat(((AbfsInputStream) in.getWrappedStream()).getReadAheadQueueDepth())
-            .describedAs("readahead queue depth should be set to default value 2").isEqualTo(2);
+    Assertions.assertThat(
+        ((AbfsInputStream) in.getWrappedStream()).getReadAheadQueueDepth())
+        .describedAs("readahead queue depth should be set to default value 2")
+        .isEqualTo(2);
   }
 
 
