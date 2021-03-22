@@ -7672,7 +7672,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     String poolInfoStr = null;
     try {
-      checkSuperuserPrivilege(operationName);
+      checkSuperuserPrivilege(operationName, req.getPoolName());
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);

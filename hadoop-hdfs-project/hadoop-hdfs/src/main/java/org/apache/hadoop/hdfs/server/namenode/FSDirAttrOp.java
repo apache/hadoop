@@ -82,8 +82,8 @@ public class FSDirAttrOp {
     fsd.writeLock();
     try {
       iip = fsd.resolvePath(pc, src, DirOp.WRITE);
-      // Only the owner or super user can change the group or owner
       fsd.checkOwner(pc, iip);
+      // At this point, the user must be either owner or super user.
       // superuser: can change owner to a different user,
       // change owner group to any group
       // owner: can't change owner to a different user but can change owner
