@@ -78,7 +78,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE = true;
   public static final String DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES = "";
 
-  public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = -1;
+  public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = 2;
 
   public static final boolean DEFAULT_ENABLE_FLUSH = true;
   public static final boolean DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH = true;
