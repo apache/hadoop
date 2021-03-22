@@ -88,6 +88,12 @@ public final class AbfsLease {
     acquireLease(retryPolicy, 0, 0);
 
     while (leaseID == null && exception == null) {
+      try {
+        future.get();
+      } catch (Exception e) {
+        LOG.debug("Got exception waiting for acquire lease future. Checking if lease ID or "
+            + "exception have been set", e);
+      }
     }
     if (exception != null) {
       LOG.error("Failed to acquire lease on {}", path);
@@ -117,7 +123,7 @@ public final class AbfsLease {
         try {
           if (RetryPolicy.RetryAction.RetryDecision.RETRY
               == retryPolicy.shouldRetry(null, numRetries, 0, true).action) {
-            LOG.debug("Failed acquire lease on {}, retrying: {}", path, throwable);
+            LOG.debug("Failed to acquire lease on {}, retrying: {}", path, throwable);
             acquireLease(retryPolicy, numRetries + 1, LEASE_ACQUIRE_RETRY_INTERVAL);
           } else {
             exception = throwable;
