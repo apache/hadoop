@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.impl;
+package org.apache.hadoop.util.functional;
 
 import javax.annotation.Nullable;
 import java.io.IOException;

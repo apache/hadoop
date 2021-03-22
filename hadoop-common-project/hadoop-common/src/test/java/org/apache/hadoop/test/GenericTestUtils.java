@@ -75,8 +75,8 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
-import static org.apache.hadoop.fs.impl.CommonCallableSupplier.submit;
-import static org.apache.hadoop.fs.impl.CommonCallableSupplier.waitForCompletion;
+import static org.apache.hadoop.util.functional.CommonCallableSupplier.submit;
+import static org.apache.hadoop.util.functional.CommonCallableSupplier.waitForCompletion;
 
 /**
  * Test provides some very generic helpers which might be used across the tests
