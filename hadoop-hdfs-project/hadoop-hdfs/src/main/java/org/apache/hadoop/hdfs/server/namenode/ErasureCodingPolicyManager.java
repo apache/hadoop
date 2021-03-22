@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -484,9 +485,26 @@ public final class ErasureCodingPolicyManager {
   public synchronized void loadPolicies(
       List<ErasureCodingPolicyInfo> ecPolicies, Configuration conf)
       throws IOException{
+    loadPolicies(ecPolicies, conf, null);
+  }
+
+  /**
+   * Reload the erasure coding strategy from fsImage and use
+   * a counter to record.
+   *
+   * @param ecPolicies contains ErasureCodingPolicy list
+   *
+   */
+  public synchronized void loadPolicies(
+          List<ErasureCodingPolicyInfo> ecPolicies, Configuration conf,
+          StartupProgress.Counter counter)
+          throws IOException{
     Preconditions.checkNotNull(ecPolicies);
     for (ErasureCodingPolicyInfo p : ecPolicies) {
       loadPolicy(p);
+      if (counter != null) {
+        counter.increment();
+      }
     }
     enableDefaultPolicy(conf);
     updatePolicies();
