@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -423,9 +424,10 @@ public class TestFileSystemCaching extends HadoopTestBase {
     // only one instance can be created at a time.
     URI uri = new URI("blocking://a");
     ListeningExecutorService pool =
-        BlockingThreadPoolExecutorService.newInstance(count * 2, 0,
+        MoreExecutors.listeningDecorator(
+            BlockingThreadPoolExecutorService.newInstance(count * 2, 0,
             10, TimeUnit.SECONDS,
-            "creation-threads");
+            "creation-threads"));
 
     // submit a set of requests to create an FS instance.
     // the semaphore will block all but one, and that will block until

@@ -20,12 +20,15 @@ package org.apache.hadoop.yarn.event;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.Collectors;
 
+import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -85,6 +88,11 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   protected final Map<Class<? extends Enum>, EventHandler> eventDispatchers;
   private boolean exitOnDispatchException = true;
 
+  private Map<Class<? extends Enum>,
+      EventTypeMetrics> eventTypeMetricsMap;
+
+  private Clock clock = new MonotonicClock();
+
   /**
    * The thread name for dispatcher.
    */
@@ -98,6 +106,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     super("Dispatcher");
     this.eventQueue = eventQueue;
     this.eventDispatchers = new HashMap<Class<? extends Enum>, EventHandler>();
+    this.eventTypeMetricsMap = new HashMap<Class<? extends Enum>,
+        EventTypeMetrics>();
   }
 
   /**
@@ -135,7 +145,16 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
             return;
           }
           if (event != null) {
-            dispatch(event);
+            if (eventTypeMetricsMap.
+                get(event.getType().getDeclaringClass()) != null) {
+              long startTime = clock.getTime();
+              dispatch(event);
+              eventTypeMetricsMap.get(event.getType().getDeclaringClass())
+                  .increment(event.getType(),
+                      clock.getTime() - startTime);
+            } else {
+              dispatch(event);
+            }
             if (printTrigger) {
               //Log the latest dispatch event type
               // may cause the too many events queued
@@ -268,11 +287,16 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   }
 
   class GenericEventHandler implements EventHandler<Event> {
-    private void printEventQueueDetails(BlockingQueue<Event> queue) {
-      Map<Enum, Long> counterMap = eventQueue.stream().
-              collect(Collectors.
-                      groupingBy(e -> e.getType(), Collectors.counting())
-              );
+    private void printEventQueueDetails() {
+      Iterator<Event> iterator = eventQueue.iterator();
+      Map<Enum, Long> counterMap = new HashMap<>();
+      while (iterator.hasNext()) {
+        Enum eventType = iterator.next().getType();
+        if (!counterMap.containsKey(eventType)) {
+          counterMap.put(eventType, 0L);
+        }
+        counterMap.put(eventType, counterMap.get(eventType) + 1);
+      }
       for (Map.Entry<Enum, Long> entry : counterMap.entrySet()) {
         long num = entry.getValue();
         LOG.info("Event type: " + entry.getKey()
@@ -295,7 +319,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       if (qSize != 0 && qSize % detailsInterval == 0
               && lastEventDetailsQueueSizeLogged != qSize) {
         lastEventDetailsQueueSizeLogged = qSize;
-        printEventQueueDetails(eventQueue);
+        printEventQueueDetails();
         printTrigger = true;
       }
       int remCapacity = eventQueue.remainingCapacity();
@@ -363,5 +387,10 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
   protected boolean isStopped() {
     return stopped;
+  }
+
+  public void addMetrics(EventTypeMetrics metrics,
+      Class<? extends Enum> eventClass) {
+    eventTypeMetricsMap.put(eventClass, metrics);
   }
 }

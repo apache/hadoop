@@ -16,28 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+#include <Windows.h>
 
-public enum MappingRuleResultType {
-  /**
-   * Represents a result where we simply ignore the current rule
-   * and move onto the next one.
-   */
-  SKIP,
+#include "syscall.h"
 
-  /**
-   * Represents a result where the application gets rejected.
-   */
-  REJECT,
+bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
+  return WriteToStdoutImpl(message.c_str());
+}
 
-  /**
-   * Represents a result where the application gets placed into a queue.
-   */
-  PLACE,
+int XPlatform::Syscall::WriteToStdout(const char* message) {
+  return WriteToStdoutImpl(message) ? 1 : 0;
+}
 
-  /**
-   * Special placement, which means the application is to be placed to the
-   * queue marked by %default variable.
-   */
-  PLACE_TO_DEFAULT
+bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
+  auto* const stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  if (stdout_handle == INVALID_HANDLE_VALUE || stdout_handle == nullptr) {
+    return false;
+  }
+
+  unsigned long bytes_written = 0;
+  const auto message_len = lstrlen(message);
+  const auto result =
+      WriteFile(stdout_handle, message, message_len, &bytes_written, nullptr);
+  return result && static_cast<unsigned long>(message_len) == bytes_written;
 }

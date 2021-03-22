@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
@@ -48,7 +48,7 @@ public class MappingRuleValidationContextImpl
    */
   private final CapacitySchedulerQueueManager queueManager;
 
-  MappingRuleValidationContextImpl(CapacitySchedulerQueueManager qm) {
+  public MappingRuleValidationContextImpl(CapacitySchedulerQueueManager qm) {
     queueManager = qm;
   }
 

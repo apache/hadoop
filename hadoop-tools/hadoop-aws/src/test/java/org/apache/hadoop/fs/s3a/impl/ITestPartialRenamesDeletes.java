@@ -34,6 +34,7 @@ import java.util.stream.Stream;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -128,11 +129,12 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * For submitting work.
    */
   private static final ListeningExecutorService EXECUTOR =
-      BlockingThreadPoolExecutorService.newInstance(
-          EXECUTOR_THREAD_COUNT,
-          EXECUTOR_THREAD_COUNT * 2,
-          30, TimeUnit.SECONDS,
-          "test-operations");
+      MoreExecutors.listeningDecorator(
+          BlockingThreadPoolExecutorService.newInstance(
+              EXECUTOR_THREAD_COUNT,
+              EXECUTOR_THREAD_COUNT * 2,
+              30, TimeUnit.SECONDS,
+              "test-operations"));
 
 
   /**

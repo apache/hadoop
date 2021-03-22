@@ -15,4 +15,4 @@
 # limitations under the License.
 
 BINDIR=$(cd -P -- "$(dirname -- "${BASH_SOURCE-0}")" >/dev/null && pwd -P)
-exec "${BINDIR}/yetus-wrapper" test-patch --project=hadoop --skip-dir=dev-support "$@"
+exec "${BINDIR}/yetus-wrapper" test-patch --project=hadoop --skip-dirs=dev-support "$@"
