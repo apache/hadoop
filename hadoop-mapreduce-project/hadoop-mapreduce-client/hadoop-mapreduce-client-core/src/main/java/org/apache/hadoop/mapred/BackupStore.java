@@ -44,7 +44,7 @@ import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.CryptoUtils;
+import org.apache.hadoop.mapreduce.security.IntermediateEncryptedStream;
 
 /**
  * <code>BackupStore</code> is an utility class that is used to support
@@ -575,7 +575,7 @@ public class BackupStore<K,V> {
       file = lDirAlloc.getLocalPathForWrite(tmp.toUri().getPath(), 
           -1, conf);
       FSDataOutputStream out = fs.create(file);
-      out = CryptoUtils.wrapIfNecessary(conf, out);
+      out = IntermediateEncryptedStream.wrapIfNecessary(conf, out, tmp);
       return new Writer<K, V>(conf, out, null, null, null, null, true);
     }
   }

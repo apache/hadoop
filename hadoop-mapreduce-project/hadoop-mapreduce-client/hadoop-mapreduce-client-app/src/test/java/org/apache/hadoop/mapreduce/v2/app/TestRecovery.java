@@ -71,6 +71,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -104,6 +105,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
+
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -111,14 +114,23 @@ import org.mockito.ArgumentCaptor;
 public class TestRecovery {
 
   private static final Log LOG = LogFactory.getLog(TestRecovery.class);
-  private static Path outputDir = new Path(new File("target", 
-      TestRecovery.class.getName()).getAbsolutePath() + 
-      Path.SEPARATOR + "out");
+
+  private static File testRootDir;
+  private static Path outputDir;
   private static String partFile = "part-r-00000";
   private Text key1 = new Text("key1");
   private Text key2 = new Text("key2");
   private Text val1 = new Text("val1");
   private Text val2 = new Text("val2");
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    // setup the test root directory
+    testRootDir =
+        GenericTestUtils.setupTestRootDir(
+            TestRecovery.class);
+    outputDir = new Path(testRootDir.getAbsolutePath(), "out");
+  }
 
   /**
    * AM with 2 maps and 1 reduce. For 1st map, one attempt fails, one attempt
@@ -598,8 +610,8 @@ public class TestRecovery {
     MRApp app = new MRAppWithHistory(1, 1, false, this.getClass().getName(),
         true, ++runCount) {
     };
-    Configuration conf = new Configuration();
-    conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
+    Configuration conf =
+        MRJobConfUtil.initEncryptedIntermediateConfigsForTesting(null);
     conf.setBoolean("mapred.mapper.new-api", true);
     conf.setBoolean("mapred.reducer.new-api", true);
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
