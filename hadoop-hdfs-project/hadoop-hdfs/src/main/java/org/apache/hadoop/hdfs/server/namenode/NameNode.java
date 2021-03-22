@@ -1245,8 +1245,9 @@ public class NameNode extends ReconfigurableBase implements
     LOG.info("Formatting using clusterid: {}", clusterId);
     
     FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat);
+    FSNamesystem fsn = null;
     try {
-      FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+      fsn = new FSNamesystem(conf, fsImage);
       fsImage.getEditLog().initJournalsForWrite();
 
       // Abort NameNode format if reformat is disabled and if
@@ -1269,12 +1270,16 @@ public class NameNode extends ReconfigurableBase implements
       }
 
       fsImage.format(fsn, clusterId, force);
-      fsn.close();
     } catch (IOException ioe) {
       LOG.warn("Encountered exception during format", ioe);
       throw ioe;
     } finally {
-      fsImage.close();
+      if (fsImage != null) {
+        fsImage.close();
+      }
+      if (fsn != null) {
+        fsn.close();
+      }
     }
     return false;
   }
