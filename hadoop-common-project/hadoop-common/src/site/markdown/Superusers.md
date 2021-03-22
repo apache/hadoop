@@ -80,7 +80,7 @@ If more lax security is preferred, the wildcard value \* may be used to allow im
         <value>*</value>
       </property>
 
-The `hadoop.proxyuser.$superuser.hosts` accepts list of ip addresses, ip address ranges in CIDR format and/or host names. For example, by specifying as below, user named `super` accessing from hosts in the range `10.222.0.0-15` and `10.113.221.221` can impersonate `user1` and `user2`.
+The `hadoop.proxyuser.$superuser.hosts` accepts list of ip addresses, ip address ranges in CIDR format and/or host names. For example, by specifying as below, user named `super` accessing from hosts in the range `10.222.0.0-10.222.255.255` and `10.113.221.221` can impersonate `user1` and `user2`.
 
        <property>
          <name>hadoop.proxyuser.super.hosts</name>
