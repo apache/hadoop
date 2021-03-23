@@ -93,7 +93,7 @@ public class RpcCallCache {
       if (this == obj) {
         return true;
       }
-      if (obj == null || !(obj instanceof ClientRequest)) {
+      if (!(obj instanceof ClientRequest)) {
         return false;
       }
       ClientRequest other = (ClientRequest) obj;
