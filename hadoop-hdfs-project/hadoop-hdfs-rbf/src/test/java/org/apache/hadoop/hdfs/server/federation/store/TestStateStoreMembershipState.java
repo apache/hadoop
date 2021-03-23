@@ -518,11 +518,10 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     assertThat(namespaces).hasSize(1);
 
     // Verify the registered namespace has a valid pair of clusterId and blockPoolId derived from ACTIVE NameNode
-    for (FederationNamespaceInfo namespace : namespaces) {
-      assertEquals(NAMESERVICES[0], namespace.getNameserviceId());
-      assertEquals(clusterId, namespace.getClusterId());
-      assertEquals(blockPoolId, namespace.getBlockPoolId());
-    }
+    FederationNamespaceInfo namespace = namespaces.iterator().next();
+    assertEquals(ns, namespace.getNameserviceId());
+    assertEquals(clusterId, namespace.getClusterId());
+    assertEquals(blockPoolId, namespace.getBlockPoolId());
   }
 
   /**
