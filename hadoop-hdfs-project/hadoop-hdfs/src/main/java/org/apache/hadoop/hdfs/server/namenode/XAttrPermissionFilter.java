@@ -65,8 +65,14 @@ public class XAttrPermissionFilter {
       boolean isRawPath)
       throws AccessControlException {
     final boolean isSuperUser = pc.isSuperUser();
+    final String xAttrString =
+        "XAttr [ns=" + xAttr.getNameSpace() + ", name=" + xAttr.getName() + "]";
     if (xAttr.getNameSpace() == XAttr.NameSpace.USER || 
         (xAttr.getNameSpace() == XAttr.NameSpace.TRUSTED && isSuperUser)) {
+      if (isSuperUser) {
+        // call the external enforcer for audit.
+        pc.checkSuperuserPrivilege(xAttrString);
+      }
       return;
     }
     if (xAttr.getNameSpace() == XAttr.NameSpace.RAW && isRawPath) {
@@ -75,6 +81,8 @@ public class XAttrPermissionFilter {
     if (XAttrHelper.getPrefixedName(xAttr).
         equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
       if (xAttr.getValue() != null) {
+        // Notify external enforcer for audit
+        pc.denySuperUserAccess(xAttrString);
         throw new AccessControlException("Attempt to set a value for '" +
             SECURITY_XATTR_UNREADABLE_BY_SUPERUSER +
             "'. Values are not allowed for this xattr.");

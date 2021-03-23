@@ -1943,7 +1943,7 @@ public class FSDirectory implements Closeable {
       FsAction access, FsAction subAccess, boolean ignoreEmptyDir)
       throws AccessControlException {
     if (pc.isSuperUser()) {
-      // call the enforcer for audit
+      // call the external enforcer for audit
       pc.checkSuperuserPrivilege(iip.getPath());
     } else {
       readLock();
@@ -1961,9 +1961,12 @@ public class FSDirectory implements Closeable {
     if (pc.isSuperUser()) {
       if (FSDirXAttrOp.getXAttrByPrefixedName(this, iip,
           SECURITY_XATTR_UNREADABLE_BY_SUPERUSER) != null) {
+        pc.denySuperUserAccess(iip.getPath());
         throw new AccessControlException(
             "Access is denied for " + pc.getUser() + " since the superuser "
             + "is not allowed to perform this operation.");
+      } else {
+        pc.checkSuperuserPrivilege(iip.getPath());
       }
     }
   }

@@ -429,7 +429,26 @@ public abstract class INodeAttributeProvider {
             "required for operation " + authzContext.getOperationName());
       }
     }
+
+    /**
+     * This method must be called when denying access to super users to
+     * notify the external enforcers.
+     * This will help the external enforcers to audit the requests
+     * by super users that were denied access.
+     * @param authzContext an {@link AuthorizationContext} object encapsulating
+     *                     the various parameters required to authorize an
+     *                     operation.
+     * @throws AccessControlException
+     */
+    default void denySuperUserAccess(AuthorizationContext authzContext)
+        throws AccessControlException {
+      throw new AccessControlException("The authorization provider does not "
+          + "implement the denySuperUserAccess(AuthorizationContext) "
+          + "API.");
+
+    }
   }
+
   /**
    * Initialize the provider. This method is called at NameNode startup
    * time.

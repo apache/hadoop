@@ -7678,7 +7678,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot add cache pool"
-            + (req == null ? null : req.getPoolName()));
+            + poolName);
         CachePoolInfo info = FSNDNCacheOp.addCachePool(this, cacheManager, req,
             logRetryCache);
         poolInfoStr = info.toString();

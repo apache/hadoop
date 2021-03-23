@@ -189,6 +189,11 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         getAuthorizationContextForSuperUser(path));
   }
 
+  public void denySuperUserAccess(String path) throws AccessControlException {
+    getAccessControlEnforcer().denySuperUserAccess(
+        getAuthorizationContextForSuperUser(path));
+  }
+
   /**
    * Check whether current user have permissions to access the path.
    * Traverse is always checked.
@@ -738,6 +743,10 @@ public class FSPermissionChecker implements AccessControlEnforcer {
           UnresolvedPathException, ParentNotDirectoryException {
     try {
       if (pc == null || pc.isSuperUser()) {
+        if (pc != null) {
+          // call the external enforcer for audit
+          pc.checkSuperuserPrivilege(iip.getPath());
+        }
         checkSimpleTraverse(iip);
       } else {
         pc.checkPermission(iip, false, null, null, null, null, false);
