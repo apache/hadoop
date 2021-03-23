@@ -30,7 +30,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MULTIPART_SIZE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -45,7 +44,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
   private S3ABlockOutputStream stream;
 
   /**
-   * Create an S3A Builder all mocked up from component pieces
+   * Create an S3A Builder all mocked up from component pieces.
    * @return stream builder.
    */
   private S3ABlockOutputStream.BlockOutputStreamBuilder mockS3ABuilder() {
