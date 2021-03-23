@@ -24,7 +24,6 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verif
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.clearRecords;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.createMockRegistrationForNamenode;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.synchronizeRecords;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -515,7 +514,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     Set<FederationNamespaceInfo> namespaces = response.getNamespaceInfo();
 
     // Verify only one namespace is registered
-    assertThat(namespaces).hasSize(1);
+    assertEquals(1, namespaces.size());
 
     // Verify the registered namespace has a valid pair of clusterId and blockPoolId derived from ACTIVE NameNode
     FederationNamespaceInfo namespace = namespaces.iterator().next();
