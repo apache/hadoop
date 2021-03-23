@@ -47,11 +47,11 @@ public class DecodingValidator {
    * and (p0, p1, p2) be parities, and assume
    *  inputs = [d0, null (d1), d2, d3, d4, d5, null (p0), p1, null (p2)];
    *  erasedIndexes = [1, 6];
-   *  outputs = [d1, p1].
+   *  outputs = [d1, p0].
    * Then
    *  1. Create new inputs, erasedIndexes and outputs for validation so that
    *     the inputs could contain the decoded outputs, and decode them:
-   *      newInputs = [d1, d2, d3, d4, d5, p1]
+   *      newInputs = [d1, d2, d3, d4, d5, p0]
    *      newErasedIndexes = [0]
    *      newOutputs = [d0']
    *  2. Compare d0 and d0'. The comparison will fail with high probability
