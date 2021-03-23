@@ -17,9 +17,9 @@
 #
 
 if(WIN32)
-    add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_utils_obj> utils_common_test.cc utils_test_main.cc utils_win_test.cc)
+    add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_obj> utils_common_test.cc utils_test_main.cc utils_win_test.cc)
 else(WIN32)
-    add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_utils_obj> utils_common_test.cc utils_test_main.cc utils_nix_test.cc)
+    add_executable(x_platform_utils_test $<TARGET_OBJECTS:x_platform_obj> utils_common_test.cc utils_test_main.cc utils_nix_test.cc)
 endif(WIN32)
 target_include_directories(x_platform_utils_test PRIVATE ${LIBHDFSPP_LIB_DIR})
 target_link_libraries(x_platform_utils_test gmock_main)

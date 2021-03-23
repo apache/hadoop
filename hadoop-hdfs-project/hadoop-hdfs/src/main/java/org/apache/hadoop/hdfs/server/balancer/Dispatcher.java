@@ -1158,12 +1158,7 @@ public class Dispatcher {
       p.proxySource.removePendingBlock(p);
       return;
     }
-    moveExecutor.execute(new Runnable() {
-      @Override
-      public void run() {
-        p.dispatch();
-      }
-    });
+    moveExecutor.execute(p::dispatch);
   }
 
   public boolean dispatchAndCheckContinue() throws InterruptedException {

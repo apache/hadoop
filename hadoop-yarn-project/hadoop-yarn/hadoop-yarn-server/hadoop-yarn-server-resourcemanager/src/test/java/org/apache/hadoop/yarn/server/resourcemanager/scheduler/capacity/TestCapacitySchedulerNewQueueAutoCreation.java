@@ -550,6 +550,63 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   }
 
   @Test
+  public void testAutoQueueCreationMaxAppUpdate() throws Exception {
+    startScheduler();
+
+    // When no conf for max apps
+    LeafQueue a1 =  (LeafQueue)cs.
+        getQueue("root.a.a1");
+    Assert.assertNotNull(a1);
+    Assert.assertEquals(csConf.getMaximumSystemApplications()
+            * a1.getAbsoluteCapacity(), a1.getMaxApplications(), 1);
+
+    LeafQueue b = (LeafQueue)cs.
+        getQueue("root.b");
+    Assert.assertNotNull(b);
+    Assert.assertEquals(csConf.getMaximumSystemApplications()
+            * b.getAbsoluteCapacity(), b.getMaxApplications(), 1);
+
+    createQueue("root.e");
+
+    // Make sure other children queues
+    // max app correct.
+    LeafQueue e = (LeafQueue)cs.
+        getQueue("root.e");
+    Assert.assertNotNull(e);
+    Assert.assertEquals(csConf.getMaximumSystemApplications()
+            * e.getAbsoluteCapacity(), e.getMaxApplications(), 1);
+
+    a1 =  (LeafQueue)cs.
+        getQueue("root.a.a1");
+    Assert.assertNotNull(a1);
+    Assert.assertEquals(csConf.getMaximumSystemApplications()
+            * a1.getAbsoluteCapacity(), a1.getMaxApplications(), 1);
+
+    b = (LeafQueue)cs.
+        getQueue("root.b");
+    Assert.assertNotNull(b);
+    Assert.assertEquals(csConf.getMaximumSystemApplications()
+            * b.getAbsoluteCapacity(), b.getMaxApplications(), 1);
+
+    // When update global max app per queue
+    csConf.setGlobalMaximumApplicationsPerQueue(1000);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    Assert.assertEquals(1000, b.getMaxApplications());
+    Assert.assertEquals(1000, a1.getMaxApplications());
+    Assert.assertEquals(1000, e.getMaxApplications());
+
+    // when set some queue for max apps
+    csConf.setMaximumApplicationsPerQueue("root.e1", 50);
+    createQueue("root.e1");
+    LeafQueue e1 = (LeafQueue)cs.
+        getQueue("root.e1");
+    Assert.assertNotNull(e1);
+
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    Assert.assertEquals(50, e1.getMaxApplications());
+  }
+
+  @Test
   public void testAutoCreateQueueIfAmbiguousQueueNames() throws Exception {
     startScheduler();
 

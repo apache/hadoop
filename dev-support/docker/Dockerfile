@@ -44,7 +44,6 @@ RUN apt-get -q update \
         cmake \
         curl \
         doxygen \
-        findbugs \
         fuse \
         g++ \
         gcc \
@@ -92,7 +91,16 @@ RUN apt-get -q update \
 ENV MAVEN_HOME /usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
-ENV FINDBUGS_HOME /usr
+
+#######
+# Install SpotBugs 4.2.2
+#######
+RUN mkdir -p /opt/spotbugs \
+    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.2.2/spotbugs-4.2.2.tgz \
+      -o /opt/spotbugs.tgz \
+    && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
+    && chmod +x /opt/spotbugs/bin/*
+ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
 # Install Boost 1.72 (1.71 ships with Focal)

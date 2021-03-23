@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.ClusterStatus;
 import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -99,6 +98,15 @@ public class RandomTextWriter extends Configured implements Tool {
    */
   enum Counters { RECORDS_WRITTEN, BYTES_WRITTEN }
 
+  public static String generateSentenceWithRand(ThreadLocalRandom rand,
+      int noWords) {
+    StringBuffer sentence = new StringBuffer(words[rand.nextInt(words.length)]);
+    for (int i = 1; i < noWords; i++) {
+      sentence.append(" ").append(words[rand.nextInt(words.length)]);
+    }
+    return sentence.toString();
+  }
+
   static class RandomTextMapper extends Mapper<Text, Text, Text, Text> {
     
     private long numBytesToWrite;
@@ -106,7 +114,6 @@ public class RandomTextWriter extends Configured implements Tool {
     private int wordsInKeyRange;
     private int minWordsInValue;
     private int wordsInValueRange;
-    private Random random = new Random();
     
     /**
      * Save the configuration value that we need to write the data.
@@ -127,12 +134,13 @@ public class RandomTextWriter extends Configured implements Tool {
     public void map(Text key, Text value,
                     Context context) throws IOException,InterruptedException {
       int itemCount = 0;
+      ThreadLocalRandom rand = ThreadLocalRandom.current();
       while (numBytesToWrite > 0) {
         // Generate the key/value 
-        int noWordsKey = minWordsInKey + 
-          (wordsInKeyRange != 0 ? random.nextInt(wordsInKeyRange) : 0);
-        int noWordsValue = minWordsInValue + 
-          (wordsInValueRange != 0 ? random.nextInt(wordsInValueRange) : 0);
+        int noWordsKey = minWordsInKey +
+            (wordsInKeyRange != 0 ? rand.nextInt(wordsInKeyRange) : 0);
+        int noWordsValue = minWordsInValue +
+            (wordsInValueRange != 0 ? rand.nextInt(wordsInValueRange) : 0);
         Text keyWords = generateSentence(noWordsKey);
         Text valueWords = generateSentence(noWordsValue);
         
@@ -154,13 +162,9 @@ public class RandomTextWriter extends Configured implements Tool {
     }
     
     private Text generateSentence(int noWords) {
-      StringBuffer sentence = new StringBuffer();
-      String space = " ";
-      for (int i=0; i < noWords; ++i) {
-        sentence.append(words[random.nextInt(words.length)]);
-        sentence.append(space);
-      }
-      return new Text(sentence.toString());
+      String sentence =
+          generateSentenceWithRand(ThreadLocalRandom.current(), noWords);
+      return new Text(sentence);
     }
   }
   

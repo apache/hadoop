@@ -3786,7 +3786,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                 "RecoveryId = " + blockRecoveryId + " for block " + lastBlock);
       }
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile);
-      leaseManager.renewLease(lease);
+      if (recoveryLeaseHolder == null) {
+        leaseManager.renewLease(lease);
+      }
       break;
     }
     return false;

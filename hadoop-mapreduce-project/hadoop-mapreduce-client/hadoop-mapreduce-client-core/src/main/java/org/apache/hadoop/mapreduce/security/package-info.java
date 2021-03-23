@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
-
-public interface MappingRuleMatcher {
-  /**
-   * Returns true if the matcher matches the current context.
-   * @param variables The variable context, which contains all the variables
-   * @return true if this matcher matches to the provided variable set
-   */
-  boolean match(VariableContext variables);
-}
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+/**
+ * Helper classes for the shuffle/spill encryptions.
+ */
+package org.apache.hadoop.mapreduce.security;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
