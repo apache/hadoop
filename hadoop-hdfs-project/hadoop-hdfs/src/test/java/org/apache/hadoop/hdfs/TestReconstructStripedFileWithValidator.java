@@ -89,11 +89,11 @@ public class TestReconstructStripedFileWithValidator
           ReconstructionType.DataOnly,
           getEcPolicy().getNumParityUnits());
 
-      long count = cluster.getDataNodes().stream()
+      long sum = cluster.getDataNodes().stream()
           .map(DataNode::getMetrics)
-          .map(DataNodeMetrics::getECInvalidReconstructionTasks)
-          .filter(n -> n == 1).count();
-      Assert.assertEquals(1, count);
+          .mapToLong(DataNodeMetrics::getECInvalidReconstructionTasks)
+          .sum();
+      Assert.assertEquals(1, sum);
     } finally {
       DataNodeFaultInjector.set(oldInjector);
     }
