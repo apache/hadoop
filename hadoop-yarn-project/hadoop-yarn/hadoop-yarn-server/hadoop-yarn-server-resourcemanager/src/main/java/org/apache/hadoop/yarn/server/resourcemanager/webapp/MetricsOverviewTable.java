@@ -83,13 +83,13 @@ public class MetricsOverviewTable extends HtmlBlock {
     } else {
       allocatedContainers = clusterMetrics.getContainersAllocated();
       usedResources = Resource.newInstance(
-          clusterMetrics.getAllocatedMB() * BYTES_IN_MB,
+          clusterMetrics.getAllocatedMB(),
           (int) clusterMetrics.getAllocatedVirtualCores());
       totalResources = Resource.newInstance(
-          clusterMetrics.getTotalMB() * BYTES_IN_MB,
+          clusterMetrics.getTotalMB(),
           (int) clusterMetrics.getTotalVirtualCores());
       reservedResources = Resource.newInstance(
-          clusterMetrics.getReservedMB() * BYTES_IN_MB,
+          clusterMetrics.getReservedMB(),
           (int) clusterMetrics.getReservedVirtualCores());
     }
 
@@ -121,9 +121,9 @@ public class MetricsOverviewTable extends HtmlBlock {
                 )
             ).
         td(String.valueOf(allocatedContainers)).
-        td(usedResources.toString()).
-        td(totalResources.toString()).
-        td(reservedResources.toString()).
+        td(usedResources.getFormattedString()).
+        td(totalResources.getFormattedString()).
+        td(reservedResources.getFormattedString()).
         td(String.valueOf(clusterMetrics.getUtilizedMBPercent())).
         td(String.valueOf(clusterMetrics.getUtilizedVirtualCoresPercent())).
       _().
