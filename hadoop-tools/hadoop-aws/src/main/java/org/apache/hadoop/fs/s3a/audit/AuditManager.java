@@ -37,14 +37,10 @@ import org.apache.hadoop.service.Service;
  * </ol>
  */
 @InterfaceAudience.Private
-public interface AuditManager extends Service, AuditSpanSource,
-    AuditSpanCallbacks {
-
-  /**
-   * Get the wrapped active span.
-   * @return the currently active span.
-   */
-  AuditSpan getActiveThreadSpan();
+public interface AuditManager extends Service,
+    AuditSpanSource,
+    AuditSpanCallbacks,
+    ActiveThreadSpanSource {
 
   /**
    * Create the request handler(s) for this audit service.

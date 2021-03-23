@@ -16,43 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit.impl;
+package org.apache.hadoop.fs.s3a.audit;
 
-import org.apache.hadoop.fs.s3a.audit.AuditSpan;
-
-import static java.util.Objects.requireNonNull;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
- * Base class for the audit spans implementations..
+ * A marker attribute simply to highlight which of the methods
+ * in the FS are audit entry points.
+ * - S3AFileSystem and classes/methods it then invokes
+ *    SHOULD NOT invoke audit entry points internally
+ * - All external methods MUST be audit entry points.
  */
-public abstract class AbstractAuditSpanImpl implements AuditSpan {
-
-  /**
-   * Span ID.
-   */
-  private final String spanId;
-
-
-  /**
-   * Constructor.
-   * @param spanId span ID.
-   */
-  protected AbstractAuditSpanImpl(final String spanId) {
-    this.spanId = requireNonNull(spanId);
-  }
-
-  @Override
-  public String getSpanId() {
-    return spanId;
-  }
-
-  /**
-   * Invoke {@link AuditSpan#deactivate()}.
-   * This is final: subclasses MUST override the
-   * {@code deactivate()} method.
-   */
-  @Override
-  public final void close() {
-    deactivate();
-  }
+@Documented
+@Retention(RetentionPolicy.SOURCE)
+public @interface AuditEntryPoint {
 }

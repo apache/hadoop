@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.fs.s3a.audit.impl;
 
+import org.apache.hadoop.fs.s3a.audit.AuditSpan;
+
 /**
- * Simple no-op span.
+ * A minimal span with no direct side effects.
+ * It does have an ID and, if given callbacks,
+ * will notify the callback implementation
+ * of activation and deactivation.
  */
 public final class NoopSpan extends AbstractAuditSpanImpl {
 
@@ -29,6 +34,9 @@ public final class NoopSpan extends AbstractAuditSpanImpl {
 
   private final String path2;
 
+  /** Activation callbacks. */
+  private final SpanActivationCallbacks activationCallbacks;
+
   /**
    * Static public instance.
    */
@@ -36,32 +44,68 @@ public final class NoopSpan extends AbstractAuditSpanImpl {
 
   /**
    * Create a no-op span.
+   * @param spanId span ID
    * @param name name
    * @param path1 path
    * @param path2 path 2
+   * @param activationCallbacks Activation callbacks.
    */
-  public NoopSpan(final String name, final String path1, final String path2) {
+  NoopSpan(String spanId,
+      final String name,
+      final String path1,
+      final String path2,
+      final SpanActivationCallbacks activationCallbacks) {
+    super(spanId);
     this.name = name;
     this.path1 = path1;
     this.path2 = path2;
+    this.activationCallbacks = activationCallbacks;
   }
 
   NoopSpan() {
-    this("no-op", null, null);
+    this("", "no-op", null, null, null);
+  }
+
+
+  @Override
+  public AuditSpan activate() {
+    if (activationCallbacks != null) {
+      activationCallbacks.activate(this);
+    }
+    return this;
   }
 
   @Override
   public void deactivate() {
-    // no-op
+    if (activationCallbacks != null) {
+      activationCallbacks.deactivate(this);
+    }
   }
 
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder("NoopSpan{");
+    sb.append("id='").append(getSpanId()).append('\'');
     sb.append("name='").append(name).append('\'');
     sb.append(", path1='").append(path1).append('\'');
     sb.append(", path2='").append(path2).append('\'');
     sb.append('}');
     return sb.toString();
+  }
+
+  /** Activation callbacks. */
+  public interface SpanActivationCallbacks {
+
+    /**
+     * Span was activated.
+     * @param span span reference.
+     */
+    void activate(AuditSpan span);
+
+    /**
+     * Span was deactivated.
+     * @param span span reference.
+     */
+    void deactivate(AuditSpan span);
   }
 }

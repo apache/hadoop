@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.audit.impl;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.fs.s3a.audit.OperationAuditor;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.service.AbstractService;
@@ -31,6 +33,12 @@ import org.apache.hadoop.service.AbstractService;
  */
 public abstract class AbstractOperationAuditor extends AbstractService
     implements OperationAuditor {
+
+
+  /**
+   * Counter to create unique auditor IDs.
+   */
+  private final AtomicLong SPAN_ID_COUNTER = new AtomicLong(1);
 
   /**
    * Destination for recording statistics, especially duration/count of
@@ -57,4 +65,11 @@ public abstract class AbstractOperationAuditor extends AbstractService
     return iostatistics;
   }
 
+  /**
+   * Create a span ID.
+   * @return a unique span ID.
+   */
+  protected final String createSpanID() {
+    return Long.toString(SPAN_ID_COUNTER.incrementAndGet());
+  }
 }

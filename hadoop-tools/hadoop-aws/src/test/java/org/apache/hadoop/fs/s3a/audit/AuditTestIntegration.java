@@ -16,32 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit.impl;
+package org.apache.hadoop.fs.s3a.audit;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
-
-import org.apache.hadoop.fs.s3a.audit.AuditSpan;
-import org.apache.hadoop.fs.s3a.audit.AuditSpanSource;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditManager;
+import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor;
 
 /**
- * Simple no-op source, which always returns
- * a new {@link NoopSpan}.
+ * Support for auditing in testing.
  */
-public final class NoopSpanSource implements AuditSpanSource {
+public class AuditTestIntegration {
 
   /**
-   * Sole public instance.
+   * Reusable no-op span instance.
    */
-  public static final NoopSpanSource INSTANCE = new NoopSpanSource();
+  public static AuditSpan NOOP_SPAN = NoopAuditManager
+      .createNewSpan("noop", null, null);
 
-  private NoopSpanSource() {
-  }
 
-  @Override
-  public AuditSpan createSpan(final String name,
-      @Nullable final String path1,
-      @Nullable final String path2) throws IOException {
-    return new NoopSpan(name, path1, path2);
+  /**
+   * Create, init and start a no-op auditor instance.
+   * @param conf configuration.
+   * @return a started instance.
+   */
+  public static OperationAuditor noopAuditor(Configuration conf) {
+    return NoopAuditor.newInstance(conf, null);
   }
 }

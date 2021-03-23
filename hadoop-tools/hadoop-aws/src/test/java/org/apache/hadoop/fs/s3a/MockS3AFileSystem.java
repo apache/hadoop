@@ -37,8 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
-import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor;
-import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
+import org.apache.hadoop.fs.s3a.audit.AuditTestIntegration;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
@@ -48,6 +47,7 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.hadoop.fs.s3a.audit.AuditTestIntegration.noopAuditor;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTrackerFactory;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
@@ -172,8 +172,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
     writeHelper = new WriteOperationHelper(this,
         conf,
         new EmptyS3AStatisticsContext(),
-        NoopAuditor.newInstance(conf),
-        NoopSpan.INSTANCE);
+        noopAuditor(conf),
+        AuditTestIntegration.NOOP_SPAN);
   }
 
   @Override

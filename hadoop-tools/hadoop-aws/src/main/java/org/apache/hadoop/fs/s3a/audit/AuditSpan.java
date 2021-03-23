@@ -29,6 +29,15 @@ import java.lang.annotation.RetentionPolicy;
 public interface AuditSpan extends Closeable, AuditSpanCallbacks {
 
   /**
+   * Return a span ID which must be unique for all spans within
+   * this instance of the filesystem.
+   * Callers MUST NOT make any assumptions about the contents
+   * of this string.
+   * @return a non-empty string
+   */
+  String getSpanId();
+
+  /**
    * Make this span active in the current thread.
    * @return the activated span.
    * This is makes it easy to use in try with resources
@@ -60,14 +69,5 @@ public interface AuditSpan extends Closeable, AuditSpanCallbacks {
     return true;
   }
 
-  /**
-   * A marker simply to highlight which of the methods in the
-   * FS are audit entry points.
-   * - S3A Code SHOULD NOT invoke audit entry points internally
-   * - All external methods MUST be audit entry points.
-   */
-  @Documented
-  @Retention(RetentionPolicy.SOURCE)
-  @interface AuditEntryPoint {
-  }
+
 }

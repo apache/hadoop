@@ -76,13 +76,6 @@ public final class LoggingAuditor
       AUDITOR_ID_COUNTER.getAndIncrement());
 
   /**
-   * Counter for next operation in this service.
-   * Initial value is what will be used for the span ID when there
-   * is no active request span.
-   */
-  private final AtomicLong nextOperationId = new AtomicLong(1);
-
-  /**
    * Some basic analysis for the logs.
    */
   private final AWSRequestAnalyzer analyzer = new AWSRequestAnalyzer();
@@ -115,14 +108,6 @@ public final class LoggingAuditor
   private final String principal;
 
   /**
-   * Create an operation ID. The nature of it should be opaque.
-   * @return an ID for the constructor.
-   */
-  private long newOperationId() {
-    return nextOperationId.getAndIncrement();
-  }
-
-  /**
    * Create the auditor.
    * The UGI current user is used to provide the principal;
    * this will be cached and provided in the referrer header.
@@ -137,7 +122,7 @@ public final class LoggingAuditor
     attributes.put(FILESYSTEM_ID, auditorID);
     final CommonAuditContext currentContext = currentContext();
     warningSpan = new WarningSpan(AuditConstants.OUTSIDE_SPAN,
-        currentContext, newOperationId(), null, null);
+        currentContext, createSpanID(), null, null);
     // add the principal
     String p;
     try {
@@ -186,7 +171,7 @@ public final class LoggingAuditor
     getIOStatistics().incrementCounter(
         Statistic.AUDIT_SPAN_START.getSymbol());
     final LoggingAuditSpan span = new LoggingAuditSpan(name,
-        prepareActiveContext(), newOperationId(), path1, path2);
+        prepareActiveContext(), createSpanID(), path1, path2);
     span.start();
     return span;
   }
@@ -227,18 +212,16 @@ public final class LoggingAuditor
 
     private final String description;
 
-    private final String id;
-
     private LoggingAuditSpan(
         final String name,
         final CommonAuditContext context,
-        final long operationId,
+        final String operationId,
         final String path1, final String path2) {
+      super(String.format("%s-%s", getContextId(), operationId));
       this.operationName = name;
-      this.id = String.format("%s-%08d", getContextId(), operationId);
       referrer = HttpReferrerAuditEntry.builder()
           .withContextId(contextId)
-          .withOperationId(String.format("%08x", operationId))
+          .withOperationId(operationId)
           .withOperationName(name)
           .withPath1(path1)
           .withPath2(path2)
@@ -253,7 +236,7 @@ public final class LoggingAuditor
     }
 
     public void start() {
-      LOG.trace("{} Start {}", getId(), getDescription());
+      LOG.trace("{} Start {}", getSpanId(), getDescription());
     }
 
     protected String getOperationName() {
@@ -264,19 +247,15 @@ public final class LoggingAuditor
       return description;
     }
 
-    protected String getId() {
-      return id;
-    }
-
     @Override
     public AuditSpan activate() {
-      LOG.trace("{} Activate {}", id, description);
+      LOG.trace("{} Activate {}", getSpanId(), description);
       return this;
     }
 
     @Override
     public void deactivate() {
-      LOG.trace("{} Deactivate {}", id, description);
+      LOG.trace("{} Deactivate {}", getSpanId(), description);
     }
 
     @Override
@@ -288,7 +267,7 @@ public final class LoggingAuditor
           header);
       if (LOG.isDebugEnabled()) {
         LOG.debug("{} Executing {} with {}; {}",
-            id,
+            getSpanId(),
             getOperationName(),
             analyzer.analyze(request),
             header);
@@ -300,7 +279,7 @@ public final class LoggingAuditor
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "LoggingAuditSpan{");
-      sb.append(", id='").append(id).append('\'');
+      sb.append(", id='").append(getSpanId()).append('\'');
       sb.append("description='").append(description).append('\'');
       sb.append('}');
       return sb.toString();
@@ -324,19 +303,19 @@ public final class LoggingAuditor
     private WarningSpan(
         final String name,
         final CommonAuditContext context,
-        final long operationId,
+        final String operationId,
         final String path1, final String path2) {
       super(name, context, operationId, path1, path2);
     }
 
     @Override
     public void start() {
-      LOG.warn("{} Start {}", getId(), getDescription());
+      LOG.warn("{} Start {}", getSpanId(), getDescription());
     }
 
     @Override
     public AuditSpan activate() {
-      LOG.warn("{} Activate {}", getId(), getDescription());
+      LOG.warn("{} Activate {}", getSpanId(), getDescription());
       return this;
     }
 
@@ -376,8 +355,8 @@ public final class LoggingAuditor
       String error = "Executing a request outside an audit span "
           + analyzer.analyze(request);
       LOG.warn("{} {}",
-          getId(), error);
-      final String unaudited = getId() + " "
+          getSpanId(), error);
+      final String unaudited = getSpanId() + " "
           + AuditConstants.UNAUDITED_OPERATION + " " + error;
       if (isRequestNotAlwaysInSpan(request)) {
         // can get by auditing during a copy, so don't overreact

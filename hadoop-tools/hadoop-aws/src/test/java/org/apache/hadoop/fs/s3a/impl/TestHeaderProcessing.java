@@ -37,11 +37,11 @@ import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpan;
+import org.apache.hadoop.fs.s3a.audit.AuditTestIntegration;
 import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static java.lang.System.currentTimeMillis;
-import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.NOOP_SPAN;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.XA_MAGIC_MARKER;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.X_HEADER_MAGIC_MARKER;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_LAST_MODIFIED;
@@ -299,7 +299,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
 
     @Override
     public AuditSpan getActiveAuditSpan() {
-      return NOOP_SPAN;
+      return AuditTestIntegration.NOOP_SPAN;
     }
 
     @Override

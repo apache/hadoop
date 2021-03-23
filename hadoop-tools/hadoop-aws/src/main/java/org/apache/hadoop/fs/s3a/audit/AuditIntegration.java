@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.s3a.audit.impl.ActiveAuditManager;
 import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditManager;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor;
-import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
@@ -148,30 +147,5 @@ public final class AuditIntegration {
     }
   }
 
-  /**
-   * Create, init and start a no-op auditor instance.
-   * @param conf configuration.
-   * @return a started instance.
-   */
-  public static OperationAuditor noopAuditor(Configuration conf) {
-    return NoopAuditor.newInstance(conf);
-  }
 
-  /**
-   * Create a no-op span.
-   * @param name name
-   * @param path1 path
-   * @param path2 path 2
-   * @return a span.
-   */
-  public static final AuditSpan noopSpan(final String name,
-      final String path1,
-      final String path2) {
-    return new NoopSpan(name, path1, path2);
-  }
-
-  /**
-   * Reusable no-op span instance.
-   */
-  public static AuditSpan NOOP_SPAN = NoopSpan.INSTANCE;
 }

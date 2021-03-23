@@ -16,43 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.audit.impl;
-
-import org.apache.hadoop.fs.s3a.audit.AuditSpan;
-
-import static java.util.Objects.requireNonNull;
+package org.apache.hadoop.fs.s3a.audit;
 
 /**
- * Base class for the audit spans implementations..
+ * Interface to get the active thread span.
  */
-public abstract class AbstractAuditSpanImpl implements AuditSpan {
+public interface ActiveThreadSpanSource {
 
   /**
-   * Span ID.
+   * Get the wrapped active span.
+   * @return the currently active span.
    */
-  private final String spanId;
-
-
-  /**
-   * Constructor.
-   * @param spanId span ID.
-   */
-  protected AbstractAuditSpanImpl(final String spanId) {
-    this.spanId = requireNonNull(spanId);
-  }
-
-  @Override
-  public String getSpanId() {
-    return spanId;
-  }
-
-  /**
-   * Invoke {@link AuditSpan#deactivate()}.
-   * This is final: subclasses MUST override the
-   * {@code deactivate()} method.
-   */
-  @Override
-  public final void close() {
-    deactivate();
-  }
+  AuditSpan getActiveThreadSpan();
 }

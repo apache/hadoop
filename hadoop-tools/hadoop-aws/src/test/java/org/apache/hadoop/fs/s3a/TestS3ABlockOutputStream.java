@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.audit.AuditTestIntegration;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.util.Progressable;
@@ -30,8 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
-import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.NOOP_SPAN;
-import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.noopAuditor;
+import static org.apache.hadoop.fs.s3a.audit.AuditTestIntegration.noopAuditor;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -77,7 +77,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
         conf,
         new EmptyS3AStatisticsContext(),
         noopAuditor(conf),
-        NOOP_SPAN);
+        AuditTestIntegration.NOOP_SPAN);
     ByteArrayInputStream inputStream = new ByteArrayInputStream(
         "a".getBytes());
     // first one works

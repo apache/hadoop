@@ -19,46 +19,64 @@
 package org.apache.hadoop.fs.s3a.audit.impl;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.audit.OperationAuditor;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
  * An audit service which returns the {@link NoopSpan}.
  */
-public class NoopAuditor extends AbstractOperationAuditor {
+public final class NoopAuditor extends AbstractOperationAuditor {
 
+  /**
+  * unbonded span created in constructor.
+  */
+  private final AuditSpan unbondedSpan;
+
+  private final NoopSpan.SpanActivationCallbacks
+      activationCallbacks;
+
+  /**
+   * Constructor.
+   * @param name name
+   * @param activationCallbacks Activation callbacks.
+   */
   public NoopAuditor(final String name,
-      final IOStatisticsStore iostatistics) {
-    super(name, iostatistics);
+      NoopSpan.SpanActivationCallbacks activationCallbacks) {
+    super(name, iostatisticsStore().build());
+    unbondedSpan = createSpan("unbonded", null, null);
+    this.activationCallbacks = activationCallbacks;
   }
 
   @Override
   public AuditSpan createSpan(final String name,
       @Nullable final String path1,
-      @Nullable final String path2) throws IOException {
-    return new NoopSpan(name, path1, path2);
+      @Nullable final String path2)  {
+    return new NoopSpan(createSpanID(), name, path1, path2,
+        activationCallbacks);
   }
 
   @Override
   public AuditSpan getUnbondedSpan() {
-    return NoopSpan.INSTANCE;
+    return unbondedSpan;
   }
 
   /**
    * Create, init and start an instance.
    * @param conf configuration.
+   * @param activationCallbacks Activation callbacks.
    * @return a started instance.
    */
-  public static OperationAuditor newInstance(Configuration conf) {
+  public static NoopAuditor newInstance(Configuration conf,
+      NoopSpan.SpanActivationCallbacks activationCallbacks) {
     NoopAuditor noop = new NoopAuditor("noop",
-        IOStatisticsBinding.emptyStatisticsStore());
+        activationCallbacks);
     noop.init(conf);
     noop.start();
     return noop;
   }
+
 }

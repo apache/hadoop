@@ -87,14 +87,14 @@ public final class ActiveAuditManager
    * This is the span returned to after a wrapper is closed or
    * the span is reset to the unbonded span..
    */
-  private WrappingAuditSpan unboundedSpan;
+  private WrappingAuditSpan unbondedSpan;
 
   /**
    * Thread local span. This defaults to being
    * the unbonded span.
    */
   private final ThreadLocal<WrappingAuditSpan> activeSpan =
-      ThreadLocal.withInitial(() -> getUnboundedSpan());
+      ThreadLocal.withInitial(() -> getUnbondedSpan());
 
   /**
    * Destination for recording statistics, especially duration/count of
@@ -126,7 +126,7 @@ public final class ActiveAuditManager
   @Override
   protected void serviceStart() throws Exception {
     super.serviceStart();
-    setUnboundedSpan(new WrappingAuditSpan(
+    setUnbondedSpan(new WrappingAuditSpan(
         auditService.getUnbondedSpan(), false));
     LOG.debug("Started audit service {}", auditService);
   }
@@ -137,12 +137,12 @@ public final class ActiveAuditManager
    * span.
    * @return the unbounded span.
    */
-  private WrappingAuditSpan getUnboundedSpan() {
-    return unboundedSpan;
+  private WrappingAuditSpan getUnbondedSpan() {
+    return unbondedSpan;
   }
 
-  public void setUnboundedSpan(final WrappingAuditSpan unboundedSpan) {
-    this.unboundedSpan = unboundedSpan;
+  public void setUnbondedSpan(final WrappingAuditSpan unbondedSpan) {
+    this.unbondedSpan = unbondedSpan;
   }
 
   @Override
@@ -169,7 +169,7 @@ public final class ActiveAuditManager
     if (span != null && span.isValidSpan()) {
       activeSpan.set(span);
     } else {
-      activeSpan.set(unboundedSpan);
+      activeSpan.set(unbondedSpan);
     }
     return activeSpan.get();
   }
@@ -331,6 +331,7 @@ public final class ActiveAuditManager
      */
     private WrappingAuditSpan(
         final AuditSpan span, final boolean isValid) {
+      super(span.getSpanId());
       this.span = requireNonNull(span);
       this.isValid = isValid;
     }
@@ -373,7 +374,7 @@ public final class ActiveAuditManager
       // deactivate the span
       span.deactivate();
       // and go to the unbounded one.
-      switchToActiveSpan(getUnboundedSpan());
+      switchToActiveSpan(getUnbondedSpan());
     }
 
     /**

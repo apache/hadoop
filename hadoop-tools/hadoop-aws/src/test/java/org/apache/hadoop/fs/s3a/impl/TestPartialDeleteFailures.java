@@ -40,9 +40,9 @@ import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditSpan;
+import org.apache.hadoop.fs.s3a.audit.AuditTestIntegration;
 import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
 
-import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.NOOP_SPAN;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.ACCESS_DENIED;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.toPathList;
@@ -261,7 +261,7 @@ public class TestPartialDeleteFailures {
 
     @Override
     public AuditSpan getActiveAuditSpan() {
-      return NOOP_SPAN;
+      return AuditTestIntegration.NOOP_SPAN;
     }
 
     @Override

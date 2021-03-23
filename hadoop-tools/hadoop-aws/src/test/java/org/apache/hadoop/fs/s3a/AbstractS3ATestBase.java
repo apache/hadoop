@@ -43,7 +43,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
-import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.noopSpan;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
@@ -245,7 +244,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    * Uses the test method name for the span.
    * @return a span.
    */
-  protected AuditSpan span() {
+  protected AuditSpan span() throws IOException {
     return span(getSpanSource());
   }
 
@@ -256,15 +255,8 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    * @param source source of spans; can be an S3A FS
    * @return a span.
    */
-  protected AuditSpan span(AuditSpanSource source) {
+  protected AuditSpan span(AuditSpanSource source) throws IOException {
 
-    if (source != null) {
-      try {
-        return source.createSpan(getMethodName(), null, null);
-      } catch (Exception e) {
-        LOG.info("Span collection failure", e);
-      }
-    }
-    return noopSpan(getMethodName(), null, null);
+    return source.createSpan(getMethodName(), null, null);
   }
 }
