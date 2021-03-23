@@ -21,6 +21,7 @@ package org.apache.hadoop.tools;
 import java.util.Collections;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -226,6 +227,42 @@ public class TestDistCpOptions {
   }
 
   @Test
+  public void testDeleteMissingUseTrash() throws Exception {
+    final DistCpOptions.Builder builder = new DistCpOptions.Builder(
+        Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"));
+    Assert.assertFalse("Delete does not use trash by default.",
+        builder.build().shouldDeleteUseTrash());
+
+    DistCpOptions options = builder.withSyncFolder(true)
+        .withDeleteMissing(true)
+        .withDeleteUseTrash(true)
+        .build();
+    Assert.assertTrue(options.shouldSyncFolder());
+    Assert.assertTrue(options.shouldDeleteMissing());
+    Assert.assertTrue(options.shouldDeleteUseTrash());
+
+    options = new DistCpOptions.Builder(
+        Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"))
+        .withOverwrite(true)
+        .withDeleteMissing(true)
+        .withDeleteUseTrash(true)
+        .build();
+
+    Assert.assertTrue(options.shouldDeleteUseTrash());
+    Assert.assertTrue(options.shouldOverwrite());
+    Assert.assertTrue(options.shouldDeleteMissing());
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> new DistCpOptions.Builder(Collections.singletonList(
+            new Path("hdfs://localhost:8020/source")),
+            new Path("hdfs://localhost:8020/target/"))
+            .withDeleteUseTrash(true)
+            .build());
+  }
+
+  @Test
   public void testSetMaps() {
     final DistCpOptions.Builder builder = new DistCpOptions.Builder(
         Collections.singletonList(new Path("hdfs://localhost:8020/source")),
@@ -281,8 +318,8 @@ public class TestDistCpOptions {
     DistCpOptions option = new DistCpOptions.Builder(new Path("abc"),
         new Path("xyz")).build();
     String val = "DistCpOptions{atomicCommit=false, syncFolder=false, " +
-        "deleteMissing=false, ignoreFailures=false, overwrite=false, " +
-        "append=false, useDiff=false, useRdiff=false, " +
+        "deleteMissing=false, deleteUseTrash=false, ignoreFailures=false, " +
+        "overwrite=false, append=false, useDiff=false, useRdiff=false, " +
         "fromSnapshot=null, toSnapshot=null, " +
         "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, " +
         "mapBandwidth=0.0, copyStrategy='uniformsize', preserveStatus=[], " +

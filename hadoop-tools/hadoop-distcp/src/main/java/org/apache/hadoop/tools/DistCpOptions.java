@@ -95,6 +95,8 @@ public final class DistCpOptions {
   /** Whether to run blocking or non-blocking. */
   private final boolean blocking;
 
+  private boolean deleteUseTrash;
+
   // When "-diff s1 s2 src tgt" is passed, apply forward snapshot diff (from s1
   // to s2) of source cluster to the target cluster to sync target cluster with
   // the source cluster. Referred to as "Fdiff" in the code.
@@ -222,6 +224,7 @@ public final class DistCpOptions {
     this.trackPath = builder.trackPath;
 
     this.directWrite = builder.directWrite;
+    this.deleteUseTrash = builder.deleteUseTrash;
   }
 
   public Path getSourceFileListing() {
@@ -283,6 +286,10 @@ public final class DistCpOptions {
 
   public boolean shouldUseSnapshotDiff() {
     return shouldUseDiff() || shouldUseRdiff();
+  }
+
+  public boolean shouldDeleteUseTrash() {
+    return deleteUseTrash;
   }
 
   public String getFromSnapshot() {
@@ -375,6 +382,8 @@ public final class DistCpOptions {
         String.valueOf(useDiff));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.RDIFF,
         String.valueOf(useRdiff));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.DELETE_USETRASH,
+        String.valueOf(deleteUseTrash));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.SKIP_CRC,
         String.valueOf(skipCRC));
     if (mapBandwidth > 0) {
@@ -416,6 +425,7 @@ public final class DistCpOptions {
         "atomicCommit=" + atomicCommit +
         ", syncFolder=" + syncFolder +
         ", deleteMissing=" + deleteMissing +
+        ", deleteUseTrash=" + deleteUseTrash +
         ", ignoreFailures=" + ignoreFailures +
         ", overwrite=" + overwrite +
         ", append=" + append +
@@ -468,6 +478,8 @@ public final class DistCpOptions {
 
     private boolean useDiff = false;
     private boolean useRdiff = false;
+    private boolean deleteUseTrash = false;
+
     private String fromSnapshot;
     private String toSnapshot;
 
@@ -565,6 +577,11 @@ public final class DistCpOptions {
             + "only with update or overwrite options");
       }
 
+      if (deleteUseTrash && !deleteMissing) {
+        throw new IllegalArgumentException("Option -useTrash must be " +
+            "accompanied by -delete");
+      }
+
       if (overwrite && syncFolder) {
         throw new IllegalArgumentException("Overwrite and update options are "
             + "mutually exclusive");
@@ -625,6 +642,11 @@ public final class DistCpOptions {
 
     public Builder withDeleteMissing(boolean newDeleteMissing) {
       this.deleteMissing = newDeleteMissing;
+      return this;
+    }
+
+    public Builder withDeleteUseTrash(boolean newDeleteUseTrash) {
+      this.deleteUseTrash = newDeleteUseTrash;
       return this;
     }
 
