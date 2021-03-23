@@ -21,9 +21,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableScheduledFuture;
 import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,8 +53,10 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THR
 public final class AbfsLease {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsLease.class);
 
-  static final int LEASE_ACQUIRE_RETRY_INTERVAL = 10; // Retry interval for acquiring lease in secs
-  static final int LEASE_ACQUIRE_MAX_RETRIES = 7; // Number of retries for acquiring lease
+  // Number of retries for acquiring lease
+  static final int DEFAULT_LEASE_ACQUIRE_MAX_RETRIES = 7;
+  // Retry interval for acquiring lease in secs
+  static final int DEFAULT_LEASE_ACQUIRE_RETRY_INTERVAL = 10;
 
   private final AbfsClient client;
   private final String path;
@@ -61,6 +65,7 @@ public final class AbfsLease {
   private volatile boolean leaseFreed;
   private volatile String leaseID = null;
   private volatile Throwable exception = null;
+  private volatile int acquireRetryCount = 0;
   private volatile ListenableScheduledFuture<AbfsRestOperation> future = null;
 
   public static class LeaseException extends AzureBlobFileSystemException {
@@ -74,6 +79,12 @@ public final class AbfsLease {
   }
 
   public AbfsLease(AbfsClient client, String path) throws AzureBlobFileSystemException {
+    this(client, path, DEFAULT_LEASE_ACQUIRE_MAX_RETRIES, DEFAULT_LEASE_ACQUIRE_RETRY_INTERVAL);
+  }
+
+  @VisibleForTesting
+  public AbfsLease(AbfsClient client, String path, int acquireMaxRetries,
+      int acquireRetryInterval) throws AzureBlobFileSystemException {
     this.leaseFreed = false;
     this.client = client;
     this.path = path;
@@ -84,8 +95,8 @@ public final class AbfsLease {
 
     // Try to get the lease a specified number of times, else throw an error
     RetryPolicy retryPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
-        LEASE_ACQUIRE_MAX_RETRIES, LEASE_ACQUIRE_RETRY_INTERVAL, TimeUnit.SECONDS);
-    acquireLease(retryPolicy, 0, 0);
+        acquireMaxRetries, acquireRetryInterval, TimeUnit.SECONDS);
+    acquireLease(retryPolicy, 0, acquireRetryInterval, 0);
 
     while (leaseID == null && exception == null) {
       try {
@@ -103,7 +114,7 @@ public final class AbfsLease {
     LOG.debug("Acquired lease {} on {}", leaseID, path);
   }
 
-  private void acquireLease(RetryPolicy retryPolicy, int numRetries, long delay)
+  private void acquireLease(RetryPolicy retryPolicy, int numRetries, int retryInterval, long delay)
       throws LeaseException {
     LOG.debug("Attempting to acquire lease on {}, retry {}", path, numRetries);
     if (future != null && !future.isDone()) {
@@ -124,7 +135,8 @@ public final class AbfsLease {
           if (RetryPolicy.RetryAction.RetryDecision.RETRY
               == retryPolicy.shouldRetry(null, numRetries, 0, true).action) {
             LOG.debug("Failed to acquire lease on {}, retrying: {}", path, throwable);
-            acquireLease(retryPolicy, numRetries + 1, LEASE_ACQUIRE_RETRY_INTERVAL);
+            acquireRetryCount++;
+            acquireLease(retryPolicy, numRetries + 1, retryInterval, retryInterval);
           } else {
             exception = throwable;
           }
@@ -167,5 +179,10 @@ public final class AbfsLease {
 
   public String getLeaseID() {
     return leaseID;
+  }
+
+  @VisibleForTesting
+  public int getAcquireRetryCount() {
+    return acquireRetryCount;
   }
 }

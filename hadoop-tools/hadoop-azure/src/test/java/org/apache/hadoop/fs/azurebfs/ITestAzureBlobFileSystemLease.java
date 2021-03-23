@@ -26,9 +26,17 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsLease;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INFINITE_LEASE_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_LEASE_THREADS;
@@ -291,6 +299,38 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
       try (FSDataOutputStream out2 = fs.append(testFilePath)) {
       }
       return "Expected exception on new append after closed FS";
+    });
+  }
+
+  @Test(timeout = TEST_EXECUTION_TIMEOUT)
+  public void testAcquireRetry() throws Exception {
+    final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
+    final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
+    fs.mkdirs(testFilePath.getParent());
+    fs.createNewFile(testFilePath);
+
+    AbfsLease lease = new AbfsLease(fs.getAbfsClient(), testFilePath.toUri().getPath());
+    Assert.assertNotNull("Did not successfully lease file", lease.getLeaseID());
+    lease.free();
+    Assert.assertEquals("Unexpected acquire retry count", 0, lease.getAcquireRetryCount());
+
+    AbfsClient mockClient = spy(fs.getAbfsClient());
+
+    doThrow(new AbfsLease.LeaseException("failed to acquire 1"))
+        .doThrow(new AbfsLease.LeaseException("failed to acquire 2"))
+        .doCallRealMethod()
+        .when(mockClient).acquireLease(anyString(), anyInt());
+
+    lease = new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1);
+    Assert.assertNotNull("Acquire lease should have retried", lease.getLeaseID());
+    lease.free();
+    Assert.assertEquals("Unexpected acquire retry count", 2, lease.getAcquireRetryCount());
+
+    doThrow(new AbfsLease.LeaseException("failed to acquire"))
+        .when(mockClient).acquireLease(anyString(), anyInt());
+
+    LambdaTestUtils.intercept(AzureBlobFileSystemException.class, () -> {
+      new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1);
     });
   }
 }
