@@ -213,7 +213,8 @@ public class MembershipStoreImpl
             nnRegistrations.put(nnId, nnRegistration);
           }
           nnRegistration.add(membership);
-          if (membership.getState() != FederationNamenodeServiceState.UNAVAILABLE) {
+          if (membership.getState()
+              != FederationNamenodeServiceState.UNAVAILABLE) {
             String bpId = membership.getBlockPoolId();
             String cId = membership.getClusterId();
             String nsId = membership.getNameserviceId();

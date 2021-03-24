@@ -478,8 +478,10 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
   }
 
   @Test
-  public void testNamespaceInfoWithUnavailableNameNodeRegistration() throws IOException {
-    // Populate the state store with one ACTIVE NameNode entry and one UNAVAILABLE NameNode entry
+  public void testNamespaceInfoWithUnavailableNameNodeRegistration()
+      throws IOException {
+    // Populate the state store with one ACTIVE NameNode entry
+    // and one UNAVAILABLE NameNode entry
     // 1) ns0:nn0 - ACTIVE
     // 2) ns0:nn1 - UNAVAILABLE
     List<MembershipState> registrationList = new ArrayList<>();
@@ -510,13 +512,15 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     registerAndLoadRegistrations(registrationList);
 
     GetNamespaceInfoRequest request = GetNamespaceInfoRequest.newInstance();
-    GetNamespaceInfoResponse response = membershipStore.getNamespaceInfo(request);
+    GetNamespaceInfoResponse response
+        = membershipStore.getNamespaceInfo(request);
     Set<FederationNamespaceInfo> namespaces = response.getNamespaceInfo();
 
     // Verify only one namespace is registered
     assertEquals(1, namespaces.size());
 
-    // Verify the registered namespace has a valid pair of clusterId and blockPoolId derived from ACTIVE NameNode
+    // Verify the registered namespace has a valid pair of clusterId
+    // and blockPoolId derived from ACTIVE NameNode
     FederationNamespaceInfo namespace = namespaces.iterator().next();
     assertEquals(ns, namespace.getNameserviceId());
     assertEquals(clusterId, namespace.getClusterId());
