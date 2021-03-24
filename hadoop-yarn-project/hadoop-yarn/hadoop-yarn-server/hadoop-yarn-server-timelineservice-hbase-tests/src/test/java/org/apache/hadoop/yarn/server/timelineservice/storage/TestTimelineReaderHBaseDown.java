@@ -181,14 +181,13 @@ public class TestTimelineReaderHBaseDown {
     }
   }
 
-  private static void checkQuery(HBaseTimelineReaderImpl htr) throws
-      IOException {
+  private static Set<TimelineEntity> checkQuery(HBaseTimelineReaderImpl htr)
+      throws IOException {
     TimelineReaderContext context =
         new TimelineReaderContext(YarnConfiguration.DEFAULT_RM_CLUSTER_ID,
             null, null, null, null, TimelineEntityType
             .YARN_FLOW_ACTIVITY.toString(), null, null);
-    Set<TimelineEntity> entities = htr.getEntities(context, MONITOR_FILTERS,
-        DATA_TO_RETRIEVE);
+    return htr.getEntities(context, MONITOR_FILTERS, DATA_TO_RETRIEVE);
   }
 
   private static void configure(HBaseTestingUtility util) {

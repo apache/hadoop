@@ -764,7 +764,7 @@ public class SLSRunner extends Configured implements Tool {
     if (appNum == null) {
       appNum = 1;
     } else {
-      appNum++;
+      appNum = appNum + 1;
     }
 
     queueAppNumMap.put(queueName, appNum);

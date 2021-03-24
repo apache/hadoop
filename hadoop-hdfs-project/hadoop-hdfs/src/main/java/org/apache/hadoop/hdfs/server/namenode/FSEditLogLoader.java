@@ -1237,7 +1237,7 @@ public class FSEditLogLoader {
       holder = new Holder<Integer>(1);
       opCounts.put(opCode, holder);
     } else {
-      holder.held++;
+      holder.held = holder.held + 1;
     }
     counter.increment();
   }
