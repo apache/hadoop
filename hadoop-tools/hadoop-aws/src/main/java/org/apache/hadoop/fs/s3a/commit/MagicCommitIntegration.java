@@ -24,8 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
@@ -48,21 +48,25 @@ import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 public class MagicCommitIntegration {
   private static final Logger LOG =
       LoggerFactory.getLogger(MagicCommitIntegration.class);
-  private final S3AFileSystem owner;
   private final boolean magicCommitEnabled;
 
   private final StoreContext storeContext;
 
+  private final WriteOperationHelper writeOperationHelper;
+
   /**
    * Instantiate.
-   * @param owner owner class
+   * @param storeContext store context
+   * @param writeOperationHelper helper
    * @param magicCommitEnabled is magic commit enabled.
    */
-  public MagicCommitIntegration(S3AFileSystem owner,
-      boolean magicCommitEnabled) {
-    this.owner = owner;
+  public MagicCommitIntegration(
+      final StoreContext storeContext,
+      final WriteOperationHelper writeOperationHelper,
+      final boolean magicCommitEnabled) {
     this.magicCommitEnabled = magicCommitEnabled;
-    this.storeContext = owner.createStoreContext();
+    this.storeContext = storeContext;
+    this.writeOperationHelper = writeOperationHelper;
   }
 
   /**
@@ -105,7 +109,7 @@ public class MagicCommitIntegration {
             key,
             destKey,
             pendingsetPath,
-            owner.getWriteOperationHelper());
+            writeOperationHelper);
         LOG.debug("Created {}", tracker);
       } else {
         LOG.warn("File being created has a \"magic\" path, but the filesystem"

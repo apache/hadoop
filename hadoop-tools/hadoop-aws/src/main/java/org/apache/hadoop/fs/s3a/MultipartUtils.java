@@ -55,7 +55,7 @@ public final class MultipartUtils {
    *               bucket will be searched.
    * @return an iterator of matching uploads
    */
-  static MultipartUtils.UploadIterator listMultipartUploads(AmazonS3 s3,
+  public static MultipartUtils.UploadIterator listMultipartUploads(AmazonS3 s3,
       Invoker invoker, String bucketName, int maxKeys, @Nullable String prefix)
       throws IOException {
     return new MultipartUtils.UploadIterator(s3, invoker, bucketName, maxKeys,

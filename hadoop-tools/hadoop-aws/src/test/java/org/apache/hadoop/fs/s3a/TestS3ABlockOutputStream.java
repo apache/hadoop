@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
-import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.impl.RequestFactory;
+import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +34,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link S3ABlockOutputStream}.
@@ -65,22 +64,21 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
   }
 
   @Test
-  public void testWriteOperationHelperPartLimits() throws Throwable {
-    S3AFileSystem s3a = mock(S3AFileSystem.class);
-    when(s3a.getBucket()).thenReturn("bucket");
-    WriteOperationHelper woh = new WriteOperationHelper(s3a,
-        new Configuration(),
-        new EmptyS3AStatisticsContext());
+  public void testPartLimits() throws Throwable {
+    RequestFactory requestFactory = RequestFactoryImpl.builder()
+        .withBucket("bucket")
+        .withMultipartPartCountLimit(1000)
+        .build();
     ByteArrayInputStream inputStream = new ByteArrayInputStream(
         "a".getBytes());
     // first one works
     String key = "destKey";
-    woh.newUploadPartRequest(key,
+   requestFactory.newUploadPartRequest(key,
         "uploadId", 1, 1024, inputStream, null, 0L);
     // but ask past the limit and a PathIOE is raised
     intercept(PathIOException.class, key,
-        () -> woh.newUploadPartRequest(key,
-            "uploadId", 50000, 1024, inputStream, null, 0L));
+        () -> requestFactory.newUploadPartRequest(key,
+            "uploadId", 10, 1024, inputStream, null, 0L));
   }
 
   static class StreamClosedException extends IOException {}

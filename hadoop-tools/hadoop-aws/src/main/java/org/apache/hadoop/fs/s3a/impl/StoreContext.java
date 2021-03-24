@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
@@ -117,7 +118,14 @@ public class StoreContext {
   /**
    * Source of time.
    */
-  private ITtlTimeProvider timeProvider;
+  private final ITtlTimeProvider timeProvider;
+
+  /**
+   * Factory for AWS requests.
+   */
+  private final RequestFactory requestFactory;
+
+  private final DurationTrackerFactory durationTrackerFactory;
 
   /**
    * Instantiate.
@@ -140,7 +148,9 @@ public class StoreContext {
       final MetadataStore metadataStore,
       final boolean useListV1,
       final ContextAccessors contextAccessors,
-      final ITtlTimeProvider timeProvider) {
+      final ITtlTimeProvider timeProvider,
+      final RequestFactory requestFactory,
+      final DurationTrackerFactory durationTrackerFactory) {
     this.fsURI = fsURI;
     this.bucket = bucket;
     this.configuration = configuration;
@@ -158,6 +168,8 @@ public class StoreContext {
     this.useListV1 = useListV1;
     this.contextAccessors = contextAccessors;
     this.timeProvider = timeProvider;
+    this.requestFactory = requestFactory;
+    this.durationTrackerFactory = durationTrackerFactory;
   }
 
   @Override
@@ -216,6 +228,14 @@ public class StoreContext {
 
   public boolean isUseListV1() {
     return useListV1;
+  }
+
+  public RequestFactory getRequestFactory() {
+    return requestFactory;
+  }
+
+  public DurationTrackerFactory getDurationTrackerFactory() {
+    return durationTrackerFactory;
   }
 
   public ContextAccessors getContextAccessors() {
@@ -391,4 +411,5 @@ public class StoreContext {
         LambdaUtils.eval(future, call));
     return future;
   }
+
 }
