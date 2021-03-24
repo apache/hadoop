@@ -62,7 +62,7 @@ import com.google.common.base.Preconditions;
  * <p>
  * Rack localized {@link ResourceRequest}s are forwarded to the RMs that owns
  * the corresponding rack. Note that in some deployments each rack could be
- * striped across multiple RMs. Thsi policy respects that. If the
+ * striped across multiple RMs. This policy respects that. If the
  * {@link SubClusterResolver} cannot resolve this rack we default to forwarding
  * the {@link ResourceRequest} to the home sub-cluster.
  * </p>
