@@ -33,6 +33,7 @@ import org.apache.hadoop.test.Whitebox;
 
 import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -288,6 +289,26 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Assertions.assertThat(conn.getResponseCode()).isEqualTo(200);
     final int after = metrics.responses2xx();
     Assertions.assertThat(after).isGreaterThan(before);
+  }
+
+  /**
+   * Jetty StatisticsHandler must be inserted via Server#insertHandler
+   * instead of Server#setHandler. The server fails to start if
+   * the handler is added by setHandler.
+   */
+  @Test
+  public void testSetStatisticsHandler() throws Exception {
+    final Configuration conf = new Configuration();
+    // skip insert
+    conf.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, false);
+    final HttpServer2 testServer = createTestServer(conf);
+    testServer.webServer.setHandler(new StatisticsHandler());
+    try {
+      testServer.start();
+      fail("IOException should be thrown.");
+    } catch (IOException ignore) {
+    }
   }
 
   @Test
