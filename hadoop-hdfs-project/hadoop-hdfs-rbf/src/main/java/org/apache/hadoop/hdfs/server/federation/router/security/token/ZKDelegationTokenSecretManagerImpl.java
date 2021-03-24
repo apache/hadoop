@@ -115,9 +115,9 @@ public class ZKDelegationTokenSecretManagerImpl extends
         }
 
         LOG.info("Start loading token cache");
-        long start = Time.now();
+        long start = Time.monotonicNow();
         rebuildTokenCache(true);
-        LOG.info("Loaded token cache in {} milliseconds", Time.now() - start);
+        LOG.info("Loaded token cache in {} milliseconds", Time.monotonicNow() - start);
 
         int syncInterval = conf.getInt(ZK_DTSM_ROUTER_TOKEN_SYNC_INTERVAL,
             ZK_DTSM_ROUTER_TOKEN_SYNC_INTERVAL_DEFAULT);

@@ -88,8 +88,8 @@ public abstract class HATestUtil {
 
     active.getRpcServer().rollEditLog();
 
-    long start = Time.now();
-    while (Time.now() - start < TestEditLogTailer.NN_LAG_TIMEOUT) {
+    long start = Time.monotonicNow();
+    while (Time.monotonicNow() - start < TestEditLogTailer.NN_LAG_TIMEOUT) {
       long nn2HighestTxId = standby.getNamesystem().getFSImage()
         .getLastAppliedTxId();
       if (nn2HighestTxId >= activeTxId) {
@@ -341,13 +341,13 @@ public abstract class HATestUtil {
   
   public static void waitForCheckpoint(MiniDFSCluster cluster, int nnIdx,
       List<Integer> txids) throws InterruptedException {
-    long start = Time.now();
+    long start = Time.monotonicNow();
     while (true) {
       try {
         FSImageTestUtil.assertNNHasCheckpoints(cluster, nnIdx, txids);
         return;
       } catch (AssertionError err) {
-        if (Time.now() - start > 10000) {
+        if (Time.monotonicNow() - start > 10000) {
           throw err;
         } else {
           Thread.sleep(300);
