@@ -15,14 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.io.erasurecode.rawcoder;
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+import org.apache.hadoop.classification.InterfaceAudience;
 
-public interface MappingRuleMatcher {
-  /**
-   * Returns true if the matcher matches the current context.
-   * @param variables The variable context, which contains all the variables
-   * @return true if this matcher matches to the provided variable set
-   */
-  boolean match(VariableContext variables);
+import java.io.IOException;
+
+/**
+ * Thrown for invalid decoding.
+ */
+@InterfaceAudience.Private
+public class InvalidDecodingException
+    extends IOException {
+  private static final long serialVersionUID = 0L;
+
+  public InvalidDecodingException(String description) {
+    super(description);
+  }
 }

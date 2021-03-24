@@ -239,7 +239,12 @@ public enum DistCpOptionSwitch {
    */
   DIRECT_WRITE(DistCpConstants.CONF_LABEL_DIRECT_WRITE,
       new Option("direct", false, "Write files directly to the"
-          + " target location, avoiding temporary file rename."));
+          + " target location, avoiding temporary file rename.")),
+
+  USE_ITERATOR(DistCpConstants.CONF_LABEL_USE_ITERATOR,
+      new Option("useiterator", false,
+          "Use single threaded list status iterator to build "
+              + "the listing to save the memory utilisation at the client"));
 
 
   public static final String PRESERVE_STATUS_DEFAULT = "-prbugpct";

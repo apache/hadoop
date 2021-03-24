@@ -332,7 +332,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void maybeCreateFakeParentDirectory(Path path)
+  protected void maybeCreateFakeParentDirectory(Path path)
       throws IOException, AmazonClientException {
     // no-op
   }

@@ -55,34 +55,43 @@ public class CapacitySchedulerAutoQueueHandler {
     List<ApplicationPlacementContext> parentsToCreate = new ArrayList<>();
 
     ApplicationPlacementContext queueCandidateContext = parentContext;
-    CSQueue existingQueueCandidate = getQueue(
+    CSQueue firstExistingQueue = getQueue(
         queueCandidateContext.getFullQueuePath());
 
-    while (existingQueueCandidate == null) {
+    while (firstExistingQueue == null) {
       parentsToCreate.add(queueCandidateContext);
       queueCandidateContext = CSQueueUtils.extractQueuePath(
           queueCandidateContext.getParentQueue());
-      existingQueueCandidate = getQueue(
+      firstExistingQueue = getQueue(
           queueCandidateContext.getFullQueuePath());
+    }
+
+    CSQueue firstExistingStaticQueue = firstExistingQueue;
+    // Include the LeafQueue in the distance
+    int firstStaticParentDistance = parentsToCreate.size() + 1;
+
+    while(isNonStaticParent(firstExistingStaticQueue)) {
+      queueCandidateContext = CSQueueUtils.extractQueuePath(
+          queueCandidateContext.getParentQueue());
+      firstExistingStaticQueue = getQueue(
+          queueCandidateContext.getFullQueuePath());
+      ++firstStaticParentDistance;
     }
 
     // Reverse the collection to to represent the hierarchy to be created
     // from highest to lowest level
     Collections.reverse(parentsToCreate);
 
-    if (!(existingQueueCandidate instanceof ParentQueue)) {
+    if (!(firstExistingQueue instanceof ParentQueue)) {
       throw new SchedulerDynamicEditException(
           "Could not auto create hierarchy of "
               + queue.getFullQueuePath() + ". Queue "
-              + existingQueueCandidate.getQueuePath() +
+              + firstExistingQueue.getQueuePath() +
               " is not a ParentQueue."
       );
     }
-    ParentQueue existingParentQueue = (ParentQueue) existingQueueCandidate;
+    ParentQueue existingParentQueue = (ParentQueue) firstExistingQueue;
     int depthLimit = extractDepthLimit(existingParentQueue);
-    // The number of levels to be created including the LeafQueue
-    // (which is last)
-    int levelsToCreate = parentsToCreate.size() + 1;
 
     if (depthLimit == 0) {
       throw new SchedulerDynamicEditException("Auto creation of queue " +
@@ -90,12 +99,12 @@ public class CapacitySchedulerAutoQueueHandler {
           + existingParentQueue.getQueuePath());
     }
 
-    if (levelsToCreate > depthLimit) {
+    if (firstStaticParentDistance > depthLimit) {
       throw new SchedulerDynamicEditException(
           "Could not auto create queue " + queue.getFullQueuePath()
-              + ". In order to create the desired queue hierarchy, " +
-              levelsToCreate + " levels of queues would need " +
-              "to be created, which is above the limit.");
+              + ". The distance of the LeafQueue from the first static " +
+              "ParentQueue is" + firstStaticParentDistance + ", which is " +
+              "above the limit.");
     }
 
     for (ApplicationPlacementContext current : parentsToCreate) {
@@ -122,5 +131,10 @@ public class CapacitySchedulerAutoQueueHandler {
 
   private CSQueue getQueue(String queue) {
     return queue != null ? queueManager.getQueue(queue) : null;
+  }
+
+  private boolean isNonStaticParent(CSQueue queue) {
+    return (!(queue instanceof AbstractCSQueue)
+        || ((AbstractCSQueue) queue).isDynamicQueue());
   }
 }

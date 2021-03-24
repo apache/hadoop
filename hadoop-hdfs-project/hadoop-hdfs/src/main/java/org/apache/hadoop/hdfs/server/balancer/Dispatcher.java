@@ -622,7 +622,7 @@ public class Dispatcher {
       public boolean equals(Object obj) {
         if (this == obj) {
           return true;
-        } else if (obj == null || !(obj instanceof StorageGroup)) {
+        } else if (!(obj instanceof StorageGroup)) {
           return false;
         } else {
           final StorageGroup that = (StorageGroup) obj;
@@ -1158,12 +1158,7 @@ public class Dispatcher {
       p.proxySource.removePendingBlock(p);
       return;
     }
-    moveExecutor.execute(new Runnable() {
-      @Override
-      public void run() {
-        p.dispatch();
-      }
-    });
+    moveExecutor.execute(p::dispatch);
   }
 
   public boolean dispatchAndCheckContinue() throws InterruptedException {

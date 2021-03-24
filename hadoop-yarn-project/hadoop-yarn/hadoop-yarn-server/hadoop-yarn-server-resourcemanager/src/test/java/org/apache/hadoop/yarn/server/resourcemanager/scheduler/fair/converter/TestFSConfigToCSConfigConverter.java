@@ -687,6 +687,21 @@ public class TestFSConfigToCSConfigConverter {
             schedulingEnabledValue);
   }
 
+  @Test
+  public void testSiteDisabledPreemptionWithObserveOnlyConversion()
+      throws Exception{
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+        .withDisablePreemption(FSConfigToCSConfigConverterParams.
+            PreemptionMode.OBSERVE_ONLY)
+        .build();
+
+    converter.convert(params);
+    assertTrue("The observe only should be true",
+        converter.getCapacitySchedulerConfig().
+            getBoolean(CapacitySchedulerConfiguration.
+                PREEMPTION_OBSERVE_ONLY, false));
+  }
+
   private boolean testConversionWithAsyncSchedulingOption(boolean enabled) throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
             .withClusterResource(CLUSTER_RESOURCE_STRING)

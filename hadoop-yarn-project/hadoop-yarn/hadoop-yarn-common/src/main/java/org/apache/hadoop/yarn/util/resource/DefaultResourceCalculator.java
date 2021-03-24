@@ -166,4 +166,9 @@ public class DefaultResourceCalculator extends ResourceCalculator {
       return ImmutableSet.of();
     }
   }
+
+  @Override
+  public boolean isAllInvalidDivisor(Resource r) {
+    return isInvalidDivisor(r);
+  }
 }

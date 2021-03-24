@@ -103,6 +103,8 @@ public class FSConfigToCSConfigConverter {
   private String outputDirectory;
   private boolean rulesToFile;
   private boolean usePercentages;
+  private FSConfigToCSConfigConverterParams.
+      PreemptionMode preemptionMode;
 
   public FSConfigToCSConfigConverter(FSConfigToCSConfigRuleHandler
       ruleHandler, ConversionOptions conversionOptions) {
@@ -121,6 +123,7 @@ public class FSConfigToCSConfigConverter {
     this.outputDirectory = params.getOutputDirectory();
     this.rulesToFile = params.isPlacementRulesToFile();
     this.usePercentages = params.isUsePercentages();
+    this.preemptionMode = params.getPreemptionMode();
     prepareOutputFiles(params.isConsole());
     loadConversionRules(params.getConversionRulesConfig());
     Configuration inputYarnSiteConfig = getInputYarnSiteConfig(params);
@@ -277,7 +280,8 @@ public class FSConfigToCSConfigConverter {
         new FSYarnSiteConverter();
     siteConverter.convertSiteProperties(inputYarnSiteConfig,
         convertedYarnSiteConfig, drfUsed,
-        conversionOptions.isEnableAsyncScheduler());
+        conversionOptions.isEnableAsyncScheduler(),
+        usePercentages, preemptionMode);
 
     preemptionEnabled = siteConverter.isPreemptionEnabled();
     sizeBasedWeight = siteConverter.isSizeBasedWeight();
@@ -291,6 +295,7 @@ public class FSConfigToCSConfigConverter {
     emitDefaultUserMaxParallelApplications();
     emitUserMaxParallelApplications();
     emitDefaultMaxAMShare();
+    emitDisablePreemptionForObserveOnlyMode();
 
     FSQueueConverter queueConverter = FSQueueConverterBuilder.create()
         .withRuleHandler(ruleHandler)
@@ -405,6 +410,14 @@ public class FSConfigToCSConfigConverter {
           CapacitySchedulerConfiguration.
             MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
           queueMaxAMShareDefault);
+    }
+  }
+  private void emitDisablePreemptionForObserveOnlyMode() {
+    if (preemptionMode == FSConfigToCSConfigConverterParams
+            .PreemptionMode.OBSERVE_ONLY) {
+      capacitySchedulerConfig.
+          setBoolean(CapacitySchedulerConfiguration.
+              PREEMPTION_OBSERVE_ONLY, true);
     }
   }
 

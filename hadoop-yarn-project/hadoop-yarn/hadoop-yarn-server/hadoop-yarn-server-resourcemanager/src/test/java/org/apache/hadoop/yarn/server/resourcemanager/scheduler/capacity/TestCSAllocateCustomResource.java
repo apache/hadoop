@@ -22,18 +22,22 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ClusterNodeTracker;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -47,8 +51,12 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test case for custom resource container allocation.
@@ -63,6 +71,9 @@ public class TestCSAllocateCustomResource {
   private File resourceTypesFile = null;
 
   private final int g = 1024;
+
+  private ClusterNodeTracker<FiCaSchedulerNode> nodeTracker;
+  private ClusterMetrics metrics;
 
   @Before
   public void setUp() throws Exception {
@@ -181,5 +192,58 @@ public class TestCSAllocateCustomResource {
         cs.getMaximumResourceCapability("a")
             .getResourceValue("yarn.io/gpu"));
     rm.close();
+  }
+
+  @Test
+  public void testClusterMetricsWithGPU()
+      throws Exception {
+    metrics = ClusterMetrics.getMetrics();
+    // reset resource types
+    ResourceUtils.resetResourceTypes();
+    String resourceTypesFileName = "resource-types-test.xml";
+    File source = new File(
+        conf.getClassLoader().getResource(resourceTypesFileName).getFile());
+    resourceTypesFile = new File(source.getParent(), "resource-types.xml");
+    FileUtils.copyFile(source, resourceTypesFile);
+
+    CapacitySchedulerConfiguration newConf =
+        (CapacitySchedulerConfiguration) TestUtils
+            .getConfigurationWithMultipleQueues(conf);
+    newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+        DominantResourceCalculator.class, ResourceCalculator.class);
+    //start RM
+    MockRM rm = new MockRM(newConf);
+    rm.start();
+
+    nodeTracker = new ClusterNodeTracker<>();
+    MockNodes.resetHostIds();
+    Resource nodeResource = Resource.newInstance(4096, 4,
+        Collections.singletonMap(GPU_URI, 4L));
+    List<RMNode> rmNodes =
+        MockNodes.newNodes(2, 4, nodeResource);
+    for (RMNode rmNode : rmNodes) {
+      nodeTracker.addNode(new FiCaSchedulerNode(rmNode, false));
+    }
+
+    // Check GPU inc related cluster metrics.
+    assertEquals("Cluster Capability Memory incorrect",
+        metrics.getCapabilityMB(), (4096 * 8));
+    assertEquals("Cluster Capability Vcores incorrect",
+        metrics.getCapabilityVirtualCores(), 4 * 8);
+    assertEquals("Cluster Capability GPUs incorrect",
+        metrics.getCapabilityGPUs(), 4 * 8);
+
+    for (RMNode rmNode : rmNodes) {
+      nodeTracker.removeNode(rmNode.getNodeID());
+    }
+
+    // Check GPU dec related cluster metrics.
+    assertEquals("Cluster Capability Memory incorrect",
+        metrics.getCapabilityMB(), 0);
+    assertEquals("Cluster Capability Vcores incorrect",
+        metrics.getCapabilityVirtualCores(), 0);
+    assertEquals("Cluster Capability GPUs incorrect",
+        metrics.getCapabilityGPUs(), 0);
+    ClusterMetrics.destroy();
   }
 }

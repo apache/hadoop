@@ -22,11 +22,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingQueuePath;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingQueuePath;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 
 public class LegacyMappingRuleToJson {
   //Legacy rule parse helper constants
