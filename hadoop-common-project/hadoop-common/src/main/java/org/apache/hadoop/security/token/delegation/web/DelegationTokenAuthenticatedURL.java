@@ -295,10 +295,8 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
       // delegation token
       Credentials creds = UserGroupInformation.getCurrentUser().
           getCredentials();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Token not set, looking for delegation token. Creds:{},"
-                + " size:{}", creds.getAllTokens(), creds.numberOfTokens());
-      }
+      LOG.debug("Token not set, looking for delegation token. Creds:{},"
+          + " size:{}", creds.getAllTokens(), creds.numberOfTokens());
       if (!creds.getAllTokens().isEmpty()) {
         dToken = selectDelegationToken(url, creds);
         if (dToken != null) {
