@@ -65,6 +65,13 @@ Keys with uppercase names can no longer be created when using the JavaKeyStorePr
 
 ---
 
+* [MAPREDUCE-5420](https://issues.apache.org/jira/browse/MAPREDUCE-5420) | *Major* | **Remove mapreduce.task.tmp.dir from mapred-default.xml**
+
+**WARNING: No release note provided for this change.**
+
+
+---
+
 * [HADOOP-9629](https://issues.apache.org/jira/browse/HADOOP-9629) | *Major* | **Support Windows Azure Storage - Blob as a file system in Hadoop**
 
 Hadoop now supports integration with Azure Storage as an alternative Hadoop Compatible File System.

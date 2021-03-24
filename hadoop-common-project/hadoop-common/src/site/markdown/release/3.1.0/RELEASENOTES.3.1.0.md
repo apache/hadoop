@@ -196,4 +196,11 @@ HBase integration module was mixed up with for hbase-server and hbase-client dep
 The HADOOP\_CONF\_DIR environment variable is no longer unconditionally inherited by containers even if it does not appear in the nodemanager whitelist variables specified by the yarn.nodemanager.env-whitelist property. If the whitelist property has been modified from the default to not include HADOOP\_CONF\_DIR yet containers need it to be inherited from the nodemanager's environment then the whitelist settings need to be updated to include HADOOP\_CONF\_DIR.
 
 
+---
+
+* [HDFS-13553](https://issues.apache.org/jira/browse/HDFS-13553) | *Major* | **RBF: Support global quota**
+
+Federation supports and controls global quota at mount table level.
+
+In a federated environment, a folder can be spread across multiple subclusters. Router aggregates quota that queried from these subclusters  and uses that for the quota-verification.
 
