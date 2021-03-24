@@ -1658,6 +1658,7 @@ public class TestBalancer {
           // a block is moved unexpectedly, IN_PROGRESS will be reported.
           assertEquals("We expect ExitStatus.NO_MOVE_PROGRESS to be reported.",
               ExitStatus.NO_MOVE_PROGRESS, r.getExitStatus());
+          assertEquals(0, r.getBlocksMoved());
         }
       } finally {
         for (NameNodeConnector nnc : connectors) {
@@ -2309,8 +2310,11 @@ public class TestBalancer {
     // Hence, overall total blocks moved by HDFS balancer would be either of these 2 options:
     // a) 2 blocks of total size (100B + 100B)
     // b) 3 blocks of total size (50B + 100B + 100B)
-    assertTrue(balancerResult.getBytesAlreadyMoved() == 200
-        || balancerResult.getBytesAlreadyMoved() == 250);
+    assertTrue("BalancerResult is not as expected. " + balancerResult,
+        (balancerResult.getBytesAlreadyMoved() == 200
+            && balancerResult.getBlocksMoved() == 2)
+            || (balancerResult.getBytesAlreadyMoved() == 250
+            && balancerResult.getBlocksMoved() == 3));
     // 100% and 95% used nodes will be balanced, so top used will be 900
     assertEquals(900, maxUsage);
   }
