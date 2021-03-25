@@ -158,7 +158,7 @@ class BlockPoolManager {
       newLifelineAddressMap =
           DFSUtil.getNNLifelineRpcAddressesForCluster(conf);
     } catch (IOException ioe) {
-      LOG.warn("Unable to get NameNode addresses.");
+      LOG.warn("Unable to get NameNode addresses.", ioe);
     }
 
     if (newAddressMap == null || newAddressMap.isEmpty()) {
