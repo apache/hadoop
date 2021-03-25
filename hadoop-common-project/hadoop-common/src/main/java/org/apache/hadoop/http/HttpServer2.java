@@ -674,7 +674,8 @@ public final class HttpServer2 implements FilterContainer {
     addDefaultApps(contexts, appDir, conf);
     webServer.setHandler(handlers);
 
-    if (conf.getBoolean(CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
       // Jetty StatisticsHandler must be inserted as the first handler.
       // The tree might look like this:
