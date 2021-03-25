@@ -438,13 +438,8 @@ public abstract class INodeAttributeProvider {
      * @param authzContext an {@link AuthorizationContext} object encapsulating
      *                     the various parameters required to authorize an
      *                     operation.
-     * @throws AccessControlException
      */
-    default void denySuperUserAccess(AuthorizationContext authzContext)
-        throws AccessControlException {
-      throw new AccessControlException("The authorization provider does not "
-          + "implement the denySuperUserAccess(AuthorizationContext) "
-          + "API.");
+    default void denySuperUserAccess(AuthorizationContext authzContext) {
 
     }
   }

@@ -2289,6 +2289,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "truncate";
     requireEffectiveLayoutVersionForFeature(Feature.TRUNCATE);
     FSDirTruncateOp.TruncateResult r = null;
+    FileStatus status;
     try {
       NameNode.stateChangeLog.info(
           "DIR* NameSystem.truncate: src={} newLength={}", src, newLength);
@@ -2307,7 +2308,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         r = FSDirTruncateOp.truncate(this, src, newLength, clientName,
             clientMachine, mtime, toRemoveBlocks, pc);
       } finally {
-        FileStatus status = r != null ? r.getFileStatus() : null;
+        status = r != null ? r.getFileStatus() : null;
         writeUnlock(operationName,
             getLockReportInfoSupplier(src, null, status));
       }
@@ -2316,7 +2317,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         removeBlocks(toRemoveBlocks);
         toRemoveBlocks.clear();
       }
-      logAuditEvent(true, operationName, src, null, r.getFileStatus());
+      logAuditEvent(true, operationName, src, null, status);
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
       throw e;

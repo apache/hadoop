@@ -189,7 +189,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         getAuthorizationContextForSuperUser(path));
   }
 
-  public void denySuperUserAccess(String path) throws AccessControlException {
+  public void denySuperUserAccess(String path) {
     getAccessControlEnforcer().denySuperUserAccess(
         getAuthorizationContextForSuperUser(path));
   }
