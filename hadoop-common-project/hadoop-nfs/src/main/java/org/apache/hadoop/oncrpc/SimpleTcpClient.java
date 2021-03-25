@@ -18,15 +18,15 @@
 package org.apache.hadoop.oncrpc;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
  * A simple TCP based RPC client which just sends a request to a server.
@@ -35,7 +35,6 @@ public class SimpleTcpClient {
   protected final String host;
   protected final int port;
   protected final XDR request;
-  protected ChannelPipelineFactory pipelineFactory;
   protected final boolean oneShot;
   
   public SimpleTcpClient(String host, int port, XDR request) {
@@ -48,40 +47,42 @@ public class SimpleTcpClient {
     this.request = request;
     this.oneShot = oneShot;
   }
-  
-  protected ChannelPipelineFactory setPipelineFactory() {
-    this.pipelineFactory = new ChannelPipelineFactory() {
+
+  protected ChannelInitializer<SocketChannel> setChannelHandler() {
+    return new ChannelInitializer<SocketChannel>() {
       @Override
-      public ChannelPipeline getPipeline() {
-        return Channels.pipeline(
+      protected void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline p = ch.pipeline();
+        p.addLast(
             RpcUtil.constructRpcFrameDecoder(),
-            new SimpleTcpClientHandler(request));
+            new SimpleTcpClientHandler(request)
+        );
       }
     };
-    return this.pipelineFactory;
   }
 
   public void run() {
     // Configure the client.
-    ChannelFactory factory = new NioClientSocketChannelFactory(
-        Executors.newCachedThreadPool(), Executors.newCachedThreadPool(), 1, 1);
-    ClientBootstrap bootstrap = new ClientBootstrap(factory);
+    NioEventLoopGroup workerGroup = new NioEventLoopGroup();
+    Bootstrap bootstrap = new Bootstrap()
+        .group(workerGroup)
+        .channel(NioSocketChannel.class);
 
-    // Set up the pipeline factory.
-    bootstrap.setPipelineFactory(setPipelineFactory());
+    try {
+      ChannelFuture future = bootstrap.handler(setChannelHandler())
+          .option(ChannelOption.TCP_NODELAY, true)
+          .option(ChannelOption.SO_KEEPALIVE, true)
+          .connect(new InetSocketAddress(host, port)).sync();
 
-    bootstrap.setOption("tcpNoDelay", true);
-    bootstrap.setOption("keepAlive", true);
+      if (oneShot) {
+        // Wait until the connection is closed or the connection attempt fails.
+        future.channel().closeFuture().sync();
 
-    // Start the connection attempt.
-    ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
-
-    if (oneShot) {
-      // Wait until the connection is closed or the connection attempt fails.
-      future.getChannel().getCloseFuture().awaitUninterruptibly();
-
-      // Shut down thread pools to exit.
-      bootstrap.releaseExternalResources();
+        // Shut down thread pools to exit.
+        workerGroup.shutdownGracefully();
+      }
+    } catch (InterruptedException e) {
+      e.printStackTrace();
     }
   }
 }

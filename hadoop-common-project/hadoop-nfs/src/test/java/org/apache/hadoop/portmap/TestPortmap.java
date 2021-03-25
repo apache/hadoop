@@ -92,6 +92,7 @@ public class TestPortmap {
     DatagramPacket p = new DatagramPacket(reqBuf, reqBuf.length,
         pm.getUdpServerLoAddress());
     try {
+
       s.send(p);
     } finally {
       s.close();

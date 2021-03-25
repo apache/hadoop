@@ -19,15 +19,33 @@ package org.apache.hadoop.oncrpc;
 
 import java.net.SocketAddress;
 
-import org.jboss.netty.buffer.ChannelBuffer;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.DefaultAddressedEnvelope;
 
 /**
  * RpcResponse encapsulates a response to a RPC request. It contains the data
  * that is going to cross the wire, as well as the information of the remote
  * peer.
  */
-public class RpcResponse {
-  private final ChannelBuffer data;
+public class RpcResponse extends
+    DefaultAddressedEnvelope<ByteBuf, SocketAddress> {
+  public RpcResponse(ByteBuf message, SocketAddress recipient) {
+    super(message, recipient, null);
+  }
+
+  public RpcResponse(ByteBuf message, SocketAddress recipient,
+      SocketAddress sender) {
+    super(message, recipient, sender);
+  }
+
+  public ByteBuf data() {
+    return this.content();
+  }
+
+  public SocketAddress remoteAddress() {
+    return this.recipient();
+  }
+  /*private final ChannelBuffer data;
   private final SocketAddress remoteAddress;
 
   public RpcResponse(ChannelBuffer data, SocketAddress remoteAddress) {
@@ -41,5 +59,5 @@ public class RpcResponse {
 
   public SocketAddress remoteAddress() {
     return remoteAddress;
-  }
+  }*/
 }
