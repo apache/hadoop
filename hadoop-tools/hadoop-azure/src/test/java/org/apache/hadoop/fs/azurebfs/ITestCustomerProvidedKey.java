@@ -131,14 +131,12 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
     //  Read without CPK header
     LambdaTestUtils.intercept(IOException.class,
-        "The blob is encrypted with customer specified encryption which is "
-            + "not supported on this endpoint.", () -> {
+        () -> {
           getAbfs(false).getXAttr(new Path(fileName), attrName);
         });
 
     //  Wrong CPK
     LambdaTestUtils.intercept(IOException.class,
-        "The value for one of the HTTP headers is not in the correct format.",
         () -> {
           getSameFSWithWrongCPK(fs).getXAttr(new Path(fileName), attrName);
         });
@@ -197,8 +195,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
       int length = 8 * ONE_MB;
       byte[] buffer = new byte[length];
       LambdaTestUtils.intercept(IOException.class,
-          "The given customer specified encryption does not match the "
-              + "encryption used to encrypt the blob.", () -> {
+          () -> {
             iStream.read(buffer, 0, length);
           });
     }
@@ -210,8 +207,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
       int length = 8 * ONE_MB;
       byte[] buffer = new byte[length];
       LambdaTestUtils.intercept(IOException.class,
-          "The blob is encrypted with customer specified encryption which is "
-              + "not supported on this endpoint.", () -> {
+          () -> {
             iStream.read(buffer, 0, length);
           });
     }
