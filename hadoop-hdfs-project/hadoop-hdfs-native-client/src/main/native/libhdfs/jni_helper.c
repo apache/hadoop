@@ -536,7 +536,7 @@ static ssize_t getClassPath_helper(const char *classpath, char* expandedClasspat
             // +1 for path separator or null terminator
             length += tokenlen + 1;
             if (expandedCP_curr != NULL) {
-                strncpy(expandedCP_curr, cp_token, tokenlen);
+                memcpy(expandedCP_curr, cp_token, tokenlen);
                 expandedCP_curr += tokenlen;
                 *expandedCP_curr = PATH_SEPARATOR;
                 expandedCP_curr++;
