@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -35,11 +36,13 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
@@ -74,14 +77,161 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 
-public class ITestAbfsClientCustomerProvidedKey
-    extends AbstractAbfsIntegrationTest {
+public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int INT_512 = 512;
   private static final int INT_50 = 50;
 
-  public ITestAbfsClientCustomerProvidedKey() throws Exception {
+  public ITestCustomerProvidedKey() throws Exception {
+  }
+
+  @Test
+  public void testWriteReadAndVerifyWithCPK() throws Exception {
+    final AzureBlobFileSystem fs = getAbfs(true);
+    int fileSize = 16 * ONE_MB;
+    byte[] fileContent = getRandomBytesArray(fileSize);
+    String fileName = methodName.getMethodName();
+    Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+    try (FSDataInputStream iStream = fs.open(testFilePath)) {
+      byte[] buffer = new byte[fileSize];
+      int bytesRead = iStream.read(buffer, 0, fileSize);
+      assertEquals(bytesRead, fileSize);
+      for (int i = 0; i < fileSize; i++) {
+        assertEquals(fileContent[i], buffer[i]);
+      }
+    }
+  }
+
+  @Test
+  public void testSetGetXAttr() throws Exception {
+    final AzureBlobFileSystem fs = getAbfs(true);
+    String fileName = methodName.getMethodName();
+    fs.create(new Path(fileName));
+
+    String valSent = "testValue";
+    String attrName = "testXAttr";
+
+    //  set get and verify
+    fs.setXAttr(new Path(fileName), attrName,
+        valSent.getBytes(StandardCharsets.UTF_8),
+        EnumSet.of(XAttrSetFlag.CREATE));
+    byte[] valBytes = fs.getXAttr(new Path(fileName), attrName);
+    String valRecieved = new String(valBytes);
+    assertEquals(valSent, valRecieved);
+
+    //  set new value get and verify
+    valSent = "new value";
+    fs.setXAttr(new Path(fileName), attrName,
+        valSent.getBytes(StandardCharsets.UTF_8),
+        EnumSet.of(XAttrSetFlag.REPLACE));
+    valBytes = fs.getXAttr(new Path(fileName), attrName);
+    valRecieved = new String(valBytes);
+    assertEquals(valSent, valRecieved);
+
+    //  Read without CPK header
+    LambdaTestUtils.intercept(IOException.class,
+        "The blob is encrypted with customer specified encryption which is "
+            + "not supported on this endpoint.", () -> {
+          getAbfs(false).getXAttr(new Path(fileName), attrName);
+        });
+
+    //  Wrong CPK
+    LambdaTestUtils.intercept(IOException.class,
+        "The value for one of the HTTP headers is not in the correct format.",
+        () -> {
+          getSameFSWithWrongCPK(fs).getXAttr(new Path(fileName), attrName);
+        });
+  }
+
+  @Test
+  public void testCopyBetweenAccounts() throws Exception {
+    String accountName = getRawConfiguration()
+        .get(FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT);
+    String accountKey = getRawConfiguration()
+        .get(FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT_KEY);
+    Assume.assumeTrue(accountName != null && !accountName.isEmpty());
+    Assume.assumeTrue(accountKey != null && !accountKey.isEmpty());
+    String fileSystemName = "cpkfs";
+
+    //  Create fs1 and a file with CPK
+    AzureBlobFileSystem fs1 = getAbfs(true);
+    int fileSize = 24 * ONE_MB;
+    byte[] fileContent = getRandomBytesArray(fileSize);
+    Path testFilePath = createFileWithContent(fs1, "fs1-file.txt", fileContent);
+
+    //  Create fs2 with different CPK
+    Configuration conf = new Configuration();
+    conf.set("fs.abfs.impl.disable.cache", "true");
+    conf.addResource(TEST_CONFIGURATION_FILE_NAME);
+    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
+    conf.unset(FS_AZURE_ABFS_ACCOUNT_NAME);
+    conf.set(FS_AZURE_ABFS_ACCOUNT_NAME, accountName);
+    conf.set(FS_AZURE_ACCOUNT_KEY + "." + accountName, accountKey);
+    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+        "123456789012345678901234567890ab");
+    conf.set("fs.defaultFS", "abfs://" + fileSystemName + "@" + accountName);
+    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
+
+    //  Read from fs1 and write to fs2, fs1 and fs2 are having different CPK
+    Path fs2DestFilePath = new Path("fs2-dest-file.txt");
+    FSDataOutputStream ops = fs2.create(fs2DestFilePath);
+    try (FSDataInputStream iStream = fs1.open(testFilePath)) {
+      long totalBytesRead = 0;
+      do {
+        int length = 8 * ONE_MB;
+        byte[] buffer = new byte[length];
+        int bytesRead = iStream.read(buffer, 0, length);
+        totalBytesRead += bytesRead;
+        ops.write(buffer);
+      } while (totalBytesRead < fileContent.length);
+      ops.close();
+    }
+
+    //  Trying to read fs2DestFilePath with different CPK headers
+    conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+        "different-1234567890123456789012");
+    AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
+    try (FSDataInputStream iStream = fs3.open(fs2DestFilePath)) {
+      int length = 8 * ONE_MB;
+      byte[] buffer = new byte[length];
+      LambdaTestUtils.intercept(IOException.class,
+          "The given customer specified encryption does not match the "
+              + "encryption used to encrypt the blob.", () -> {
+            iStream.read(buffer, 0, length);
+          });
+    }
+
+    //  Trying to read fs2DestFilePath with no CPK headers
+    conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+    AzureBlobFileSystem fs4 = (AzureBlobFileSystem) FileSystem.get(conf);
+    try (FSDataInputStream iStream = fs4.open(fs2DestFilePath)) {
+      int length = 8 * ONE_MB;
+      byte[] buffer = new byte[length];
+      LambdaTestUtils.intercept(IOException.class,
+          "The blob is encrypted with customer specified encryption which is "
+              + "not supported on this endpoint.", () -> {
+            iStream.read(buffer, 0, length);
+          });
+    }
+
+    //  Read fs2DestFilePath and verify the content with the initial random
+    //  bytes created and wrote into the source file at fs1
+    try (FSDataInputStream iStream = fs2.open(fs2DestFilePath)) {
+      long totalBytesRead = 0;
+      int pos = 0;
+      do {
+        int length = 8 * ONE_MB;
+        byte[] buffer = new byte[length];
+        int bytesRead = iStream.read(buffer, 0, length);
+        totalBytesRead += bytesRead;
+        for (int i = 0; i < bytesRead; i++) {
+          assertEquals(fileContent[pos + i], buffer[i]);
+        }
+        pos = pos + bytesRead;
+      } while (totalBytesRead < fileContent.length);
+    }
   }
 
   @Test
@@ -96,14 +246,15 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testAppend(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test"));
+    final String testFileName = "/" + methodName.getMethodName();
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
     AppendRequestParameters appendRequestParameters =
         new AppendRequestParameters(
         0, 0, 5, Mode.APPEND_MODE, false);
     byte[] buffer = getRandomBytesArray(5);
     AbfsRestOperation abfsRestOperation = abfsClient
-        .append("/test", buffer, appendRequestParameters, null);
+        .append(testFileName, buffer, appendRequestParameters, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
   }
 
@@ -119,11 +270,25 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testListPath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test1"));
+    String testDirName = "/" + methodName.getMethodName();
+    final Path testPath = new Path(testDirName);
+    fs.mkdirs(testPath);
+    fs.mkdirs(new Path(testDirName + "/aaa"));
+    fs.mkdirs(new Path(testDirName + "/bbb"));
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .listPath("/test1", false, INT_50, null);
+        .listPath(testDirName, false, INT_50, null);
+
+    //  assert cpk headers are not added
     assertCPKHeaders(abfsRestOperation, false);
+
+    FileStatus[] listStatuses = fs.listStatus(testPath);
+    Assertions.assertThat(listStatuses.length)
+        .describedAs("listStatuses should have 2 entries").isEqualTo(2);
+
+    listStatuses = getSameFSWithWrongCPK(fs).listStatus(testPath);
+    Assertions.assertThat(listStatuses.length)
+        .describedAs("listStatuses should have 2 entries").isEqualTo(2);
   }
 
   @Test
@@ -139,9 +304,12 @@ public class ITestAbfsClientCustomerProvidedKey
   private void testGetFileSystemProperties(final boolean isWithCPK)
       throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test1"));
+    final String testFileName = "/" + methodName.getMethodName();
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient.getFilesystemProperties();
+
+    //  assert cpk headers are not added
     assertCPKHeaders(abfsRestOperation, false);
   }
 
@@ -157,7 +325,8 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testDeleteFileSystem(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test1"));
+    final String testFileName = "/" + methodName.getMethodName();
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient.deleteFilesystem();
     assertCPKHeaders(abfsRestOperation, false);
@@ -175,7 +344,8 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testCreatePath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test1"));
+    final String testFileName = "/" + methodName.getMethodName();
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
     FsPermission permission = new FsPermission(FsAction.EXECUTE,
         FsAction.EXECUTE, FsAction.EXECUTE);
@@ -183,10 +353,18 @@ public class ITestAbfsClientCustomerProvidedKey
         FsAction.NONE);
     boolean isNamespaceEnabled = fs.getIsNamespaceEnabled();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .createPath("/test", true, true,
+        .createPath(testFileName, true, true,
             isNamespaceEnabled ? getOctalNotation(permission) : null,
             isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
+
+    FileStatus[] listStatuses = fs.listStatus(new Path(testFileName));
+    Assertions.assertThat(listStatuses.length)
+        .describedAs("listStatuses should have 1 entry").isEqualTo(1);
+
+    listStatuses = getSameFSWithWrongCPK(fs).listStatus(new Path(testFileName));
+    Assertions.assertThat(listStatuses.length)
+        .describedAs("listStatuses should have 1 entry").isEqualTo(1);
   }
 
   @Test
@@ -201,11 +379,26 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testRenamePath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test1"));
+    final String testFileName = "/" + methodName.getMethodName();
+    Path testPath = new Path(testFileName);
+    fs.create(testPath);
+
+    FileStatus[] listStatuses = fs.listStatus(testPath);
+    Assertions.assertThat(listStatuses.length)
+        .describedAs("listStatuses should have 1 entry").isEqualTo(1);
+
+    String newName = "/newName";
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .renamePath("/test1", "/test2", null);
+        .renamePath(testFileName, newName, null);
     assertCPKHeaders(abfsRestOperation, false);
+
+    Assertions.assertThatThrownBy(() -> fs.listStatus(testPath))
+        .isInstanceOf(FileNotFoundException.class);
+
+    listStatuses = fs.listStatus(new Path(newName));
+    Assertions.assertThat(listStatuses.length)
+        .describedAs("listStatuses should have 1 entry").isEqualTo(1);
   }
 
   @Test
@@ -220,10 +413,11 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testFlush(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test1"));
+    final String testFileName = "/" + methodName.getMethodName();
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .flush("/test1", 0, false, false, null);
+        .flush(testFileName, 0, false, false, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
   }
 
@@ -239,12 +433,14 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testSetPathProperties(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test1"));
+    final String testFileName = "/" + methodName.getMethodName();
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "val");
-    AbfsRestOperation abfsRestOperation = abfsClient.setPathProperties("/test1",
-        convertXmsPropertiesToCommaSeparatedString(properties));
+    AbfsRestOperation abfsRestOperation = abfsClient
+        .setPathProperties(testFileName,
+            convertXmsPropertiesToCommaSeparatedString(properties));
     assertCPKHeaders(abfsRestOperation, isWithCPK);
   }
 
@@ -260,11 +456,24 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testGetPathStatus(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test1"));
+    final String testFileName = "/" + methodName.getMethodName();
+    Path testPath = new Path(testFileName);
+    fs.mkdirs(testPath);
+    fs.mkdirs(new Path(testFileName + "/aaa"));
+    fs.mkdirs(new Path(testFileName + "/bbb"));
+
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .getPathStatus("/test1", false);
+        .getPathStatus(testFileName, false);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
+
+    FileStatus[] listStatuses = fs.listStatus(testPath);
+    Assertions.assertThat(listStatuses.length)
+        .describedAs("listStatuses should have 2 entries").isEqualTo(2);
+
+    listStatuses = getSameFSWithWrongCPK(fs).listStatus(testPath);
+    Assertions.assertThat(listStatuses.length)
+        .describedAs("listStatuses should have 2 entries").isEqualTo(2);
   }
 
   @Test
@@ -279,17 +488,18 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testRead(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
+    final String testFileName = "/" + methodName.getMethodName();
     int fileSize = ONE_MB;
     byte[] fileContent = getRandomBytesArray(fileSize);
-    createFileWithContent(fs, "/test1", fileContent);
+    createFileWithContent(fs, testFileName, fileContent);
     AbfsClient abfsClient = fs.getAbfsClient();
     int length = INT_512;
     byte[] buffer = new byte[length * 4];
-    final AbfsRestOperation op = abfsClient.getPathStatus("/test1", false);
+    final AbfsRestOperation op = abfsClient.getPathStatus(testFileName, false);
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
     AbfsRestOperation abfsRestOperation = abfsClient
-        .read("/test1", 0, buffer, 0, length, eTag, null);
+        .read(testFileName, 0, buffer, 0, length, eTag, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
   }
 
@@ -306,11 +516,21 @@ public class ITestAbfsClientCustomerProvidedKey
   private void testDeletePathWithoutCPK(final boolean isWithCPK)
       throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    fs.create(new Path("/test1"));
+    final String testFileName = "/" + methodName.getMethodName();
+    final Path testPath = new Path(testFileName);
+    fs.create(testPath);
+
+    FileStatus[] listStatuses = fs.listStatus(testPath);
+    Assertions.assertThat(listStatuses.length)
+        .describedAs("listStatuses should have 1 entry").isEqualTo(1);
+
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .deletePath("/test1", false, null);
+        .deletePath(testFileName, false, null);
     assertCPKHeaders(abfsRestOperation, false);
+
+    Assertions.assertThatThrownBy(() -> fs.listStatus(testPath))
+        .isInstanceOf(FileNotFoundException.class);
   }
 
   @Test
@@ -325,13 +545,14 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testSetPermission(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
+    final String testFileName = "/" + methodName.getMethodName();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    fs.create(new Path("/test1"));
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
     FsPermission permission = new FsPermission(FsAction.EXECUTE,
         FsAction.EXECUTE, FsAction.EXECUTE);
     AbfsRestOperation abfsRestOperation = abfsClient
-        .setPermission("/test1", permission.toString());
+        .setPermission(testFileName, permission.toString());
     assertCPKHeaders(abfsRestOperation, false);
   }
 
@@ -347,8 +568,9 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testSetAcl(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
+    final String testFileName = "/" + methodName.getMethodName();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    fs.create(new Path("/test1"));
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
 
     List<AclEntry> aclSpec = Lists.newArrayList(aclEntry(ACCESS, USER, ALL));
@@ -356,7 +578,7 @@ public class ITestAbfsClientCustomerProvidedKey
         .deserializeAclSpec(AclEntry.aclSpecToString(aclSpec));
 
     AbfsRestOperation abfsRestOperation = abfsClient
-        .setAcl("/test1", AbfsAclHelper.serializeAclSpec(aclEntries));
+        .setAcl(testFileName, AbfsAclHelper.serializeAclSpec(aclEntries));
     assertCPKHeaders(abfsRestOperation, false);
   }
 
@@ -372,10 +594,11 @@ public class ITestAbfsClientCustomerProvidedKey
 
   private void testGetAcl(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
+    final String testFileName = "/" + methodName.getMethodName();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    fs.create(new Path("/test1"));
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
-    AbfsRestOperation abfsRestOperation = abfsClient.getAclStatus("/test1");
+    AbfsRestOperation abfsRestOperation = abfsClient.getAclStatus(testFileName);
     assertCPKHeaders(abfsRestOperation, false);
   }
 
@@ -398,108 +621,12 @@ public class ITestAbfsClientCustomerProvidedKey
         getAuthType() == AuthType.OAuth);
 
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    fs.create(new Path("/test1"));
+    final String testFileName = "/" + methodName.getMethodName();
+    fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .checkAccess("/test1", "rwx");
+        .checkAccess(testFileName, "rwx");
     assertCPKHeaders(abfsRestOperation, false);
-  }
-
-  @Test
-  public void testWriteReadAndVerify() throws Exception {
-    final AzureBlobFileSystem fs = getAbfs(true);
-    int fileSize = 2 * ONE_MB;
-    byte[] fileContent = getRandomBytesArray(fileSize);
-    String fileName = methodName.getMethodName();
-    Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-    try (FSDataInputStream iStream = fs.open(testFilePath)) {
-      byte[] buffer = new byte[fileSize];
-      int bytesRead = iStream.read(buffer, 0, fileSize);
-      assertEquals(bytesRead, fileSize);
-      for (int i = 0; i < fileSize; i++) {
-        assertEquals(fileContent[i], buffer[i]);
-      }
-    }
-  }
-
-  @Test
-  public void testSetGetXAttr() throws Exception {
-    final AzureBlobFileSystem fs = getAbfs(true);
-    String fileName = methodName.getMethodName();
-    fs.create(new Path(fileName));
-    String valSent = "testValue";
-    String attrName = "testXAttr";
-    fs.setXAttr(new Path(fileName), attrName,
-        valSent.getBytes(StandardCharsets.UTF_8),
-        EnumSet.of(XAttrSetFlag.CREATE));
-    byte[] valBytes = fs.getXAttr(new Path(fileName), attrName);
-    String valRecieved = new String(valBytes);
-    assertEquals(valSent, valRecieved);
-    valSent = "new value";
-    fs.setXAttr(new Path(fileName), attrName,
-        valSent.getBytes(StandardCharsets.UTF_8),
-        EnumSet.of(XAttrSetFlag.REPLACE));
-    valBytes = fs.getXAttr(new Path(fileName), attrName);
-    valRecieved = new String(valBytes);
-    assertEquals(valSent, valRecieved);
-  }
-
-  @Test
-  public void testCopyBetweenAccounts() throws Exception {
-    String accountName = getRawConfiguration()
-        .get(FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT);
-    String accountKey = getRawConfiguration()
-        .get(FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT_KEY);
-    Assume.assumeTrue(accountName != null && !accountName.isEmpty());
-    Assume.assumeTrue(accountKey != null && !accountKey.isEmpty());
-    String fileSystemName = "cpkfs";
-
-    AzureBlobFileSystem fs1 = getAbfs(true);
-
-    int fileSize = 24 * ONE_MB;
-    byte[] fileContent = getRandomBytesArray(fileSize);
-    Path testFilePath = createFileWithContent(fs1, "fs1-file.txt", fileContent);
-
-    Configuration conf = new Configuration();
-    conf.addResource(TEST_CONFIGURATION_FILE_NAME);
-    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
-    conf.unset(FS_AZURE_ABFS_ACCOUNT_NAME);
-    conf.set(FS_AZURE_ABFS_ACCOUNT_NAME, accountName);
-    conf.set(FS_AZURE_ACCOUNT_KEY + "." + accountName, accountKey);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
-        "testkeyfs2");
-    conf.set("fs.defaultFS","abfs://"+fileSystemName+"@"+accountName);
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
-
-    Path fs2DestFilePath = new Path("fs2-dest-file.txt");
-    FSDataOutputStream ops = fs2.create(fs2DestFilePath);
-    try (FSDataInputStream iStream = fs1.open(testFilePath)) {
-      long totalBytesRead = 0;
-      do {
-        int length = 8 * ONE_MB;
-        byte[] buffer = new byte[length];
-        int bytesRead = iStream.read(buffer, 0, length);
-        totalBytesRead += bytesRead;
-        ops.write(buffer);
-      } while (totalBytesRead < fileContent.length);
-      ops.close();
-    }
-
-    try (FSDataInputStream iStream = fs2.open(fs2DestFilePath)) {
-      long totalBytesRead = 0;
-      int pos = 0;
-      do {
-        int length = 8 * ONE_MB;
-        byte[] buffer = new byte[length];
-        int bytesRead = iStream.read(buffer, 0, length);
-        totalBytesRead += bytesRead;
-        for (int i = 0; i < bytesRead; i++) {
-          assertEquals(fileContent[pos + i], buffer[i]);
-        }
-        pos = pos + bytesRead;
-      } while (totalBytesRead < fileContent.length);
-    }
   }
 
   private void assertCPKHeaders(AbfsRestOperation abfsRestOperation,
@@ -576,15 +703,43 @@ public class ITestAbfsClientCustomerProvidedKey
   }
 
   private AzureBlobFileSystem getAbfs(boolean withCPK) throws IOException {
+    return getAbfs(withCPK, "12345678901234567890123456789012");
+  }
+
+  private AzureBlobFileSystem getAbfs(boolean withCPK, String cpk)
+      throws IOException {
     Configuration conf = getRawConfiguration();
     if (withCPK) {
       conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName(),
-          "testkey");
+          cpk);
     } else {
       conf.unset(
           FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName());
     }
     return (AzureBlobFileSystem) FileSystem.newInstance(conf);
+  }
+
+  private AzureBlobFileSystem getSameFSWithWrongCPK(
+      final AzureBlobFileSystem fs) throws IOException {
+    AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
+    Configuration conf = abfsConf.getRawConfiguration();
+    String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    String cpk = conf
+        .get(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+    if (cpk == null || cpk.isEmpty()) {
+      cpk = "01234567890123456789012345678912";
+    }
+    cpk = "different-" + cpk;
+    String differentCpk = cpk.substring(0, 31);
+    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+        differentCpk);
+    conf.set("fs.defaultFS",
+        "abfs://" + getFileSystemName() + "@" + accountName);
+    conf.set("fs.abfs.impl.disable.cache", "true");
+    AzureBlobFileSystem sameFSWithDifferentCPK =
+        (AzureBlobFileSystem) FileSystem
+        .get(conf);
+    return sameFSWithDifferentCPK;
   }
 
 }

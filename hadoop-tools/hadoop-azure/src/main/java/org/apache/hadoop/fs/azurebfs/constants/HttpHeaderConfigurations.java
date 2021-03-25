@@ -60,7 +60,7 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_NAMESPACE_ENABLED = "x-ms-namespace-enabled";
   public static final String X_MS_ABFS_CLIENT_LATENCY = "x-ms-abfs-client-latency";
   public static final String X_MS_ENCRYPTION_KEY = "x-ms-encryption-key";
-  public static final String X_MS_ENCRYPTION_KEY_SHA256 = "x-ms-encryption-key-256";
+  public static final String X_MS_ENCRYPTION_KEY_SHA256 = "x-ms-encryption-key-sha256";
   public static final String X_MS_ENCRYPTION_ALGORITHM = "x-ms-encryption-algorithm";
 
   private HttpHeaderConfigurations() {}

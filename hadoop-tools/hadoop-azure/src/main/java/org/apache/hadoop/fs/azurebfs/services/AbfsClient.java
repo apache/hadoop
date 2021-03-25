@@ -25,6 +25,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -97,16 +98,12 @@ public class AbfsClient implements Closeable {
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
 
-    String encryptionKey = this.abfsConfiguration.getClientProvidedEncryptionKey();
+    String encryptionKey = this.abfsConfiguration
+        .getClientProvidedEncryptionKey();
     if (encryptionKey != null) {
-      this.clientProvidedEncryptionKey = encryptionKey;
-      try {
-        MessageDigest digester = MessageDigest.getInstance("SHA-256");
-        digester.update(encryptionKey.getBytes(CHARSET_UTF_8));
-        this.clientProvidedEncryptionKeySHA = Base64.getEncoder().encodeToString(digester.digest());
-      } catch (NoSuchAlgorithmException e) {
-        throw new IOException(e);
-      }
+      this.clientProvidedEncryptionKey = getBase64EncodedString(encryptionKey);
+      this.clientProvidedEncryptionKeySHA = getBase64EncodedString(
+          getSHA256Hash(encryptionKey));
     } else {
       this.clientProvidedEncryptionKey = null;
       this.clientProvidedEncryptionKeySHA = null;
@@ -148,6 +145,23 @@ public class AbfsClient implements Closeable {
       throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration, abfsClientContext);
     this.sasTokenProvider = sasTokenProvider;
+  }
+
+  private byte[] getSHA256Hash(String key) throws IOException {
+    try {
+      final MessageDigest digester = MessageDigest.getInstance("SHA-256");
+      return digester.digest(key.getBytes(StandardCharsets.UTF_8));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private String getBase64EncodedString(String key) {
+    return getBase64EncodedString(key.getBytes(StandardCharsets.UTF_8));
+  }
+
+  private String getBase64EncodedString(byte[] bytes) {
+    return Base64.getEncoder().encodeToString(bytes);
   }
 
   @Override
