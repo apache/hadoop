@@ -422,9 +422,9 @@ static ssize_t wildcard_expandPath(const char* path, char* expanded)
 
                 if (expanded != NULL) {
                     // pathLength includes an extra '.'
-                    strncpy(dest, path, pathLength-1);
+                    memcpy(dest, path, pathLength - 1);
                     dest += pathLength - 1;
-                    strncpy(dest, filename, filenameLength);
+                    memcpy(dest, filename, filenameLength);
                     dest += filenameLength;
                     *dest = PATH_SEPARATOR;
                     dest++;
