@@ -601,17 +601,22 @@ public class BlockRecoveryWorker {
     Daemon d = new Daemon(datanode.threadGroup, new Runnable() {
       @Override
       public void run() {
-        for(RecoveringBlock b : blocks) {
-          try {
-            logRecoverBlock(who, b);
-            if (b.isStriped()) {
-              new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
-            } else {
-              new RecoveryTaskContiguous(b).recover();
+        datanode.metrics.incrDataNodeBlockRecoveryWorkerCount();
+        try {
+          for (RecoveringBlock b : blocks) {
+            try {
+              logRecoverBlock(who, b);
+              if (b.isStriped()) {
+                new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
+              } else {
+                new RecoveryTaskContiguous(b).recover();
+              }
+            } catch (IOException e) {
+              LOG.warn("recover Block: {} FAILED: {}", b, e);
             }
-          } catch (IOException e) {
-            LOG.warn("recoverBlocks FAILED: " + b, e);
           }
+        } finally {
+          datanode.metrics.decrDataNodeBlockRecoveryWorkerCount();
         }
       }
     });

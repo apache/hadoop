@@ -1022,14 +1022,14 @@ public class TestBalancer {
 
           // clean all lists
           b.resetData(conf);
-          if (r.exitStatus == ExitStatus.IN_PROGRESS) {
+          if (r.getExitStatus() == ExitStatus.IN_PROGRESS) {
             done = false;
-          } else if (r.exitStatus != ExitStatus.SUCCESS) {
+          } else if (r.getExitStatus() != ExitStatus.SUCCESS) {
             //must be an error statue, return.
-            return r.exitStatus.getExitCode();
+            return r.getExitStatus().getExitCode();
           } else {
             if (iteration > 0) {
-              assertTrue(r.bytesAlreadyMoved > 0);
+              assertTrue(r.getBytesAlreadyMoved() > 0);
             }
           }
         }
@@ -1655,7 +1655,8 @@ public class TestBalancer {
           // When a block move is not canceled in 2 seconds properly and then
           // a block is moved unexpectedly, IN_PROGRESS will be reported.
           assertEquals("We expect ExitStatus.NO_MOVE_PROGRESS to be reported.",
-              ExitStatus.NO_MOVE_PROGRESS, r.exitStatus);
+              ExitStatus.NO_MOVE_PROGRESS, r.getExitStatus());
+          assertEquals(0, r.getBlocksMoved());
         }
       } finally {
         for (NameNodeConnector nnc : connectors) {

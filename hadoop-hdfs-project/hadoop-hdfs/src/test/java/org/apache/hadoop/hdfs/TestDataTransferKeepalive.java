@@ -253,12 +253,11 @@ public class TestDataTransferKeepalive {
   }
 
   /**
-   * Returns the datanode's xceiver count, but subtracts 1, since the
-   * DataXceiverServer counts as one.
+   * Returns the datanode's active xceiver count.
    * 
-   * @return int xceiver count, not including DataXceiverServer
+   * @return the datanode's active xceivers count.
    */
   private int getXceiverCountWithoutServer() {
-    return dn.getXceiverCount() - 1;
+    return dn.getXceiverCount();
   }
 }

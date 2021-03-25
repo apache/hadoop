@@ -284,7 +284,7 @@ public class HttpFSServer {
             }
           });
         } catch (InterruptedException ie) {
-          LOG.info("Open interrupted.", ie);
+          LOG.warn("Open interrupted.", ie);
           Thread.currentThread().interrupt();
         }
         Long offset = params.get(OffsetParam.NAME, OffsetParam.class);
@@ -317,7 +317,7 @@ public class HttpFSServer {
       enforceRootPath(op.value(), path);
       FSOperations.FSHomeDir command = new FSOperations.FSHomeDir();
       JSONObject json = fsExecute(user, command);
-      AUDIT_LOG.info("");
+      AUDIT_LOG.info("Home Directory for [{}]", user);
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
@@ -339,7 +339,7 @@ public class HttpFSServer {
       FSOperations.FSContentSummary command =
           new FSOperations.FSContentSummary(path);
       Map json = fsExecute(user, command);
-      AUDIT_LOG.info("[{}]", path);
+      AUDIT_LOG.info("Content summary for [{}]", path);
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
@@ -347,7 +347,7 @@ public class HttpFSServer {
       FSOperations.FSQuotaUsage command =
           new FSOperations.FSQuotaUsage(path);
       Map json = fsExecute(user, command);
-      AUDIT_LOG.info("[{}]", path);
+      AUDIT_LOG.info("Quota Usage for [{}]", path);
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
@@ -629,35 +629,30 @@ public class HttpFSServer {
     switch (op.value()) {
       case APPEND: {
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
-        if (!hasData) {
-          URI redirectURL = createUploadRedirectionURL(
-              uriInfo, HttpFSFileSystem.Operation.APPEND);
-          Boolean noRedirect = params.get(
-              NoRedirectParam.NAME, NoRedirectParam.class);
-          if (noRedirect) {
+        URI redirectURL = createUploadRedirectionURL(uriInfo,
+            HttpFSFileSystem.Operation.APPEND);
+        Boolean noRedirect =
+            params.get(NoRedirectParam.NAME, NoRedirectParam.class);
+        if (noRedirect) {
             final String js = JsonUtil.toJsonString("Location", redirectURL);
             response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-          } else {
-            response = Response.temporaryRedirect(redirectURL).build();
-          }
-        } else {
+        } else if (hasData) {
           FSOperations.FSAppend command =
             new FSOperations.FSAppend(is, path);
           fsExecute(user, command);
           AUDIT_LOG.info("[{}]", path);
           response = Response.ok().type(MediaType.APPLICATION_JSON).build();
+        } else {
+          response = Response.temporaryRedirect(redirectURL).build();
         }
         break;
       }
       case CONCAT: {
-        System.out.println("HTTPFS SERVER CONCAT");
         String sources = params.get(SourcesParam.NAME, SourcesParam.class);
-
         FSOperations.FSConcat command =
             new FSOperations.FSConcat(path, sources.split(","));
         fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
-        System.out.println("SENT RESPONSE");
         response = Response.ok().build();
         break;
       }
@@ -706,7 +701,8 @@ public class HttpFSServer {
   protected URI createUploadRedirectionURL(UriInfo uriInfo, Enum<?> uploadOperation) {
     UriBuilder uriBuilder = uriInfo.getRequestUriBuilder();
     uriBuilder = uriBuilder.replaceQueryParam(OperationParam.NAME, uploadOperation).
-      queryParam(DataParam.NAME, Boolean.TRUE);
+            queryParam(DataParam.NAME, Boolean.TRUE)
+            .replaceQueryParam(NoRedirectParam.NAME, (Object[]) null);
     return uriBuilder.build(null);
   }
 
@@ -774,18 +770,14 @@ public class HttpFSServer {
     switch (op.value()) {
       case CREATE: {
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
-        if (!hasData) {
-          URI redirectURL = createUploadRedirectionURL(
-              uriInfo, HttpFSFileSystem.Operation.CREATE);
-          Boolean noRedirect = params.get(
-              NoRedirectParam.NAME, NoRedirectParam.class);
-          if (noRedirect) {
+        URI redirectURL = createUploadRedirectionURL(uriInfo,
+            HttpFSFileSystem.Operation.CREATE);
+        Boolean noRedirect =
+            params.get(NoRedirectParam.NAME, NoRedirectParam.class);
+        if (noRedirect) {
             final String js = JsonUtil.toJsonString("Location", redirectURL);
             response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-          } else {
-            response = Response.temporaryRedirect(redirectURL).build();
-          }
-        } else {
+        } else if (hasData) {
           Short permission = params.get(PermissionParam.NAME,
                                          PermissionParam.class);
           Short unmaskedPermission = params.get(UnmaskedPermissionParam.NAME,
@@ -809,6 +801,8 @@ public class HttpFSServer {
               "Location", uriInfo.getAbsolutePath());
           response = Response.created(uriInfo.getAbsolutePath())
               .type(MediaType.APPLICATION_JSON).entity(js).build();
+        } else {
+          response = Response.temporaryRedirect(redirectURL).build();
         }
         break;
       }

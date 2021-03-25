@@ -652,7 +652,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       clientRunning = false;
       // close dead node detector thread
       if (!disabledStopDeadNodeDetectorThreadForTest) {
-        clientContext.stopDeadNodeDetectorThread();
+        clientContext.unreference();
       }
 
       // close connections to the namenode
@@ -2004,8 +2004,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#getStats()
    */
   public FsStatus getDiskStatus() throws IOException {
-    return new FsStatus(getStateByIndex(0),
-        getStateByIndex(1), getStateByIndex(2));
+    try (TraceScope ignored = tracer.newScope("getStats")) {
+      long[] states = namenode.getStats();
+      return new FsStatus(getStateAtIndex(states, 0),
+          getStateAtIndex(states, 1), getStateAtIndex(states, 2));
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  private long getStateAtIndex(long[] states, int index) {
+    return states.length > index ? states[index] : -1;
   }
 
   /**
@@ -3377,5 +3386,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   private boolean isDeadNodeDetectionEnabled() {
     return clientContext.isDeadNodeDetectionEnabled();
+  }
+
+  /**
+   * Obtain DeadNodeDetector of the current client.
+   */
+  public DeadNodeDetector getDeadNodeDetector() {
+    return clientContext.getDeadNodeDetector();
   }
 }

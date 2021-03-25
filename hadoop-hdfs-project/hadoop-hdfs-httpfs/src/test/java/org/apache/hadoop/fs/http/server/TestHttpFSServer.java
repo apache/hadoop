@@ -1602,7 +1602,7 @@ public class TestHttpFSServer extends HFSTestCase {
         new InputStreamReader(conn.getInputStream()));
     String location = (String)json.get("Location");
     Assert.assertTrue(location.contains(DataParam.NAME));
-    Assert.assertTrue(location.contains(NoRedirectParam.NAME));
+    Assert.assertFalse(location.contains(NoRedirectParam.NAME));
     Assert.assertTrue(location.contains("CREATE"));
     Assert.assertTrue("Wrong location: " + location,
         location.startsWith(TestJettyHelper.getJettyURL().toString()));
@@ -1870,5 +1870,51 @@ public class TestHttpFSServer extends HFSTestCase {
     Map<String, byte[]> xAttrs = dfs.getXAttrs(path1);
     assertTrue(
         xAttrs.containsKey(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testNoRedirectWithData() throws Exception {
+    createHttpFSServer(false, false);
+
+    final String path = "/file";
+    final String username = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    // file creation which should not redirect
+    URL url = new URL(TestJettyHelper.getJettyURL(),
+        MessageFormat.format(
+            "/webhdfs/v1{0}?user.name={1}&op=CREATE&data=true&noredirect=true",
+            path, username));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.PUT);
+    conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+    conn.setDoOutput(true);
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    JSONObject json = (JSONObject) new JSONParser()
+        .parse(new InputStreamReader(conn.getInputStream()));
+
+    // get the location to write
+    String location = (String) json.get("Location");
+    Assert.assertTrue(location.contains(DataParam.NAME));
+    Assert.assertTrue(location.contains("CREATE"));
+    url = new URL(location);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.PUT);
+    conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+    conn.setDoOutput(true);
+    conn.connect();
+    final String writeStr = "write some content";
+    OutputStream os = conn.getOutputStream();
+    os.write(writeStr.getBytes());
+    os.close();
+    // Verify that file got created
+    Assert.assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+    json = (JSONObject) new JSONParser()
+        .parse(new InputStreamReader(conn.getInputStream()));
+    location = (String) json.get("Location");
+    Assert.assertEquals(TestJettyHelper.getJettyURL() + "/webhdfs/v1" + path,
+        location);
   }
 }

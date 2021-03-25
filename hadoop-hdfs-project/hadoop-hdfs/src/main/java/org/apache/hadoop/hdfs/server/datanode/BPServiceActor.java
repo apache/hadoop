@@ -544,7 +544,7 @@ class BPServiceActor implements Runnable {
         dn.getFSDataset().getCacheCapacity(),
         dn.getFSDataset().getCacheUsed(),
         dn.getXmitsInProgress(),
-        dn.getXceiverCount(),
+        dn.getActiveTransferThreadCount(),
         numFailedVolumes,
         volumeFailureSummary,
         requestBlockReportLease,

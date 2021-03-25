@@ -138,7 +138,7 @@ public class TouchCommands extends FsCommand {
 
       CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE,
           OPTION_USE_TIMESTAMP, OPTION_CHANGE_ONLY_ACCESS_TIME,
-          OPTION_CHANGE_ONLY_MODIFICATION_TIME);
+          OPTION_CHANGE_ONLY_MODIFICATION_TIME, OPTION_DO_NOT_CREATE_FILE);
       cf.parse(args);
       this.changeModTime = cf.getOpt(OPTION_CHANGE_ONLY_MODIFICATION_TIME);
       this.changeAccessTime = cf.getOpt(OPTION_CHANGE_ONLY_ACCESS_TIME);

@@ -181,10 +181,13 @@ public class DFSInputStream extends FSInputStream
   private byte[] oneByteBuf; // used for 'int read()'
 
   protected void addToLocalDeadNodes(DatanodeInfo dnInfo) {
+    DFSClient.LOG.debug("Add {} to local dead nodes, previously was {}.",
+            dnInfo, deadNodes);
     deadNodes.put(dnInfo, dnInfo);
   }
 
   protected void removeFromLocalDeadNodes(DatanodeInfo dnInfo) {
+    DFSClient.LOG.debug("Remove {} from local dead nodes.", dnInfo);
     deadNodes.remove(dnInfo);
   }
 

@@ -134,9 +134,17 @@ public class Mover {
     final int maxNoMoveInterval = conf.getInt(
         DFSConfigKeys.DFS_MOVER_MAX_NO_MOVE_INTERVAL_KEY,
         DFSConfigKeys.DFS_MOVER_MAX_NO_MOVE_INTERVAL_DEFAULT);
-    this.retryMaxAttempts = conf.getInt(
+    final int maxAttempts = conf.getInt(
         DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY,
         DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_DEFAULT);
+    if (maxAttempts >= 0) {
+      this.retryMaxAttempts = maxAttempts;
+    } else {
+      LOG.warn(DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY + " is "
+          + "configured with a negative value, using default value of "
+          + DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_DEFAULT);
+      this.retryMaxAttempts = DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_DEFAULT;
+    }
     this.retryCount = retryCount;
     this.dispatcher = new Dispatcher(nnc, Collections.<String> emptySet(),
         Collections.<String> emptySet(), movedWinWidth, moverThreads, 0,

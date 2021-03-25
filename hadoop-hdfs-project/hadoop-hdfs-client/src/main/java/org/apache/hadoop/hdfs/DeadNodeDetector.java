@@ -29,9 +29,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -40,8 +40,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_CONNECTION_TIMEOUT_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_CONNECTION_TIMEOUT_MS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_DEFAULT;
@@ -54,15 +52,15 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_SUSPECT_NODE_THREADS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_RPC_THREADS_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_RPC_THREADS_KEY;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_DEFAULT;
 
 /**
  * Detect the dead nodes in advance, and share this information among all the
  * DFSInputStreams in the same client.
  */
-public class DeadNodeDetector implements Runnable {
+public class DeadNodeDetector extends Daemon {
   public static final Logger LOG =
       LoggerFactory.getLogger(DeadNodeDetector.class);
 
@@ -74,7 +72,7 @@ public class DeadNodeDetector implements Runnable {
   /**
    * Waiting time when DeadNodeDetector's state is idle.
    */
-  private static final long IDLE_SLEEP_MS = 10000;
+  private final long idleSleepMs;
 
   /**
    * Client context name.
@@ -114,16 +112,6 @@ public class DeadNodeDetector implements Runnable {
   private long suspectNodeDetectInterval = 0;
 
   /**
-   * The max queue size of probing dead node.
-   */
-  private int maxDeadNodesProbeQueueLen = 0;
-
-  /**
-   * The max queue size of probing suspect node.
-   */
-  private int maxSuspectNodesProbeQueueLen;
-
-  /**
    * Connection timeout for probing dead node in milliseconds.
    */
   private long probeConnectionTimeoutMs;
@@ -131,12 +119,12 @@ public class DeadNodeDetector implements Runnable {
   /**
    * The dead node probe queue.
    */
-  private Queue<DatanodeInfo> deadNodesProbeQueue;
+  private UniqueQueue<DatanodeInfo> deadNodesProbeQueue;
 
   /**
    * The suspect node probe queue.
    */
-  private Queue<DatanodeInfo> suspectNodesProbeQueue;
+  private UniqueQueue<DatanodeInfo> suspectNodesProbeQueue;
 
   /**
    * The thread pool of probing dead node.
@@ -182,6 +170,32 @@ public class DeadNodeDetector implements Runnable {
   }
 
   /**
+   * The thread safe unique queue.
+   */
+  static class UniqueQueue<T> {
+    private Deque<T> queue = new LinkedList<>();
+    private Set<T> set = new HashSet<>();
+
+    synchronized boolean offer(T dn) {
+      if (set.add(dn)) {
+        queue.addLast(dn);
+        return true;
+      }
+      return false;
+    }
+
+    synchronized T poll() {
+      T dn = queue.pollFirst();
+      set.remove(dn);
+      return dn;
+    }
+
+    synchronized int size() {
+      return set.size();
+    }
+  }
+
+  /**
    * Disabled start probe suspect/dead thread for the testing.
    */
   private static volatile boolean disabledProbeThreadForTest = false;
@@ -203,20 +217,14 @@ public class DeadNodeDetector implements Runnable {
         DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_SUSPECT_NODE_INTERVAL_MS_DEFAULT);
     socketTimeout =
         conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, HdfsConstants.READ_TIMEOUT);
-    maxDeadNodesProbeQueueLen =
-        conf.getInt(DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_KEY,
-            DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_DEFAULT);
-    maxSuspectNodesProbeQueueLen =
-        conf.getInt(DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY,
-            DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_DEFAULT);
     probeConnectionTimeoutMs = conf.getLong(
         DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_CONNECTION_TIMEOUT_MS_KEY,
         DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_CONNECTION_TIMEOUT_MS_DEFAULT);
+    this.deadNodesProbeQueue = new UniqueQueue<>();
+    this.suspectNodesProbeQueue = new UniqueQueue<>();
 
-    this.deadNodesProbeQueue =
-        new ArrayBlockingQueue<DatanodeInfo>(maxDeadNodesProbeQueueLen);
-    this.suspectNodesProbeQueue =
-        new ArrayBlockingQueue<DatanodeInfo>(maxSuspectNodesProbeQueueLen);
+    idleSleepMs = conf.getLong(DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_KEY,
+        DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_DEFAULT);
 
     int deadNodeDetectDeadThreads =
         conf.getInt(DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_THREADS_KEY,
@@ -271,6 +279,37 @@ public class DeadNodeDetector implements Runnable {
     }
   }
 
+  /**
+   * Shutdown all the threads.
+   */
+  public void shutdown() {
+    threadShutDown(this);
+    threadShutDown(probeDeadNodesSchedulerThr);
+    threadShutDown(probeSuspectNodesSchedulerThr);
+    probeDeadNodesThreadPool.shutdown();
+    probeSuspectNodesThreadPool.shutdown();
+    rpcThreadPool.shutdown();
+  }
+
+  private static void threadShutDown(Thread thread) {
+    if (thread != null && thread.isAlive()) {
+      thread.interrupt();
+      try {
+        thread.join();
+      } catch (InterruptedException e) {
+      }
+    }
+  }
+
+  @VisibleForTesting
+  boolean isThreadsShutdown() {
+    return !this.isAlive() && !probeDeadNodesSchedulerThr.isAlive()
+        && !probeSuspectNodesSchedulerThr.isAlive()
+        && probeDeadNodesThreadPool.isShutdown()
+        && probeSuspectNodesThreadPool.isShutdown()
+        && rpcThreadPool.isShutdown();
+  }
+
   @VisibleForTesting
   static void setDisabledProbeThreadForTest(
       boolean disabledProbeThreadForTest) {
@@ -294,7 +333,7 @@ public class DeadNodeDetector implements Runnable {
   }
 
   /**
-   * Prode datanode by probe byte.
+   * Prode datanode by probe type.
    */
   private void scheduleProbe(ProbeType type) {
     LOG.debug("Schedule probe datanode for probe type: {}.", type);
@@ -376,9 +415,8 @@ public class DeadNodeDetector implements Runnable {
       } catch (Exception e) {
         LOG.error("Probe failed, datanode: {}, type: {}.", datanodeInfo, type,
             e);
+        deadNodeDetector.probeCallBack(this, false);
       }
-
-      deadNodeDetector.probeCallBack(this, false);
     }
   }
 
@@ -402,7 +440,7 @@ public class DeadNodeDetector implements Runnable {
       }
     } else {
       if (probe.getType() == ProbeType.CHECK_SUSPECT) {
-        LOG.info("Add the node to dead node list: {}.",
+        LOG.warn("Probe failed, add suspect node to dead node list: {}.",
             probe.getDatanodeInfo());
         addToDead(probe.getDatanodeInfo());
       }
@@ -415,11 +453,11 @@ public class DeadNodeDetector implements Runnable {
   private void checkDeadNodes() {
     Set<DatanodeInfo> datanodeInfos = clearAndGetDetectedDeadNodes();
     for (DatanodeInfo datanodeInfo : datanodeInfos) {
-      LOG.debug("Add dead node to check: {}.", datanodeInfo);
       if (!deadNodesProbeQueue.offer(datanodeInfo)) {
         LOG.debug("Skip to add dead node {} to check " +
-                "since the probe queue is full.", datanodeInfo);
-        break;
+                "since the node is already in the probe queue.", datanodeInfo);
+      } else {
+        LOG.debug("Add dead node to check: {}.", datanodeInfo);
       }
     }
     state = State.IDLE;
@@ -427,7 +465,7 @@ public class DeadNodeDetector implements Runnable {
 
   private void idle() {
     try {
-      Thread.sleep(IDLE_SLEEP_MS);
+      Thread.sleep(idleSleepMs);
     } catch (InterruptedException e) {
       LOG.debug("Got interrupted while DeadNodeDetector is idle.", e);
       Thread.currentThread().interrupt();
@@ -452,12 +490,22 @@ public class DeadNodeDetector implements Runnable {
     deadNodes.remove(datanodeInfo.getDatanodeUuid());
   }
 
-  public Queue<DatanodeInfo> getDeadNodesProbeQueue() {
+  public UniqueQueue<DatanodeInfo> getDeadNodesProbeQueue() {
     return deadNodesProbeQueue;
   }
 
-  public Queue<DatanodeInfo> getSuspectNodesProbeQueue() {
+  public UniqueQueue<DatanodeInfo> getSuspectNodesProbeQueue() {
     return suspectNodesProbeQueue;
+  }
+
+  @VisibleForTesting
+  void setSuspectQueue(UniqueQueue<DatanodeInfo> queue) {
+    this.suspectNodesProbeQueue = queue;
+  }
+
+  @VisibleForTesting
+  void setDeadQueue(UniqueQueue<DatanodeInfo> queue) {
+    this.deadNodesProbeQueue = queue;
   }
 
   /**
@@ -475,6 +523,7 @@ public class DeadNodeDetector implements Runnable {
       datanodeInfos.add(datanodeInfo);
     }
 
+    LOG.debug("Add datanode {} to suspectAndDeadNodes.", datanodeInfo);
     addSuspectNodeToDetect(datanodeInfo);
   }
 
