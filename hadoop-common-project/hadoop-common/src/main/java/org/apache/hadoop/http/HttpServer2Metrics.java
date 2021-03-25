@@ -38,7 +38,7 @@ public class HttpServer2Metrics {
   private final StatisticsHandler handler;
   private final int port;
 
-  @Metric("number of async requests requests that have expired")
+  @Metric("number of requested that have been asynchronously dispatched")
   public int asyncDispatches() {
     return handler.getAsyncDispatches();
   }
