@@ -47,7 +47,11 @@ public class TestReplicationPolicyExcludeSlowNodes
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
         { BlockPlacementPolicyDefault.class.getName() },
-        { BlockPlacementPolicyWithUpgradeDomain.class.getName() } });
+        { BlockPlacementPolicyWithUpgradeDomain.class.getName() },
+        { AvailableSpaceBlockPlacementPolicy.class.getName() },
+        { BlockPlacementPolicyRackFaultTolerant.class.getName() },
+        { AvailableSpaceRackFaultTolerantBlockPlacementPolicy.class.getName() },
+    });
   }
 
   @Override
@@ -63,11 +67,11 @@ public class TestReplicationPolicyExcludeSlowNodes
         true);
     final String[] racks = {
         "/rack1",
-        "/rack1",
-        "/rack2",
         "/rack2",
         "/rack3",
-        "/rack3"};
+        "/rack4",
+        "/rack5",
+        "/rack6"};
     storages = DFSTestUtil.createDatanodeStorageInfos(racks);
     return DFSTestUtil.toDatanodeDescriptor(storages);
   }
