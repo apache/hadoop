@@ -27,7 +27,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
@@ -46,11 +45,11 @@ public class TestReplicationPolicyExcludeSlowNodes
   @Parameterized.Parameters
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
-        { BlockPlacementPolicyDefault.class.getName() },
-        { BlockPlacementPolicyWithUpgradeDomain.class.getName() },
-        { AvailableSpaceBlockPlacementPolicy.class.getName() },
-        { BlockPlacementPolicyRackFaultTolerant.class.getName() },
-        { AvailableSpaceRackFaultTolerantBlockPlacementPolicy.class.getName() },
+        {BlockPlacementPolicyDefault.class.getName()},
+        {BlockPlacementPolicyWithUpgradeDomain.class.getName()},
+        {AvailableSpaceBlockPlacementPolicy.class.getName()},
+        {BlockPlacementPolicyRackFaultTolerant.class.getName()},
+        {AvailableSpaceRackFaultTolerantBlockPlacementPolicy.class.getName()},
     });
   }
 
@@ -77,7 +76,7 @@ public class TestReplicationPolicyExcludeSlowNodes
   }
 
   /**
-   * Tests that chooseTarget when excludeSlowNodesEnabled set to true
+   * Tests that chooseTarget when excludeSlowNodesEnabled set to true.
    */
   @Test
   public void testChooseTargetExcludeSlowNodes() throws Exception {

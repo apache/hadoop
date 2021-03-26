@@ -210,7 +210,7 @@ public class DatanodeManager {
 
   @Nullable
   private final SlowPeerTracker slowPeerTracker;
-  private static Set<Node> slowPeers = Sets.newConcurrentHashSet();
+  private static Set<Node> slowNodes = Sets.newConcurrentHashSet();
   private Daemon slowPeerCollectorDaemon;
   private final long slowPeerCollectionInterval;
   private final int maxSlowPeerReportNodes;
@@ -255,7 +255,6 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
         DFSConfigKeys.
             DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT));
-
     final Timer timer = new Timer();
     this.slowPeerTracker = dataNodePeerStatsEnabled ?
         new SlowPeerTracker(conf, timer) : null;
@@ -272,7 +271,6 @@ public class DatanodeManager {
     if (slowPeerTracker != null && excludeSlowNodesEnabled) {
       startSlowPeerCollector();
     }
-
     this.slowDiskTracker = dataNodeDiskStatsEnabled ?
         new SlowDiskTracker(conf, timer) : null;
 
@@ -391,7 +389,7 @@ public class DatanodeManager {
       public void run() {
         while (true) {
           try {
-            slowPeers = getSlowPeers();
+            slowNodes = getSlowPeers();
           } catch (Exception e) {
             LOG.error("Failed to collect slow peers", e);
           }
@@ -2093,13 +2091,16 @@ public class DatanodeManager {
     if (slowPeerTracker == null) {
       return slowPeersSet;
     }
-    ArrayList<String> slowNodes = slowPeerTracker.getSlowNodes(maxSlowPeerReportNodes);
+    ArrayList<String> slowNodes =
+        slowPeerTracker.getSlowNodes(maxSlowPeerReportNodes);
     for (String slowNode : slowNodes) {
-      if (StringUtils.isBlank(slowNode) || !slowNode.contains(IP_PORT_SEPARATOR)) {
+      if (StringUtils.isBlank(slowNode)
+              || !slowNode.contains(IP_PORT_SEPARATOR)) {
         continue;
       }
       String ipAddr = slowNode.split(IP_PORT_SEPARATOR)[0];
-      DatanodeDescriptor datanodeByHost = host2DatanodeMap.getDatanodeByHost(ipAddr);
+      DatanodeDescriptor datanodeByHost =
+          host2DatanodeMap.getDatanodeByHost(ipAddr);
       if (datanodeByHost != null) {
         slowPeersSet.add(datanodeByHost);
       }
@@ -2112,7 +2113,7 @@ public class DatanodeManager {
    * @return
    */
   public static Set<Node> getSlowNodes() {
-    return slowPeers;
+    return slowNodes;
   }
 
   /**
