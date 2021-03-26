@@ -82,15 +82,15 @@ public class XAttrPermissionFilter {
         equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
       if (xAttr.getValue() != null) {
         // Notify external enforcer for audit
-        pc.denySuperUserAccess(xAttrString);
-        throw new AccessControlException("Attempt to set a value for '" +
+        String errorMessage = "Attempt to set a value for '" +
             SECURITY_XATTR_UNREADABLE_BY_SUPERUSER +
-            "'. Values are not allowed for this xattr.");
+            "'. Values are not allowed for this xattr.";
+        pc.denyUserAccess(xAttrString, errorMessage);
       }
       return;
     }
-    throw new AccessControlException("User doesn't have permission for xattr: "
-        + XAttrHelper.getPrefixedName(xAttr));
+    pc.denyUserAccess(xAttrString, "User doesn't have permission for xattr: "
+            + XAttrHelper.getPrefixedName(xAttr));
   }
 
   static void checkPermissionForApi(FSPermissionChecker pc,

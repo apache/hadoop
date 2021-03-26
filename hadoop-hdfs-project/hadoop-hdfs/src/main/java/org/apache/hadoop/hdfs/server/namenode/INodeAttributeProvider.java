@@ -431,16 +431,19 @@ public abstract class INodeAttributeProvider {
     }
 
     /**
-     * This method must be called when denying access to super users to
+     * This method must be called when denying access to users to
      * notify the external enforcers.
      * This will help the external enforcers to audit the requests
-     * by super users that were denied access.
+     * by users that were denied access.
      * @param authzContext an {@link AuthorizationContext} object encapsulating
      *                     the various parameters required to authorize an
      *                     operation.
+     * @throws AccessControlException
      */
-    default void denySuperUserAccess(AuthorizationContext authzContext) {
-
+    default void denyUserAccess(AuthorizationContext authzContext,
+                                String errorMessage)
+        throws AccessControlException {
+      throw new AccessControlException(errorMessage);
     }
   }
 

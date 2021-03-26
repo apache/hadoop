@@ -189,9 +189,18 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         getAuthorizationContextForSuperUser(path));
   }
 
-  public void denySuperUserAccess(String path) {
-    getAccessControlEnforcer().denySuperUserAccess(
-        getAuthorizationContextForSuperUser(path));
+  /**
+   * Calls the external enforcer to notify denial of access to the user with
+   * the given error message. Always throws an ACE with the given message.
+   *
+   * @param path The resource path for which permission is being requested.
+   * @param errorMessage message for the exception.
+   * @throws AccessControlException with the error message.
+   */
+  public void denyUserAccess(String path, String errorMessage)
+      throws AccessControlException {
+    getAccessControlEnforcer().denyUserAccess(
+        getAuthorizationContextForSuperUser(path), errorMessage);
   }
 
   /**
