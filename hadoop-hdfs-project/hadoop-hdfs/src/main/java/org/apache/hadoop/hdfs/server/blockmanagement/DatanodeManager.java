@@ -210,7 +210,7 @@ public class DatanodeManager {
 
   @Nullable
   private final SlowPeerTracker slowPeerTracker;
-  private static Set<Node> slowNodes = Sets.newConcurrentHashSet();
+  private static Set<Node> slowNodesSet = Sets.newConcurrentHashSet();
   private Daemon slowPeerCollectorDaemon;
   private final long slowPeerCollectionInterval;
   private final int maxSlowPeerReportNodes;
@@ -389,7 +389,7 @@ public class DatanodeManager {
       public void run() {
         while (true) {
           try {
-            slowNodes = getSlowPeers();
+            slowNodesSet = getSlowPeers();
           } catch (Exception e) {
             LOG.error("Failed to collect slow peers", e);
           }
@@ -2113,7 +2113,7 @@ public class DatanodeManager {
    * @return
    */
   public static Set<Node> getSlowNodes() {
-    return slowNodes;
+    return slowNodesSet;
   }
 
   /**
