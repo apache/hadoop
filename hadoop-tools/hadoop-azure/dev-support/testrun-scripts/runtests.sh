@@ -31,17 +31,17 @@ begin
 combination=HNS-OAuth
 properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled"
 "fs.azure.account.auth.type")
-values=("abfsitgen2.dfs.core.windows.net" "true" "OAuth")
+values=("{account name}.dfs.core.windows.net" "true" "OAuth")
 generateconfigs
 
 combination=HNS-SharedKey
 properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled" "fs.azure.account.auth.type")
-values=("abfsitgen2.dfs.core.windows.net" "true" "SharedKey")
+values=("{account name}.dfs.core.windows.net" "true" "SharedKey")
 generateconfigs
 
 combination=NonHNS-SharedKey
 properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled" "fs.azure.account.auth.type")
-values=("abfsitgen2nsd.dfs.core.windows.net" "false" "SharedKey")
+values=("{account name}.dfs.core.windows.net" "false" "SharedKey")
 generateconfigs
 
 
