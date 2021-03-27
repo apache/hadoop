@@ -26,8 +26,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.util.DistCpTestUtils;
+import org.apache.hadoop.util.functional.RemoteIterators;
 
+import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,6 +64,7 @@ public class TestDistCpWithRawXAttrs {
   public static void init() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 2);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true)
             .build();
     cluster.waitActive();
@@ -163,5 +167,24 @@ public class TestDistCpWithRawXAttrs {
         DistCpTestUtils.assertXAttrs(new Path(dest, p), fs, xAttrs);
       }
     }
+  }
+
+  @Test
+  public void testUseIterator() throws Exception {
+
+    Path source = new Path("/src");
+    Path dest = new Path("/dest");
+    fs.delete(source, true);
+    fs.delete(dest, true);
+    // Create a source dir
+    fs.mkdirs(source);
+
+    GenericTestUtils.createFiles(fs, source, 3, 10, 10);
+
+    DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
+        dest.toString(), "-useiterator", conf);
+
+    Assertions.assertThat(RemoteIterators.toList(fs.listFiles(dest, true)))
+        .describedAs("files").hasSize(1110);
   }
 }
