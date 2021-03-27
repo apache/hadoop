@@ -2369,6 +2369,36 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block-placement-policy.exclude-slow-nodes.enabled</name>
+  <value>false</value>
+  <description>
+    If this is set to true, we will filter out slow nodes
+    when choosing targets for blocks.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.max.slowpeer.collect.nodes</name>
+  <value>5</value>
+  <description>
+    How many slow nodes we will collect for filtering out
+    when choosing targets for blocks.
+
+    It is ignored if dfs.namenode.block-placement-policy.exclude-slow-nodes.enabled is false.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.slowpeer.collect.interval</name>
+  <value>30m</value>
+  <description>
+    Interval at which the slow peer trackers runs in the background to collect slow peers.
+
+    It is ignored if dfs.namenode.block-placement-policy.exclude-slow-nodes.enabled is false.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.fileio.profiling.sampling.percentage</name>
   <value>0</value>
   <description>
