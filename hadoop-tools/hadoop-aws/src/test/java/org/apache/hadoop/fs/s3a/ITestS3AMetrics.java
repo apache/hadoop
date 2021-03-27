@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.hdfs.DFSUtil;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -53,7 +54,7 @@ public class ITestS3AMetrics extends AbstractS3ATestBase {
   public void testStreamStatistics() throws IOException {
     S3AFileSystem fs = getFileSystem();
     Path file = path("testStreamStatistics");
-    byte[] data = "abcdefghijklmnopqrstuvwxyz".getBytes();
+    byte[] data = DFSUtil.string2Bytes("abcdefghijklmnopqrstuvwxyz");
     ContractTestUtils.createFile(fs, file, false, data);
     InputStream inputStream = fs.open(file);
     try {
