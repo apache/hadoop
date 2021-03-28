@@ -84,7 +84,7 @@ std::shared_ptr<std::string> GetRandomClientName() {
           std::this_thread::get_id() << "_" <<
           std::setw(2) << std::hex << std::uppercase << std::setfill('0');
   for (auto b : buf) {
-      oss << static_cast<unsigned>(b);
+    oss << static_cast<unsigned>(b);
   }
   return std::make_shared<std::string>(oss.str());
 }
