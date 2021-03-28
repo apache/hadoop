@@ -110,7 +110,7 @@ class RpcEngine : public LockFreeRpcEngine, public std::enable_shared_from_this<
   };
 
   RpcEngine(std::shared_ptr<IoService> service, const Options &options,
-			const std::shared_ptr<std::string> &client_name, const std::string &user_name,
+            const std::shared_ptr<std::string> &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version);
 
   void Connect(const std::string & cluster_name,
