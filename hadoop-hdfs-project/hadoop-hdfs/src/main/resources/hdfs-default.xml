@@ -6191,4 +6191,12 @@
         accessed or modified before the specified time interval.
     </description>
   </property>
+  <property>
+    <name>dfs.datanode.directoryscan.max.notify.count</name>
+    <value>5</value>
+    <description>
+      Defines the maximum number of blocks that the DirectoryScanner may notify
+      namenode right way for received or deleted blocks after one round.
+    </description>
+  </property>
 </configuration>
