@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
 
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 #include <openssl/rand.h>
@@ -36,7 +37,7 @@ using optional = std::experimental::optional<T>;
 
 
 RpcEngine::RpcEngine(std::shared_ptr<IoService> io_service, const Options &options,
-                     const std::string &client_name, const std::string &user_name,
+                     const std::shared_ptr<std::string> &client_name, const std::string &user_name,
                      const char *protocol_name, int protocol_version)
     : io_service_(io_service),
       options_(options),

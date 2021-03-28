@@ -24,6 +24,8 @@
 #include "hdfspp/events.h"
 
 #include <future>
+#include <memory>
+#include <string>
 #include <tuple>
 
 #include <boost/asio/buffer.hpp>
@@ -38,7 +40,7 @@ FileHandle::~FileHandle() {}
 
 FileHandleImpl::FileHandleImpl(const std::string & cluster_name,
                                const std::string & path,
-                               std::shared_ptr<IoService> io_service, const std::string &client_name,
+                               std::shared_ptr<IoService> io_service, const std::shared_ptr<std::string> &client_name,
                                const std::shared_ptr<const struct FileInfo> file_info,
                                std::shared_ptr<BadDataNodeTracker> bad_data_nodes,
                                std::shared_ptr<LibhdfsEvents> event_handlers)
@@ -191,6 +193,11 @@ void FileHandleImpl::AsyncPreadSome(
     return;
   }
 
+  if (client_name_ == nullptr) {
+    handler(Status::Error("AsyncPreadSome: Unable to generate random client name"), "", 0);
+    return;
+  }
+
   /**
    *  Note: block and chosen_dn will end up pointing to things inside
    *  the blocks_ vector.  They shouldn't be directly deleted.
@@ -245,7 +252,7 @@ void FileHandleImpl::AsyncPreadSome(
   //    steal the FileHandle's dn and put it back when we're done
   std::shared_ptr<DataNodeConnection> dn = CreateDataNodeConnection(io_service_, chosen_dn, &block->blocktoken());
   std::string dn_id = dn->uuid_;
-  std::string client_name = client_name_;
+  std::string client_name = *client_name_;
 
   // Wrap the DN in a block reader to handle the state and logic of the
   //    block request protocol
