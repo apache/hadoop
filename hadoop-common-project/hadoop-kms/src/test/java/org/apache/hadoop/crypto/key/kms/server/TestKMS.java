@@ -550,7 +550,7 @@ public class TestKMS {
           threadGroup.enumerate(threads);
           Thread reloaderThread = null;
           for (Thread thread : threads) {
-            if ((thread.getName() != null)
+            if (thread != null && thread.getName() != null
                 && (thread.getName().contains(SSL_RELOADER_THREAD_NAME))) {
               reloaderThread = thread;
             }
