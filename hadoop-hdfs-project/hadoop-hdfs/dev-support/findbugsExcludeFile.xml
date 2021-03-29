@@ -310,4 +310,10 @@
       <Method name="reconcile" />
       <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD" />
     </Match>
+    <!-- Manually verified that r can never be null and cannot result in NPE -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.namenode.FSNamesystem" />
+      <Method name="truncate" />
+      <Bug pattern="NP_NULL_ON_SOME_PATH" />
+    </Match>
 </FindBugsFilter>
