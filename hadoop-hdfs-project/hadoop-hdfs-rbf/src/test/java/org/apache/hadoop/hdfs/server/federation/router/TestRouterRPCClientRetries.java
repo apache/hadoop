@@ -155,10 +155,10 @@ public class TestRouterRPCClientRetries {
     // Renew lease for the DFS client, it will succeed.
     routerProtocol.renewLease(client.getClientName());
 
-    // Verify the retry times, it will retry one time for ns0.
+    // Verify the retry times, it should succeed with no retry as long as at least one of the nameservices is ACTIVE.
     FederationRPCMetrics rpcMetrics = routerContext.getRouter()
         .getRpcServer().getRPCMetrics();
-    assertEquals(1, rpcMetrics.getProxyOpRetries());
+    assertEquals(0, rpcMetrics.getProxyOpRetries());
   }
 
   /**
