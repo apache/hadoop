@@ -25,6 +25,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
@@ -32,12 +34,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Verify the AbfsRestOperationException error message format.
  * */
 public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest{
+  private static final String RETRY_TEST_TOKEN_PROVIDER = "org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider";
+
   public ITestAbfsRestOperationException() throws Exception {
     super();
   }
@@ -121,13 +128,16 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
   @Test
   public void testAuthFailException() throws Exception {
     Configuration config = new Configuration(getRawConfiguration());
-    String accountName = config.get("fs.azure.abfs.account.name");
+    String accountName = config
+        .get(TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME);
     // Setup to configure custom token provider
-    config.set("fs.azure.account.auth.type." + accountName, "Custom");
-    config.set("fs.azure.account.oauth.provider.type." + accountName,
-        "org.apache.hadoop.fs" + ".azurebfs.oauth2.RetryTestTokenProvider");
+    config.set(ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + DOT
+        + accountName, "Custom");
+    config.set(
+        FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + DOT + accountName,
+        RETRY_TEST_TOKEN_PROVIDER);
     // Stop filesystem creation as it will lead to calls to store.
-    config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
+    config.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
 
     final AzureBlobFileSystem fs = getFileSystem(config);
     try {
