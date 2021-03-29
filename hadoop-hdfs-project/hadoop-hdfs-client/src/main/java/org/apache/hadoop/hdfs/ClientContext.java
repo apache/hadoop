@@ -321,13 +321,7 @@ public class ClientContext {
     Preconditions.checkState(counter > 0);
     counter--;
     if (counter == 0 && deadNodeDetectionEnabled && deadNodeDetector != null) {
-      deadNodeDetector.interrupt();
-      try {
-        deadNodeDetector.join();
-      } catch (InterruptedException e) {
-        LOG.warn("Encountered exception while waiting to join on dead " +
-            "node detector thread.", e);
-      }
+      deadNodeDetector.shutdown();
       deadNodeDetector = null;
     }
   }

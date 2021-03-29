@@ -17,7 +17,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.DefaultPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.FSPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
@@ -38,6 +40,12 @@ class QueuePlacementConverter {
   private static final FallbackResult SKIP_RESULT = FallbackResult.SKIP;
   private static final String DEFAULT_QUEUE = "root.default";
   private static final String MATCH_ALL_USER = "*";
+  private static final Set<Policy> NEED_ROOT_PARENT = Sets.newHashSet(
+      Policy.USER,
+      Policy.PRIMARY_GROUP,
+      Policy.PRIMARY_GROUP_USER,
+      Policy.SECONDARY_GROUP,
+      Policy.SECONDARY_GROUP_USER);
 
   MappingRulesDescription convertPlacementPolicy(
       PlacementManager placementManager,
@@ -162,6 +170,16 @@ class QueuePlacementConverter {
       }
     }
 
+    // Need to set the parent queue in weight mode.
+    //
+    // We *don't* set in pct mode, because auto-creation under "root"
+    // is not possible and probably it can cause the validation step to fail
+    // if create=true.
+    if (!usePercentages &&
+        NEED_ROOT_PARENT.contains(policy)) {
+      rule.setParentQueue("root");
+    }
+
     return rule;
   }
 
@@ -175,6 +193,8 @@ class QueuePlacementConverter {
 
     Rule rule = createRule(policy, create, ruleHandler, usePercentages);
 
+    // "parent" is already set to "root" at this point,
+    // so we override it if necessary
     if (parentQueue != null) {
       rule.setParentQueue(parentQueue);
     }

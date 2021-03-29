@@ -53,6 +53,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
@@ -98,6 +99,7 @@ import org.eclipse.jetty.server.handler.AllowSymLinkAliasChecker;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.FilterMapping;
@@ -206,6 +208,9 @@ public final class HttpServer2 implements FilterContainer {
   private boolean prometheusSupport;
   protected static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
   private PrometheusMetricsSink prometheusMetricsSink;
+
+  private StatisticsHandler statsHandler;
+  private HttpServer2Metrics metrics;
 
   /**
    * Class to construct instances of HTTP server with specific options.
@@ -710,6 +715,27 @@ public final class HttpServer2 implements FilterContainer {
     final String appDir = getWebAppsPath(name);
     addDefaultApps(contexts, appDir, conf);
     webServer.setHandler(handlers);
+
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
+      // Jetty StatisticsHandler must be inserted as the first handler.
+      // The tree might look like this:
+      //
+      // - StatisticsHandler (for all requests)
+      //   - HandlerList
+      //     - ContextHandlerCollection
+      //     - RequestLogHandler (if enabled)
+      //     - WebAppContext
+      //       - SessionHandler
+      //       - Servlets
+      //       - Filters
+      //       - etc..
+      //
+      // Reference: https://www.eclipse.org/lists/jetty-users/msg06273.html
+      statsHandler = new StatisticsHandler();
+      webServer.insertHandler(statsHandler);
+    }
 
     Map<String, String> xFrameParams = setHeaders(conf);
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), xFrameParams);
@@ -1269,6 +1295,16 @@ public final class HttpServer2 implements FilterContainer {
               .register("prometheus", "Hadoop metrics prometheus exporter",
                   prometheusMetricsSink);
         }
+        if (statsHandler != null) {
+          // Create metrics source for each HttpServer2 instance.
+          // Use port number to make the metrics source name unique.
+          int port = -1;
+          for (ServerConnector connector : listeners) {
+            port = connector.getLocalPort();
+            break;
+          }
+          metrics = HttpServer2Metrics.create(statsHandler, port);
+        }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
@@ -1461,6 +1497,9 @@ public final class HttpServer2 implements FilterContainer {
 
     try {
       webServer.stop();
+      if (metrics != null) {
+        metrics.remove();
+      }
     } catch (Exception e) {
       LOG.error("Error while stopping web server for webapp "
           + webAppContext.getDisplayName(), e);
@@ -1841,4 +1880,10 @@ public final class HttpServer2 implements FilterContainer {
             splitVal[1]);
     return headers;
   }
+
+  @VisibleForTesting
+  HttpServer2Metrics getMetrics() {
+    return metrics;
+  }
+
 }

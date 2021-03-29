@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -207,7 +208,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         "page size out of range: %s", pageSize);
     this.pageSize = pageSize;
     metadataStore = context.getMetadataStore();
-    executor = context.createThrottledExecutor(1);
+    executor = MoreExecutors.listeningDecorator(
+        context.createThrottledExecutor(1));
   }
 
   public long getFilesDeleted() {

@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
 import static org.junit.Assert.*;
 
 import org.slf4j.Logger;
@@ -376,6 +377,21 @@ public class TestNameNodeReconfigure {
             + " is not reconfigured correctly",
         1000,
         datanodeManager.getBlockInvalidateLimit());
+  }
+
+  @Test
+  public void testEnableParallelLoadAfterReconfigured()
+      throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+
+    // By default, enableParallelLoad is false
+    assertEquals(false, FSImageFormatProtobuf.getEnableParallelLoad());
+
+    nameNode.reconfigureProperty(DFS_IMAGE_PARALLEL_LOAD_KEY,
+        Boolean.toString(true));
+
+    // After reconfigured, enableParallelLoad is true
+    assertEquals(true, FSImageFormatProtobuf.getEnableParallelLoad());
   }
 
   @After

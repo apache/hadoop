@@ -251,7 +251,8 @@ public class ResourceUtils {
   private static Map<String, ResourceInformation> getResourceInformationMapFromConfig(
       Configuration conf) {
     Map<String, ResourceInformation> resourceInformationMap = new HashMap<>();
-    String[] resourceNames = conf.getStrings(YarnConfiguration.RESOURCE_TYPES);
+    String[] resourceNames =
+        conf.getTrimmedStrings(YarnConfiguration.RESOURCE_TYPES);
 
     if (resourceNames != null && resourceNames.length != 0) {
       for (String resourceName : resourceNames) {

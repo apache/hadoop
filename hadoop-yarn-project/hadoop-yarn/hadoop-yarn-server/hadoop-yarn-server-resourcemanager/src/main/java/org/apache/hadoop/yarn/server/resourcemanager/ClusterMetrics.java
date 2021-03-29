@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -34,6 +35,11 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetricsForCustomResources;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 @InterfaceAudience.Private
 @Metrics(context="yarn")
@@ -59,10 +65,20 @@ public class ClusterMetrics {
 
   private static final MetricsInfo RECORD_INFO = info("ClusterMetrics",
   "Metrics for the Yarn Cluster");
+
+  private static final String CUSTOM_RESOURCE_CAPABILITY_METRIC_PREFIX =
+      "Capability.";
+  private static final String CUSTOM_RESOURCE_CAPABILITY_METRIC_DESC =
+      "NAME Capability";
+
+  private static CustomResourceMetrics customResourceMetrics;
+
+  private final CustomResourceMetricValue customResourceCapability =
+      new CustomResourceMetricValue();
   
   private static volatile ClusterMetrics INSTANCE = null;
   private static MetricsRegistry registry;
-  
+
   public static ClusterMetrics getMetrics() {
     if(!isInitialized.get()){
       synchronized (ClusterMetrics.class) {
@@ -82,6 +98,17 @@ public class ClusterMetrics {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     if (ms != null) {
       ms.register("ClusterMetrics", "Metrics for the Yarn Cluster", INSTANCE);
+    }
+
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
+      customResourceMetrics =
+          new CustomResourceMetrics();
+      Map<String, Long> customResources =
+          customResourceMetrics.initAndGetCustomResources();
+      customResourceMetrics.
+          registerCustomResources(customResources,
+              registry, CUSTOM_RESOURCE_CAPABILITY_METRIC_PREFIX,
+              CUSTOM_RESOURCE_CAPABILITY_METRIC_DESC);
     }
   }
 
@@ -206,10 +233,21 @@ public class ClusterMetrics {
     return capabilityVirtualCores.value();
   }
 
+  public Map<String, Long> getCustomResourceCapability() {
+    return customResourceCapability.getValues();
+  }
+
+  public void setCustomResourceCapability(Resource res) {
+    this.customResourceCapability.set(res);
+  }
+
   public void incrCapability(Resource res) {
     if (res != null) {
       capabilityMB.incr(res.getMemorySize());
       capabilityVirtualCores.incr(res.getVirtualCores());
+      if (customResourceCapability != null) {
+        customResourceCapability.increase(res);
+      }
     }
   }
 
@@ -217,6 +255,9 @@ public class ClusterMetrics {
     if (res != null) {
       capabilityMB.decr(res.getMemorySize());
       capabilityVirtualCores.decr(res.getVirtualCores());
+      if (customResourceCapability != null) {
+        customResourceCapability.decrease(res);
+      }
     }
   }
 

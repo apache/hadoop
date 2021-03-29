@@ -552,11 +552,15 @@ public class FairScheduler extends
           return;
         }
       }
+      boolean unmanagedAM = rmApp != null &&
+          rmApp.getApplicationSubmissionContext() != null
+          && rmApp.getApplicationSubmissionContext().getUnmanagedAM();
 
       SchedulerApplication<FSAppAttempt> application =
-          new SchedulerApplication<>(queue, user);
+          new SchedulerApplication<>(queue, user, unmanagedAM);
       applications.put(applicationId, application);
-      queue.getMetrics().submitApp(user);
+
+      queue.getMetrics().submitApp(user, unmanagedAM);
 
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName
@@ -610,7 +614,7 @@ public class FairScheduler extends
         maxRunningEnforcer.trackNonRunnableApp(attempt);
       }
 
-      queue.getMetrics().submitAppAttempt(user);
+      queue.getMetrics().submitAppAttempt(user, application.isUnmanagedAM());
 
       LOG.info("Added Application Attempt " + applicationAttemptId
           + " to scheduler from user: " + user);
@@ -1440,6 +1444,13 @@ public class FairScheduler extends
             + " is invalid, so using default value "
             + FairSchedulerConfiguration.DEFAULT_UPDATE_INTERVAL_MS
             + " ms instead");
+      }
+
+      boolean globalAmPreemption = conf.getBoolean(
+          FairSchedulerConfiguration.AM_PREEMPTION,
+          FairSchedulerConfiguration.DEFAULT_AM_PREEMPTION);
+      if (!globalAmPreemption) {
+        LOG.info("AM preemption is DISABLED globally");
       }
 
       rootMetrics = FSQueueMetrics.forQueue("root", null, true, conf);

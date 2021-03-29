@@ -44,6 +44,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean optimizeFooterRead;
 
+  private boolean bufferedPreadDisabled;
+
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -97,6 +99,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withBufferedPreadDisabled(
+      final boolean bufferedPreadDisabled) {
+    this.bufferedPreadDisabled = bufferedPreadDisabled;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
     if (readBufferSize > readAheadBlockSize) {
       LOG.debug(
@@ -142,4 +150,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return readAheadBlockSize;
   }
 
+  public boolean isBufferedPreadDisabled() {
+    return bufferedPreadDisabled;
+  }
 }

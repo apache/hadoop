@@ -281,6 +281,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   final InstrumentedReadWriteLock datasetRWLock;
   private final Condition datasetWriteLockCondition;
   private static String blockPoolId = "";
+
+  // Make limited notify times from DirectoryScanner to NameNode.
+  private long maxDirScannerNotifyCount;
+  private long curDirScannerNotifyCount;
+  private long lastDirScannerNotifyTime;
   
   /**
    * An FSDataset has a directory where it loads its data files.
@@ -408,6 +413,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     maxDataLength = conf.getInt(
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
+    maxDirScannerNotifyCount = conf.getLong(
+        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_KEY,
+        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_DEFAULT);
+    lastDirScannerNotifyTime = System.currentTimeMillis();
   }
 
   @Override
@@ -1121,6 +1130,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     try {
       moveBlock(block, replicaInfo, volumeRef, useVolumeOnSameMount);
+      datanode.getMetrics().incrReplaceBlockOpOnSameHost();
+      if (useVolumeOnSameMount) {
+        datanode.getMetrics().incrReplaceBlockOpOnSameMount();
+      }
     } finally {
       if (volumeRef != null) {
         volumeRef.close();
@@ -2605,6 +2618,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     Block corruptBlock = null;
     ReplicaInfo memBlockInfo;
     long startTimeMs = Time.monotonicNow();
+    if (startTimeMs - lastDirScannerNotifyTime >
+        datanode.getDnConf().getBlockReportInterval()) {
+      curDirScannerNotifyCount = 0;
+      lastDirScannerNotifyTime = startTimeMs;
+    }
     try (AutoCloseableLock lock = datasetWriteLock.acquire()) {
       memBlockInfo = volumeMap.get(bpid, blockId);
       if (memBlockInfo != null &&
@@ -2657,6 +2675,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           // Block is in memory and not on the disk
           // Remove the block from volumeMap
           volumeMap.remove(bpid, blockId);
+          if (curDirScannerNotifyCount < maxDirScannerNotifyCount) {
+            curDirScannerNotifyCount++;
+            datanode.notifyNamenodeDeletedBlock(new ExtendedBlock(bpid,
+                memBlockInfo), memBlockInfo.getStorageUuid());
+          }
           if (vol.isTransientStorage()) {
             ramDiskReplicaTracker.discardReplica(bpid, blockId, true);
           }
@@ -2683,6 +2706,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             .setDirectoryToUse(diskFile.getParentFile())
             .build();
         volumeMap.add(bpid, diskBlockInfo);
+        if (curDirScannerNotifyCount < maxDirScannerNotifyCount) {
+          maxDirScannerNotifyCount++;
+          datanode.notifyNamenodeReceivedBlock(
+              new ExtendedBlock(bpid, diskBlockInfo), null,
+              vol.getStorageID(), vol.isTransientStorage());
+        }
         if (vol.isTransientStorage()) {
           long lockedBytesReserved =
               cacheManager.reserve(diskBlockInfo.getNumBytes()) > 0 ?

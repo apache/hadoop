@@ -25,6 +25,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.*;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -36,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -74,12 +76,12 @@ public class CSMappingPlacementRule extends PlacementRule {
   private boolean failOnConfigError = true;
 
   @VisibleForTesting
-  void setGroups(Groups groups) {
+  public void setGroups(Groups groups) {
     this.groups = groups;
   }
 
   @VisibleForTesting
-  void setFailOnConfigError(boolean failOnConfigError) {
+  public void setFailOnConfigError(boolean failOnConfigError) {
     this.failOnConfigError = failOnConfigError;
   }
 
@@ -183,6 +185,10 @@ public class CSMappingPlacementRule extends PlacementRule {
       LOG.warn(
           "Group provider hasn't been set, cannot query groups for user {}",
           user);
+      //enforcing empty primary group instead of null, which would be considered
+      //as unknown variable and would evaluate to '%primary_group'
+      vctx.put("%primary_group", "");
+      vctx.put("%secondary_group", "");
       return;
     }
     Set<String> groupsSet = groups.getGroupsSet(user);
@@ -191,24 +197,32 @@ public class CSMappingPlacementRule extends PlacementRule {
       vctx.putExtraDataset("groups", groupsSet);
       return;
     }
-    String secondaryGroup = null;
     Iterator<String> it = groupsSet.iterator();
     String primaryGroup = it.next();
+
+    ArrayList<String> secondaryGroupList = new ArrayList<>();
+
     while (it.hasNext()) {
-      String group = it.next();
-      if (this.queueManager.getQueue(group) != null) {
-        secondaryGroup = group;
-        break;
-      }
+      secondaryGroupList.add(it.next());
     }
 
-    if (secondaryGroup == null && LOG.isDebugEnabled()) {
-      LOG.debug("User {} is not associated with any Secondary " +
-          "Group. Hence it may use the 'default' queue", user);
+    if (secondaryGroupList.size() == 0) {
+      //if we have no chance to have a secondary group to speed up evaluation
+      //we simply register it as a regular variable with "" as a value
+      vctx.put("%secondary_group", "");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("User {} does not have any potential Secondary group", user);
+      }
+    } else {
+      vctx.putConditional(
+          MappingRuleConditionalVariables.SecondaryGroupVariable.VARIABLE_NAME,
+          new MappingRuleConditionalVariables.SecondaryGroupVariable(
+              this.queueManager,
+              secondaryGroupList
+              ));
     }
 
     vctx.put("%primary_group", primaryGroup);
-    vctx.put("%secondary_group", secondaryGroup);
     vctx.putExtraDataset("groups", groupsSet);
   }
 
@@ -223,7 +237,15 @@ public class CSMappingPlacementRule extends PlacementRule {
     //To place queues specifically to default, users must use root.default
     if (!asc.getQueue().equals(YarnConfiguration.DEFAULT_QUEUE_NAME)) {
       vctx.put("%specified", asc.getQueue());
+    } else {
+      //Adding specified as empty will prevent it to be undefined and it won't
+      //try to place the application to a queue named '%specified', queue path
+      //validation will reject the empty path or the path with empty parts,
+      //so we sill still hit the fallback action of this rule if no queue
+      //is specified
+      vctx.put("%specified", "");
     }
+
     vctx.put("%application", asc.getApplicationName());
     vctx.put("%default", "root.default");
     try {
@@ -239,6 +261,12 @@ public class CSMappingPlacementRule extends PlacementRule {
   private String validateAndNormalizeQueue(
       String queueName, boolean allowCreate) throws YarnException {
     MappingQueuePath path = new MappingQueuePath(queueName);
+
+    if (path.hasEmptyPart()) {
+      throw new YarnException("Invalid path returned by rule: '" +
+          queueName + "'");
+    }
+
     String leaf = path.getLeafName();
     String parent = path.getParent();
 
@@ -335,14 +363,19 @@ public class CSMappingPlacementRule extends PlacementRule {
       MappingRule rule, VariableContext variables) {
     MappingRuleResult result = rule.evaluate(variables);
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Evaluated rule '{}' with result: '{}'", rule, result);
+    }
+
     if (result.getResult() == MappingRuleResultType.PLACE) {
       try {
         result.updateNormalizedQueue(validateAndNormalizeQueue(
             result.getQueue(), result.isCreateAllowed()));
       } catch (Exception e) {
-        LOG.info("Cannot place to queue '{}' returned by mapping rule. " +
-            "Reason: {}", result.getQueue(), e.getMessage());
         result = rule.getFallback();
+        LOG.info("Cannot place to queue '{}' returned by mapping rule. " +
+            "Reason: '{}' Fallback operation: '{}'",
+            result.getQueue(), e.getMessage(), result);
       }
     }
 
@@ -449,6 +482,12 @@ public class CSMappingPlacementRule extends PlacementRule {
       if (ret == null || !ret.getQueue().equals(asc.getQueue())) {
         return null;
       }
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Placement final result '{}' for application '{}'",
+          (ret == null ? "null" : ret.getFullQueuePath()),
+          asc.getApplicationId());
     }
 
     return ret;

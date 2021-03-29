@@ -63,7 +63,6 @@ import com.codahale.metrics.Timer;
 @Unstable
 public class SLSCapacityScheduler extends CapacityScheduler implements
         SchedulerWrapper,Configurable {
-
   private Configuration conf;
  
   private Map<ApplicationAttemptId, String> appQueueMap =
@@ -99,7 +98,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
             CapacityScheduler.class);
         schedulerMetrics.init(this, conf);
       } catch (Exception e) {
-        e.printStackTrace();
+        LOG.error("Caught exception while initializing schedulerMetrics", e);
       }
     }
   }
@@ -119,6 +118,9 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
                 containerIds, strings,
                 strings2, updateRequests);
         return allocation;
+      } catch (Exception e) {
+        LOG.error("Caught exception from allocate", e);
+        throw e;
       } finally {
         context.stop();
         schedulerMetrics.increaseSchedulerAllocationCounter();
@@ -126,7 +128,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
           updateQueueWithAllocateRequest(allocation, attemptId,
                   resourceRequests, containerIds);
         } catch (IOException e) {
-          e.printStackTrace();
+          LOG.error("Caught exception while executing finally block", e);
         }
       }
     } else {
@@ -373,7 +375,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
         schedulerMetrics.tearDown();
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Caught exception while stopping service", e);
     }
     super.serviceStop();
   }

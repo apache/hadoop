@@ -459,4 +459,8 @@ public class DNConf {
   public long getProcessCommandsThresholdMs() {
     return processCommandsThresholdMs;
   }
+
+  public long getBlockReportInterval() {
+    return blockReportInterval;
+  }
 }

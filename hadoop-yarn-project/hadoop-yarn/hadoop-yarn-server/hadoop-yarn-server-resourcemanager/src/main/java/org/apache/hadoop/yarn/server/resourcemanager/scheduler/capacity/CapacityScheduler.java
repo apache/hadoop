@@ -143,9 +143,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsU
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .QueueManagementChangeEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AutoCreatedQueueDeletionEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ReleaseContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -249,8 +249,6 @@ public class CapacityScheduler extends
 
   private CSMaxRunningAppsEnforcer maxRunningEnforcer;
 
-  private boolean activitiesManagerEnabled = true;
-
   public CapacityScheduler() {
     super(CapacityScheduler.class.getName());
     this.maxRunningEnforcer = new CSMaxRunningAppsEnforcer(this);
@@ -351,9 +349,7 @@ public class CapacityScheduler extends
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
 
       this.activitiesManager = new ActivitiesManager(rmContext);
-      if (activitiesManagerEnabled) {
-        activitiesManager.init(conf);
-      }
+      activitiesManager.init(conf);
       initializeQueues(this.conf);
       this.isLazyPreemptionEnabled = conf.getLazyPreemptionEnabled();
 
@@ -411,9 +407,7 @@ public class CapacityScheduler extends
   private void startSchedulerThreads() {
     writeLock.lock();
     try {
-      if (activitiesManagerEnabled) {
-        activitiesManager.start();
-      }
+      activitiesManager.start();
       if (scheduleAsynchronously) {
         Preconditions.checkNotNull(asyncSchedulerThreads,
             "asyncSchedulerThreads is null");
@@ -447,9 +441,7 @@ public class CapacityScheduler extends
   public void serviceStop() throws Exception {
     writeLock.lock();
     try {
-      if (activitiesManagerEnabled) {
-        this.activitiesManager.stop();
-      }
+      this.activitiesManager.stop();
       if (scheduleAsynchronously && asyncSchedulerThreads != null) {
         for (Thread t : asyncSchedulerThreads) {
           t.interrupt();
@@ -873,7 +865,8 @@ public class CapacityScheduler extends
 
   private void addApplicationOnRecovery(ApplicationId applicationId,
       String queueName, String user,
-      Priority priority, ApplicationPlacementContext placementContext) {
+      Priority priority, ApplicationPlacementContext placementContext,
+      boolean unmanagedAM) {
     writeLock.lock();
     try {
       //check if the queue needs to be auto-created during recovery
@@ -935,9 +928,11 @@ public class CapacityScheduler extends
         // Ignore the exception for recovered app as the app was previously
         // accepted.
       }
-      queue.getMetrics().submitApp(user);
+      queue.getMetrics().submitApp(user, unmanagedAM);
+
       SchedulerApplication<FiCaSchedulerApp> application =
-          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority);
+          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority,
+              unmanagedAM);
       applications.put(applicationId, application);
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName);
@@ -962,6 +957,17 @@ public class CapacityScheduler extends
       if (placementContext == null) {
         fallbackContext = CSQueueUtils.extractQueuePath(queueName);
       }
+
+      //we need to make sure there is no empty path parts present
+      String path = fallbackContext.getFullQueuePath();
+      String[] pathParts = path.split("\\.");
+      for (int i = 0; i < pathParts.length; i++) {
+        if ("".equals(pathParts[i])) {
+          LOG.error("Application submitted to invalid path: '{}'", path);
+          return null;
+        }
+      }
+
       if (fallbackContext.hasParentQueue()) {
         try {
           return autoCreateLeafQueue(fallbackContext);
@@ -1009,7 +1015,7 @@ public class CapacityScheduler extends
 
   private void addApplication(ApplicationId applicationId, String queueName,
       String user, Priority priority,
-      ApplicationPlacementContext placementContext) {
+      ApplicationPlacementContext placementContext, boolean unmanagedAM) {
     writeLock.lock();
     try {
       if (isSystemAppsLimitReached()) {
@@ -1022,8 +1028,8 @@ public class CapacityScheduler extends
       }
 
       //Could be a potential auto-created leaf queue
-      CSQueue queue = getOrCreateQueueFromPlacementContext(applicationId, user,
-            queueName, placementContext, false);
+      CSQueue queue = getOrCreateQueueFromPlacementContext(
+           applicationId, user, queueName, placementContext, false);
 
       if (queue == null) {
         String message;
@@ -1113,9 +1119,10 @@ public class CapacityScheduler extends
         return;
       }
       // update the metrics
-      queue.getMetrics().submitApp(user);
+      queue.getMetrics().submitApp(user, unmanagedAM);
       SchedulerApplication<FiCaSchedulerApp> application =
-          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority);
+          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority,
+              unmanagedAM);
       applications.put(applicationId, application);
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName);
@@ -1983,11 +1990,13 @@ public class CapacityScheduler extends
         if (!appAddedEvent.getIsAppRecovering()) {
           addApplication(appAddedEvent.getApplicationId(), queueName,
               appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
-              appAddedEvent.getPlacementContext());
+              appAddedEvent.getPlacementContext(),
+              appAddedEvent.isUnmanagedAM());
         } else {
           addApplicationOnRecovery(appAddedEvent.getApplicationId(), queueName,
               appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
-              appAddedEvent.getPlacementContext());
+              appAddedEvent.getPlacementContext(),
+              appAddedEvent.isUnmanagedAM());
         }
       }
     }
@@ -2095,8 +2104,32 @@ public class CapacityScheduler extends
       }
     }
     break;
+    case AUTO_QUEUE_DELETION:
+      try {
+        AutoCreatedQueueDeletionEvent autoCreatedQueueDeletionEvent =
+            (AutoCreatedQueueDeletionEvent) event;
+        removeAutoCreatedQueue(autoCreatedQueueDeletionEvent.
+            getCheckQueue());
+      } catch (SchedulerDynamicEditException sde) {
+        LOG.error("Dynamic queue deletion cannot be applied for "
+            + "queue : ", sde);
+      }
+      break;
     default:
       LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
+    }
+  }
+
+  private void removeAutoCreatedQueue(CSQueue checkQueue)
+      throws SchedulerDynamicEditException{
+    writeLock.lock();
+    try {
+      if (checkQueue instanceof AbstractCSQueue
+          && ((AbstractCSQueue) checkQueue).isInactiveDynamicQueue()) {
+        removeQueue(checkQueue);
+      }
+    } finally {
+      writeLock.unlock();
     }
   }
 
@@ -2548,6 +2581,44 @@ public class CapacityScheduler extends
       this.queueManager.removeQueue(queueName);
       LOG.info(
           "Removal of AutoCreatedLeafQueue " + queueName + " has succeeded");
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public void removeQueue(CSQueue queue)
+      throws SchedulerDynamicEditException {
+    writeLock.lock();
+    try {
+      LOG.info("Removing queue: " + queue.getQueuePath());
+      if (!((AbstractCSQueue)queue).isDynamicQueue()) {
+        throw new SchedulerDynamicEditException(
+            "The queue that we are asked "
+                + "to remove (" + queue.getQueuePath()
+                + ") is not a DynamicQueue");
+      }
+
+      if (!((AbstractCSQueue) queue).isEligibleForAutoDeletion()) {
+        LOG.warn("Queue " + queue.getQueuePath() +
+            " is marked for deletion, but not eligible for deletion");
+        return;
+      }
+
+      ParentQueue parentQueue = (ParentQueue)queue.getParent();
+      if (parentQueue != null) {
+        ((ParentQueue) queue.getParent()).removeChildQueue(queue);
+      } else {
+        throw new SchedulerDynamicEditException(
+            "The queue " + queue.getQueuePath()
+                + " can't be removed because it's parent is null");
+      }
+
+      if (parentQueue.childQueues.contains(queue) ||
+          queueManager.getQueue(queue.getQueuePath()) != null) {
+        throw new SchedulerDynamicEditException(
+            "The queue " + queue.getQueuePath()
+                + " has not been removed normally.");
+      }
     } finally {
       writeLock.unlock();
     }
@@ -3385,6 +3456,10 @@ public class CapacityScheduler extends
     return null;
   }
 
+  public CSConfigurationProvider getCsConfProvider() {
+    return csConfProvider;
+  }
+
   @Override
   public void resetSchedulerMetrics() {
     CapacitySchedulerMetrics.destroy();
@@ -3403,18 +3478,12 @@ public class CapacityScheduler extends
     this.maxRunningEnforcer = enforcer;
   }
 
-
   /**
    * Returning true as capacity scheduler supports placement constraints.
    */
   @Override
   public boolean placementConstraintEnabled() {
     return true;
-  }
-
-  @VisibleForTesting
-  public void setActivitiesManagerEnabled(boolean enabled) {
-    this.activitiesManagerEnabled = enabled;
   }
 
   @VisibleForTesting

@@ -64,9 +64,9 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 public class TestBlockTokenWithDFS {
 
@@ -77,7 +77,7 @@ public class TestBlockTokenWithDFS {
   private static final String FILE_TO_APPEND = "/fileToAppend.dat";
 
   {
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
   }
 
   public static byte[] generateBytes(int fileSize){

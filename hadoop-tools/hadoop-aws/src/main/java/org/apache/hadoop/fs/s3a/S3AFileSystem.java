@@ -42,6 +42,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -68,7 +69,6 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
-
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
@@ -82,7 +82,6 @@ import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -165,7 +164,6 @@ import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
-import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.statistics.impl.BondedS3AStatisticsContext;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.retry.RetryPolicies;
@@ -197,7 +195,6 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_SDK_METRICS_ENABLED;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
@@ -262,7 +259,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private long partSize;
   private boolean enableMultiObjectsDelete;
   private TransferManager transfers;
-  private ListeningExecutorService boundedThreadPool;
+  private ExecutorService boundedThreadPool;
   private ThreadPoolExecutor unboundedThreadPool;
   private int executorCapacity;
   private long multiPartThreshold;
@@ -375,6 +372,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Initializing S3AFileSystem for {}", bucket);
       // clone the configuration into one with propagated bucket options
       Configuration conf = propagateBucketOptions(originalConf, bucket);
+      // fix up the classloader of the configuration to be whatever
+      // classloader loaded this filesystem.
+      // See: HADOOP-17372
+      conf.setClassLoader(this.getClass().getClassLoader());
+
       // patch the Hadoop security providers
       patchSecurityCredentialProviders(conf);
       // look for delegation token support early.
@@ -739,16 +741,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
         S3ClientFactory.class);
 
-    StatisticsFromAwsSdk awsStats = null;
-    //  TODO: HADOOP-16830 when the S3 client building code works
-    //   with different regions,
-    //   then non-null stats can be passed in here.
-    if (AWS_SDK_METRICS_ENABLED) {
-      awsStats = statisticsContext.newStatisticsFromAwsSdk();
-    }
+    S3ClientFactory.S3ClientCreationParameters parameters = null;
+    parameters = new S3ClientFactory.S3ClientCreationParameters()
+        .withCredentialSet(credentials)
+        .withEndpoint(conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT))
+        .withMetrics(statisticsContext.newStatisticsFromAwsSdk())
+        .withPathStyleAccess(conf.getBoolean(PATH_STYLE_ACCESS, false))
+        .withUserAgentSuffix(uaSuffix);
 
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-        .createS3Client(getUri(), bucket, credentials, uaSuffix, awsStats);
+        .createS3Client(getUri(),
+            parameters);
   }
 
   /**
@@ -1462,9 +1465,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.info("{}", e.getMessage());
       LOG.debug("rename failure", e);
       return e.getExitCode();
-    } catch (FileNotFoundException e) {
-      LOG.debug(e.toString());
-      return false;
     }
   }
 
@@ -1517,9 +1517,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // whether or not it can be the destination of the rename.
       if (srcStatus.isDirectory()) {
         if (dstStatus.isFile()) {
-          throw new RenameFailedException(src, dst,
-              "source is a directory and dest is a file")
-              .withExitCode(srcStatus.isFile());
+          throw new FileAlreadyExistsException(
+              "Failed to rename " + src + " to " + dst
+               +"; source is a directory and dest is a file");
         } else if (dstStatus.isEmptyDirectory() != Tristate.TRUE) {
           throw new RenameFailedException(src, dst,
               "Destination is a non-empty directory")
@@ -1530,9 +1530,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // source is a file. The destination must be a directory,
         // empty or not
         if (dstStatus.isFile()) {
-          throw new RenameFailedException(src, dst,
-              "Cannot rename onto an existing file")
-              .withExitCode(false);
+          throw new FileAlreadyExistsException(
+              "Failed to rename " + src + " to " + dst
+                  + "; destination file exists");
         }
       }
 
@@ -1543,17 +1543,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (!pathToKey(parent).isEmpty()
           && !parent.equals(src.getParent())) {
         try {
-          // only look against S3 for directories; saves
-          // a HEAD request on all normal operations.
+          // make sure parent isn't a file.
+          // don't look for parent being a dir as there is a risk
+          // of a race between dest dir cleanup and rename in different
+          // threads.
           S3AFileStatus dstParentStatus = innerGetFileStatus(parent,
-              false, StatusProbeEnum.DIRECTORIES);
+              false, StatusProbeEnum.FILE);
+          // if this doesn't raise an exception then it's one of
+          // raw S3: parent is a file: error
+          // guarded S3: parent is a file or a dir.
           if (!dstParentStatus.isDirectory()) {
             throw new RenameFailedException(src, dst,
                 "destination parent is not a directory");
           }
-        } catch (FileNotFoundException e2) {
-          throw new RenameFailedException(src, dst,
-              "destination has no parent ");
+        } catch (FileNotFoundException expected) {
+          // nothing was found. Don't worry about it;
+          // expect rename to implicitly create the parent dir (raw S3)
+          // or the s3guard parents (guarded)
+
         }
       }
     }
@@ -2760,7 +2767,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO problem
    */
   @Retries.RetryTranslated
-  void maybeCreateFakeParentDirectory(Path path)
+  @VisibleForTesting
+  protected void maybeCreateFakeParentDirectory(Path path)
       throws IOException, AmazonClientException {
     Path parent = path.getParent();
     if (parent != null && !parent.isRoot()) {
@@ -4724,6 +4732,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
 
+    case CommonPathCapabilities.ABORTABLE_STREAM:
     case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
       return true;
 
