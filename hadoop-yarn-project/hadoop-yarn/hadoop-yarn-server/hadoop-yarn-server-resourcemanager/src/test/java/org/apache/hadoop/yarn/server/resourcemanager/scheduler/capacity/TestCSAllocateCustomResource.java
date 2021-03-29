@@ -231,7 +231,8 @@ public class TestCSAllocateCustomResource {
     assertEquals("Cluster Capability Vcores incorrect",
         metrics.getCapabilityVirtualCores(), 4 * 8);
     assertEquals("Cluster Capability GPUs incorrect",
-        metrics.getCapabilityGPUs(), 4 * 8);
+        (metrics.getCustomResourceCapability()
+            .get(GPU_URI)).longValue(), 4 * 8);
 
     for (RMNode rmNode : rmNodes) {
       nodeTracker.removeNode(rmNode.getNodeID());
@@ -243,7 +244,8 @@ public class TestCSAllocateCustomResource {
     assertEquals("Cluster Capability Vcores incorrect",
         metrics.getCapabilityVirtualCores(), 0);
     assertEquals("Cluster Capability GPUs incorrect",
-        metrics.getCapabilityGPUs(), 0);
+        (metrics.getCustomResourceCapability()
+            .get(GPU_URI)).longValue(), 0);
     ClusterMetrics.destroy();
   }
 }
