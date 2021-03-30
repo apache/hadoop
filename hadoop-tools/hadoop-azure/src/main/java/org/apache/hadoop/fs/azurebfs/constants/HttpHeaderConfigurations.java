@@ -62,6 +62,8 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_ENCRYPTION_KEY = "x-ms-encryption-key";
   public static final String X_MS_ENCRYPTION_KEY_SHA256 = "x-ms-encryption-key-sha256";
   public static final String X_MS_ENCRYPTION_ALGORITHM = "x-ms-encryption-algorithm";
+  public static final String X_MS_REQUEST_SERVER_ENCRYPTED = "x-ms-request-server-encrypted";
+  public static final String X_MS_SERVER_ENCRYPTED = "x-ms-server-encrypted";
 
   private HttpHeaderConfigurations() {}
 }

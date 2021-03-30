@@ -50,6 +50,7 @@ public class AbfsRestOperation {
   private final URL url;
   // all the custom HTTP request headers provided by the caller
   private final List<AbfsHttpHeader> requestHeaders;
+  private List<AbfsHttpHeader> responseHeaders;
 
   // This is a simple operation class, where all the upload methods have a
   // request body and all the download methods have a response body.
@@ -287,6 +288,7 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
+      this.responseHeaders = httpOperation.getResponseHeaders();
       AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 
@@ -311,5 +313,9 @@ public class AbfsRestOperation {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
     }
+  }
+
+  public List<AbfsHttpHeader> getResponseHeaders() {
+    return this.responseHeaders;
   }
 }

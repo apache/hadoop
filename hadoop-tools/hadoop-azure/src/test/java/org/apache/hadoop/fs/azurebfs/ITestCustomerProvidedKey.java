@@ -25,6 +25,8 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.EnumSet;
 import java.util.Hashtable;
 import java.util.List;
@@ -34,7 +36,10 @@ import java.util.Random;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -63,21 +68,16 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY_SHA256;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 
 public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ITestCustomerProvidedKey.class);
 
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int INT_512 = 512;
@@ -86,10 +86,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   public ITestCustomerProvidedKey() throws Exception {
   }
 
+  @Ignore
   @Test
   public void testWriteReadAndVerifyWithCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
-    int fileSize = 16 * ONE_MB;
+    int fileSize = 8 * ONE_MB;
     byte[] fileContent = getRandomBytesArray(fileSize);
     String fileName = methodName.getMethodName();
     Path testFilePath = createFileWithContent(fs, fileName, fileContent);
@@ -101,8 +102,37 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         assertEquals(fileContent[i], buffer[i]);
       }
     }
+
+    //  Trying to read fs2DestFilePath with different CPK headers
+    Configuration conf = fs.getConf();
+    String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    //  Trying to read fs2DestFilePath with different CPK headers
+    conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+        "different-1234567890123456789012");
+    conf.set("fs.abfs.impl.disable.cache", "true");
+    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
+    try (FSDataInputStream iStream = fs2.open(testFilePath)) {
+      int length = 8 * ONE_MB;
+      byte[] buffer = new byte[length];
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        iStream.read(buffer, 0, length);
+      });
+    }
+
+    //  Trying to read fs2DestFilePath with no CPK headers
+    conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+    AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
+    try (FSDataInputStream iStream = fs3.open(testFilePath)) {
+      int length = 8 * ONE_MB;
+      byte[] buffer = new byte[length];
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        iStream.read(buffer, 0, length);
+      });
+    }
   }
 
+  @Ignore
   @Test
   public void testSetGetXAttr() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
@@ -130,18 +160,17 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertEquals(valSent, valRecieved);
 
     //  Read without CPK header
-    LambdaTestUtils.intercept(IOException.class,
-        () -> {
-          getAbfs(false).getXAttr(new Path(fileName), attrName);
-        });
+    LambdaTestUtils.intercept(IOException.class, () -> {
+      getAbfs(false).getXAttr(new Path(fileName), attrName);
+    });
 
     //  Wrong CPK
-    LambdaTestUtils.intercept(IOException.class,
-        () -> {
-          getSameFSWithWrongCPK(fs).getXAttr(new Path(fileName), attrName);
-        });
+    LambdaTestUtils.intercept(IOException.class, () -> {
+      getSameFSWithWrongCPK(fs).getXAttr(new Path(fileName), attrName);
+    });
   }
 
+  @Ignore
   @Test
   public void testCopyBetweenAccounts() throws Exception {
     String accountName = getRawConfiguration()
@@ -194,10 +223,9 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     try (FSDataInputStream iStream = fs3.open(fs2DestFilePath)) {
       int length = 8 * ONE_MB;
       byte[] buffer = new byte[length];
-      LambdaTestUtils.intercept(IOException.class,
-          () -> {
-            iStream.read(buffer, 0, length);
-          });
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        iStream.read(buffer, 0, length);
+      });
     }
 
     //  Trying to read fs2DestFilePath with no CPK headers
@@ -206,10 +234,9 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     try (FSDataInputStream iStream = fs4.open(fs2DestFilePath)) {
       int length = 8 * ONE_MB;
       byte[] buffer = new byte[length];
-      LambdaTestUtils.intercept(IOException.class,
-          () -> {
-            iStream.read(buffer, 0, length);
-          });
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        iStream.read(buffer, 0, length);
+      });
     }
 
     //  Read fs2DestFilePath and verify the content with the initial random
@@ -230,11 +257,13 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     }
   }
 
+  @Ignore
   @Test
   public void testAppendWithCPK() throws Exception {
     testAppend(true);
   }
 
+  @Ignore
   @Test
   public void testAppendWithoutCPK() throws Exception {
     testAppend(false);
@@ -252,13 +281,20 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .append(testFileName, buffer, appendRequestParameters, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
+    assertResponseHeaders(abfsRestOperation, isWithCPK,
+        X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
+    assertResponseHeaders(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
+    assertResponseHeaders(abfsRestOperation, true,
+        X_MS_REQUEST_SERVER_ENCRYPTED, "true");
   }
 
+  @Ignore
   @Test
   public void testListPathWithCPK() throws Exception {
     testListPath(true);
   }
 
+  @Ignore
   @Test
   public void testListPathWithoutCPK() throws Exception {
     testListPath(false);
@@ -277,6 +313,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
     //  assert cpk headers are not added
     assertCPKHeaders(abfsRestOperation, false);
+    assertNoCPKResponseHeadersPresent(abfsRestOperation);
 
     FileStatus[] listStatuses = fs.listStatus(testPath);
     Assertions.assertThat(listStatuses.length)
@@ -287,11 +324,13 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .describedAs("listStatuses should have 2 entries").isEqualTo(2);
   }
 
+  @Ignore
   @Test
   public void testGetFileSystemPropertiesWithCPK() throws Exception {
     testGetFileSystemProperties(true);
   }
 
+  @Ignore
   @Test
   public void testGetFileSystemPropertiesWithoutCPK() throws Exception {
     testGetFileSystemProperties(false);
@@ -307,13 +346,16 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
     //  assert cpk headers are not added
     assertCPKHeaders(abfsRestOperation, false);
+    assertNoCPKResponseHeadersPresent(abfsRestOperation);
   }
 
+  @Ignore
   @Test
   public void testDeleteFileSystemWithCPK() throws Exception {
     testDeleteFileSystem(true);
   }
 
+  @Ignore
   @Test
   public void testDeleteFileSystemWithoutCPK() throws Exception {
     testDeleteFileSystem(false);
@@ -326,13 +368,16 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient.deleteFilesystem();
     assertCPKHeaders(abfsRestOperation, false);
+    assertNoCPKResponseHeadersPresent(abfsRestOperation);
   }
 
+  @Ignore
   @Test
   public void testCreatePathWithCPK() throws Exception {
     testCreatePath(true);
   }
 
+  @Ignore
   @Test
   public void testCreatePathWithoutCPK() throws Exception {
     testCreatePath(false);
@@ -353,6 +398,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
             isNamespaceEnabled ? getOctalNotation(permission) : null,
             isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
+    assertResponseHeaders(abfsRestOperation, isWithCPK,
+        X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
+    assertResponseHeaders(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
+    assertResponseHeaders(abfsRestOperation, true,
+        X_MS_REQUEST_SERVER_ENCRYPTED, "true");
 
     FileStatus[] listStatuses = fs.listStatus(new Path(testFileName));
     Assertions.assertThat(listStatuses.length)
@@ -363,11 +413,13 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .describedAs("listStatuses should have 1 entry").isEqualTo(1);
   }
 
+  @Ignore
   @Test
   public void testRenamePathWithCPK() throws Exception {
     testRenamePath(true);
   }
 
+  @Ignore
   @Test
   public void testRenamePathWithoutCPK() throws Exception {
     testRenamePath(false);
@@ -388,6 +440,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .renamePath(testFileName, newName, null);
     assertCPKHeaders(abfsRestOperation, false);
+    assertNoCPKResponseHeadersPresent(abfsRestOperation);
 
     Assertions.assertThatThrownBy(() -> fs.listStatus(testPath))
         .isInstanceOf(FileNotFoundException.class);
@@ -397,11 +450,13 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .describedAs("listStatuses should have 1 entry").isEqualTo(1);
   }
 
+  @Ignore
   @Test
   public void testFlushWithCPK() throws Exception {
     testFlush(true);
   }
 
+  @Ignore
   @Test
   public void testFlushWithoutCPK() throws Exception {
     testFlush(false);
@@ -415,13 +470,20 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .flush(testFileName, 0, false, false, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
+    assertResponseHeaders(abfsRestOperation, isWithCPK,
+        X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
+    assertResponseHeaders(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
+    assertResponseHeaders(abfsRestOperation, true,
+        X_MS_REQUEST_SERVER_ENCRYPTED, isWithCPK + "");
   }
 
+  @Ignore
   @Test
   public void testSetPathPropertiesWithCPK() throws Exception {
     testSetPathProperties(true);
   }
 
+  @Ignore
   @Test
   public void testSetPathPropertiesWithoutCPK() throws Exception {
     testSetPathProperties(false);
@@ -438,13 +500,20 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .setPathProperties(testFileName,
             convertXmsPropertiesToCommaSeparatedString(properties));
     assertCPKHeaders(abfsRestOperation, isWithCPK);
+    assertResponseHeaders(abfsRestOperation, isWithCPK,
+        X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
+    assertResponseHeaders(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
+    assertResponseHeaders(abfsRestOperation, true,
+        X_MS_REQUEST_SERVER_ENCRYPTED, "true");
   }
 
+  @Ignore
   @Test
   public void testGetPathStatusWithCPK() throws Exception {
     testGetPathStatus(true);
   }
 
+  @Ignore
   @Test
   public void testGetPathStatusWithoutCPK() throws Exception {
     testGetPathStatus(false);
@@ -462,6 +531,12 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .getPathStatus(testFileName, false);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
+    assertResponseHeaders(abfsRestOperation, false, X_MS_ENCRYPTION_KEY_SHA256,
+        "");
+    assertResponseHeaders(abfsRestOperation, true, X_MS_SERVER_ENCRYPTED,
+        "true");
+    assertResponseHeaders(abfsRestOperation, false,
+        X_MS_REQUEST_SERVER_ENCRYPTED, "");
 
     FileStatus[] listStatuses = fs.listStatus(testPath);
     Assertions.assertThat(listStatuses.length)
@@ -472,11 +547,13 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .describedAs("listStatuses should have 2 entries").isEqualTo(2);
   }
 
+  @Ignore
   @Test
   public void testReadWithCPK() throws Exception {
     testRead(true);
   }
 
+  @Ignore
   @Test
   public void testReadWithoutCPK() throws Exception {
     testRead(false);
@@ -497,13 +574,21 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .read(testFileName, 0, buffer, 0, length, eTag, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
+    assertResponseHeaders(abfsRestOperation, isWithCPK,
+        X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
+    assertResponseHeaders(abfsRestOperation, true, X_MS_SERVER_ENCRYPTED,
+        "true");
+    assertResponseHeaders(abfsRestOperation, false,
+        X_MS_REQUEST_SERVER_ENCRYPTED, "");
   }
 
+  @Ignore
   @Test
   public void testDeletePathWithCPK() throws Exception {
     testDeletePathWithoutCPK(false);
   }
 
+  @Ignore
   @Test
   public void testDeletePathWithoutCPK() throws Exception {
     testDeletePathWithoutCPK(false);
@@ -524,16 +609,19 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .deletePath(testFileName, false, null);
     assertCPKHeaders(abfsRestOperation, false);
+    assertNoCPKResponseHeadersPresent(abfsRestOperation);
 
     Assertions.assertThatThrownBy(() -> fs.listStatus(testPath))
         .isInstanceOf(FileNotFoundException.class);
   }
 
+  @Ignore
   @Test
   public void testSetPermissionWithCPK() throws Exception {
     testSetPermission(true);
   }
 
+  @Ignore
   @Test
   public void testSetPermissionWithoutCPK() throws Exception {
     testSetPermission(false);
@@ -550,13 +638,16 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .setPermission(testFileName, permission.toString());
     assertCPKHeaders(abfsRestOperation, false);
+    assertNoCPKResponseHeadersPresent(abfsRestOperation);
   }
 
+  @Ignore
   @Test
   public void testSetAclWithCPK() throws Exception {
     testSetAcl(true);
   }
 
+  @Ignore
   @Test
   public void testSetAclWithoutCPK() throws Exception {
     testSetAcl(false);
@@ -576,13 +667,16 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .setAcl(testFileName, AbfsAclHelper.serializeAclSpec(aclEntries));
     assertCPKHeaders(abfsRestOperation, false);
+    assertNoCPKResponseHeadersPresent(abfsRestOperation);
   }
 
+  @Ignore
   @Test
   public void testGetAclWithCPK() throws Exception {
     testGetAcl(true);
   }
 
+  @Ignore
   @Test
   public void testGetAclWithoutCPK() throws Exception {
     testGetAcl(false);
@@ -596,13 +690,16 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient.getAclStatus(testFileName);
     assertCPKHeaders(abfsRestOperation, false);
+    assertNoCPKResponseHeadersPresent(abfsRestOperation);
   }
 
+  @Ignore
   @Test
   public void testCheckAccessWithCPK() throws Exception {
     testCheckAccess(true);
   }
 
+  @Ignore
   @Test
   public void testCheckAccessWithoutCPK() throws Exception {
     testCheckAccess(false);
@@ -623,6 +720,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .checkAccess(testFileName, "rwx");
     assertCPKHeaders(abfsRestOperation, false);
+    assertNoCPKResponseHeadersPresent(abfsRestOperation);
   }
 
   private void assertCPKHeaders(AbfsRestOperation abfsRestOperation,
@@ -634,6 +732,34 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         isCPKHeaderExpected);
   }
 
+  private void assertNoCPKResponseHeadersPresent(
+      AbfsRestOperation abfsRestOperation) {
+    assertResponseHeaders(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
+    assertResponseHeaders(abfsRestOperation, false,
+        X_MS_REQUEST_SERVER_ENCRYPTED, "");
+    assertResponseHeaders(abfsRestOperation, false, X_MS_ENCRYPTION_KEY_SHA256,
+        "");
+  }
+
+  private void assertResponseHeaders(AbfsRestOperation abfsRestOperation,
+      boolean isHeaderExpected, String headerName, String expectedValue) {
+    boolean isHeaderFound = false;
+    String key, val = null;
+    for (AbfsHttpHeader respHeader : abfsRestOperation.getResponseHeaders()) {
+      key = respHeader.getName();
+      val = respHeader.getValue();
+      if (key.equals(headerName)) {
+        isHeaderFound = true;
+        break;
+      }
+    }
+    Assertions.assertThat(isHeaderFound).isEqualTo(isHeaderExpected);
+    if (!isHeaderExpected) {
+      return;
+    }
+    Assertions.assertThat(val).isEqualTo(expectedValue);
+  }
+
   private void assertHeader(AbfsRestOperation abfsRestOperation,
       String headerName, boolean isCPKHeaderExpected) {
     assertTrue(abfsRestOperation != null);
@@ -642,12 +768,38 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
             .equalsIgnoreCase(headerName)).findFirst();
     String desc;
     if (isCPKHeaderExpected) {
-      desc = "CPK header is expected, but the same is absent.";
+      desc =
+          "CPK header " + headerName + " is expected, but the same is absent.";
     } else {
-      desc = "CPK header is not expected, but the same is present.";
+      desc = "CPK header " + headerName
+          + " is not expected, but the same is present.";
     }
     Assertions.assertThat(header.isPresent()).describedAs(desc)
         .isEqualTo(isCPKHeaderExpected);
+  }
+
+  private byte[] getSHA256Hash(String key) throws IOException {
+    try {
+      final MessageDigest digester = MessageDigest.getInstance("SHA-256");
+      return digester.digest(key.getBytes(StandardCharsets.UTF_8));
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private String getCPKSha(final AzureBlobFileSystem abfs) throws IOException {
+    Configuration conf = abfs.getConf();
+    String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    String encryptionKey = conf
+        .get(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+    if (encryptionKey == null || encryptionKey.isEmpty()) {
+      return "";
+    }
+    return getBase64EncodedString(getSHA256Hash(encryptionKey));
+  }
+
+  private String getBase64EncodedString(byte[] bytes) {
+    return java.util.Base64.getEncoder().encodeToString(bytes);
   }
 
   private Path createFileWithContent(FileSystem fs, String fileName,

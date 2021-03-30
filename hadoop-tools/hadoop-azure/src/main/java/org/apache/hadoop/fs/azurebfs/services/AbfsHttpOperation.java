@@ -75,6 +75,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private String requestId  = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
+  private List<AbfsHttpHeader> responseHeaders;
 
   // metrics
   private int bytesSent;
@@ -339,9 +340,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
     }
+    responseHeaders = AbfsIoUtils.getResponseHeaders(connection);
     // dump the headers
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
-        connection.getHeaderFields());
+        responseHeaders);
 
     if (AbfsHttpConstants.HTTP_METHOD_HEAD.equals(this.method)) {
       // If it is HEAD, and it is ERROR
@@ -556,6 +558,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       this.maskedEncodedUrl = encodedUrlStr(getSignatureMaskedUrl());
     }
     return this.maskedEncodedUrl;
+  }
+
+  public List<AbfsHttpHeader> getResponseHeaders() {
+    return this.responseHeaders;
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
