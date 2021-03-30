@@ -100,13 +100,19 @@ static void SetRequestHeader(std::weak_ptr<LockFreeRpcEngine> weak_engine, int c
     return;
   }
 
+  const auto& client_id = counted_engine->client_id();
+  if (client_id == nullptr) {
+    LOG_ERROR(kRPC, << "Failed to generate client ID");
+    return;
+  }
+
   rpc_header->set_rpckind(RPC_PROTOCOL_BUFFER);
   rpc_header->set_rpcop(RpcRequestHeaderProto::RPC_FINAL_PACKET);
   rpc_header->set_callid(call_id);
   if (retry_count != kNoRetry) {
     rpc_header->set_retrycount(retry_count);
   }
-  rpc_header->set_clientid(counted_engine->client_id());
+  rpc_header->set_clientid(*client_id);
   req_header->set_methodname(method_name);
   req_header->set_declaringclassprotocolname(counted_engine->protocol_name());
   req_header->set_clientprotocolversion(counted_engine->protocol_version());
