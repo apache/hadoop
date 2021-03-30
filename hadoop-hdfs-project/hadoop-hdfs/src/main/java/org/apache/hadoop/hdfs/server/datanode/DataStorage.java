@@ -1117,7 +1117,7 @@ public class DataStorage extends Storage {
 
     final ArrayList<LinkArgs> idBasedLayoutSingleLinks = Lists.newArrayList();
     final Map<File, File> pathCache = new HashMap<>();
-    linkBlocksHelper(from, to, oldLV, hl, upgradeToIdBasedLayout, to,
+    linkBlocksHelper(from, to, hl, upgradeToIdBasedLayout, to,
         idBasedLayoutSingleLinks, pathCache);
 
     // Detect and remove duplicate entries.
@@ -1320,10 +1320,10 @@ public class DataStorage extends Storage {
     }
   }
 
-  static void linkBlocksHelper(File from, File to, int oldLV, HardLink hl,
-  boolean upgradeToIdBasedLayout, File blockRoot,
-      List<LinkArgs> idBasedLayoutSingleLinks,
-      Map<File, File> pathCache) throws IOException {
+  static void linkBlocksHelper(File from, File to, HardLink hl,
+      boolean upgradeToIdBasedLayout, File blockRoot,
+      List<LinkArgs> idBasedLayoutSingleLinks, Map<File, File> pathCache)
+      throws IOException {
     if (!from.exists()) {
       return;
     }
@@ -1397,7 +1397,7 @@ public class DataStorage extends Storage {
     if (otherNames != null) {
       for (int i = 0; i < otherNames.length; i++) {
         linkBlocksHelper(new File(from, otherNames[i]),
-            new File(to, otherNames[i]), oldLV, hl, upgradeToIdBasedLayout,
+            new File(to, otherNames[i]), hl, upgradeToIdBasedLayout,
             blockRoot, idBasedLayoutSingleLinks, pathCache);
       }
     }
