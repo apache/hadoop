@@ -1089,7 +1089,9 @@ public class DFSInputStream extends FSInputStream
     final String dnAddr =
         chosenNode.getXferAddr(dfsClient.getConf().isConnectToDnViaHostname());
     DFSClient.LOG.debug("Connecting to datanode {}", dnAddr);
-    InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr);
+    boolean uriCacheEnabled = dfsClient.getConf().isUriCacheEnabled();
+    InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr,
+        -1, null, uriCacheEnabled);
     return new DNAddrPair(chosenNode, targetAddr, storageType, block);
   }
 

@@ -410,6 +410,9 @@ public interface HdfsClientConfigKeys {
 
     String  PREFETCH_SIZE_KEY = PREFIX + "prefetch.size";
 
+    String URI_CACHE_KEY = PREFIX + "uri.cache.enabled";
+    boolean URI_CACHE_DEFAULT = false;
+
     interface ShortCircuit {
       String PREFIX = Read.PREFIX + "shortcircuit.";
 
