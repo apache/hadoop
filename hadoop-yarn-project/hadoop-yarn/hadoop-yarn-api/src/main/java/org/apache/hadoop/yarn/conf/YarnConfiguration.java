@@ -120,6 +120,8 @@ public class YarnConfiguration extends Configuration {
             CommonConfigurationKeys.ZK_TIMEOUT_MS),
         new DeprecationDelta(RM_ZK_RETRY_INTERVAL_MS,
             CommonConfigurationKeys.ZK_RETRY_INTERVAL_MS),
+        new DeprecationDelta(HADOOP_HTTP_WEBAPP_SCHEDULER_PAGE,
+            YARN_HTTP_WEBAPP_SCHEDULER_PAGE)
     });
     Configuration.addDeprecations(new DeprecationDelta[] {
         new DeprecationDelta("yarn.resourcemanager.display.per-user-apps",
@@ -2486,6 +2488,14 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_HTTP_WEBAPP_EXTERNAL_CLASSES =
       "yarn.http.rmwebapp.external.classes";
+
+  /**
+   * @deprecated This field is deprecated for
+   * {@link #YARN_HTTP_WEBAPP_SCHEDULER_PAGE}
+   */
+  @Deprecated
+  public static final String HADOOP_HTTP_WEBAPP_SCHEDULER_PAGE =
+      "hadoop.http.rmwebapp.scheduler.page.class";
 
   public static final String YARN_HTTP_WEBAPP_SCHEDULER_PAGE =
       "yarn.http.rmwebapp.scheduler.page.class";
