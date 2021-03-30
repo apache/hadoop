@@ -833,6 +833,11 @@ public class Component implements EventHandler<ComponentEvent> {
                 targetExpressions.toArray(new TargetExpression[0])).build();
             break;
           }
+          if (constraint == null) {
+            LOG.info("[COMPONENT {}] Placement constraint: null ",
+                componentSpec.getName());
+            continue;
+          }
           // The default AND-ed final composite constraint
           if (finalConstraint != null) {
             finalConstraint = PlacementConstraints
