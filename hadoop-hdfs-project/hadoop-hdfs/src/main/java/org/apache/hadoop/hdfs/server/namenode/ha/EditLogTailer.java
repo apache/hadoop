@@ -86,6 +86,7 @@ public class EditLogTailer {
       Long.MAX_VALUE;
 
   private final EditLogTailerThread tailerThread;
+  private final EditLogRollThread rollThread;
   
   private final Configuration conf;
   private final FSNamesystem namesystem;
@@ -174,6 +175,7 @@ public class EditLogTailer {
 
   public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
     this.tailerThread = new EditLogTailerThread();
+    this.rollThread = new EditLogRollThread();
     this.conf = conf;
     this.namesystem = namesystem;
     this.editLog = namesystem.getEditLog();
@@ -263,15 +265,25 @@ public class EditLogTailer {
 
   public void start() {
     tailerThread.start();
+    rollThread.start();
   }
   
   public void stop() throws IOException {
     tailerThread.setShouldRun(false);
+    rollThread.setShouldRun(false);
     tailerThread.interrupt();
+    rollThread.interrupt();
     try {
       tailerThread.join();
     } catch (InterruptedException e) {
       LOG.warn("Edit log tailer thread exited with an exception");
+      throw new IOException(e);
+    }
+
+    try {
+      rollThread.join();
+    } catch (InterruptedException e) {
+      LOG.warn("Edit log roll thread exited with an exception");
       throw new IOException(e);
     } finally {
       rollEditsRpcExecutor.shutdown();
@@ -292,6 +304,9 @@ public class EditLogTailer {
     Preconditions.checkState(tailerThread == null ||
         !tailerThread.isAlive(),
         "Tailer thread should not be running once failover starts");
+    Preconditions.checkState(rollThread == null ||
+                    !rollThread.isAlive(),
+            "Roll thread should not be running once failover starts");
     // Important to do tailing as the login user, in case the shared
     // edits storage is implemented by a JournalManager that depends
     // on security credentials to access the logs (eg QuorumJournalManager).
@@ -319,7 +334,7 @@ public class EditLogTailer {
       }
     });
   }
-  
+
   @VisibleForTesting
   public long doTailEdits() throws IOException, InterruptedException {
     // Write lock needs to be interruptible here because the 
@@ -444,8 +459,50 @@ public class EditLogTailer {
   }
 
   /**
-   * The thread which does the actual work of tailing edits journals and
-   * applying the transactions to the FSNS.
+   * The thread which does the actual work of applying the
+   * transactions to the FSNS.
+   */
+  private class EditLogRollThread extends Thread {
+
+    private volatile boolean shouldRun = true;
+
+    private EditLogRollThread() {
+      super("Edit log roll");
+    }
+
+    private void setShouldRun(boolean shouldRun) {
+      this.shouldRun = shouldRun;
+    }
+
+    @Override
+    public void run() {
+      while (shouldRun) {
+        boolean triggeredLogRoll = false;
+        if (tooLongSinceLastLoad() && lastRollTriggerTxId < lastLoadedTxnId) {
+          triggerActiveLogRoll();
+          triggeredLogRoll = true;
+        }
+
+        //Update NameDirSize Metric
+        if (triggeredLogRoll) {
+          namesystem.getFSImage().getStorage().updateNameDirSize();
+        }
+
+        if (!shouldRun) {
+          break;
+        }
+
+        try {
+          Thread.sleep(sleepTimeMs);
+        } catch (InterruptedException e) {
+          LOG.warn("Edit log roll interrupted: {}", e.getMessage());
+        }
+      }
+    }
+  }
+
+  /**
+   * The thread which does the actual work of tailing edits journals.
    */
   private class EditLogTailerThread extends Thread {
     private volatile boolean shouldRun = true;
@@ -475,15 +532,6 @@ public class EditLogTailer {
       while (shouldRun) {
         long editsTailed  = 0;
         try {
-          // There's no point in triggering a log roll if the Standby hasn't
-          // read any more transactions since the last time a roll was
-          // triggered.
-          boolean triggeredLogRoll = false;
-          if (tooLongSinceLastLoad() &&
-              lastRollTriggerTxId < lastLoadedTxnId) {
-            triggerActiveLogRoll();
-            triggeredLogRoll = true;
-          }
           /**
            * Check again in case someone calls {@link EditLogTailer#stop} while
            * we're triggering an edit log roll, since ipc.Client catches and
@@ -507,10 +555,6 @@ public class EditLogTailer {
             NameNode.getNameNodeMetrics().addEditLogTailTime(
                 Time.monotonicNow() - startTime);
           }
-          //Update NameDirSize Metric
-          if (triggeredLogRoll) {
-            namesystem.getFSImage().getStorage().updateNameDirSize();
-          }
         } catch (EditLogInputException elie) {
           LOG.warn("Error while reading edits from disk. Will try again.", elie);
         } catch (InterruptedException ie) {
@@ -533,7 +577,7 @@ public class EditLogTailer {
           } else {
             currentSleepTimeMs = sleepTimeMs; // reset to initial sleep time
           }
-          EditLogTailer.this.sleep(currentSleepTimeMs);
+          Thread.sleep(currentSleepTimeMs);
         } catch (InterruptedException e) {
           LOG.warn("Edit log tailer interrupted: {}", e.getMessage());
         }
