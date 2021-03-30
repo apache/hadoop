@@ -2322,6 +2322,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
+    assert(r != null);
     return r.getResult();
   }
 
