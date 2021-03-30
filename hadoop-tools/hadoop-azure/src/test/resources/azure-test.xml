@@ -62,29 +62,12 @@
       IT IN PATCHES OR COMMITS. -->
   <!--=============================================================-->
 
-
-  <include xmlns="http://www.w3.org/2001/XInclude"
-           href="/home/bith/Desktop/abfs-acc-confs/12h.xml">
-    <fallback />
-  </include>
-
-
-  <!--
-
-    <include xmlns="http://www.w3.org/2001/XInclude"
-             href="/home/bith/Desktop/abfs-acc-confs/devfab.xml">
-      <fallback />
-    </include>
-  -->
-
-  <!--
-  <include xmlns="http://www.w3.org/2001/XInclude" href="/home/bith/Desktop/abfs-acc-confs/azure-auth-keys.xml">
+  <include xmlns="http://www.w3.org/2001/XInclude" href="azure-auth-keys.xml">
     <fallback />
   </include>
 
   <include xmlns="http://www.w3.org/2001/XInclude" href="abfs-combination-test-configs.xml">
     <fallback />
   </include>
--->
 
 </configuration>
