@@ -557,7 +557,13 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
 
     // Write the definition first and then submit - AM will read the definition
     ServiceApiUtil.createDirAndPersistApp(fs, appDir, service);
-    ApplicationId appId = submitApp(service);
+    ApplicationId appId;
+    try {
+      appId = submitApp(service);
+    } catch(YarnException e){
+      actionDestroy(serviceName);
+      throw e;
+    }
     cachedAppInfo.put(serviceName, new AppInfo(appId, service
         .getKerberosPrincipal().getPrincipalName()));
     service.setId(appId.toString());
@@ -1362,7 +1368,13 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       ServiceApiUtil.validateAndResolveService(service, fs, getConfig());
       // see if it is actually running and bail out;
       verifyNoLiveAppInRM(serviceName, "start");
-      ApplicationId appId = submitApp(service);
+      ApplicationId appId;
+      try {
+        appId = submitApp(service);
+      } catch (YarnException e) {
+        actionDestroy(serviceName);
+        throw e;
+      }
       cachedAppInfo.put(serviceName, new AppInfo(appId, service
           .getKerberosPrincipal().getPrincipalName()));
       service.setId(appId.toString());
