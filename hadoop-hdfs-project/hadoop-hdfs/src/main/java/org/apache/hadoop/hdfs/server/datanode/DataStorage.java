@@ -1176,11 +1176,9 @@ public class DataStorage extends Storage {
        */
       @Override
       public int compare(LinkArgs a, LinkArgs b) {
-        File asrc = a.src();
-        File bsrc = b.src();
         return ComparisonChain.start().
-            compare(asrc.getName(), bsrc.getName()).
-            compare(asrc, bsrc).
+            compare(a.blockFile(), b.blockFile()).
+            compare(a.src(), b.src()).
             compare(a.dst(), b.dst()).
             result();
       }
