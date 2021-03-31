@@ -564,6 +564,9 @@ public class TestKMS {
             Thread.sleep(1000);
           }
           Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
+          reloaderThreads =
+              ThreadUtils.findThreadsByName(SSL_RELOADER_THREAD_NAME);
+          assertEquals(1, reloaderThreads.size());
         }
 
         if (kerberos) {
