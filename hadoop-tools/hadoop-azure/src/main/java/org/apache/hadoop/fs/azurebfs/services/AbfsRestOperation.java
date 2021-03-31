@@ -288,7 +288,9 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
-      this.responseHeaders = httpOperation.getResponseHeaders();
+      if (httpOperation != null) {
+        this.responseHeaders = httpOperation.getResponseHeaders();
+      }
       AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 

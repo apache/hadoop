@@ -72,7 +72,7 @@ public final class AbfsIoUtils {
 
   public static void dumpHeadersToDebugLog(final String origin,
       final List<AbfsHttpHeader> headers) {
-    if (headers == null | headers.size() < 1) {
+    if (headers == null || headers.size() < 1) {
       return;
     }
     LOG.debug("{}", origin);
