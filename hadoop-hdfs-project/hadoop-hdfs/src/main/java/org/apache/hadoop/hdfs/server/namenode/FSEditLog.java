@@ -1181,7 +1181,8 @@ public class FSEditLog implements LogsPurgeable {
 
   /**
    * Log a CacheDirectiveInfo returned from
-   * {@link CacheManager#addDirective(CacheDirectiveInfo, FSPermissionChecker, EnumSet)}
+   * {@link CacheManager#addDirective(CacheDirectiveInfo, FSPermissionChecker,
+   * EnumSet)}
    */
   void logAddCacheDirectiveInfo(CacheDirectiveInfo directive,
       boolean toLogRpcIds) {
