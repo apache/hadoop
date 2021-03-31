@@ -1559,6 +1559,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
 
+    QueueMetrics qm1 = rm1.getResourceScheduler().getRootQueueMetrics();
+    assertUnmanagedAMQueueMetrics(qm1, 0, 0, 0, 0);
     // create app and launch the UAM
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
@@ -1567,6 +1569,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     RMApp app0 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am0 = MockRM.launchUAM(app0, rm1, nm1);
     am0.registerAppAttempt();
+    assertUnmanagedAMQueueMetrics(qm1, 1, 1, 0, 0);
 
     // Allocate containers to UAM
     int numContainers = 2;
@@ -1581,17 +1584,19 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
           new ArrayList<ContainerId>()).getAllocatedContainers());
       Thread.sleep(100);
     }
+    assertUnmanagedAMQueueMetrics(qm1, 1, 0, 1, 0);
 
     // start new RM
     rm2 = new MockRM(conf, memStore);
     rm2.start();
     MockMemoryRMStateStore memStore2 =
         (MockMemoryRMStateStore) rm2.getRMStateStore();
+    QueueMetrics qm2 = rm2.getResourceScheduler().getRootQueueMetrics();
     rm2.waitForState(app0.getApplicationId(), RMAppState.ACCEPTED);
     rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.LAUNCHED);
-
     // recover app
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    assertUnmanagedAMQueueMetrics(qm2, 1, 1, 0, 0);
     RMApp recoveredApp =
         rm2.getRMContext().getRMApps().get(app0.getApplicationId());
     NMContainerStatus container1 = TestRMRestart
@@ -1601,13 +1606,13 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         .createNMContainerStatus(am0.getApplicationAttemptId(), 2,
             ContainerState.RUNNING);
     nm1.registerNode(Arrays.asList(container1, container2), null);
-
     // Wait for RM to settle down on recovering containers;
     waitForNumContainersToRecover(2, rm2, am0.getApplicationAttemptId());
 
     // retry registerApplicationMaster() after RM restart.
     am0.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
     am0.registerAppAttempt(true);
+    assertUnmanagedAMQueueMetrics(qm2, 1, 0, 1, 0);
 
     // Check if UAM is correctly recovered on restart
     rm2.waitForState(app0.getApplicationId(), RMAppState.RUNNING);
@@ -1626,6 +1631,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
     // Check if UAM is able to heart beat
     Assert.assertNotNull(am0.doHeartbeat());
+    assertUnmanagedAMQueueMetrics(qm2, 1, 0, 1, 0);
 
     // Complete the UAM
     am0.unregisterAppAttempt(false);
@@ -1633,14 +1639,25 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     rm2.waitForState(app0.getApplicationId(), RMAppState.FINISHED);
     Assert.assertEquals(FinalApplicationStatus.SUCCEEDED,
         recoveredApp.getFinalApplicationStatus());
+    assertUnmanagedAMQueueMetrics(qm2, 1, 0, 0, 1);
 
     // Restart RM once more to check UAM is not re-run
     MockRM rm3 = new MockRM(conf, memStore2);
     rm3.start();
     recoveredApp = rm3.getRMContext().getRMApps().get(app0.getApplicationId());
+    QueueMetrics qm3 = rm3.getResourceScheduler().getRootQueueMetrics();
     Assert.assertEquals(RMAppState.FINISHED, recoveredApp.getState());
-
+    assertUnmanagedAMQueueMetrics(qm2, 1, 0, 0, 1);
   }
+
+  private void assertUnmanagedAMQueueMetrics(QueueMetrics qm, int appsSubmitted,
+      int appsPending, int appsRunning, int appsCompleted) {
+    Assert.assertEquals(appsSubmitted, qm.getUnmanagedAppsSubmitted());
+    Assert.assertEquals(appsPending, qm.getUnmanagedAppsPending());
+    Assert.assertEquals(appsRunning, qm.getUnmanagedAppsRunning());
+    Assert.assertEquals(appsCompleted, qm.getUnmanagedAppsCompleted());
+  }
+
 
   @Test(timeout = 30000)
   public void testUnknownUserOnRecovery() throws Exception {

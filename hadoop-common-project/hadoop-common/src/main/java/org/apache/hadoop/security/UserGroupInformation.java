@@ -1920,16 +1920,16 @@ public class UserGroupInformation {
   /**
    * Log current UGI and token information into specified log.
    * @param ugi - UGI
-   * @throws IOException
    */
   @InterfaceAudience.LimitedPrivate({"HDFS", "KMS"})
   @InterfaceStability.Unstable
   public static void logUserInfo(Logger log, String caption,
-      UserGroupInformation ugi) throws IOException {
+      UserGroupInformation ugi) {
     if (log.isDebugEnabled()) {
       log.debug(caption + " UGI: " + ugi);
-      for (Token<?> token : ugi.getTokens()) {
-        log.debug("+token:" + token);
+      for (Map.Entry<Text, Token<? extends TokenIdentifier>> kv :
+          ugi.getCredentials().getTokenMap().entrySet()) {
+        log.debug("+token: {} -> {}", kv.getKey(), kv.getValue());
       }
     }
   }

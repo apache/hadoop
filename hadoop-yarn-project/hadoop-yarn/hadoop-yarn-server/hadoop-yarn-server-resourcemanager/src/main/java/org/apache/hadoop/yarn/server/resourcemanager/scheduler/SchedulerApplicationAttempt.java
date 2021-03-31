@@ -241,7 +241,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
     this.appSchedulingInfo = new AppSchedulingInfo(applicationAttemptId, user,
         queue, abstractUsersManager, rmContext.getEpoch(), attemptResourceUsage,
-        applicationSchedulingEnvs, rmContext);
+        applicationSchedulingEnvs, rmContext, unmanagedAM);
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -1138,7 +1138,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           .put(ResourceInformation.VCORES.getName(), 0L);
       float queueUsagePerc = 0.0f;
       float clusterUsagePerc = 0.0f;
-      if (!calc.isInvalidDivisor(cluster)) {
+      if (!calc.isAllInvalidDivisor(cluster)) {
         float queueCapacityPerc = queue.getQueueInfo(false, false)
             .getCapacity();
         queueUsagePerc = calc.divide(cluster, usedResourceClone,

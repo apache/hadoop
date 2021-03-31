@@ -92,7 +92,7 @@ public:
     hdfsFile file = hdfsOpenFile(*this, path.c_str(), O_WRONLY, 0, 0, 0);
     EXPECT_NE(nullptr, file);
     void * buf = malloc(size);
-    bzero(buf, size);
+    explicit_bzero(buf, size);
     EXPECT_EQ(1024, hdfsWrite(*this, file, buf, size));
     EXPECT_EQ(0, hdfsCloseFile(*this, file));
     free(buf);

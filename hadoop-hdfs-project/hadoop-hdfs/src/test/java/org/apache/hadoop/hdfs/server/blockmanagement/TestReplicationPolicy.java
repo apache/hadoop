@@ -1664,4 +1664,16 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     assertNotEquals(0,
         appender.countLinesWithMessage("NO_REQUIRED_STORAGE_TYPE"));
   }
+
+  @Test
+  public void testReduceChooseTimesIfNOStaleNode() {
+    for(int i = 0; i < 6; i++) {
+      updateHeartbeatWithUsage(dataNodes[i],
+          2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L,
+          (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE - 1) * BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0);
+    }
+    assertFalse(dnManager.shouldAvoidStaleDataNodesForWrite());
+    resetHeartbeatForStorages();
+  }
 }

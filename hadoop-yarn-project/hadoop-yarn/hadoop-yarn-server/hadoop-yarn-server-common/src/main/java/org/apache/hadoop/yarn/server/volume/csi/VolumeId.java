@@ -43,7 +43,7 @@ public class VolumeId {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof VolumeId)) {
+    if (!(obj instanceof VolumeId)) {
       return false;
     }
     return StringUtils.equalsIgnoreCase(volumeId,

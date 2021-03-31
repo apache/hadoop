@@ -67,6 +67,7 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -454,7 +455,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     instrumentation = context.getInstrumentation()
         .getS3GuardInstrumentation();
     username = context.getUsername();
-    executor = context.createThrottledExecutor();
+    executor = MoreExecutors.listeningDecorator(
+        context.createThrottledExecutor());
     ttlTimeProvider = Preconditions.checkNotNull(
         context.getTimeProvider(),
         "ttlTimeProvider must not be null");
@@ -509,13 +511,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // the executor capacity for work.
     int executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
-    executor = BlockingThreadPoolExecutorService.newInstance(
-        executorCapacity,
-        executorCapacity * 2,
-        longOption(conf, KEEPALIVE_TIME,
-            DEFAULT_KEEPALIVE_TIME, 0),
-        TimeUnit.SECONDS,
-        "s3a-ddb-" + tableName);
+    executor = MoreExecutors.listeningDecorator(
+        BlockingThreadPoolExecutorService.newInstance(
+            executorCapacity,
+            executorCapacity * 2,
+              longOption(conf, KEEPALIVE_TIME,
+                  DEFAULT_KEEPALIVE_TIME, 0),
+                  TimeUnit.SECONDS,
+                  "s3a-ddb-" + tableName));
     initDataAccessRetries(conf);
     this.ttlTimeProvider = ttlTp;
 

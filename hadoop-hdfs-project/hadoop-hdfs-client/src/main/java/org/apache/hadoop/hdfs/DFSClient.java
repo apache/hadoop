@@ -861,6 +861,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return dfsClientConf.getRefreshReadBlockLocationsMS();
   }
 
+  /**
+   * Get locations of the blocks of the specified file `src` from offset
+   * `start` within the prefetch size which is related to parameter
+   * `dfs.client.read.prefetch.size`. DataNode locations for each block are
+   * sorted by the proximity to the client. Please note that the prefetch size
+   * is not equal file length generally.
+   *
+   * @param src the file path.
+   * @param start starting offset.
+   * @return LocatedBlocks
+   * @throws IOException
+   */
   public LocatedBlocks getLocatedBlocks(String src, long start)
       throws IOException {
     return getLocatedBlocks(src, start, dfsClientConf.getPrefetchSize());

@@ -23,9 +23,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -127,7 +129,7 @@ public class StoreContext {
       final Configuration configuration,
       final String username,
       final UserGroupInformation owner,
-      final ListeningExecutorService executor,
+      final ExecutorService executor,
       final int executorCapacity,
       final Invoker invoker,
       final S3AStatisticsContext instrumentation,
@@ -144,7 +146,7 @@ public class StoreContext {
     this.configuration = configuration;
     this.username = username;
     this.owner = owner;
-    this.executor = executor;
+    this.executor = MoreExecutors.listeningDecorator(executor);
     this.executorCapacity = executorCapacity;
     this.invoker = invoker;
     this.instrumentation = instrumentation;
@@ -179,7 +181,7 @@ public class StoreContext {
     return username;
   }
 
-  public ListeningExecutorService getExecutor() {
+  public ExecutorService getExecutor() {
     return executor;
   }
 
@@ -310,7 +312,7 @@ public class StoreContext {
    * @param capacity maximum capacity of this executor.
    * @return an executor for submitting work.
    */
-  public ListeningExecutorService createThrottledExecutor(int capacity) {
+  public ExecutorService createThrottledExecutor(int capacity) {
     return new SemaphoredDelegatingExecutor(executor,
         capacity, true);
   }
@@ -320,7 +322,7 @@ public class StoreContext {
    * {@link #executorCapacity}.
    * @return a new executor for exclusive use by the caller.
    */
-  public ListeningExecutorService createThrottledExecutor() {
+  public ExecutorService createThrottledExecutor() {
     return createThrottledExecutor(executorCapacity);
   }
 

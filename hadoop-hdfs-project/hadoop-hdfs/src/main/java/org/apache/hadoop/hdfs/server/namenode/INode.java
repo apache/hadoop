@@ -850,7 +850,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     if (this == that) {
       return true;
     }
-    if (that == null || !(that instanceof INode)) {
+    if (!(that instanceof INode)) {
       return false;
     }
     return getId() == ((INode) that).getId();

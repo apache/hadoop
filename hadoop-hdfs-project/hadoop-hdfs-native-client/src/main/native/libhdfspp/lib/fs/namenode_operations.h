@@ -26,6 +26,8 @@
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
 
+#include <memory>
+#include <string>
 
 namespace hdfs {
 
@@ -43,7 +45,7 @@ class NameNodeOperations {
 public:
   MEMCHECKED_CLASS(NameNodeOperations)
   NameNodeOperations(std::shared_ptr<IoService> io_service, const Options &options,
-            const std::string &client_name, const std::string &user_name,
+            const std::shared_ptr<std::string> &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version) :
   io_service_(io_service),
   engine_(std::make_shared<RpcEngine>(io_service, options, client_name, user_name, protocol_name, protocol_version)),

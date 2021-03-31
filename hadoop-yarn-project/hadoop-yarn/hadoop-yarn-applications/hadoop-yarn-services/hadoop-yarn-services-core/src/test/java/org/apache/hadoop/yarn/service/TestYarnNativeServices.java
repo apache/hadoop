@@ -41,10 +41,12 @@ import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
 import org.apache.hadoop.yarn.service.api.records.PlacementPolicy;
 import org.apache.hadoop.yarn.service.api.records.PlacementScope;
 import org.apache.hadoop.yarn.service.api.records.PlacementType;
+import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
+import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.hamcrest.CoreMatchers;
@@ -981,5 +983,44 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     waitForServiceToBeStable(client, exampleApp);
     Assert.assertEquals(ServiceState.STABLE, client.getStatus(
         exampleApp.getName()).getState());
+  }
+
+  public Service createServiceWithSingleComp(int memory){
+    Service service = new Service();
+    service.setName("example-app");
+    service.setVersion("v1");
+    Component component = new Component();
+    component.setName("sleep");
+    component.setNumberOfContainers(1L);
+    component.setLaunchCommand("sleep 1000");
+    org.apache.hadoop.yarn.service.api.records.Resource resource = new Resource();
+    resource.setMemory(Integer.toString(memory));
+    resource.setCpus(1);
+    component.setResource(resource);
+    service.addComponent(component);
+    return service;
+  }
+
+  @Test(timeout = 200000)
+  public void testServiceSameNameWithFailure() throws Exception{
+    setupInternal(NUM_NMS);
+    ServiceClient client = createClient(getConf());
+    try {
+      client.actionCreate(createServiceWithSingleComp(1024000));
+      Assert.fail("Service should throw YarnException as memory is " +
+          "configured as 1000GB, which is more than allowed");
+    } catch (YarnException e) {
+      Assert.assertTrue(true);
+    }
+    Service service = createServiceWithSingleComp(128);
+    try {
+      client.actionCreate(service);
+    } catch (SliderException e){
+      Assert.fail("Not able to submit service as the files related to" +
+          " failed service with same name are not cleared");
+    }
+    waitForServiceToBeStable(client,service);
+    client.actionStop(service.getName(), true);
+    client.actionDestroy(service.getName());
   }
 }
