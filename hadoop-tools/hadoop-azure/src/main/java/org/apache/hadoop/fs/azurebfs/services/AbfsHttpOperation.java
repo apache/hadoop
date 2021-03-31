@@ -52,6 +52,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
   public static final String SIGNATURE_QUERY_PARAM_KEY = "sig=";
+  public static final String[] SAS_OID_PARAM_KEYS = {"skoid", "saoid", "suoid"};
 
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
@@ -547,6 +548,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   public String getSignatureMaskedUrl() {
     if (this.maskedUrl == null) {
       this.maskedUrl = getSignatureMaskedUrl(this.url.toString());
+      maskSASObjectIDs();
     }
     return this.maskedUrl;
   }
@@ -556,6 +558,24 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       this.maskedEncodedUrl = encodedUrlStr(getSignatureMaskedUrl());
     }
     return this.maskedEncodedUrl;
+  }
+
+  public void maskSASObjectIDs() {
+    int oidStartIdx, ampIdx, oidEndIndex, qpStrIdx;
+    for (String qpKey : SAS_OID_PARAM_KEYS) {
+      qpStrIdx = maskedUrl.indexOf('&' + qpKey);
+      if (qpStrIdx == -1) {
+        qpStrIdx = maskedUrl.indexOf('?' + qpKey);
+        if (qpStrIdx == -1) {
+          continue;
+        }
+      }
+      oidStartIdx = qpStrIdx + qpKey.length() + 1;
+      ampIdx = maskedUrl.indexOf("&", oidStartIdx);
+      oidEndIndex = (ampIdx != -1) ? ampIdx : maskedUrl.length();
+      maskedUrl = maskedUrl.substring(0, oidStartIdx + 5) + "XXXX" + maskedUrl
+          .substring(oidEndIndex);
+    }
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
