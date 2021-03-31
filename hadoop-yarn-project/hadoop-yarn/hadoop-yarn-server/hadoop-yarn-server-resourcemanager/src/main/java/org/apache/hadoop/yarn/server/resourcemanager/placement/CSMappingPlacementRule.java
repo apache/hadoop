@@ -132,11 +132,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
 
     if (groups == null) {
-      //We cannot use Groups#getUserToGroupsMappingService here, because when
-      //tests change the HADOOP_SECURITY_GROUP_MAPPING, Groups won't refresh its
-      //cached instance of groups, so we might get a Group instance which
-      //ignores the HADOOP_SECURITY_GROUP_MAPPING settings.
-      groups = new Groups(conf);
+      groups = Groups.getUserToGroupsMappingService(conf);
     }
 
     MappingRuleValidationContext validationContext = buildValidationContext();
