@@ -52,9 +52,9 @@ class FSDirConcatOp {
       String target, String[] srcs, boolean logRetryCache) throws IOException {
     validatePath(target, srcs);
     assert srcs != null;
-    if (FSDirectory.LOG.isDebugEnabled()) {
-      FSDirectory.LOG.debug("concat {} to {}", Arrays.toString(srcs), target);
-    }
+    NameNode.stateChangeLog.debug("DIR* NameSystem.concat: {} to {}",
+        Arrays.toString(srcs), target);
+
     final INodesInPath targetIIP = fsd.resolvePath(pc, target, DirOp.WRITE);
     // write permission for the target
     if (fsd.isPermissionEnabled()) {
@@ -65,11 +65,6 @@ class FSDirConcatOp {
     verifyTargetFile(fsd, target, targetIIP);
     // check the srcs
     INodeFile[] srcFiles = verifySrcFiles(fsd, srcs, targetIIP, pc);
-
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.concat: " +
-          Arrays.toString(srcs) + " to " + target);
-    }
 
     long timestamp = now();
     fsd.writeLock();
@@ -234,10 +229,8 @@ class FSDirConcatOp {
   static void unprotectedConcat(FSDirectory fsd, INodesInPath targetIIP,
       INodeFile[] srcList, long timestamp) throws IOException {
     assert fsd.hasWriteLock();
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "
-          + targetIIP.getPath());
-    }
+    NameNode.stateChangeLog.debug("DIR* NameSystem.concat to {}",
+        targetIIP.getPath());
 
     final INodeFile trgInode = targetIIP.getLastINode().asFile();
     QuotaCounts deltas = computeQuotaDeltas(fsd, trgInode, srcList);

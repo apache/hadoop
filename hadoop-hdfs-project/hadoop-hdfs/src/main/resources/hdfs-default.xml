@@ -2369,6 +2369,36 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block-placement-policy.exclude-slow-nodes.enabled</name>
+  <value>false</value>
+  <description>
+    If this is set to true, we will filter out slow nodes
+    when choosing targets for blocks.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.max.slowpeer.collect.nodes</name>
+  <value>5</value>
+  <description>
+    How many slow nodes we will collect for filtering out
+    when choosing targets for blocks.
+
+    It is ignored if dfs.namenode.block-placement-policy.exclude-slow-nodes.enabled is false.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.slowpeer.collect.interval</name>
+  <value>30m</value>
+  <description>
+    Interval at which the slow peer trackers runs in the background to collect slow peers.
+
+    It is ignored if dfs.namenode.block-placement-policy.exclude-slow-nodes.enabled is false.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.fileio.profiling.sampling.percentage</name>
   <value>0</value>
   <description>
@@ -3690,6 +3720,16 @@
     for EC and replicated blocks.
     The xmits of an erasure coding recovery task is calculated as the maximum
     value between the number of read streams and the number of write streams.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.ec.reconstruction.validation</name>
+  <value>false</value>
+  <description>
+    Decide if datanode validates that EC reconstruction tasks reconstruct
+    target blocks correctly. When validation fails, reconstruction tasks
+    will fail and be retried by namenode.
   </description>
 </property>
 
@@ -6149,6 +6189,14 @@
     <description>
         Balancer prefer moving cold blocks i.e blocks associated with files
         accessed or modified before the specified time interval.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.directoryscan.max.notify.count</name>
+    <value>5</value>
+    <description>
+      Defines the maximum number of blocks that the DirectoryScanner may notify
+      namenode right way for received or deleted blocks after one round.
     </description>
   </property>
 </configuration>

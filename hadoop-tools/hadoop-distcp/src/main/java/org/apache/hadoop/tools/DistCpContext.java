@@ -171,6 +171,10 @@ public class DistCpContext {
     return options.getBlocksPerChunk();
   }
 
+  public boolean shouldUseIterator() {
+    return options.shouldUseIterator();
+  }
+
   public final boolean splitLargeFile() {
     return options.getBlocksPerChunk() > 0;
   }

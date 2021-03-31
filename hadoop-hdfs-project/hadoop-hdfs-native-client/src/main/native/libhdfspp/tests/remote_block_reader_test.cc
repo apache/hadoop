@@ -27,8 +27,10 @@
 
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include <gmock/gmock-spec-builders.h>
+#include <gmock/gmock-generated-actions.h>
 #include <boost/system/error_code.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/io_service.hpp>
@@ -165,8 +167,10 @@ TEST(RemoteBlockReaderTest, TestReadSingleTrunk) {
   EXPECT_CALL(reader, AsyncReadPacket(_, _))
       .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
 
+  const auto client_name = GetRandomClientName();
+  ASSERT_NE(client_name, nullptr);
   reader.AsyncReadBlock(
-       GetRandomClientName(), block, 0, boost::asio::buffer(buf, sizeof(buf)),
+       *client_name, block, 0, boost::asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
@@ -192,8 +196,10 @@ TEST(RemoteBlockReaderTest, TestReadMultipleTrunk) {
       .Times(4)
       .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
 
+  const auto client_name = GetRandomClientName();
+  ASSERT_NE(client_name, nullptr);
   reader.AsyncReadBlock(
-       GetRandomClientName(), block, 0, boost::asio::buffer(buf, sizeof(buf)),
+       *client_name, block, 0, boost::asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
@@ -220,8 +226,10 @@ TEST(RemoteBlockReaderTest, TestReadError) {
       .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4))
       .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
 
+  const auto client_name = GetRandomClientName();
+  ASSERT_NE(client_name, nullptr);
   reader.AsyncReadBlock(
-       GetRandomClientName(), block, 0, boost::asio::buffer(buf, sizeof(buf)),
+       *client_name, block, 0, boost::asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;

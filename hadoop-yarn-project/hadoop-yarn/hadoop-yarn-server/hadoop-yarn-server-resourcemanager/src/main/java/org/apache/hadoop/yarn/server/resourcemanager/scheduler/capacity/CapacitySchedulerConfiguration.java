@@ -477,6 +477,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return maxApplicationsPerQueue;
   }
 
+  @VisibleForTesting
+  public void setMaximumApplicationsPerQueue(String queue,
+      int numMaxApps) {
+    setInt(getQueuePrefix(queue) + MAXIMUM_APPLICATIONS_SUFFIX,
+            numMaxApps);
+  }
+
   /**
    * Get the maximum am resource percent per queue setting.
    * @param queue name of the queue
@@ -775,7 +782,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (!configuredWeightAsCapacity(configureValue)) {
       return -1f;
     } else {
-      return Float.valueOf(
+      return Float.parseFloat(
           configureValue.substring(0, configureValue.indexOf(WEIGHT_SUFFIX)));
     }
   }
@@ -1963,7 +1970,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getQueuePrefix(queuePath).replaceAll("\\.", "\\\\.")
         + USER_SETTINGS + "\\.";
     String weightKeyRegex =
-        qPathPlusPrefix + "\\w+\\." + USER_WEIGHT;
+        qPathPlusPrefix + "\\S+\\." + USER_WEIGHT;
     Map<String, String> props = getValByRegex(weightKeyRegex);
     for (Entry<String, String> e : props.entrySet()) {
       String userName =

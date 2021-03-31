@@ -185,7 +185,7 @@
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.11.901</aws-java-sdk.version>
     <hsqldb.version>2.3.4</hsqldb.version>
-    <frontend-maven-plugin.version>1.6</frontend-maven-plugin.version>
+    <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
     <phantomjs-maven-plugin.version>0.7</phantomjs-maven-plugin.version>
     <yuicompressor-maven-plugin.version>1.5.1</yuicompressor-maven-plugin.version>
@@ -199,7 +199,7 @@
     <snakeyaml.version>1.26</snakeyaml.version>
     <hbase.one.version>1.4.8</hbase.one.version>
     <hbase.two.version>2.0.2</hbase.two.version>
-    <junit.version>4.12</junit.version>
+    <junit.version>4.13.1</junit.version>
     <junit.jupiter.version>5.5.1</junit.jupiter.version>
     <junit.vintage.version>5.5.1</junit.vintage.version>
     <junit.platform.version>1.5.1</junit.platform.version>

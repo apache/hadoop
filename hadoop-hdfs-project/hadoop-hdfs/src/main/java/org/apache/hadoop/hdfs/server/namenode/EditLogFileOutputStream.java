@@ -88,7 +88,12 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
     } else {
       rp = new RandomAccessFile(name, "rws");
     }
-    fp = new FileOutputStream(rp.getFD()); // open for append
+    try {
+      fp = new FileOutputStream(rp.getFD()); // open for append
+    } catch (IOException e) {
+      IOUtils.closeStream(rp);
+      throw e;
+    }
     fc = rp.getChannel();
     fc.position(fc.size());
   }
