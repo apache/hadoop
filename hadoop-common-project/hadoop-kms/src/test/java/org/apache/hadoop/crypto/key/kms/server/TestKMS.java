@@ -18,8 +18,6 @@
 package org.apache.hadoop.crypto.key.kms.server;
 
 import java.util.function.Supplier;
-
-import org.apache.commons.lang3.ThreadUtils;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
@@ -527,7 +525,6 @@ public class TestKMS {
     if (ssl) {
       sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
       try {
-        // the first reloader thread is created here
         sslFactory.init();
       } catch (GeneralSecurityException ex) {
         throw new IOException(ex);
@@ -544,29 +541,31 @@ public class TestKMS {
         final URI uri = createKMSUri(getKMSUrl());
 
         if (ssl) {
-          // the second reloader thread is created here
           KeyProvider testKp = createProvider(uri, conf);
-          Collection<Thread> reloaderThreads =
-              ThreadUtils.findThreadsByName(SSL_RELOADER_THREAD_NAME);
-          // now there are two active reloader threads
-          assertEquals(2, reloaderThreads.size());
-          // Explicitly close the provider so we can verify
-          // the second reloader thread is shutdown
+          ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
+          while (threadGroup.getParent() != null) {
+            threadGroup = threadGroup.getParent();
+          }
+          Thread[] threads = new Thread[threadGroup.activeCount()];
+          threadGroup.enumerate(threads);
+          Thread reloaderThread = null;
+          for (Thread thread : threads) {
+            if ((thread.getName() != null)
+                && (thread.getName().contains(SSL_RELOADER_THREAD_NAME))) {
+              reloaderThread = thread;
+            }
+          }
+          Assert.assertTrue("Reloader is not alive", reloaderThread.isAlive());
+          // Explicitly close the provider so we can verify the internal thread
+          // is shutdown
           testKp.close();
           boolean reloaderStillAlive = true;
           for (int i = 0; i < 10; i++) {
-            for (Thread thread : reloaderThreads) {
-              if (!thread.isAlive()) {
-                reloaderStillAlive = false;
-                break;
-              }
-            }
+            reloaderStillAlive = reloaderThread.isAlive();
+            if (!reloaderStillAlive) break;
             Thread.sleep(1000);
           }
           Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
-          reloaderThreads =
-              ThreadUtils.findThreadsByName(SSL_RELOADER_THREAD_NAME);
-          assertEquals(1, reloaderThreads.size());
         }
 
         if (kerberos) {
