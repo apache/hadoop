@@ -52,7 +52,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
   public static final String SIGNATURE_QUERY_PARAM_KEY = "sig=";
-  public static final String[] SAS_OID_PARAM_KEYS = {"skoid", "saoid", "suoid"};
+  private static final String[] SAS_OID_PARAM_KEYS = {"skoid", "saoid", "suoid"};
 
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
