@@ -370,6 +370,16 @@ public class TestSecurityUtil {
     verifyServiceAddr(staticHost, "255.255.255.255");
   }
 
+  @Test
+  public void testSocketAddrWithChangeIP() {
+    String staticHost = "host4";
+    NetUtils.addStaticResolution(staticHost, "255.255.255.255");
+    verifyServiceAddr(staticHost, "255.255.255.255");
+
+    NetUtils.addStaticResolution(staticHost, "255.255.255.254");
+    verifyServiceAddr(staticHost, "255.255.255.254");
+  }
+
   // this is a bizarre case, but it's if a test tries to remap an ip address
   @Test
   public void testSocketAddrWithIPToStaticIP() {

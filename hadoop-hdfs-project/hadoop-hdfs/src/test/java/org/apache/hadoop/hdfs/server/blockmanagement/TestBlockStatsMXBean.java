@@ -33,13 +33,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -217,5 +222,52 @@ public class TestBlockStatsMXBean {
 
     storageTypeStats = storageTypeStatsMap.get(StorageType.ARCHIVE);
     assertEquals(3, storageTypeStats.getNodesInService());
+  }
+
+  @Test
+  public void testStorageTypeLoad() throws Exception {
+    HeartbeatManager heartbeatManager =
+        cluster.getNamesystem().getBlockManager().getDatanodeManager()
+            .getHeartbeatManager();
+    Map<StorageType, StorageTypeStats> storageTypeStatsMap =
+        heartbeatManager.getStorageTypeStats();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+
+    // Create a file with HOT storage policy.
+    Path hotSpDir = new Path("/HOT");
+    dfs.mkdir(hotSpDir, FsPermission.getDirDefault());
+    dfs.setStoragePolicy(hotSpDir, "HOT");
+    FSDataOutputStream hotSpFileStream =
+        dfs.create(new Path(hotSpDir, "hotFile"));
+    hotSpFileStream.write("Storage Policy Hot".getBytes());
+    hotSpFileStream.hflush();
+
+    // Create a file with COLD storage policy.
+    Path coldSpDir = new Path("/COLD");
+    dfs.mkdir(coldSpDir, FsPermission.getDirDefault());
+    dfs.setStoragePolicy(coldSpDir, "COLD");
+    FSDataOutputStream coldSpFileStream =
+        dfs.create(new Path(coldSpDir, "coldFile"));
+    coldSpFileStream.write("Writing to ARCHIVE storage type".getBytes());
+    coldSpFileStream.hflush();
+
+    // Trigger heartbeats manually to speed up the test.
+    cluster.triggerHeartbeats();
+
+    // The load would be 2*replication since both the
+    // write xceiver & packet responder threads are counted.
+    GenericTestUtils.waitFor(() -> storageTypeStatsMap.get(StorageType.DISK)
+        .getNodesInServiceXceiverCount() == 6, 100, 5000);
+
+    // The count for ARCHIVE should be independent of the value of DISK.
+    GenericTestUtils.waitFor(() -> storageTypeStatsMap.get(StorageType.ARCHIVE)
+        .getNodesInServiceXceiverCount() == 6, 100, 5000);
+
+    // The total count should stay unaffected, that is sum of load from all
+    // datanodes.
+    GenericTestUtils
+        .waitFor(() -> heartbeatManager.getInServiceXceiverCount() == 12, 100,
+            5000);
+    IOUtils.closeStreams(hotSpFileStream, coldSpFileStream);
   }
 }

@@ -314,6 +314,17 @@
 </property>
 
   <property>
+    <name>dfs.namenode.redundancy.considerLoadByStorageType</name>
+    <value>false</value>
+    <description>
+      Decide if chooseTarget considers the target's load with respect to the
+      storage type. Typically to be used when datanodes contain homogenous
+      storage types. Irrelevent if dfs.namenode.redundancy.considerLoad is
+      false.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.redundancy.considerLoad.factor</name>
     <value>2.0</value>
     <description>The factor by which a node's load can exceed the average
@@ -1428,13 +1439,13 @@
 
 <property>
   <name>dfs.image.transfer.bandwidthPerSec</name>
-  <value>0</value>
+  <value>52428800</value>
   <description>
         Maximum bandwidth used for regular image transfers (instead of
         bootstrapping the standby namenode), in bytes per second.
         This can help keep normal namenode operations responsive during
         checkpointing.
-        A default value of 0 indicates that throttling is disabled.
+        A default value is 50mb per second.
         The maximum bandwidth used for bootstrapping standby namenode is
         configured with dfs.image.transfer-bootstrap-standby.bandwidthPerSec.
         Support multiple size unit suffix(case insensitive), as described
@@ -4170,6 +4181,15 @@
   <description>
     The number of bytes for the DFSClient will fetch from the Namenode
     during a read operation.  Defaults to 10 * ${dfs.blocksize}.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.read.uri.cache.enabled</name>
+  <value>false</value>
+  <description>
+    If true, dfs client will use cache when creating URI based on host:port
+    to reduce the frequency of URI object creation.
   </description>
 </property>
 

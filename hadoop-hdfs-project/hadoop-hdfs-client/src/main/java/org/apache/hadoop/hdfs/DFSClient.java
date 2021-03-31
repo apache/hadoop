@@ -1245,7 +1245,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Same as {@link #create(String, FsPermission, EnumSet, boolean, short, long,
-   * addition of Progressable, int, ChecksumOpt, InetSocketAddress[], String)}
+   * Progressable, int, ChecksumOpt, InetSocketAddress[], String)}
    * with the storagePolicy that is used to specify a specific storage policy
    * instead of inheriting any policy from this new file's parent directory.
    * This policy will be persisted in HDFS. A value of null means inheriting
