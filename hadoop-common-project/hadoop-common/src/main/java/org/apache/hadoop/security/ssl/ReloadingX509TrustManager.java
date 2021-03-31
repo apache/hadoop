@@ -32,8 +32,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
@@ -41,22 +39,30 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * A {@link TrustManager} implementation that exposes a method, {@link #loadFrom(Path)}
- * to reload its configuration for example when the truststore file on disk changes.
+ * A {@link TrustManager} implementation that reloads its configuration when
+ * the truststore file on disk changes.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public final class ReloadingX509TrustManager implements X509TrustManager {
+public final class ReloadingX509TrustManager
+  implements X509TrustManager, Runnable {
 
+  @VisibleForTesting
   static final Logger LOG =
       LoggerFactory.getLogger(ReloadingX509TrustManager.class);
-
+  @VisibleForTesting
   static final String RELOAD_ERROR_MESSAGE =
       "Could not load truststore (keep using existing one) : ";
 
   private String type;
+  private File file;
   private String password;
+  private long lastLoaded;
+  private long reloadInterval;
   private AtomicReference<X509TrustManager> trustManagerRef;
+
+  private volatile boolean running;
+  private Thread reloader;
 
   /**
    * Creates a reloadable trustmanager. The trustmanager reloads itself
@@ -65,18 +71,49 @@ public final class ReloadingX509TrustManager implements X509TrustManager {
    * @param type type of truststore file, typically 'jks'.
    * @param location local path to the truststore file.
    * @param password password of the truststore file.
+   * @param reloadInterval interval to check if the truststore file has
    * changed, in milliseconds.
    * @throws IOException thrown if the truststore could not be initialized due
    * to an IO error.
    * @throws GeneralSecurityException thrown if the truststore could not be
    * initialized due to a security error.
    */
-  public ReloadingX509TrustManager(String type, String location, String password)
+  public ReloadingX509TrustManager(String type, String location,
+                                   String password, long reloadInterval)
     throws IOException, GeneralSecurityException {
     this.type = type;
+    file = new File(location);
     this.password = password;
     trustManagerRef = new AtomicReference<X509TrustManager>();
-    trustManagerRef.set(loadTrustManager(Paths.get(location)));
+    trustManagerRef.set(loadTrustManager());
+    this.reloadInterval = reloadInterval;
+  }
+
+  /**
+   * Starts the reloader thread.
+   */
+  public void init() {
+    reloader = new Thread(this, "Truststore reloader thread");
+    reloader.setDaemon(true);
+    running =  true;
+    reloader.start();
+  }
+
+  /**
+   * Stops the reloader thread.
+   */
+  public void destroy() {
+    running = false;
+    reloader.interrupt();
+  }
+
+  /**
+   * Returns the reload check interval.
+   *
+   * @return the reload check interval, in milliseconds.
+   */
+  public long getReloadInterval() {
+    return reloadInterval;
   }
 
   @Override
@@ -114,24 +151,27 @@ public final class ReloadingX509TrustManager implements X509TrustManager {
     return issuers;
   }
 
-  public ReloadingX509TrustManager loadFrom(Path path) {
-    try {
-      this.trustManagerRef.set(loadTrustManager(path));
-    } catch (Exception ex) {
-      // The Consumer.accept interface forces us to convert to unchecked
-      throw new RuntimeException(RELOAD_ERROR_MESSAGE, ex);
+  boolean needsReload() {
+    boolean reload = true;
+    if (file.exists()) {
+      if (file.lastModified() == lastLoaded) {
+        reload = false;
+      }
+    } else {
+      lastLoaded = 0;
     }
-    return this;
+    return reload;
   }
 
-  X509TrustManager loadTrustManager(Path path)
+  X509TrustManager loadTrustManager()
   throws IOException, GeneralSecurityException {
     X509TrustManager trustManager = null;
     KeyStore ks = KeyStore.getInstance(type);
-    InputStream in = Files.newInputStream(path);
+    InputStream in = Files.newInputStream(file.toPath());
     try {
       ks.load(in, (password == null) ? null : password.toCharArray());
-      LOG.debug("Loaded truststore '" + path + "'");
+      lastLoaded = file.lastModified();
+      LOG.debug("Loaded truststore '" + file + "'");
     } finally {
       in.close();
     }
@@ -148,4 +188,23 @@ public final class ReloadingX509TrustManager implements X509TrustManager {
     }
     return trustManager;
   }
+
+  @Override
+  public void run() {
+    while (running) {
+      try {
+        Thread.sleep(reloadInterval);
+      } catch (InterruptedException e) {
+        //NOP
+      }
+      if (running && needsReload()) {
+        try {
+          trustManagerRef.set(loadTrustManager());
+        } catch (Exception ex) {
+          LOG.warn(RELOAD_ERROR_MESSAGE + ex.toString(), ex);
+        }
+      }
+    }
+  }
+
 }
