@@ -41,6 +41,9 @@ public class OpensslSm4CtrCryptoCodec extends OpensslCtrCryptoCodec {
     if (loadingFailureReason != null) {
       throw new RuntimeException(loadingFailureReason);
     }
+    if (!OpensslCipher.isSupported(CipherSuite.SM4_CTR_NOPADDING)) {
+      throw new RuntimeException("Doesn't support SM4 CTR.");
+    }
   }
 
   @Override

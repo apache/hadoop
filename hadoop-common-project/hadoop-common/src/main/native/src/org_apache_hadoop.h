@@ -95,6 +95,12 @@ void *do_dlsym(JNIEnv *env, void *handle, const char *symbol) {
   if ((func_ptr = do_dlsym(env, handle, symbol)) == NULL) { \
     return; \
   }
+
+/* A helper macro to dlsym the requisite dynamic symbol ignoring error. */
+#define MAYBE_LOAD_DYNAMIC_SYMBOL(func_ptr, env, handle, symbol) \
+  if ((func_ptr = do_dlsym(env, handle, symbol)) == NULL) { \
+    (*env)->ExceptionClear(env); \
+  }
 #endif
 // Unix part end
 

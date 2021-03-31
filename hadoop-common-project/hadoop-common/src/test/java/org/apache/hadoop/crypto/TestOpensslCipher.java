@@ -107,4 +107,11 @@ public class TestOpensslCipher {
           "Direct buffer is required", e);
     }
   }
+
+  @Test(timeout=120000)
+  public void testIsSupportedSuite() throws Exception {
+    Assume.assumeTrue(OpensslCipher.getLoadingFailureReason() == null);
+    Assert.assertFalse(OpensslCipher.isSupported(CipherSuite.UNKNOWN));
+    Assert.assertTrue(OpensslCipher.isSupported(CipherSuite.AES_CTR_NOPADDING));
+  }
 }

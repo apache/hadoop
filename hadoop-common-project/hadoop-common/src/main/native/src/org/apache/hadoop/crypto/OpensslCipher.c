@@ -125,7 +125,7 @@ static void loadSm4Ctr(JNIEnv *env)
 {
 #ifdef UNIX
 #if OPENSSL_VERSION_NUMBER >= 0x10101001L
-   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_sm4_ctr, env, openssl, "EVP_sm4_ctr");
+   MAYBE_LOAD_DYNAMIC_SYMBOL(dlsym_EVP_sm4_ctr, env, openssl, "EVP_sm4_ctr");
 #endif
 #endif
 }
@@ -553,4 +553,25 @@ JNIEXPORT jstring JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_getLibrary
     return (*env)->NewStringUTF(env, "Unavailable");
   }
 #endif
+}
+
+JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_isSupportedSuite
+    (JNIEnv *env, jclass clazz, jint alg, jint padding)
+{
+  if (padding != NOPADDING) {
+    return JNI_FALSE;
+  }
+
+  if (alg == AES_CTR && (dlsym_EVP_aes_256_ctr != NULL && dlsym_EVP_aes_128_ctr != NULL)) {
+    return JNI_TRUE;
+  }
+
+  if (alg == SM4_CTR) {
+#if OPENSSL_VERSION_NUMBER >= 0x10101001L
+    if (dlsym_EVP_sm4_ctr != NULL) {
+      return JNI_TRUE;
+    }
+#endif
+  }
+  return JNI_FALSE;
 }
