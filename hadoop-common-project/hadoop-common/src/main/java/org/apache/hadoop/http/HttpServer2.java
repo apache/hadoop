@@ -27,17 +27,14 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.Enumeration;
 import java.util.Arrays;
-import java.util.Timer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -78,8 +75,6 @@ import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationF
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
-import org.apache.hadoop.security.ssl.FileMonitoringTimerTask;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
@@ -191,7 +186,6 @@ public final class HttpServer2 implements FilterContainer {
   static final String STATE_DESCRIPTION_ALIVE = " - alive";
   static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
   private final SignerSecretProvider secretProvider;
-  private final Optional<java.util.Timer> configurationChangeMonitor;
   private XFrameOption xFrameOption;
   private boolean xFrameOptionIsEnabled;
   public static final String HTTP_HEADER_PREFIX = "hadoop.http.header.";
@@ -249,8 +243,6 @@ public final class HttpServer2 implements FilterContainer {
     private XFrameOption xFrameOption = XFrameOption.SAMEORIGIN;
 
     private boolean sniHostCheckEnabled;
-
-    private Optional<Timer> configurationChangeMonitor = Optional.empty();
 
     public Builder setName(String name){
       this.name = name;
@@ -582,43 +574,10 @@ public final class HttpServer2 implements FilterContainer {
       }
 
       setEnabledProtocols(sslContextFactory);
-
-      long storesReloadInterval =
-          conf.getLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
-              FileBasedKeyStoresFactory.DEFAULT_SSL_STORES_RELOAD_INTERVAL);
-
-      if (storesReloadInterval > 0) {
-        this.configurationChangeMonitor = Optional.of(
-            this.makeConfigurationChangeMonitor(storesReloadInterval, sslContextFactory));
-      }
-
       conn.addFirstConnectionFactory(new SslConnectionFactory(sslContextFactory,
           HttpVersion.HTTP_1_1.asString()));
 
       return conn;
-    }
-
-    private Timer makeConfigurationChangeMonitor(long reloadInterval,
-        SslContextFactory.Server sslContextFactory) {
-      java.util.Timer timer = new java.util.Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
-      //
-      // The Jetty SSLContextFactory provides a 'reload' method which will reload both
-      // truststore and keystore certificates.
-      //
-      timer.schedule(new FileMonitoringTimerTask(
-              Paths.get(keyStore),
-              path -> {
-                LOG.info("Reloading certificates from store keystore " + keyStore);
-                try {
-                  sslContextFactory.reload(factory -> { });
-                } catch (Exception ex) {
-                  LOG.error("Failed to reload SSL keystore certificates", ex);
-                }
-              },null),
-          reloadInterval,
-          reloadInterval
-      );
-      return timer;
     }
 
     private void setEnabledProtocols(SslContextFactory sslContextFactory) {
@@ -663,7 +622,6 @@ public final class HttpServer2 implements FilterContainer {
     this.webAppContext = createWebAppContext(b, adminsAcl, appDir);
     this.xFrameOptionIsEnabled = b.xFrameEnabled;
     this.xFrameOption = b.xFrameOption;
-    this.configurationChangeMonitor = b.configurationChangeMonitor;
 
     try {
       this.secretProvider =
@@ -1462,16 +1420,6 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void stop() throws Exception {
     MultiException exception = null;
-    if (this.configurationChangeMonitor.isPresent()) {
-      try {
-        this.configurationChangeMonitor.get().cancel();
-      } catch (Exception e) {
-        LOG.error(
-            "Error while canceling configuration monitoring timer for webapp"
-                + webAppContext.getDisplayName(), e);
-        exception = addMultiException(exception, e);
-      }
-    }
     for (ServerConnector c : listeners) {
       try {
         c.close();
