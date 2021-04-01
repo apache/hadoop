@@ -1785,8 +1785,8 @@ public class TestFsDatasetImpl {
       assertFalse(metaFile.exists());
 
       FsVolumeSpi.ScanInfo info = new FsVolumeSpi.ScanInfo(
-          replicaInfo.getBlockId(), blockFile.getAbsoluteFile(),
-          metaFile.getAbsoluteFile(), replicaInfo.getVolume());
+          replicaInfo.getBlockId(), blockFile.getParentFile().getAbsoluteFile(),
+          blockFile.getName(), metaFile.getName(), replicaInfo.getVolume());
       fsdataset.checkAndUpdate(bpid, info);
 
       BlockManager blockManager = cluster.getNameNode().
