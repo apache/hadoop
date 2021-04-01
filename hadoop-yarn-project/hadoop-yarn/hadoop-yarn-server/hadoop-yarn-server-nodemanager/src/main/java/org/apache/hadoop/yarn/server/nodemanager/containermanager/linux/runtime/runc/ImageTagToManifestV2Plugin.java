@@ -212,7 +212,7 @@ public class ImageTagToManifestV2Plugin extends AbstractService
         } else {
           return null;
         }
-        
+
         if (!hash.matches(HASH_REGEX)) {
           LOG.warn("Malformed image hash: " + hash);
         }
