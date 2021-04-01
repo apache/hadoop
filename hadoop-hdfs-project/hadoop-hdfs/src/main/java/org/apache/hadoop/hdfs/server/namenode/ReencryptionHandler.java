@@ -834,7 +834,7 @@ public class ReencryptionHandler implements Runnable {
     }
   }
 
-  private class ZoneTraverseInfo extends TraverseInfo {
+  private static class ZoneTraverseInfo extends TraverseInfo {
     private String ezKeyVerName;
 
     ZoneTraverseInfo(String ezKeyVerName) {
