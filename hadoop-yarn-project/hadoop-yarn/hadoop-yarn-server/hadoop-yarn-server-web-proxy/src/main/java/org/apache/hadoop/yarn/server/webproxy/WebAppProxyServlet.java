@@ -63,15 +63,15 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.params.ClientPNames;
-import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,6 +122,9 @@ public class WebAppProxyServlet extends HttpServlet {
     }
   }
 
+  protected void setConf(YarnConfiguration conf){
+    this.conf = conf;
+  }
   /**
    * Default constructor
    */
@@ -188,15 +191,18 @@ public class WebAppProxyServlet extends HttpServlet {
    * @param method the http method
    * @throws IOException on any error.
    */
-  private static void proxyLink(final HttpServletRequest req,
+  private void proxyLink(final HttpServletRequest req,
       final HttpServletResponse resp, final URI link, final Cookie c,
       final String proxyHost, final HTTP method) throws IOException {
-    DefaultHttpClient client = new DefaultHttpClient();
-    client
-        .getParams()
-        .setParameter(ClientPNames.COOKIE_POLICY,
-            CookiePolicy.BROWSER_COMPATIBILITY)
-        .setBooleanParameter(ClientPNames.ALLOW_CIRCULAR_REDIRECTS, true);
+    HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+
+    boolean connectionTimeoutEnabled =
+        conf.getBoolean(YarnConfiguration.RM_PROXY_TIMEOUT_ENABLED,
+            YarnConfiguration.DEFALUT_RM_PROXY_TIMEOUT_ENABLED);
+    int connectionTimeout =
+        conf.getInt(YarnConfiguration.RM_PROXY_CONNECTION_TIMEOUT,
+            YarnConfiguration.DEFAULT_RM_PROXY_CONNECTION_TIMEOUT);
+
     // Make sure we send the request from the proxy address in the config
     // since that is what the AM filter checks against. IP aliasing or
     // similar could cause issues otherwise.
@@ -204,8 +210,19 @@ public class WebAppProxyServlet extends HttpServlet {
     if (LOG.isDebugEnabled()) {
       LOG.debug("local InetAddress for proxy host: {}", localAddress);
     }
-    client.getParams()
-        .setParameter(ConnRoutePNames.LOCAL_ADDRESS, localAddress);
+    httpClientBuilder.setDefaultRequestConfig(
+        connectionTimeoutEnabled ?
+            RequestConfig.custom()
+                .setCircularRedirectsAllowed(true)
+                .setLocalAddress(localAddress)
+                .setConnectionRequestTimeout(connectionTimeout)
+                .setSocketTimeout(connectionTimeout)
+                .setConnectTimeout(connectionTimeout)
+                .build() :
+            RequestConfig.custom()
+                .setCircularRedirectsAllowed(true)
+                .setLocalAddress(localAddress)
+                .build());
 
     HttpRequestBase base = null;
     if (method.equals(HTTP.GET)) {
@@ -247,6 +264,7 @@ public class WebAppProxyServlet extends HttpServlet {
           PROXY_USER_COOKIE_NAME + "=" + URLEncoder.encode(user, "ASCII"));
     }
     OutputStream out = resp.getOutputStream();
+    HttpClient client = httpClientBuilder.build();
     try {
       HttpResponse httpResp = client.execute(base);
       resp.setStatus(httpResp.getStatusLine().getStatusCode());
@@ -566,7 +584,6 @@ public class WebAppProxyServlet extends HttpServlet {
    * again... If this method returns true, there was a redirect, and
    * it was handled by redirecting the current request to an error page.
    *
-   * @param path the part of the request path after the app id
    * @param id the app id
    * @param req the request object
    * @param resp the response object

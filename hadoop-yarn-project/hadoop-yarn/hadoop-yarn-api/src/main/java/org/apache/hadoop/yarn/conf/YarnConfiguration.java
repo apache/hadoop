@@ -2315,6 +2315,19 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_RM_APPLICATION_MONITOR_INTERVAL_MS =
       3000;
 
+  // If the proxy connection time enabled.
+  public static final String RM_PROXY_TIMEOUT_ENABLED =
+      RM_PREFIX + "proxy.timeout.enabled";
+
+  public static final boolean DEFALUT_RM_PROXY_TIMEOUT_ENABLED =
+      true;
+
+  public static final String RM_PROXY_CONNECTION_TIMEOUT =
+      RM_PREFIX + "proxy.connection.timeout";
+
+  public static final int DEFAULT_RM_PROXY_CONNECTION_TIMEOUT =
+      60000;
+
   /**
    * Interval of time the linux container executor should try cleaning up
    * cgroups entry when cleaning up a container. This is required due to what 
