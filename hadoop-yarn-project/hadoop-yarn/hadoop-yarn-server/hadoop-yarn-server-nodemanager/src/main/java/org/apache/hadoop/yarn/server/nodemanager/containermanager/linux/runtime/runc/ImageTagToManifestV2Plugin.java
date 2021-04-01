@@ -48,9 +48,7 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_MANIFEST_CAC
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_NUM_MANIFESTS_TO_CACHE;
 
 /**
- * This class is a V2 plugin for the
- * {@link org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.RuncContainerRuntime}
- * to convert image tags into runC image manifests.
+ * This class is a V2 plugin to convert image tags into runC image manifests.
  */
 @InterfaceStability.Unstable
 public class ImageTagToManifestV2Plugin extends AbstractService
@@ -60,12 +58,13 @@ public class ImageTagToManifestV2Plugin extends AbstractService
   private ObjectMapper objMapper;
   private Configuration conf;
   private String manifestDir;
-  private String metaNamespaceDir;
+  private String metaDir;
+  private String defaultMetaNamespace;
   private boolean manifestCacheEnabled;
 
   private static final String MANIFEST_PREFIX = "runc.manifest";
 
-  private static final String ALPHA_NUMERIC = "[a-fA-F0-9]{64}";
+  private static final String HASH_REGEX = "[a-fA-F0-9]{64}";
 
   private static final Log LOG = LogFactory.getLog(
       ImageTagToManifestV2Plugin.class);
@@ -74,9 +73,23 @@ public class ImageTagToManifestV2Plugin extends AbstractService
     super("ImageTagToManifestPluginService");
   }
 
+  /**
+   * Gets the runc image manifest from cache or HDFS using the specified
+   * imageTag.
+   *
+   * @param imageTag User defined imageTag.
+   * @return the ImageManifest.
+   * @throws IOException When it is unable to read the manifest file from HDFS.
+   */
   @Override
   public ImageManifest getManifestFromImageTag(String imageTag)
       throws IOException {
+    LOG.debug("Getting manifest for imageTag: " + imageTag);
+
+    if (imageTag == null || imageTag.equals("")) {
+      throw new IOException("Unable to read the HDFS manifest file for a null "
+          + "or empty imageTag");
+    }
 
     ImageManifest manifest;
     if (manifestCacheEnabled) {
@@ -87,22 +100,28 @@ public class ImageTagToManifestV2Plugin extends AbstractService
       }
     }
 
-    // 1. Read the hash from HDFS
-    // 2. Use tag as is and assume the tag is the hash
-    String hash = getHashFromImageTag(imageTag);
-    if (hash == null) {
-      hash = imageTag;
+    String hash;
+    try {
+      hash = getHashFromImageTag(imageTag);
+    } catch (IllegalArgumentException iae) {
+      throw new IOException("Unable to read the HDFS manifest file, "
+          + "invalid imageTag");
     }
 
-    Path manifestHashPath = new Path(manifestDir, hash.substring(0, 2));
-    Path manifestPath = new Path(manifestHashPath, hash);
-    FileSystem fs = manifestPath.getFileSystem(conf);
+    if (hash == null) {
+      throw new IOException("Unable to read the hash for imageTag: "
+          + imageTag);
+    }
+
     FSDataInputStream input;
     try {
+      Path manifestHashPath = new Path(manifestDir, hash.substring(0, 2));
+      Path manifestPath = new Path(manifestHashPath, hash);
+      FileSystem fs = manifestPath.getFileSystem(conf);
       input = fs.open(manifestPath);
     } catch (IllegalArgumentException iae) {
-      throw new IOException("Failed to read the HDFS manifest file for "
-          + manifestPath.toString(), iae);
+      throw new IOException("Failed to read the HDFS manifest file for: "
+          + imageTag, iae);
     }
 
     byte[] bytes = IOUtils.toByteArray(input);
@@ -115,31 +134,45 @@ public class ImageTagToManifestV2Plugin extends AbstractService
     return manifest;
   }
 
+  /**
+   * Gets the runc image hash from the imageTag property file.
+   *
+   * @param imageTag User defined imageTag.
+   * @return the hash of the imageTag.
+   */
   @Override
   public String getHashFromImageTag(String imageTag) {
     String hash = null;
-
+    ImageMetadata imageMetadata =
+        new ImageMetadata(imageTag, defaultMetaNamespace);
+    String metaImageTag = imageMetadata.getNameTag();
+    String metaImageNamespace = imageMetadata.getMetaNamespace();
     try {
-      BufferedReader br = getHdfsImageToHashReader(imageTag);
+      BufferedReader br =
+          getHdfsImageToHashReader(metaImageTag, metaImageNamespace);
       hash = readImageToHashFile(br);
     } catch (IOException e) {
       LOG.error("Failed to read the image hash from the image "
-          + "properties file");
+          + "properties file", e);
     }
 
     return hash;
   }
 
-  protected BufferedReader getHdfsImageToHashReader(String imageTag)
-      throws IOException {
-    // Default to latest if no tag is present
-    if (!imageTag.contains(":")) {
-      imageTag = imageTag + ":latest";
-    }
-
-    // Special image filename delimiter
+  /**
+   * Gets the HDFS image BufferedReader for the runc image property file. The
+   * image property file contains a special delimiter to match the runc image
+   * import CLI tool.
+   *
+   * @param imageTag Validated user defined imageTag.
+   * @param imageNamespace Validated image namespace.
+   * @return The BufferedReader for the image property file.
+   * @throws IOException when it is unable to load the HDFS file.
+   */
+  protected BufferedReader getHdfsImageToHashReader(String imageTag,
+      String imageNamespace) throws IOException {
     String updatedImageTag = imageTag.replace(':', '@');
-    String imageFile = metaNamespaceDir + "/" + updatedImageTag
+    String imageFile = metaDir + imageNamespace + "/" + updatedImageTag
         + ".properties";
     LOG.debug("Checking HDFS for image file: " + imageFile);
     Path propertiesFile = new Path(imageFile);
@@ -173,16 +206,14 @@ public class ImageTagToManifestV2Plugin extends AbstractService
     String line;
     while ((line = br.readLine()) != null) {
       if (line.startsWith(MANIFEST_PREFIX)) {
-        LOG.debug("Reading the hash from the manifest prefix line");
-
         if (line.contains(":")) {
           String[] parts = line.split(":");
           hash = parts[1];
         } else {
           return null;
         }
-
-        if (!hash.matches(ALPHA_NUMERIC)) {
+        
+        if (!hash.matches(HASH_REGEX)) {
           LOG.warn("Malformed image hash: " + hash);
         }
       }
@@ -198,9 +229,9 @@ public class ImageTagToManifestV2Plugin extends AbstractService
     this.objMapper = new ObjectMapper();
     manifestDir = conf.get(NM_RUNC_IMAGE_TOPLEVEL_DIR,
         DEFAULT_NM_RUNC_IMAGE_TOPLEVEL_DIR) + "/manifest/";
-    String metaDir = conf.get(NM_RUNC_IMAGE_TOPLEVEL_DIR,
+    metaDir = conf.get(NM_RUNC_IMAGE_TOPLEVEL_DIR,
         DEFAULT_NM_RUNC_IMAGE_TOPLEVEL_DIR) + "/meta/";
-    metaNamespaceDir = metaDir + conf.get(NM_RUNC_IMAGE_META_NAMESPACE,
+    defaultMetaNamespace = conf.get(NM_RUNC_IMAGE_META_NAMESPACE,
         DEFAULT_NM_RUNC_IMAGE_META_NAMESPACE);
     manifestCacheEnabled = conf.getBoolean(NM_RUNC_MANIFEST_CACHE_ENABLED,
         DEFAULT_NM_RUNC_MANIFEST_CACHE_ENABLED);

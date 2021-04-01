@@ -110,7 +110,8 @@ public class TestImageTagToManifestV2Plugin {
     }
 
     @Override
-    protected BufferedReader getHdfsImageToHashReader(String imageTag) {
+    protected BufferedReader getHdfsImageToHashReader(String imageTag,
+        String imageNamespace) {
       return mockHdfsBufferedReader;
     }
   }
@@ -135,6 +136,7 @@ public class TestImageTagToManifestV2Plugin {
     BufferedReader br =
         new BufferedReader(new FileReader(tmpPath + imageFile));
     mockImageTagToManifestV2Plugin = new MockImageTagToManifestV2Plugin(br);
+    mockImageTagToManifestV2Plugin.init(conf);
     String returnedHash =
         mockImageTagToManifestV2Plugin.getHashFromImageTag(imageTag);
     br.close();
@@ -143,7 +145,7 @@ public class TestImageTagToManifestV2Plugin {
   }
 
   @Test
-  public void testHdfsGetHashFromImageTagFails() throws IOException {
+  public void testHdfsGetHashFromImageTagWrongHashFails() throws IOException {
     String imageFile = "busybox@123.properties";
     String imageTag = "busybox:123";
     String imageHash =
@@ -162,6 +164,7 @@ public class TestImageTagToManifestV2Plugin {
     BufferedReader br =
         new BufferedReader(new FileReader(tmpPath + imageFile));
     mockImageTagToManifestV2Plugin = new MockImageTagToManifestV2Plugin(br);
+    mockImageTagToManifestV2Plugin.init(conf);
     String returnedHash =
         mockImageTagToManifestV2Plugin.getHashFromImageTag(imageTag);
     br.close();
@@ -185,6 +188,7 @@ public class TestImageTagToManifestV2Plugin {
     BufferedReader br =
         new BufferedReader(new FileReader(tmpPath + imageFile));
     mockImageTagToManifestV2Plugin = new MockImageTagToManifestV2Plugin(br);
+    mockImageTagToManifestV2Plugin.init(conf);
     String returnedHash =
         mockImageTagToManifestV2Plugin.getHashFromImageTag(imageTag);
     br.close();
@@ -210,11 +214,65 @@ public class TestImageTagToManifestV2Plugin {
     BufferedReader br =
         new BufferedReader(new FileReader(tmpPath + imageFile));
     mockImageTagToManifestV2Plugin = new MockImageTagToManifestV2Plugin(br);
+    mockImageTagToManifestV2Plugin.init(conf);
     String returnedHash =
         mockImageTagToManifestV2Plugin.getHashFromImageTag(imageTag);
     br.close();
 
     Assert.assertNull(returnedHash);
+  }
+
+  @Test (expected = IOException.class)
+  public void testGetManifestFromNullImageTagFails() throws IOException {
+    String imageTag = null;
+    ImageTagToManifestV2Plugin plugin = new ImageTagToManifestV2Plugin();
+    ImageManifest hash = plugin.getManifestFromImageTag(imageTag);
+  }
+
+  @Test (expected = IOException.class)
+  public void testGetManifestFromEmptyImageTagFails() throws IOException {
+    String imageTag = "";
+    ImageTagToManifestV2Plugin plugin = new ImageTagToManifestV2Plugin();
+    ImageManifest hash = plugin.getManifestFromImageTag(imageTag);
+  }
+
+  @Test (expected = IOException.class)
+  public void testGetManifestFromInvalidImageTagFails() throws IOException {
+    String imageTag = "hadoop/busybox:1.0.0:0";
+    ImageTagToManifestV2Plugin plugin = new ImageTagToManifestV2Plugin();
+    ImageManifest hash = plugin.getManifestFromImageTag(imageTag);
+  }
+
+  @Test (expected = IOException.class)
+  public void testGetManifestFromInvalidTagFails() throws IOException {
+    String imageTag = "busybox:1,0,0";
+    ImageTagToManifestV2Plugin plugin = new ImageTagToManifestV2Plugin();
+    plugin.init(conf);
+    ImageManifest hash = plugin.getManifestFromImageTag(imageTag);
+  }
+
+  @Test (expected = IOException.class)
+  public void testGetManifestFromInvalidTag2Fails() throws IOException {
+    String imageTag = "busybox:,,111";
+    ImageTagToManifestV2Plugin plugin = new ImageTagToManifestV2Plugin();
+    plugin.init(conf);
+    ImageManifest hash = plugin.getManifestFromImageTag(imageTag);
+  }
+
+  @Test (expected = IOException.class)
+  public void testGetManifestFromInvalidTag3Fails() throws IOException {
+    String imageTag = "//busybox:,,111";
+    ImageTagToManifestV2Plugin plugin = new ImageTagToManifestV2Plugin();
+    plugin.init(conf);
+    ImageManifest hash = plugin.getManifestFromImageTag(imageTag);
+  }
+
+  @Test (expected = IOException.class)
+  public void testGetManifestFromInvalidTag4Fails() throws IOException {
+    String imageTag = "default@1/busybox:,,111";
+    ImageTagToManifestV2Plugin plugin = new ImageTagToManifestV2Plugin();
+    plugin.init(conf);
+    ImageManifest hash = plugin.getManifestFromImageTag(imageTag);
   }
 
   @Test

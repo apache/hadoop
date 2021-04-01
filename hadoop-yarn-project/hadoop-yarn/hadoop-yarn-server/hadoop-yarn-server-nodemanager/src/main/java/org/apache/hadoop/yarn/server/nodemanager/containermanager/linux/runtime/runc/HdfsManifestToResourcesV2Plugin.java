@@ -50,10 +50,8 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_STAT_CACHE_S
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_STAT_CACHE_TIMEOUT;
 
 /**
- * This class is a V2 plugin for the
- * {@link org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.RuncContainerRuntime}
- * that maps runC image manifests into their associated config and
- * layers that are located in HDFS.
+ * This class is a V2 plugin that maps runC image manifests into their
+ * associated config and layers that are located in HDFS.
  */
 @InterfaceStability.Unstable
 public class HdfsManifestToResourcesV2Plugin extends AbstractService implements
@@ -78,7 +76,7 @@ public class HdfsManifestToResourcesV2Plugin extends AbstractService implements
   private static final String LAYER_HASH_ALGORITHM =
       SHA_256;
 
-  private static final String ALPHA_NUMERIC = "[a-fA-F0-9]{64}";
+  private static final String HASH_REGEX = "[a-fA-F0-9]{64}";
 
   private static final Log LOG = LogFactory.getLog(
       HdfsManifestToResourcesV2Plugin.class);
@@ -116,6 +114,13 @@ public class HdfsManifestToResourcesV2Plugin extends AbstractService implements
     this.fs = path.getFileSystem(conf);
   }
 
+  /**
+   * Gets the runc image layer resources.
+   *
+   * @param manifest The image manifest to get the layers for.
+   * @return The list of layers.
+   * @throws IOException When it fails to get the layer resources.
+   */
   @Override
   public List<LocalResource> getLayerResources(ImageManifest manifest)
       throws IOException  {
@@ -130,6 +135,13 @@ public class HdfsManifestToResourcesV2Plugin extends AbstractService implements
     return localRsrcs;
   }
 
+  /**
+   * Gets the runc image config resource.
+   *
+   * @param manifest The image manifest to get the image config for.
+   * @return The image config resource.
+   * @throws IOException When it fails to get the image config resource.
+   */
   public LocalResource getConfigResource(ImageManifest manifest)
       throws IOException {
     ImageManifest.Blob config = manifest.getConfig();
@@ -137,6 +149,17 @@ public class HdfsManifestToResourcesV2Plugin extends AbstractService implements
         CONFIG_HASH_ALGORITHM, "");
   }
 
+  /**
+   * Validates and gets runc image config and layer resources.
+   *
+   * @param blob The ImageManifest blob.
+   * @param dir The HDFS resource directory.
+   * @param expectedMediaType The expected resource media type.
+   * @param expectedHashAlgorithm The expected resource hash algorithm.
+   * @param resourceSuffix The resource suffix.
+   * @return The runc image resources.
+   * @throws IOException When it fails to return the local resources.
+   */
   public LocalResource getResource(ImageManifest.Blob blob,
       String dir, String expectedMediaType,
       String expectedHashAlgorithm, String resourceSuffix) throws IOException {
@@ -157,7 +180,7 @@ public class HdfsManifestToResourcesV2Plugin extends AbstractService implements
     }
 
     String hash = blobDigest[1];
-    if (!hash.matches(ALPHA_NUMERIC)) {
+    if (!hash.matches(HASH_REGEX)) {
       throw new IOException("Malformed blob digest: " + hash);
     }
 
@@ -182,6 +205,14 @@ public class HdfsManifestToResourcesV2Plugin extends AbstractService implements
     return rsrc;
   }
 
+  /**
+   * Gets the file status for a given path.
+   *
+   * @param path to get the FileStatus for.
+   * @return the FileStatus from the given path.
+   * @throws IOException When it fails to get the FileStatus for the
+   * given path.
+   */
   protected FileStatus statBlob(Path path) throws IOException {
     return fs.getFileStatus(path);
   }
