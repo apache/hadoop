@@ -2601,6 +2601,18 @@
     <value/>
   </property>
 
+  <property>
+    <description>Enable the web proxy connection timeout, default is enabled.</description>
+    <name>yarn.resourcemanager.proxy.timeout.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>The web proxy connection timeout.</description>
+    <name>yarn.resourcemanager.proxy.connection.timeout</name>
+    <value>60000</value>
+  </property>
+
   <!-- Applications' Configuration -->
 
   <property>
