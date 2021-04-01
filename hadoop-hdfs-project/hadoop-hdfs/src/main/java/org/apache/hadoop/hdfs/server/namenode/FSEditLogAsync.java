@@ -247,11 +247,11 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
           // sync if requested by edit log.
           doSync = edit.logEdit();
           syncWaitQ.add(edit);
-          metrics.setEditPendingCount(editPendingQ.size() + 1);
+          metrics.setPendingEditsCount(editPendingQ.size() + 1);
         } else {
           // sync when editq runs dry, but have edits pending a sync.
           doSync = !syncWaitQ.isEmpty();
-          metrics.setEditPendingCount(0);
+          metrics.setPendingEditsCount(0);
         }
         if (doSync) {
           // normally edit log exceptions cause the NN to terminate, but tests

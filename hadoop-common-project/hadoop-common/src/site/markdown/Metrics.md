@@ -228,6 +228,7 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `EditLogTailIntervalNumOps` | Total number of intervals between edit log tailings by standby NameNode |
 | `EditLogTailIntervalAvgTime` | Average time of intervals between edit log tailings by standby NameNode in milliseconds |
 | `EditLogTailInterval`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of time between edit log tailings by standby NameNode in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `PendingEditsCount` | Current number of pending edits |
 
 FSNamesystem
 ------------
