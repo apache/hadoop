@@ -854,6 +854,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void unsetStoragePolicy(String src)
       throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.unsetStoragePolicy for path: {}", src);
     namesystem.unsetStoragePolicy(src);
   }
 
@@ -861,12 +862,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.setStoragePolicy for path: {}, " +
+            "policyName: {}", src, policyName);
     namesystem.setStoragePolicy(src, policyName);
   }
 
   @Override
   public BlockStoragePolicy getStoragePolicy(String path) throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.getStoragePolicy for path: {}", path);
     return namesystem.getStoragePolicy(path);
   }
 
