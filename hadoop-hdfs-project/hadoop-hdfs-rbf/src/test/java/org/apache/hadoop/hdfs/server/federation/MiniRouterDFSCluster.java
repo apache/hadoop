@@ -152,7 +152,7 @@ public class MiniRouterDFSCluster {
   /**
    * Router context.
    */
-  public class RouterContext {
+  public static class RouterContext {
     private Router router;
     private FileContext fileContext;
     private String nameserviceId;
