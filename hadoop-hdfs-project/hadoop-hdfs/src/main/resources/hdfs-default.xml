@@ -887,6 +887,14 @@
 </property>
 
 <property>
+  <name>dfs.heartbeat.monitor.interval</name>
+  <value>5000</value>
+  <description>
+    Set the time to periodically check whether the datanode is healthy.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.lifeline.interval.seconds</name>
   <value></value>
   <description>

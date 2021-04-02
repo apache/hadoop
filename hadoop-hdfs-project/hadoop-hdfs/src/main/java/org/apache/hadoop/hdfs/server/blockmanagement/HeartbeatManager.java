@@ -69,7 +69,7 @@ class HeartbeatManager implements DatanodeStatistics {
   /** The time period to check for expired datanodes. */
   private final long heartbeatRecheckInterval;
   /** Heartbeat monitor thread. */
-  private final Daemon heartbeatThread = new Daemon(new Monitor());
+  private final Daemon heartbeatThread;
   private final StopWatch heartbeatStopWatch = new StopWatch();
 
   final Namesystem namesystem;
@@ -84,6 +84,7 @@ class HeartbeatManager implements DatanodeStatistics {
       final BlockManager blockManager, final Configuration conf) {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
+    this.heartbeatThread = new Daemon(new Monitor(conf));
     boolean avoidStaleDataNodesForWrite = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
@@ -446,7 +447,9 @@ class HeartbeatManager implements DatanodeStatistics {
           if (shouldAbortHeartbeatCheck(0)) {
             return;
           }
-          if (dead == null && dm.isDatanodeDead(d)) {
+          boolean isDead = dm.isDatanodeDead(d);
+          System.out.println(" isDead : " + isDead);
+          if (dead == null && isDead) {
             stats.incrExpiredHeartbeats();
             dead = d;
             // remove the node from stale list to adjust the stale list size
@@ -516,6 +519,18 @@ class HeartbeatManager implements DatanodeStatistics {
   private class Monitor implements Runnable {
     private long lastHeartbeatCheck;
     private long lastBlockKeyUpdate;
+    private long recheckInterval;
+
+    private Monitor(Configuration conf) {
+      recheckInterval = conf.getLong(
+              DFSConfigKeys.DFS_HEARTBEAT_MONITOR_INTERVAL_KEY,
+              DFSConfigKeys.DFS_HEARTBEAT_MONITOR_INTERVAL_DEFAULT);
+      if (recheckInterval < 1) {
+        LOG.warn("The current value of recheckInterval is {} this variable " +
+          "should be a positive number.", recheckInterval);
+        recheckInterval = DFSConfigKeys.DFS_HEARTBEAT_MONITOR_INTERVAL_DEFAULT;
+      }
+    }
 
     @Override
     public void run() {
@@ -539,7 +554,7 @@ class HeartbeatManager implements DatanodeStatistics {
           LOG.error("Exception while checking heartbeat", e);
         }
         try {
-          Thread.sleep(5000);  // 5 seconds
+          Thread.sleep(recheckInterval);  // The default is 5 seconds.
         } catch (InterruptedException ignored) {
         }
         // avoid declaring nodes dead for another cycle if a GC pause lasts
