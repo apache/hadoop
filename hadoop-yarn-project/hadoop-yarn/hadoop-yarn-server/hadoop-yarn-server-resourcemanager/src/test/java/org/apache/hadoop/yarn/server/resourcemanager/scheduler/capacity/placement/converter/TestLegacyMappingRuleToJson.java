@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placeme
 
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.yarn.server.resourcemanager.placement.MappingRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.Test;
 

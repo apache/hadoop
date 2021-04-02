@@ -112,7 +112,7 @@ add_executable(hdfs_builder_test hdfs_builder_test.cc)
 target_link_libraries(hdfs_builder_test test_common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(hdfs_builder_test hdfs_builder_test)
 
-add_executable(logging_test logging_test.cc $<TARGET_OBJECTS:x_platform_utils_obj>)
+add_executable(logging_test logging_test.cc $<TARGET_OBJECTS:x_platform_obj>)
 target_link_libraries(logging_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(logging_test logging_test)
 
@@ -144,10 +144,10 @@ include_directories (
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libhdfs-tests/
 )
 
-add_library(hdfspp_test_shim_static STATIC $<TARGET_OBJECTS:x_platform_utils_obj> hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc ${LIBHDFSPP_BINDING_C}/hdfs.cc)
+add_library(hdfspp_test_shim_static STATIC $<TARGET_OBJECTS:x_platform_obj> hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc ${LIBHDFSPP_BINDING_C}/hdfs.cc)
 add_dependencies(hdfspp_test_shim_static proto)
 
-add_library(hdfspp_test_static STATIC $<TARGET_OBJECTS:x_platform_utils_obj> ${LIBHDFSPP_BINDING_C}/hdfs.cc)
+add_library(hdfspp_test_static STATIC $<TARGET_OBJECTS:x_platform_obj> ${LIBHDFSPP_BINDING_C}/hdfs.cc)
 add_dependencies(hdfspp_test_static proto)
 
 # TODO: get all of the mini dfs library bits here in one place

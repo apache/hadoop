@@ -20,8 +20,11 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuNodeResourceUpdateHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.slf4j.Logger;
@@ -45,6 +48,10 @@ public class NodeResourceMonitorImpl extends AbstractService implements
 
   /** Resource calculator. */
   private ResourceCalculatorPlugin resourceCalculatorPlugin;
+
+  /** Gpu related plugin. */
+  private GpuResourcePlugin gpuResourcePlugin;
+  private GpuNodeResourceUpdateHandler gpuNodeResourceUpdateHandler;
 
   /** Current <em>resource utilization</em> of the node. */
   private ResourceUtilization nodeUtilization =
@@ -71,6 +78,18 @@ public class NodeResourceMonitorImpl extends AbstractService implements
 
     this.resourceCalculatorPlugin =
         ResourceCalculatorPlugin.getNodeResourceMonitorPlugin(conf);
+
+    if (nmContext.getResourcePluginManager() != null) {
+      this.gpuResourcePlugin =
+          (GpuResourcePlugin)nmContext.getResourcePluginManager().
+          getNameToPlugins().get(ResourceInformation.GPU_URI);
+
+      if (gpuResourcePlugin != null) {
+        this.gpuNodeResourceUpdateHandler =
+            (GpuNodeResourceUpdateHandler)gpuResourcePlugin.
+                getNodeResourceHandlerInstance();
+      }
+    }
 
     LOG.info(" Using ResourceCalculatorPlugin : "
         + this.resourceCalculatorPlugin);
@@ -152,6 +171,16 @@ public class NodeResourceMonitorImpl extends AbstractService implements
                 (int) (vmem >> 20), // B -> MB
                 vcores); // Used Virtual Cores
 
+        float nodeGpuUtilization = 0F;
+        try {
+          if (gpuNodeResourceUpdateHandler != null) {
+            nodeGpuUtilization =
+                gpuNodeResourceUpdateHandler.getNodeGpuUtilization();
+          }
+        } catch (Exception e) {
+          LOG.error("Get Node GPU Utilization error: " + e);
+        }
+
         // Publish the node utilization metrics to node manager
         // metrics system.
         NodeManagerMetrics nmMetrics = nmContext.getNodeManagerMetrics();
@@ -159,6 +188,7 @@ public class NodeResourceMonitorImpl extends AbstractService implements
           nmMetrics.setNodeUsedMemGB(nodeUtilization.getPhysicalMemory());
           nmMetrics.setNodeUsedVMemGB(nodeUtilization.getVirtualMemory());
           nmMetrics.setNodeCpuUtilization(nodeUtilization.getCPU());
+          nmMetrics.setNodeGpuUtilization(nodeGpuUtilization);
         }
 
         try {

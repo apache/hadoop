@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.slf4j.Logger;
@@ -634,36 +635,71 @@ public class Balancer {
   }
 
   static class Result {
-    final ExitStatus exitStatus;
-    final long bytesLeftToMove;
-    final long bytesBeingMoved;
-    final long bytesAlreadyMoved;
+    private final ExitStatus exitStatus;
+    private final long bytesLeftToMove;
+    private final long bytesBeingMoved;
+    private final long bytesAlreadyMoved;
+    private final long blocksMoved;
 
     Result(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved,
-        long bytesAlreadyMoved) {
+           long bytesAlreadyMoved, long blocksMoved) {
       this.exitStatus = exitStatus;
       this.bytesLeftToMove = bytesLeftToMove;
       this.bytesBeingMoved = bytesBeingMoved;
       this.bytesAlreadyMoved = bytesAlreadyMoved;
+      this.blocksMoved = blocksMoved;
+    }
+
+    public ExitStatus getExitStatus() {
+      return exitStatus;
+    }
+
+    public long getBytesLeftToMove() {
+      return bytesLeftToMove;
+    }
+
+    public long getBytesBeingMoved() {
+      return bytesBeingMoved;
+    }
+
+    public long getBytesAlreadyMoved() {
+      return bytesAlreadyMoved;
+    }
+
+    public long getBlocksMoved() {
+      return blocksMoved;
     }
 
     void print(int iteration, NameNodeConnector nnc, PrintStream out) {
-      out.printf("%-24s %10d  %19s  %18s  %17s  %s%n",
+      out.printf("%-24s %10d  %19s  %18s  %17s  %17s  %s%n",
           DateFormat.getDateTimeInstance().format(new Date()), iteration,
           StringUtils.byteDesc(bytesAlreadyMoved),
           StringUtils.byteDesc(bytesLeftToMove),
           StringUtils.byteDesc(bytesBeingMoved),
+          blocksMoved,
           nnc.getNameNodeUri());
+    }
+
+    @Override
+    public String toString() {
+      return new ToStringBuilder(this)
+          .append("exitStatus", exitStatus)
+          .append("bytesLeftToMove", bytesLeftToMove)
+          .append("bytesBeingMoved", bytesBeingMoved)
+          .append("bytesAlreadyMoved", bytesAlreadyMoved)
+          .append("blocksMoved", blocksMoved)
+          .toString();
     }
   }
 
   Result newResult(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved) {
     return new Result(exitStatus, bytesLeftToMove, bytesBeingMoved,
-        dispatcher.getBytesMoved());
+        dispatcher.getBytesMoved(), dispatcher.getBblocksMoved());
   }
 
   Result newResult(ExitStatus exitStatus) {
-    return new Result(exitStatus, -1, -1, dispatcher.getBytesMoved());
+    return new Result(exitStatus, -1, -1, dispatcher.getBytesMoved(),
+        dispatcher.getBblocksMoved());
   }
 
   /** Run an iteration for all datanodes. */

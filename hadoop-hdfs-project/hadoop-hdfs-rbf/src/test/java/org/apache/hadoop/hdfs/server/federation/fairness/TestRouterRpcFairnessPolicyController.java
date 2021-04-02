@@ -85,30 +85,31 @@ public class TestRouterRpcFairnessPolicyController {
   @Test
   public void testAllocationErrorWithZeroHandlers() {
     Configuration conf = createConf(0);
-    verifyInstantiationError(conf);
+    verifyInstantiationError(conf, 0, 3);
   }
 
   @Test
   public void testAllocationErrorForLowDefaultHandlers() {
     Configuration conf = createConf(1);
-    verifyInstantiationError(conf);
+    verifyInstantiationError(conf, 1, 3);
   }
 
   @Test
   public void testAllocationErrorForLowDefaultHandlersPerNS() {
     Configuration conf = createConf(1);
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "concurrent", 1);
-    verifyInstantiationError(conf);
+    verifyInstantiationError(conf, 1, 3);
   }
 
   @Test
   public void testAllocationErrorForLowPreconfiguredHandlers() {
     Configuration conf = createConf(1);
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns1", 2);
-    verifyInstantiationError(conf);
+    verifyInstantiationError(conf, 1, 4);
   }
 
-  private void verifyInstantiationError(Configuration conf) {
+  private void verifyInstantiationError(Configuration conf, int handlerCount,
+      int totalDedicatedHandlers) {
     GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer
         .captureLogs(LoggerFactory.getLogger(
             StaticRouterRpcFairnessPolicyController.class));
@@ -117,8 +118,11 @@ public class TestRouterRpcFairnessPolicyController {
     } catch (IllegalArgumentException e) {
       // Ignore the exception as it is expected here.
     }
-    assertTrue("Should contain error message",
-        logs.getOutput().contains("lower than min"));
+    String errorMsg = String.format(
+        StaticRouterRpcFairnessPolicyController.ERROR_MSG, handlerCount,
+        totalDedicatedHandlers);
+    assertTrue("Should contain error message: " + errorMsg,
+        logs.getOutput().contains(errorMsg));
   }
 
   private RouterRpcFairnessPolicyController getFairnessPolicyController(

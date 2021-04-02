@@ -306,13 +306,19 @@ std::shared_ptr<std::string> RpcConnection::PrepareContextPacket() {
     return std::make_shared<std::string>();
   }
 
+  const auto& client_name = pinnedEngine->client_name();
+  if (client_name == nullptr) {
+    LOG_ERROR(kRPC, << "RpcConnection@" << this << " unable to generate random client name");
+    return std::make_shared<std::string>();
+  }
+
   std::shared_ptr<std::string> serializedPacketBuffer = std::make_shared<std::string>();
 
   RpcRequestHeaderProto headerProto;
   headerProto.set_rpckind(RPC_PROTOCOL_BUFFER);
   headerProto.set_rpcop(RpcRequestHeaderProto::RPC_FINAL_PACKET);
   headerProto.set_callid(RpcEngine::kCallIdConnectionContext);
-  headerProto.set_clientid(pinnedEngine->client_name());
+  headerProto.set_clientid(*client_name);
 
   IpcConnectionContextProto handshakeContextProto;
   handshakeContextProto.set_protocol(pinnedEngine->protocol_name());

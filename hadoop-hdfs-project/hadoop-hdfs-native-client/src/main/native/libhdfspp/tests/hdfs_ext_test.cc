@@ -475,7 +475,7 @@ TEST_F(HdfsExtTest, TestReadStats) {
   hdfsFile file = hdfsOpenFile(fs, path.c_str(), O_WRONLY, 0, 0, 0);
   EXPECT_NE(nullptr, file);
   void * buf = malloc(size);
-  bzero(buf, size);
+  explicit_bzero(buf, size);
   EXPECT_EQ(size, hdfsWrite(fs, file, buf, size));
   free(buf);
   EXPECT_EQ(0, hdfsCloseFile(fs, file));

@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Test;
 
@@ -79,7 +80,8 @@ public class TestMROpportunisticMaps {
     MiniMRClientCluster mrCluster = null;
     FileSystem fileSystem = null;
     try {
-      Configuration conf = new Configuration();
+      Configuration conf =
+          MRJobConfUtil.initEncryptedIntermediateConfigsForTesting(null);
       // Start the mini-MR and mini-DFS clusters
       conf.setBoolean(YarnConfiguration.AMRM_PROXY_ENABLED, true);
       conf.setBoolean(YarnConfiguration.
@@ -149,7 +151,6 @@ public class TestMROpportunisticMaps {
     job.setInt("mapreduce.map.maxattempts", 1);
     job.setInt("mapreduce.reduce.maxattempts", 1);
     job.setInt("mapred.test.num_lines", numLines);
-    job.setBoolean(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA, true);
     try {
       submittedJob = client.submitJob(job);
       try {

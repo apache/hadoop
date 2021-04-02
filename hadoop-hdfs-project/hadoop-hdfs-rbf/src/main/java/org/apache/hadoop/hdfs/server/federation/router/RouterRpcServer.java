@@ -776,20 +776,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         replication, blockSize, supportedVersions, ecPolicyName, storagePolicy);
   }
 
-
-  /**
-   * Get the location to create a file. It checks if the file already existed
-   * in one of the locations.
-   *
-   * @param src Path of the file to check.
-   * @return The remote location for this file.
-   * @throws IOException If the file has no creation location.
-   */
-  RemoteLocation getCreateLocation(final String src) throws IOException {
-    final List<RemoteLocation> locations = getLocationsForPath(src, true);
-    return getCreateLocation(src, locations);
-  }
-
   /**
    * Get the location to create a file. It checks if the file already existed
    * in one of the locations.

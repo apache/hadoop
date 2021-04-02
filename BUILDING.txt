@@ -139,7 +139,7 @@ Maven build goals:
  * Compile                   : mvn compile [-Pnative]
  * Run tests                 : mvn test [-Pnative] [-Pshelltest]
  * Create JAR                : mvn package
- * Run findbugs              : mvn compile findbugs:findbugs
+ * Run spotbugs              : mvn compile spotbugs:spotbugs
  * Run checkstyle            : mvn compile checkstyle:checkstyle
  * Install JAR in M2 cache   : mvn install
  * Deploy JAR to Maven repo  : mvn deploy

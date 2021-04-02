@@ -199,6 +199,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE)
   private boolean enableConditionalCreateOverwrite;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_MKDIR_OVERWRITE, DefaultValue =
+      DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE)
+  private boolean mkdirOverwrite;
+
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,
       DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
   private String azureAppendBlobDirs;
@@ -619,6 +624,10 @@ public class AbfsConfiguration{
 
   public boolean isConditionalCreateOverwriteEnabled() {
     return this.enableConditionalCreateOverwrite;
+  }
+
+  public boolean isEnabledMkdirOverwrite() {
+    return mkdirOverwrite;
   }
 
   public String getAppendBlobDirs() {

@@ -854,6 +854,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void unsetStoragePolicy(String src)
       throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.unsetStoragePolicy for path: {}", src);
     namesystem.unsetStoragePolicy(src);
   }
 
@@ -861,12 +862,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.setStoragePolicy for path: {}, " +
+            "policyName: {}", src, policyName);
     namesystem.setStoragePolicy(src, policyName);
   }
 
   @Override
   public BlockStoragePolicy getStoragePolicy(String path) throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.getStoragePolicy for path: {}", path);
     return namesystem.getStoragePolicy(path);
   }
 
@@ -1045,6 +1049,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void concat(String trg, String[] src) throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.concat: src path {} to" +
+        " target path {}", Arrays.toString(src), trg);
     namesystem.checkOperation(OperationCategory.WRITE);
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
@@ -1899,6 +1905,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkNNStartup();
+    LOG.debug("*DIR* NameNode.createSnapshot: Path {} and SnapshotName {}",
+        snapshotRoot, snapshotName);
     if (!checkPathLength(snapshotRoot)) {
       throw new IOException("createSnapshot: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -1925,6 +1933,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkNNStartup();
+    LOG.debug("*DIR* NameNode.deleteSnapshot: Path {} and SnapshotName {}",
+        snapshotRoot, snapshotName);
     if (snapshotName == null || snapshotName.isEmpty()) {
       throw new IOException("The snapshot name is null or empty.");
     }
@@ -1964,6 +1974,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void renameSnapshot(String snapshotRoot, String snapshotOldName,
       String snapshotNewName) throws IOException {
     checkNNStartup();
+    LOG.debug("*DIR* NameNode.renameSnapshot: Snapshot Path {}, " +
+        "snapshotOldName {}, snapshotNewName {}", snapshotRoot,
+        snapshotOldName, snapshotNewName);
     if (snapshotNewName == null || snapshotNewName.isEmpty()) {
       throw new IOException("The new snapshot name is null or empty.");
     }

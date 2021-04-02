@@ -954,6 +954,15 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String HADOOP_HTTP_METRICS_ENABLED =
+      "hadoop.http.metrics.enabled";
+  public static final boolean HADOOP_HTTP_METRICS_ENABLED_DEFAULT = true;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH =
       "hadoop.security.credential.provider.path";
 

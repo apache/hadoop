@@ -321,7 +321,7 @@ public class DatanodeStorageInfo {
   public boolean equals(Object obj) {
     if (this == obj) {
       return true;
-    } else if (obj == null || !(obj instanceof DatanodeStorageInfo)) {
+    } else if (!(obj instanceof DatanodeStorageInfo)) {
       return false;
     }
     final DatanodeStorageInfo that = (DatanodeStorageInfo)obj;

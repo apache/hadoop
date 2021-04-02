@@ -24,8 +24,14 @@
 #include "rpc/rpc_connection_impl.h"
 #include "common/namenode_info.h"
 
+#include <memory>
+#include <string>
+
 #include <google/protobuf/io/coded_stream.h>
+#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gmock/gmock-spec-builders.h>
+#include <gmock/gmock-generated-actions.h>
 #include <boost/system/error_code.hpp>
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 
@@ -108,7 +114,9 @@ TEST(RpcEngineTest, TestRoundTrip) {
 
   std::shared_ptr<IoService> io_service = IoService::MakeShared();
   Options options;
-  std::shared_ptr<RpcEngine> engine = std::make_shared<RpcEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<RpcEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
   auto conn =
       std::make_shared<RpcConnectionImpl<MockRPCConnection> >(engine);
   conn->TEST_set_connected(true);
@@ -144,7 +152,9 @@ TEST(RpcEngineTest, TestRoundTrip) {
 TEST(RpcEngineTest, TestConnectionResetAndFail) {
   std::shared_ptr<IoService> io_service = IoService::MakeShared();
   Options options;
-  std::shared_ptr<RpcEngine> engine = std::make_shared<RpcEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<RpcEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
   auto conn =
       std::make_shared<RpcConnectionImpl<MockRPCConnection> >(engine);
   conn->TEST_set_connected(true);
@@ -181,8 +191,9 @@ TEST(RpcEngineTest, TestConnectionResetAndRecover) {
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 0;
-  std::shared_ptr<SharedConnectionEngine> engine
-      = std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<SharedConnectionEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
 
   // Normally determined during RpcEngine::Connect, but in this case options
   // provides enough info to determine policy here.
@@ -222,8 +233,9 @@ TEST(RpcEngineTest, TestConnectionResetAndRecoverWithDelay) {
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 1;
-  std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<SharedConnectionEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
 
   // Normally determined during RpcEngine::Connect, but in this case options
   // provides enough info to determine policy here.
@@ -276,8 +288,10 @@ TEST(RpcEngineTest, TestConnectionFailure)
   Options options;
   options.max_rpc_retries = 0;
   options.rpc_retry_delay_ms = 0;
-  std::shared_ptr<SharedConnectionEngine> engine
-      = std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<SharedConnectionEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
+
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(boost::asio::error::connection_reset), "")));
 
@@ -303,8 +317,9 @@ TEST(RpcEngineTest, TestConnectionFailureRetryAndFailure)
   Options options;
   options.max_rpc_retries = 2;
   options.rpc_retry_delay_ms = 0;
-  std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<SharedConnectionEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(boost::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(make_error_code(boost::asio::error::connection_reset), "")))
@@ -332,8 +347,9 @@ TEST(RpcEngineTest, TestConnectionFailureAndRecover)
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 0;
-  std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<SharedConnectionEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(boost::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(boost::system::error_code(), "")))
@@ -355,8 +371,9 @@ TEST(RpcEngineTest, TestEventCallbacks)
   Options options;
   options.max_rpc_retries = 99;
   options.rpc_retry_delay_ms = 0;
-  std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<SharedConnectionEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
 
   // Normally determined during RpcEngine::Connect, but in this case options
   // provides enough info to determine policy here.
@@ -441,8 +458,9 @@ TEST(RpcEngineTest, TestConnectionFailureAndAsyncRecover)
   Options options;
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 1;
-  std::shared_ptr<SharedConnectionEngine> engine =
-      std::make_shared<SharedConnectionEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<SharedConnectionEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
   EXPECT_CALL(*producer, Produce())
       .WillOnce(Return(std::make_pair(make_error_code(boost::asio::error::connection_reset), "")))
       .WillOnce(Return(std::make_pair(boost::system::error_code(), "")))
@@ -466,7 +484,9 @@ TEST(RpcEngineTest, TestTimeout) {
   std::shared_ptr<IoService> io_service = IoService::MakeShared();
   Options options;
   options.rpc_timeout = 1;
-  std::shared_ptr<RpcEngine> engine = std::make_shared<RpcEngine>(io_service, options, "foo", "", "protocol", 1);
+  auto engine = std::make_shared<RpcEngine>(
+      io_service, options, std::make_shared<std::string>("foo"), "", "protocol",
+      1);
   auto conn =
       std::make_shared<RpcConnectionImpl<MockRPCConnection> >(engine);
   conn->TEST_set_connected(true);

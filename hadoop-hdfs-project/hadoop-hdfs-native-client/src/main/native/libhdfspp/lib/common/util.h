@@ -22,6 +22,7 @@
 #include "common/logging.h"
 
 #include <mutex>
+#include <memory>
 #include <string>
 
 #include <boost/asio/ip/tcp.hpp>
@@ -61,7 +62,7 @@ std::string SerializeDelimitedProtobufMessage(const ::google::protobuf::MessageL
 std::string Base64Encode(const std::string &src);
 
 // Return a new high-entropy client name
-std::string GetRandomClientName();
+std::shared_ptr<std::string> GetRandomClientName();
 
 // Returns true if _someone_ is holding the lock (not necessarily this thread,
 // but a std::mutex doesn't track which thread is holding the lock)

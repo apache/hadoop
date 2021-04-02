@@ -219,7 +219,7 @@ public class BlockStoragePolicy implements BlockStoragePolicySpi {
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
-    } else if (obj == null || !(obj instanceof BlockStoragePolicy)) {
+    } else if (!(obj instanceof BlockStoragePolicy)) {
       return false;
     }
     final BlockStoragePolicy that = (BlockStoragePolicy)obj;
