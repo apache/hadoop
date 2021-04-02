@@ -28,6 +28,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +54,8 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   // queue is unbounded because it's effectively limited by the size
   // of the edit log buffer - ie. a sync will eventually be forced.
   private final Deque<Edit> syncWaitQ = new ArrayDeque<Edit>();
+
+  private long lastFull = 0;
 
   FSEditLogAsync(Configuration conf, NNStorage storage, List<URI> editsDirs) {
     super(conf, storage, editsDirs);
@@ -188,6 +192,11 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
       if (!editPendingQ.offer(edit)) {
         Preconditions.checkState(
             isSyncThreadAlive(), "sync thread is not alive");
+        long now = Time.monotonicNow();
+        if (now - lastFull > 4000) {
+          lastFull = now;
+          LOG.info("Edit pending queue is full");
+        }
         if (Thread.holdsLock(this)) {
           // if queue is full, synchronized caller must immediately relinquish
           // the monitor before re-offering to avoid deadlock with sync thread
@@ -225,15 +234,18 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   public void run() {
     try {
       while (true) {
+        NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
         boolean doSync;
         Edit edit = dequeueEdit();
         if (edit != null) {
           // sync if requested by edit log.
           doSync = edit.logEdit();
           syncWaitQ.add(edit);
+          metrics.setPendingEditsCount(editPendingQ.size() + 1);
         } else {
           // sync when editq runs dry, but have edits pending a sync.
           doSync = !syncWaitQ.isEmpty();
+          metrics.setPendingEditsCount(0);
         }
         if (doSync) {
           // normally edit log exceptions cause the NN to terminate, but tests
