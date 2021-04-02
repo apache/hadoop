@@ -185,6 +185,11 @@ public class FSPermissionChecker implements AccessControlEnforcer {
    */
   public void checkSuperuserPrivilege(String path)
       throws AccessControlException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("SUPERUSER ACCESS CHECK: " + this
+          + ", operationName=" + FSPermissionChecker.operationType.get()
+          + ", path=" + path);
+    }
     getAccessControlEnforcer().checkSuperUserPermissionWithContext(
         getAuthorizationContextForSuperUser(path));
   }
@@ -199,6 +204,11 @@ public class FSPermissionChecker implements AccessControlEnforcer {
    */
   public void denyUserAccess(String path, String errorMessage)
       throws AccessControlException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("DENY USER ACCESS: " + this
+          + ", operationName=" + FSPermissionChecker.operationType.get()
+          + ", path=" + path);
+    }
     getAccessControlEnforcer().denyUserAccess(
         getAuthorizationContextForSuperUser(path), errorMessage);
   }
