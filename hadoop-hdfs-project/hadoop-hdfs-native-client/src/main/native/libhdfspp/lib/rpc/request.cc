@@ -47,7 +47,7 @@ static const int kNoRetry = -1;
 static void AddHeadersToPacket(std::string *res,
                                std::initializer_list<const pb::MessageLite *> headers,
                                const std::string *payload) {
-  int len = 0;
+  size_t len = 0;
   std::for_each(
       headers.begin(), headers.end(),
       [&len](const pb::MessageLite *v) { len += DelimitedPBMessageSize(v); });
@@ -68,7 +68,7 @@ static void AddHeadersToPacket(std::string *res,
 
   std::for_each(
       headers.begin(), headers.end(), [&buf](const pb::MessageLite *v) {
-        buf = pbio::CodedOutputStream::WriteVarint32ToArray(v->ByteSize(), buf);
+        buf = pbio::CodedOutputStream::WriteVarint64ToArray(v->ByteSizeLong(), buf);
         buf = v->SerializeWithCachedSizesToArray(buf);
       });
 
@@ -78,13 +78,13 @@ static void AddHeadersToPacket(std::string *res,
 }
 
 static void ConstructPayload(std::string *res, const pb::MessageLite *header) {
-  int len = DelimitedPBMessageSize(header);
+  const auto len = DelimitedPBMessageSize(header);
   res->reserve(len);
   pbio::StringOutputStream ss(res);
   pbio::CodedOutputStream os(&ss);
   uint8_t *buf = os.GetDirectBufferForNBytesAndAdvance(len);
   assert(buf);
-  buf = pbio::CodedOutputStream::WriteVarint32ToArray(header->ByteSize(), buf);
+  buf = pbio::CodedOutputStream::WriteVarint64ToArray(header->ByteSizeLong(), buf);
   buf = header->SerializeWithCachedSizesToArray(buf);
 }
 

@@ -36,7 +36,7 @@ using namespace ::std::placeholders;
 static void AddHeadersToPacket(
     std::string *res, std::initializer_list<const pb::MessageLite *> headers,
     const std::string *payload) {
-  int len = 0;
+  size_t len = 0;
   std::for_each(
       headers.begin(), headers.end(),
       [&len](const pb::MessageLite *v) { len += DelimitedPBMessageSize(v); });
@@ -57,7 +57,7 @@ static void AddHeadersToPacket(
 
   std::for_each(
       headers.begin(), headers.end(), [&buf](const pb::MessageLite *v) {
-        buf = pbio::CodedOutputStream::WriteVarint32ToArray(v->ByteSize(), buf);
+        buf = pbio::CodedOutputStream::WriteVarint64ToArray(v->ByteSizeLong(), buf);
         buf = v->SerializeWithCachedSizesToArray(buf);
       });
 
