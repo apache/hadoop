@@ -1587,4 +1587,47 @@ public class TestDecommission extends AdminStatesBaseTest {
 
     cleanupFile(fileSys, file);
   }
+
+  /**
+   * DataNodes with capacity 0 should be decommissioned immediately
+   * even if they haven't reported the first block report.
+   */
+  @Test
+  public void testCapacityZeroNodesDecommission() throws Exception {
+    int numNamenodes = 1;
+    int numDatanodes = 3;
+    startCluster(numNamenodes, numDatanodes);
+
+    // start 1 more datanode with capacity 0
+    int numOfNewDatanodes = 1;
+    int storagesPerDatanode = 2;
+    long[][] capacities = new long[numOfNewDatanodes][storagesPerDatanode];
+    for (int i = 0; i < numOfNewDatanodes; i++) {
+      for (int j = 0; j < storagesPerDatanode; j++) {
+        capacities[i][j] = 0;
+      }
+    }
+    getCluster().startDataNodes(getConf(), 1, null, true, null, null, null,
+        capacities, null, false, false, false, null);
+    getCluster().triggerHeartbeats();
+
+    // clear the block report count of the datanode with capacity 0
+    BlockManager bm = getCluster().getNamesystem().getBlockManager();
+    DatanodeManager dm = bm.getDatanodeManager();
+    DatanodeID dnID =
+        getCluster().getDataNodes().get(numDatanodes).getDatanodeId();
+    DatanodeDescriptor dn = dm.getDatanode(dnID);
+    dn.updateRegInfo(dnID);
+
+    // decommission the datanode with capacity 0
+    ArrayList<String> nodes = new ArrayList<>();
+    nodes.add(dn.getXferAddr());
+    initExcludeHosts(nodes);
+    refreshNodes(0);
+
+    // it should be decommissioned immediately
+    FSNamesystem ns = getCluster().getNamesystem(0);
+    int liveDecommissioned = ns.getNumDecomLiveDataNodes();
+    assertEquals(1, liveDecommissioned);
+  }
 }

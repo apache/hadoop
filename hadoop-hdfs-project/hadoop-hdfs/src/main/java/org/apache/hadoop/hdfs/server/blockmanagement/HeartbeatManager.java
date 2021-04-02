@@ -281,7 +281,13 @@ class HeartbeatManager implements DatanodeStatistics {
       node.setDecommissioned();
     } else {
       stats.subtract(node);
-      node.startDecommission();
+      if (node.getCapacity() == 0 && node.getNumBlocks() == 0) {
+        LOG.info("The capacity and the number of blocks are zero. " + node +
+            " is put decommissioned state immediately.");
+        node.setDecommissioned();
+      } else {
+        node.startDecommission();
+      }
       stats.add(node);
     }
   }
