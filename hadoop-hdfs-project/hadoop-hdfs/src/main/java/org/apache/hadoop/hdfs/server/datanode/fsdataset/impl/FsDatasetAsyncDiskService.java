@@ -335,7 +335,7 @@ class FsDatasetAsyncDiskService {
             + block.getLocalBlock() + " URI " + replicaToDelete.getBlockURI());
       }
       updateDeletedBlockId(block);
-      IOUtils.cleanup(null, volumeRef);
+      IOUtils.cleanupWithLogger(null, volumeRef);
     }
   }
   

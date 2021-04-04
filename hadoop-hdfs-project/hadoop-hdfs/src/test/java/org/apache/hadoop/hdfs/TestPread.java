@@ -363,8 +363,8 @@ public class TestPread {
       assertTrue(false);
     } finally {
       Mockito.reset(injector);
-      IOUtils.cleanup(null, input);
-      IOUtils.cleanup(null, output);
+      IOUtils.cleanupWithLogger(null, input);
+      IOUtils.cleanupWithLogger(null, output);
       fileSys.close();
       cluster.shutdown();
     }

@@ -206,7 +206,7 @@ public class TestAddStripedBlocks {
       assertTrue(blocks[0].isStriped());
       checkStripedBlockUC((BlockInfoStriped) fileNode.getLastBlock(), false);
     } finally {
-      IOUtils.cleanup(null, out);
+      IOUtils.cleanupWithLogger(null, out);
     }
   }
 
@@ -271,7 +271,7 @@ public class TestAddStripedBlocks {
       assertArrayEquals(indices, blockIndices);
       assertArrayEquals(expectedDNs, datanodes);
     } finally {
-      IOUtils.cleanup(null, out);
+      IOUtils.cleanupWithLogger(null, out);
     }
   }
 
@@ -327,7 +327,7 @@ public class TestAddStripedBlocks {
         assertTrue(storageIDs.contains(newstorage.getStorageID()));
       }
     } finally {
-      IOUtils.cleanup(null, out);
+      IOUtils.cleanupWithLogger(null, out);
     }
 
     // 3. restart the namenode. mimic the full block reports and check the
