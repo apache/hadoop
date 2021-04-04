@@ -42,6 +42,7 @@ import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptions;
+import org.apache.hadoop.tools.SimpleCopyListing;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.apache.hadoop.tools.util.DistCpTestUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
@@ -628,8 +629,15 @@ public abstract class AbstractContractDistCpTest
     GenericTestUtils
         .createFiles(remoteFS, source, getDepth(), getWidth(), getWidth());
 
+    GenericTestUtils.LogCapturer log =
+        GenericTestUtils.LogCapturer.captureLogs(SimpleCopyListing.LOG);
+
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
-        dest.toString(), "-useiterator", conf);
+        dest.toString(), "-useiterator -update -delete", conf);
+
+    // Check the target listing was also done using iterator.
+    assertTrue(log.getOutput().contains(
+        "Building listing using iterator mode for " + dest.toString()));
 
     Assertions
         .assertThat(RemoteIterators.toList(localFS.listFiles(dest, true)))
