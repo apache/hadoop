@@ -1592,7 +1592,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * DataNodes with capacity 0 should be decommissioned immediately
    * even if they haven't reported the first block report.
    */
-  @Test
+  @Test(timeout=60000)
   public void testCapacityZeroNodesDecommission() throws Exception {
     int numNamenodes = 1;
     int numDatanodes = 3;
@@ -1614,16 +1614,19 @@ public class TestDecommission extends AdminStatesBaseTest {
     // clear the block report count of the datanode with capacity 0
     BlockManager bm = getCluster().getNamesystem().getBlockManager();
     DatanodeManager dm = bm.getDatanodeManager();
-    DatanodeID dnID =
-        getCluster().getDataNodes().get(numDatanodes).getDatanodeId();
-    DatanodeDescriptor dn = dm.getDatanode(dnID);
-    dn.updateRegInfo(dnID);
+    DataNode dataNode = getCluster().getDataNodes().get(numDatanodes);
+    DatanodeID dnID = dataNode.getDatanodeId();
+    DatanodeDescriptor capacityZeroNode = dm.getDatanode(dnID);
+    capacityZeroNode.updateRegInfo(dnID);
+    // disable heartbeat not to send the first block report
+    DataNodeTestUtils.setHeartbeatsDisabledForTests(dataNode, true);
 
     // decommission the datanode with capacity 0
     ArrayList<String> nodes = new ArrayList<>();
-    nodes.add(dn.getXferAddr());
+    nodes.add(capacityZeroNode.getXferAddr());
     initExcludeHosts(nodes);
     refreshNodes(0);
+    waitNodeState(capacityZeroNode, AdminStates.DECOMMISSIONED);
 
     // it should be decommissioned immediately
     FSNamesystem ns = getCluster().getNamesystem(0);

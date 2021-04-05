@@ -4584,8 +4584,14 @@ public class BlockManager implements BlockStatsMXBean {
    */
   boolean isNodeHealthyForDecommissionOrMaintenance(DatanodeDescriptor node) {
     if (!node.checkBlockReportReceived()) {
-      LOG.info("Node {} hasn't sent its first block report.", node);
-      return false;
+      if (node.getCapacity() == 0 && node.getNumBlocks() == 0) {
+        LOG.info("The capacity and the number of blocks of {} are zero. "
+            + "Safe to decommission or put in maintenance.", node);
+        return true;
+      } else {
+        LOG.info("Node {} hasn't sent its first block report.", node);
+        return false;
+      }
     }
 
     if (node.isAlive()) {
