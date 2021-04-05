@@ -175,7 +175,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>netty-all</artifactId>
       <scope>compile</scope>
     </dependency>
-    
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-kms</artifactId>
