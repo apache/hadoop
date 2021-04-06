@@ -453,11 +453,11 @@ TEST_F(HdfsExtTest, TestHosts) {
   EXPECT_EQ(0, errno);
 
   //Test invalid arguments
-  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), 0, std::numeric_limits<int64_t>::max()+1));
+  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), 0, std::numeric_limits<int64_t>::min()));
   EXPECT_EQ((int) std::errc::invalid_argument, errno);
 
   //Test invalid arguments
-  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), std::numeric_limits<int64_t>::max()+1, std::numeric_limits<int64_t>::max()));
+  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max()));
   EXPECT_EQ((int) std::errc::invalid_argument, errno);
 }
 
