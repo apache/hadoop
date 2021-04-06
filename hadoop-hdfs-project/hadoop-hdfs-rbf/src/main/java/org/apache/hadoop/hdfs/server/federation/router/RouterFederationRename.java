@@ -20,8 +20,13 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.fedbalance.DistCpProcedure;
 import org.apache.hadoop.tools.fedbalance.FedBalanceConfigs;
 import org.apache.hadoop.tools.fedbalance.FedBalanceContext;
@@ -31,6 +36,8 @@ import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedure;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedureScheduler;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -96,23 +103,35 @@ public class RouterFederationRename {
     }
     RemoteLocation srcLoc = srcLocations.get(0);
     RemoteLocation dstLoc = dstLocations.get(0);
-    // Build and submit router federation rename job.
-    BalanceJob job = buildRouterRenameJob(srcLoc.getNameserviceId(),
-        dstLoc.getNameserviceId(), srcLoc.getDest(), dstLoc.getDest());
-    BalanceProcedureScheduler scheduler = rpcServer.getFedRenameScheduler();
-    countIncrement();
+
+    UserGroupInformation routerUser = UserGroupInformation.getLoginUser();
+
     try {
-      scheduler.submit(job);
-      LOG.info("Rename {} to {} from namespace {} to {}. JobId={}.", src, dst,
-          srcLoc.getNameserviceId(), dstLoc.getNameserviceId(), job.getId());
-      scheduler.waitUntilDone(job);
-      if (job.getError() != null) {
-        throw new IOException("Rename of " + src + " to " + dst + " failed.",
-            job.getError());
-      }
-      return true;
-    } finally {
-      countDecrement();
+      // as router user with saveJournal and task submission privileges
+      return routerUser.doAs((PrivilegedExceptionAction<Boolean>) () -> {
+        // Build and submit router federation rename job.
+        BalanceJob job = buildRouterRenameJob(srcLoc.getNameserviceId(),
+            dstLoc.getNameserviceId(), srcLoc.getDest(), dstLoc.getDest());
+        BalanceProcedureScheduler scheduler = rpcServer.getFedRenameScheduler();
+        countIncrement();
+        try {
+          // Neet TGT
+          scheduler.submit(job);
+          LOG.info("Rename {} to {} from namespace {} to {}. JobId={}.", src, dst,
+              srcLoc.getNameserviceId(), dstLoc.getNameserviceId(), job.getId());
+          scheduler.waitUntilDone(job);
+          if (job.getError() != null) {
+            throw new IOException("Rename of " + src + " to " + dst + " failed.",
+                job.getError());
+          }
+          return true;
+        } finally {
+          countDecrement();
+        }
+      });
+    } catch (InterruptedException e) {
+      LOG.warn("Fed balance job is interrupted.", e);
+      throw new InterruptedIOException(e.getMessage());
     }
   }
 
