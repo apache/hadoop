@@ -16,9 +16,12 @@
  * limitations under the License.
  */
 
+#include <Shlwapi.h>
 #include <Windows.h>
 
 #include "syscall.h"
+
+#pragma comment(lib, "Shlwapi.lib")
 
 bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
   return WriteToStdoutImpl(message.c_str());
@@ -26,6 +29,12 @@ bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
 
 int XPlatform::Syscall::WriteToStdout(const char* message) {
   return WriteToStdoutImpl(message) ? 1 : 0;
+}
+
+bool XPlatform::Syscall::FnMatch(const std::string& pattern,
+                                 const std::string& str) {
+  return PathMatchSpecA(static_cast<LPCSTR>(str.c_str()),
+                        static_cast<LPCSTR>(pattern.c_str())) == TRUE;
 }
 
 bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
