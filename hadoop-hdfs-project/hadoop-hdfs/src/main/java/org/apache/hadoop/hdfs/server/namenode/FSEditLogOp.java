@@ -252,13 +252,13 @@ public abstract class FSEditLogOp {
   }
   
   public boolean hasRpcIds() {
-    return rpcClientId != RpcConstants.DUMMY_CLIENT_ID
+    return !Arrays.equals(rpcClientId, RpcConstants.DUMMY_CLIENT_ID)
         && rpcCallId != RpcConstants.INVALID_CALL_ID;
   }
   
   /** this has to be called after calling {@link #hasRpcIds()} */
   public byte[] getClientId() {
-    Preconditions.checkState(rpcClientId != RpcConstants.DUMMY_CLIENT_ID);
+    Preconditions.checkState(!Arrays.equals(rpcClientId, RpcConstants.DUMMY_CLIENT_ID));
     return rpcClientId;
   }
   
