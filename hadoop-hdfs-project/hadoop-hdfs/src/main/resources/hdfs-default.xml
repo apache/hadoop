@@ -3735,11 +3735,11 @@
 
 <property>
   <name>dfs.namenode.quota.init-threads</name>
-  <value>4</value>
+  <value>12</value>
   <description>
     The number of concurrent threads to be used in quota initialization. The
     speed of quota initialization also affects the namenode fail-over latency.
-    If the size of name space is big, try increasing this.
+    If the size of name space is big, try increasing this to 16 or higher.
   </description>
 </property>
 
