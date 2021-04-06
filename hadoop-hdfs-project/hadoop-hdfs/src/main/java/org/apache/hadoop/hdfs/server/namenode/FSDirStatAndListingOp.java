@@ -152,13 +152,8 @@ class FSDirStatAndListingOp {
     BlockManager bm = fsd.getBlockManager();
     fsd.readLock();
     try {
-      final INodesInPath iip;
-      if (pc.isSuperUser()) {
-        // Pass null to PC for superUsers to avoid multiple audits
-        iip = fsd.resolvePath(null, src, DirOp.READ);
-      } else {
-        iip = fsd.resolvePath(pc, src, DirOp.READ);
-      }
+      // Just get INodesInPath since we check for path access later
+      final INodesInPath iip = fsd.getINodesInPath(src, DirOp.READ);
       src = iip.getPath();
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (fsd.isPermissionEnabled()) {
