@@ -1548,7 +1548,8 @@ public class TestEditLog {
       LOG.error("edit log failover didn't work", e);
       fail("Edit log failover didn't work");
     } finally {
-      IOUtils.cleanup(null, streams.toArray(new EditLogInputStream[0]));
+      IOUtils.cleanupWithLogger(null,
+          streams.toArray(new EditLogInputStream[0]));
     }
   }
 
@@ -1598,7 +1599,8 @@ public class TestEditLog {
       LOG.error("edit log failover didn't work", e);
       fail("Edit log failover didn't work");
     } finally {
-      IOUtils.cleanup(null, streams.toArray(new EditLogInputStream[0]));
+      IOUtils.cleanupWithLogger(null,
+          streams.toArray(new EditLogInputStream[0]));
     }
   }
 
