@@ -204,7 +204,8 @@ public class MetricsOverviewTable extends HtmlBlock {
     }
 
     SchedulerInfo schedulerInfo = new SchedulerInfo(this.rm);
-    
+    int schedBusy = clusterMetrics.getRmSchedulerBusyPercent();
+
     div.h3("Scheduler Metrics").
     table("#schedulermetricsoverview").
     thead().$class("ui-widget-header").
@@ -215,6 +216,7 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default").__("Maximum Allocation").__().
         th().$class("ui-state-default")
             .__("Maximum Cluster Application Priority").__().
+        th().$class("ui-state-default").__("Scheduler Busy %").__().
         __().
         __().
     tbody().$class("ui-widget-content").
@@ -225,6 +227,7 @@ public class MetricsOverviewTable extends HtmlBlock {
         td(schedulerInfo.getMinAllocation().toString()).
         td(schedulerInfo.getMaxAllocation().toString()).
         td(String.valueOf(schedulerInfo.getMaxClusterLevelAppPriority())).
+        td(schedBusy == -1 ? UNAVAILABLE : String.valueOf(schedBusy)).
         __().
         __().__();
 
