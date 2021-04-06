@@ -177,7 +177,7 @@ public class TestHFlush {
       blocks = fileSystem.dfs.getLocatedBlocks(path.toString(), 0);
       assertEquals(3, blocks.getLocatedBlocks().size());
     } finally {
-      IOUtils.cleanup(null, stm, fileSystem);
+      IOUtils.cleanupWithLogger(null, stm, fileSystem);
       if (cluster != null) {
         cluster.shutdown();
       }

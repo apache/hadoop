@@ -431,7 +431,7 @@ class DataXceiver extends Receiver implements Runnable {
             blk.getBlockId(), dnR.getDatanodeUuid(), success));
       }
       if (fis != null) {
-        IOUtils.cleanup(null, fis);
+        IOUtils.cleanupWithLogger(null, fis);
       }
     }
   }
@@ -554,7 +554,7 @@ class DataXceiver extends Receiver implements Runnable {
           LOG.warn("Failed to shut down socket in error handler", e);
         }
       }
-      IOUtils.cleanup(null, shmInfo);
+      IOUtils.cleanupWithLogger(null, shmInfo);
     }
   }
 
