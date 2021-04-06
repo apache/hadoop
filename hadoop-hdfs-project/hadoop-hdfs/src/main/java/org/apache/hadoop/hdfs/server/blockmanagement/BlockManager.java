@@ -4585,6 +4585,8 @@ public class BlockManager implements BlockStatsMXBean {
   boolean isNodeHealthyForDecommissionOrMaintenance(DatanodeDescriptor node) {
     if (!node.checkBlockReportReceived()) {
       if (node.getCapacity() == 0 && node.getNumBlocks() == 0) {
+        // DataNode has a storage problem and doesn't send block reports.
+        // In this case, it is safe to decommission or put in maintenance.
         LOG.info("The capacity and the number of blocks of {} are zero. "
             + "Safe to decommission or put in maintenance.", node);
         return true;
