@@ -317,7 +317,7 @@ public class CryptoInputStream extends FilterInputStream implements
   }
   
   @Override
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
     if (closed) {
       return;
     }
