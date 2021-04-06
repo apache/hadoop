@@ -2903,6 +2903,18 @@ public class YarnConfiguration extends Configuration {
   public static final int
           DEFAULT_YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD = 5000;
 
+  /** Resource manager dispatcher thread monitor sampling rate.
+   * Units are samples per minute.  This controls how often to sample
+   * the cpu utilization of the resource manager dispatcher thread.
+   * The cpu utilization is displayed on the RM UI as scheduler busy %.
+   * Set to zero to disable the dispatcher thread monitor.
+   */
+  public static final String
+      YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN =
+      YARN_PREFIX + "dispatcher.cpu-monitor.samples-per-min";
+  public static final int
+      DEFAULT_YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN = 60;
+
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
    * entries

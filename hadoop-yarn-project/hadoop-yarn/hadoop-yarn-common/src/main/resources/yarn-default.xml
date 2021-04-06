@@ -121,6 +121,19 @@
   </property>
 
   <property>
+    <description>
+      Resource manager dispatcher thread cpu monitor sampling rate.
+      Units are samples per minute.  This controls how often to sample
+      the cpu utilization of the resource manager dispatcher thread.
+      The cpu utilization is displayed on the RM UI as scheduler busy %.
+      Set this to zero to disable the dispatcher thread monitor.  Defaults
+      to 60 samples per minute.
+    </description>
+    <name>yarn.dispatcher.cpu-monitor.samples-per-min</name>
+    <value>60</value>
+  </property>
+
+  <property>
     <description>The expiry interval for application master reporting.</description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
