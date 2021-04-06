@@ -117,7 +117,7 @@ public class FsDatasetUtil {
       }
       return raf.getFD();
     } catch(IOException ioe) {
-      IOUtils.cleanup(null, raf);
+      IOUtils.cleanupWithLogger(null, raf);
       throw ioe;
     }
   }

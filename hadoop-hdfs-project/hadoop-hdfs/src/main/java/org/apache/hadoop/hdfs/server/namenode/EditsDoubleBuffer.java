@@ -76,7 +76,7 @@ public class EditsDoubleBuffer {
           + " bytes still to be flushed and cannot be closed.");
     }
 
-    IOUtils.cleanup(null, bufCurrent, bufReady);
+    IOUtils.cleanupWithLogger(null, bufCurrent, bufReady);
     bufCurrent = bufReady = null;
   }
   

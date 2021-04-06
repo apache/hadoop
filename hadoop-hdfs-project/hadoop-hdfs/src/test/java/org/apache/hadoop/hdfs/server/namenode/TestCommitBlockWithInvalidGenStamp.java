@@ -95,7 +95,7 @@ public class TestCommitBlockWithInvalidGenStamp {
       dfs.getClient().getClientName(), previous, fileNode.getId());
       Assert.assertTrue("should complete successfully", complete);
     } finally {
-      IOUtils.cleanup(null, out);
+      IOUtils.cleanupWithLogger(null, out);
     }
   }
 }
