@@ -1589,44 +1589,31 @@ public class TestDecommission extends AdminStatesBaseTest {
   }
 
   /**
-   * DataNodes with capacity 0 should be decommissioned immediately
+   * DataNodes with 0 blocks should be decommissioned immediately
    * even if they haven't reported the first block report.
    */
   @Test(timeout=60000)
-  public void testCapacityZeroNodesDecommission() throws Exception {
+  public void testZeroBlocksNodesDecommission() throws Exception {
     int numNamenodes = 1;
     int numDatanodes = 3;
     startCluster(numNamenodes, numDatanodes);
 
-    // start 1 more datanode with capacity 0
-    int numOfNewDatanodes = 1;
-    int storagesPerDatanode = 2;
-    long[][] capacities = new long[numOfNewDatanodes][storagesPerDatanode];
-    for (int i = 0; i < numOfNewDatanodes; i++) {
-      for (int j = 0; j < storagesPerDatanode; j++) {
-        capacities[i][j] = 0;
-      }
-    }
-    getCluster().startDataNodes(getConf(), 1, null, true, null, null, null,
-        capacities, null, false, false, false, null);
-    getCluster().triggerHeartbeats();
-
-    // clear the block report count of the datanode with capacity 0
     BlockManager bm = getCluster().getNamesystem().getBlockManager();
     DatanodeManager dm = bm.getDatanodeManager();
-    DataNode dataNode = getCluster().getDataNodes().get(numDatanodes);
+    DataNode dataNode = getCluster().getDataNodes().get(numDatanodes-1);
     DatanodeID dnID = dataNode.getDatanodeId();
-    DatanodeDescriptor capacityZeroNode = dm.getDatanode(dnID);
-    capacityZeroNode.updateRegInfo(dnID);
+    DatanodeDescriptor zeroBlocksNode = dm.getDatanode(dnID);
+    // clear the block report count
+    zeroBlocksNode.updateRegInfo(dnID);
     // disable heartbeat not to send the first block report
     DataNodeTestUtils.setHeartbeatsDisabledForTests(dataNode, true);
 
-    // decommission the datanode with capacity 0
+    // decommission the datanode with 0 blocks
     ArrayList<String> nodes = new ArrayList<>();
-    nodes.add(capacityZeroNode.getXferAddr());
+    nodes.add(zeroBlocksNode.getXferAddr());
     initExcludeHosts(nodes);
     refreshNodes(0);
-    waitNodeState(capacityZeroNode, AdminStates.DECOMMISSIONED);
+    waitNodeState(zeroBlocksNode, AdminStates.DECOMMISSIONED);
 
     // it should be decommissioned immediately
     FSNamesystem ns = getCluster().getNamesystem(0);
