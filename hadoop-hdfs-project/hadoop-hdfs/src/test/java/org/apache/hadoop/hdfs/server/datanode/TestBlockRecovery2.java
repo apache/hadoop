@@ -229,8 +229,8 @@ public class TestBlockRecovery2 {
     tearDown();
 
     Configuration configuration = new HdfsConfiguration();
-    configuration.set(
-        DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY, "1000");
+    configuration.setLong(
+        DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY, 5000L);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(configuration)
         .numDataNodes(1).build();
     try {
