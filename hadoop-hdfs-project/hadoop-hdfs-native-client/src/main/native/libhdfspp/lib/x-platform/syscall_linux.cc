@@ -41,3 +41,10 @@ bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
   const auto result = write(1, message, message_len);
   return result == static_cast<ssize_t>(message_len);
 }
+
+void XPlatform::Syscall::ClearBufferSafely(void* buffer,
+                                           const size_t sz_bytes) {
+  if (buffer != nullptr) {
+    explicit_bzero(buffer, sz_bytes);
+  }
+}
