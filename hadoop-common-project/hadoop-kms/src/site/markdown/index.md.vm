@@ -1055,7 +1055,8 @@ $H4 Get Key Version
     Content-Type: application/json
 
     {
-      "name"        : "versionName",
+      "name"        : "<name>",
+      "versionName" : "<version>",
       "material"    : "<material>",    //base64
     }
 
@@ -1072,11 +1073,13 @@ $H4 Get Key Versions
 
     [
       {
-        "name"        : "versionName",
+        "name"        : "<name>",
+        "versionName" : "<version>",
         "material"    : "<material>",    //base64
       },
       {
-        "name"        : "versionName",
+        "name"        : "<name>",
+        "versionName" : "<version>",
         "material"    : "<material>",    //base64
       },
       ...
