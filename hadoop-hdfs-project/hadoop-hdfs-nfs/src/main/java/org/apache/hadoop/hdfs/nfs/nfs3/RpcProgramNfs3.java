@@ -31,6 +31,7 @@ import java.util.EnumSet;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
@@ -141,6 +142,7 @@ import org.slf4j.LoggerFactory;
 /**
  * RPC program corresponding to nfs daemon. See {@link Nfs3}.
  */
+@ChannelHandler.Sharable
 public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   public static final int DEFAULT_UMASK = 0022;
   public static final FsPermission umask = new FsPermission(
