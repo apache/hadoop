@@ -152,8 +152,9 @@ class FSDirStatAndListingOp {
     BlockManager bm = fsd.getBlockManager();
     fsd.readLock();
     try {
-      // Just get INodesInPath since we check for path access later
-      final INodesInPath iip = fsd.getINodesInPath(src, DirOp.READ);
+      // Just get INodesInPath without access checks, since we check for path
+      // access later
+      final INodesInPath iip = fsd.resolvePath(null, src, DirOp.READ);
       src = iip.getPath();
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (fsd.isPermissionEnabled()) {
