@@ -348,4 +348,31 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       NoRouterRpcFairnessPolicyController.class;
   public static final String DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX =
       FEDERATION_ROUTER_FAIRNESS_PREFIX + "handler.count.";
+
+  // HDFS Router Federation Rename.
+  public static final String DFS_ROUTER_FEDERATION_RENAME_PREFIX =
+      FEDERATION_ROUTER_PREFIX + "federation.rename.";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_OPTION =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "option";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT =
+      "NONE";
+  public static final String
+      DFS_ROUTER_FEDERATION_RENAME_FORCE_CLOSE_OPEN_FILE =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "force.close.open.file";
+  public static final boolean
+      DFS_ROUTER_FEDERATION_RENAME_FORCE_CLOSE_OPEN_FILE_DEFAULT = true;
+  public static final String DFS_ROUTER_FEDERATION_RENAME_MAP =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "map";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_BANDWIDTH =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "bandwidth";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_DELAY =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "delay";
+  public static final long DFS_ROUTER_FEDERATION_RENAME_DELAY_DEFAULT = 1000;
+  public static final String DFS_ROUTER_FEDERATION_RENAME_DIFF =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "diff";
+  public static final int DFS_ROUTER_FEDERATION_RENAME_DIFF_DEFAULT = 0;
+  public static final String DFS_ROUTER_FEDERATION_RENAME_TRASH =
+      DFS_ROUTER_FEDERATION_RENAME_PREFIX + "trash";
+  public static final String DFS_ROUTER_FEDERATION_RENAME_TRASH_DEFAULT =
+      "trash";
 }

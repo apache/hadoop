@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -90,6 +89,8 @@ public class DelegationTokenRenewer extends AbstractService {
       new Text("HDFS_DELEGATION_TOKEN");
   public static final String SCHEME = "hdfs";
 
+  private volatile int lastEventQueueSizeLogged = 0;
+
   // global single timer (daemon)
   private Timer renewalTimer;
   private RMContext rmContext;
@@ -123,7 +124,7 @@ public class DelegationTokenRenewer extends AbstractService {
   private long tokenRenewerThreadRetryInterval;
   private int tokenRenewerThreadRetryMaxAttempts;
   private final Map<DelegationTokenRenewerEvent, Future<?>> futures =
-      new HashMap<>();
+      new ConcurrentHashMap<>();
   private boolean delegationTokenRenewerPoolTrackerFlag = true;
 
   // this config is supposedly not used by end-users.
@@ -229,6 +230,13 @@ public class DelegationTokenRenewer extends AbstractService {
         futures.put(evt, future);
       } else {
         pendingEventQueue.add(evt);
+        int qSize = pendingEventQueue.size();
+        if (qSize != 0 && qSize % 1000 == 0
+            && lastEventQueueSizeLogged != qSize) {
+          lastEventQueueSizeLogged = qSize;
+          LOG.info("Size of pending " +
+              "DelegationTokenRenewerEvent queue is " + qSize);
+        }
       }
     } finally {
       serviceStateLock.readLock().unlock();

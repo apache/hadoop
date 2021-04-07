@@ -61,7 +61,7 @@ public class TestBalancerWithMultipleNameNodes {
   static final Logger LOG = Balancer.LOG;
   {
     GenericTestUtils.setLogLevel(LOG, Level.TRACE);
-    DFSTestUtil.setNameNodeLogLevel(org.apache.log4j.Level.TRACE);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
 
   
@@ -146,15 +146,16 @@ public class TestBalancerWithMultipleNameNodes {
   }
 
   /* wait for one heartbeat */
-  static void wait(final ClientProtocol[] clients,
+  static void wait(final Suite suite,
       long expectedUsedSpace, long expectedTotalSpace) throws IOException {
     LOG.info("WAIT expectedUsedSpace=" + expectedUsedSpace
         + ", expectedTotalSpace=" + expectedTotalSpace);
-    for(int n = 0; n < clients.length; n++) {
+    suite.cluster.triggerHeartbeats();
+    for(int n = 0; n < suite.clients.length; n++) {
       int i = 0;
       for(boolean done = false; !done; ) {
-        final long[] s = clients[n].getStats();
-        done = s[0] == expectedTotalSpace && s[1] == expectedUsedSpace;
+        final long[] s = suite.clients[n].getStats();
+        done = s[0] == expectedTotalSpace && s[1] >= expectedUsedSpace;
         if (!done) {
           sleep(100L);
           if (++i % 100 == 0) {
@@ -172,7 +173,7 @@ public class TestBalancerWithMultipleNameNodes {
     LOG.info("BALANCER 0: totalUsed=" + totalUsed
         + ", totalCapacity=" + totalCapacity
         + ", avg=" + avg);
-    wait(s.clients, totalUsed, totalCapacity);
+    wait(s, totalUsed, totalCapacity);
     LOG.info("BALANCER 1");
 
     // get storage reports for relevant blockpools so that we can compare
@@ -186,7 +187,7 @@ public class TestBalancerWithMultipleNameNodes {
     Assert.assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
 
     LOG.info("BALANCER 2");
-    wait(s.clients, totalUsed, totalCapacity);
+    wait(s, totalUsed, totalCapacity);
     LOG.info("BALANCER 3");
 
     int i = 0;
@@ -530,7 +531,7 @@ public class TestBalancerWithMultipleNameNodes {
 
       LOG.info("RUN_TEST 2: create files");
       // fill up the cluster to be 30% full
-      final long totalUsed = (totalCapacity * s.replication)*3/10;
+      final long totalUsed = totalCapacity * 3 / 10;
       final long size = (totalUsed/nNameNodes)/s.replication;
       for(int n = 0; n < nNameNodes; n++) {
         createFile(s, n, size);

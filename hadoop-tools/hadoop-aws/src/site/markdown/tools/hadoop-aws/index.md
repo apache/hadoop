@@ -81,11 +81,12 @@ schemes.
 * Supports authentication via: environment variables, Hadoop configuration
 properties, the Hadoop key management store and IAM roles.
 * Supports per-bucket configuration.
-* With [S3Guard](./s3guard.html), adds high performance and consistent metadata/
-directory read operations. This delivers consistency as well as speed.
 * Supports S3 "Server Side Encryption" for both reading and writing:
  SSE-S3, SSE-KMS and SSE-C
 * Instrumented with Hadoop metrics.
+* Before S3 was consistent, provided a consistent view of inconsistent storage
+  through [S3Guard](./s3guard.html).
+
 * Actively maintained by the open source community.
 
 
@@ -356,7 +357,7 @@ the Hadoop configuration files.
 
 By default, the S3A client follows the following authentication chain:
 
-1. The options `fs.s3a.access.key`, `fs.s3a.secret.key` and `fs.s3a.sesson.key
+1. The options `fs.s3a.access.key`, `fs.s3a.secret.key` and `fs.s3a.sesson.key`
 are looked for in the Hadoop XML configuration/Hadoop credential providers,
 returning a set of session credentials if all three are defined.
 1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
@@ -1039,9 +1040,9 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.bucket.probe</name>
-  <value>2</value>
+  <value>0</value>
   <description>
-     The value can be 0, 1 or 2 (default).
+     The value can be 0 (default), 1 or 2.
      When set to 0, bucket existence checks won't be done
      during initialization thus making it faster.
      Though it should be noted that when the bucket is not available in S3,

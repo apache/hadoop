@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,7 +50,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
@@ -532,7 +532,7 @@ public class ITestDynamoDBMetadataStoreScale
         LOG.info("Deleting {}", p);
         list.add(p);
       });
-    } catch (WrappedIOException e) {
+    } catch (UncheckedIOException e) {
       // the iterator may have overloaded; swallow if so.
       if (!(e.getCause() instanceof AWSServiceThrottledException)) {
         throw e;

@@ -74,30 +74,14 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
     writeLock.lock();
     try {
-
-      this.getParent().updateClusterResource(this.csContext.getClusterResource(),
-          new ResourceLimits(this.csContext.getClusterResource()));
-
-      // TODO:
       // reinitialize only capacities for now since 0 capacity updates
       // can cause
       // abs capacity related config computations to be incorrect if we go
       // through reinitialize
       QueueCapacities capacities = leafQueueTemplate.getQueueCapacities();
 
-      //update abs capacities
-      setupConfigurableCapacities(capacities);
-
       //reset capacities for the leaf queue
       mergeCapacities(capacities);
-
-      //update queue used capacity for all the node labels
-      CSQueueUtils.updateQueueStatistics(resourceCalculator,
-          csContext.getClusterResource(),
-          this, labelManager, null);
-
-      //activate applications if any are pending
-      activateApplications();
 
     } finally {
       writeLock.unlock();

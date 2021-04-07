@@ -39,7 +39,7 @@ import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROT
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
 import static org.apache.hadoop.fs.s3a.impl.ITestPartialRenamesDeletes.createFiles;
-import static org.apache.hadoop.fs.s3a.impl.ITestPartialRenamesDeletes.filenameOfIndex;
+import static org.apache.hadoop.test.GenericTestUtils.filenameOfIndex;
 
 /**
  * Test some scalable operations related to file renaming and deletion.

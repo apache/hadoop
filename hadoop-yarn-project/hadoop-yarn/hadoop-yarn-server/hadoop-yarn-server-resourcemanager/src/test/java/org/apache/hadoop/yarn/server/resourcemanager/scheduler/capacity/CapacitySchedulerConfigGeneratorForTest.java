@@ -46,7 +46,7 @@ public final class CapacitySchedulerConfigGeneratorForTest {
     conf.put("yarn.scheduler.capacity.root.test1.state", "RUNNING");
     conf.put("yarn.scheduler.capacity.root.test2.state", "RUNNING");
     conf.put("yarn.scheduler.capacity.queue-mappings",
-            "u:test1:test1,u:test2:test2");
+            "u:test1:root.test1,u:test2:root.test2");
     return createConfiguration(conf);
   }
 

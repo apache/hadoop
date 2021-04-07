@@ -19,7 +19,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
@@ -29,6 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.junit.After;
@@ -44,8 +47,6 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Unit tests for FSConfigToCSConfigArgumentHandler.
@@ -227,6 +228,28 @@ public class TestFSConfigToCSConfigArgumentHandler {
         .toString()
         .contains("Cannot start FS config conversion due to the following " +
             "precondition error"));
+  }
+
+  @Test
+  public void testVerificationException() throws Exception {
+    setupFSConfigConversionFiles(true);
+    ConversionOptions mockOptions = Mockito.mock(ConversionOptions.class);
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+        new FSConfigToCSConfigArgumentHandler(mockOptions, mockValidator);
+    argumentHandler.setConverterSupplier(this::getMockConverter);
+
+    String[] args = getArgumentsAsArrayWithDefaults("-f",
+        FSConfigConverterTestCommons.FS_ALLOC_FILE,
+        "-r", FSConfigConverterTestCommons.CONVERSION_RULES_FILE);
+
+    doThrow(new VerificationException("test", new Exception("test")))
+      .when(mockConverter)
+        .convert(any(FSConfigToCSConfigConverterParams.class));
+
+    argumentHandler.parseAndConvert(args);
+
+    verify(mockOptions).handleVerificationFailure(any(Exception.class),
+        any(String.class));
   }
 
   @Test
@@ -534,7 +557,8 @@ public class TestFSConfigToCSConfigArgumentHandler {
 
       String[] args = new String[] {
           "-y", FSConfigConverterTestCommons.YARN_SITE_XML,
-          "-o", FSConfigConverterTestCommons.OUTPUT_DIR};
+          "-o", FSConfigConverterTestCommons.OUTPUT_DIR,
+          "-e"};
 
       int retVal = argumentHandler.parseAndConvert(args);
       assertEquals("Return value", -1, retVal);
@@ -565,6 +589,13 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
+  public void testMappingRulesJsonExistsInOutputFolder()
+      throws Exception {
+    testFileExistsInOutputFolder(
+        "mapping-rules.json");
+  }
+
+  @Test
   public void testPlacementRulesConversionEnabled() throws Exception {
     testPlacementRuleConversion(true);
   }
@@ -581,11 +612,11 @@ public class TestFSConfigToCSConfigArgumentHandler {
     if (enabled) {
       args = getArgumentsAsArrayWithDefaults("-f",
           FSConfigConverterTestCommons.FS_ALLOC_FILE,
-          "-p", "-m");
+          "-p");
     } else {
       args = getArgumentsAsArrayWithDefaults("-f",
           FSConfigConverterTestCommons.FS_ALLOC_FILE,
-          "-p");
+          "-p", "-sp");
     }
     FSConfigToCSConfigArgumentHandler argumentHandler =
         new FSConfigToCSConfigArgumentHandler(conversionOptions,
@@ -600,9 +631,10 @@ public class TestFSConfigToCSConfigArgumentHandler {
     FSConfigToCSConfigConverterParams params = captor.getValue();
 
     if (enabled) {
-      assertTrue("-m switch had no effect", params.isConvertPlacementRules());
+      assertTrue("Conversion should be enabled by default",
+          params.isConvertPlacementRules());
     } else {
-      assertFalse("Placement rule conversion was enabled",
+      assertFalse("-sp switch had no effect",
           params.isConvertPlacementRules());
     }
   }
@@ -681,5 +713,42 @@ public class TestFSConfigToCSConfigArgumentHandler {
 
     assertFalse("-a switch wasn't provided but async scheduling option is true",
             conversionOptions.isEnableAsyncScheduler());
+  }
+
+  @Test
+  public void testUsePercentages() throws Exception {
+    testUsePercentages(true);
+  }
+
+  @Test
+  public void testUseWeights() throws Exception {
+    testUsePercentages(false);
+  }
+
+  private void testUsePercentages(boolean enabled) throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+        new FSConfigToCSConfigArgumentHandler(conversionOptions, mockValidator);
+    argumentHandler.setConverterSupplier(this::getMockConverter);
+
+    String[] args;
+    if (enabled) {
+      args = getArgumentsAsArrayWithDefaults("-f",
+          FSConfigConverterTestCommons.FS_ALLOC_FILE, "-p",
+          "-pc");
+    } else {
+      args = getArgumentsAsArrayWithDefaults("-f",
+          FSConfigConverterTestCommons.FS_ALLOC_FILE, "-p");
+    }
+
+    argumentHandler.parseAndConvert(args);
+
+    ArgumentCaptor<FSConfigToCSConfigConverterParams> captor =
+        ArgumentCaptor.forClass(FSConfigToCSConfigConverterParams.class);
+    verify(mockConverter).convert(captor.capture());
+    FSConfigToCSConfigConverterParams params = captor.getValue();
+
+    assertEquals("Use percentages", enabled, params.isUsePercentages());
   }
 }

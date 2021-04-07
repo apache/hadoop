@@ -24,6 +24,9 @@ import java.io.InputStream;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,5 +136,24 @@ public abstract class FSInputStream extends InputStream
   public void readFully(long position, byte[] buffer)
     throws IOException {
     readFully(position, buffer, 0, buffer.length);
+  }
+
+  /**
+   * toString method returns the superclass toString, but if the subclass
+   * implements {@link IOStatisticsSource} then those statistics are
+   * extracted and included in the output.
+   * That is: statistics of subclasses are automatically reported.
+   * @return a string value.
+   */
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(super.toString());
+    sb.append('{');
+    if (this instanceof IOStatisticsSource) {
+      sb.append(IOStatisticsLogging.ioStatisticsSourceToString(
+          (IOStatisticsSource) this));
+    }
+    sb.append('}');
+    return sb.toString();
   }
 }

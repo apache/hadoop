@@ -749,11 +749,79 @@ public class FederationClientInterceptor
     throw new NotImplementedException("Code is not implemented");
   }
 
+  /**
+   * The YARN Router will forward to the respective YARN RM in which the AM is
+   * running.
+   *
+   * Possible failure:
+   *
+   * Client: identical behavior as {@code ClientRMService}.
+   *
+   * Router: the Client will timeout and resubmit the request.
+   *
+   * ResourceManager: the Router will timeout and the call will fail.
+   *
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
   @Override
   public GetApplicationAttemptReportResponse getApplicationAttemptReport(
       GetApplicationAttemptReportRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    long startTime = clock.getTime();
+
+    if (request == null || request.getApplicationAttemptId() == null
+            || request.getApplicationAttemptId().getApplicationId() == null) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+              "Missing getApplicationAttemptReport " +
+                      "request or applicationId " +
+                      "or applicationAttemptId information.",
+              null);
+    }
+
+    SubClusterId subClusterId = null;
+
+    try {
+      subClusterId = federationFacade
+              .getApplicationHomeSubCluster(
+                      request.getApplicationAttemptId().getApplicationId());
+    } catch (YarnException e) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil
+              .logAndThrowException("ApplicationAttempt " +
+                      request.getApplicationAttemptId() +
+                      "belongs to Application " +
+                      request.getApplicationAttemptId().getApplicationId() +
+                      " does not exist in FederationStateStore", e);
+    }
+
+    ApplicationClientProtocol clientRMProxy =
+            getClientRMProxyForSubCluster(subClusterId);
+
+    GetApplicationAttemptReportResponse response = null;
+    try {
+      response = clientRMProxy.getApplicationAttemptReport(request);
+    } catch (Exception e) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      LOG.error("Unable to get the applicationAttempt report for "
+              + request.getApplicationAttemptId() + "to SubCluster "
+              + subClusterId.getId(), e);
+      throw e;
+    }
+
+    if (response == null) {
+      LOG.error("No response when attempting to retrieve the report of "
+              + "the applicationAttempt "
+              + request.getApplicationAttemptId() + " to SubCluster "
+              + subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override

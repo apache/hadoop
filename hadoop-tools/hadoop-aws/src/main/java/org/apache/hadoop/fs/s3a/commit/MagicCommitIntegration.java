@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 
@@ -50,6 +51,8 @@ public class MagicCommitIntegration {
   private final S3AFileSystem owner;
   private final boolean magicCommitEnabled;
 
+  private final StoreContext storeContext;
+
   /**
    * Instantiate.
    * @param owner owner class
@@ -59,6 +62,7 @@ public class MagicCommitIntegration {
       boolean magicCommitEnabled) {
     this.owner = owner;
     this.magicCommitEnabled = magicCommitEnabled;
+    this.storeContext = owner.createStoreContext();
   }
 
   /**
@@ -94,10 +98,10 @@ public class MagicCommitIntegration {
       if (isMagicCommitPath(elements)) {
         final String destKey = keyOfFinalDestination(elements, key);
         String pendingsetPath = key + CommitConstants.PENDING_SUFFIX;
-        owner.getInstrumentation()
-            .incrementCounter(Statistic.COMMITTER_MAGIC_FILES_CREATED, 1);
+        storeContext.incrementStatistic(
+            Statistic.COMMITTER_MAGIC_FILES_CREATED);
         tracker = new MagicCommitTracker(path,
-            owner.getBucket(),
+            storeContext.getBucket(),
             key,
             destKey,
             pendingsetPath,

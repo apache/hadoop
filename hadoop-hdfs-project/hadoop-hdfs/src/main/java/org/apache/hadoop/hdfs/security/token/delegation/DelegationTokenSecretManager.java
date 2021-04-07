@@ -191,7 +191,7 @@ public class DelegationTokenSecretManager
     }
   }
 
-  public synchronized void loadSecretManagerState(SecretManagerState state)
+  public synchronized void loadSecretManagerState(SecretManagerState state, Counter counter)
       throws IOException {
     Preconditions.checkState(!running,
         "Can't load state from image in a running SecretManager.");
@@ -211,6 +211,7 @@ public class DelegationTokenSecretManager
       id.setSequenceNumber(t.getSequenceNumber());
       id.setMasterKeyId(t.getMasterKeyId());
       addPersistedDelegationToken(id, t.getExpiryDate());
+      counter.increment();
     }
   }
 

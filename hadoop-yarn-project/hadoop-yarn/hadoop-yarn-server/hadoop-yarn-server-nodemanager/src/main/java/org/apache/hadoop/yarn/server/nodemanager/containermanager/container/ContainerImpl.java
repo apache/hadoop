@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -1240,6 +1241,15 @@ public class ContainerImpl implements Container {
               container.resourceSet.addResources(ctxt.getLocalResources());
           container.dispatcher.getEventHandler().handle(
               new ContainerLocalizationRequestEvent(container, req));
+          // Get list of resources for logging
+          List<String> resourcePaths = new ArrayList<>();
+          for (Collection<LocalResourceRequest> rsrcReqList : req.values()) {
+            for (LocalResourceRequest rsrc : rsrcReqList) {
+              resourcePaths.add(rsrc.getPath().toString());
+            }
+          }
+          LOG.info("Container " + container.getContainerId()
+              + " is localizing: " + resourcePaths);
           return ContainerState.LOCALIZING;
         } else {
           container.sendScheduleEvent();

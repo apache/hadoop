@@ -319,10 +319,10 @@ abstract class PBImageTextWriter implements Closeable {
       @Override
       public void close() throws IOException {
         if (batch != null) {
-          IOUtils.cleanup(null, batch);
+          IOUtils.cleanupWithLogger(null, batch);
           batch = null;
         }
-        IOUtils.cleanup(null, db);
+        IOUtils.cleanupWithLogger(null, db);
         db = null;
       }
 
@@ -388,13 +388,13 @@ abstract class PBImageTextWriter implements Closeable {
         dirMap = new LevelDBStore(new File(dbDir, "dirMap"));
       } catch (IOException e) {
         LOG.error("Failed to open LevelDBs", e);
-        IOUtils.cleanup(null, this);
+        IOUtils.cleanupWithLogger(null, this);
       }
     }
 
     @Override
     public void close() throws IOException {
-      IOUtils.cleanup(null, dirChildMap, dirMap);
+      IOUtils.cleanupWithLogger(null, dirChildMap, dirMap);
       dirChildMap = null;
       dirMap = null;
     }
@@ -515,7 +515,7 @@ abstract class PBImageTextWriter implements Closeable {
   @Override
   public void close() throws IOException {
     out.flush();
-    IOUtils.cleanup(null, metadataMap);
+    IOUtils.cleanupWithLogger(null, metadataMap);
   }
 
   void append(StringBuffer buffer, int field) {

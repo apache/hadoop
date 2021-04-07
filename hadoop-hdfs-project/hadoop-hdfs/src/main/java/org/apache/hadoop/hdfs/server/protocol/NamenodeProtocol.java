@@ -74,6 +74,8 @@ public interface NamenodeProtocol {
    * @param datanode  a data node
    * @param size      requested size
    * @param minBlockSize each block should be of this minimum Block Size
+   * @param hotBlockTimeInterval prefer to get blocks which are belong to
+   * the cold files accessed before the time interval
    * @return BlocksWithLocations a list of blocks &amp; their locations
    * @throws IOException if size is less than or equal to 0 or
   datanode does not exist
@@ -81,7 +83,7 @@ public interface NamenodeProtocol {
   @Idempotent
   @ReadOnly
   BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize) throws IOException;
+      minBlockSize, long hotBlockTimeInterval) throws IOException;
 
   /**
    * Get the current block keys

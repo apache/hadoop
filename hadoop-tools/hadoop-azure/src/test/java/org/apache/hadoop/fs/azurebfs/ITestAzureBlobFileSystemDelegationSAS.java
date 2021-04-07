@@ -20,13 +20,12 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -52,6 +51,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
@@ -432,15 +432,12 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
         rootStatus.getOwner());
 
     // Attempt to set permission without being the owner.
-    try {
-      fs.setPermission(rootPath, new FsPermission(FsAction.ALL,
-          FsAction.READ_EXECUTE, FsAction.EXECUTE));
-      assertTrue("Set permission should fail because saoid is not the owner.", false);
-    } catch (AbfsRestOperationException ex) {
-      // Should fail with permission mismatch
-      assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH,
-          ex.getErrorCode());
-    }
+    intercept(AccessDeniedException.class,
+        AUTHORIZATION_PERMISSION_MISS_MATCH.getErrorCode(), () -> {
+          fs.setPermission(rootPath, new FsPermission(FsAction.ALL,
+              FsAction.READ_EXECUTE, FsAction.EXECUTE));
+          return "Set permission should fail because saoid is not the owner.";
+        });
 
     // Attempt to set permission as the owner.
     fs.setOwner(rootPath, MockDelegationSASTokenProvider.TEST_OWNER, null);

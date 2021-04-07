@@ -73,13 +73,13 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 /**
  * This class tests the decommissioning of nodes.
@@ -976,6 +976,8 @@ public class TestDecommission extends AdminStatesBaseTest {
   @Test(timeout=120000)
   public void testAllocAndIBRWhileDecommission() throws IOException {
     LOG.info("Starting test testAllocAndIBRWhileDecommission");
+    getConf().setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
+        DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT);
     startCluster(1, 6);
     getCluster().waitActive();
     FSNamesystem ns = getCluster().getNamesystem(0);
@@ -1223,8 +1225,8 @@ public class TestDecommission extends AdminStatesBaseTest {
   
   @Test(timeout=120000)
   public void testBlocksPerInterval() throws Exception {
-    org.apache.log4j.Logger.getLogger(DatanodeAdminManager.class)
-        .setLevel(Level.TRACE);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(DatanodeAdminManager.class), Level.TRACE);
     // Turn the blocks per interval way down
     getConf().setInt(
         DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_KEY,
@@ -1325,8 +1327,8 @@ public class TestDecommission extends AdminStatesBaseTest {
 
   @Test(timeout=120000)
   public void testPendingNodes() throws Exception {
-    org.apache.log4j.Logger.getLogger(DatanodeAdminManager.class)
-        .setLevel(Level.TRACE);
+    GenericTestUtils.setLogLevel(
+        LoggerFactory.getLogger(DatanodeAdminManager.class), Level.TRACE);
     // Only allow one node to be decom'd at a time
     getConf().setInt(
         DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES,

@@ -31,6 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -377,7 +378,7 @@ public class TestParentQueue {
       CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
-    } catch (IllegalArgumentException ie) {
+    } catch (IOException ie) {
       exceptionOccurred = true;
     }
     if (!exceptionOccurred) {
@@ -647,7 +648,7 @@ public class TestParentQueue {
     reset(a); reset(b); reset(c);
   }
   
-  @Test (expected=IllegalArgumentException.class)
+  @Test (expected=IOException.class)
   public void testQueueCapacitySettingChildZero() throws Exception {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
@@ -663,7 +664,7 @@ public class TestParentQueue {
         TestUtils.spyHook);
   }
   
-  @Test (expected=IllegalArgumentException.class)
+  @Test (expected=IOException.class)
   public void testQueueCapacitySettingParentZero() throws Exception {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
@@ -695,7 +696,7 @@ public class TestParentQueue {
         TestUtils.spyHook);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test(expected = IOException.class)
   public void testQueueCapacitySettingParentZeroChildren50pctZeroSumAllowed()
       throws Exception {
     // Setup queue configs

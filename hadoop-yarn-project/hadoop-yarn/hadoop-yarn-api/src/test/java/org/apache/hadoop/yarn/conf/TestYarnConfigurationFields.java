@@ -157,6 +157,9 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_SOURCE_FILE);
 
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.HADOOP_HTTP_WEBAPP_SCHEDULER_PAGE);
+
     // Ignore NodeManager "work in progress" variables
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED);
@@ -183,6 +186,10 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
         .add(YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY);
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT);
+    configurationPrefixToSkipCompare
+        .add(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT);
 
     // Set by container-executor.cfg
     configurationPrefixToSkipCompare.add(YarnConfiguration.NM_USER_HOME_DIR);

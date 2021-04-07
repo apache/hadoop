@@ -25,10 +25,13 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
+import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.math3.util.Pair;
@@ -256,6 +259,58 @@ public class LogAggregationTFileController
       }
     }
     return findLogs;
+  }
+
+  @Override
+  public Map<String, List<ContainerLogFileInfo>> getLogMetaFilesOfNode(
+      ExtendedLogMetaRequest logRequest, FileStatus currentNodeFile,
+      ApplicationId appId) throws IOException {
+    Map<String, List<ContainerLogFileInfo>> logMetaFiles = new HashMap<>();
+    Path nodePath = currentNodeFile.getPath();
+
+    LogReader reader =
+        new LogReader(conf,
+            nodePath);
+    try {
+      DataInputStream valueStream;
+      LogKey key = new LogKey();
+      valueStream = reader.next(key);
+      while (valueStream != null) {
+        if (logRequest.getContainerId() == null ||
+            logRequest.getContainerId().equals(key.toString())) {
+          logMetaFiles.put(key.toString(), new ArrayList<>());
+          fillMetaFiles(currentNodeFile, valueStream,
+              logMetaFiles.get(key.toString()));
+        }
+        // Next container
+        key = new LogKey();
+        valueStream = reader.next(key);
+      }
+    } finally {
+      reader.close();
+    }
+    return logMetaFiles;
+  }
+
+  private void fillMetaFiles(
+      FileStatus currentNodeFile, DataInputStream valueStream,
+      List<ContainerLogFileInfo> logMetaFiles)
+      throws IOException {
+    while (true) {
+      try {
+        Pair<String, String> logMeta =
+            LogReader.readContainerMetaDataAndSkipData(
+                valueStream);
+        ContainerLogFileInfo logMetaFile = new ContainerLogFileInfo();
+        logMetaFile.setLastModifiedTime(
+            Long.toString(currentNodeFile.getModificationTime()));
+        logMetaFile.setFileName(logMeta.getFirst());
+        logMetaFile.setFileSize(logMeta.getSecond());
+        logMetaFiles.add(logMetaFile);
+      } catch (EOFException eof) {
+        break;
+      }
+    }
   }
 
   @Override

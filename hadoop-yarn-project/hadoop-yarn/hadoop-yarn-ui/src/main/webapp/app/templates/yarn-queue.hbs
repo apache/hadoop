@@ -31,14 +31,34 @@
           {{/if}}
           {{#if (eq model.queues.firstObject.type "capacity")}}
               <div class="top-1">
-                <span class="yarn-label secondary">
-                  <span class="label-key">configured capacity</span>
-                  <span class="label-value">{{model.selectedQueue.capacity}}%</span>
-                </span>
-                <span class="yarn-label secondary">
-                  <span class="label-key">configured max capacity</span>
-                  <span class="label-value">{{model.selectedQueue.maxCapacity}}%</span>
-                </span>
+                  {{#if model.selectedQueue.isWeightMode}}
+  <span class="yarn-label secondary">
+    <span class="label-key">weight</span>
+    <span class="label-value">{{model.selectedQueue.weight}}</span>
+  </span>
+                          <span class="yarn-label secondary">
+    <span class="label-key">normalized weight</span>
+    <span class="label-value">{{model.selectedQueue.normalizedWeight}}</span>
+  </span>
+                  {{else}}
+  <span class="yarn-label secondary">
+    <span class="label-key">configured capacity</span>
+    <span class="label-value">{{model.selectedQueue.capacity}}%</span>
+  </span>
+                          <span class="yarn-label secondary">
+    <span class="label-key">configured max capacity</span>
+    <span class="label-value">{{model.selectedQueue.maxCapacity}}%</span>
+  </span>
+                  {{/if}}
+                  <span class="yarn-label secondary">
+    <span class="label-key">ordering policy</span>
+    <span class="label-value">{{model.selectedQueue.orderingPolicy}}</span>
+  </span>
+                  {{#if model.selectedQueue.isFlexibleDynamicQueue}}
+  <span class="yarn-label secondary">
+    <span class="label-key">flexible dynamic queue</span>
+  </span>
+                  {{/if}}
                 {{#if model.selectedQueue.isLeafQueue}}
                 <span class="yarn-label secondary">
                   <span class="label-key">user limit</span>

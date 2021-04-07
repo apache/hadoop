@@ -51,6 +51,8 @@ public final class OperationCost {
 
   /**
    * Delete cost when deleting a marker.
+   * Note: if bulk delete is disabled, this changes to being
+   * the number of directories deleted.
    */
   public static final int DELETE_MARKER_REQUEST = DELETE_OBJECT_REQUEST;
 
@@ -132,7 +134,7 @@ public final class OperationCost {
   public static final OperationCost RENAME_SINGLE_FILE_DIFFERENT_DIR =
       FILE_STATUS_FILE_PROBE              // source file probe
           .plus(GET_FILE_STATUS_FNFE)     // dest does not exist
-          .plus(FILE_STATUS_DIR_PROBE)    // parent dir of dest
+          .plus(FILE_STATUS_FILE_PROBE)   // parent dir of dest is not file
           .plus(FILE_STATUS_DIR_PROBE)    // recreate source parent dir?
           .plus(COPY_OP);                 // metadata read on copy
 

@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.MultipartUploaderBuilderImpl;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperations;
-import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
 
 /**
  * Builder for S3A multipart uploaders.

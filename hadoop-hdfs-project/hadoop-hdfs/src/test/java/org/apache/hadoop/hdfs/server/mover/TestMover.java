@@ -34,6 +34,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,6 +85,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -170,14 +173,26 @@ public class TestMover {
     }
   }
 
-  private void testWithinSameNode(Configuration conf) throws Exception {
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(3)
-        .storageTypes(
-            new StorageType[] {StorageType.DISK, StorageType.ARCHIVE})
-        .build();
+  private void testMovementWithLocalityOption(Configuration conf,
+      boolean sameNode) throws Exception {
+    final MiniDFSCluster cluster;
+    if (sameNode) {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(3)
+          .storageTypes(
+              new StorageType[] {StorageType.DISK, StorageType.ARCHIVE})
+          .build();
+    } else {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(2)
+          .storageTypes(
+              new StorageType[][] {{StorageType.DISK}, {StorageType.ARCHIVE}})
+          .build();
+    }
+
     try {
       cluster.waitActive();
+
       final DistributedFileSystem dfs = cluster.getFileSystem();
       final String file = "/testScheduleWithinSameNode/file";
       Path dir = new Path("/testScheduleWithinSameNode");
@@ -201,10 +216,35 @@ public class TestMover {
       Assert.assertEquals("Movement to ARCHIVE should be successful", 0, rc);
 
       // Wait till namenode notified about the block location details
-      waitForLocatedBlockWithArchiveStorageType(dfs, file, 3);
+      waitForLocatedBlockWithArchiveStorageType(dfs, file, sameNode ? 3 : 1);
+
+      MetricsRecordBuilder rb =
+          getMetrics(cluster.getDataNodes().get(1).getMetrics().name());
+
+      if (!sameNode) {
+        testReplaceBlockOpLocalityMetrics(0, 0, 1, rb);
+      } else if (conf.getBoolean(
+          DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, false)) {
+        testReplaceBlockOpLocalityMetrics(1, 1, 0, rb);
+      } else {
+        testReplaceBlockOpLocalityMetrics(1, 0, 0, rb);
+      }
     } finally {
       cluster.shutdown();
     }
+  }
+
+  private void testReplaceBlockOpLocalityMetrics(
+      long sameHost,
+      long sameMount,
+      long otherHost,
+      MetricsRecordBuilder rb) {
+    assertCounter("ReplaceBlockOpOnSameHost",
+        sameHost, rb);
+    assertCounter("ReplaceBlockOpOnSameMount",
+        sameMount, rb);
+    assertCounter("ReplaceBlockOpToOtherHost",
+        otherHost, rb);
   }
 
   private void setupStoragePoliciesAndPaths(DistributedFileSystem dfs1,
@@ -441,11 +481,27 @@ public class TestMover {
     }, 100, 3000);
   }
 
+  /**
+   * Test block movement with different block locality scenarios.
+   * 1) Block will be copied to local host,
+   *    if there is target storage type on same datanode.
+   * 2) Block will be moved within local mount with hardlink,
+   *    if disk/archive are on same mount with same-disk-tiering feature on.
+   * 3) Block will be moved to another datanode,
+   *    if there is no available target storage type on local datanode.
+   */
   @Test
-  public void testScheduleBlockWithinSameNode() throws Exception {
+  public void testScheduleBlockLocality() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
-    testWithinSameNode(conf);
+    testMovementWithLocalityOption(conf, true);
+    // Test movement with hardlink, when same disk tiering is enabled.
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
+    conf.setDouble(DFSConfigKeys
+        .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+    testMovementWithLocalityOption(conf, true);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, false);
+    testMovementWithLocalityOption(conf, false);
   }
 
   private void checkMovePaths(List<Path> actual, Path... expected) {
@@ -1000,7 +1056,8 @@ public class TestMover {
 
   /**
    * Test Mover runs fine when logging in with a keytab in kerberized env.
-   * Reusing testWithinSameNode here for basic functionality testing.
+   * Reusing testMovementWithLocalityOption
+   * here for basic functionality testing.
    */
   @Test(timeout = 300000)
   public void testMoverWithKeytabs() throws Exception {
@@ -1014,7 +1071,7 @@ public class TestMover {
         @Override
         public Void run() throws Exception {
           // verify that mover runs Ok.
-          testWithinSameNode(conf);
+          testMovementWithLocalityOption(conf, true);
           // verify that UGI was logged in using keytab.
           Assert.assertTrue(UserGroupInformation.isLoginKeytabBased());
           return null;

@@ -451,8 +451,6 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
             Assert.fail("Unexpected partition" + partitionName);
           }
         }
-      } else if (queueChildElem.getTagName().equals("resources")) {
-        verifyResourceUsageInfoXML(queueChildElem);
       }
     }
     assertEquals("Node Labels are not matching", LABEL_LX,
@@ -576,7 +574,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements", 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 12, info.length());
+    assertEquals("incorrect number of elements", 19, info.length());
     JSONObject capacitiesJsonObject = info.getJSONObject(CAPACITIES);
     JSONArray partitionsCapsArray =
         capacitiesJsonObject.getJSONArray(QUEUE_CAPACITIES_BY_PARTITION);
@@ -594,16 +592,12 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     for (int i = 0; i < queuesArray.length(); i++) {
       JSONObject queueJson = queuesArray.getJSONObject(i);
       String queue = queueJson.getString("queueName");
-
-      assertEquals("Partition resourceInfo is wrong", 1,
-          queueJson.getJSONObject("resources")
-              .getJSONArray(RESOURCE_USAGES_BY_PARTITION).length());
+      JSONArray resourceUsageByPartition = queueJson.getJSONObject("resources")
+          .getJSONArray(RESOURCE_USAGES_BY_PARTITION);
 
       JSONObject resourcesJsonObject = queueJson.getJSONObject("resources");
       JSONArray partitionsResourcesArray =
-          resourcesJsonObject.getJSONArray("resourceUsagesByPartition");
-      assertEquals("incorrect number of elements", 1,
-          partitionsResourcesArray.length());
+          resourcesJsonObject.getJSONArray(RESOURCE_USAGES_BY_PARTITION);
 
       capacitiesJsonObject = queueJson.getJSONObject(CAPACITIES);
       partitionsCapsArray =
@@ -620,6 +614,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         verifyPartitionCapacityInfoJson(partitionInfo, 30, 0, 50, 30, 0, 50);
         assertEquals("incorrect number of elements", 7,
             partitionsResourcesArray.getJSONObject(0).length());
+        assertEquals("incorrect number of objects", 1,
+            resourceUsageByPartition.length());
         break;
       case QUEUE_B:
         assertEquals("Invalid default Label expression", LABEL_LX,
@@ -629,6 +625,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         verifyAccesibleNodeLabels(queueJson, ImmutableSet.of(LABEL_LX));
         assertEquals("incorrect number of partitions", 2,
             partitionsCapsArray.length());
+        assertEquals("incorrect number of objects", 2,
+            resourceUsageByPartition.length());
         for (int j = 0; j < partitionsCapsArray.length(); j++) {
           partitionInfo = partitionsCapsArray.getJSONObject(j);
           partitionName = partitionInfo.getString("partitionName");

@@ -218,13 +218,13 @@ public class NNStorage extends Storage implements Closeable,
 
   /**
    * Set flag whether an attempt should be made to restore failed storage
-   * directories at the next available oppurtuinity.
+   * directories at the next available opportunity.
    *
    * @param val Whether restoration attempt should be made.
    */
   void setRestoreFailedStorage(boolean val) {
     LOG.warn("set restore failed storage to {}", val);
-    restoreFailedStorage=val;
+    restoreFailedStorage = val;
   }
 
   /**

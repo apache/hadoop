@@ -34,7 +34,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface StreamCapabilities {
   /**
    * Stream hflush capability implemented by {@link Syncable#hflush()}.
+   *
+   * Use the {@link #HSYNC} probe to check for the support of Syncable;
+   * it's that presence of {@code hsync()} which matters.
    */
+  @Deprecated
   String HFLUSH = "hflush";
 
   /**
@@ -70,6 +74,18 @@ public interface StreamCapabilities {
    * {@link ByteBufferPositionedReadable#read(long, java.nio.ByteBuffer)}.
    */
   String PREADBYTEBUFFER = "in:preadbytebuffer";
+
+  /**
+   * IOStatisticsSource API.
+   */
+  String IOSTATISTICS = "iostatistics";
+
+  /**
+   * Stream abort() capability implemented by {@link Abortable#abort()}.
+   * This matches the Path Capability
+   * {@link CommonPathCapabilities#ABORTABLE_STREAM}.
+   */
+  String ABORTABLE_STREAM =  CommonPathCapabilities.ABORTABLE_STREAM;
 
   /**
    * Capabilities that a stream can support and be queried for.

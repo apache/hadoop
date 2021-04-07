@@ -159,6 +159,7 @@ public class ITestS3AConfiguration {
     return intercept(clazz,
         () -> {
           fs = S3ATestUtils.createTestFileSystem(conf);
+          fs.listFiles(new Path("/"), false);
           return "expected failure creating FS " + text + " got " + fs;
         });
   }

@@ -61,6 +61,10 @@ public class Snapshot implements Comparable<byte[]> {
     return new SimpleDateFormat(DEFAULT_SNAPSHOT_NAME_PATTERN).format(new Date());
   }
 
+  public static String generateDeletedSnapshotName(Snapshot s) {
+    return getSnapshotName(s) + "#" + s.getId();
+  }
+
   public static String getSnapshotPath(String snapshottableDir,
       String snapshotRelativePath) {
     final StringBuilder b = new StringBuilder(snapshottableDir);
@@ -228,7 +232,7 @@ public class Snapshot implements Comparable<byte[]> {
   public boolean equals(Object that) {
     if (this == that) {
       return true;
-    } else if (that == null || !(that instanceof Snapshot)) {
+    } else if (!(that instanceof Snapshot)) {
       return false;
     }
     return this.id == ((Snapshot)that).id;

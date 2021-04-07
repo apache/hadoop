@@ -436,7 +436,8 @@ class BPServiceActor implements Runnable {
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
           "uccessfully sent block report 0x" +
-          Long.toHexString(reportId) + ",  containing " + reports.length +
+          Long.toHexString(reportId) + " to namenode: " + nnAddr +
+          ",  containing " + reports.length +
           " storage report(s), of which we sent " + numReportsSent + "." +
           " The reports had " + totalBlockCount +
           " total blocks and used " + numRPCs +
@@ -617,8 +618,8 @@ class BPServiceActor implements Runnable {
   private synchronized void cleanUp() {
     
     shouldServiceRun = false;
-    IOUtils.cleanup(null, bpNamenode);
-    IOUtils.cleanup(null, lifelineSender);
+    IOUtils.cleanupWithLogger(null, bpNamenode);
+    IOUtils.cleanupWithLogger(null, lifelineSender);
     bpos.shutdownActor(this);
   }
 
@@ -930,10 +931,12 @@ class BPServiceActor implements Runnable {
 
   void triggerBlockReport(BlockReportOptions options) {
     if (options.isIncremental()) {
-      LOG.info(bpos.toString() + ": scheduling an incremental block report.");
+      LOG.info(bpos.toString() + ": scheduling an incremental block report " +
+         "to namenode: " + nnAddr + ".");
       ibrManager.triggerIBR(true);
     } else {
-      LOG.info(bpos.toString() + ": scheduling a full block report.");
+      LOG.info(bpos.toString() + ": scheduling a full block report " +
+         "to namenode: " + nnAddr + ".");
       synchronized(ibrManager) {
         scheduler.forceFullBlockReportNow();
         ibrManager.notifyAll();
@@ -989,7 +992,7 @@ class BPServiceActor implements Runnable {
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
-      IOUtils.cleanup(null, lifelineNamenode);
+      IOUtils.cleanupWithLogger(null, lifelineNamenode);
     }
 
     @Override

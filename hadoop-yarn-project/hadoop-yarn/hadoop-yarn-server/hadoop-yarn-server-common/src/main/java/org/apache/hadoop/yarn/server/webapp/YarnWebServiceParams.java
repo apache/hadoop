@@ -40,4 +40,6 @@ public interface YarnWebServiceParams {
   String CLUSTER_ID = "clusterid";
   String MANUAL_REDIRECTION = "manual_redirection";
   String REMOTE_USER = "user";
+  String FILESIZE = "file_size";
+  String MODIFICATION_TIME = "modification_time";
 }

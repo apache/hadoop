@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
@@ -226,7 +227,8 @@ public class TestPartialDeleteFailures {
   }
 
 
-  private static class MinimalContextAccessor implements ContextAccessors {
+  private static final class MinimalContextAccessor
+      implements ContextAccessors {
 
     @Override
     public Path keyToPath(final String key) {
@@ -252,6 +254,12 @@ public class TestPartialDeleteFailures {
     @Override
     public Path makeQualified(final Path path) {
       return path;
+    }
+
+    @Override
+    public ObjectMetadata getObjectMetadata(final String key)
+        throws IOException {
+      return new ObjectMetadata();
     }
   }
 

@@ -83,17 +83,17 @@ public class AclFeature implements INode.Feature, ReferenceCounter {
   }
 
   @Override
-  public int getRefCount() {
+  public synchronized int getRefCount() {
     return refCount;
   }
 
   @Override
-  public int incrementAndGetRefCount() {
+  public synchronized int incrementAndGetRefCount() {
     return ++refCount;
   }
 
   @Override
-  public int decrementAndGetRefCount() {
+  public synchronized int decrementAndGetRefCount() {
     return (refCount > 0) ? --refCount : 0;
   }
 }

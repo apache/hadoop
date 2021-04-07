@@ -34,6 +34,7 @@ import java.util.stream.Stream;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -57,8 +58,9 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.FILES_DELETE_REJECTED;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
@@ -75,7 +77,9 @@ import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndel
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.toPathList;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.extractCause;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.test.LambdaTestUtils.eval;
 
 /**
@@ -126,11 +130,12 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * For submitting work.
    */
   private static final ListeningExecutorService EXECUTOR =
-      BlockingThreadPoolExecutorService.newInstance(
-          EXECUTOR_THREAD_COUNT,
-          EXECUTOR_THREAD_COUNT * 2,
-          30, TimeUnit.SECONDS,
-          "test-operations");
+      MoreExecutors.listeningDecorator(
+          BlockingThreadPoolExecutorService.newInstance(
+              EXECUTOR_THREAD_COUNT,
+              EXECUTOR_THREAD_COUNT * 2,
+              30, TimeUnit.SECONDS,
+              "test-operations"));
 
 
   /**
@@ -157,8 +162,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   public static final int DIR_COUNT_SCALED = 4;
   public static final int DEPTH = 2;
   public static final int DEPTH_SCALED = 2;
-
-  public static final String PREFIX = "file-";
 
   /**
    * A role FS; if non-null it is closed in teardown.
@@ -664,7 +667,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);
-    MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUESTS);
+    MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUEST);
+    MetricDiff bulkDeleteVerbCount = new MetricDiff(roleFS,
+        OBJECT_BULK_DELETE_REQUEST);
     MetricDiff deleteObjectCount = new MetricDiff(roleFS,
         OBJECT_DELETE_OBJECTS);
 
@@ -673,12 +678,15 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     if (multiDelete) {
       // multi-delete status checks
       extractCause(MultiObjectDeleteException.class, ex);
-      deleteVerbCount.assertDiffEquals("Wrong delete request count", 1);
+      deleteVerbCount.assertDiffEquals("Wrong delete request count", 0);
+      bulkDeleteVerbCount.assertDiffEquals("Wrong bulk delete request count",
+          1);
       deleteObjectCount.assertDiffEquals("Number of keys in delete request",
           readOnlyFiles.size());
       rejectionCount.assertDiffEquals("Wrong rejection count",
           readOnlyFiles.size());
-      reset(rejectionCount, deleteVerbCount, deleteObjectCount);
+      reset(rejectionCount, deleteVerbCount, deleteObjectCount,
+          bulkDeleteVerbCount);
     }
     // all the files are still there? (avoid in scale test due to cost)
     if (!scaleTest) {
@@ -687,9 +695,13 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     describe("Trying to delete upper-level directory");
     ex = expectDeleteForbidden(basePath);
+    String iostats = ioStatisticsSourceToString(roleFS);
+
     if (multiDelete) {
       // multi-delete status checks
-      deleteVerbCount.assertDiffEquals("Wrong delete count", 1);
+      deleteVerbCount.assertDiffEquals("Wrong delete request count", 0);
+      bulkDeleteVerbCount.assertDiffEquals(
+          "Wrong count of delete operations in " + iostats, 1);
       MultiObjectDeleteException mde = extractCause(
           MultiObjectDeleteException.class, ex);
       List<MultiObjectDeleteSupport.KeyPath> undeletedKeyPaths =
@@ -895,49 +907,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       waitForCompletion(futures);
       return paths;
     }
-  }
-
-  /**
-   * Recursive method to build up lists of files and directories.
-   * @param filePaths list of file paths to add entries to.
-   * @param dirPaths list of directory paths to add entries to.
-   * @param destDir destination directory.
-   * @param depth depth of directories
-   * @param fileCount number of files.
-   * @param dirCount number of directories.
-   */
-  private static void buildPaths(
-      final List<Path> filePaths,
-      final List<Path> dirPaths,
-      final Path destDir,
-      final int depth,
-      final int fileCount,
-      final int dirCount) {
-    if (depth<=0) {
-      return;
-    }
-    // create the file paths
-    for (int i = 0; i < fileCount; i++) {
-      String name = filenameOfIndex(i);
-      Path p = new Path(destDir, name);
-      filePaths.add(p);
-    }
-    for (int i = 0; i < dirCount; i++) {
-      String name = String.format("dir-%03d", i);
-      Path p = new Path(destDir, name);
-      dirPaths.add(p);
-      buildPaths(filePaths, dirPaths, p, depth - 1, fileCount, dirCount);
-    }
-
-  }
-
-  /**
-   * Given an index, return a string to use as the filename.
-   * @param i index
-   * @return name
-   */
-  public static String filenameOfIndex(final int i) {
-    return String.format("%s%03d", PREFIX, i);
   }
 
   /**

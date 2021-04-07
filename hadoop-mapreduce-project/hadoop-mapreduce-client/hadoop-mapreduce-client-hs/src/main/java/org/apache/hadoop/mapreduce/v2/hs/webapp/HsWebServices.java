@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import java.io.IOException;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -69,6 +70,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.server.webapp.WrappedLogMetaRequest;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.LogServlet;
@@ -439,6 +441,31 @@ public class HsWebServices extends WebServices {
       throws IOException {
     init();
     return logServlet.getRemoteLogDirPath(user, appIdStr);
+  }
+
+  @GET
+  @Path("/extended-log-query")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public Response getAggregatedLogsMeta(@Context HttpServletRequest hsr,
+      @QueryParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME) String fileName,
+      @QueryParam(YarnWebServiceParams.FILESIZE) Set<String> fileSize,
+      @QueryParam(YarnWebServiceParams.MODIFICATION_TIME) Set<String>
+                                              modificationTime,
+      @QueryParam(YarnWebServiceParams.APP_ID) String appIdStr,
+      @QueryParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
+      @QueryParam(YarnWebServiceParams.NM_ID) String nmId) throws IOException {
+    init();
+    ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder logsRequest =
+        new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
+    logsRequest.setAppId(appIdStr);
+    logsRequest.setFileName(fileName);
+    logsRequest.setContainerId(containerIdStr);
+    logsRequest.setFileSize(fileSize);
+    logsRequest.setModificationTime(modificationTime);
+    logsRequest.setNodeId(nmId);
+    return logServlet.getContainerLogsInfo(hsr, logsRequest);
   }
 
   @GET

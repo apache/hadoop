@@ -20,11 +20,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -164,6 +168,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     setQueueAcls(authorizer, appPriorityACLManager, queues);
     labelManager.reinitializeQueueLabels(getQueueToLabels());
     this.queueStateManager.initialize(this);
+    root.updateClusterResource(csContext.getClusterResource(),
+        new ResourceLimits(csContext.getClusterResource()));
     LOG.info("Initialized root queue " + root);
   }
 
@@ -172,7 +178,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       throws IOException {
     // Parse new queues
     CSQueueStore newQueues = new CSQueueStore();
-    CSQueue newRoot =  parseQueue(this.csContext, newConf, null,
+    CSQueue newRoot = parseQueue(this.csContext, newConf, null,
         CapacitySchedulerConfiguration.ROOT, newQueues, queues, NOOP);
 
     // When failing over, if using configuration store, don't validate queue
@@ -208,7 +214,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @param conf the CapacitySchedulerConfiguration
    * @param parent the parent queue
    * @param queueName the queue name
-   * @param queues all the queues
+   * @param newQueues all the queues
    * @param oldQueues the old queues
    * @param hook the queue hook
    * @return the CSQueue
@@ -218,18 +224,35 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       CapacitySchedulerContext csContext,
       CapacitySchedulerConfiguration conf,
       CSQueue parent, String queueName,
-      CSQueueStore queues,
+      CSQueueStore newQueues,
       CSQueueStore oldQueues,
       QueueHook hook) throws IOException {
     CSQueue queue;
     String fullQueueName = (parent == null) ?
         queueName :
         (parent.getQueuePath() + "." + queueName);
-    String[] childQueueNames = conf.getQueues(fullQueueName);
+    String[] staticChildQueueNames = conf.getQueues(fullQueueName);
+    List<String> childQueueNames = staticChildQueueNames != null ?
+        Arrays.asList(staticChildQueueNames) : Collections.emptyList();
+
     boolean isReservableQueue = conf.isReservable(fullQueueName);
     boolean isAutoCreateEnabled = conf.isAutoCreateChildQueueEnabled(
         fullQueueName);
-    if (childQueueNames == null || childQueueNames.length == 0) {
+    // if a queue is eligible for auto queue creation v2
+    // it must be a ParentQueue (even if it is empty)
+    boolean isAutoQueueCreationV2Enabled = conf.isAutoQueueCreationV2Enabled(
+        fullQueueName);
+    boolean isDynamicParent = false;
+
+    // Auto created parent queues might not have static children, but they
+    // must be kept as a ParentQueue
+    CSQueue oldQueue = oldQueues.get(fullQueueName);
+    if (oldQueue instanceof ParentQueue) {
+      isDynamicParent = ((ParentQueue) oldQueue).isDynamicQueue();
+    }
+
+    if (childQueueNames.size() == 0 && !isDynamicParent &&
+        !isAutoQueueCreationV2Enabled) {
       if (null == parent) {
         throw new IllegalStateException(
             "Queue configuration missing child queue names for " + queueName);
@@ -254,7 +277,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         }
         childQueues.add(resQueue);
         ((PlanQueue) queue).setChildQueues(childQueues);
-        queues.add(resQueue);
+        newQueues.add(resQueue);
 
       } else if (isAutoCreateEnabled) {
         queue = new ManagedParentQueue(csContext, queueName, parent,
@@ -287,14 +310,14 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       List<CSQueue> childQueues = new ArrayList<>();
       for (String childQueueName : childQueueNames) {
         CSQueue childQueue = parseQueue(csContext, conf, queue, childQueueName,
-            queues, oldQueues, hook);
+            newQueues, oldQueues, hook);
         childQueues.add(childQueue);
       }
       parentQueue.setChildQueues(childQueues);
 
     }
 
-    queues.add(queue);
+    newQueues.add(queue);
 
     LOG.info("Initialized queue: " + fullQueueName);
     return queue;
@@ -316,11 +339,12 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       }
     }
 
-    for (CSQueue queue: existingQueues.getQueues()) {
-      if (newQueues.get(queue.getQueuePath()) == null && !(
+    for (CSQueue queue : existingQueues.getQueues()) {
+      if (!((AbstractCSQueue) queue).isDynamicQueue() && newQueues.get(
+          queue.getQueuePath()) == null && !(
           queue instanceof AutoCreatedLeafQueue && conf
               .isAutoCreateChildQueueEnabled(
-                queue.getParent().getQueuePath()))) {
+                  queue.getParent().getQueuePath()))) {
         existingQueues.remove(queue);
       }
     }

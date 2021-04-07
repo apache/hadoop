@@ -23,7 +23,6 @@ import static org.mockito.Mockito.*;
 import java.net.URI;
 import java.util.ArrayList;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.Region;
@@ -35,11 +34,10 @@ import com.amazonaws.services.s3.model.Region;
 public class MockS3ClientFactory implements S3ClientFactory {
 
   @Override
-  public AmazonS3 createS3Client(URI name,
-      final String bucket,
-      final AWSCredentialsProvider credentialSet,
-      final String userAgentSuffix) {
+  public AmazonS3 createS3Client(URI uri,
+      final S3ClientCreationParameters parameters) {
     AmazonS3 s3 = mock(AmazonS3.class);
+    String bucket = uri.getHost();
     when(s3.doesBucketExist(bucket)).thenReturn(true);
     when(s3.doesBucketExistV2(bucket)).thenReturn(true);
     // this listing is used in startup if purging is enabled, so

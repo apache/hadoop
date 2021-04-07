@@ -559,6 +559,50 @@ public class CommonNodeLabelsManager extends AbstractService {
     addNodeToLabels(node, newLabels);
   }
 
+  private void addLabelsToNodeInHost(NodeId node, Set<String> labels)
+       throws IOException {
+    Host host = nodeCollections.get(node.getHost());
+    if (null == host) {
+      throw new IOException("Cannot add labels to a host that "
+              + "does not exist. Create the host before adding labels to it.");
+    }
+    Node nm = host.nms.get(node);
+    if (nm != null) {
+      Node newNm = nm.copy();
+      if (newNm.labels == null) {
+        newNm.labels =
+            Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+      }
+      newNm.labels.addAll(labels);
+      host.nms.put(node, newNm);
+    }
+  }
+
+  protected void removeLabelsFromNodeInHost(NodeId node, Set<String> labels)
+      throws IOException {
+    Host host = nodeCollections.get(node.getHost());
+    if (null == host) {
+      throw new IOException("Cannot remove labels from a host that "
+              + "does not exist. Create the host before adding labels to it.");
+    }
+    Node nm = host.nms.get(node);
+    if (nm != null) {
+      if (nm.labels == null) {
+        nm.labels = new HashSet<String>();
+      } else {
+        nm.labels.removeAll(labels);
+      }
+    }
+  }
+
+  private void replaceLabelsForNode(NodeId node, Set<String> oldLabels,
+      Set<String> newLabels) throws IOException {
+    if(oldLabels != null) {
+      removeLabelsFromNodeInHost(node, oldLabels);
+    }
+    addLabelsToNodeInHost(node, newLabels);
+  }
+
   @SuppressWarnings("unchecked")
   protected void internalUpdateLabelsOnNodes(
       Map<NodeId, Set<String>> nodeToLabels, NodeLabelUpdateOperation op)
@@ -597,10 +641,14 @@ public class CommonNodeLabelsManager extends AbstractService {
           break;
         case REPLACE:
           replaceNodeForLabels(nodeId, host.labels, labels);
+          replaceLabelsForNode(nodeId, host.labels, labels);
           host.labels.clear();
           host.labels.addAll(labels);
           for (Node node : host.nms.values()) {
             replaceNodeForLabels(node.nodeId, node.labels, labels);
+            if (node.labels != null) {
+              replaceLabelsForNode(node.nodeId, node.labels, labels);
+            }
             node.labels = null;
           }
           break;
@@ -625,6 +673,7 @@ public class CommonNodeLabelsManager extends AbstractService {
           case REPLACE:
             oldLabels = getLabelsByNode(nodeId);
             replaceNodeForLabels(nodeId, oldLabels, labels);
+            replaceLabelsForNode(nodeId, oldLabels, labels);
             if (nm.labels == null) { 
               nm.labels = new HashSet<String>();
             }

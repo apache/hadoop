@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -53,8 +54,11 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.UploadHandle;
 import org.apache.hadoop.fs.impl.AbstractMultipartUploader;
 import org.apache.hadoop.fs.s3a.WriteOperations;
-import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AMultipartUploaderStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 
 /**
  * MultipartUploader for S3AFileSystem. This uses the S3 multipart
@@ -102,7 +106,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     this.builder = builder;
     this.writeOperations = writeOperations;
     this.context = context;
-    this.statistics = statistics;
+    this.statistics = Objects.requireNonNull(statistics);
   }
 
   @Override
@@ -111,6 +115,22 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       operationState.close();
     }
     super.close();
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    return statistics.getIOStatistics();
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "S3AMultipartUploader{");
+    sb.append("base=").append(getBasePath());
+    sb.append("; statistics=").append(
+        ioStatisticsToString(statistics.getIOStatistics()));
+    sb.append('}');
+    return sb.toString();
   }
 
   /**

@@ -23,9 +23,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -33,9 +35,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -88,7 +90,8 @@ public class StoreContext {
   private final Invoker invoker;
 
   /** Instrumentation and statistics. */
-  private final S3AInstrumentation instrumentation;
+  private final S3AStatisticsContext instrumentation;
+
   private final S3AStorageStatistics storageStatistics;
 
   /** Seek policy. */
@@ -126,10 +129,10 @@ public class StoreContext {
       final Configuration configuration,
       final String username,
       final UserGroupInformation owner,
-      final ListeningExecutorService executor,
+      final ExecutorService executor,
       final int executorCapacity,
       final Invoker invoker,
-      final S3AInstrumentation instrumentation,
+      final S3AStatisticsContext instrumentation,
       final S3AStorageStatistics storageStatistics,
       final S3AInputPolicy inputPolicy,
       final ChangeDetectionPolicy changeDetectionPolicy,
@@ -143,7 +146,7 @@ public class StoreContext {
     this.configuration = configuration;
     this.username = username;
     this.owner = owner;
-    this.executor = executor;
+    this.executor = MoreExecutors.listeningDecorator(executor);
     this.executorCapacity = executorCapacity;
     this.invoker = invoker;
     this.instrumentation = instrumentation;
@@ -178,7 +181,7 @@ public class StoreContext {
     return username;
   }
 
-  public ListeningExecutorService getExecutor() {
+  public ExecutorService getExecutor() {
     return executor;
   }
 
@@ -186,7 +189,12 @@ public class StoreContext {
     return invoker;
   }
 
-  public S3AInstrumentation getInstrumentation() {
+  /**
+   * Get the statistics context for this StoreContext.
+   * @return the statistics context this store context was created
+   * with.
+   */
+  public S3AStatisticsContext getInstrumentation() {
     return instrumentation;
   }
 
@@ -268,7 +276,6 @@ public class StoreContext {
    */
   public void incrementStatistic(Statistic statistic, long count) {
     instrumentation.incrementCounter(statistic, count);
-    storageStatistics.incrementCounter(statistic, count);
   }
 
   /**
@@ -305,7 +312,7 @@ public class StoreContext {
    * @param capacity maximum capacity of this executor.
    * @return an executor for submitting work.
    */
-  public ListeningExecutorService createThrottledExecutor(int capacity) {
+  public ExecutorService createThrottledExecutor(int capacity) {
     return new SemaphoredDelegatingExecutor(executor,
         capacity, true);
   }
@@ -315,7 +322,7 @@ public class StoreContext {
    * {@link #executorCapacity}.
    * @return a new executor for exclusive use by the caller.
    */
-  public ListeningExecutorService createThrottledExecutor() {
+  public ExecutorService createThrottledExecutor() {
     return createThrottledExecutor(executorCapacity);
   }
 

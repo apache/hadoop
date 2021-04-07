@@ -176,6 +176,8 @@ public class FairSchedulerConfiguration extends Configuration {
   public static final String  PREEMPTION = CONF_PREFIX + "preemption";
   public static final boolean DEFAULT_PREEMPTION = false;
 
+  protected static final String AM_PREEMPTION =
+      CONF_PREFIX + "am.preemption";
   protected static final String AM_PREEMPTION_PREFIX =
           CONF_PREFIX + "am.preemption.";
   protected static final boolean DEFAULT_AM_PREEMPTION = true;
@@ -407,7 +409,17 @@ public class FairSchedulerConfiguration extends Configuration {
   }
 
   public boolean getAMPreemptionEnabled(String queueName) {
-    return getBoolean(AM_PREEMPTION_PREFIX + queueName, DEFAULT_AM_PREEMPTION);
+    String propertyName = AM_PREEMPTION_PREFIX + queueName;
+
+    if (get(propertyName) != null) {
+      boolean amPreemptionEnabled =
+          getBoolean(propertyName, DEFAULT_AM_PREEMPTION);
+      LOG.debug("AM preemption enabled for queue {}: {}",
+          queueName, amPreemptionEnabled);
+      return amPreemptionEnabled;
+    }
+
+    return getBoolean(AM_PREEMPTION, DEFAULT_AM_PREEMPTION);
   }
 
   public float getPreemptionUtilizationThreshold() {

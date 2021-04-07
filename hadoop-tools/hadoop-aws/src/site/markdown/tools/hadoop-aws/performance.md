@@ -30,11 +30,11 @@ That's because its a very different system, as you can see:
 | communication | RPC | HTTP GET/PUT/HEAD/LIST/COPY requests |
 | data locality | local storage | remote S3 servers |
 | replication | multiple datanodes | asynchronous after upload |
-| consistency | consistent data and listings | eventual consistent for listings, deletes and updates |
+| consistency | consistent data and listings | consistent since November 2020|
 | bandwidth | best: local IO, worst: datacenter network | bandwidth between servers and S3 |
 | latency | low | high, especially for "low cost" directory operations |
-| rename | fast, atomic | slow faked rename through COPY & DELETE|
-| delete | fast, atomic | fast for a file, slow & non-atomic for directories |
+| rename | fast, atomic | slow faked rename through COPY and DELETE|
+| delete | fast, atomic | fast for a file, slow and non-atomic for directories |
 | writing| incremental | in blocks; not visible until the writer is closed |
 | reading | seek() is fast | seek() is slow and expensive |
 | IOPs | limited only by hardware | callers are throttled to shards in an s3 bucket |

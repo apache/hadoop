@@ -17,6 +17,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -318,6 +319,101 @@ public class TestQueuePlacementConverter {
   }
 
   @Test
+  public void testConvertNestedRuleCreateFalseFalseInWeightMode() {
+    testConvertNestedRuleCreateFlagInWeightMode(false, false,
+        false, false);
+  }
+
+  @Test
+  public void testConvertNestedRuleCreateFalseTrueInWeightMode() {
+    testConvertNestedRuleCreateFlagInWeightMode(false, true,
+        true, true);
+  }
+
+  @Test
+  public void testConvertNestedRuleCreateTrueFalseInWeightMode() {
+    testConvertNestedRuleCreateFlagInWeightMode(true, false,
+        true, true);
+  }
+
+  @Test
+  public void testConvertNestedRuleCreateTrueTrueInWeightMode() {
+    testConvertNestedRuleCreateFlagInWeightMode(true, true,
+        true, false);
+  }
+
+  private void testConvertNestedRuleCreateFlagInWeightMode(
+      boolean parentCreate,
+      boolean childCreate,
+      boolean expectedFlagOnRule,
+      boolean ruleHandlerShouldBeInvoked) {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    PrimaryGroupPlacementRule parent = mock(PrimaryGroupPlacementRule.class);
+    when(parent.getCreateFlag()).thenReturn(parentCreate);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    when(fsRule.getCreateFlag()).thenReturn(childCreate);
+    initPlacementManagerMock(fsRule);
+
+    MappingRulesDescription desc = convertInWeightMode();
+    Rule rule = desc.getRules().get(0);
+
+    assertEquals("Expected create flag", expectedFlagOnRule, rule.getCreate());
+
+    if (ruleHandlerShouldBeInvoked) {
+      verify(ruleHandler).handleFSParentAndChildCreateFlagDiff(
+          any(Policy.class));
+      verifyNoMoreInteractions(ruleHandler);
+    } else {
+      verifyZeroInteractions(ruleHandler);
+    }
+  }
+
+  @Test
+  public void testParentSetToRootInWeightModeUserPolicy() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  @Test
+  public void testParentSetToRootInWeightModePrimaryGroupPolicy() {
+    PrimaryGroupPlacementRule fsRule = mock(PrimaryGroupPlacementRule.class);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  @Test
+  public void testParentSetToRootInWeightModePrimaryGroupUserPolicy() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    PrimaryGroupPlacementRule parent = mock(PrimaryGroupPlacementRule.class);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  @Test
+  public void testParentSetToRootInWeightModeSecondaryGroupPolicy() {
+    SecondaryGroupExistingPlacementRule fsRule =
+        mock(SecondaryGroupExistingPlacementRule.class);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  @Test
+  public void testParentSetToRootInWeightModeSecondaryGroupUserPolicy() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    SecondaryGroupExistingPlacementRule parent =
+        mock(SecondaryGroupExistingPlacementRule.class);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    testParentSetToRootInWeightMode(fsRule);
+  }
+
+  private void testParentSetToRootInWeightMode(FSPlacementRule fsRule) {
+    initPlacementManagerMock(fsRule);
+
+    MappingRulesDescription desc = convertInWeightMode();
+    Rule rule = desc.getRules().get(0);
+
+    assertEquals("Parent queue", "root", rule.getParentQueue());
+  }
+
+  @Test
   public void testConvertNestedPrimaryGroupRuleWithParentCreate() {
     UserPlacementRule fsRule = mock(UserPlacementRule.class);
     PrimaryGroupPlacementRule parent = mock(PrimaryGroupPlacementRule.class);
@@ -388,7 +484,12 @@ public class TestQueuePlacementConverter {
 
   private MappingRulesDescription convert() {
     return converter.convertPlacementPolicy(placementManager,
-        ruleHandler, csConf);
+        ruleHandler, csConf, true);
+  }
+
+  private MappingRulesDescription convertInWeightMode() {
+    return converter.convertPlacementPolicy(placementManager,
+        ruleHandler, csConf, false);
   }
 
   private void verifyRule(Rule rule, Policy expectedPolicy) {
@@ -397,13 +498,6 @@ public class TestQueuePlacementConverter {
     assertEquals("Fallback result",
         FallbackResult.SKIP, rule.getFallbackResult());
     assertEquals("Type", Type.USER, rule.getType());
-  }
-
-  private void verifySetDefaultRule(Rule rule, String expectedQueue) {
-    assertEquals("Policy type", Policy.SET_DEFAULT_QUEUE, rule.getPolicy());
-    assertEquals("Queue", expectedQueue, rule.getValue());
-    assertEquals("Fallback result",
-        FallbackResult.SKIP, rule.getFallbackResult());
   }
 
   private class TestPlacementRule extends FSPlacementRule {

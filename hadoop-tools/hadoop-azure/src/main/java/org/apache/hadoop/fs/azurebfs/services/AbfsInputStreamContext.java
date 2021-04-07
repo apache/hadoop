@@ -40,6 +40,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private AbfsInputStreamStatistics streamStatistics;
 
+  private boolean readSmallFilesCompletely;
+
+  private boolean optimizeFooterRead;
+
+  private boolean bufferedPreadDisabled;
+
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -69,6 +75,18 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withReadSmallFilesCompletely(
+      final boolean readSmallFilesCompletely) {
+    this.readSmallFilesCompletely = readSmallFilesCompletely;
+    return this;
+  }
+
+  public AbfsInputStreamContext withOptimizeFooterRead(
+      final boolean optimizeFooterRead) {
+    this.optimizeFooterRead = optimizeFooterRead;
+    return this;
+  }
+
   public AbfsInputStreamContext withShouldReadBufferSizeAlways(
       final boolean alwaysReadBufferSize) {
     this.alwaysReadBufferSize = alwaysReadBufferSize;
@@ -78,6 +96,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public AbfsInputStreamContext withReadAheadBlockSize(
       final int readAheadBlockSize) {
     this.readAheadBlockSize = readAheadBlockSize;
+    return this;
+  }
+
+  public AbfsInputStreamContext withBufferedPreadDisabled(
+      final boolean bufferedPreadDisabled) {
+    this.bufferedPreadDisabled = bufferedPreadDisabled;
     return this;
   }
 
@@ -110,6 +134,14 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return streamStatistics;
   }
 
+  public boolean readSmallFilesCompletely() {
+    return this.readSmallFilesCompletely;
+  }
+
+  public boolean optimizeFooterRead() {
+    return this.optimizeFooterRead;
+  }
+
   public boolean shouldReadBufferSizeAlways() {
     return alwaysReadBufferSize;
   }
@@ -118,4 +150,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return readAheadBlockSize;
   }
 
+  public boolean isBufferedPreadDisabled() {
+    return bufferedPreadDisabled;
+  }
 }

@@ -50,11 +50,20 @@
 
   <property>
     <name>hadoop.http.idle_timeout.ms</name>
-    <value>1000</value>
+    <value>60000</value>
     <description>
       NN/JN/DN Server connection timeout in milliseconds.
     </description>
   </property>
+
+<property>
+  <name>hadoop.http.metrics.enabled</name>
+  <value>true</value>
+  <description>
+    If true, set Jetty's StatisticsHandler to HTTP server to collect
+    HTTP layer metrics and register them to Hadoop metrics system.
+  </description>
+</property>
 
 <!--- security properties -->
 
@@ -1873,11 +1882,9 @@
 
 <property>
   <name>fs.s3a.committer.magic.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
-    Enable support in the filesystem for the S3 "Magic" committer.
-    When working with AWS S3, S3Guard must be enabled for the destination
-    bucket, as consistent metadata listings are required.
+    Enable support in the S3A filesystem for the "Magic" committer.
   </description>
 </property>
 
@@ -2385,9 +2392,10 @@
 
 <property>
   <name>ipc.client.rpc-timeout.ms</name>
-  <value>0</value>
+  <value>120000</value>
   <description>Timeout on waiting response from server, in milliseconds.
-  If ipc.client.ping is set to true and this rpc-timeout is greater than
+  If this rpc-timeout is 0, it means no timeout. If this rpc-timeout is greater
+  than 0, and ipc.client.ping is set to true, and this rpc-timeout is greater than
   the value of ipc.ping.interval, the effective value of the rpc-timeout is
   rounded up to multiple of ipc.ping.interval.
   </description>
@@ -2847,7 +2855,7 @@
   <value>${user.home}/hadoop-http-auth-signature-secret</value>
   <description>
     The signature secret for signing the authentication tokens.
-    The same secret should be used for RM/NM/NN/DN configurations.
+    A different secret should be used for each service.
   </description>
 </property>
 

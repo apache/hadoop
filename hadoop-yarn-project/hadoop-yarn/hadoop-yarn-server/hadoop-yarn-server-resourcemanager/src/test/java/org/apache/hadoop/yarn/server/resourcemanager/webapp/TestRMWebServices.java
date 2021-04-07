@@ -474,7 +474,7 @@ public class TestRMWebServices extends JerseyTestBase {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject clusterinfo = json.getJSONObject("clusterMetrics");
-    assertEquals("incorrect number of elements", 31, clusterinfo.length());
+    assertEquals("incorrect number of elements", 32, clusterinfo.length());
     verifyClusterMetrics(
         clusterinfo.getInt("appsSubmitted"), clusterinfo.getInt("appsCompleted"),
         clusterinfo.getInt("reservedMB"), clusterinfo.getInt("availableMB"),
@@ -1027,7 +1027,7 @@ public class TestRMWebServices extends JerseyTestBase {
     Assert.assertEquals(Status.BAD_REQUEST
             .getStatusCode(), response.getStatus());
     Assert.assertTrue(response.getEntity().toString()
-            .contains("Illegal capacity of 0.5 for children of queue"));
+            .contains("IOException"));
   }
 
   @Test

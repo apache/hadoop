@@ -51,7 +51,7 @@ public class TestQueueParsing {
       LoggerFactory.getLogger(TestQueueParsing.class);
   
   private static final double DELTA = 0.000001;
-  
+
   private RMNodeLabelsManager nodeLabelManager;
   
   @Before
@@ -1141,6 +1141,59 @@ public class TestQueueParsing {
         new String[] { "b1", "b2", "b3", "b4" });
 
     ServiceOperations.stopQuietly(capacityScheduler);
+  }
+
+  @Test(timeout = 60000)
+  public void testQueueCapacityWithWeight() throws Exception {
+    YarnConfiguration config = new YarnConfiguration();
+    nodeLabelManager = new NullRMNodeLabelsManager();
+    nodeLabelManager.init(config);
+    config.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    CapacitySchedulerConfiguration conf =
+        new CapacitySchedulerConfiguration(config);
+
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a" });
+    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
+    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
+
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    conf.setNonLabeledQueueWeight(A, 100);
+    conf.setAccessibleNodeLabels(A, ImmutableSet.of("x", "y", "z"));
+    conf.setLabeledQueueWeight(A, "x", 100);
+    conf.setLabeledQueueWeight(A, "y", 100);
+    conf.setLabeledQueueWeight(A, "z", 70);
+    MockRM rm = null;
+    try {
+      rm = new MockRM(conf) {
+        @Override
+        public RMNodeLabelsManager createNodeLabelManager() {
+          return nodeLabelManager;
+        }
+      };
+    } finally {
+      IOUtils.closeStream(rm);
+    }
+
+    verifyQueueAbsCapacity(rm, CapacitySchedulerConfiguration.ROOT, "", 1f);
+    verifyQueueAbsCapacity(rm, CapacitySchedulerConfiguration.ROOT, "x", 1f);
+    verifyQueueAbsCapacity(rm, CapacitySchedulerConfiguration.ROOT, "y", 1f);
+    verifyQueueAbsCapacity(rm, CapacitySchedulerConfiguration.ROOT, "z", 1f);
+
+    verifyQueueAbsCapacity(rm, A, "", 1f);
+    verifyQueueAbsCapacity(rm, A, "x", 1f);
+    verifyQueueAbsCapacity(rm, A, "y", 1f);
+    verifyQueueAbsCapacity(rm, A, "z", 1f);
+  }
+
+  private void verifyQueueAbsCapacity(MockRM rm, String queuePath, String label,
+      float expectedAbsCapacity) {
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    CSQueue queue = cs.getQueue(queuePath);
+    Assert.assertEquals(expectedAbsCapacity,
+        queue.getQueueCapacities().getAbsoluteCapacity(label), 1e-6);
   }
 
   private void checkEqualsToQueueSet(List<CSQueue> queues, String[] queueNames) {
