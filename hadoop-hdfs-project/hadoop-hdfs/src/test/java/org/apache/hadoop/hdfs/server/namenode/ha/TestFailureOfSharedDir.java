@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystemUtil;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -61,10 +61,10 @@ public class TestFailureOfSharedDir {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, Joiner.on(",").join(foo, bar));
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY, foo.toString());
-    assertFalse(FSNamesystem.getRequiredNamespaceEditsDirs(conf).contains(
+    assertFalse(FSNamesystemUtil.getRequiredNamespaceEditsDirs(conf).contains(
         bar));
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY, bar.toString());
-    Collection<URI> requiredEditsDirs = FSNamesystem
+    Collection<URI> requiredEditsDirs = FSNamesystemUtil
         .getRequiredNamespaceEditsDirs(conf); 
     assertTrue(Joiner.on(",").join(requiredEditsDirs) + " does not contain " + bar,
         requiredEditsDirs.contains(bar));
@@ -86,7 +86,7 @@ public class TestFailureOfSharedDir {
         localA.toString());
 
     try {
-      FSNamesystem.getNamespaceEditsDirs(conf);
+      FSNamesystemUtil.getNamespaceEditsDirs(conf);
       fail("Allowed multiple shared edits directories");
     } catch (IOException ioe) {
       assertEquals("Multiple shared edits directories are not yet supported",
@@ -113,7 +113,7 @@ public class TestFailureOfSharedDir {
     // the order listed, regardless of lexical sort order.
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         Joiner.on(",").join(localC, localB, localA));
-    List<URI> dirs = FSNamesystem.getNamespaceEditsDirs(conf);
+    List<URI> dirs = FSNamesystemUtil.getNamespaceEditsDirs(conf);
     assertEquals(
         "Shared dirs should come first, then local dirs, in the order " +
         "they were listed in the configuration.",

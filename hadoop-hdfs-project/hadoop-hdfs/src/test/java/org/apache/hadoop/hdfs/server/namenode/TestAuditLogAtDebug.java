@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.FSNamesystemAuditLogger;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Rule;
 import org.junit.Test;

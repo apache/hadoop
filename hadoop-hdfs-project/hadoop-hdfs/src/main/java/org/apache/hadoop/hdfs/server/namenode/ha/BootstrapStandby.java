@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystemUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -53,7 +54,6 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNUpgradeUtil;
@@ -445,10 +445,10 @@ public class BootstrapStandby implements Tool, Configurable {
     // make sure we have at least one left to read
     Preconditions.checkArgument(!remoteNNs.isEmpty(), "Could not find any valid namenodes!");
 
-    dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-    editUrisToFormat = FSNamesystem.getNamespaceEditsDirs(
+    dirsToFormat = FSNamesystemUtil.getNamespaceDirs(conf);
+    editUrisToFormat = FSNamesystemUtil.getNamespaceEditsDirs(
         conf, false);
-    sharedEditsUris = FSNamesystem.getSharedEditsDirs(conf);
+    sharedEditsUris = FSNamesystemUtil.getSharedEditsDirs(conf);
 
     parseProvidedConfigurations(conf);
   }

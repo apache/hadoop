@@ -178,7 +178,7 @@ public class NNStorage extends Storage implements Closeable,
     // this may modify the editsDirs, so copy before passing in
     setStorageDirectories(imageDirs, 
                           Lists.newArrayList(editsDirs),
-                          FSNamesystem.getSharedEditsDirs(conf));
+                          FSNamesystemUtil.getSharedEditsDirs(conf));
     //Update NameDirSize metric value after NN start
     updateNameDirSize();
   }

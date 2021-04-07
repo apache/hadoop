@@ -31,6 +31,7 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystemUtil;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -132,7 +133,7 @@ public class TestHAConfiguration {
     conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY, "file://edits/shared/dir");
 
     // getNamespaceEditsDirs removes duplicates across edits and shared.edits
-    Collection<URI> editsDirs = FSNamesystem.getNamespaceEditsDirs(conf);
+    Collection<URI> editsDirs = FSNamesystemUtil.getNamespaceEditsDirs(conf);
     assertEquals(2, editsDirs.size());
   }
   

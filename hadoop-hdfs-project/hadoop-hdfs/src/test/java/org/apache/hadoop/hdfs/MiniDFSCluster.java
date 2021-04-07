@@ -78,6 +78,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import java.util.function.Supplier;
+
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystemUtil;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
@@ -1092,7 +1094,7 @@ public class MiniDFSCluster implements AutoCloseable {
     for (NNConf nn : nameservice.getNNs()) {
       initNameNodeConf(conf, nsId, nsCounter, nn.getNnId(), manageNameDfsDirs,
           manageNameDfsDirs,  nnIndex);
-      Collection<URI> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
+      Collection<URI> namespaceDirs = FSNamesystemUtil.getNamespaceDirs(conf);
       if (format) {
         // delete the existing namespaces
         for (URI nameDirUri : namespaceDirs) {
@@ -2705,14 +2707,14 @@ public class MiniDFSCluster implements AutoCloseable {
    * Get the directories where the namenode stores its image.
    */
   public Collection<URI> getNameDirs(int nnIndex) {
-    return FSNamesystem.getNamespaceDirs(getNN(nnIndex).conf);
+    return FSNamesystemUtil.getNamespaceDirs(getNN(nnIndex).conf);
   }
 
   /**
    * Get the directories where the namenode stores its edits.
    */
   public Collection<URI> getNameEditsDirs(int nnIndex) throws IOException {
-    return FSNamesystem.getNamespaceEditsDirs(getNN(nnIndex).conf);
+    return FSNamesystemUtil.getNamespaceEditsDirs(getNN(nnIndex).conf);
   }
   
   public void transitionToActive(int nnIndex) throws IOException,

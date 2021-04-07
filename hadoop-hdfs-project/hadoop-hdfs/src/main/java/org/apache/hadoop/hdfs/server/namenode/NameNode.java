@@ -1227,13 +1227,12 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
     }
     
-    Collection<URI> nameDirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-    List<URI> sharedDirs = FSNamesystem.getSharedEditsDirs(conf);
+    Collection<URI> nameDirsToFormat = FSNamesystemUtil.getNamespaceDirs(conf);
+    List<URI> sharedDirs = FSNamesystemUtil.getSharedEditsDirs(conf);
     List<URI> dirsToPrompt = new ArrayList<URI>();
     dirsToPrompt.addAll(nameDirsToFormat);
     dirsToPrompt.addAll(sharedDirs);
-    List<URI> editDirsToFormat = 
-                 FSNamesystem.getNamespaceEditsDirs(conf);
+    List<URI> editDirsToFormat = FSNamesystemUtil.getNamespaceEditsDirs(conf);
 
     // if clusterID is not provided - see if you can find the current one
     String clusterId = StartupOption.FORMAT.getClusterId();
@@ -1316,7 +1315,7 @@ public class NameNode extends ReconfigurableBase implements
   private static Configuration getConfigurationWithoutSharedEdits(
       Configuration conf)
       throws IOException {
-    List<URI> editsDirs = FSNamesystem.getNamespaceEditsDirs(conf, false);
+    List<URI> editsDirs = FSNamesystemUtil.getNamespaceEditsDirs(conf, false);
     String editsDirsString = Joiner.on(",").join(editsDirs);
 
     Configuration confWithoutShared = new Configuration(conf);
@@ -1362,7 +1361,7 @@ public class NameNode extends ReconfigurableBase implements
       existingStorage = fsns.getFSImage().getStorage();
       NamespaceInfo nsInfo = existingStorage.getNamespaceInfo();
       
-      List<URI> sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
+      List<URI> sharedEditsDirs = FSNamesystemUtil.getSharedEditsDirs(conf);
       
       sharedEditsImage = new FSImage(conf,
           Lists.<URI>newArrayList(),

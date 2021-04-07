@@ -17,15 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.commons.text.StringEscapeUtils.escapeJava;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
@@ -59,27 +52,17 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_HEAP_PERCENT_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_HEAP_PERCENT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_KEY;
@@ -142,7 +125,6 @@ import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -153,10 +135,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -177,7 +157,6 @@ import javax.management.StandardMBean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -266,7 +245,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSDirEncryptionZoneOp.EncryptionKeyInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
@@ -328,11 +306,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.log4j.Logger;
-import org.apache.log4j.Appender;
-import org.apache.log4j.AsyncAppender;
 import org.eclipse.jetty.util.ajax.JSON;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -714,56 +688,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Check the supplied configuration for correctness.
-   * @param conf Supplies the configuration to validate.
-   * @throws IOException if the configuration could not be queried.
-   * @throws IllegalArgumentException if the configuration is invalid.
-   */
-  private static void checkConfiguration(Configuration conf)
-      throws IOException {
-
-    final Collection<URI> namespaceDirs =
-        FSNamesystem.getNamespaceDirs(conf);
-    final Collection<URI> editsDirs =
-        FSNamesystem.getNamespaceEditsDirs(conf);
-    final Collection<URI> requiredEditsDirs =
-        FSNamesystem.getRequiredNamespaceEditsDirs(conf);
-    final Collection<URI> sharedEditsDirs =
-        FSNamesystem.getSharedEditsDirs(conf);
-
-    for (URI u : requiredEditsDirs) {
-      if (u.toString().compareTo(
-              DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_DEFAULT) == 0) {
-        continue;
-      }
-
-      // Each required directory must also be in editsDirs or in
-      // sharedEditsDirs.
-      if (!editsDirs.contains(u) &&
-          !sharedEditsDirs.contains(u)) {
-        throw new IllegalArgumentException("Required edits directory " + u
-            + " not found: "
-            + DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY + "=" + editsDirs + "; "
-            + DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY
-            + "=" + requiredEditsDirs + "; "
-            + DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY
-            + "=" + sharedEditsDirs);
-      }
-    }
-
-    if (namespaceDirs.size() == 1) {
-      LOG.warn("Only one image storage directory ("
-          + DFS_NAMENODE_NAME_DIR_KEY + ") configured. Beware of data loss"
-          + " due to lack of redundant storage directories!");
-    }
-    if (editsDirs.size() == 1) {
-      LOG.warn("Only one namespace edits storage directory ("
-          + DFS_NAMENODE_EDITS_DIR_KEY + ") configured. Beware of data loss"
-          + " due to lack of redundant storage directories!");
-    }
-  }
-
-  /**
    * Instantiates an FSNamesystem loaded from the image and edits
    * directories specified in the passed Configuration.
    *
@@ -774,10 +698,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   static FSNamesystem loadFromDisk(Configuration conf) throws IOException {
 
-    checkConfiguration(conf);
+    FSNamesystemUtil.checkConfiguration(conf);
     FSImage fsImage = new FSImage(conf,
-        FSNamesystem.getNamespaceDirs(conf),
-        FSNamesystem.getNamespaceEditsDirs(conf));
+        FSNamesystemUtil.getNamespaceDirs(conf),
+        FSNamesystemUtil.getNamespaceEditsDirs(conf));
     FSNamesystem namesystem = new FSNamesystem(conf, fsImage, false);
     StartupOption startOpt = NameNode.getStartupOption(conf);
     if (startOpt == StartupOption.RECOVER) {
@@ -825,7 +749,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
                         DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
       LOG.info("Enabling async auditlog");
-      enableAsyncAuditLog(conf);
+      FSNamesystemUtil.enableAsyncAuditLog(conf, auditLog);
     }
     fsLock = new FSNamesystemLock(conf, detailedLockHoldTimeMetrics);
     cond = fsLock.newWriteLockCondition();
@@ -996,7 +920,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.auditLoggers = initAuditLoggers(conf);
       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
         auditLoggers.get(0) instanceof DefaultAuditLogger;
-      this.retryCache = ignoreRetryCache ? null : initRetryCache(conf);
+      this.retryCache = ignoreRetryCache ? null :
+          FSNamesystemUtil.initRetryCache(conf);
       Class<? extends INodeAttributeProvider> klass = conf.getClass(
           DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_KEY,
           null, INodeAttributeProvider.class);
@@ -1092,28 +1017,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @VisibleForTesting
   public KeyProviderCryptoExtension getProvider() {
     return provider;
-  }
-
-  @VisibleForTesting
-  static RetryCache initRetryCache(Configuration conf) {
-    boolean enable = conf.getBoolean(DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY,
-                                     DFS_NAMENODE_ENABLE_RETRY_CACHE_DEFAULT);
-    LOG.info("Retry cache on namenode is " + (enable ? "enabled" : "disabled"));
-    if (enable) {
-      float heapPercent = conf.getFloat(
-          DFS_NAMENODE_RETRY_CACHE_HEAP_PERCENT_KEY,
-          DFS_NAMENODE_RETRY_CACHE_HEAP_PERCENT_DEFAULT);
-      long entryExpiryMillis = conf.getLong(
-          DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_KEY,
-          DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_DEFAULT);
-      LOG.info("Retry cache will use " + heapPercent
-          + " of total heap and retry cache entry expiry time is "
-          + entryExpiryMillis + " millis");
-      long entryExpiryNanos = entryExpiryMillis * 1000 * 1000;
-      return new RetryCache("NameNodeRetryCache", heapPercent,
-          entryExpiryNanos);
-    }
-    return null;
   }
 
   /**
@@ -1605,127 +1508,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return isPermissionEnabled;
   }
 
-  public static Collection<URI> getNamespaceDirs(Configuration conf) {
-    return getStorageDirs(conf, DFS_NAMENODE_NAME_DIR_KEY);
-  }
-
-  /**
-   * Get all edits dirs which are required. If any shared edits dirs are
-   * configured, these are also included in the set of required dirs.
-   * 
-   * @param conf the HDFS configuration.
-   * @return all required dirs.
-   */
-  public static Collection<URI> getRequiredNamespaceEditsDirs(Configuration conf) {
-    Set<URI> ret = new HashSet<URI>();
-    ret.addAll(getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY));
-    ret.addAll(getSharedEditsDirs(conf));
-    return ret;
-  }
-
-  private static Collection<URI> getStorageDirs(Configuration conf,
-                                                String propertyName) {
-    Collection<String> dirNames = conf.getTrimmedStringCollection(propertyName);
-    StartupOption startOpt = NameNode.getStartupOption(conf);
-    if(startOpt == StartupOption.IMPORT) {
-      // In case of IMPORT this will get rid of default directories 
-      // but will retain directories specified in hdfs-site.xml
-      // When importing image from a checkpoint, the name-node can
-      // start with empty set of storage directories.
-      Configuration cE = new HdfsConfiguration(false);
-      cE.addResource("core-default.xml");
-      cE.addResource("core-site.xml");
-      cE.addResource("hdfs-default.xml");
-      Collection<String> dirNames2 = cE.getTrimmedStringCollection(propertyName);
-      dirNames.removeAll(dirNames2);
-      if(dirNames.isEmpty())
-        LOG.warn("!!! WARNING !!!" +
-          "\n\tThe NameNode currently runs without persistent storage." +
-          "\n\tAny changes to the file system meta-data may be lost." +
-          "\n\tRecommended actions:" +
-          "\n\t\t- shutdown and restart NameNode with configured \"" 
-          + propertyName + "\" in hdfs-site.xml;" +
-          "\n\t\t- use Backup Node as a persistent and up-to-date storage " +
-          "of the file system meta-data.");
-    } else if (dirNames.isEmpty()) {
-      dirNames = Collections.singletonList(
-          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_DEFAULT);
-    }
-    return Util.stringCollectionAsURIs(dirNames);
-  }
-
-  /**
-   * Return an ordered list of edits directories to write to.
-   * The list is ordered such that all shared edits directories
-   * are ordered before non-shared directories, and any duplicates
-   * are removed. The order they are specified in the configuration
-   * is retained.
-   * @return Collection of shared edits directories.
-   * @throws IOException if multiple shared edits directories are configured
-   */
-  public static List<URI> getNamespaceEditsDirs(Configuration conf)
-      throws IOException {
-    return getNamespaceEditsDirs(conf, true);
-  }
-  
-  public static List<URI> getNamespaceEditsDirs(Configuration conf,
-      boolean includeShared)
-      throws IOException {
-    // Use a LinkedHashSet so that order is maintained while we de-dup
-    // the entries.
-    LinkedHashSet<URI> editsDirs = new LinkedHashSet<URI>();
-    
-    if (includeShared) {
-      List<URI> sharedDirs = getSharedEditsDirs(conf);
-  
-      // Fail until multiple shared edits directories are supported (HDFS-2782)
-      if (sharedDirs.size() > 1) {
-        throw new IOException(
-            "Multiple shared edits directories are not yet supported");
-      }
-  
-      // First add the shared edits dirs. It's critical that the shared dirs
-      // are added first, since JournalSet syncs them in the order they are listed,
-      // and we need to make sure all edits are in place in the shared storage
-      // before they are replicated locally. See HDFS-2874.
-      for (URI dir : sharedDirs) {
-        if (!editsDirs.add(dir)) {
-          LOG.warn("Edits URI " + dir + " listed multiple times in " + 
-              DFS_NAMENODE_SHARED_EDITS_DIR_KEY + ". Ignoring duplicates.");
-        }
-      }
-    }    
-    // Now add the non-shared dirs.
-    for (URI dir : getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_KEY)) {
-      if (!editsDirs.add(dir)) {
-        LOG.warn("Edits URI " + dir + " listed multiple times in " + 
-            DFS_NAMENODE_SHARED_EDITS_DIR_KEY + " and " +
-            DFS_NAMENODE_EDITS_DIR_KEY + ". Ignoring duplicates.");
-      }
-    }
-
-    if (editsDirs.isEmpty()) {
-      // If this is the case, no edit dirs have been explicitly configured.
-      // Image dirs are to be used for edits too.
-      return Lists.newArrayList(getNamespaceDirs(conf));
-    } else {
-      return Lists.newArrayList(editsDirs);
-    }
-  }
-  
-  /**
-   * Returns edit directories that are shared between primary and secondary.
-   * @param conf configuration
-   * @return collection of edit directories from {@code conf}
-   */
-  public static List<URI> getSharedEditsDirs(Configuration conf) {
-    // don't use getStorageDirs here, because we want an empty default
-    // rather than the dir in /tmp
-    Collection<String> dirNames = conf.getTrimmedStringCollection(
-        DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
-    return Util.stringCollectionAsURIs(dirNames);
-  }
-
   @Override
   public void readLock() {
     this.fsLock.readLock();
@@ -2060,7 +1842,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirAttrOp.setPermission(dir, pc, src, permission);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -2092,7 +1874,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirAttrOp.setOwner(dir, pc, src, username, group);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -2234,7 +2016,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         stat = FSDirConcatOp.concat(dir, pc, target, srcs, logRetryCache);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(srcsStr, target, stat));
+            FSNamesystemUtil.getLockReportInfoSupplier(srcsStr, target, stat));
       }
     } catch (AccessControlException ace) {
       logAuditEvent(false, operationName, srcsStr, target, stat);
@@ -2263,7 +2045,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirAttrOp.setTimes(dir, pc, src, mtime, atime);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -2309,7 +2091,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } finally {
         FileStatus status = r != null ? r.getFileStatus() : null;
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, status));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, status));
       }
       getEditLog().logSync();
       if (!toRemoveBlocks.getToDeleteList().isEmpty()) {
@@ -2346,7 +2128,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             dirPerms, createParent, logRetryCache);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(link, target, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(link, target, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, link, target, null);
@@ -2446,7 +2228,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             policyName);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -2480,7 +2262,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             dir, blockManager, src, logRetryCache);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -2527,7 +2309,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirAttrOp.unsetStoragePolicy(dir, pc, blockManager, src);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -2713,7 +2495,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp
             .getErasureCodingPolicy(this, ecPolicyName, iip);
         if (ecPolicy != null && (!ecPolicy.isReplicationPolicy())) {
-          checkErasureCodingSupported("createWithEC");
+          FSNamesystemUtil.checkErasureCodingSupported("createWithEC",
+              getEffectiveLayoutVersion());
           if (blockSize < ecPolicy.getCellSize()) {
             throw new IOException("Specified block size (" + blockSize
                 + ") is less than the cell size (" + ecPolicy.getCellSize()
@@ -2755,7 +2538,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         dir.writeUnlock();
       }
     } finally {
-      writeUnlock("create", getLockReportInfoSupplier(src, null, stat));
+      writeUnlock("create",
+          FSNamesystemUtil.getLockReportInfoSupplier(src, null, stat));
       // There might be transactions logged while trying to recover the lease.
       // They need to be sync'ed even when an exception was thrown.
       if (!skipSync) {
@@ -3241,7 +3025,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } finally {
         FileStatus status = ret != null ? ret.auditStat : null;
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, dst, status));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, dst, status));
       }
     } catch (AccessControlException e)  {
       logAuditEvent(false, operationName, src, dst, null);
@@ -3274,7 +3058,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } finally {
         FileStatus status = res != null ? res.auditStat : null;
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, dst, status));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, dst, status));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName + " (options=" +
@@ -3478,7 +3262,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             createParent);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -3577,7 +3361,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       requireEffectiveLayoutVersionForFeature(Feature.NVDIMM_SUPPORT);
     }
     checkOperation(OperationCategory.WRITE);
-    final String operationName = getQuotaCommand(nsQuota, ssQuota);
+    final String operationName =
+        FSNamesystemUtil.getQuotaCommand(nsQuota, ssQuota);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
     try {
@@ -4938,7 +4723,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws AccessControlException if superuser privilege is violated.
    */
   boolean restoreFailedStorage(String arg) throws IOException {
-    String operationName = getFailedStorageCommand(arg);
+    String operationName = FSNamesystemUtil.getFailedStorageCommand(arg);
     boolean val = false;
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.UNCHECKED);
@@ -6024,7 +5809,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // Do a quick check if there are any corrupt files without taking the lock
     if (blockManager.getMissingBlocksCount() == 0) {
       if (cookieTab[0] == null) {
-        cookieTab[0] = String.valueOf(getIntCookie(cookieTab[0]));
+        cookieTab[0] = String.valueOf(
+            FSNamesystemUtil.getIntCookie(cookieTab[0]));
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("there are no corrupt file blocks.");
@@ -6044,7 +5830,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final Iterator<BlockInfo> blkIterator =
           blockManager.getCorruptReplicaBlockIterator();
 
-      int skip = getIntCookie(cookieTab[0]);
+      int skip = FSNamesystemUtil.getIntCookie(cookieTab[0]);
       for (int i = 0; i < skip && blkIterator.hasNext(); i++) {
         blkIterator.next();
       }
@@ -6069,24 +5855,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       readUnlock("listCorruptFileBlocks");
     }
-  }
-
-  /**
-   * Convert string cookie to integer.
-   */
-  private static int getIntCookie(String cookie){
-    int c;
-    if(cookie == null){
-      c = 0;
-    } else {
-      try{
-        c = Integer.parseInt(cookie);
-      }catch (NumberFormatException e) {
-        c = 0;
-      }
-    }
-    c = Math.max(0, c);
-    return c;
   }
 
   /**
@@ -7455,26 +7223,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @return layout version in effect
    */
   public int getEffectiveLayoutVersion() {
-    return getEffectiveLayoutVersion(isRollingUpgrade(),
+    return FSNamesystemUtil.getEffectiveLayoutVersion(isRollingUpgrade(),
         fsImage.getStorage().getLayoutVersion(),
         NameNodeLayoutVersion.MINIMUM_COMPATIBLE_LAYOUT_VERSION,
         NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
-  }
-
-  @VisibleForTesting
-  static int getEffectiveLayoutVersion(boolean isRollingUpgrade, int storageLV,
-      int minCompatLV, int currentLV) {
-    if (isRollingUpgrade) {
-      if (storageLV <= minCompatLV) {
-        // The prior layout version satisfies the minimum compatible layout
-        // version of the current software.  Keep reporting the prior layout
-        // as the effective one.  Downgrade is possible.
-        return storageLV;
-      }
-    }
-    // The current software cannot satisfy the layout version of the prior
-    // software.  Proceed with using the current layout version.
-    return currentLV;
   }
 
   /**
@@ -7777,7 +7529,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirAclOp.modifyAclEntries(dir, pc, src, aclSpec);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -7802,7 +7554,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirAclOp.removeAclEntries(dir, pc, src, aclSpec);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -7826,7 +7578,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirAclOp.removeDefaultAcl(dir, pc, src);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -7850,7 +7602,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirAclOp.removeAcl(dir, pc, src);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -7874,7 +7626,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirAclOp.setAcl(dir, pc, src, aclSpec);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -7937,7 +7689,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             pc, metadata.getCipher(), keyName, logRetryCache);
       } finally {
         writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, resultingStat));
+            FSNamesystemUtil.getLockReportInfoSupplier(src, null, resultingStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -7972,8 +7724,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         resultingStat = ezForPath.getValue();
         encryptionZone = ezForPath.getKey();
       } finally {
-        readUnlock(operationName,
-            getLockReportInfoSupplier(srcArg, null, resultingStat));
+        readUnlock(operationName, FSNamesystemUtil.getLockReportInfoSupplier(
+            srcArg, null, resultingStat));
       }
     } catch (AccessControlException ace) {
       logAuditEvent(false, operationName, srcArg, null, resultingStat);
@@ -8111,7 +7863,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       UnresolvedLinkException, SafeModeException, AccessControlException {
     final String operationName = "setErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
-    checkErasureCodingSupported(operationName);
+    FSNamesystemUtil.checkErasureCodingSupported(operationName,
+        getEffectiveLayoutVersion());
     FileStatus resultingStat = null;
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
@@ -8125,8 +7878,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, srcArg);
       throw ace;
     } finally {
-      writeUnlock(operationName,
-          getLockReportInfoSupplier(srcArg, null, resultingStat));
+      writeUnlock(operationName, FSNamesystemUtil.getLockReportInfoSupplier(
+          srcArg, null, resultingStat));
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, srcArg, null, resultingStat);
@@ -8145,7 +7898,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "addErasureCodingPolicies";
     List<String> addECPolicyNames = new ArrayList<>(policies.length);
     checkOperation(OperationCategory.WRITE);
-    checkErasureCodingSupported(operationName);
+    FSNamesystemUtil.checkErasureCodingSupported(operationName,
+        getEffectiveLayoutVersion());
     List<AddErasureCodingPolicyResponse> responses =
         new ArrayList<>(policies.length);
     writeLock();
@@ -8183,7 +7937,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final boolean logRetryCache) throws IOException {
     final String operationName = "removeErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
-    checkErasureCodingSupported(operationName);
+    FSNamesystemUtil.checkErasureCodingSupported(operationName,
+        getEffectiveLayoutVersion());
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -8210,7 +7965,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final boolean logRetryCache) throws IOException {
     final String operationName = "enableErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
-    checkErasureCodingSupported(operationName);
+    FSNamesystemUtil.checkErasureCodingSupported(operationName,
+        getEffectiveLayoutVersion());
     boolean success = false;
     try {
       writeLock();
@@ -8245,7 +8001,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final boolean logRetryCache) throws IOException {
     final String operationName = "disableErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
-    checkErasureCodingSupported(operationName);
+    FSNamesystemUtil.checkErasureCodingSupported(operationName,
+        getEffectiveLayoutVersion());
     boolean success = false;
     try {
       writeLock();
@@ -8281,7 +8038,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       UnresolvedLinkException, SafeModeException, AccessControlException {
     final String operationName = "unsetErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
-    checkErasureCodingSupported(operationName);
+    FSNamesystemUtil.checkErasureCodingSupported(operationName,
+        getEffectiveLayoutVersion());
     FileStatus resultingStat = null;
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
@@ -8292,8 +8050,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       resultingStat = FSDirErasureCodingOp.unsetErasureCodingPolicy(this,
           srcArg, pc, logRetryCache);
     } finally {
-      writeUnlock(operationName,
-          getLockReportInfoSupplier(srcArg, null, resultingStat));
+      writeUnlock(operationName, FSNamesystemUtil.getLockReportInfoSupplier(
+          srcArg, null, resultingStat));
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, srcArg, null, resultingStat);
@@ -8318,7 +8076,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // If no policy name is specified return the result
       // for all enabled policies.
       if (policyNames == null || policyNames.length == 0) {
-        result = getEcTopologyVerifierResultForEnabledPolicies();
+        result = FSNamesystemUtil.getEcTopologyVerifierResultForEnabledPolicies(
+            getBlockManager(), getErasureCodingPolicyManager());
       } else {
         Collection<ErasureCodingPolicy> policies =
             new ArrayList<ErasureCodingPolicy>();
@@ -8349,7 +8108,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "getErasureCodingPolicy";
     boolean success = false;
     checkOperation(OperationCategory.READ);
-    checkErasureCodingSupported(operationName);
+    FSNamesystemUtil.checkErasureCodingSupported(operationName,
+        getEffectiveLayoutVersion());
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
     readLock();
@@ -8372,7 +8132,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "getErasureCodingPolicies";
     boolean success = false;
     checkOperation(OperationCategory.READ);
-    checkErasureCodingSupported(operationName);
+    FSNamesystemUtil.checkErasureCodingSupported(operationName,
+        getEffectiveLayoutVersion());
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -8393,7 +8154,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "getErasureCodingCodecs";
     boolean success = false;
     checkOperation(OperationCategory.READ);
-    checkErasureCodingSupported(operationName);
+    FSNamesystemUtil.checkErasureCodingSupported(operationName,
+        getEffectiveLayoutVersion());
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -8423,8 +8185,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirXAttrOp.setXAttr(dir, pc, src, xAttr, flag,
             logRetryCache);
       } finally {
-        writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+        writeUnlock(operationName, FSNamesystemUtil.getLockReportInfoSupplier(
+            src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -8494,8 +8256,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditStat = FSDirXAttrOp.removeXAttr(dir, pc, src, xAttr,
             logRetryCache);
       } finally {
-        writeUnlock(operationName,
-            getLockReportInfoSupplier(src, null, auditStat));
+        writeUnlock(operationName, FSNamesystemUtil.getLockReportInfoSupplier(
+            src, null, auditStat));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
@@ -8599,186 +8361,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private Supplier<String> getLockReportInfoSupplier(String src, String dst) {
-    return getLockReportInfoSupplier(src, dst, (FileStatus) null);
+    return FSNamesystemUtil.getLockReportInfoSupplier(src, dst,
+        (FileStatus) null);
   }
 
-  private Supplier<String> getLockReportInfoSupplier(String src, String dst,
-      HdfsFileStatus stat) {
-    FileStatus status = null;
-    if (stat != null) {
-      Path symlink = stat.isSymlink()
-          ? new Path(DFSUtilClient.bytes2String(stat.getSymlinkInBytes()))
-          : null;
-      Path path = new Path(src);
-      status = new FileStatus(stat.getLen(), stat.isDirectory(),
-        stat.getReplication(), stat.getBlockSize(),
-        stat.getModificationTime(),
-        stat.getAccessTime(), stat.getPermission(), stat.getOwner(),
-        stat.getGroup(), symlink, path);
-    }
-    return getLockReportInfoSupplier(src, dst, status);
-  }
-
-  private Supplier<String> getLockReportInfoSupplier(String src, String dst,
-      FileStatus status) {
-    return () -> {
-      UserGroupInformation ugi = Server.getRemoteUser();
-      String userName = ugi != null ? ugi.toString() : null;
-      InetAddress addr = Server.getRemoteIp();
-      StringBuilder sb = new StringBuilder();
-      String s = escapeJava(src);
-      String d = escapeJava(dst);
-      sb.append("ugi=").append(userName).append(",")
-          .append("ip=").append(addr).append(",")
-          .append("src=").append(s).append(",")
-          .append("dst=").append(d).append(",");
-      if (null == status) {
-        sb.append("perm=null");
-      } else {
-        sb.append("perm=")
-            .append(status.getOwner()).append(":")
-            .append(status.getGroup()).append(":")
-            .append(status.getPermission());
-      }
-      return sb.toString();
-    };
-  }
-
-  /**
-   * FSNamesystem Default AuditLogger implementation;used when no access logger
-   * is defined in the config file. It can also be explicitly listed in the
-   * config file.
-   */
-  @VisibleForTesting
-  static class FSNamesystemAuditLogger extends DefaultAuditLogger {
-
-    @Override
-    public void initialize(Configuration conf) {
-      isCallerContextEnabled = conf.getBoolean(
-          HADOOP_CALLER_CONTEXT_ENABLED_KEY,
-          HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT);
-      callerContextMaxLen = conf.getInt(
-          HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY,
-          HADOOP_CALLER_CONTEXT_MAX_SIZE_DEFAULT);
-      callerSignatureMaxLen = conf.getInt(
-          HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY,
-          HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT);
-      logTokenTrackingId = conf.getBoolean(
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY,
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT);
-
-      debugCmdSet.addAll(Arrays.asList(conf.getTrimmedStrings(
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_DEBUG_CMDLIST)));
-    }
-
-    @Override
-    public void logAuditEvent(boolean succeeded, String userName,
-        InetAddress addr, String cmd, String src, String dst,
-        FileStatus status, CallerContext callerContext, UserGroupInformation ugi,
-        DelegationTokenSecretManager dtSecretManager) {
-
-      if (auditLog.isDebugEnabled() ||
-          (auditLog.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
-        final StringBuilder sb = STRING_BUILDER.get();
-        src = escapeJava(src);
-        dst = escapeJava(dst);
-        sb.setLength(0);
-        sb.append("allowed=").append(succeeded).append("\t")
-            .append("ugi=").append(userName).append("\t")
-            .append("ip=").append(addr).append("\t")
-            .append("cmd=").append(cmd).append("\t")
-            .append("src=").append(src).append("\t")
-            .append("dst=").append(dst).append("\t");
-        if (null == status) {
-          sb.append("perm=null");
-        } else {
-          sb.append("perm=")
-              .append(status.getOwner()).append(":")
-              .append(status.getGroup()).append(":")
-              .append(status.getPermission());
-        }
-        if (logTokenTrackingId) {
-          sb.append("\t").append("trackingId=");
-          String trackingId = null;
-          if (ugi != null && dtSecretManager != null
-              && ugi.getAuthenticationMethod() == AuthenticationMethod.TOKEN) {
-            for (TokenIdentifier tid: ugi.getTokenIdentifiers()) {
-              if (tid instanceof DelegationTokenIdentifier) {
-                DelegationTokenIdentifier dtid =
-                    (DelegationTokenIdentifier)tid;
-                trackingId = dtSecretManager.getTokenTrackingId(dtid);
-                break;
-              }
-            }
-          }
-          sb.append(trackingId);
-        }
-        sb.append("\t").append("proto=")
-            .append(Server.getProtocol());
-        if (isCallerContextEnabled &&
-            callerContext != null &&
-            callerContext.isContextValid()) {
-          sb.append("\t").append("callerContext=");
-          if (callerContext.getContext().length() > callerContextMaxLen) {
-            sb.append(callerContext.getContext().substring(0,
-                callerContextMaxLen));
-          } else {
-            sb.append(callerContext.getContext());
-          }
-          if (callerContext.getSignature() != null &&
-              callerContext.getSignature().length > 0 &&
-              callerContext.getSignature().length <= callerSignatureMaxLen) {
-            sb.append(":")
-                .append(new String(callerContext.getSignature(),
-                CallerContext.SIGNATURE_ENCODING));
-          }
-        }
-        logAuditMessage(sb.toString());
-      }
-    }
-
-    @Override
-    public void logAuditEvent(boolean succeeded, String userName,
-        InetAddress addr, String cmd, String src, String dst,
-        FileStatus status, UserGroupInformation ugi,
-        DelegationTokenSecretManager dtSecretManager) {
-      this.logAuditEvent(succeeded, userName, addr, cmd, src, dst, status,
-              null /*CallerContext*/, ugi, dtSecretManager);
-    }
-
-    public void logAuditMessage(String message) {
-      auditLog.info(message);
-    }
-  }
-
-  private static void enableAsyncAuditLog(Configuration conf) {
-    if (!(auditLog instanceof Log4JLogger)) {
-      LOG.warn("Log4j is required to enable async auditlog");
-      return;
-    }
-    Logger logger = ((Log4JLogger)auditLog).getLogger();
-    @SuppressWarnings("unchecked")
-    List<Appender> appenders = Collections.list(logger.getAllAppenders());
-    // failsafe against trying to async it more than once
-    if (!appenders.isEmpty() && !(appenders.get(0) instanceof AsyncAppender)) {
-      AsyncAppender asyncAppender = new AsyncAppender();
-      asyncAppender.setBlocking(conf.getBoolean(
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_KEY,
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BLOCKING_DEFAULT
-      ));
-      asyncAppender.setBufferSize(conf.getInt(
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_KEY,
-          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_BUFFER_SIZE_DEFAULT
-      ));
-      // change logger to have an async appender containing all the
-      // previously configured appenders
-      for (Appender appender : appenders) {
-        logger.removeAppender(appender);
-        asyncAppender.addAppender(appender);
-      }
-      logger.addAppender(asyncAppender);        
-    }
-  }
   /**
    * Return total number of Sync Operations on FSEditLog.
    */
@@ -8851,24 +8437,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override // NameNodeMXBean
   public String getVerifyECWithTopologyResult() {
     ECTopologyVerifierResult result =
-        getEcTopologyVerifierResultForEnabledPolicies();
+        FSNamesystemUtil.getEcTopologyVerifierResultForEnabledPolicies(
+            getBlockManager(), getErasureCodingPolicyManager());
 
     Map<String, String> resultMap = new HashMap<String, String>();
     resultMap.put("isSupported", Boolean.toString(result.isSupported()));
     resultMap.put("resultMessage", result.getResultMessage());
     return JSON.toString(resultMap);
-  }
-
-  private ECTopologyVerifierResult getEcTopologyVerifierResultForEnabledPolicies() {
-    int numOfDataNodes =
-        getBlockManager().getDatanodeManager().getNumOfDataNodes();
-    int numOfRacks = getBlockManager().getDatanodeManager().getNetworkTopology()
-        .getNumOfRacks();
-    ErasureCodingPolicy[] enabledEcPolicies =
-        getErasureCodingPolicyManager().getCopyOfEnabledPolicies();
-    return ECTopologyVerifier
-        .getECTopologyVerifierResult(numOfRacks, numOfDataNodes,
-            Arrays.asList(enabledEcPolicies));
   }
 
   // This method logs operatoinName without super user privilege.
@@ -8883,42 +8458,4 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  String getQuotaCommand(long nsQuota, long dsQuota) {
-    if (nsQuota == HdfsConstants.QUOTA_RESET
-        && dsQuota == HdfsConstants.QUOTA_DONT_SET) {
-      return "clearQuota";
-    } else if (nsQuota == HdfsConstants.QUOTA_DONT_SET
-        && dsQuota == HdfsConstants.QUOTA_RESET) {
-      return "clearSpaceQuota";
-    } else if (dsQuota == HdfsConstants.QUOTA_DONT_SET) {
-      return "setQuota";
-    } else {
-      return "setSpaceQuota";
-    }
-  }
-
-  String getFailedStorageCommand(String mode) {
-    if(mode.equals("check")) {
-      return "checkRestoreFailedStorage";
-    } else if (mode.equals("true")) {
-      return "enableRestoreFailedStorage";
-    } else {
-      return "disableRestoreFailedStorage";
-    }
-  }
-
-  /**
-   * Check whether operation is supported.
-   * @param operationName the name of operation.
-   * @throws UnsupportedActionException throws UAE if not supported.
-   */
-  public void checkErasureCodingSupported(String operationName)
-      throws UnsupportedActionException {
-    if (!NameNodeLayoutVersion.supports(
-        NameNodeLayoutVersion.Feature.ERASURE_CODING,
-        getEffectiveLayoutVersion())) {
-      throw new UnsupportedActionException(operationName + " not supported.");
-    }
-  }
 }
-

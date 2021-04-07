@@ -144,8 +144,8 @@ public class FSImage implements Closeable {
    */
   public FSImage(Configuration conf) throws IOException {
     this(conf,
-         FSNamesystem.getNamespaceDirs(conf),
-         FSNamesystem.getNamespaceEditsDirs(conf));
+         FSNamesystemUtil.getNamespaceDirs(conf),
+         FSNamesystemUtil.getNamespaceEditsDirs(conf));
   }
 
   /**

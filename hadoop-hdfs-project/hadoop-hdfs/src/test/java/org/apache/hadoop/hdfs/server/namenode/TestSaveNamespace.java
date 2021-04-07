@@ -410,8 +410,8 @@ public class TestSaveNamespace {
     FSImage spyImage = spy(originalImage);
     Whitebox.setInternalState(fsn, "fsImage", spyImage);
 
-    spyImage.storage.setStorageDirectories(FSNamesystem.getNamespaceDirs(conf),
-        FSNamesystem.getNamespaceEditsDirs(conf));
+    spyImage.storage.setStorageDirectories(FSNamesystemUtil.getNamespaceDirs(conf),
+        FSNamesystemUtil.getNamespaceEditsDirs(conf));
 
     doThrow(new IOException("Injected fault: saveFSImage")).
         when(spyImage).saveFSImage(any(), any(), any());
@@ -542,8 +542,8 @@ public class TestSaveNamespace {
     // FSNamesystem's initialization may have locked
     storage.close();
     storage.setStorageDirectories(
-        FSNamesystem.getNamespaceDirs(conf), 
-        FSNamesystem.getNamespaceEditsDirs(conf));
+        FSNamesystemUtil.getNamespaceDirs(conf),
+        FSNamesystemUtil.getNamespaceEditsDirs(conf));
 
     FSNamesystem spyFsn = spy(fsn);
     final FSNamesystem finalFsn = spyFsn;

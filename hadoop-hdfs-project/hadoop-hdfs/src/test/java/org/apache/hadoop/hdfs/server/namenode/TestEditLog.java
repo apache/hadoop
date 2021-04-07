@@ -262,7 +262,7 @@ public class TestEditLog {
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         StringUtils.join(",", storage.getEditsDirectories()));
     FSEditLog log = FSEditLog.newInstance(
-        conf, storage, FSNamesystem.getNamespaceEditsDirs(conf));
+        conf, storage, FSNamesystemUtil.getNamespaceEditsDirs(conf));
     return log;
   }
 

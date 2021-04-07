@@ -962,7 +962,8 @@ public class ITestProvidedImplementation {
         if (!completedNNs.contains(nnIndex)) {
           // format the NN directories for non-provided namespaces
           // if the directory for a namespace has been formatted, copy it over.
-          Collection<URI> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
+          Collection<URI> namespaceDirs =
+              FSNamesystemUtil.getNamespaceDirs(conf);
           if (formattedDirsByNamespaceId.containsKey(nameserviceId)) {
             copyNameDirs(formattedDirsByNamespaceId.get(nameserviceId),
                 namespaceDirs, conf);

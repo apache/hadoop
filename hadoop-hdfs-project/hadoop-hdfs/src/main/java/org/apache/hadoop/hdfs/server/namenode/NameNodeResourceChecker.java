@@ -116,7 +116,7 @@ public class NameNodeResourceChecker {
         .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_KEY));
 
     Collection<URI> localEditDirs =
-        FSNamesystem.getNamespaceEditsDirs(conf).stream().filter(
+        FSNamesystemUtil.getNamespaceEditsDirs(conf).stream().filter(
             input -> {
               if (input.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
                 return true;
@@ -128,7 +128,7 @@ public class NameNodeResourceChecker {
     // configured as such.
     for (URI editsDirToCheck : localEditDirs) {
       addDirToCheck(editsDirToCheck,
-          FSNamesystem.getRequiredNamespaceEditsDirs(conf).contains(
+          FSNamesystemUtil.getRequiredNamespaceEditsDirs(conf).contains(
               editsDirToCheck));
     }
 

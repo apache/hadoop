@@ -191,7 +191,7 @@ public class TestStartup {
    * @throws IOException
    */
   private void corruptFSImageMD5(boolean corruptAll) throws IOException {
-    List<URI> nameDirs = (List<URI>)FSNamesystem.getNamespaceDirs(config);
+    List<URI> nameDirs = (List<URI>) FSNamesystemUtil.getNamespaceDirs(config);
     // Corrupt the md5 files in all the namedirs
     for (URI uri: nameDirs) {
       // Directory layout looks like:
@@ -216,8 +216,8 @@ public class TestStartup {
    */
   private void corruptNameNodeFiles() throws IOException {
     // now corrupt/delete the directrory
-    List<URI> nameDirs = (List<URI>)FSNamesystem.getNamespaceDirs(config);
-    List<URI> nameEditsDirs = FSNamesystem.getNamespaceEditsDirs(config);
+    List<URI> nameDirs = (List<URI>) FSNamesystemUtil.getNamespaceDirs(config);
+    List<URI> nameEditsDirs = FSNamesystemUtil.getNamespaceEditsDirs(config);
 
     // get name dir and its length, then delete and recreate the directory
     File dir = new File(nameDirs.get(0).getPath()); // has only one
@@ -724,7 +724,7 @@ public class TestStartup {
       cluster.waitActive();
 
       /* get and verify NN dir */
-      final Collection<URI> nnDirs = FSNamesystem.getNamespaceDirs(config);
+      final Collection<URI> nnDirs = FSNamesystemUtil.getNamespaceDirs(config);
       assertNotNull(nnDirs);
       assertTrue(nnDirs.iterator().hasNext());
       assertEquals(

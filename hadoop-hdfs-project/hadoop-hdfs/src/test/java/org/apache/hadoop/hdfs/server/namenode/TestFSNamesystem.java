@@ -71,7 +71,7 @@ public class TestFSNamesystem {
         + "file://edits/dir1,file://edits/dir1"); // overlapping internally
 
     // getNamespaceEditsDirs removes duplicates
-    Collection<URI> editsDirs = FSNamesystem.getNamespaceEditsDirs(config);
+    Collection<URI> editsDirs = FSNamesystemUtil.getNamespaceEditsDirs(config);
     assertEquals(2, editsDirs.size());
   }
 
@@ -206,21 +206,21 @@ public class TestFSNamesystem {
   @Test
   public void testGetEffectiveLayoutVersion() {
     assertEquals(-63,
-        FSNamesystem.getEffectiveLayoutVersion(true, -60, -61, -63));
+        FSNamesystemUtil.getEffectiveLayoutVersion(true, -60, -61, -63));
     assertEquals(-61,
-        FSNamesystem.getEffectiveLayoutVersion(true, -61, -61, -63));
+        FSNamesystemUtil.getEffectiveLayoutVersion(true, -61, -61, -63));
     assertEquals(-62,
-        FSNamesystem.getEffectiveLayoutVersion(true, -62, -61, -63));
+        FSNamesystemUtil.getEffectiveLayoutVersion(true, -62, -61, -63));
     assertEquals(-63,
-        FSNamesystem.getEffectiveLayoutVersion(true, -63, -61, -63));
+        FSNamesystemUtil.getEffectiveLayoutVersion(true, -63, -61, -63));
     assertEquals(-63,
-        FSNamesystem.getEffectiveLayoutVersion(false, -60, -61, -63));
+        FSNamesystemUtil.getEffectiveLayoutVersion(false, -60, -61, -63));
     assertEquals(-63,
-        FSNamesystem.getEffectiveLayoutVersion(false, -61, -61, -63));
+        FSNamesystemUtil.getEffectiveLayoutVersion(false, -61, -61, -63));
     assertEquals(-63,
-        FSNamesystem.getEffectiveLayoutVersion(false, -62, -61, -63));
+        FSNamesystemUtil.getEffectiveLayoutVersion(false, -62, -61, -63));
     assertEquals(-63,
-        FSNamesystem.getEffectiveLayoutVersion(false, -63, -61, -63));
+        FSNamesystemUtil.getEffectiveLayoutVersion(false, -63, -61, -63));
   }
 
   @Test
@@ -257,9 +257,9 @@ public class TestFSNamesystem {
     auditLoggers = fsn.getAuditLoggers();
     assertTrue(auditLoggers.size() == 1);
     assertTrue(
-        auditLoggers.get(0) instanceof FSNamesystem.FSNamesystemAuditLogger);
-    FSNamesystem.FSNamesystemAuditLogger defaultAuditLogger =
-        (FSNamesystem.FSNamesystemAuditLogger) auditLoggers.get(0);
+        auditLoggers.get(0) instanceof FSNamesystemAuditLogger);
+    FSNamesystemAuditLogger defaultAuditLogger =
+        (FSNamesystemAuditLogger) auditLoggers.get(0);
     assertTrue(defaultAuditLogger.getCallerContextEnabled());
 
     // Not to specify any audit loggers in config
@@ -272,7 +272,7 @@ public class TestFSNamesystem {
     // the audit loggers order is not defined
     for (AuditLogger auditLogger : auditLoggers) {
       assertThat(auditLogger,
-          either(instanceOf(FSNamesystem.FSNamesystemAuditLogger.class))
+          either(instanceOf(FSNamesystemAuditLogger.class))
               .or(instanceOf(TopAuditLogger.class)));
     }
 
@@ -285,7 +285,7 @@ public class TestFSNamesystem {
     assertTrue(auditLoggers.size() == 2);
     for (AuditLogger auditLogger : auditLoggers) {
       assertThat(auditLogger,
-          either(instanceOf(FSNamesystem.FSNamesystemAuditLogger.class))
+          either(instanceOf(FSNamesystemAuditLogger.class))
               .or(instanceOf(TopAuditLogger.class)));
     }
 
@@ -299,7 +299,7 @@ public class TestFSNamesystem {
     assertTrue(auditLoggers.size() == 3);
     for (AuditLogger auditLogger : auditLoggers) {
       assertThat(auditLogger,
-          either(instanceOf(FSNamesystem.FSNamesystemAuditLogger.class))
+          either(instanceOf(FSNamesystemAuditLogger.class))
               .or(instanceOf(TopAuditLogger.class))
               .or(instanceOf(DummyAuditLogger.class)));
     }

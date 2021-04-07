@@ -426,11 +426,11 @@ public class TestNamenodeRetryCache {
   public void testRetryCacheConfig() {
     // By default retry configuration should be enabled
     Configuration conf = new HdfsConfiguration();
-    Assert.assertNotNull(FSNamesystem.initRetryCache(conf));
+    Assert.assertNotNull(FSNamesystemUtil.initRetryCache(conf));
     
     // If retry cache is disabled, it should not be created
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY, false);
-    Assert.assertNull(FSNamesystem.initRetryCache(conf));
+    Assert.assertNull(FSNamesystemUtil.initRetryCache(conf));
   }
   
   /**

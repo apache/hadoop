@@ -252,7 +252,7 @@ public class FSEditLog implements LogsPurgeable {
     // of the editlog, as no journals will exist
     this.editsDirs = Lists.newArrayList(editsDirs);
 
-    this.sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
+    this.sharedEditsDirs = FSNamesystemUtil.getSharedEditsDirs(conf);
   }
   
   public synchronized void initJournalsForWrite() {
@@ -285,7 +285,7 @@ public class FSEditLog implements LogsPurgeable {
       journalSet = new JournalSet(minimumRedundantJournals);
 
       for (URI u : dirs) {
-        boolean required = FSNamesystem.getRequiredNamespaceEditsDirs(conf)
+        boolean required = FSNamesystemUtil.getRequiredNamespaceEditsDirs(conf)
             .contains(u);
         if (u.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
           StorageDirectory sd = storage.getStorageDirectory(u);

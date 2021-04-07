@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystemUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.function.Supplier;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.BPServiceActor.RunningState;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -290,8 +290,8 @@ public class TestDataNodeMultipleRegistrations {
       // setting up invalid cluster
       StartupOption.FORMAT.setClusterId("cluster-2");
       DFSTestUtil.formatNameNode(nn1);
-      MiniDFSCluster.copyNameDirs(FSNamesystem.getNamespaceDirs(nn1),
-          FSNamesystem.getNamespaceDirs(nn2), nn2);
+      MiniDFSCluster.copyNameDirs(FSNamesystemUtil.getNamespaceDirs(nn1),
+          FSNamesystemUtil.getNamespaceDirs(nn2), nn2);
       cluster.restartNameNode(0, false);
       cluster.restartNameNode(1, false);
       cluster.restartDataNode(dnProp);

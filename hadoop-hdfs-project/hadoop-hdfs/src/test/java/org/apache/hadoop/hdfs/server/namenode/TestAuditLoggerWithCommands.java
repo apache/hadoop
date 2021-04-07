@@ -152,7 +152,7 @@ public class TestAuditLoggerWithCommands {
 
   private void verifySetQuota(Path path, long nsQuota, long ssQuota)
       throws IOException {
-    String operationName = cluster.getNamesystem().getQuotaCommand(
+    String operationName = FSNamesystemUtil.getQuotaCommand(
         nsQuota, ssQuota);
     String acePattern =
         ".*allowed=false.*ugi=theDoctor.*cmd=.*" + operationName + ".*";
@@ -1220,7 +1220,7 @@ public class TestAuditLoggerWithCommands {
 
   private void verifyAuditRestoreFailedStorageACE(
       FSNamesystem fsNamesystem, String arg) throws IOException {
-    String operationName = fsNamesystem.getFailedStorageCommand(arg);
+    String operationName = FSNamesystemUtil.getFailedStorageCommand(arg);
     try {
       fsNamesystem.restoreFailedStorage(arg);
       fail(
@@ -1236,7 +1236,7 @@ public class TestAuditLoggerWithCommands {
 
   private void verifyAuditRestoreFailedStorage(
       FSNamesystem fsNamesystem, String arg) throws IOException {
-    String operationName = fsNamesystem.getFailedStorageCommand(arg);
+    String operationName = FSNamesystemUtil.getFailedStorageCommand(arg);
     String auditLogString =
         ".*allowed=true.*cmd=" + operationName + ".*";
     try {

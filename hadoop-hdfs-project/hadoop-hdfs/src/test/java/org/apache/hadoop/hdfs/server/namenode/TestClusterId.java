@@ -61,8 +61,8 @@ public class TestClusterId {
 
   private String getClusterId(Configuration config) throws IOException {
     // see if cluster id not empty.
-    Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(config);
-    List<URI> editsToFormat = FSNamesystem.getNamespaceEditsDirs(config);
+    Collection<URI> dirsToFormat = FSNamesystemUtil.getNamespaceDirs(config);
+    List<URI> editsToFormat = FSNamesystemUtil.getNamespaceEditsDirs(config);
     FSImage fsImage = new FSImage(config, dirsToFormat, editsToFormat);
     
     Iterator<StorageDirectory> sdit = 
