@@ -22,6 +22,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -966,6 +967,66 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         bAutoParent.getQueueInfo().getQueueName());
     Assert.assertEquals("b",
         bAutoLeafQueue.getQueueInfo().getQueueName());
+  }
+
+  @Test
+  public void testRemoveDanglingAutoCreatedQueuesOnReinit() throws Exception {
+    startScheduler();
+
+    // Validate static parent deletion
+    createQueue("root.a.a-auto");
+    AbstractCSQueue aAuto = (AbstractCSQueue) cs.
+        getQueue("root.a.a-auto");
+    Assert.assertTrue(aAuto.isDynamicQueue());
+
+    csConf.setState("root.a", QueueState.STOPPED);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    aAuto = (AbstractCSQueue) cs.
+        getQueue("root.a.a-auto");
+    Assert.assertEquals("root.a.a-auto is not in STOPPED state", QueueState.STOPPED, aAuto.getState());
+    csConf.setQueues("root", new String[]{"b"});
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    CSQueue aAutoNew = cs.getQueue("root.a.a-auto");
+    Assert.assertNull(aAutoNew);
+
+    submitApp(cs, USER0, "a-auto", "root.a");
+    aAutoNew = cs.getQueue("root.a.a-auto");
+    Assert.assertNotNull(aAutoNew);
+
+    // Validate static grandparent deletion
+    csConf.setQueues("root", new String[]{"a", "b"});
+    csConf.setQueues("root.a", new String[]{"a1"});
+    csConf.setAutoQueueCreationV2Enabled("root.a.a1", true);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+
+    createQueue("root.a.a1.a1-auto");
+    CSQueue a1Auto = cs.getQueue("root.a.a1.a1-auto");
+    Assert.assertNotNull("a1-auto should exist", a1Auto);
+
+    csConf.setQueues("root", new String[]{"b"});
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    a1Auto = cs.getQueue("root.a.a1.a1-auto");
+    Assert.assertNull("a1-auto has no parent and should not exist", a1Auto);
+
+    // Validate dynamic parent deletion
+    csConf.setState("root.b", QueueState.STOPPED);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    csConf.setAutoQueueCreationV2Enabled("root.b", true);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+
+    createQueue("root.b.b-auto-parent.b-auto-leaf");
+    CSQueue bAutoParent = cs.getQueue("root.b.b-auto-parent");
+    Assert.assertNotNull("b-auto-parent should exist", bAutoParent);
+    ParentQueue b = (ParentQueue) cs.getQueue("root.b");
+    b.removeChildQueue(bAutoParent);
+
+    cs.reinitialize(csConf, mockRM.getRMContext());
+
+    bAutoParent = cs.getQueue("root.b.b-auto-parent");
+    Assert.assertNull("b-auto-parent should not exist ", bAutoParent);
+    CSQueue bAutoLeaf = cs.getQueue("root.b.b-auto-parent.b-auto-leaf");
+    Assert.assertNull("b-auto-leaf should not exist " +
+        "when its dynamic parent is removed", bAutoLeaf);
   }
 
   protected LeafQueue createQueue(String queuePath) throws YarnException {
