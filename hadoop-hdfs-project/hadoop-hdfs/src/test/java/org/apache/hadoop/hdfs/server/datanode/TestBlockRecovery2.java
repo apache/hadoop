@@ -257,6 +257,7 @@ public class TestBlockRecovery2 {
             dataNode.initReplicaRecovery(recoveringBlock);
           }
         } catch (Exception e) {
+          LOG.error("Something went wrong.", e);
           recoveryInitResult.set(false);
         }
       });
