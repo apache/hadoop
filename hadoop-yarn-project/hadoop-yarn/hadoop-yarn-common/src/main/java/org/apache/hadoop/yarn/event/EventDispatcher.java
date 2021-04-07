@@ -136,4 +136,11 @@ public class EventDispatcher<T extends Event> extends
   public void disableExitOnError() {
     shouldExitOnError = false;
   }
+  protected long getEventProcessorId() {
+    return this.eventProcessor.getId();
+  }
+
+  protected boolean isStopped() {
+    return this.stopped;
+  }
 }

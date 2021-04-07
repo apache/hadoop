@@ -103,6 +103,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -771,13 +772,14 @@ public class RouterClientProtocol implements ClientProtocol {
 
     List<RemoteResult<RemoteLocation, DirectoryListing>> listings =
         getListingInt(src, startAfter, needLocation);
-    Map<String, HdfsFileStatus> nnListing = new TreeMap<>();
+    TreeMap<String, HdfsFileStatus> nnListing = new TreeMap<>();
     int totalRemainingEntries = 0;
     int remainingEntries = 0;
     boolean namenodeListingExists = false;
+    // Check the subcluster listing with the smallest name to make sure
+    // no file is skipped across subclusters
+    String lastName = null;
     if (listings != null) {
-      // Check the subcluster listing with the smallest name
-      String lastName = null;
       for (RemoteResult<RemoteLocation, DirectoryListing> result : listings) {
         if (result.hasException()) {
           IOException ioe = result.getException();
@@ -824,6 +826,10 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // Add mount points at this level in the tree
     final List<String> children = subclusterResolver.getMountPoints(src);
+    // Sort the list as the entries from subcluster are also sorted
+    if (children != null) {
+      Collections.sort(children);
+    }
     if (children != null) {
       // Get the dates for each mount point
       Map<String, Long> dates = getMountPointDates(src);
@@ -838,9 +844,27 @@ public class RouterClientProtocol implements ClientProtocol {
         HdfsFileStatus dirStatus =
             getMountPointStatus(childPath.toString(), 0, date);
 
-        // This may overwrite existing listing entries with the mount point
-        // TODO don't add if already there?
-        nnListing.put(child, dirStatus);
+        // if there is no subcluster path, always add mount point
+        if (lastName == null) {
+          nnListing.put(child, dirStatus);
+        } else {
+          if (shouldAddMountPoint(child,
+                lastName, startAfter, remainingEntries)) {
+            // This may overwrite existing listing entries with the mount point
+            // TODO don't add if already there?
+            nnListing.put(child, dirStatus);
+          }
+        }
+      }
+      // Update the remaining count to include left mount points
+      if (nnListing.size() > 0) {
+        String lastListing = nnListing.lastKey();
+        for (int i = 0; i < children.size(); i++) {
+          if (children.get(i).compareTo(lastListing) > 0) {
+            remainingEntries += (children.size() - i);
+            break;
+          }
+        }
       }
     }
 
@@ -1833,6 +1857,8 @@ public class RouterClientProtocol implements ClientProtocol {
 
   /**
    * Aggregate content summaries for each subcluster.
+   * If the mount point has multiple destinations
+   * add the quota set value only once.
    *
    * @param summaries Collection of individual summaries.
    * @return Aggregated content summary.
@@ -1855,9 +1881,9 @@ public class RouterClientProtocol implements ClientProtocol {
       length += summary.getLength();
       fileCount += summary.getFileCount();
       directoryCount += summary.getDirectoryCount();
-      quota += summary.getQuota();
+      quota = summary.getQuota();
       spaceConsumed += summary.getSpaceConsumed();
-      spaceQuota += summary.getSpaceQuota();
+      spaceQuota = summary.getSpaceQuota();
       // We return from the first response as we assume that the EC policy
       // of each sub-cluster is same.
       if (ecPolicy.isEmpty()) {
@@ -1951,7 +1977,8 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param date Map with the dates.
    * @return New HDFS file status representing a mount point.
    */
-  private HdfsFileStatus getMountPointStatus(
+  @VisibleForTesting
+  HdfsFileStatus getMountPointStatus(
       String name, int childrenNum, long date) {
     long modTime = date;
     long accessTime = date;
@@ -2002,6 +2029,8 @@ public class RouterClientProtocol implements ClientProtocol {
       }
     }
     long inodeId = 0;
+    Path path = new Path(name);
+    String nameStr = path.getName();
     return new HdfsFileStatus.Builder()
         .isdir(true)
         .mtime(modTime)
@@ -2010,7 +2039,7 @@ public class RouterClientProtocol implements ClientProtocol {
         .owner(owner)
         .group(group)
         .symlink(new byte[0])
-        .path(DFSUtil.string2Bytes(name))
+        .path(DFSUtil.string2Bytes(nameStr))
         .fileId(inodeId)
         .children(childrenNum)
         .flags(flags)
@@ -2106,6 +2135,36 @@ public class RouterClientProtocol implements ClientProtocol {
       LOG.debug("Cannot get locations for {}, {}.", src, e.getMessage());
       return new ArrayList<>();
     }
+  }
+
+  /**
+   * Check if we should add the mount point into the total listing.
+   * This should be done under either of the two cases:
+   * 1) current mount point is between startAfter and cutoff lastEntry.
+   * 2) there are no remaining entries from subclusters and this mount
+   *    point is bigger than all files from subclusters
+   * This is to make sure that the following batch of
+   * getListing call will use the correct startAfter, which is lastEntry from
+   * subcluster.
+   *
+   * @param mountPoint to be added mount point inside router
+   * @param lastEntry biggest listing from subcluster
+   * @param startAfter starting listing from client, used to define listing
+   *                   start boundary
+   * @param remainingEntries how many entries left from subcluster
+   * @return
+   */
+  private static boolean shouldAddMountPoint(
+      String mountPoint, String lastEntry, byte[] startAfter,
+      int remainingEntries) {
+    if (mountPoint.compareTo(DFSUtil.bytes2String(startAfter)) > 0 &&
+        mountPoint.compareTo(lastEntry) <= 0) {
+      return true;
+    }
+    if (remainingEntries == 0 && mountPoint.compareTo(lastEntry) >= 0) {
+      return true;
+    }
+    return false;
   }
 
   /**

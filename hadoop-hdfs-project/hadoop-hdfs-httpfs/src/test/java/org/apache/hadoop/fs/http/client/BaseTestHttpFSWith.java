@@ -59,6 +59,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestHdfs;
@@ -557,9 +558,18 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs = getHttpFSFileSystem();
     fs.setWorkingDirectory(new Path("/tmp"));
     workingDir = fs.getWorkingDirectory();
-    fs.close();
     assertEquals(workingDir.toUri().getPath(),
         new Path("/tmp").toUri().getPath());
+    final FileSystem httpFs = getHttpFSFileSystem();
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid DFS directory name /foo:bar",
+        () -> httpFs.setWorkingDirectory(new Path("/foo:bar")));
+    fs.setWorkingDirectory(new Path("/bar"));
+    workingDir = fs.getWorkingDirectory();
+    httpFs.close();
+    fs.close();
+    assertEquals(workingDir.toUri().getPath(),
+        new Path("/bar").toUri().getPath());
   }
 
   private void testTrashRoot() throws Exception {

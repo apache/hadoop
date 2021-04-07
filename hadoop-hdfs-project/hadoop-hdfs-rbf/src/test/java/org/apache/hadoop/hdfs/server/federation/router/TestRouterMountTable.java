@@ -291,6 +291,37 @@ public class TestRouterMountTable {
   }
 
   /**
+   * Verify the getMountPointStatus result of passing in different parameters.
+   */
+  @Test
+  public void testGetMountPointStatus() throws IOException {
+    MountTable addEntry = MountTable.newInstance("/testA/testB/testC/testD",
+        Collections.singletonMap("ns0", "/testA/testB/testC/testD"));
+    assertTrue(addMountTable(addEntry));
+    RouterClientProtocol clientProtocol = new RouterClientProtocol(
+        nnFs0.getConf(), routerContext.getRouter().getRpcServer());
+    String src = "/";
+    String child = "testA";
+    Path childPath = new Path(src, child);
+    HdfsFileStatus dirStatus =
+        clientProtocol.getMountPointStatus(childPath.toString(), 0, 0);
+    assertEquals(child, dirStatus.getLocalName());
+
+    String src1 = "/testA";
+    String child1 = "testB";
+    Path childPath1 = new Path(src1, child1);
+    HdfsFileStatus dirStatus1 =
+        clientProtocol.getMountPointStatus(childPath1.toString(), 0, 0);
+    assertEquals(child1, dirStatus1.getLocalName());
+
+    String src2 = "/testA/testB";
+    String child2 = "testC";
+    Path childPath2 = new Path(src2, child2);
+    HdfsFileStatus dirStatus2 =
+        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0);
+    assertEquals(child2, dirStatus2.getLocalName());
+  }
+  /**
    * GetListing of testPath through router.
    */
   private void getListing(String testPath)

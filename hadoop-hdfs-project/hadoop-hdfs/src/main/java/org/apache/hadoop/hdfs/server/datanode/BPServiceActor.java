@@ -617,8 +617,8 @@ class BPServiceActor implements Runnable {
   private synchronized void cleanUp() {
     
     shouldServiceRun = false;
-    IOUtils.cleanup(null, bpNamenode);
-    IOUtils.cleanup(null, lifelineSender);
+    IOUtils.cleanupWithLogger(null, bpNamenode);
+    IOUtils.cleanupWithLogger(null, lifelineSender);
     bpos.shutdownActor(this);
   }
 
@@ -989,7 +989,7 @@ class BPServiceActor implements Runnable {
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
-      IOUtils.cleanup(null, lifelineNamenode);
+      IOUtils.cleanupWithLogger(null, lifelineNamenode);
     }
 
     @Override

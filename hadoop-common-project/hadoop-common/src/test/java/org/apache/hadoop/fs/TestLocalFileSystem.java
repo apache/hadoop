@@ -312,7 +312,7 @@ public class TestLocalFileSystem {
         .new LocalFSFileInputStream(path), 1024);
       assertNotNull(bis.getFileDescriptor());
     } finally {
-      IOUtils.cleanup(null, bis);
+      IOUtils.cleanupWithLogger(null, bis);
     }
   }
 
