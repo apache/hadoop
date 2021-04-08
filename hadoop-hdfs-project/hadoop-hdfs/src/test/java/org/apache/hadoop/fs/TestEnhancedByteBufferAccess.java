@@ -841,7 +841,7 @@ public class TestEnhancedByteBufferAccess {
       if (buf2 != null) {
         fsIn2.releaseBuffer(buf2);
       }
-      IOUtils.cleanup(null, fsIn, fsIn2);
+      IOUtils.cleanupWithLogger(null, fsIn, fsIn2);
       if (cluster != null) {
         cluster.shutdown();
       }

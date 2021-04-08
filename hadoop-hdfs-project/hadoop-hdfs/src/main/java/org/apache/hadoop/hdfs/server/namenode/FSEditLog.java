@@ -25,6 +25,7 @@ import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -1180,7 +1181,8 @@ public class FSEditLog implements LogsPurgeable {
 
   /**
    * Log a CacheDirectiveInfo returned from
-   * {@link CacheManager#addDirective(CacheDirectiveInfo, FSPermissionChecker)}
+   * {@link CacheManager#addDirective(CacheDirectiveInfo, FSPermissionChecker,
+   * EnumSet)}
    */
   void logAddCacheDirectiveInfo(CacheDirectiveInfo directive,
       boolean toLogRpcIds) {

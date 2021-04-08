@@ -16,28 +16,20 @@
  * limitations under the License.
  */
 
-#include <fnmatch.h>
-#include <unistd.h>
+#include <gtest/gtest.h>
 
-#include <cstring>
+#include <string>
 
-#include "syscall.h"
+#include "x-platform/syscall.h"
 
-bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
-  return WriteToStdoutImpl(message.c_str());
+TEST(XPlatformSyscall, FnMatchBasicPath) {
+  const std::string pattern("*.doc");
+  const std::string str(R"(some\path\abcd.doc)");
+  EXPECT_TRUE(XPlatform::Syscall::FnMatch(pattern, str));
 }
 
-int XPlatform::Syscall::WriteToStdout(const char* message) {
-  return WriteToStdoutImpl(message) ? 1 : 0;
-}
-
-bool XPlatform::Syscall::FnMatch(const std::string& pattern,
-                                 const std::string& str) {
-  return fnmatch(pattern.c_str(), str.c_str(), 0) == 0;
-}
-
-bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
-  const auto message_len = strlen(message);
-  const auto result = write(1, message, message_len);
-  return result == static_cast<ssize_t>(message_len);
+TEST(XPlatformSyscall, FnMatchNegativePath) {
+  const std::string pattern("x*.doc");
+  const std::string str(R"(y\abcd.doc)");
+  EXPECT_FALSE(XPlatform::Syscall::FnMatch(pattern, str));
 }

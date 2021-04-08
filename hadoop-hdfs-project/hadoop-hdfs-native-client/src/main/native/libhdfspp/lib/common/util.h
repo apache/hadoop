@@ -47,7 +47,7 @@ Status ToStatus(const boost::system::error_code &ec);
 
 // Determine size of buffer that needs to be allocated in order to serialize msg
 // in delimited format
-int DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg);
+size_t DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg);
 
 // Construct msg from the input held in the CodedInputStream
 // return false on failure, otherwise return true

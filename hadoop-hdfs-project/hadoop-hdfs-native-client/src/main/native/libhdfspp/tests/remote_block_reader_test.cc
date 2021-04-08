@@ -119,7 +119,7 @@ static inline string ToDelimitedString(const pb::MessageLite *msg) {
   res.reserve(hdfs::DelimitedPBMessageSize(msg));
   pbio::StringOutputStream os(&res);
   pbio::CodedOutputStream out(&os);
-  out.WriteVarint32(msg->ByteSize());
+  out.WriteVarint64(msg->ByteSizeLong());
   msg->SerializeToCodedStream(&out);
   return res;
 }
@@ -141,9 +141,9 @@ static inline std::pair<error_code, string> ProducePacket(
   *reinterpret_cast<unsigned *>(prefix) =
       htonl(data.size() + checksum.size() + sizeof(int32_t));
   *reinterpret_cast<short *>(prefix + sizeof(int32_t)) =
-      htons(proto.ByteSize());
+      htons(static_cast<uint16_t>(proto.ByteSizeLong()));
   std::string payload(prefix, sizeof(prefix));
-  payload.reserve(payload.size() + proto.ByteSize() + checksum.size() +
+  payload.reserve(payload.size() + proto.ByteSizeLong() + checksum.size() +
                   data.size());
   proto.AppendToString(&payload);
   payload += checksum;

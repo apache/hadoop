@@ -212,7 +212,7 @@ public class TestMetaSave {
         line = rdr.readLine();
       }
     } finally {
-      IOUtils.cleanup(null, rdr, isr, fis);
+      IOUtils.cleanupWithLogger(null, rdr, isr, fis);
     }
   }
 
@@ -271,7 +271,7 @@ public class TestMetaSave {
         line = rdr.readLine();
       }
     } finally {
-      IOUtils.cleanup(null, rdr, isr, fis);
+      IOUtils.cleanupWithLogger(null, rdr, isr, fis);
     }
   }
 

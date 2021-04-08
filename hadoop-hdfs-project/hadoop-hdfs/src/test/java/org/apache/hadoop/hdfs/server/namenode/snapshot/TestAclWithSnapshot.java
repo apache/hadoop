@@ -86,7 +86,7 @@ public class TestAclWithSnapshot {
 
   @AfterClass
   public static void shutdown() throws Exception {
-    IOUtils.cleanup(null, hdfs, fsAsBruce, fsAsDiana);
+    IOUtils.cleanupWithLogger(null, hdfs, fsAsBruce, fsAsDiana);
     if (cluster != null) {
       cluster.shutdown();
     }

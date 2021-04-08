@@ -88,9 +88,9 @@ protected:
 static inline std::pair<boost::system::error_code, string> RpcResponse(
     const RpcResponseHeaderProto &h, const std::string &data,
     const boost::system::error_code &ec = boost::system::error_code()) {
-  uint32_t payload_length =
-      pbio::CodedOutputStream::VarintSize32(h.ByteSize()) +
-      pbio::CodedOutputStream::VarintSize32(data.size()) + h.ByteSize() +
+  const auto payload_length =
+      pbio::CodedOutputStream::VarintSize64(h.ByteSizeLong()) +
+      pbio::CodedOutputStream::VarintSize64(data.size()) + h.ByteSizeLong() +
       data.size();
 
   std::string res;
@@ -99,9 +99,9 @@ static inline std::pair<boost::system::error_code, string> RpcResponse(
 
   buf = pbio::CodedOutputStream::WriteLittleEndian32ToArray(
       htonl(payload_length), buf);
-  buf = pbio::CodedOutputStream::WriteVarint32ToArray(h.ByteSize(), buf);
+  buf = pbio::CodedOutputStream::WriteVarint64ToArray(h.ByteSizeLong(), buf);
   buf = h.SerializeWithCachedSizesToArray(buf);
-  buf = pbio::CodedOutputStream::WriteVarint32ToArray(data.size(), buf);
+  buf = pbio::CodedOutputStream::WriteVarint64ToArray(data.size(), buf);
   buf = pbio::CodedOutputStream::WriteStringToArray(data, buf);
 
   return std::make_pair(ec, std::move(res));

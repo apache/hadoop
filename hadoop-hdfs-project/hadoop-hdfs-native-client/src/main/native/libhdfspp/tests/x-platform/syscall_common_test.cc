@@ -16,28 +16,32 @@
  * limitations under the License.
  */
 
-#include <fnmatch.h>
-#include <unistd.h>
+#include <gtest/gtest.h>
 
-#include <cstring>
+#include <string>
 
-#include "syscall.h"
+#include "x-platform/syscall.h"
 
-bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
-  return WriteToStdoutImpl(message.c_str());
+TEST(XPlatformSyscall, FnMatchBasicAsterisk) {
+  const std::string pattern("a*.doc");
+  const std::string str("abcd.doc");
+  EXPECT_TRUE(XPlatform::Syscall::FnMatch(pattern, str));
 }
 
-int XPlatform::Syscall::WriteToStdout(const char* message) {
-  return WriteToStdoutImpl(message) ? 1 : 0;
+TEST(XPlatformSyscall, FnMatchBasicQuestionMark) {
+  const std::string pattern("a?.doc");
+  const std::string str("ab.doc");
+  EXPECT_TRUE(XPlatform::Syscall::FnMatch(pattern, str));
 }
 
-bool XPlatform::Syscall::FnMatch(const std::string& pattern,
-                                 const std::string& str) {
-  return fnmatch(pattern.c_str(), str.c_str(), 0) == 0;
+TEST(XPlatformSyscall, FnMatchNegativeAsterisk) {
+  const std::string pattern("a*.doc");
+  const std::string str("bcd.doc");
+  EXPECT_FALSE(XPlatform::Syscall::FnMatch(pattern, str));
 }
 
-bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
-  const auto message_len = strlen(message);
-  const auto result = write(1, message, message_len);
-  return result == static_cast<ssize_t>(message_len);
+TEST(XPlatformSyscall, FnMatchNegativeQuestionMark) {
+  const std::string pattern("a?.doc");
+  const std::string str("abc.doc");
+  EXPECT_FALSE(XPlatform::Syscall::FnMatch(pattern, str));
 }
