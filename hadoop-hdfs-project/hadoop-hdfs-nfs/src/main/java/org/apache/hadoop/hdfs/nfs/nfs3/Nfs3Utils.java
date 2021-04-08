@@ -148,7 +148,7 @@ public class Nfs3Utils {
       RpcProgramNfs3.LOG.debug(WRITE_RPC_END + xid);
     }
     ByteBuf outBuf = XDR.writeMessageTcp(out, true);
-    channel.write(outBuf);
+    channel.writeAndFlush(outBuf);
   }
   
   public static void writeChannelCommit(Channel channel, XDR out, int xid) {
@@ -156,7 +156,7 @@ public class Nfs3Utils {
       RpcProgramNfs3.LOG.debug("Commit done:" + xid);
     }
     ByteBuf outBuf = XDR.writeMessageTcp(out, true);
-    channel.write(outBuf);
+    channel.writeAndFlush(outBuf);
   }
 
   private static boolean isSet(int access, int bits) {
