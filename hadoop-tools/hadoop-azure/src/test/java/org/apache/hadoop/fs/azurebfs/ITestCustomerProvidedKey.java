@@ -36,7 +36,6 @@ import java.util.Random;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,23 +81,23 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int INT_512 = 512;
   private static final int INT_50 = 50;
+  private static final int FILE_SIZE = 10 * ONE_MB;
 
   public ITestCustomerProvidedKey() throws Exception {
+    boolean isCPKTestsEnabled =
+        getConfiguration().getBoolean(FS_AZURE_TEST_CPK_ENABLED, false);
+    Assume.assumeTrue(isCPKTestsEnabled);
   }
 
-  @Ignore
   @Test
   public void testReadWithCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
     String fileName = "/" + methodName.getMethodName();
-    int fileSize = 8 * ONE_MB;
-    byte[] fileContent = getRandomBytesArray(fileSize);
-    Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-    verifyContent(fs, testFilePath, fileContent);
+    createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     AbfsClient abfsClient = fs.getAbfsClient();
-    int length = INT_512;
-    byte[] buffer = new byte[length * 4];
+    int length = FILE_SIZE;
+    byte[] buffer = new byte[length];
     final AbfsRestOperation op = abfsClient.getPathStatus(fileName, false);
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
@@ -119,7 +118,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         "different-1234567890123456789012");
     conf.set("fs.abfs.impl.disable.cache", "true");
     AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
-    try (FSDataInputStream iStream = fs2.open(testFilePath)) {
+    try (FSDataInputStream iStream = fs2.open(new Path(fileName))) {
       int len = 8 * ONE_MB;
       byte[] b = new byte[len];
       LambdaTestUtils.intercept(IOException.class, () -> {
@@ -130,7 +129,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to read with no CPK headers
     conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
     AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
-    try (FSDataInputStream iStream = fs3.open(testFilePath)) {
+    try (FSDataInputStream iStream = fs3.open(new Path(fileName))) {
       int len = 8 * ONE_MB;
       byte[] b = new byte[len];
       LambdaTestUtils.intercept(IOException.class, () -> {
@@ -139,15 +138,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     }
   }
 
-  @Ignore
   @Test
   public void testReadWithoutCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(false);
-    int fileSize = 8 * ONE_MB;
-    byte[] fileContent = getRandomBytesArray(fileSize);
     String fileName = "/" + methodName.getMethodName();
-    Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-    verifyContent(fs, testFilePath, fileContent);
+    createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     AbfsClient abfsClient = fs.getAbfsClient();
     int length = INT_512;
@@ -178,12 +173,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     });
   }
 
-  @Ignore
   @Test
   public void testAppendWithCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
     final String fileName = "/" + methodName.getMethodName();
-    fs.create(new Path(fileName));
+    createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     //  Trying to append with correct CPK headers
     AppendRequestParameters appendRequestParameters =
@@ -221,12 +215,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     });
   }
 
-  @Ignore
   @Test
   public void testAppendWithoutCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(false);
     final String fileName = "/" + methodName.getMethodName();
-    fs.create(new Path(fileName));
+    createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     //  Trying to append without CPK headers
     AppendRequestParameters appendRequestParameters =
@@ -256,12 +249,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     });
   }
 
-  @Ignore
   @Test
   public void testSetGetXAttr() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
     String fileName = methodName.getMethodName();
-    fs.create(new Path(fileName));
+    createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     String valSent = "testValue";
     String attrName = "testXAttr";
@@ -294,7 +286,6 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     });
   }
 
-  @Ignore
   @Test
   public void testCopyBetweenAccounts() throws Exception {
     String accountName = getRawConfiguration()
@@ -381,13 +372,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     }
   }
 
-  @Ignore
   @Test
   public void testListPathWithCPK() throws Exception {
     testListPath(true);
   }
 
-  @Ignore
   @Test
   public void testListPathWithoutCPK() throws Exception {
     testListPath(false);
@@ -398,13 +387,37 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     String testDirName = "/" + methodName.getMethodName();
     final Path testPath = new Path(testDirName);
     fs.mkdirs(testPath);
-    fs.mkdirs(new Path(testDirName + "/aaa"));
-    fs.mkdirs(new Path(testDirName + "/bbb"));
+    createFileAndGetContent(fs, testDirName + "/aaa", FILE_SIZE);
+    createFileAndGetContent(fs, testDirName + "/bbb", FILE_SIZE);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
         .listPath(testDirName, false, INT_50, null);
+    assertListstatus(fs, abfsRestOperation, testPath);
 
-    //  assert cpk headers are not added
+    //  Trying with different CPK headers
+    Configuration conf = fs.getConf();
+    String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+        "different-1234567890123456789012");
+    conf.set("fs.abfs.impl.disable.cache", "true");
+    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
+    AbfsClient abfsClient2 = fs2.getAbfsClient();
+    abfsRestOperation = abfsClient2
+        .listPath(testDirName, false, INT_50, null);
+    assertListstatus(fs, abfsRestOperation, testPath);
+
+    if(isWithCPK) {
+      //  Trying with no CPK headers
+      conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+      AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
+      AbfsClient abfsClient3 = fs3.getAbfsClient();
+      abfsRestOperation = abfsClient3.listPath(testDirName, false, INT_50, null);
+      assertListstatus(fs, abfsRestOperation, testPath);
+    }
+  }
+
+  private void assertListstatus(AzureBlobFileSystem fs,
+      AbfsRestOperation abfsRestOperation, Path testPath) throws IOException {
     assertCPKHeaders(abfsRestOperation, false);
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
 
@@ -417,60 +430,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .describedAs("listStatuses should have 2 entries").isEqualTo(2);
   }
 
-  @Ignore
-  @Test
-  public void testGetFileSystemPropertiesWithCPK() throws Exception {
-    testGetFileSystemProperties(true);
-  }
-
-  @Ignore
-  @Test
-  public void testGetFileSystemPropertiesWithoutCPK() throws Exception {
-    testGetFileSystemProperties(false);
-  }
-
-  private void testGetFileSystemProperties(final boolean isWithCPK)
-      throws Exception {
-    final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = "/" + methodName.getMethodName();
-    fs.create(new Path(testFileName));
-    AbfsClient abfsClient = fs.getAbfsClient();
-    AbfsRestOperation abfsRestOperation = abfsClient.getFilesystemProperties();
-
-    //  assert cpk headers are not added
-    assertCPKHeaders(abfsRestOperation, false);
-    assertNoCPKResponseHeadersPresent(abfsRestOperation);
-  }
-
-  @Ignore
-  @Test
-  public void testDeleteFileSystemWithCPK() throws Exception {
-    testDeleteFileSystem(true);
-  }
-
-  @Ignore
-  @Test
-  public void testDeleteFileSystemWithoutCPK() throws Exception {
-    testDeleteFileSystem(false);
-  }
-
-  private void testDeleteFileSystem(final boolean isWithCPK) throws Exception {
-    final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = "/" + methodName.getMethodName();
-    fs.create(new Path(testFileName));
-    AbfsClient abfsClient = fs.getAbfsClient();
-    AbfsRestOperation abfsRestOperation = abfsClient.deleteFilesystem();
-    assertCPKHeaders(abfsRestOperation, false);
-    assertNoCPKResponseHeadersPresent(abfsRestOperation);
-  }
-
-  @Ignore
   @Test
   public void testCreatePathWithCPK() throws Exception {
     testCreatePath(true);
   }
 
-  @Ignore
   @Test
   public void testCreatePathWithoutCPK() throws Exception {
     testCreatePath(false);
@@ -479,7 +443,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   private void testCreatePath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = "/" + methodName.getMethodName();
-    fs.create(new Path(testFileName));
+    createFileAndGetContent(fs, testFileName, FILE_SIZE);
+
     AbfsClient abfsClient = fs.getAbfsClient();
     FsPermission permission = new FsPermission(FsAction.EXECUTE,
         FsAction.EXECUTE, FsAction.EXECUTE);
@@ -506,13 +471,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .describedAs("listStatuses should have 1 entry").isEqualTo(1);
   }
 
-  @Ignore
   @Test
   public void testRenamePathWithCPK() throws Exception {
     testRenamePath(true);
   }
 
-  @Ignore
   @Test
   public void testRenamePathWithoutCPK() throws Exception {
     testRenamePath(false);
@@ -521,12 +484,10 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   private void testRenamePath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = "/" + methodName.getMethodName();
-    Path testPath = new Path(testFileName);
-    fs.create(testPath);
+    createFileAndGetContent(fs, testFileName, FILE_SIZE);
 
-    FileStatus[] listStatuses = fs.listStatus(testPath);
-    Assertions.assertThat(listStatuses.length)
-        .describedAs("listStatuses should have 1 entry").isEqualTo(1);
+    FileStatus fileStatusBeforeRename =
+        fs.getFileStatus(new Path(testFileName));
 
     String newName = "/newName";
     AbfsClient abfsClient = fs.getAbfsClient();
@@ -535,21 +496,20 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertCPKHeaders(abfsRestOperation, false);
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
 
-    Assertions.assertThatThrownBy(() -> fs.listStatus(testPath))
+    Assertions.assertThatThrownBy(() -> fs.getFileStatus(new Path(testFileName)))
         .isInstanceOf(FileNotFoundException.class);
 
-    listStatuses = fs.listStatus(new Path(newName));
-    Assertions.assertThat(listStatuses.length)
-        .describedAs("listStatuses should have 1 entry").isEqualTo(1);
+    FileStatus fileStatusAfterRename = fs.getFileStatus(new Path(newName));
+    Assertions.assertThat(fileStatusAfterRename.getLen())
+        .describedAs("File size has to be same before and after rename")
+        .isEqualTo(fileStatusBeforeRename.getLen());
   }
 
-  @Ignore
   @Test
   public void testFlushWithCPK() throws Exception {
     testFlush(true);
   }
 
-  @Ignore
   @Test
   public void testFlushWithoutCPK() throws Exception {
     testFlush(false);
@@ -560,23 +520,52 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final String testFileName = "/" + methodName.getMethodName();
     fs.create(new Path(testFileName));
     AbfsClient abfsClient = fs.getAbfsClient();
+    String expectedCPKSha = getCPKSha(fs);
+
+    byte[] fileContent = getRandomBytesArray(FILE_SIZE);
+    Path testFilePath = new Path(testFileName+"1");
+    FSDataOutputStream oStream = fs.create(testFilePath);
+    oStream.write(fileContent);
+
+    //  Trying to read with different CPK headers
+    Configuration conf = fs.getConf();
+    String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+        "different-1234567890123456789012");
+    conf.set("fs.abfs.impl.disable.cache", "true");
+    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
+    AbfsClient abfsClient2 = fs2.getAbfsClient();
+    LambdaTestUtils.intercept(IOException.class, () -> {
+      abfsClient2
+          .flush(testFileName, 0, false, false, null);
+    });
+
+    //  Trying to read with no CPK headers
+    if(isWithCPK) {
+      conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+      AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
+      AbfsClient abfsClient3 = fs3.getAbfsClient();
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        abfsClient3.flush(testFileName, 0, false, false, null);
+      });
+    }
+
+    //  With correct CPK
     AbfsRestOperation abfsRestOperation = abfsClient
         .flush(testFileName, 0, false, false, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
-        X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
+        X_MS_ENCRYPTION_KEY_SHA256, expectedCPKSha);
     assertResponseHeader(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
     assertResponseHeader(abfsRestOperation, true,
         X_MS_REQUEST_SERVER_ENCRYPTED, isWithCPK + "");
   }
 
-  @Ignore
   @Test
   public void testSetPathPropertiesWithCPK() throws Exception {
     testSetPathProperties(true);
   }
 
-  @Ignore
   @Test
   public void testSetPathPropertiesWithoutCPK() throws Exception {
     testSetPathProperties(false);
@@ -585,7 +574,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   private void testSetPathProperties(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = "/" + methodName.getMethodName();
-    fs.create(new Path(testFileName));
+    createFileAndGetContent(fs, testFileName, FILE_SIZE);
+
     AbfsClient abfsClient = fs.getAbfsClient();
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "val");
@@ -600,54 +590,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         X_MS_REQUEST_SERVER_ENCRYPTED, "true");
   }
 
-  @Ignore
-  @Test
-  public void testGetPathStatusDirWithCPK() throws Exception {
-    testGetPathStatusDirectorey(true);
-  }
-
-  @Ignore
-  @Test
-  public void testGetPathStatusDirWithoutCPK() throws Exception {
-    testGetPathStatusDirectorey(false);
-  }
-
-  private void testGetPathStatusDirectorey(final boolean isWithCPK)
-      throws Exception {
-    final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = "/" + methodName.getMethodName();
-    Path testPath = new Path(testFileName);
-    fs.mkdirs(testPath);
-    fs.mkdirs(new Path(testFileName + "/aaa"));
-    fs.mkdirs(new Path(testFileName + "/bbb"));
-
-    AbfsClient abfsClient = fs.getAbfsClient();
-    AbfsRestOperation abfsRestOperation = abfsClient
-        .getPathStatus(testFileName, false);
-    assertCPKHeaders(abfsRestOperation, isWithCPK);
-    assertResponseHeader(abfsRestOperation, false, X_MS_ENCRYPTION_KEY_SHA256,
-        "");
-    assertResponseHeader(abfsRestOperation, true, X_MS_SERVER_ENCRYPTED,
-        "true");
-    assertResponseHeader(abfsRestOperation, false,
-        X_MS_REQUEST_SERVER_ENCRYPTED, "");
-
-    FileStatus[] listStatuses = fs.listStatus(testPath);
-    Assertions.assertThat(listStatuses.length)
-        .describedAs("listStatuses should have 2 entries").isEqualTo(2);
-
-    listStatuses = getSameFSWithWrongCPK(fs).listStatus(testPath);
-    Assertions.assertThat(listStatuses.length)
-        .describedAs("listStatuses should have 2 entries").isEqualTo(2);
-  }
-
-  @Ignore
   @Test
   public void testGetPathStatusFileWithCPK() throws Exception {
     testGetPathStatusFile(true);
   }
 
-  @Ignore
   @Test
   public void testGetPathStatusFileWithoutCPK() throws Exception {
     testGetPathStatusFile(false);
@@ -656,13 +603,21 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   private void testGetPathStatusFile(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = "/" + methodName.getMethodName();
-    int fileSize = 8 * ONE_MB;
-    byte[] fileContent = getRandomBytesArray(fileSize);
-    createFileWithContent(fs, testFileName, fileContent);
+    createFileAndGetContent(fs, testFileName, FILE_SIZE);
 
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
         .getPathStatus(testFileName, false);
+    assertCPKHeaders(abfsRestOperation, false);
+    assertResponseHeader(abfsRestOperation, isWithCPK,
+        X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
+    assertResponseHeader(abfsRestOperation, true, X_MS_SERVER_ENCRYPTED,
+        "true");
+    assertResponseHeader(abfsRestOperation, false,
+        X_MS_REQUEST_SERVER_ENCRYPTED, "");
+
+    abfsRestOperation = abfsClient
+        .getPathStatus(testFileName, true);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
@@ -672,13 +627,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         X_MS_REQUEST_SERVER_ENCRYPTED, "");
   }
 
-  @Ignore
   @Test
   public void testDeletePathWithCPK() throws Exception {
     testDeletePath(false);
   }
 
-  @Ignore
   @Test
   public void testDeletePathWithoutCPK() throws Exception {
     testDeletePath(false);
@@ -687,10 +640,9 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   private void testDeletePath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = "/" + methodName.getMethodName();
-    final Path testPath = new Path(testFileName);
-    fs.create(testPath);
+    createFileAndGetContent(fs, testFileName, FILE_SIZE);
 
-    FileStatus[] listStatuses = fs.listStatus(testPath);
+    FileStatus[] listStatuses = fs.listStatus(new Path(testFileName));
     Assertions.assertThat(listStatuses.length)
         .describedAs("listStatuses should have 1 entry").isEqualTo(1);
 
@@ -700,17 +652,15 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertCPKHeaders(abfsRestOperation, false);
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
 
-    Assertions.assertThatThrownBy(() -> fs.listStatus(testPath))
+    Assertions.assertThatThrownBy(() -> fs.listStatus(new Path(testFileName)))
         .isInstanceOf(FileNotFoundException.class);
   }
 
-  @Ignore
   @Test
   public void testSetPermissionWithCPK() throws Exception {
     testSetPermission(true);
   }
 
-  @Ignore
   @Test
   public void testSetPermissionWithoutCPK() throws Exception {
     testSetPermission(false);
@@ -720,7 +670,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = "/" + methodName.getMethodName();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    fs.create(new Path(testFileName));
+    createFileAndGetContent(fs, testFileName, FILE_SIZE);
     AbfsClient abfsClient = fs.getAbfsClient();
     FsPermission permission = new FsPermission(FsAction.EXECUTE,
         FsAction.EXECUTE, FsAction.EXECUTE);
@@ -730,13 +680,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
   }
 
-  @Ignore
   @Test
   public void testSetAclWithCPK() throws Exception {
     testSetAcl(true);
   }
 
-  @Ignore
   @Test
   public void testSetAclWithoutCPK() throws Exception {
     testSetAcl(false);
@@ -746,7 +694,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = "/" + methodName.getMethodName();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    fs.create(new Path(testFileName));
+    createFileAndGetContent(fs, testFileName, FILE_SIZE);
     AbfsClient abfsClient = fs.getAbfsClient();
 
     List<AclEntry> aclSpec = Lists.newArrayList(aclEntry(ACCESS, USER, ALL));
@@ -759,13 +707,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
   }
 
-  @Ignore
   @Test
   public void testGetAclWithCPK() throws Exception {
     testGetAcl(true);
   }
 
-  @Ignore
   @Test
   public void testGetAclWithoutCPK() throws Exception {
     testGetAcl(false);
@@ -775,20 +721,18 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = "/" + methodName.getMethodName();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
-    fs.create(new Path(testFileName));
+    createFileAndGetContent(fs, testFileName, FILE_SIZE);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient.getAclStatus(testFileName);
     assertCPKHeaders(abfsRestOperation, false);
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
   }
 
-  @Ignore
   @Test
   public void testCheckAccessWithCPK() throws Exception {
     testCheckAccess(true);
   }
 
-  @Ignore
   @Test
   public void testCheckAccessWithoutCPK() throws Exception {
     testCheckAccess(false);
@@ -810,6 +754,14 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .checkAccess(testFileName, "rwx");
     assertCPKHeaders(abfsRestOperation, false);
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
+  }
+
+  private byte[] createFileAndGetContent(AzureBlobFileSystem fs,
+      String fileName, int fileSize) throws IOException {
+    byte[] fileContent = getRandomBytesArray(fileSize);
+    Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+    verifyContent(fs, testFilePath, fileContent);
+    return fileContent;
   }
 
   private void assertCPKHeaders(AbfsRestOperation abfsRestOperation,
@@ -893,7 +845,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private Path createFileWithContent(FileSystem fs, String fileName,
       byte[] fileContent) throws IOException {
-    Path testFilePath = path(fileName);
+    Path testFilePath = new Path(fileName);
     try (FSDataOutputStream oStream = fs.create(testFilePath)) {
       oStream.write(fileContent);
       oStream.flush();

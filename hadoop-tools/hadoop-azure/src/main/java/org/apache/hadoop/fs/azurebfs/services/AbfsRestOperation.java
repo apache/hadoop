@@ -36,6 +36,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY_SHA256;
+
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
@@ -290,6 +292,7 @@ public class AbfsRestOperation {
     } finally {
       if (httpOperation != null) {
         this.responseHeaders = httpOperation.getResponseHeaders();
+
       }
       AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
@@ -303,6 +306,28 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
+  }
+
+  private boolean isCPKShaMismatch() {
+    String shaSent = getHeader(requestHeaders, X_MS_ENCRYPTION_KEY_SHA256);
+    String shaReceived = getHeader(responseHeaders, X_MS_ENCRYPTION_KEY_SHA256);
+    boolean isCPKShaMismatch = !shaSent.equalsIgnoreCase(shaReceived);
+    if (isCPKShaMismatch) {
+      LOG.debug("The value sent and received for {} is different. Value "
+              + "sent: {}, value received: {}", X_MS_ENCRYPTION_KEY_SHA256,
+          shaSent,
+          shaReceived);
+    }
+    return isCPKShaMismatch;
+  }
+
+  private String getHeader(List<AbfsHttpHeader> headers, String headerName){
+    for(AbfsHttpHeader header : headers){
+      if(header.getName().equalsIgnoreCase(headerName)){
+        return header.getValue();
+      }
+    }
+    return "";
   }
 
   /**
