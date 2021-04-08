@@ -55,6 +55,7 @@ public class ClusterMetricsInfo {
   private long totalVirtualCores;
   private int utilizedMBPercent;
   private int utilizedVirtualCoresPercent;
+  private int rmSchedulerBusyPercent;
   private int totalNodes;
   private int lostNodes;
   private int unhealthyNodes;
@@ -139,7 +140,11 @@ public class ClusterMetricsInfo {
     this.utilizedVirtualCoresPercent = baseCores <= 0 ? 0 :
         (int) (clusterMetrics.getUtilizedVirtualCores() * 100 /
             baseCores);
-
+    // Scheduler Busy is in usec per sec, so to get percent divide by 10^4
+    // Set to -1 if disabled.
+    this.rmSchedulerBusyPercent =
+        clusterMetrics.getRmEventProcMonitorEnable() ?
+        (int)(clusterMetrics.getRmEventProcCPUAvg() / 10000L) : -1;
     this.activeNodes = clusterMetrics.getNumActiveNMs();
     this.lostNodes = clusterMetrics.getNumLostNMs();
     this.unhealthyNodes = clusterMetrics.getUnhealthyNMs();
@@ -259,6 +264,10 @@ public class ClusterMetricsInfo {
     return utilizedVirtualCoresPercent;
   }
 
+  public int getRmSchedulerBusyPercent() {
+    return rmSchedulerBusyPercent;
+  }
+
   public void setContainersReserved(int containersReserved) {
     this.containersReserved = containersReserved;
   }
@@ -369,6 +378,10 @@ public class ClusterMetricsInfo {
 
   public void setUtilizedVirtualCoresPercent(int utilizedVirtualCoresPercent) {
     this.utilizedVirtualCoresPercent = utilizedVirtualCoresPercent;
+  }
+
+  public void setRmSchedulerBusyPercent(int rmSchedulerBusyPercent) {
+    this.rmSchedulerBusyPercent = rmSchedulerBusyPercent;
   }
 
   public ResourceInfo getTotalClusterResourcesAcrossPartition() {
