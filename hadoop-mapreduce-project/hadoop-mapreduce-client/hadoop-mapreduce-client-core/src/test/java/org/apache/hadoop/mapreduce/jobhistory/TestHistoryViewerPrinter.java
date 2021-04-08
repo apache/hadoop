@@ -55,7 +55,7 @@ public class TestHistoryViewerPrinter {
 
   @AfterClass
   public static void tearDown() throws Exception {
-      Locale.setDefault(DEFAULT_LOCALE);
+    Locale.setDefault(DEFAULT_LOCALE);
   }
 
   @Test
