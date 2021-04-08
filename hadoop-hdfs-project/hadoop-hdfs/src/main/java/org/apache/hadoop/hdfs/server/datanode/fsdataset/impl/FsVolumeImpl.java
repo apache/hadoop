@@ -1474,8 +1474,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
         }
       }
       verifyFileLocation(blockFile, bpFinalizedDir, blockId);
-      report.add(new ScanInfo(blockId, dir,
-          blockFile == null ? null : blockFile.getName(),
+      report.add(new ScanInfo(blockId, dir, blockFile.getName(),
           metaFile == null ? null : metaFile.getName(), this));
     }
   }

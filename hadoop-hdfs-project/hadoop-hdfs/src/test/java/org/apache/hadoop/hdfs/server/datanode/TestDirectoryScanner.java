@@ -1064,7 +1064,7 @@ public class TestDirectoryScanner {
 
   void testScanInfoObject(long blockId) throws Exception {
     FsVolumeSpi.ScanInfo scanInfo =
-        new FsVolumeSpi.ScanInfo(blockId, null,null, null, null);
+        new FsVolumeSpi.ScanInfo(blockId, null, null, null, null);
     assertEquals(blockId, scanInfo.getBlockId());
     assertNull(scanInfo.getBlockFile());
     assertNull(scanInfo.getMetaFile());

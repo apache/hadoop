@@ -247,7 +247,7 @@ public interface FsVolumeSpi
 
     private final FileRegion fileRegion;
     /**
-     * Get the file's length in async block scan
+     * Get the file's length in async block scan.
      */
     private final long blockLength;
 
@@ -281,8 +281,8 @@ public interface FsVolumeSpi
      * @param metaFile the path to the block meta-data file
      * @param vol the volume that contains the block
      */
-    public ScanInfo(long blockId, File basePath, String blockFile, String metaFile,
-        FsVolumeSpi vol) {
+    public ScanInfo(long blockId, File basePath, String blockFile,
+        String metaFile, FsVolumeSpi vol) {
       this.blockId = blockId;
       this.basePath = basePath;
       this.blockFile = blockFile;
