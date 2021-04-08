@@ -18,7 +18,9 @@
 
 #include <gtest/gtest.h>
 
+#include <numeric>
 #include <string>
+#include <vector>
 
 #include "x-platform/syscall.h"
 
@@ -44,4 +46,25 @@ TEST(XPlatformSyscall, FnMatchNegativeQuestionMark) {
   const std::string pattern("a?.doc");
   const std::string str("abc.doc");
   EXPECT_FALSE(XPlatform::Syscall::FnMatch(pattern, str));
+}
+
+TEST(XPlatformSyscall, ClearBufferSafelyChars) {
+  std::vector<char> alphabets(26);
+  std::iota(alphabets.begin(), alphabets.end(), 'a');
+
+  XPlatform::Syscall::ClearBufferSafely(alphabets.data(), alphabets.size());
+  for (const auto alphabet : alphabets) {
+    EXPECT_EQ(alphabet, '\0');
+  }
+}
+
+TEST(XPlatformSyscall, ClearBufferSafelyNumbers) {
+  std::vector<int> numbers(200);
+  std::iota(numbers.begin(), numbers.end(), 0);
+
+  XPlatform::Syscall::ClearBufferSafely(numbers.data(),
+                                        numbers.size() * sizeof(int));
+  for (const auto number : numbers) {
+    EXPECT_EQ(number, 0);
+  }
 }
