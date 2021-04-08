@@ -46,11 +46,6 @@ public class SimpleTcpClientHandler extends ChannelInboundHandlerAdapter {
     ctx.channel().writeAndFlush(outBuf);
   }
 
-  @Override
-  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-    LOG.info("channel is inactive");
-  }
-
   /**
    * Shutdown connection by default. Subclass can override this method to do
    * more interaction with the server.

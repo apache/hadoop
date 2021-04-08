@@ -250,7 +250,7 @@ public final class XDR {
     ByteBuffer headerBuf = ByteBuffer.wrap(fragmentHeader);
 
     // TODO: Investigate whether making a copy of the buffer is necessary.
-    return Unpooled.copiedBuffer(headerBuf, b);
+    return Unpooled.wrappedBuffer(headerBuf, b);
   }
 
   /**

@@ -116,7 +116,7 @@ public final class RpcUtil {
       SocketAddress remoteAddress;
       if (msg instanceof DatagramPacket) {
         DatagramPacket packet = (DatagramPacket)msg;
-        buf = packet.content(); //(ByteBuf) msg;
+        buf = packet.content();
         remoteAddress = packet.sender();
       } else {
         buf = (ByteBuf) msg;
@@ -136,6 +136,8 @@ public final class RpcUtil {
             remoteAddress);
       } catch (Exception exc) {
         LOG.info("Malformed RPC request from " + remoteAddress);
+      } finally {
+        buf.release();
       }
 
       if (info != null) {
