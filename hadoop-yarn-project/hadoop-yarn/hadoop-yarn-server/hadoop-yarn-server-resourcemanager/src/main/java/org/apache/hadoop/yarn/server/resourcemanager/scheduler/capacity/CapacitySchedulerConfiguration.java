@@ -2029,7 +2029,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       AUTO_CREATE_CHILD_QUEUE_PREFIX + "enabled";
 
   @Private
-  private static final String AUTO_QUEUE_CREATION_V2_PREFIX =
+  protected static final String AUTO_QUEUE_CREATION_V2_PREFIX =
       "auto-queue-creation-v2.";
 
   @Private
