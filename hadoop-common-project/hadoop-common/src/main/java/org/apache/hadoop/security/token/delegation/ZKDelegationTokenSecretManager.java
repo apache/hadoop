@@ -56,11 +56,16 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import static org.apache.hadoop.util.Time.now;
+
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.client.ZKClientConfig;
+import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.slf4j.Logger;
@@ -104,6 +109,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static final String ZK_DTSM_TOKEN_WATCHER_ENABLED = ZK_CONF_PREFIX
       + "token.watcher.enabled";
   public static final boolean ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT = true;
+  public static final String ZK_DTSM_ZK_DIGEST_AUTH = ZK_CONF_PREFIX
+      + "digest.auth";
 
   public static final int ZK_DTSM_ZK_NUM_RETRIES_DEFAULT = 3;
   public static final int ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT = 10000;
@@ -180,47 +187,56 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // AuthType has to be explicitly set to 'none' or 'sasl'
       Preconditions.checkNotNull(authType, "Zookeeper authType cannot be null !!");
       Preconditions.checkArgument(
-          authType.equals("sasl") || authType.equals("none"),
-          "Zookeeper authType must be one of [none, sasl]");
+          authType.equals("sasl") || authType.equals("none") || authType.equals("digest"),
+          "Zookeeper authType must be one of [none, sasl or digest]");
 
-      Builder builder = null;
+      int sessionT =
+          conf.getInt(ZK_DTSM_ZK_SESSION_TIMEOUT,
+              ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT);
+      int numRetries =
+          conf.getInt(ZK_DTSM_ZK_NUM_RETRIES, ZK_DTSM_ZK_NUM_RETRIES_DEFAULT);
+      Builder builder =
+          CuratorFrameworkFactory
+              .builder()
+              .namespace(
+                  conf.get(ZK_DTSM_ZNODE_WORKING_PATH,
+                      ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT)
+                      + "/"
+                      + ZK_DTSM_NAMESPACE
+              )
+              .sessionTimeoutMs(sessionT)
+              .connectionTimeoutMs(
+                  conf.getInt(ZK_DTSM_ZK_CONNECTION_TIMEOUT,
+                      ZK_DTSM_ZK_CONNECTION_TIMEOUT_DEFAULT)
+              )
+              .retryPolicy(
+                  new RetryNTimes(numRetries, sessionT / numRetries));
       try {
-        ACLProvider aclProvider = null;
         if (authType.equals("sasl")) {
           LOG.info("Connecting to ZooKeeper with SASL/Kerberos"
               + "and using 'sasl' ACLs");
           String principal = setJaasConfiguration(conf);
-          System.setProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY,
-                             JAAS_LOGIN_ENTRY_NAME);
+          System.setProperty(ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
+              JAAS_LOGIN_ENTRY_NAME);
           System.setProperty("zookeeper.authProvider.1",
               "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
-          aclProvider = new SASLOwnerACLProvider(principal);
+          builder.aclProvider(new SASLOwnerACLProvider(principal));
+        } else if (authType.equals("digest")) {
+          LOG.info("Connecting to ZooKeeper with Digest"
+              + " and using 'auth' ACLs");
+          char [] credentialChars = conf.getPassword(ZK_DTSM_ZK_DIGEST_AUTH);
+          Preconditions.checkNotNull(credentialChars,
+              "Zookeeper digest credentials cannot be null for DIGEST authentication" +
+                  ", please set the " + ZK_DTSM_ZK_DIGEST_AUTH + " '<user>:<password>' digest property.");
+          String credentials = ZKUtil.resolveConfIndirection(new String(credentialChars));
+          if (credentials.startsWith("digest:")) // allow same format az ZKFC configuration
+            credentials = credentials.substring("digest:".length());
+          builder.authorization("digest", credentials.getBytes(Charsets.UTF_8));
+          builder.aclProvider(new DigestOwnerACLProvider());
         } else { // "none"
           LOG.info("Connecting to ZooKeeper without authentication");
-          aclProvider = new DefaultACLProvider(); // open to everyone
+          builder.aclProvider(new DefaultACLProvider()); // open to everyone
         }
-        int sessionT =
-            conf.getInt(ZK_DTSM_ZK_SESSION_TIMEOUT,
-                ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT);
-        int numRetries =
-            conf.getInt(ZK_DTSM_ZK_NUM_RETRIES, ZK_DTSM_ZK_NUM_RETRIES_DEFAULT);
-        builder =
-            CuratorFrameworkFactory
-                .builder()
-                .aclProvider(aclProvider)
-                .namespace(
-                    conf.get(ZK_DTSM_ZNODE_WORKING_PATH,
-                        ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT)
-                        + "/"
-                        + ZK_DTSM_NAMESPACE
-                )
-                .sessionTimeoutMs(sessionT)
-                .connectionTimeoutMs(
-                    conf.getInt(ZK_DTSM_ZK_CONNECTION_TIMEOUT,
-                        ZK_DTSM_ZK_CONNECTION_TIMEOUT_DEFAULT)
-                )
-                .retryPolicy(
-                    new RetryNTimes(numRetries, sessionT / numRetries));
       } catch (Exception ex) {
         throw new RuntimeException("Could not Load ZK acls or auth: " + ex, ex);
       }
@@ -982,6 +998,23 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     @Override
     public List<ACL> getAclForPath(String path) {
       return saslACL;
+    }
+  }
+
+  /**
+   * Implementation of an {@link ACLProvider} that simply gives full
+   * permissions to the authenticated user for all ZK paths.
+   */
+  private static class DigestOwnerACLProvider implements ACLProvider {
+
+    private final List<ACL> digestACL = ZooDefs.Ids.CREATOR_ALL_ACL;
+
+    @Override
+    public List<ACL> getDefaultAcl() { return digestACL; }
+
+    @Override
+    public List<ACL> getAclForPath(String path) {
+      return digestACL;
     }
   }
 
