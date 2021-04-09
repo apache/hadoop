@@ -240,9 +240,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     if (maskedEncodedUrl != null) {
       return maskedEncodedUrl;
     }
-    return maskedUrl == null ?
-        UriUtils.getMaskedEncodedUrl(url.toString()) :
-        UriUtils.encodedUrlStr(maskedUrl);
+    return maskedUrl == null
+        ? UriUtils.getMaskedEncodedUrl(url.toString())
+        : UriUtils.encodedUrlStr(maskedUrl);
   }
 
   /**
