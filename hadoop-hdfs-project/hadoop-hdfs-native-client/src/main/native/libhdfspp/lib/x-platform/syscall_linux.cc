@@ -17,6 +17,7 @@
  */
 
 #include <fnmatch.h>
+#include <strings.h>
 #include <unistd.h>
 
 #include <cstring>
@@ -47,4 +48,9 @@ void XPlatform::Syscall::ClearBufferSafely(void* buffer,
   if (buffer != nullptr) {
     explicit_bzero(buffer, sz_bytes);
   }
+}
+
+bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
+                                                 const std::string& b) {
+  return strcasecmp(a.c_str(), b.c_str()) == 0;
 }
