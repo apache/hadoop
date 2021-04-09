@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 
 import java.io.IOException;
