@@ -40,11 +40,6 @@ bool XPlatform::Syscall::FnMatch(const std::string& pattern,
                         static_cast<LPCSTR>(pattern.c_str())) == TRUE;
 }
 
-bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
-                                                 const std::string& b) {
-  return _stricmp(a.c_str(), b.c_str());
-}
-
 bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
   auto* const stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
   if (stdout_handle == INVALID_HANDLE_VALUE || stdout_handle == nullptr) {
@@ -63,4 +58,9 @@ void XPlatform::Syscall::ClearBufferSafely(void* buffer,
   if (buffer != nullptr) {
     SecureZeroMemory(buffer, sz_bytes);
   }
+}
+
+bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
+                                                 const std::string& b) {
+  return _stricmp(a.c_str(), b.c_str()) == 0;
 }
