@@ -35,46 +35,57 @@ public class TestAbfsHttpOperation {
     testIfMaskAndEncodeSuccessful("Where sig is the only query param",
         "http://www.testurl.net?sig=abcd", "http://www.testurl.net?sig=XXXX");
 
+    testIfMaskAndEncodeSuccessful("Where oid is the only query param",
+        "http://www.testurl.net?saoid=abcd", "http://www.testurl.net?sig=XXXX");
+
     testIfMaskAndEncodeSuccessful("Where sig is the first query param",
         "http://www.testurl.net?sig=abcd&abc=xyz",
         "http://www.testurl.net?sig=XXXX&abc=xyz");
 
+    testIfMaskAndEncodeSuccessful("Where oid is the first query param",
+        "http://www.testurl.net?skoid=abcd123&abc=xyz",
+        "http://www.testurl.net?skoid=abcdXXXX&abc=xyz");
+
     testIfMaskAndEncodeSuccessful(
-        "Where sig is neither first nor last query param",
-        "http://www.testurl.net?lmn=abc&sig=abcd&abc=xyz",
-        "http://www.testurl.net?lmn=abc&sig=XXXX&abc=xyz");
+        "Where sig/oid are neither first nor last query param",
+        "http://www.testurl.net?lmn=abc&sig=abcd&suoid=mnop789&abc=xyz",
+        "http://www.testurl.net?lmn=abc&sig=XXXX&suoid=mnopXXXX&abc=xyz");
 
     testIfMaskAndEncodeSuccessful("Where sig is the last query param",
         "http://www.testurl.net?abc=xyz&sig=abcd",
         "http://www.testurl.net?abc=xyz&sig=XXXX");
 
-    testIfMaskAndEncodeSuccessful("Where sig query param is not present",
+    testIfMaskAndEncodeSuccessful("Where oid is the last query param",
+        "http://www.testurl.net?abc=xyz&saoid=abcd456",
+        "http://www.testurl.net?abc=xyz&saoid=abcdXXXX");
+
+    testIfMaskAndEncodeSuccessful("Where sig/oid query param are not present",
         "http://www.testurl.net?abc=xyz", "http://www.testurl.net?abc=xyz");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but mysig",
-        "http://www.testurl.net?abc=xyz&mysig=qwerty",
-        "http://www.testurl.net?abc=xyz&mysig=qwerty");
+        "Where sig/oid query param are not present but mysig and myoid",
+        "http://www.testurl.net?abc=xyz&mysig=qwerty&mysaoid=uvw",
+        "http://www.testurl.net?abc=xyz&mysig=qwerty&mysaoid=uvw");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but sigmy",
-        "http://www.testurl.net?abc=xyz&sigmy=qwerty",
-        "http://www.testurl.net?abc=xyz&sigmy=qwerty");
+        "Where sig/oid query param is not present but sigmy and oidmy",
+        "http://www.testurl.net?abc=xyz&sigmy=qwerty&skoidmy=uvw",
+        "http://www.testurl.net?abc=xyz&sigmy=qwerty&skoidmy=uvw");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but a " + "value sig",
-        "http://www.testurl.net?abc=xyz&mnop=sig",
-        "http://www.testurl.net?abc=xyz&mnop=sig");
+        "Where sig/oid query param is not present but values sig and oid",
+        "http://www.testurl.net?abc=xyz&mnop=sig&pqr=saoid",
+        "http://www.testurl.net?abc=xyz&mnop=sig&pqr=saoid");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but a " + "value ends with sig",
-        "http://www.testurl.net?abc=xyz&mnop=abcsig",
-        "http://www.testurl.net?abc=xyz&mnop=abcsig");
+        "Where sig/oid query param is not present but a value ends with sig/oid",
+        "http://www.testurl.net?abc=xyzsaoid&mnop=abcsig",
+        "http://www.testurl.net?abc=xyzsaoid&mnop=abcsig");
 
     testIfMaskAndEncodeSuccessful(
-        "Where sig query param is not present but a " + "value starts with sig",
-        "http://www.testurl.net?abc=xyz&mnop=sigabc",
-        "http://www.testurl.net?abc=xyz&mnop=sigabc");
+        "Where sig/oid query param is not present but a value starts with sig/oid",
+        "http://www.testurl.net?abc=saoidxyz&mnop=sigabc",
+        "http://www.testurl.net?abc=saoidxyz&mnop=sigabc");
   }
 
   private void testIfMaskAndEncodeSuccessful(final String scenario,
