@@ -70,6 +70,8 @@ class Syscall {
    * @param sz_bytes the count of the bytes to clear.
    */
   static void ClearBufferSafely(void* buffer, size_t sz_bytes);
+  static bool StringCompareIgnoreCase(const std::string& a,
+                                      const std::string& b);
 
  private:
   static bool WriteToStdoutImpl(const char* message);

@@ -20,6 +20,8 @@
 #include <WinBase.h>
 #include <Windows.h>
 
+#include <cstring>
+
 #include "syscall.h"
 
 #pragma comment(lib, "Shlwapi.lib")
@@ -36,6 +38,11 @@ bool XPlatform::Syscall::FnMatch(const std::string& pattern,
                                  const std::string& str) {
   return PathMatchSpecA(static_cast<LPCSTR>(str.c_str()),
                         static_cast<LPCSTR>(pattern.c_str())) == TRUE;
+}
+
+bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
+                                                 const std::string& b) {
+  return _stricmp(a.c_str(), b.c_str());
 }
 
 bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
