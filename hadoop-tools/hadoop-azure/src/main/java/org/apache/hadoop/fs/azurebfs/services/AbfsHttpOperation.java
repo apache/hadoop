@@ -75,7 +75,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private String requestId  = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
-  private List<AbfsHttpHeader> responseHeaders;
 
   // metrics
   private int bytesSent;

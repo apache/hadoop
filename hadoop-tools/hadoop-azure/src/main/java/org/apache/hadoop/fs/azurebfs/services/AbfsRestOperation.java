@@ -301,7 +301,7 @@ public class AbfsRestOperation {
     return true;
   }
 
-   /**
+  /**
    * Incrementing Abfs counters with a long value.
    *
    * @param statistic the Abfs statistic that needs to be incremented.
@@ -312,5 +312,4 @@ public class AbfsRestOperation {
       abfsCounters.incrementCounter(statistic, value);
     }
   }
-
 }
