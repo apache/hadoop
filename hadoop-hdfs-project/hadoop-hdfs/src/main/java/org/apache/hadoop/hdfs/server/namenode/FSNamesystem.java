@@ -124,7 +124,13 @@ import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
-import org.apache.hadoop.util.*;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.util.ExitUtil;
 
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -8559,10 +8565,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Check if snapshot roots are created for all existing snapshottable
    * directories. Create them if not.
+   * Only the active NameNode needs to execute this in HA setup.
    */
   @Override
   public void checkAndProvisionSnapshotTrashRoots() {
-    if (isSnapshotTrashRootEnabled) {
+    if (isSnapshotTrashRootEnabled && (haEnabled && inActiveState()
+        || !haEnabled)) {
       try {
         SnapshottableDirectoryStatus[] dirStatusList =
             getSnapshottableDirListing();
@@ -8575,9 +8583,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             currDir += Path.SEPARATOR;
           }
           String trashPath = currDir + FileSystem.TRASH_PREFIX;
-          HdfsFileStatus fileStatus = getFileInfo(trashPath, false, false, false);
+          HdfsFileStatus fileStatus =
+              getFileInfo(trashPath, false, false, false);
           if (fileStatus == null) {
-            LOG.info("Trash doesn't exist for snapshottable directory {}. " + "Creating trash at {}", currDir, trashPath);
+            LOG.info("Trash doesn't exist for snapshottable directory {}. "
+                + "Creating trash at {}", currDir, trashPath);
             PermissionStatus permissionStatus =
                 new PermissionStatus(getRemoteUser().getShortUserName(), null,
                     SHARED_TRASH_PERMISSION);
@@ -8585,9 +8595,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
         }
       } catch (IOException e) {
-        final String msg =
-            "Could not provision Trash directory for existing "
-                + "snapshottable directories. Exiting Namenode.";
+        final String msg = "Could not provision Trash directory for existing "
+            + "snapshottable directories. Exiting Namenode.";
         ExitUtil.terminate(1, msg);
       }
 
