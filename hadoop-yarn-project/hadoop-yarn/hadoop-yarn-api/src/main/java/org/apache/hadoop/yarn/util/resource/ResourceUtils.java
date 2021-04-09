@@ -766,4 +766,19 @@ public class ResourceUtils {
 
     return info;
   }
+
+  public static StringBuilder
+  getCustomResourcesStrings(Resource resource) {
+    StringBuilder res = new StringBuilder();
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
+      ResourceInformation[] resources =
+          resource.getResources();
+      for (int i = 2; i < resources.length; i++) {
+        ResourceInformation resInfo = resources[i];
+        res.append(","
+            + resInfo.getName() + "=" + resInfo.getValue());
+      }
+    }
+    return  res;
+  }
 }
