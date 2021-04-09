@@ -197,9 +197,9 @@ public class TestDNS {
   @Test (timeout=60000)
   public void testLookupWithHostsFallback() throws Exception {
     assumeNotWindows();
-    final String oldHostname = changeDnsCachedHostname(DUMMY_HOSTNAME);
-
+    final String oldHostname = DNS.getCachedHostname();
     try {
+      DNS.setCachedHostname(DUMMY_HOSTNAME);
       String hostname = DNS.getDefaultHost(
           getLoopbackInterface(), INVALID_DNS_SERVER, true);
 
@@ -207,7 +207,7 @@ public class TestDNS {
       assertThat(hostname, not(DUMMY_HOSTNAME));
     } finally {
       // Restore DNS#cachedHostname for subsequent tests.
-      changeDnsCachedHostname(oldHostname);
+      DNS.setCachedHostname(oldHostname);
     }
   }
 
@@ -219,9 +219,9 @@ public class TestDNS {
    */
   @Test(timeout=60000)
   public void testLookupWithoutHostsFallback() throws Exception {
-    final String oldHostname = changeDnsCachedHostname(DUMMY_HOSTNAME);
-
+    final String oldHostname = DNS.getCachedHostname();
     try {
+      DNS.setCachedHostname(DUMMY_HOSTNAME);
       String hostname = DNS.getDefaultHost(
           getLoopbackInterface(), INVALID_DNS_SERVER, false);
 
@@ -230,29 +230,13 @@ public class TestDNS {
       assertThat(hostname, is(DUMMY_HOSTNAME));
     } finally {
       // Restore DNS#cachedHostname for subsequent tests.
-      changeDnsCachedHostname(oldHostname);
+      DNS.setCachedHostname(oldHostname);
     }
   }
 
   private String getLoopbackInterface() throws SocketException {
     return NetworkInterface.getByInetAddress(
         InetAddress.getLoopbackAddress()).getName();
-  }
-
-  /**
-   * Change DNS#cachedHostName to something which cannot be a real
-   * host name. Uses reflection since it is a 'private final' field.
-   */
-  private String changeDnsCachedHostname(final String newHostname)
-      throws Exception {
-    final String oldCachedHostname = DNS.getDefaultHost(DEFAULT);
-    Field field = DNS.class.getDeclaredField("cachedHostname");
-    field.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.set(field, field.getModifiers() & ~Modifier.FINAL);
-    field.set(null, newHostname);
-    return oldCachedHostname;
   }
 
   /**
