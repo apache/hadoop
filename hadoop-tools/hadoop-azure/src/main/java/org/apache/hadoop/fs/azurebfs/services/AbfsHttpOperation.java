@@ -21,16 +21,15 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.List;
 import java.util.UUID;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
@@ -50,9 +49,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
  */
 public class AbfsHttpOperation implements AbfsPerfLoggable {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
-
-  public static final String SIGNATURE_QUERY_PARAM_KEY = "sig=";
-  private static final String[] SAS_OID_PARAM_KEYS = {"skoid", "saoid", "suoid"};
 
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
@@ -195,7 +191,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(",");
     sb.append(method);
     sb.append(",");
-    sb.append(getSignatureMaskedUrl());
+    sb.append(getMaskedUrl());
     return sb.toString();
   }
 
@@ -228,9 +224,25 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       .append(" m=")
       .append(method)
       .append(" u=")
-      .append(getSignatureMaskedEncodedUrl());
+      .append(getMaskedEncodedUrl());
 
     return sb.toString();
+  }
+
+  public String getMaskedUrl() {
+    if (maskedUrl != null) {
+      return maskedUrl;
+    }
+    return UriUtils.getMaskedUrl(url.toString());
+  }
+
+  public String getMaskedEncodedUrl() {
+    if (maskedEncodedUrl != null) {
+      return maskedEncodedUrl;
+    }
+    return maskedUrl == null ?
+        UriUtils.getMaskedEncodedUrl(url.toString()) :
+        UriUtils.encodedUrlStr(maskedUrl);
   }
 
   /**
@@ -520,62 +532,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   private boolean isNullInputStream(InputStream stream) {
     return stream == null ? true : false;
-  }
-
-  public static String getSignatureMaskedUrl(String url) {
-    int qpStrIdx = url.indexOf('?' + SIGNATURE_QUERY_PARAM_KEY);
-    if (qpStrIdx == -1) {
-      qpStrIdx = url.indexOf('&' + SIGNATURE_QUERY_PARAM_KEY);
-    }
-    if (qpStrIdx == -1) {
-      return url;
-    }
-    final int sigStartIdx = qpStrIdx + SIGNATURE_QUERY_PARAM_KEY.length() + 1;
-    final int ampIdx = url.indexOf("&", sigStartIdx);
-    final int sigEndIndex = (ampIdx != -1) ? ampIdx : url.length();
-    String signature = url.substring(sigStartIdx, sigEndIndex);
-    return url.replace(signature, "XXXX");
-  }
-
-  public static String encodedUrlStr(String url) {
-    try {
-      return URLEncoder.encode(url, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      return "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
-    }
-  }
-
-  public String getSignatureMaskedUrl() {
-    if (this.maskedUrl == null) {
-      this.maskedUrl = getSignatureMaskedUrl(this.url.toString());
-      maskSASObjectIDs();
-    }
-    return this.maskedUrl;
-  }
-
-  public String getSignatureMaskedEncodedUrl() {
-    if (this.maskedEncodedUrl == null) {
-      this.maskedEncodedUrl = encodedUrlStr(getSignatureMaskedUrl());
-    }
-    return this.maskedEncodedUrl;
-  }
-
-  public void maskSASObjectIDs() {
-    int oidStartIdx, ampIdx, oidEndIndex, qpStrIdx;
-    for (String qpKey : SAS_OID_PARAM_KEYS) {
-      qpStrIdx = maskedUrl.indexOf('&' + qpKey);
-      if (qpStrIdx == -1) {
-        qpStrIdx = maskedUrl.indexOf('?' + qpKey);
-        if (qpStrIdx == -1) {
-          continue;
-        }
-      }
-      oidStartIdx = qpStrIdx + qpKey.length() + 1;
-      ampIdx = maskedUrl.indexOf("&", oidStartIdx);
-      oidEndIndex = (ampIdx != -1) ? ampIdx : maskedUrl.length();
-      maskedUrl = maskedUrl.substring(0, oidStartIdx + 5) + "XXXX" + maskedUrl
-          .substring(oidEndIndex);
-    }
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {

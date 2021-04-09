@@ -25,6 +25,8 @@ import java.net.URLEncoder;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
+
 public class TestAbfsHttpOperation {
 
   @Test
@@ -79,13 +81,13 @@ public class TestAbfsHttpOperation {
       final String url, final String expectedMaskedUrl)
       throws UnsupportedEncodingException {
 
-    Assertions.assertThat(AbfsHttpOperation.getSignatureMaskedUrl(url))
+    Assertions.assertThat(UriUtils.getMaskedUrl(url))
         .describedAs(url + " (" + scenario + ") after masking should be: "
             + expectedMaskedUrl).isEqualTo(expectedMaskedUrl);
 
     final String expectedMaskedEncodedUrl = URLEncoder
         .encode(expectedMaskedUrl, "UTF-8");
-    Assertions.assertThat(AbfsHttpOperation.encodedUrlStr(expectedMaskedUrl))
+    Assertions.assertThat(UriUtils.encodedUrlStr(expectedMaskedUrl))
         .describedAs(
             url + " (" + scenario + ") after masking and encoding should "
                 + "be: " + expectedMaskedEncodedUrl)

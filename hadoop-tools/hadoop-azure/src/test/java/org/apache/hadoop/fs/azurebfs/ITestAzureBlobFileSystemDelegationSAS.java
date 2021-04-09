@@ -64,7 +64,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrationTest {
   private static final String TEST_GROUP = UUID.randomUUID().toString();
-  private static final String[] OID_KEYS = {"skoid", "saoid", "suoid"};
+  private static final String[] OID_KEYS = {"skoid=", "saoid=", "suoid="};
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAzureBlobFileSystemDelegationSAS.class);
@@ -401,8 +401,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null);
     AbfsHttpOperation result = abfsHttpRestOperation.getResult();
-    String url = result.getSignatureMaskedUrl();
-    String encodedUrl = result.getSignatureMaskedEncodedUrl();
+    String url = result.getMaskedUrl();
+    String encodedUrl = result.getMaskedEncodedUrl();
     Assertions.assertThat(url.substring(url.indexOf("sig=")))
         .describedAs("Signature query param should be masked")
         .startsWith("sig=XXXX");
@@ -416,20 +416,20 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsHttpOperation abfsHttpOperation = fs.getAbfsClient().getAclStatus("/")
         .getResult();
-    String url = abfsHttpOperation.getSignatureMaskedUrl();
-    String encodedUrl = abfsHttpOperation.getSignatureMaskedEncodedUrl();
+    String url = abfsHttpOperation.getMaskedUrl();
+    String encodedUrl = abfsHttpOperation.getMaskedEncodedUrl();
     int startIndex;
     for (String qpKey : OID_KEYS) {
       startIndex = url.indexOf(qpKey);
       if (startIndex != -1) {
-        Assertions.assertThat(url.substring(startIndex + qpKey.length() + 5))
+        Assertions.assertThat(url.substring(startIndex + qpKey.length() + 4))
             .describedAs("OID query param should be masked in url")
             .startsWith("XXXX");
       }
       startIndex = encodedUrl.indexOf(qpKey);
       if (startIndex != -1) {
         Assertions
-            .assertThat(encodedUrl.substring(startIndex + qpKey.length() + 7))
+            .assertThat(encodedUrl.substring(startIndex + qpKey.length() + 6))
             .describedAs("OID query param should be masked in encoded url")
             .startsWith("XXXX");
       }

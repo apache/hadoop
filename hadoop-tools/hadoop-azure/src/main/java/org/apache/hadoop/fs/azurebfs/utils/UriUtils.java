@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.regex.Pattern;
 
 /**
@@ -26,6 +28,9 @@ import java.util.regex.Pattern;
 public final class UriUtils {
   private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
   private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
+  public static final String SIGNATURE_QUERY_PARAM_KEY = "sig=";
+  private static final String[] MASK_PARAM_KEYS = {"skoid=", "saoid=", "suoid=",
+      SIGNATURE_QUERY_PARAM_KEY};
 
   /**
    * Checks whether a string includes abfs url.
@@ -71,6 +76,44 @@ public final class UriUtils {
   public static String generateUniqueTestPath() {
     String testUniqueForkId = System.getProperty("test.unique.fork.id");
     return testUniqueForkId == null ? "/test" : "/" + testUniqueForkId + "/test";
+  }
+
+  public static String encodedUrlStr(String url) {
+    try {
+      return URLEncoder.encode(url, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      return "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
+    }
+  }
+
+  public static String getMaskedUrl(String url) {
+    return maskSigAndOIDs(url);
+  }
+
+  public static String getMaskedEncodedUrl(String url) {
+    return encodedUrlStr(getMaskedUrl(url));
+  }
+
+  public static String maskSigAndOIDs(String url) {
+    for (String qpKey : MASK_PARAM_KEYS) {
+      int qpStrIdx = url.indexOf('&' + qpKey);
+      if (qpStrIdx == -1) {
+        qpStrIdx = url.indexOf('?' + qpKey);
+        if (qpStrIdx == -1) {
+          continue;
+        }
+      }
+      int startIdx = qpStrIdx + qpKey.length() + 1;
+      int ampIdx = url.indexOf("&", startIdx);
+      int endIndex = (ampIdx != -1) ? ampIdx : url.length();
+      if (qpKey.equals(SIGNATURE_QUERY_PARAM_KEY)) {
+        String signature = url.substring(startIdx, endIndex);
+        url = url.replace(signature, "XXXX");
+      } else {
+        url = url.substring(0, startIdx + 4) + "XXXX" + url.substring(endIndex);
+      }
+    }
+    return url;
   }
 
   private UriUtils() {
