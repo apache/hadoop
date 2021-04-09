@@ -68,3 +68,20 @@ TEST(XPlatformSyscall, ClearBufferSafelyNumbers) {
     EXPECT_EQ(number, 0);
   }
 }
+
+TEST(XPlatformSyscall, StringCompareIgnoreCaseBasic) {
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase("aBcDeF", "AbCdEf"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase("a1B2c3D4e5F",
+                                                          "A1b2C3d4E5f"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase(
+      "a!1@B#2$c%3^D&4*e(5)F", "A!1@b#2$C%3^d&4*E(5)f"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase(
+      "a<!>1@B#2$c%3^D&4*e(5)F?:", "A<!>1@b#2$C%3^d&4*E(5)f?:"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase("12345", "12345"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase("", ""));
+}
+
+TEST(XPlatformSyscall, StringCompareIgnoreCaseNegative) {
+  EXPECT_FALSE(XPlatform::Syscall::StringCompareIgnoreCase("abcd", "abcde"));
+  EXPECT_FALSE(XPlatform::Syscall::StringCompareIgnoreCase("12345", "abcde"));
+}
