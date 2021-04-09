@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.net.HttpURLConnection;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -68,43 +66,6 @@ public final class AbfsIoUtils {
             values);
       }
     }
-  }
-
-  public static void dumpHeadersToDebugLog(final String origin,
-      final List<AbfsHttpHeader> headers) {
-    if (headers == null || headers.size() < 1) {
-      return;
-    }
-    LOG.debug("{}", origin);
-    for (AbfsHttpHeader header : headers) {
-      String key = header.getName();
-      String value = header.getValue();
-      if (key == null) {
-        key = "HTTP Response";
-      }
-      if (key.contains("Cookie")) {
-        value = "*cookie info*";
-      }
-      if (key.equals("sig")) {
-        value = "XXXX";
-      }
-      LOG.debug("  {}={}", key, value);
-    }
-  }
-
-  public static List<AbfsHttpHeader> getResponseHeaders(
-      final HttpURLConnection connection) {
-    final Map<String, List<String>> headers = connection.getHeaderFields();
-    final List<AbfsHttpHeader> responseHeaders = new ArrayList<>();
-    for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-      String key = entry.getKey();
-      if (key == null) {
-        key = "HTTP Response";
-      }
-      String values = StringUtils.join(";", entry.getValue());
-      responseHeaders.add(new AbfsHttpHeader(key, values));
-    }
-    return responseHeaders;
   }
 
 }

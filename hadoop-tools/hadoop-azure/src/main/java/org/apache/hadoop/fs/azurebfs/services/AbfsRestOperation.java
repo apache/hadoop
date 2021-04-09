@@ -36,8 +36,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperati
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY_SHA256;
-
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
@@ -52,7 +50,6 @@ public class AbfsRestOperation {
   private final URL url;
   // all the custom HTTP request headers provided by the caller
   private final List<AbfsHttpHeader> requestHeaders;
-  private List<AbfsHttpHeader> responseHeaders;
 
   // This is a simple operation class, where all the upload methods have a
   // request body and all the download methods have a response body.
@@ -290,10 +287,6 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
-      if (httpOperation != null) {
-        this.responseHeaders = httpOperation.getResponseHeaders();
-
-      }
       AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 
@@ -308,29 +301,7 @@ public class AbfsRestOperation {
     return true;
   }
 
-  private boolean isCPKShaMismatch() {
-    String shaSent = getHeader(requestHeaders, X_MS_ENCRYPTION_KEY_SHA256);
-    String shaReceived = getHeader(responseHeaders, X_MS_ENCRYPTION_KEY_SHA256);
-    boolean isCPKShaMismatch = !shaSent.equalsIgnoreCase(shaReceived);
-    if (isCPKShaMismatch) {
-      LOG.debug("The value sent and received for {} is different. Value "
-              + "sent: {}, value received: {}", X_MS_ENCRYPTION_KEY_SHA256,
-          shaSent,
-          shaReceived);
-    }
-    return isCPKShaMismatch;
-  }
-
-  private String getHeader(List<AbfsHttpHeader> headers, String headerName){
-    for(AbfsHttpHeader header : headers){
-      if(header.getName().equalsIgnoreCase(headerName)){
-        return header.getValue();
-      }
-    }
-    return "";
-  }
-
-  /**
+   /**
    * Incrementing Abfs counters with a long value.
    *
    * @param statistic the Abfs statistic that needs to be incremented.
@@ -342,7 +313,4 @@ public class AbfsRestOperation {
     }
   }
 
-  public List<AbfsHttpHeader> getResponseHeaders() {
-    return this.responseHeaders;
-  }
 }

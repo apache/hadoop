@@ -34,7 +34,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;

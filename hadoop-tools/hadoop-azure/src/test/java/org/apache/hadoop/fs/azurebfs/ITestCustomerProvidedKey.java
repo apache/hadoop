@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.services.*;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -52,11 +53,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
-import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
-import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -81,7 +77,9 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int INT_512 = 512;
   private static final int INT_50 = 50;
+  private static final int ENCRYPTION_KEY_LEN = 32;
   private static final int FILE_SIZE = 10 * ONE_MB;
+  private static final int FILE_SIZE_FOR_COPY_BETWEEN_ACCOUNTS = 24 * ONE_MB;
 
   public ITestCustomerProvidedKey() throws Exception {
     boolean isCPKTestsEnabled =
@@ -298,7 +296,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
     //  Create fs1 and a file with CPK
     AzureBlobFileSystem fs1 = getAbfs(true);
-    int fileSize = 24 * ONE_MB;
+    int fileSize = FILE_SIZE_FOR_COPY_BETWEEN_ACCOUNTS;
     byte[] fileContent = getRandomBytesArray(fileSize);
     Path testFilePath = createFileWithContent(fs1, "fs1-file.txt", fileContent);
 
@@ -406,7 +404,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .listPath(testDirName, false, INT_50, null);
     assertListstatus(fs, abfsRestOperation, testPath);
 
-    if(isWithCPK) {
+    if (isWithCPK) {
       //  Trying with no CPK headers
       conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
       AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
@@ -541,7 +539,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     });
 
     //  Trying to read with no CPK headers
-    if(isWithCPK) {
+    if (isWithCPK) {
       conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
       AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
       AbfsClient abfsClient3 = fs3.getAbfsClient();
@@ -783,22 +781,14 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   }
 
   private void assertResponseHeader(AbfsRestOperation abfsRestOperation,
-      boolean isHeaderExpected, String headerName, String expectedValue) {
-    boolean isHeaderFound = false;
-    String key, val = null;
-    for (AbfsHttpHeader respHeader : abfsRestOperation.getResponseHeaders()) {
-      key = respHeader.getName();
-      val = respHeader.getValue();
-      if (key.equals(headerName)) {
-        isHeaderFound = true;
-        break;
-      }
+                                    boolean isHeaderExpected, String headerName, String expectedValue) {
+    final AbfsHttpOperation result = abfsRestOperation.getResult();
+    final String value = result.getResponseHeader(headerName);
+    if (isHeaderExpected) {
+      Assertions.assertThat(value).isEqualTo(expectedValue);
+    } else {
+      Assertions.assertThat(value).isNull();
     }
-    Assertions.assertThat(isHeaderFound).isEqualTo(isHeaderExpected);
-    if (!isHeaderExpected) {
-      return;
-    }
-    Assertions.assertThat(val).isEqualTo(expectedValue);
   }
 
   private void assertHeader(AbfsRestOperation abfsRestOperation,
@@ -932,7 +922,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
       cpk = "01234567890123456789012345678912";
     }
     cpk = "different-" + cpk;
-    String differentCpk = cpk.substring(0, 31);
+    String differentCpk = cpk.substring(0, ENCRYPTION_KEY_LEN - 1);
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         differentCpk);
     conf.set("fs.defaultFS",

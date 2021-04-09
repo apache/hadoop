@@ -224,7 +224,7 @@ public abstract class AbstractAbfsIntegrationTest extends
       this.fileSystemName = authorityParts[0];
 
       // Reset URL with configured filesystem
-      final String abfsUrl = this.getFileSystemName() + "@" + authorityParts[1];
+      final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
       URI defaultUri = null;
 
       defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
