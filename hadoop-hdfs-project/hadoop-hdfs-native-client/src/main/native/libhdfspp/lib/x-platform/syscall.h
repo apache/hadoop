@@ -48,6 +48,29 @@ class Syscall {
    */
   static int WriteToStdout(const char* message);
 
+  /**
+   * Checks whether the {@link str} argument matches the {@link pattern}
+   * argument, which is a shell wildcard pattern.
+   *
+   * @param pattern The wildcard pattern to use.
+   * @param str The string to match.
+   * @returns A boolean indicating whether the given {@link str}
+   * matches {@link pattern}.
+   */
+  static bool FnMatch(const std::string& pattern, const std::string& str);
+
+  /**
+   * Clears the given {@link buffer} upto {@link sz_bytes} by
+   * filling them with zeros. This method is immune to compiler
+   * optimizations and guarantees that the first {@link sz_bytes} of
+   * {@link buffer} is cleared. The {@link buffer} must be at least
+   * as big as {@link sz_bytes}, the behaviour is undefined otherwise.
+   *
+   * @param buffer the pointer to the buffer to clear.
+   * @param sz_bytes the count of the bytes to clear.
+   */
+  static void ClearBufferSafely(void* buffer, size_t sz_bytes);
+
  private:
   static bool WriteToStdoutImpl(const char* message);
 };

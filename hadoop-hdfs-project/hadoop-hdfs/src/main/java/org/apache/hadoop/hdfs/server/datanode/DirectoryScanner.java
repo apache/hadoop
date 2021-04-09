@@ -173,7 +173,8 @@ public class DirectoryScanner implements Runnable {
     /**
      * Create a new info list initialized to the given expected size.
      *
-     * @param sz initial expected size
+     * @param volume
+     * @param blockPools list of known block pools
      */
     ScanInfoVolumeReport(final FsVolumeSpi volume,
         final Collection<String> blockPools) {
@@ -220,8 +221,6 @@ public class DirectoryScanner implements Runnable {
 
     /**
      * Create a block pool report.
-     *
-     * @param volume
      */
     BlockPoolReport() {
       this.blockPools = new HashSet<>(2);

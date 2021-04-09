@@ -568,7 +568,7 @@ public class TestFsck {
           }
         }
       } finally {
-        IOUtils.cleanup(null, in);
+        IOUtils.cleanupWithLogger(null, in);
       }
     }
   }
@@ -1136,7 +1136,7 @@ public class TestFsck {
     String outStr = runFsck(conf, 0, false, "/corruptData",
         "-list-corruptfileblocks");
     System.out.println("1. good fsck out: " + outStr);
-    assertTrue(outStr.contains("has 0 CORRUPT files"));
+    assertTrue(outStr.contains("has 0 CORRUPT blocks"));
     // delete the blocks
     final String bpid = cluster.getNamesystem().getBlockPoolId();
     for (int i=0; i<4; i++) {
@@ -1159,19 +1159,19 @@ public class TestFsck {
     waitForCorruptionBlocks(3, "/corruptData");
     outStr = runFsck(conf, -1, true, "/corruptData", "-list-corruptfileblocks");
     System.out.println("2. bad fsck out: " + outStr);
-    assertTrue(outStr.contains("has 3 CORRUPT files"));
+    assertTrue(outStr.contains("has 3 CORRUPT blocks"));
 
     // Do a listing on a dir which doesn't have any corrupt blocks and validate
     util.createFiles(fs, "/goodData");
     outStr = runFsck(conf, 0, true, "/goodData", "-list-corruptfileblocks");
     System.out.println("3. good fsck out: " + outStr);
-    assertTrue(outStr.contains("has 0 CORRUPT files"));
+    assertTrue(outStr.contains("has 0 CORRUPT blocks"));
     util.cleanup(fs, "/goodData");
 
     // validate if a directory have any invalid entries
     util.createFiles(fs, "/corruptDa");
     outStr = runFsck(conf, 0, true, "/corruptDa", "-list-corruptfileblocks");
-    assertTrue(outStr.contains("has 0 CORRUPT files"));
+    assertTrue(outStr.contains("has 0 CORRUPT blocks"));
     util.cleanup(fs, "/corruptData");
     util.cleanup(fs, "/corruptDa");
   }
@@ -2120,7 +2120,7 @@ public class TestFsck {
     String outStr =
         runFsck(conf, 0, false, "/corruptData", "-list-corruptfileblocks");
     System.out.println("1. good fsck out: " + outStr);
-    assertTrue(outStr.contains("has 0 CORRUPT files"));
+    assertTrue(outStr.contains("has 0 CORRUPT blocks"));
     // delete the blocks
     final String bpid = cluster.getNamesystem().getBlockPoolId();
     for (int i=0; i<numFiles; i++) {
@@ -2150,14 +2150,14 @@ public class TestFsck {
         "-list-corruptfileblocks", "-includeSnapshots");
     System.out.println("2. bad fsck include snapshot out: " + outStr);
     assertTrue(outStr
-        .contains("has " + (numFiles + numSnapshots) + " CORRUPT files"));
+        .contains("has " + (numFiles + numSnapshots) + " CORRUPT blocks"));
     assertTrue(outStr.contains("/.snapshot/"));
 
     // without -includeSnapshots only non-snapshots are reported
     outStr =
         runFsck(conf, -1, true, "/corruptData", "-list-corruptfileblocks");
     System.out.println("3. bad fsck exclude snapshot out: " + outStr);
-    assertTrue(outStr.contains("has " + numFiles + " CORRUPT files"));
+    assertTrue(outStr.contains("has " + numFiles + " CORRUPT blocks"));
     assertFalse(outStr.contains("/.snapshot/"));
   }
 
@@ -2403,7 +2403,7 @@ public class TestFsck {
     assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
     assertTrue(outStr.contains("Under-erasure-coded block groups:\t0"));
     outStr = runFsck(conf, -1, true, "/", "-list-corruptfileblocks");
-    assertTrue(outStr.contains("has 1 CORRUPT files"));
+    assertTrue(outStr.contains("has 1 CORRUPT blocks"));
   }
 
   @Test (timeout = 300000)
@@ -2448,7 +2448,7 @@ public class TestFsck {
     assertTrue(outStr.contains("Live_repl=" + (dataBlocks - 1)));
     assertTrue(outStr.contains("Under-erasure-coded block groups:\t0"));
     outStr = runFsck(conf, -1, true, "/", "-list-corruptfileblocks");
-    assertTrue(outStr.contains("has 1 CORRUPT files"));
+    assertTrue(outStr.contains("has 1 CORRUPT blocks"));
   }
 
   private void waitForUnrecoverableBlockGroup(Configuration configuration)
@@ -2511,13 +2511,17 @@ public class TestFsck {
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
        @Override
         public Void run() throws Exception {
-         String path = "/";
-         String outStr = runFsck(conf, -1, true, path, "-list-corruptfileblocks");
+        String path = "/";
+        String outStr =
+            runFsck(conf, -1, true, path, "-list-corruptfileblocks");
 
-         assertFalse(outStr.contains("The list of corrupt files under path '" + path + "' are:"));
-         assertFalse(outStr.contains("The filesystem under path '" + path + "' has "));
-         assertTrue(outStr.contains("Failed to open path '" + path + "': Permission denied"));
-         return null;
+        assertFalse(outStr.contains(
+            "The list of corrupt blocks under path '" + path + "' are:"));
+        assertFalse(
+            outStr.contains("The filesystem under path '" + path + "' has "));
+        assertTrue(outStr
+            .contains("Failed to open path '" + path + "': Permission denied"));
+        return null;
        }
       });
   }

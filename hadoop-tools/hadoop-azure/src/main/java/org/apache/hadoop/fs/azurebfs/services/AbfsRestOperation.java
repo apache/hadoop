@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -233,7 +232,13 @@ public class AbfsRestOperation {
               hasRequestBody ? bufferLength : 0);
           break;
       }
+    } catch (IOException e) {
+      LOG.debug("Auth failure: {}, {}", method, url);
+      throw new AbfsRestOperationException(-1, null,
+          "Auth failure: " + e.getMessage(), e);
+    }
 
+    try {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
@@ -256,9 +261,7 @@ public class AbfsRestOperation {
       }
     } catch (UnknownHostException ex) {
       String hostname = null;
-      if (httpOperation != null) {
-        hostname = httpOperation.getHost();
-      }
+      hostname = httpOperation.getHost();
       LOG.warn("Unknown host name: %s. Retrying to resolve the host name...",
           hostname);
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -267,22 +270,11 @@ public class AbfsRestOperation {
       return false;
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
-        if (httpOperation != null) {
-          LOG.debug("HttpRequestFailure: " + httpOperation.toString(), ex);
-        } else {
-          LOG.debug("HttpRequestFailure: " + method + "," + url, ex);
-        }
+        LOG.debug("HttpRequestFailure: {}, {}", httpOperation.toString(), ex);
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
-      }
-
-      // once HttpException is thrown by AzureADAuthenticator,
-      // it indicates the policy in AzureADAuthenticator determined
-      // retry is not needed
-      if (ex instanceof HttpException) {
-        throw new AbfsRestOperationException((HttpException) ex);
       }
 
       return false;
