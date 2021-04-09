@@ -40,8 +40,8 @@ public class TestAbfsHttpOperation {
         "http://www.testurl.net?saoid=abcdXXXX");
 
     testIfMaskAndEncodeSuccessful("Where sig is the first query param, oid is last",
-        "http://www.testurl.net?sig=abcd&abc=xyz&saoid=abcd456",
-        "http://www.testurl.net?sig=XXXX&abc=xyz&saoid=abcdXXXX");
+        "http://www.testurl.net?sig=abcd&abc=xyz&saoid=pqrs456",
+        "http://www.testurl.net?sig=XXXX&abc=xyz&saoid=pqrsXXXX");
 
     testIfMaskAndEncodeSuccessful(
         "Where sig/oid are neither first nor last query param",
@@ -49,8 +49,8 @@ public class TestAbfsHttpOperation {
         "http://www.testurl.net?lmn=abc&sig=XXXX&suoid=mnopXXXX&abc=xyz");
 
     testIfMaskAndEncodeSuccessful("Where sig is the last query param, oid is first",
-        "http://www.testurl.net?skoid=abcd123&abc=xyz&sig=abcd",
-        "http://www.testurl.net?skoid=abcdXXXX&abc=xyz&sig=XXXX");
+        "http://www.testurl.net?skoid=pqrs123&abc=xyz&sig=abcd",
+        "http://www.testurl.net?skoid=pqrsXXXX&abc=xyz&sig=XXXX");
 
     testIfMaskAndEncodeSuccessful("Where sig/oid query param are not present",
         "http://www.testurl.net?abc=xyz", "http://www.testurl.net?abc=xyz");

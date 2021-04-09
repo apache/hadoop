@@ -87,14 +87,6 @@ public final class UriUtils {
   }
 
   public static String getMaskedUrl(String url) {
-    return maskSigAndOIDs(url);
-  }
-
-  public static String getMaskedEncodedUrl(String url) {
-    return encodedUrlStr(getMaskedUrl(url));
-  }
-
-  public static String maskSigAndOIDs(String url) {
     for (String qpKey : MASK_PARAM_KEYS) {
       int qpStrIdx = url.indexOf('&' + qpKey);
       if (qpStrIdx == -1) {
