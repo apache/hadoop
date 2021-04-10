@@ -18,6 +18,9 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ThreadUtil;
 import org.junit.Assert;
@@ -278,6 +281,42 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
       } finally {
         latch.countDown();
       }
+    }
+  }
+  @Test
+  public void testReleaseVolumeRefIfExceptionThrown() throws IOException {
+    getClusterBuilder().setRamDiskReplicaCapacity(2).build();
+    final String METHOD_NAME = GenericTestUtils.getMethodName();
+    final int SEED = 0xFADED;
+    Path path = new Path("/" + METHOD_NAME + ".Writer.File.dat");
+
+    DataNode dn = cluster.getDataNodes().get(0);
+    FsDatasetSpi.FsVolumeReferences volumes =
+        DataNodeTestUtils.getFSDataset(dn).getFsVolumeReferences();
+    int[] beforeCnts = new int[volumes.size()];
+    try {
+      FsDatasetImpl ds = (FsDatasetImpl) DataNodeTestUtils.getFSDataset(dn);
+
+      // Create a runtime exception
+      ds.asyncLazyPersistService.shutdown();
+      for (int i = 0; i < volumes.size(); ++i) {
+        beforeCnts[i] = ((FsVolumeImpl) volumes.get(i)).getReferenceCount();
+      }
+
+      makeRandomTestFile(path, BLOCK_SIZE, true, SEED);
+      Thread.sleep(3 * LAZY_WRITER_INTERVAL_SEC * 1000);
+
+      for (int i = 0; i < volumes.size(); ++i) {
+        int afterCnt = ((FsVolumeImpl) volumes.get(i)).getReferenceCount();
+        // LazyWriter keeps trying to save copies even if
+        // asyncLazyPersistService is already shutdown.
+        // If we do not release references, the number of
+        // references will increase infinitely.
+        Assert.assertTrue(
+            beforeCnts[i] == afterCnt || beforeCnts[i] == (afterCnt - 1));
+      }
+    } catch (InterruptedException e) {
+      e.printStackTrace();
     }
   }
 }
