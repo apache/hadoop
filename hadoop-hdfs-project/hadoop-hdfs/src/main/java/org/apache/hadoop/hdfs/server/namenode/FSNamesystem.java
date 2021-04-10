@@ -8565,12 +8565,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Check if snapshot roots are created for all existing snapshottable
    * directories. Create them if not.
-   * Only the active NameNode needs to execute this in HA setup.
+   * Only the active NameNode needs to execute this in HA setup once it is out
+   * of safe mode.
+   *
+   * The function gets called while exiting safe mode or post starting the
+   * services in Active NameNode, but comes into effect post whichever event
+   * happens later.
    */
   @Override
-  public void checkAndProvisionSnapshotTrashRoots() {
+  public synchronized void checkAndProvisionSnapshotTrashRoots() {
     if (isSnapshotTrashRootEnabled && (haEnabled && inActiveState()
-        || !haEnabled)) {
+        || !haEnabled) && !blockManager.isInSafeMode()) {
       try {
         SnapshottableDirectoryStatus[] dirStatusList =
             getSnapshottableDirListing();
