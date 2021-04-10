@@ -911,17 +911,16 @@ public class TestHASafeMode {
   }
 
   @Test
-  public void testNameNodeCreateSnapshotTrashRootOnHASetup()
-      throws Exception {
-     DistributedFileSystem dfs = cluster.getFileSystem(0);
-      final Path testDir = new Path("/disallowss/test2/");
-      final Path file0path = new Path(testDir, "file-0");
-      dfs.create(file0path).close();
-      dfs.allowSnapshot(testDir);
-      // .Trash won't be created right now since snapshot trash is disabled
-      final Path trashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
-      assertFalse(dfs.exists(trashRoot));
-      // Set dfs.namenode.snapshot.trashroot.enabled=true
+  public void testNameNodeCreateSnapshotTrashRootOnHASetup() throws Exception {
+    DistributedFileSystem dfs = cluster.getFileSystem(0);
+    final Path testDir = new Path("/disallowss/test2/");
+    final Path file0path = new Path(testDir, "file-0");
+    dfs.create(file0path).close();
+    dfs.allowSnapshot(testDir);
+    // .Trash won't be created right now since snapshot trash is disabled
+    final Path trashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
+    assertFalse(dfs.exists(trashRoot));
+    // Set dfs.namenode.snapshot.trashroot.enabled=true
     cluster.getNameNode(0).getConf()
         .setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
     cluster.getNameNode(1).getConf()
