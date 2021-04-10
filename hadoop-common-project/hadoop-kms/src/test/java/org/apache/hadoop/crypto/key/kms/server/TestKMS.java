@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
@@ -92,7 +91,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
