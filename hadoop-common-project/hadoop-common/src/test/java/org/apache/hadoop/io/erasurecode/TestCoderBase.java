@@ -527,4 +527,16 @@ public abstract class TestCoderBase {
       buffer.position(buffer.position() + 1);
     }
   }
+
+  /**
+   * Pollute some chunk.
+   * @param chunks
+   */
+  protected void polluteSomeChunk(ECChunk[] chunks) {
+    int idx = new Random().nextInt(chunks.length);
+    ByteBuffer buffer = chunks[idx].getBuffer();
+    buffer.mark();
+    buffer.put((byte) ((buffer.get(buffer.position()) + 1)));
+    buffer.reset();
+  }
 }
