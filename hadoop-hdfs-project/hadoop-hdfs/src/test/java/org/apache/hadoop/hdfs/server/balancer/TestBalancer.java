@@ -1024,14 +1024,14 @@ public class TestBalancer {
 
           // clean all lists
           b.resetData(conf);
-          if (r.exitStatus == ExitStatus.IN_PROGRESS) {
+          if (r.getExitStatus() == ExitStatus.IN_PROGRESS) {
             done = false;
-          } else if (r.exitStatus != ExitStatus.SUCCESS) {
+          } else if (r.getExitStatus() != ExitStatus.SUCCESS) {
             //must be an error statue, return.
-            return r.exitStatus.getExitCode();
+            return r.getExitStatus().getExitCode();
           } else {
             if (iteration > 0) {
-              assertTrue(r.bytesAlreadyMoved > 0);
+              assertTrue(r.getBytesAlreadyMoved() > 0);
             }
           }
         }
@@ -1610,9 +1610,9 @@ public class TestBalancer {
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, blockSize);
     // limit the worker thread count of Balancer to have only 1 queue per DN
     conf.setInt(DFSConfigKeys.DFS_BALANCER_MOVERTHREADS_KEY, 1);
-    // limit the bandwitdh to 1 packet per sec to emulate slow block moves
+    // limit the bandwidth to 4MB per sec to emulate slow block moves
     conf.setLong(DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY,
-        64 * 1024);
+        4 * 1024 * 1024);
     // set client socket timeout to have an IN_PROGRESS notification back from
     // the DataNode about the copy in every second.
     conf.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 2000L);
@@ -1643,31 +1643,22 @@ public class TestBalancer {
       List<NameNodeConnector> connectors = Collections.emptyList();
       try {
         BalancerParameters bParams = BalancerParameters.DEFAULT;
+        // set maxIdleIterations to 1 for NO_MOVE_PROGRESS to be
+        // reported when there is no block move
         connectors = NameNodeConnector.newNameNodeConnectors(
             DFSUtil.getInternalNsRpcUris(conf), Balancer.class.getSimpleName(),
-            Balancer.BALANCER_ID_PATH, conf, bParams.getMaxIdleIteration());
+            Balancer.BALANCER_ID_PATH, conf, 1);
         for (NameNodeConnector nnc : connectors) {
           LOG.info("NNC to work on: " + nnc);
           Balancer b = new Balancer(nnc, bParams, conf);
-          long startTime = Time.monotonicNow();
           Result r = b.runOneIteration();
-          long runtime = Time.monotonicNow() - startTime;
-          assertEquals("We expect ExitStatus.IN_PROGRESS to be reported.",
-              ExitStatus.IN_PROGRESS, r.exitStatus);
-          // accept runtime if it is under 3.5 seconds, as we need to wait for
-          // IN_PROGRESS report from DN, and some spare to be able to finish.
-          // NOTE: This can be a source of flaky tests, if the box is busy,
-          // assertion here is based on the following: Balancer is already set
-          // up, iteration gets the blocks from the NN, and makes the decision
-          // to move 2 blocks. After that the PendingMoves are scheduled, and
-          // DataNode heartbeats in for the Balancer every second, iteration is
-          // two seconds long. This means that it will fail if the setup and the
-          // heartbeat from the DataNode takes more than 500ms, as the iteration
-          // should end at the 3rd second from start. As the number of
-          // operations seems to be pretty low, and all comm happens locally, I
-          // think the possibility of a failure due to node busyness is low.
-          assertTrue("Unexpected iteration runtime: " + runtime + "ms > 3.5s",
-              runtime < 3500);
+          // Since no block cannot be moved in 2 seconds (i.e.,
+          // 4MB/s * 2s = 8MB < 10MB), NO_MOVE_PROGRESS will be reported.
+          // When a block move is not canceled in 2 seconds properly and then
+          // a block is moved unexpectedly, IN_PROGRESS will be reported.
+          assertEquals("We expect ExitStatus.NO_MOVE_PROGRESS to be reported.",
+              ExitStatus.NO_MOVE_PROGRESS, r.getExitStatus());
+          assertEquals(0, r.getBlocksMoved());
         }
       } finally {
         for (NameNodeConnector nnc : connectors) {
@@ -2307,7 +2298,23 @@ public class TestBalancer {
       maxUsage = Math.max(maxUsage, datanodeReport[i].getDfsUsed());
     }
 
-    assertEquals(200, balancerResult.bytesAlreadyMoved);
+    // The 95% usage DN will have 9 blocks of 100B and 1 block of 50B - all for the same file.
+    // The HDFS balancer will choose a block to move from this node randomly. More likely it will
+    // be 100B block. Since 100B is greater than DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY which is 99L,
+    // it will stop here. Total bytes moved from this 95% DN will be 1 block of size 100B.
+    // However, chances are the first block selected to be moved from this 95% DN is the 50B block.
+    // After this block is moved, the total moved size so far would be 50B which is smaller than
+    // DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY (99L), hence it will try to move another block.
+    // The second block will always be of size 100B. So total bytes moved from this 95% DN will be
+    // 2 blocks of size (100B + 50B) 150B.
+    // Hence, overall total blocks moved by HDFS balancer would be either of these 2 options:
+    // a) 2 blocks of total size (100B + 100B)
+    // b) 3 blocks of total size (50B + 100B + 100B)
+    assertTrue("BalancerResult is not as expected. " + balancerResult,
+        (balancerResult.getBytesAlreadyMoved() == 200
+            && balancerResult.getBlocksMoved() == 2)
+            || (balancerResult.getBytesAlreadyMoved() == 250
+            && balancerResult.getBlocksMoved() == 3));
     // 100% and 95% used nodes will be balanced, so top used will be 900
     assertEquals(900, maxUsage);
   }

@@ -173,7 +173,7 @@ public abstract class QJMTestUtil {
         lastRecoveredTxn = elis.getLastTxId();
       }
     } finally {
-      IOUtils.cleanup(null, streams.toArray(new Closeable[0]));
+      IOUtils.cleanupWithLogger(null, streams.toArray(new Closeable[0]));
     }
     return lastRecoveredTxn;
   }

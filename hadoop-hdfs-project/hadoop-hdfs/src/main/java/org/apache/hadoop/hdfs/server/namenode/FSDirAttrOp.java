@@ -434,6 +434,8 @@ public class FSDirAttrOp {
     }
     final int snapshotId = iip.getLatestSnapshotId();
     if (inode.isFile()) {
+      FSDirectory.LOG.debug("DIR* FSDirAAr.unprotectedSetStoragePolicy for " +
+              "File.");
       if (policyId != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
         BlockStoragePolicy newPolicy = bm.getStoragePolicy(policyId);
         if (newPolicy.isCopyOnCreateFile()) {
@@ -452,6 +454,8 @@ public class FSDirAttrOp {
       }
       inode.asFile().setStoragePolicyID(policyId, snapshotId);
     } else if (inode.isDirectory()) {
+      FSDirectory.LOG.debug("DIR* FSDirAAr.unprotectedSetStoragePolicy for " +
+              "Directory.");
       setDirStoragePolicy(fsd, iip, policyId);
     } else {
       throw new FileNotFoundException(iip.getPath()

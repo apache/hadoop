@@ -74,7 +74,7 @@ static void init_protectedpaths(dfs_context *dfs)
     }
     dfs->protectedpaths[j] = (char*)malloc(sizeof(char)*length+1);
     assert(dfs->protectedpaths[j]);
-    strncpy(dfs->protectedpaths[j], tmp, length);
+    memcpy(dfs->protectedpaths[j], tmp, length);
     dfs->protectedpaths[j][length] = '\0';
     if (eos) {
       tmp = eos + 1;

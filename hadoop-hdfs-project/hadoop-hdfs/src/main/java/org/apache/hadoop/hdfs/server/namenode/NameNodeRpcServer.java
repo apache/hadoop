@@ -854,6 +854,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void unsetStoragePolicy(String src)
       throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.unsetStoragePolicy for path: {}", src);
     namesystem.unsetStoragePolicy(src);
   }
 
@@ -861,12 +862,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.setStoragePolicy for path: {}, " +
+            "policyName: {}", src, policyName);
     namesystem.setStoragePolicy(src, policyName);
   }
 
   @Override
   public BlockStoragePolicy getStoragePolicy(String path) throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.getStoragePolicy for path: {}", path);
     return namesystem.getStoragePolicy(path);
   }
 
@@ -1045,6 +1049,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void concat(String trg, String[] src) throws IOException {
     checkNNStartup();
+    stateChangeLog.debug("*DIR* NameNode.concat: src path {} to" +
+        " target path {}", Arrays.toString(src), trg);
     namesystem.checkOperation(OperationCategory.WRITE);
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {

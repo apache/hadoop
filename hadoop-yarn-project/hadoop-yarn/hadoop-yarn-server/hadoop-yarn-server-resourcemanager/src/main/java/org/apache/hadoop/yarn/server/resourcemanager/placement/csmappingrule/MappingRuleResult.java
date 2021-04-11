@@ -153,6 +153,8 @@ public final class MappingRuleResult {
   /**
    * Generator method for place results.
    * @param queue The name of the queue in which we shall place the application
+   * @param allowCreate Flag to indicate if the placement rule is allowed to
+   *                    create a queue if possible.
    * @return The generated MappingRuleResult
    */
   public static MappingRuleResult createPlacementResult(

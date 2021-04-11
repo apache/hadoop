@@ -275,7 +275,7 @@ public class QuotaCounts {
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
-    } else if (obj == null || !(obj instanceof QuotaCounts)) {
+    } else if (!(obj instanceof QuotaCounts)) {
       return false;
     }
     final QuotaCounts that = (QuotaCounts)obj;

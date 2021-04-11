@@ -153,7 +153,7 @@ public abstract class TestDistCpSyncReverseBase {
 
   @After
   public void tearDown() throws Exception {
-    IOUtils.cleanup(null, dfs);
+    IOUtils.cleanupWithLogger(null, dfs);
     if (cluster != null) {
       cluster.shutdown();
     }

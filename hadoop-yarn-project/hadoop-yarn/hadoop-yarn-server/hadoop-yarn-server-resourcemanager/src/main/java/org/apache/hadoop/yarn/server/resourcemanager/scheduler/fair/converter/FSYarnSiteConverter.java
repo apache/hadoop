@@ -20,6 +20,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueDeletionPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
@@ -36,7 +38,9 @@ public class FSYarnSiteConverter {
 
   @SuppressWarnings({"deprecation", "checkstyle:linelength"})
   public void convertSiteProperties(Configuration conf,
-      Configuration yarnSiteConfig, boolean drfUsed, boolean enableAsyncScheduler) {
+      Configuration yarnSiteConfig, boolean drfUsed,
+      boolean enableAsyncScheduler, boolean userPercentage,
+      FSConfigToCSConfigConverterParams.PreemptionMode preemptionMode) {
     yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
 
@@ -52,11 +56,19 @@ public class FSYarnSiteConverter {
           "schedule-asynchronously.scheduling-interval-ms", interval);
     }
 
+    // This should be always true to trigger cs auto
+    // refresh queue.
+    yarnSiteConfig.setBoolean(
+        YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
+
     if (conf.getBoolean(FairSchedulerConfiguration.PREEMPTION,
         FairSchedulerConfiguration.DEFAULT_PREEMPTION)) {
-      yarnSiteConfig.setBoolean(
-          YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
       preemptionEnabled = true;
+
+      String policies = addMonitorPolicy(ProportionalCapacityPreemptionPolicy.
+          class.getCanonicalName(), yarnSiteConfig);
+      yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+          policies);
 
       int waitTimeBeforeKill = conf.getInt(
           FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL,
@@ -71,6 +83,23 @@ public class FSYarnSiteConverter {
       yarnSiteConfig.setLong(
           CapacitySchedulerConfiguration.PREEMPTION_MONITORING_INTERVAL,
           waitBeforeNextStarvationCheck);
+    } else {
+      if (preemptionMode ==
+          FSConfigToCSConfigConverterParams.PreemptionMode.NO_POLICY) {
+        yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES, "");
+      }
+    }
+
+    // For auto created queue's auto deletion.
+    if (!userPercentage) {
+      String policies = addMonitorPolicy(AutoCreatedQueueDeletionPolicy.
+          class.getCanonicalName(), yarnSiteConfig);
+      yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+          policies);
+
+      // Set the expired for deletion interval to 10s, consistent with fs.
+      yarnSiteConfig.setInt(CapacitySchedulerConfiguration.
+          AUTO_CREATE_CHILD_QUEUE_EXPIRED_TIME, 10);
     }
 
     if (conf.getBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE,
@@ -132,4 +161,17 @@ public class FSYarnSiteConverter {
   public boolean isSizeBasedWeight() {
     return sizeBasedWeight;
   }
+
+  private String addMonitorPolicy(String policyName,
+      Configuration yarnSiteConfig) {
+    String policies =
+        yarnSiteConfig.get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES);
+    if (policies == null || policies.isEmpty()) {
+      policies = policyName;
+    } else {
+      policies += "," + policyName;
+    }
+    return policies;
+  }
+
 }

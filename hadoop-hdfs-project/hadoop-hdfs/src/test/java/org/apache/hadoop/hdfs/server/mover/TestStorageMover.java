@@ -230,7 +230,7 @@ public class TestStorageMover {
     }
 
     void shutdownCluster() throws Exception {
-      IOUtils.cleanup(null, dfs);
+      IOUtils.cleanupWithLogger(null, dfs);
       if (cluster != null) {
         cluster.shutdown();
       }

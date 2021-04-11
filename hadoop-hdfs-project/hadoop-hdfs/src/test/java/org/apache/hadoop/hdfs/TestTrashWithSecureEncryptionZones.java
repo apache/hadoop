@@ -229,7 +229,7 @@ public class TestTrashWithSecureEncryptionZones {
 
   @AfterClass
   public static void destroy() {
-    IOUtils.cleanup(null, fs);
+    IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;

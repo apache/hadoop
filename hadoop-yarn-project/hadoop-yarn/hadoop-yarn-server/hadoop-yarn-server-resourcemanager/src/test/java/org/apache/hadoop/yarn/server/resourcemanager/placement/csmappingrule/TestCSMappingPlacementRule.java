@@ -64,7 +64,7 @@ public class TestCSMappingPlacementRule {
   public TemporaryFolder folder = new TemporaryFolder();
 
   private Map<String, Set<String>> userGroups = ImmutableMap.of(
-      "alice", ImmutableSet.of("p_alice", "user", "developer"),
+      "alice", ImmutableSet.of("p_alice", "unique", "user"),
       "bob", ImmutableSet.of("p_bob", "user", "developer"),
       "charlie", ImmutableSet.of("p_charlie", "user", "tester"),
       "dave", ImmutableSet.of("user"),
@@ -79,6 +79,8 @@ public class TestCSMappingPlacementRule {
         .withManagedParentQueue("root.man")
         .withQueue("root.user.alice")
         .withQueue("root.user.bob")
+        .withQueue("root.secondaryTests.unique")
+        .withQueue("root.secondaryTests.user")
         .withQueue("root.ambiguous.user.charlie")
         .withQueue("root.ambiguous.user.dave")
         .withQueue("root.ambiguous.user.ambi")
@@ -91,13 +93,12 @@ public class TestCSMappingPlacementRule {
         .withManagedParentQueue("root.ambiguous.deep.managed")
         .withQueue("root.disambiguous.deep.disambiuser.emily")
         .withQueue("root.disambiguous.deep.disambiuser.disambi")
-        .withQueue("root.disambiguous.deep.group.developer")
+        .withManagedParentQueue("root.disambiguous.deep.group.developer")
         .withManagedParentQueue("root.disambiguous.deep.dman")
         .withDynamicParentQueue("root.dynamic")
         .build();
 
     when(queueManager.getQueue(isNull())).thenReturn(null);
-    when(queueManager.isAmbiguous("primarygrouponly")).thenReturn(true);
   }
 
   private CSMappingPlacementRule setupEngine(
@@ -479,14 +480,6 @@ public class TestCSMappingPlacementRule {
         "queue 'root.user.bob'", engine, appBob, "alice", "root.user.bob");
   }
 
-  private MappingRule createGroupMapping(String group, String queue) {
-    MappingRuleMatcher matcher = MappingRuleMatchers.createUserGroupMatcher(group);
-    MappingRuleAction action =
-        (new MappingRuleActions.PlaceToQueueAction(queue, true))
-        .setFallbackReject();
-    return new MappingRule(matcher, action);
-  }
-
   @Test
   public void testGroupTargetMatching() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
@@ -502,7 +495,7 @@ public class TestCSMappingPlacementRule {
         new MappingRule(
             MappingRuleMatchers.createUserMatcher("bob"),
             (new MappingRuleActions.PlaceToQueueAction(
-                "root.dynamic.%secondary_group.%user", true))
+                "root.disambiguous.deep.group.%secondary_group.%user", true))
                 .setFallbackReject()));
 
     rules.add(
@@ -526,16 +519,104 @@ public class TestCSMappingPlacementRule {
         "Alice should be placed to root.man.p_alice based on her primary group",
         engine, app, "alice", "root.man.p_alice");
     assertPlace(
-        "Bob should be placed to root.dynamic.developer.bob based on his " +
-        "secondary group, since we have a queue named 'developer', bob " +
+        "Bob should be placed to root.disambiguous.deep.group.developer.bob" +
+        "based on his secondary group, since we have a queue named" +
+        "'developer', under the path 'root.disambiguous.deep.group' bob " +
         "identifies as a user with secondary_group 'developer'", engine, app,
-        "bob", "root.dynamic.developer.bob");
+        "bob", "root.disambiguous.deep.group.developer.bob");
     assertReject("Charlie should get rejected because he neither of his" +
         "groups have an ambiguous queue, so effectively he has no secondary " +
         "group", engine, app, "charlie");
     assertReject("Dave should get rejected because he has no secondary group",
         engine, app, "dave");
   }
+
+  @Test
+  public void testSecondaryGroupWithoutParent() throws IOException {
+    ArrayList<MappingRule> rules = new ArrayList<>();
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("alice"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "%secondary_group", false))
+                .setFallbackReject()));
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("bob"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "%secondary_group.%user", true))
+                .setFallbackReject()));
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("charlie"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "%secondary_group", true))
+                .setFallbackReject()));
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+
+    assertPlace(
+        "Alice should be placed to root.secondaryTests.unique because " +
+        "'unique' is a globally unique queue, and she has a matching group",
+        engine, app, "alice", "root.secondaryTests.unique");
+    assertPlace(
+        "Bob should be placed to root.disambiguous.deep.group.developer.bob " +
+        "because 'developer' is a globally unique PARENT queue, and he " +
+        "has a matching group name, and can create a queue with '%user' " +
+        "under it", engine, app, "bob",
+        "root.disambiguous.deep.group.developer.bob");
+    assertReject("Charlie should get rejected because neither of his" +
+        "groups have a disambiguous queue, so effectively he has no " +
+        "secondary group", engine, app, "charlie");
+  }
+
+
+  @Test
+  public void testSecondaryGroupWithParent() throws IOException {
+    ArrayList<MappingRule> rules = new ArrayList<>();
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("alice"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "root.secondaryTests.%secondary_group", false))
+                .setFallbackReject()));
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("bob"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "root.secondaryTests.%secondary_group", true))
+                .setFallbackReject()));
+
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("charlie"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "root.%secondary_group", true))
+                .setFallbackReject()));
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+
+    assertPlace(
+        "Alice should be placed to root.secondaryTests.unique because " +
+        "both her secondary groups 'user' and 'unique' are eligible " +
+        "for being a secondary group under root.secondaryTests, but " +
+        "'unique' precedes 'user' in the group list.",
+        engine, app, "alice", "root.secondaryTests.unique");
+    assertPlace(
+        "Bob should be placed to root.secondaryTests.user " +
+        "bob is member of group 'user' and while 'user' is globally not " +
+        "unique it is a valid secondary group target under queue " +
+        "root.secondaryTests.",
+        engine, app, "bob", "root.secondaryTests.user");
+    assertReject("Charlie should get rejected because neither of his" +
+        "groups have a matching queue under root.", engine, app, "charlie");
+  }
+
 
   void assertConfigTestResult(List<MappingRule> rules) {
     assertEquals("We only specified one rule", 1, rules.size());

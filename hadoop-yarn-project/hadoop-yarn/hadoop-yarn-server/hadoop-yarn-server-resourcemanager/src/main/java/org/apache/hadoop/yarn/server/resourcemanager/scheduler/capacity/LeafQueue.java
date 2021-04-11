@@ -87,6 +87,7 @@ public class LeafQueue extends AbstractCSQueue {
 
   private float absoluteUsedCapacity = 0.0f;
 
+  // TODO the max applications should consider label
   protected int maxApplications;
   protected volatile int maxApplicationsPerUser;
   
@@ -602,7 +603,9 @@ public class LeafQueue extends AbstractCSQueue {
 
     // We don't want to update metrics for move app
     if (!isMoveApp) {
-      metrics.submitAppAttempt(userName);
+      boolean unmanagedAM = application.getAppSchedulingInfo() != null &&
+          application.getAppSchedulingInfo().isUnmanagedAM();
+      metrics.submitAppAttempt(userName, unmanagedAM);
     }
 
     getParent().submitApplicationAttempt(application, userName);
@@ -1915,28 +1918,6 @@ public class LeafQueue extends AbstractCSQueue {
         currentResourceLimits.getLimit()));
   }
 
-  private void updateAbsoluteCapacitiesAndRelatedFields() {
-    updateAbsoluteCapacities();
-    CapacitySchedulerConfiguration schedulerConf = csContext.getConfiguration();
-
-    // If maxApplications not set, use the system total max app, apply newly
-    // calculated abs capacity of the queue.
-    if (maxApplications <= 0) {
-      int maxSystemApps = schedulerConf.
-          getMaximumSystemApplications();
-      maxApplications =
-          (int) (maxSystemApps * queueCapacities.getAbsoluteCapacity());
-    }
-    maxApplicationsPerUser =
-        Math.min(maxApplications,
-        (int) (maxApplications * (usersManager.getUserLimit() / 100.0f)
-            * usersManager.getUserLimitFactor()));
-
-    if (getUserLimitFactor() == -1) {
-      maxApplicationsPerUser = maxApplications;
-    }
-  }
-
   @Override
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits currentResourceLimits) {
@@ -1944,7 +1925,14 @@ public class LeafQueue extends AbstractCSQueue {
     try {
       lastClusterResource = clusterResource;
 
-      updateAbsoluteCapacitiesAndRelatedFields();
+      updateAbsoluteCapacities();
+
+      // If maxApplications not set, use the system total max app, apply newly
+      // calculated abs capacity of the queue.
+      // When add new queue, the parent queue's other children should also
+      // update the max app.
+      super.updateMaxAppRelatedField(csContext.getConfiguration(),
+          this, CommonNodeLabelsManager.NO_LABEL);
 
       super.updateEffectiveResources(clusterResource);
 
