@@ -46,6 +46,22 @@ public class ConfigurationValidationAnnotations {
     boolean ThrowIfInvalid() default false;
   }
 
+  @Target({ ElementType.FIELD })
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface IntegerWithOutlierConfigurationValidatorAnnotation {
+    String ConfigurationKey();
+
+    int MaxValue() default Integer.MAX_VALUE;
+
+    int MinValue() default Integer.MIN_VALUE;
+
+    int OutlierValue() default Integer.MIN_VALUE;
+
+    int DefaultValue();
+
+    boolean ThrowIfInvalid() default false;
+  }
+
   /**
    * Describes the requirements when validating the annotated long field.
    */

@@ -86,6 +86,15 @@ public final class ConfigurationKeys {
   /** Provides a config to provide comma separated path prefixes on which Appendblob based files are created
    *  Default is empty. **/
   public static final String FS_AZURE_APPEND_BLOB_KEY = "fs.azure.appendblob.directories";
+  /** Provides a config to provide comma separated path prefixes which support infinite leases.
+   *  Files under these paths will be leased when created or opened for writing and the lease will
+   *  be released when the file is closed. The lease may be broken with the breakLease method on
+   *  AzureBlobFileSystem. Default is empty.
+   * **/
+  public static final String FS_AZURE_INFINITE_LEASE_KEY = "fs.azure.infinite-lease.directories";
+  /** Provides a number of threads to use for lease operations for infinite lease directories.
+   *  Must be set to a minimum of 1 if infinite lease directories are to be used. Default is 0. **/
+  public static final String FS_AZURE_LEASE_THREADS = "fs.azure.lease.threads";
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
   public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.read.alwaysReadBufferSize";
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";

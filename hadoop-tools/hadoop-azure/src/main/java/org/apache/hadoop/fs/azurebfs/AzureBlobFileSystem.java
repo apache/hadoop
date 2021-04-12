@@ -87,6 +87,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
@@ -502,6 +503,26 @@ public class AzureBlobFileSystem extends FileSystem {
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
       return null;
+    }
+  }
+
+  /**
+   * Break the current lease on an ABFS file if it exists. A lease that is broken cannot be
+   * renewed. A new lease may be obtained on the file immediately.
+   *
+   * @param f file name
+   * @throws IOException on any exception while breaking the lease
+   */
+  public void breakLease(final Path f) throws IOException {
+    LOG.debug("AzureBlobFileSystem.breakLease path: {}", f);
+
+    Path qualifiedPath = makeQualified(f);
+
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "Break lease for %s",
+        qualifiedPath)) {
+      abfsStore.breakLease(qualifiedPath);
+    } catch(AzureBlobFileSystemException ex) {
+      checkException(f, ex);
     }
   }
 
