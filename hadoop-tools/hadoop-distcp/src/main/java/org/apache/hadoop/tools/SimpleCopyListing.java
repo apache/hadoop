@@ -602,7 +602,7 @@ public class SimpleCopyListing extends CopyListing {
   }
 
   private void printStats() {
-    LOG.info("Paths (files+dirs) cnt = {}; dirCnt = ", totalPaths, totalDirs);
+    LOG.info("Paths (files+dirs) cnt = {}; dirCnt = {}", totalPaths, totalDirs);
   }
 
   private void maybePrintStats() {

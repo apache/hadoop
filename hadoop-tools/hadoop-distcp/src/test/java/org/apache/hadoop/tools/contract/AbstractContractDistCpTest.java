@@ -636,11 +636,10 @@ public abstract class AbstractContractDistCpTest
         dest.toString(), "-useiterator -update -delete", conf);
 
     // Check the target listing was also done using iterator.
-    assertTrue(log.getOutput().contains(
-        "Building listing using iterator mode for " + dest.toString()));
+    Assertions.assertThat(log.getOutput()).contains(
+        "Building listing using iterator mode for " + dest.toString());
 
-    Assertions
-        .assertThat(RemoteIterators.toList(localFS.listFiles(dest, true)))
+    Assertions.assertThat(RemoteIterators.toList(localFS.listFiles(dest, true)))
         .describedAs("files").hasSize(getTotalFiles());
   }
 
