@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
@@ -33,7 +34,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface AbfsCounters extends IOStatisticsSource {
+public interface AbfsCounters extends IOStatisticsSource, DurationTrackerFactory {
 
   /**
    * Increment a AbfsStatistic by a long value.
@@ -71,5 +72,6 @@ public interface AbfsCounters extends IOStatisticsSource {
    * @param key Name of the DurationTracker statistic.
    * @return an instance of DurationTracker.
    */
-  DurationTracker startRequest(String key);
+  @Override
+  DurationTracker trackDuration(String key);
 }

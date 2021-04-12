@@ -95,9 +95,9 @@ public class TestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     AbfsCounters abfsCounters = new AbfsCountersImpl(getFileSystem().getUri());
     // Start dummy work for the DurationTrackers and start tracking.
     try (DurationTracker ignoredPatch =
-        abfsCounters.startRequest(AbfsHttpConstants.HTTP_METHOD_PATCH);
+        abfsCounters.trackDuration(AbfsStatistic.getStatNameFromHttpCall(AbfsHttpConstants.HTTP_METHOD_PATCH));
         DurationTracker ignoredPost =
-            abfsCounters.startRequest(AbfsHttpConstants.HTTP_METHOD_POST)
+            abfsCounters.trackDuration(AbfsStatistic.getStatNameFromHttpCall(AbfsHttpConstants.HTTP_METHOD_POST))
     ) {
       // Emulates doing some work.
       Thread.sleep(10);

@@ -231,14 +231,13 @@ public class AbfsCountersImpl implements AbfsCounters {
   }
 
   /**
-   * Tracks the duration for different types of HTTP requests.
+   * Tracks the duration of a statistic.
    *
-   * @param key name of the request that is mapped to the statistic name.
+   * @param key name of the statistic.
    * @return DurationTracker for that statistic.
    */
   @Override
-  public DurationTracker startRequest(String key) {
-    return ioStatisticsStore
-        .trackDuration(AbfsStatistic.getStatNameFromHttpCall(key));
+  public DurationTracker trackDuration(String key) {
+    return ioStatisticsStore.trackDuration(key);
   }
 }

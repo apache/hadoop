@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -173,12 +173,16 @@ public class AbfsRestOperation {
    *
    */
   public void execute() throws AzureBlobFileSystemException {
-    if (abfsCounters != null) {
-      try (DurationTracker ignored = abfsCounters.startRequest(method)) {
-        completeExecute();
-      }
-    } else {
-      completeExecute();
+
+    try {
+      IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
+          AbfsStatistic.getStatNameFromHttpCall(method),
+          () -> completeExecute());
+    } catch (AzureBlobFileSystemException aze) {
+      throw aze;
+    } catch (IOException e) {
+      throw new RuntimeException("Error while tracking Duration of an "
+          + "AbfsRestOperation call", e);
     }
   }
 
