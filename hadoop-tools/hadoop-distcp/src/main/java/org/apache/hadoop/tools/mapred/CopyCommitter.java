@@ -638,7 +638,6 @@ public class CopyCommitter extends FileOutputCommitter {
     long firstChunkLastModifiedTs = dstfs.getFileStatus(firstChunkFile)
         .getModificationTime();
     dstfs.concat(firstChunkFile, restChunkFiles);
-    dstfs.setTimes(firstChunkFile, firstChunkLastModifiedTs, -1);
     if (LOG.isDebugEnabled()) {
       LOG.debug("concat: result: " + dstfs.getFileStatus(firstChunkFile));
     }
