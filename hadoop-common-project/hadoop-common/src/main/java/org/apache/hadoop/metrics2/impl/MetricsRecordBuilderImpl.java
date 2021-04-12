@@ -80,6 +80,17 @@ class MetricsRecordBuilderImpl extends MetricsRecordBuilder {
   }
 
   @Override
+  public MetricsRecordBuilder tag(MetricsInfo info, String value,
+                                  boolean isStringMetric) {
+    if (acceptable) {
+      MetricsTag tag = Interns.tag(info, value);
+      tag.setStringMetric(isStringMetric);
+      tags.add(tag);
+    }
+    return this;
+  }
+
+  @Override
   public MetricsRecordBuilderImpl add(MetricsTag tag) {
     tags.add(tag);
     return this;

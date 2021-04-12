@@ -84,6 +84,12 @@ public class MetricStringBuilder extends MetricsRecordBuilder {
   }
 
   @Override
+  public MetricsRecordBuilder tag(MetricsInfo info, String value,
+                                  boolean isStringMetric) {
+    return add(info, value);
+  }
+
+  @Override
   public MetricsRecordBuilder add(MetricsTag tag) {
     return tuple(tag.name(), tag.value());
   }

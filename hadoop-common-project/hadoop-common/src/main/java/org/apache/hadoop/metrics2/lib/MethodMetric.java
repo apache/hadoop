@@ -128,7 +128,7 @@ class MethodMetric extends MutableMetric {
         @Override public void snapshot(MetricsRecordBuilder rb, boolean all) {
           try {
             Object ret = method.invoke(obj, (Object[]) null);
-            rb.tag(info, (String) ret);
+            rb.tag(info, (String) ret, true);
           } catch (Exception ex) {
             LOG.error("Error invoking method "+ method.getName(), ex);
           }

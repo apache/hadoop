@@ -35,14 +35,27 @@ public class MetricsTag implements MetricsInfo {
   private final MetricsInfo info;
   private final String value;
 
+  // This is to indicate whether this is a String metric instead of normal tag
+  private boolean isStringMetric;
+
   /**
    * Construct the tag with name, description and value
    * @param info  of the tag
    * @param value of the tag
    */
   public MetricsTag(MetricsInfo info, String value) {
+    this(info, value, false);
+  }
+
+  /**
+   * Construct the tag with name, description and value
+   * @param info  of the tag
+   * @param value of the tag
+   */
+  public MetricsTag(MetricsInfo info, String value, boolean isStringMetric) {
     this.info = checkNotNull(info, "tag info");
     this.value = value;
+    this.isStringMetric = isStringMetric;
   }
 
   @Override public String name() {
@@ -61,7 +74,7 @@ public class MetricsTag implements MetricsInfo {
   }
 
   /**
-   * Get the value of the tag
+   * Get the value of the tag.
    * @return  the value
    */
   public String value() {
@@ -86,5 +99,13 @@ public class MetricsTag implements MetricsInfo {
         .add("info=" + info)
         .add("value=" + value())
         .toString();
+  }
+
+  public boolean isStringMetric() {
+    return isStringMetric;
+  }
+
+  public void setStringMetric(boolean stringMetric) {
+    this.isStringMetric = stringMetric;
   }
 }

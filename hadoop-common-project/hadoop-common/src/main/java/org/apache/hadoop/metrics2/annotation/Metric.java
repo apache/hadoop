@@ -35,7 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public @interface Metric {
 
   public enum Type {
-    DEFAULT, COUNTER, GAUGE, TAG
+    DEFAULT, COUNTER, GAUGE, TEXT, TAG
   }
 
   /**

@@ -216,6 +216,12 @@ public class AbfsCountersImpl implements AbfsCounters {
     }
 
     @Override
+    public MetricsRecordBuilder tag(MetricsInfo info, String value,
+                                    boolean isStringMetric) {
+      return this;
+    }
+
+    @Override
     public MetricsRecordBuilder add(MetricsTag tag) {
       return this;
     }
