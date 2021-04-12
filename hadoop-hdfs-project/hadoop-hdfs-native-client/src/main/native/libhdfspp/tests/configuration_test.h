@@ -21,11 +21,17 @@
 #include "hdfspp/config_parser.h"
 #include "common/configuration.h"
 #include "common/configuration_loader.h"
+#include "x-platform/syscall.h"
+
 #include <cstdio>
 #include <fstream>
 #include <istream>
+#include <vector>
+
 #include <ftw.h>
+#include <unistd.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace hdfs {
 
@@ -107,23 +113,27 @@ void writeDamagedConfig(const std::string& filename, Args... args) {
 
 // TempDir: is deleted on destruction
 class TempFile {
-public:
-  std::string filename;
-  char        fn_buffer[128];
-  int         tempFileHandle;
-  TempFile() : tempFileHandle(-1) {
-    strncpy(fn_buffer, "/tmp/test_XXXXXXXXXX", sizeof(fn_buffer));
-    tempFileHandle = mkstemp(fn_buffer);
-    EXPECT_NE(-1, tempFileHandle);
-    filename = fn_buffer;
+ public:
+  TempFile() {
+    std::vector<char> tmp_buf(filename.begin(), filename.end());
+    fd = XPlatform::Syscall::CreateAndOpenTempFile(tmp_buf);
+    EXPECT_NE(fd, -1);
+    filename.assign(tmp_buf.data());
   }
-  TempFile(const std::string & fn) : filename(fn), tempFileHandle(-1) {
-    strncpy(fn_buffer, fn.c_str(), sizeof(fn_buffer));
-    fn_buffer[sizeof(fn_buffer)-1] = 0;
-  }
-  ~TempFile() { if(-1 != tempFileHandle) close(tempFileHandle); unlink(fn_buffer); }
-};
 
+  TempFile(const std::string& fn) : filename(fn) {}
+
+  ~TempFile() {
+    if (-1 != fd) {
+      EXPECT_NE(XPlatform::Syscall::CloseFile(fd), -1);
+    }
+
+    unlink(filename.c_str());
+  }
+
+  std::string filename{"/tmp/test_XXXXXXXXXX"};
+  int fd{-1};
+};
 
 // Callback to remove a directory in the nftw visitor
 int nftw_remove(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
