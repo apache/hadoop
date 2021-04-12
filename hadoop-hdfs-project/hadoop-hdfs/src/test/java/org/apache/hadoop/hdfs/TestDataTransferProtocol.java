@@ -613,7 +613,6 @@ public class TestDataTransferProtocol {
       assertEquals(beforeCnt, afterCnt);
 
     } catch (InterruptedException e) {
-      e.printStackTrace();
     } finally {
       cluster.shutdown();
     }

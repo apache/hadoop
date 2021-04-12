@@ -1807,7 +1807,7 @@ public class TestFsDatasetImpl {
     }
   }
 
-  @Test
+  @Test(timeout = 20000)
   public void testReleaseVolumeRefIfExceptionThrown() throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(
         new HdfsConfiguration()).build();
@@ -1835,7 +1835,6 @@ public class TestFsDatasetImpl {
     } catch (RuntimeException re) {
       int afterCnt = vol.getReferenceCount();
       assertEquals(beforeCnt, afterCnt);
-      re.printStackTrace();
     } finally {
       cluster.shutdown();
     }

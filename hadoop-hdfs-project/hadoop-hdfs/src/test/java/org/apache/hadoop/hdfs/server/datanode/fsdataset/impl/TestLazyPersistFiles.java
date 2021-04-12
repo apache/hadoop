@@ -283,12 +283,13 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
       }
     }
   }
-  @Test
+
+  @Test(timeout = 20000)
   public void testReleaseVolumeRefIfExceptionThrown() throws IOException {
     getClusterBuilder().setRamDiskReplicaCapacity(2).build();
-    final String METHOD_NAME = GenericTestUtils.getMethodName();
-    final int SEED = 0xFADED;
-    Path path = new Path("/" + METHOD_NAME + ".Writer.File.dat");
+    final String methodName = GenericTestUtils.getMethodName();
+    final int seed = 0xFADED;
+    Path path = new Path("/" + methodName + ".Writer.File.dat");
 
     DataNode dn = cluster.getDataNodes().get(0);
     FsDatasetSpi.FsVolumeReferences volumes =
@@ -303,7 +304,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
         beforeCnts[i] = ((FsVolumeImpl) volumes.get(i)).getReferenceCount();
       }
 
-      makeRandomTestFile(path, BLOCK_SIZE, true, SEED);
+      makeRandomTestFile(path, BLOCK_SIZE, true, seed);
       Thread.sleep(3 * LAZY_WRITER_INTERVAL_SEC * 1000);
 
       for (int i = 0; i < volumes.size(); ++i) {
@@ -316,7 +317,6 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
             beforeCnts[i] == afterCnt || beforeCnts[i] == (afterCnt - 1));
       }
     } catch (InterruptedException e) {
-      e.printStackTrace();
     }
   }
 }
