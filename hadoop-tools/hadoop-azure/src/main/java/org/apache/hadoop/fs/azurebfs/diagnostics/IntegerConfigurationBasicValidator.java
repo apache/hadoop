@@ -31,11 +31,18 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationVa
 public class IntegerConfigurationBasicValidator extends ConfigurationBasicValidator<Integer> implements ConfigurationValidator {
   private final int min;
   private final int max;
+  private final int outlier;
 
   public IntegerConfigurationBasicValidator(final int min, final int max, final int defaultVal, final String configKey, final boolean throwIfInvalid) {
+    this(min, min, max, defaultVal, configKey, throwIfInvalid);
+  }
+
+  public IntegerConfigurationBasicValidator(final int outlier, final int min, final int max,
+      final int defaultVal, final String configKey, final boolean throwIfInvalid) {
     super(configKey, defaultVal, throwIfInvalid);
     this.min = min;
     this.max = max;
+    this.outlier = outlier;
   }
 
   public Integer validate(final String configValue) throws InvalidConfigurationValueException {
@@ -47,8 +54,12 @@ public class IntegerConfigurationBasicValidator extends ConfigurationBasicValida
     try {
       result = Integer.parseInt(configValue);
       // throw an exception if a 'within bounds' value is missing
-      if (getThrowIfInvalid() && (result < this.min || result > this.max)) {
+      if (getThrowIfInvalid() && (result != outlier) && (result < this.min || result > this.max)) {
         throw new InvalidConfigurationValueException(getConfigKey());
+      }
+
+      if (result == outlier) {
+        return result;
       }
 
       // set the value to the nearest bound if it's out of bounds
