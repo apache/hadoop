@@ -643,6 +643,7 @@ public class CopyCommitter extends FileOutputCommitter {
       LOG.debug("concat: result: " + dstfs.getFileStatus(firstChunkFile));
     }
     rename(dstfs, firstChunkFile, targetFile);
+    dstfs.setTimes(targetFile, firstChunkLastModifiedTs, -1);
     DistCpUtils.compareFileLengthsAndChecksums(srcFileStatus.getLen(),
         srcfs, sourceFile, null, dstfs,
             targetFile, skipCrc, srcFileStatus.getLen());
