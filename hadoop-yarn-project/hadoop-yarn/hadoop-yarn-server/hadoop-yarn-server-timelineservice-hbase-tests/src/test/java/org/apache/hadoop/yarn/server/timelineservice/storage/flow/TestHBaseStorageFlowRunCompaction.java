@@ -382,7 +382,6 @@ public class TestHBaseStorageFlowRunCompaction {
     assertEquals(1, rowCount);
   }
 
-
   private FlowScanner getFlowScannerForTestingCompaction() {
     // create a FlowScanner object with the sole purpose of invoking a process
     // summation;

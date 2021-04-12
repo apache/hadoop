@@ -51,7 +51,7 @@
     <kafka.version>0.8.2.1</kafka.version>
 
     <hbase.version>1.4.13</hbase.version>
-    <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
+    <hbase-compatible-hadoop.version>2.7.0</hbase-compatible-hadoop.version>
     <hbase-compatible-guava.version>12.0.1</hbase-compatible-guava.version>
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
