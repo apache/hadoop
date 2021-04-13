@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -1618,5 +1619,20 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     when(node.getXceiverCount()).thenReturn(10);
     assertTrue(bppd.excludeNodeByLoad(node));
 
+  }
+
+  @Test
+  public void testChosenFailureForStorageType() {
+    final LogVerificationAppender appender = new LogVerificationAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
+    DatanodeStorageInfo[] targets = replicator.chooseTarget(filename, 1,
+        dataNodes[0], new ArrayList<DatanodeStorageInfo>(), false, null,
+        BLOCK_SIZE, TestBlockStoragePolicy.POLICY_SUITE.getPolicy(
+            HdfsConstants.COLD_STORAGE_POLICY_ID), null);
+    assertEquals(0, targets.length);
+    assertNotEquals(0,
+        appender.countLinesWithMessage("NO_REQUIRED_STORAGE_TYPE"));
   }
 }
