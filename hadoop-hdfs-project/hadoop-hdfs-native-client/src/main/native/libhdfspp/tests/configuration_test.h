@@ -26,6 +26,8 @@
 #include <cstdio>
 #include <fstream>
 #include <istream>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <ftw.h>
@@ -115,24 +117,48 @@ void writeDamagedConfig(const std::string& filename, Args... args) {
 class TempFile {
  public:
   TempFile() {
-    std::vector<char> tmp_buf(filename.begin(), filename.end());
-    fd = XPlatform::Syscall::CreateAndOpenTempFile(tmp_buf);
-    EXPECT_NE(fd, -1);
-    filename.assign(tmp_buf.data());
+    std::vector<char> tmp_buf(filename_.begin(), filename_.end());
+    fd_ = XPlatform::Syscall::CreateAndOpenTempFile(tmp_buf);
+    EXPECT_NE(fd_, -1);
+    filename_.assign(tmp_buf.data());
   }
 
-  TempFile(const std::string& fn) : filename(fn) {}
+  TempFile(std::string fn) : filename_(std::move(fn)) {}
+
+  TempFile(const TempFile& other) = default;
+
+  TempFile(TempFile&& other) noexcept
+      : filename_{std::move(other.filename_)}, fd_{other.fd_} {}
+
+  TempFile& operator=(const TempFile& other) {
+    if (&other != this) {
+      filename_ = other.filename_;
+      fd_ = other.fd_;
+    }
+    return *this;
+  }
+
+  TempFile& operator=(TempFile&& other) noexcept {
+    if (&other != this) {
+      filename_ = std::move(other.filename_);
+      fd_ = other.fd_;
+    }
+    return *this;
+  }
+
+  [[nodiscard]] const std::string& GetFileName() const { return filename_; }
 
   ~TempFile() {
-    if (-1 != fd) {
-      EXPECT_NE(XPlatform::Syscall::CloseFile(fd), -1);
+    if (-1 != fd_) {
+      EXPECT_NE(XPlatform::Syscall::CloseFile(fd_), -1);
     }
 
-    unlink(filename.c_str());
+    unlink(filename_.c_str());
   }
 
-  std::string filename{"/tmp/test_XXXXXXXXXX"};
-  int fd{-1};
+ private:
+  std::string filename_{"/tmp/test_XXXXXXXXXX"};
+  int fd_{-1};
 };
 
 // Callback to remove a directory in the nftw visitor
