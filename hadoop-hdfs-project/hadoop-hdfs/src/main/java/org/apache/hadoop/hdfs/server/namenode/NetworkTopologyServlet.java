@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
 
 /**
@@ -75,27 +76,23 @@ public class NetworkTopologyServlet extends DfsServlet {
    * @param leaves leaves nodes under base scope
    */
   public void printTopology(PrintStream stream, List<Node> leaves) {
-    if (leaves.size() == 0) {
+    if (leaves.isEmpty()) {
       stream.print("No DataNodes");
       return;
     }
 
     // Build a map of rack -> nodes
-    HashMap<String, TreeSet<String>> tree =
-        new HashMap<String, TreeSet<String>>();
+    Map<String, TreeSet<String>> tree = new HashMap<>();
     for(Node dni : leaves) {
       String location = dni.getNetworkLocation();
       String name = dni.getName();
 
-      if(!tree.containsKey(location)) {
-        tree.put(location, new TreeSet<String>());
-      }
-
+      tree.putIfAbsent(location, new TreeSet<>());
       tree.get(location).add(name);
     }
 
     // Sort the racks (and nodes) alphabetically, display in order
-    ArrayList<String> racks = new ArrayList<String>(tree.keySet());
+    ArrayList<String> racks = new ArrayList<>(tree.keySet());
     Collections.sort(racks);
 
     for(String r : racks) {
