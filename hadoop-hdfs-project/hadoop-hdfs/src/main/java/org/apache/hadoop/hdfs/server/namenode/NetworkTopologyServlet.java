@@ -80,7 +80,7 @@ public class NetworkTopologyServlet extends DfsServlet {
       return;
     }
 
-    // Build a map of rack -> nodes from the datanode report
+    // Build a map of rack -> nodes
     HashMap<String, TreeSet<String>> tree =
         new HashMap<String, TreeSet<String>>();
     for(Node dni : leaves) {
