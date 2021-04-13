@@ -774,15 +774,6 @@ public class MiniRouterDFSCluster {
       }
       topology.setFederation(true);
 
-      // Generate conf for namenodes and datanodes
-      String ns0 = nameservices.get(0);
-      Configuration nnConf = generateNamenodeConfiguration(ns0);
-      if (overrideConf != null) {
-        nnConf.addResource(overrideConf);
-        // Router also uses this configurations as initial values.
-        routerConf = new Configuration(overrideConf);
-      }
-
       // Set independent DNs across subclusters
       int numDNs = nameservices.size() * numDatanodesPerNameservice;
       Configuration[] dnConfs = null;
@@ -790,7 +781,7 @@ public class MiniRouterDFSCluster {
         dnConfs = new Configuration[numDNs];
         int dnId = 0;
         for (String nsId : nameservices) {
-          Configuration subclusterConf = new Configuration(nnConf);
+          Configuration subclusterConf = new Configuration();
           subclusterConf.set(DFS_INTERNAL_NAMESERVICES_KEY, nsId);
           for (int i = 0; i < numDatanodesPerNameservice; i++) {
             dnConfs[dnId] = subclusterConf;
@@ -800,6 +791,14 @@ public class MiniRouterDFSCluster {
       }
 
       // Start mini DFS cluster
+      String ns0 = nameservices.get(0);
+      Configuration nnConf = generateNamenodeConfiguration(ns0);
+      if (overrideConf != null) {
+        nnConf.addResource(overrideConf);
+        // Router also uses this configurations as initial values.
+        routerConf = new Configuration(overrideConf);
+      }
+
       cluster = new MiniDFSCluster.Builder(nnConf)
           .numDataNodes(numDNs)
           .nnTopology(topology)
