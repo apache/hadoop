@@ -22,7 +22,7 @@ import io.opentelemetry.context.Scope;
 import java.io.Closeable;
 
 public class Span implements Closeable {
-  io.opentelemetry.api.trace.Span span = null;
+  private io.opentelemetry.api.trace.Span span = null;
   public Span() {
   }
 
@@ -45,7 +45,10 @@ public class Span implements Closeable {
   }
 
   public SpanContext getContext() {
-    return  new SpanContext(span.getSpanContext());
+    if(span != null){
+      return  new SpanContext(span.getSpanContext());
+    }
+    return null;
   }
 
   public void finish() {
