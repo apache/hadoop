@@ -708,6 +708,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.ec.reconstruction.xmits.weight";
   public static final float   DFS_DN_EC_RECONSTRUCTION_XMITS_WEIGHT_DEFAULT =
       0.5f;
+  public static final String DFS_DN_EC_RECONSTRUCTION_VALIDATION_KEY =
+      "dfs.datanode.ec.reconstruction.validation";
+  public static final boolean DFS_DN_EC_RECONSTRUCTION_VALIDATION_VALUE = false;
 
   public static final String
       DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY =
