@@ -40,12 +40,15 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test to reconfigure some parameters for DataNode without restart
  */
 public class TestDataNodeReconfiguration {
-
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestBlockRecovery.class);
   private static final String DATA_DIR = MiniDFSCluster.getBaseDirectory()
       + "data";
   private final static InetSocketAddress NN_ADDR = new InetSocketAddress(

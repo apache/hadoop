@@ -705,7 +705,7 @@ public class TestBlockRecovery {
       streams.close();
     }
   }
-  
+
   /**
    * DNs report RUR instead of RBW, RWR or FINALIZED. Primary DN expected to
    * throw an exception.

@@ -77,9 +77,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -141,23 +141,23 @@ public class TestBlockRecovery2 {
         (Answer<DatanodeRegistration>) invocation ->
             (DatanodeRegistration) invocation.getArguments()[0])
         .when(namenode)
-        .registerDatanode(Mockito.any(DatanodeRegistration.class));
+        .registerDatanode(any(DatanodeRegistration.class));
 
     when(namenode.versionRequest())
         .thenReturn(new NamespaceInfo(1, CLUSTER_ID, POOL_ID, 1L));
 
     when(namenode.sendHeartbeat(
-        Mockito.any(),
-        Mockito.any(),
-        Mockito.anyLong(),
-        Mockito.anyLong(),
+        any(),
+        any(),
+        anyLong(),
+        anyLong(),
         Mockito.anyInt(),
         Mockito.anyInt(),
         Mockito.anyInt(),
-        Mockito.any(),
+        any(),
         Mockito.anyBoolean(),
-        Mockito.any(),
-        Mockito.any()))
+        any(),
+        any()))
         .thenReturn(new HeartbeatResponse(
             new DatanodeCommand[0],
             new NNHAStatusHeartbeat(HAServiceProtocol.HAServiceState.ACTIVE, 1),
