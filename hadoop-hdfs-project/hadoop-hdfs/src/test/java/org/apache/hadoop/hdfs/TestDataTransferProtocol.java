@@ -567,7 +567,8 @@ public class TestDataTransferProtocol {
   }
 
   @Test
-  public void testReleaseVolumeRefIfExceptionThrown() throws IOException {
+  public void testReleaseVolumeRefIfExceptionThrown()
+      throws IOException, InterruptedException {
     Path file = new Path("dataprotocol.dat");
     int numDataNodes = 1;
 
@@ -612,7 +613,6 @@ public class TestDataTransferProtocol {
       int afterCnt = volume.getReferenceCount();
       assertEquals(beforeCnt, afterCnt);
 
-    } catch (InterruptedException e) {
     } finally {
       cluster.shutdown();
     }
