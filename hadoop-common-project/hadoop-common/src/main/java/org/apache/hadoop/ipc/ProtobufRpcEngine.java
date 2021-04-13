@@ -122,18 +122,18 @@ public class ProtobufRpcEngine implements RpcEngine {
                 factory)), false);
   }
 
-  private static class Invoker implements RpcInvocationHandler {
-    private final Map<String, Message> returnTypes = 
+  protected static class Invoker implements RpcInvocationHandler {
+    protected final Map<String, Message> returnTypes =
         new ConcurrentHashMap<String, Message>();
-    private boolean isClosed = false;
-    private final Client.ConnectionId remoteId;
-    private final Client client;
-    private final long clientProtocolVersion;
-    private final String protocolName;
-    private AtomicBoolean fallbackToSimpleAuth;
-    private AlignmentContext alignmentContext;
+    protected boolean isClosed = false;
+    protected final Client.ConnectionId remoteId;
+    protected final Client client;
+    protected final long clientProtocolVersion;
+    protected final String protocolName;
+    protected AtomicBoolean fallbackToSimpleAuth;
+    protected AlignmentContext alignmentContext;
 
-    private Invoker(Class<?> protocol, InetSocketAddress addr,
+    protected Invoker(Class<?> protocol, InetSocketAddress addr,
         UserGroupInformation ticket, Configuration conf, SocketFactory factory,
         int rpcTimeout, RetryPolicy connectionRetryPolicy,
         AtomicBoolean fallbackToSimpleAuth, AlignmentContext alignmentContext)
@@ -148,7 +148,7 @@ public class ProtobufRpcEngine implements RpcEngine {
     /**
      * This constructor takes a connectionId, instead of creating a new one.
      */
-    private Invoker(Class<?> protocol, Client.ConnectionId connId,
+    protected Invoker(Class<?> protocol, Client.ConnectionId connId,
         Configuration conf, SocketFactory factory) {
       this.remoteId = connId;
       this.client = CLIENTS.getClient(conf, factory, RpcWritable.Buffer.class);
@@ -225,8 +225,6 @@ public class ProtobufRpcEngine implements RpcEngine {
         traceScope = tracer.newScope(RpcClientUtil.methodToTraceString(method));
       }
 
-      RequestHeaderProto rpcRequestHeader = constructRpcRequestHeader(method);
-      
       if (LOG.isTraceEnabled()) {
         LOG.trace(Thread.currentThread().getId() + ": Call -> " +
             remoteId + ": " + method.getName() +
@@ -238,7 +236,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       final RpcWritable.Buffer val;
       try {
         val = (RpcWritable.Buffer) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
-            new RpcProtobufRequest(rpcRequestHeader, theRequest), remoteId,
+            constructRpcRequest(method, theRequest), remoteId,
             fallbackToSimpleAuth, alignmentContext);
 
       } catch (Throwable e) {
@@ -281,6 +279,11 @@ public class ProtobufRpcEngine implements RpcEngine {
       } else {
         return getReturnMessage(method, val);
       }
+    }
+
+    protected Writable constructRpcRequest(Method method, Message theRequest) {
+      RequestHeaderProto rpcRequestHeader = constructRpcRequestHeader(method);
+      return new RpcProtobufRequest(rpcRequestHeader, theRequest);
     }
 
     private Message getReturnMessage(final Method method,
@@ -518,6 +521,13 @@ public class ProtobufRpcEngine implements RpcEngine {
         String declaringClassProtoName = 
             rpcRequest.getDeclaringClassProtocolName();
         long clientVersion = rpcRequest.getClientProtocolVersion();
+        return call(server, connectionProtocolName, request, receiveTime,
+            methodName, declaringClassProtoName, clientVersion);
+      }
+
+      protected Writable call(RPC.Server server, String connectionProtocolName,
+          RpcWritable.Buffer request, long receiveTime, String methodName,
+          String declaringClassProtoName, long clientVersion) throws Exception {
         if (server.verbose)
           LOG.info("Call: connectionProtocolName=" + connectionProtocolName + 
               ", method=" + methodName);
