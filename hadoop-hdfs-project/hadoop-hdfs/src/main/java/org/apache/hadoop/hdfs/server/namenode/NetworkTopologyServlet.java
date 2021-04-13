@@ -81,7 +81,8 @@ public class NetworkTopologyServlet extends DfsServlet {
     }
 
     // Build a map of rack -> nodes from the datanode report
-    HashMap<String, TreeSet<String>> tree = new HashMap<String, TreeSet<String>>();
+    HashMap<String, TreeSet<String>> tree =
+        new HashMap<String, TreeSet<String>>();
     for(Node dni : leaves) {
       String location = dni.getNetworkLocation();
       String name = dni.getName();
