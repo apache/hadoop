@@ -70,3 +70,7 @@ int XPlatform::Syscall::CreateAndOpenTempFile(std::vector<char>& pattern) {
 bool XPlatform::Syscall::CloseFile(const int file_descriptor) {
   return close(file_descriptor) == 0;
 }
+
+bool XPlatform::Syscall::CreateTempDir(std::vector<char>& pattern) {
+  return mkdtemp(pattern.data()) != nullptr;
+}

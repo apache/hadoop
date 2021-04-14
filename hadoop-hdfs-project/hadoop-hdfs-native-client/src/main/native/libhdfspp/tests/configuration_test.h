@@ -174,21 +174,19 @@ int nftw_remove(const char *fpath, const struct stat *sb, int typeflag, struct F
 // TempDir: is created in ctor and recursively deletes in dtor
 class TempDir {
 public:
-  std::string path;
+  std::string path{"/tmp/test_dir_XXXXXXXXXX"};
+
   TempDir() {
-    char        fn_buffer[128];
-    strncpy(fn_buffer, "/tmp/test_dir_XXXXXXXXXX", sizeof(fn_buffer));
-    const char * returned_path = mkdtemp(fn_buffer);
-    EXPECT_NE(nullptr, returned_path);
-    path = returned_path;
+    std::vector<char> path_pattern(path.begin(), path.end());
+    EXPECT_TRUE(XPlatform::Syscall::CreateTempDir(path_pattern));
+    path.assign(path_pattern.data());
   }
+
   ~TempDir() {
     if(!path.empty())
       nftw(path.c_str(), nftw_remove, 64, FTW_DEPTH | FTW_PHYS);
   }
 };
-
-
 }
 
 #endif
