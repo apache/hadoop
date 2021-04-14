@@ -125,7 +125,6 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   public void close() {
     super.close();
     stopSyncThread();
-    logSyncNotifyExecutor.shutdown();
   }
 
   @Override
