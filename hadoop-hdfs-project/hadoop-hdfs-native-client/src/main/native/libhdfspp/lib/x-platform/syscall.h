@@ -124,9 +124,8 @@ class Syscall {
    * application and is not handled by this function.
    *
    * @param pattern the pattern to be used for the temporary filename.
-   * @returns an integer representing the file descriptor for the
-   * opened temporary file. Returns -1 in the case of error and sets
-   * the global errno with the appropriate error code.
+   * @returns true if the creation of directory succeeds, false
+   * otherwise.
    */
   static bool CreateTempDir(std::vector<char>& pattern);
 
