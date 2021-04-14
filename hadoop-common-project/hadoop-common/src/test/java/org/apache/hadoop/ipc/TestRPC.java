@@ -1089,7 +1089,7 @@ public class TestRPC extends TestRpcBase {
       MetricsAsserts.assertQuantileGauges("RpcProcessingTime" + interval + "s",
           rpcMetrics);
       String actualUserVsCon = MetricsAsserts
-          .getStringMetric("NumOpenConnectionsPerUser", rpcMetrics);
+          .getStringMetric("NumOpenConnectionsPerUser", rpcMetrics, true);
       String proxyUser =
           UserGroupInformation.getCurrentUser().getShortUserName();
       assertTrue(actualUserVsCon.contains("\"" + proxyUser + "\":1"));
