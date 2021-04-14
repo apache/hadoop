@@ -18,6 +18,8 @@
 #ifndef TESTS_CONFIGURATION_H_
 #define TESTS_CONFIGURATION_H_
 
+#include <algorithm>
+
 #include "hdfspp/config_parser.h"
 #include "common/configuration.h"
 #include "common/configuration_loader.h"
@@ -173,19 +175,43 @@ int nftw_remove(const char *fpath, const struct stat *sb, int typeflag, struct F
 
 // TempDir: is created in ctor and recursively deletes in dtor
 class TempDir {
-public:
-  std::string path{"/tmp/test_dir_XXXXXXXXXX"};
-
+ public:
   TempDir() {
-    std::vector<char> path_pattern(path.begin(), path.end());
-    EXPECT_TRUE(XPlatform::Syscall::CreateTempDir(path_pattern));
-    path.assign(path_pattern.data());
+    std::vector<char> path_pattern(path_.begin(), path_.end());
+    is_path_init_ = XPlatform::Syscall::CreateTempDir(path_pattern);
+    EXPECT_TRUE(is_path_init_);
+    path_.assign(path_pattern.data());
   }
+
+  TempDir(const TempDir& other) = default;
+
+  TempDir(TempDir&& other) noexcept : path_{std::move(other.path_)} {}
+
+  TempDir& operator=(const TempDir& other) {
+    if (&other != this) {
+      path_ = other.path_;
+    }
+    return *this;
+  }
+
+  TempDir& operator=(TempDir&& other) noexcept {
+    if (&other != this) {
+      path_ = std::move(other.path_);
+    }
+    return *this;
+  }
+
+  [[nodiscard]] const std::string& GetPath() const { return path_; }
 
   ~TempDir() {
-    if(!path.empty())
-      nftw(path.c_str(), nftw_remove, 64, FTW_DEPTH | FTW_PHYS);
+    if (is_path_init_) {
+      nftw(path_.c_str(), nftw_remove, 64, FTW_DEPTH | FTW_PHYS);
+    }
   }
+
+ private:
+  std::string path_{"/tmp/test_dir_XXXXXXXXXX"};
+  bool is_path_init_{false};
 };
 }
 
