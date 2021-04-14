@@ -88,7 +88,8 @@ public class TestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
    * doing some work.
    */
   @Test
-  public void testAbfsNetworkDurationTrackers() throws IOException {
+  public void testAbfsNetworkDurationTrackers()
+      throws IOException, InterruptedException {
     describe("Test to verify the actual values of DurationTrackers are "
         + "greater than 0.0 while tracking some work.");
 
@@ -102,9 +103,6 @@ public class TestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // Emulates doing some work.
       Thread.sleep(10);
       LOG.info("Execute some Http requests...");
-    } catch (InterruptedException e) {
-      throw new RuntimeException(
-          "Exception encountered while Thread tried to sleep", e);
     }
 
     // Extract the iostats from the abfsCounters instance.
