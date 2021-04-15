@@ -322,7 +322,7 @@ class FsDatasetAsyncDiskService {
 
     @Override
     public void run() {
-      try (FsVolumeReference ref = this.volumeRef) {
+      try {
         final long blockLength = replicaToDelete.getBlockDataLength();
         final long metaLength = replicaToDelete.getMetadataLength();
         boolean result;
@@ -344,13 +344,8 @@ class FsDatasetAsyncDiskService {
               block.getLocalBlock() + " URI " + replicaToDelete.getBlockURI());
         }
         updateDeletedBlockId(block);
-      } catch (Exception e) {
-        LOG.warn(
-            "ReplicaFileDeleteTask failed to " +
-                (trashDirectory == null ? "delete" : "move")
-                + " block " + block.getBlockPoolId() + " " +
-                block.getLocalBlock()
-                + " at file " + replicaToDelete.getBlockURI());
+      } finally {
+        IOUtils.cleanupWithLogger(null, this.volumeRef);
       }
     }
   }
