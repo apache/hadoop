@@ -610,10 +610,10 @@ public class CapacityScheduler extends
       // First randomize the start point
       int start = random.nextInt(partitionSize);
       // Allocate containers of partition [start, end)
-      for (String partititon : partitions) {
+      for (String partition : partitions) {
         if (current++ >= start) {
           CandidateNodeSet<FiCaSchedulerNode> candidates =
-                  cs.getCandidateNodeSet(partititon);
+                  cs.getCandidateNodeSet(partition);
           if (candidates == null) {
             continue;
           }
@@ -624,12 +624,12 @@ public class CapacityScheduler extends
       current = 0;
 
       // Allocate containers of partition [0, start)
-      for (String partititon : partitions) {
+      for (String partition : partitions) {
         if (current++ > start) {
           break;
         }
         CandidateNodeSet<FiCaSchedulerNode> candidates =
-                cs.getCandidateNodeSet(partititon);
+                cs.getCandidateNodeSet(partition);
         if (candidates == null) {
           continue;
         }
