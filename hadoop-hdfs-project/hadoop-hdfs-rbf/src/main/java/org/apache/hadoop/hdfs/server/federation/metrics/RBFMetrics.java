@@ -21,6 +21,7 @@ import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -371,13 +372,13 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
-  public long getTotalCapacity() {
-    return getNameserviceAggregatedLong(MembershipStats::getTotalSpace);
+  public BigInteger getTotalCapacity() {
+    return getNameserviceAggregatedBigInt(MembershipStats::getTotalSpace);
   }
 
   @Override
-  public long getRemainingCapacity() {
-    return getNameserviceAggregatedLong(MembershipStats::getAvailableSpace);
+  public BigInteger getRemainingCapacity() {
+    return getNameserviceAggregatedBigInt(MembershipStats::getAvailableSpace);
   }
 
   @Override
@@ -386,8 +387,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
-  public long getUsedCapacity() {
-    return getTotalCapacity() - getRemainingCapacity();
+  public BigInteger getUsedCapacity() {
+    return getTotalCapacity().subtract(getRemainingCapacity());
   }
 
   @Override
@@ -780,6 +781,23 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     } catch (IOException e) {
       LOG.error("Unable to extract metrics: {}", e.getMessage());
       return 0;
+    }
+  }
+
+  private BigInteger getNameserviceAggregatedBigInt(
+      ToLongFunction<MembershipStats> f) {
+    try {
+      List<MembershipState> states = getActiveNamenodeRegistrations();
+      BigInteger sum = new BigInteger("0");
+      for (MembershipState state : states) {
+        long lvalue = f.applyAsLong(state.getStats());
+        BigInteger bvalue = new BigInteger(String.valueOf(lvalue));
+        sum.add(bvalue);
+      }
+      return sum;
+    } catch (IOException e) {
+      LOG.error("Unable to extract metrics: {}", e.getMessage());
+      return new BigInteger("0");
     }
   }
 

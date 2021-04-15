@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
+import java.math.BigInteger;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -56,19 +58,19 @@ public interface FederationMBean {
    * Get the total capacity of the federated cluster.
    * @return Total capacity of the federated cluster.
    */
-  long getTotalCapacity();
+  BigInteger getTotalCapacity();
 
   /**
    * Get the used capacity of the federated cluster.
    * @return Used capacity of the federated cluster.
    */
-  long getUsedCapacity();
+  BigInteger getUsedCapacity();
 
   /**
    * Get the remaining capacity of the federated cluster.
    * @return Remaining capacity of the federated cluster.
    */
-  long getRemainingCapacity();
+  BigInteger getRemainingCapacity();
 
   /**
    * Get the total remote storage capacity mounted in the federated cluster.

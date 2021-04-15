@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.List;
 
@@ -58,6 +59,7 @@ public class TestRBFMetrics extends TestMetricsBase {
     FederationMBean federationBean = getBean(FEDERATION_BEAN,
         FederationMBean.class);
     validateClusterStatsFederationBean(federationBean);
+    testCapacity(federationBean);
     RouterMBean routerBean = getBean(ROUTER_BEAN, RouterMBean.class);
     validateClusterStatsRouterBean(routerBean);
   }
@@ -347,5 +349,23 @@ public class TestRBFMetrics extends TestMetricsBase {
     assertTrue(bean.getRouterStarted().length() > 0);
     assertTrue(bean.getHostAndPort().length() > 0);
     assertFalse(bean.isSecurityEnabled());
+  }
+
+  private void testCapacity(FederationMBean bean) {
+    List<MembershipState> memberships = getActiveMemberships();
+    assertTrue(memberships.size() > 1);
+
+    BigInteger availableCapacity = new BigInteger("0");
+    BigInteger totalCapacity = new BigInteger("0");
+    BigInteger unitCapacity = new BigInteger(String.valueOf(Long.MAX_VALUE));
+    for (MembershipState mock : memberships) {
+      MembershipStats stats = mock.getStats();
+      stats.setTotalSpace(Long.MAX_VALUE);
+      stats.setAvailableSpace(Long.MAX_VALUE);
+      totalCapacity.add(unitCapacity);
+      availableCapacity.add(unitCapacity);
+    }
+    assertEquals(bean.getTotalCapacity(), totalCapacity); // overflow
+    assertEquals(bean.getRemainingCapacity(), availableCapacity); // overflow
   }
 }
