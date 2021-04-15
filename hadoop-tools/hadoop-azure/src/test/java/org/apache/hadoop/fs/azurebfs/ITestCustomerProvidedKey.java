@@ -3,9 +3,9 @@
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * to you under the Apache License, Version 2.0 ("License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
  * <p>
@@ -34,37 +34,52 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
-import org.apache.hadoop.fs.azurebfs.services.*;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.XAttrSetFlag;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode;
+import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY_SHA256;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_SERVER_ENCRYPTED;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_SERVER_ENCRYPTED;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_CPK_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
@@ -82,8 +97,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   private static final int FILE_SIZE_FOR_COPY_BETWEEN_ACCOUNTS = 24 * ONE_MB;
 
   public ITestCustomerProvidedKey() throws Exception {
-    boolean isCPKTestsEnabled =
-        getConfiguration().getBoolean(FS_AZURE_TEST_CPK_ENABLED, false);
+    boolean isCPKTestsEnabled = getConfiguration()
+        .getBoolean(FS_AZURE_TEST_CPK_ENABLED, false);
     Assume.assumeTrue(isCPKTestsEnabled);
   }
 
@@ -115,8 +130,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "different-1234567890123456789012");
     conf.set("fs.abfs.impl.disable.cache", "true");
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
-    try (FSDataInputStream iStream = fs2.open(new Path(fileName))) {
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
+        .get(conf); FSDataInputStream iStream = fs2.open(new Path(fileName))) {
       int len = 8 * ONE_MB;
       byte[] b = new byte[len];
       LambdaTestUtils.intercept(IOException.class, () -> {
@@ -126,8 +141,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
     //  Trying to read with no CPK headers
     conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
-    AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
-    try (FSDataInputStream iStream = fs3.open(new Path(fileName))) {
+    try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
+        .get(conf); FSDataInputStream iStream = fs3.open(new Path(fileName))) {
       int len = 8 * ONE_MB;
       byte[] b = new byte[len];
       LambdaTestUtils.intercept(IOException.class, () -> {
@@ -164,11 +179,12 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "12345678901234567890123456789012");
     conf.set("fs.abfs.impl.disable.cache", "true");
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
-    AbfsClient abfsClient2 = fs2.getAbfsClient();
-    LambdaTestUtils.intercept(IOException.class, () -> {
-      abfsClient2.read(fileName, 0, buffer, 0, length, eTag, null);
-    });
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
+        .get(conf); AbfsClient abfsClient2 = fs2.getAbfsClient()) {
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        abfsClient2.read(fileName, 0, buffer, 0, length, eTag, null);
+      });
+    }
   }
 
   @Test
@@ -189,8 +205,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertResponseHeader(abfsRestOperation, true, X_MS_ENCRYPTION_KEY_SHA256,
         getCPKSha(fs));
     assertResponseHeader(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
-    assertResponseHeader(abfsRestOperation, true,
-        X_MS_REQUEST_SERVER_ENCRYPTED, "true");
+    assertResponseHeader(abfsRestOperation, true, X_MS_REQUEST_SERVER_ENCRYPTED,
+        "true");
 
     //  Trying to append with different CPK headers
     Configuration conf = fs.getConf();
@@ -198,19 +214,21 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "different-1234567890123456789012");
     conf.set("fs.abfs.impl.disable.cache", "true");
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
-    AbfsClient abfsClient2 = fs2.getAbfsClient();
-    LambdaTestUtils.intercept(IOException.class, () -> {
-      abfsClient2.append(fileName, buffer, appendRequestParameters, null);
-    });
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
+        .get(conf); AbfsClient abfsClient2 = fs2.getAbfsClient()) {
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        abfsClient2.append(fileName, buffer, appendRequestParameters, null);
+      });
+    }
 
     //  Trying to append with no CPK headers
     conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
-    AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
-    AbfsClient abfsClient3 = fs3.getAbfsClient();
-    LambdaTestUtils.intercept(IOException.class, () -> {
-      abfsClient3.append(fileName, buffer, appendRequestParameters, null);
-    });
+    try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
+        .get(conf); AbfsClient abfsClient3 = fs3.getAbfsClient()) {
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        abfsClient3.append(fileName, buffer, appendRequestParameters, null);
+      });
+    }
   }
 
   @Test
@@ -231,8 +249,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertResponseHeader(abfsRestOperation, false, X_MS_ENCRYPTION_KEY_SHA256,
         "");
     assertResponseHeader(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
-    assertResponseHeader(abfsRestOperation, true,
-        X_MS_REQUEST_SERVER_ENCRYPTED, "true");
+    assertResponseHeader(abfsRestOperation, true, X_MS_REQUEST_SERVER_ENCRYPTED,
+        "true");
 
     //  Trying to append with CPK headers
     Configuration conf = fs.getConf();
@@ -240,11 +258,12 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "12345678901234567890123456789012");
     conf.set("fs.abfs.impl.disable.cache", "true");
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
-    AbfsClient abfsClient2 = fs2.getAbfsClient();
-    LambdaTestUtils.intercept(IOException.class, () -> {
-      abfsClient2.append(fileName, buffer, appendRequestParameters, null);
-    });
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
+        .get(conf); AbfsClient abfsClient2 = fs2.getAbfsClient()) {
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        abfsClient2.append(fileName, buffer, appendRequestParameters, null);
+      });
+    }
   }
 
   @Test
@@ -332,8 +351,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "different-1234567890123456789012");
-    AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
-    try (FSDataInputStream iStream = fs3.open(fs2DestFilePath)) {
+    try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
+        .get(conf); FSDataInputStream iStream = fs3.open(fs2DestFilePath)) {
       int length = 8 * ONE_MB;
       byte[] buffer = new byte[length];
       LambdaTestUtils.intercept(IOException.class, () -> {
@@ -343,8 +362,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
     //  Trying to read fs2DestFilePath with no CPK headers
     conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
-    AzureBlobFileSystem fs4 = (AzureBlobFileSystem) FileSystem.get(conf);
-    try (FSDataInputStream iStream = fs4.open(fs2DestFilePath)) {
+    try (AzureBlobFileSystem fs4 = (AzureBlobFileSystem) FileSystem
+        .get(conf); FSDataInputStream iStream = fs4.open(fs2DestFilePath)) {
       int length = 8 * ONE_MB;
       byte[] buffer = new byte[length];
       LambdaTestUtils.intercept(IOException.class, () -> {
@@ -400,8 +419,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     conf.set("fs.abfs.impl.disable.cache", "true");
     AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
     AbfsClient abfsClient2 = fs2.getAbfsClient();
-    abfsRestOperation = abfsClient2
-        .listPath(testDirName, false, INT_50, null);
+    abfsRestOperation = abfsClient2.listPath(testDirName, false, INT_50, null);
     assertListstatus(fs, abfsRestOperation, testPath);
 
     if (isWithCPK) {
@@ -409,7 +427,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
       conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
       AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
       AbfsClient abfsClient3 = fs3.getAbfsClient();
-      abfsRestOperation = abfsClient3.listPath(testDirName, false, INT_50, null);
+      abfsRestOperation = abfsClient3
+          .listPath(testDirName, false, INT_50, null);
       assertListstatus(fs, abfsRestOperation, testPath);
     }
   }
@@ -457,8 +476,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
     assertResponseHeader(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
-    assertResponseHeader(abfsRestOperation, true,
-        X_MS_REQUEST_SERVER_ENCRYPTED, "true");
+    assertResponseHeader(abfsRestOperation, true, X_MS_REQUEST_SERVER_ENCRYPTED,
+        "true");
 
     FileStatus[] listStatuses = fs.listStatus(new Path(testFileName));
     Assertions.assertThat(listStatuses.length)
@@ -484,8 +503,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final String testFileName = "/" + methodName.getMethodName();
     createFileAndGetContent(fs, testFileName, FILE_SIZE);
 
-    FileStatus fileStatusBeforeRename =
-        fs.getFileStatus(new Path(testFileName));
+    FileStatus fileStatusBeforeRename = fs
+        .getFileStatus(new Path(testFileName));
 
     String newName = "/newName";
     AbfsClient abfsClient = fs.getAbfsClient();
@@ -494,7 +513,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertCPKHeaders(abfsRestOperation, false);
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
 
-    Assertions.assertThatThrownBy(() -> fs.getFileStatus(new Path(testFileName)))
+    Assertions
+        .assertThatThrownBy(() -> fs.getFileStatus(new Path(testFileName)))
         .isInstanceOf(FileNotFoundException.class);
 
     FileStatus fileStatusAfterRename = fs.getFileStatus(new Path(newName));
@@ -521,7 +541,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     String expectedCPKSha = getCPKSha(fs);
 
     byte[] fileContent = getRandomBytesArray(FILE_SIZE);
-    Path testFilePath = new Path(testFileName+"1");
+    Path testFilePath = new Path(testFileName + "1");
     FSDataOutputStream oStream = fs.create(testFilePath);
     oStream.write(fileContent);
 
@@ -531,21 +551,22 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "different-1234567890123456789012");
     conf.set("fs.abfs.impl.disable.cache", "true");
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
-    AbfsClient abfsClient2 = fs2.getAbfsClient();
-    LambdaTestUtils.intercept(IOException.class, () -> {
-      abfsClient2
-          .flush(testFileName, 0, false, false, null);
-    });
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
+        .get(conf); AbfsClient abfsClient2 = fs2.getAbfsClient()) {
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        abfsClient2.flush(testFileName, 0, false, false, null);
+      });
+    }
 
     //  Trying to read with no CPK headers
     if (isWithCPK) {
       conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
-      AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
-      AbfsClient abfsClient3 = fs3.getAbfsClient();
-      LambdaTestUtils.intercept(IOException.class, () -> {
-        abfsClient3.flush(testFileName, 0, false, false, null);
-      });
+      try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
+          .get(conf); AbfsClient abfsClient3 = fs3.getAbfsClient()) {
+        LambdaTestUtils.intercept(IOException.class, () -> {
+          abfsClient3.flush(testFileName, 0, false, false, null);
+        });
+      }
     }
 
     //  With correct CPK
@@ -555,8 +576,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, expectedCPKSha);
     assertResponseHeader(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
-    assertResponseHeader(abfsRestOperation, true,
-        X_MS_REQUEST_SERVER_ENCRYPTED, isWithCPK + "");
+    assertResponseHeader(abfsRestOperation, true, X_MS_REQUEST_SERVER_ENCRYPTED,
+        isWithCPK + "");
   }
 
   @Test
@@ -584,8 +605,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
     assertResponseHeader(abfsRestOperation, false, X_MS_SERVER_ENCRYPTED, "");
-    assertResponseHeader(abfsRestOperation, true,
-        X_MS_REQUEST_SERVER_ENCRYPTED, "true");
+    assertResponseHeader(abfsRestOperation, true, X_MS_REQUEST_SERVER_ENCRYPTED,
+        "true");
   }
 
   @Test
@@ -614,8 +635,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertResponseHeader(abfsRestOperation, false,
         X_MS_REQUEST_SERVER_ENCRYPTED, "");
 
-    abfsRestOperation = abfsClient
-        .getPathStatus(testFileName, true);
+    abfsRestOperation = abfsClient.getPathStatus(testFileName, true);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
@@ -781,7 +801,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   }
 
   private void assertResponseHeader(AbfsRestOperation abfsRestOperation,
-                                    boolean isHeaderExpected, String headerName, String expectedValue) {
+      boolean isHeaderExpected, String headerName, String expectedValue) {
     final AbfsHttpOperation result = abfsRestOperation.getResult();
     final String value = result.getResponseHeader(headerName);
     if (isHeaderExpected) {
