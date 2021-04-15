@@ -209,6 +209,15 @@ public class FSDirXAttrOp {
     List<XAttr> removedXAttrs = Lists.newArrayListWithCapacity(toRemove.size());
     List<XAttr> newXAttrs = filterINodeXAttrs(existingXAttrs, toRemove,
                                               removedXAttrs);
+    // removing an EZ xattr requires an ancestor to be using the same key.
+    for (XAttr removed : removedXAttrs) {
+      if (KEYID_XATTR.equalsIgnoreValue(removed)) {
+        Preconditions.checkArgument(fsd.ezManager.checkRemoveXAttrValidity(iip),
+            "The encryption zone xattr should never be deleted.");
+        fsd.ezManager.removeEncryptionZone(inode.getId());
+        break;
+      }
+    }
     if (existingXAttrs.size() != newXAttrs.size()) {
       XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
       return removedXAttrs;
@@ -245,9 +254,6 @@ public class FSDirXAttrOp {
       for (ListIterator<XAttr> it = toFilter.listIterator(); it.hasNext()
           ;) {
         XAttr filter = it.next();
-        Preconditions.checkArgument(
-            !KEYID_XATTR.equalsIgnoreValue(filter),
-            "The encryption zone xattr should never be deleted.");
         if (UNREADABLE_BY_SUPERUSER_XATTR.equalsIgnoreValue(filter)) {
           throw new AccessControlException("The xattr '" +
               SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' can not be deleted.");
