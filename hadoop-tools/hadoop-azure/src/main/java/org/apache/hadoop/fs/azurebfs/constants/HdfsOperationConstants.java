@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 public final class HdfsOperationConstants {
     public static final String ACCESS = "AS";
+    public static final String ACQUIRE_LEASE = "AL";
     public static final String APPEND = "AP";
+    public static final String BREAK_LEASE = "BL";
     public static final String CREATE = "CR";
     public static final String CREATE_FILESYSTEM = "CF";
     public static final String DELETE = "DL";
@@ -34,6 +36,7 @@ public final class HdfsOperationConstants {
     public static final String HAS_PATH_CAPABILITY = "PC";
     public static final String SET_PERMISSION = "SP";
     public static final String READ = "RE";
+    public static final String RELEASE_LEASE = "RL";
     public static final String REMOVE_ACL = "RA";
     public static final String REMOVE_ACL_ENTRIES = "RT";
     public static final String REMOVE_DEFAULT_ACL = "RD";

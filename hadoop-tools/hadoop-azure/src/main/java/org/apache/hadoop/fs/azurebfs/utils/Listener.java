@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+/**
+ * Interface for testing identifiers tracked via TracingContext
+ * Implemented in TracingHeaderValidator
+ */
+
 public interface Listener {
   void callTracingHeaderValidator(String header, TracingContextFormat format);
   void updatePrimaryRequestID(String primaryRequestID);

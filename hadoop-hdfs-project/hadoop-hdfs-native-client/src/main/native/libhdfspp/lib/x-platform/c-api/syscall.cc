@@ -18,6 +18,26 @@
 
 #include "x-platform/syscall.h"
 
-extern "C" int x_platform_syscall_write_to_stdout(const char* msg) {
+#include <algorithm>
+#include <vector>
+
+extern "C" {
+int x_platform_syscall_write_to_stdout(const char* msg) {
   return XPlatform::Syscall::WriteToStdout(msg) ? 1 : 0;
+}
+
+int x_platform_syscall_create_and_open_temp_file(char* pattern,
+                                                 const size_t pattern_len) {
+  std::vector<char> pattern_vec(pattern, pattern + pattern_len);
+
+  const auto fd = XPlatform::Syscall::CreateAndOpenTempFile(pattern_vec);
+  if (fd != -1) {
+    std::copy_n(pattern_vec.begin(), pattern_len, pattern);
+  }
+  return fd;
+}
+
+int x_platform_syscall_close_file(const int fd) {
+  return XPlatform::Syscall::CloseFile(fd);
+}
 }

@@ -21,11 +21,19 @@
 #include "hdfspp/config_parser.h"
 #include "common/configuration.h"
 #include "common/configuration_loader.h"
+#include "x-platform/syscall.h"
+
 #include <cstdio>
 #include <fstream>
 #include <istream>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include <ftw.h>
+#include <unistd.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace hdfs {
 
@@ -107,23 +115,51 @@ void writeDamagedConfig(const std::string& filename, Args... args) {
 
 // TempDir: is deleted on destruction
 class TempFile {
-public:
-  std::string filename;
-  char        fn_buffer[128];
-  int         tempFileHandle;
-  TempFile() : tempFileHandle(-1) {
-    strncpy(fn_buffer, "/tmp/test_XXXXXXXXXX", sizeof(fn_buffer));
-    tempFileHandle = mkstemp(fn_buffer);
-    EXPECT_NE(-1, tempFileHandle);
-    filename = fn_buffer;
+ public:
+  TempFile() {
+    std::vector<char> tmp_buf(filename_.begin(), filename_.end());
+    fd_ = XPlatform::Syscall::CreateAndOpenTempFile(tmp_buf);
+    EXPECT_NE(fd_, -1);
+    filename_.assign(tmp_buf.data());
   }
-  TempFile(const std::string & fn) : filename(fn), tempFileHandle(-1) {
-    strncpy(fn_buffer, fn.c_str(), sizeof(fn_buffer));
-    fn_buffer[sizeof(fn_buffer)-1] = 0;
-  }
-  ~TempFile() { if(-1 != tempFileHandle) close(tempFileHandle); unlink(fn_buffer); }
-};
 
+  TempFile(std::string fn) : filename_(std::move(fn)) {}
+
+  TempFile(const TempFile& other) = default;
+
+  TempFile(TempFile&& other) noexcept
+      : filename_{std::move(other.filename_)}, fd_{other.fd_} {}
+
+  TempFile& operator=(const TempFile& other) {
+    if (&other != this) {
+      filename_ = other.filename_;
+      fd_ = other.fd_;
+    }
+    return *this;
+  }
+
+  TempFile& operator=(TempFile&& other) noexcept {
+    if (&other != this) {
+      filename_ = std::move(other.filename_);
+      fd_ = other.fd_;
+    }
+    return *this;
+  }
+
+  [[nodiscard]] const std::string& GetFileName() const { return filename_; }
+
+  ~TempFile() {
+    if (-1 != fd_) {
+      EXPECT_NE(XPlatform::Syscall::CloseFile(fd_), -1);
+    }
+
+    unlink(filename_.c_str());
+  }
+
+ private:
+  std::string filename_{"/tmp/test_XXXXXXXXXX"};
+  int fd_{-1};
+};
 
 // Callback to remove a directory in the nftw visitor
 int nftw_remove(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)

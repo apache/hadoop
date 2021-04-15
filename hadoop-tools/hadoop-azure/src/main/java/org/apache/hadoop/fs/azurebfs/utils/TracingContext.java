@@ -27,6 +27,25 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
+/**
+ * The TracingContext class to correlate Store requests using unique
+ * identifiers and common resources such as filesystem and stream
+ *
+ * Implementing new HDFS method:
+ * Create and pass an instance of TracingContext to method in outer layer of
+ * ABFS driver (AzureBlobFileSystem/AbfsInputStream/AbfsOutputStream).
+ * Identifiers appear in X_MS_CLIENT_REQUEST_ID header and debug logs.
+ *
+ * Add new operations to HdfsOperationConstants file.
+ *
+ * PrimaryRequestId can be enabled for individual HDFS API that invoke
+ * multiple Store calls.
+ *
+ * Testing:
+ * Pass an instance of TracingHeaderValidator to registerListener() of ABFS
+ * filesystem/stream class before calling the API in tests.
+ */
+
 public class TracingContext {
   private final String clientCorrelationID;
   private final String fileSystemID;
@@ -42,6 +61,16 @@ public class TracingContext {
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
+  /**
+   * Initialize TracingContext
+   * @param clientCorrelationID Provided over config by client
+   * @param fileSystemID Unique guid for AzureBlobFileSystem instance
+   * @param hadoopOpName Code indicating the high-level Hadoop operation that
+   *                    triggered the current Store request
+   * @param tracingContextFormat Format of IDs to be
+   * @param listener Holds instance of TracingHeaderValidator during testing,
+   *                null otherwise
+   */
   public TracingContext(String clientCorrelationID, String fileSystemID,
       String hadoopOpName, TracingContextFormat tracingContextFormat,
       Listener listener) {
@@ -131,7 +160,7 @@ public class TracingContext {
     default:
       header = clientRequestID; //case SINGLE_ID_FORMAT
     }
-    if (listener != null) {
+    if (listener != null) { //testing
       listener.callTracingHeaderValidator(header, format);
     }
     return header;

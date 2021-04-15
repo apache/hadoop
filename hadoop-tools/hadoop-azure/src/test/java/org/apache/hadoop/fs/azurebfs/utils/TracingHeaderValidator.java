@@ -22,6 +22,10 @@ import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 
+/**
+ * Used to validate correlation identifiers provided during testing against
+ * values that get associated with a request through its TracingContext instance
+ */
 public class TracingHeaderValidator implements Listener {
   private String clientCorrelationID;
   private String fileSystemID;
@@ -131,6 +135,10 @@ public class TracingHeaderValidator implements Listener {
         .isEqualTo(retryNum);
   }
 
+  /**
+   * Sets the value of expected Hadoop operation
+   * @param operation Hadoop operation code (String of two characters)
+   */
   @Override
   public void setOperation(String operation) {
     this.operation = operation;
