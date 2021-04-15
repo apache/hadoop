@@ -5062,7 +5062,6 @@
   </description>
 </property>
 
-
 <property>
   <name>dfs.namenode.edits.dir.minimum</name>
   <value>1</value>
