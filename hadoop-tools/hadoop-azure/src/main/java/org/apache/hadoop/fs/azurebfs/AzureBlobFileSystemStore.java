@@ -781,6 +781,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * Break any current lease on an ABFS file.
    *
    * @param path file name
+   * @param tracingContext TracingContext instance to track correlation IDs
    * @throws AzureBlobFileSystemException on any exception while breaking the lease
    */
   public void breakLease(final Path path, final TracingContext tracingContext) throws AzureBlobFileSystemException {
@@ -1441,7 +1442,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   public boolean isInfiniteLeaseKey(String key) {
     if (azureInfiniteLeaseDirSet.isEmpty()) {
-      System.out.println("==========");
       return false;
     }
     return isKeyForDirectorySet(key, azureInfiniteLeaseDirSet);
@@ -1623,7 +1623,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
     for (String dir : dirSet) {
-      System.out.println(dir + "> " + key);
       if (dir.isEmpty() || key.startsWith(dir + AbfsHttpConstants.FORWARD_SLASH)) {
         return true;
       }
@@ -1742,17 +1741,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         abfsConfiguration.getAzureInfiniteLeaseDirs().split(AbfsHttpConstants.COMMA)));
     // remove the empty string, since isKeyForDirectory returns true for empty strings
     // and we don't want to default to enabling infinite lease dirs
-//    this.azureInfiniteLeaseDirSet.remove("");
+    this.azureInfiniteLeaseDirSet.remove("");
   }
 
   private AbfsLease maybeCreateLease(String relativePath, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     boolean enableInfiniteLease = isInfiniteLeaseKey(relativePath);
     if (!enableInfiniteLease) {
-      System.out.println("-------------------");
       return null;
     }
-    tracingContext.setOperation(HdfsOperationConstants.ACQUIRE_LEASE);
     AbfsLease lease = new AbfsLease(client, relativePath, tracingContext);
     leaseRefs.put(lease, null);
     return lease;

@@ -194,4 +194,13 @@ public final class AbfsLease {
   public int getAcquireRetryCount() {
     return acquireRetryCount;
   }
+
+  public void setListenerOperation(String op) {
+    tracingContext.setOperation(op);
+  }
+
+  @VisibleForTesting
+  public TracingContext getTracingContext() {
+    return tracingContext;
+  }
 }

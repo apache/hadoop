@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Assert;
@@ -313,14 +314,15 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.mkdirs(testFilePath.getParent());
     fs.createNewFile(testFilePath);
     TracingContext tracingContext = getTestTracingContext(fs, false);
-    fs.registerListener(new TracingHeaderValidator(
-        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.ACQUIRE_LEASE, false, 0));
+    tracingContext.setListener(new TracingHeaderValidator(getConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), HdfsOperationConstants.TEST_OP, true, 0));
 
     AbfsLease lease = new AbfsLease(fs.getAbfsClient(),
         testFilePath.toUri().getPath(), tracingContext);
     Assert.assertNotNull("Did not successfully lease file", lease.getLeaseID());
+    lease.setListenerOperation(HdfsOperationConstants.RELEASE_LEASE);
     lease.free();
+    lease.getTracingContext().setListener(null);
     Assert.assertEquals("Unexpected acquire retry count", 0, lease.getAcquireRetryCount());
 
     AbfsClient mockClient = spy(fs.getAbfsClient());

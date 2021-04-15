@@ -29,12 +29,12 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_ST
 
 /**
  * The TracingContext class to correlate Store requests using unique
- * identifiers and common resources such as filesystem and stream
+ * identifiers and resources common to requests (e.g. filesystem, stream)
  *
  * Implementing new HDFS method:
- * Create and pass an instance of TracingContext to method in outer layer of
- * ABFS driver (AzureBlobFileSystem/AbfsInputStream/AbfsOutputStream).
- * Identifiers appear in X_MS_CLIENT_REQUEST_ID header and debug logs.
+ * Create TracingContext instance in method of outer layer of
+ * ABFS driver (AzureBlobFileSystem/AbfsInputStream/AbfsOutputStream), to be
+ * passed through ABFS layers up to AbfsRestOperation.
  *
  * Add new operations to HdfsOperationConstants file.
  *
@@ -49,7 +49,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_ST
 public class TracingContext {
   private final String clientCorrelationID;
   private final String fileSystemID;
-  private String clientRequestID = "";
+  private String clientRequestID = EMPTY_STRING;
   private String primaryRequestID;
   private String streamID;
   private int retryCount;
@@ -67,7 +67,7 @@ public class TracingContext {
    * @param fileSystemID Unique guid for AzureBlobFileSystem instance
    * @param hadoopOpName Code indicating the high-level Hadoop operation that
    *                    triggered the current Store request
-   * @param tracingContextFormat Format of IDs to be
+   * @param tracingContextFormat Format of IDs to be printed in header and logs
    * @param listener Holds instance of TracingHeaderValidator during testing,
    *                null otherwise
    */

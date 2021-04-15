@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 public final class HdfsOperationConstants {
     public static final String ACCESS = "AS";
-    public static final String ACQUIRE_LEASE = "AL";
     public static final String APPEND = "AP";
     public static final String BREAK_LEASE = "BL";
     public static final String CREATE = "CR";
