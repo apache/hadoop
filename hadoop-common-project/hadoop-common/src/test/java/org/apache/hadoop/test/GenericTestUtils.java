@@ -30,6 +30,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -70,7 +71,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
@@ -927,7 +927,7 @@ public abstract class GenericTestUtils {
     return submit(EXECUTOR, () -> {
       try (DurationInfo ignore =
           new DurationInfo(LOG, false, "Creating %s", path)) {
-        createFile(fs, path, true, text.getBytes(Charsets.UTF_8));
+        createFile(fs, path, true, text.getBytes(StandardCharsets.UTF_8));
         return path;
       }
     });

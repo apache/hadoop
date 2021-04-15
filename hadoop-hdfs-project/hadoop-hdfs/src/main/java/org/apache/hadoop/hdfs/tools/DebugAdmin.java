@@ -65,7 +65,7 @@ public class DebugAdmin extends Configured implements Tool {
   /**
    * All the debug commands we can run.
    */
-  private DebugCommand DEBUG_COMMANDS[] = {
+  private final DebugCommand[] DEBUG_COMMANDS = {
       new VerifyMetaCommand(),
       new ComputeMetaCommand(),
       new RecoverLeaseCommand(),
@@ -75,7 +75,7 @@ public class DebugAdmin extends Configured implements Tool {
   /**
    * The base class for debug commands.
    */
-  private abstract class DebugCommand {
+  private abstract static class DebugCommand {
     final String name;
     final String usageText;
     final String helpText;
@@ -94,15 +94,15 @@ public class DebugAdmin extends Configured implements Tool {
   /**
    * The command for verifying a block metadata file and possibly block file.
    */
-  private class VerifyMetaCommand extends DebugCommand {
+  private static class VerifyMetaCommand extends DebugCommand {
     VerifyMetaCommand() {
       super("verifyMeta",
-"verifyMeta -meta <metadata-file> [-block <block-file>]",
-"  Verify HDFS metadata and block files.  If a block file is specified, we" +
-    System.lineSeparator() +
-"  will verify that the checksums in the metadata file match the block" +
-    System.lineSeparator() +
-"  file.");
+          "verifyMeta -meta <metadata-file> [-block <block-file>]",
+          "  Verify HDFS metadata and block files.  If a block file is specified, we" +
+              System.lineSeparator() +
+              "  will verify that the checksums in the metadata file match the block" +
+              System.lineSeparator() +
+              "  file.");
     }
 
     int run(List<String> args) throws IOException {
@@ -202,7 +202,7 @@ public class DebugAdmin extends Configured implements Tool {
             blockFile);
         return 0;
       } finally {
-        IOUtils.cleanup(null, metaStream, dataStream, checksumStream);
+        IOUtils.cleanupWithLogger(null, metaStream, dataStream, checksumStream);
       }
     }
   }
@@ -210,7 +210,7 @@ public class DebugAdmin extends Configured implements Tool {
   /**
    * The command for verifying a block metadata file and possibly block file.
    */
-  private class ComputeMetaCommand extends DebugCommand {
+  private static class ComputeMetaCommand extends DebugCommand {
     ComputeMetaCommand() {
       super("computeMeta",
           "computeMeta -block <block-file> -out <output-metadata-file>",
@@ -287,7 +287,7 @@ public class DebugAdmin extends Configured implements Tool {
                 + " saved metadata to meta file " + outFile);
         return 0;
       } finally {
-        IOUtils.cleanup(null, metaOut);
+        IOUtils.cleanupWithLogger(null, metaOut);
       }
     }
   }

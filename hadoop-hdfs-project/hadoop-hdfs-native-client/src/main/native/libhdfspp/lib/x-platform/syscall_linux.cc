@@ -16,9 +16,12 @@
  * limitations under the License.
  */
 
+#include <fnmatch.h>
+#include <strings.h>
 #include <unistd.h>
 
 #include <cstring>
+#include <vector>
 
 #include "syscall.h"
 
@@ -30,8 +33,35 @@ int XPlatform::Syscall::WriteToStdout(const char* message) {
   return WriteToStdoutImpl(message) ? 1 : 0;
 }
 
+bool XPlatform::Syscall::FnMatch(const std::string& pattern,
+                                 const std::string& str) {
+  return fnmatch(pattern.c_str(), str.c_str(), 0) == 0;
+}
+
 bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
   const auto message_len = strlen(message);
   const auto result = write(1, message, message_len);
   return result == static_cast<ssize_t>(message_len);
+}
+
+void XPlatform::Syscall::ClearBufferSafely(void* buffer,
+                                           const size_t sz_bytes) {
+  if (buffer != nullptr) {
+    explicit_bzero(buffer, sz_bytes);
+  }
+}
+
+bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
+                                                 const std::string& b) {
+  return strcasecmp(a.c_str(), b.c_str()) == 0;
+}
+
+int XPlatform::Syscall::CreateAndOpenTempFile(std::vector<char>& pattern) {
+  // Make space for mkstemp to add NULL character at the end
+  pattern.resize(pattern.size() + 1);
+  return mkstemp(pattern.data());
+}
+
+bool XPlatform::Syscall::CloseFile(const int file_descriptor) {
+  return close(file_descriptor) == 0;
 }

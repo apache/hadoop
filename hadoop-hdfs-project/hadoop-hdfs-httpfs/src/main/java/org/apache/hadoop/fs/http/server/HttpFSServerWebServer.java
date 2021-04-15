@@ -30,6 +30,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -150,6 +151,7 @@ public class HttpFSServerWebServer {
   }
 
   public void start() throws IOException {
+    DefaultMetricsSystem.initialize("httpfs");
     httpServer.start();
   }
 
@@ -159,6 +161,7 @@ public class HttpFSServerWebServer {
 
   public void stop() throws Exception {
     httpServer.stop();
+    DefaultMetricsSystem.shutdown();
   }
 
   public URL getUrl() {

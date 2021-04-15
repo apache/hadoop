@@ -247,7 +247,7 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
         LOG.error("[STRESS] Interrupted in the main block!", e);
         return;
       } finally {
-        IOUtils.cleanup(null, jobProducer);
+        IOUtils.cleanupWithLogger(null, jobProducer);
       }
     }
   }

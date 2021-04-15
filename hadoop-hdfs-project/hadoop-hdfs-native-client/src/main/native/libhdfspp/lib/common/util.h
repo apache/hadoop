@@ -22,6 +22,7 @@
 #include "common/logging.h"
 
 #include <mutex>
+#include <memory>
 #include <string>
 
 #include <boost/asio/ip/tcp.hpp>
@@ -46,7 +47,7 @@ Status ToStatus(const boost::system::error_code &ec);
 
 // Determine size of buffer that needs to be allocated in order to serialize msg
 // in delimited format
-int DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg);
+size_t DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg);
 
 // Construct msg from the input held in the CodedInputStream
 // return false on failure, otherwise return true
@@ -61,7 +62,7 @@ std::string SerializeDelimitedProtobufMessage(const ::google::protobuf::MessageL
 std::string Base64Encode(const std::string &src);
 
 // Return a new high-entropy client name
-std::string GetRandomClientName();
+std::shared_ptr<std::string> GetRandomClientName();
 
 // Returns true if _someone_ is holding the lock (not necessarily this thread,
 // but a std::mutex doesn't track which thread is holding the lock)

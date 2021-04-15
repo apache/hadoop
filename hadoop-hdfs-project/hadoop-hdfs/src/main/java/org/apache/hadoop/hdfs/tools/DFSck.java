@@ -227,7 +227,7 @@ public class DFSck extends Configured implements Tool {
             continue;
           numCorrupt++;
           if (numCorrupt == 1) {
-            out.println("The list of corrupt files under path '"
+            out.println("The list of corrupt blocks under path '"
                 + dir + "' are:");
           }
           out.println(line);
@@ -237,7 +237,7 @@ public class DFSck extends Configured implements Tool {
       }
     }
     out.println("The filesystem under path '" + dir + "' has " 
-        + numCorrupt + " CORRUPT files");
+        + numCorrupt + " CORRUPT blocks");
     if (numCorrupt == 0)
       errCode = 0;
     return errCode;
