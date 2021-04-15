@@ -53,6 +53,11 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
   private final BlockingQueue<Edit> editPendingQ;
 
   // Thread pool for executing logSyncNotify
+  // It should not be shut down when the FSEditLogAsync is closed, because
+  // 1) when the state transitions from active to standby and then transitions back,
+  // it is still using the same FSEditLogAsync object, so the same executor should
+  // keep working; 2) in all possible scenarios, FSEditLogAsync is a singleton
+  // in the NameNode process, so it is fine to let this executor run forever.
   private final ExecutorService logSyncNotifyExecutor;
 
   // only accessed by syncing thread so no synchronization required.
