@@ -78,8 +78,11 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
 
     editPendingQ = new ArrayBlockingQueue<>(editPendingQSize);
 
-    // the thread pool size should be configurable later, and justified with a rationale
-    logSyncNotifyExecutor = Executors.newFixedThreadPool(10);
+    int logSyncNotifyExecutorSize = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_ASYNC_LOGSYNCNOTIFY_EXECUTOR_SIZE,
+        DFSConfigKeys.
+            DFS_NAMENODE_EDITS_ASYNC_LOGSYNCNOTIFY_EXECUTOR_SIZE_DEFAULT);
+    logSyncNotifyExecutor = Executors.newFixedThreadPool(logSyncNotifyExecutorSize);
   }
 
   private boolean isSyncThreadAlive() {
