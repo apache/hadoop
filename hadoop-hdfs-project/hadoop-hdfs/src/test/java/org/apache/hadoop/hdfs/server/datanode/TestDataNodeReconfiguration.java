@@ -28,8 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -42,12 +40,13 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test to reconfigure some parameters for DataNode without restart
  */
 public class TestDataNodeReconfiguration {
-
   private static final Logger LOG =
       LoggerFactory.getLogger(TestBlockRecovery.class);
   private static final String DATA_DIR = MiniDFSCluster.getBaseDirectory()
