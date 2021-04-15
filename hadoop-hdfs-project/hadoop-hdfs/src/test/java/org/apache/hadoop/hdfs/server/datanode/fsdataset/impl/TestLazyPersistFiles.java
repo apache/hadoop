@@ -298,7 +298,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     int[] beforeCnts = new int[volumes.size()];
     FsDatasetImpl ds = (FsDatasetImpl) DataNodeTestUtils.getFSDataset(dn);
 
-    // Create a runtime exception
+    // Create a runtime exception.
     ds.asyncLazyPersistService.shutdown();
     for (int i = 0; i < volumes.size(); ++i) {
       beforeCnts[i] = ((FsVolumeImpl) volumes.get(i)).getReferenceCount();

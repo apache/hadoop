@@ -566,7 +566,7 @@ public class TestDataTransferProtocol {
         null, null, new String[0]);
   }
 
-  @Test
+  @Test(timeout = 30000)
   public void testReleaseVolumeRefIfExceptionThrown()
       throws IOException, InterruptedException {
     Path file = new Path("dataprotocol.dat");
@@ -590,7 +590,7 @@ public class TestDataTransferProtocol {
           fileSys.getDefaultBlockSize(file),
           fileSys.getDefaultReplication(file), 0L);
 
-      // get the first blockid for the file
+      // Get the first blockid for the file.
       final ExtendedBlock firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
 
       String bpid = cluster.getNamesystem().getBlockPoolId();
@@ -598,7 +598,7 @@ public class TestDataTransferProtocol {
       sendBuf.reset();
       recvBuf.reset();
 
-      // delete the meta file to create a exception in BlockSender constructor
+      // Delete the meta file to create a exception in BlockSender constructor.
       DataNode dn = cluster.getDataNodes().get(0);
       cluster.getMaterializedReplica(0, blk).deleteMeta();
 
@@ -608,7 +608,7 @@ public class TestDataTransferProtocol {
 
       sender.copyBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN);
       sendRecvData("Copy a block.", false);
-      Thread.sleep(1000);
+      Thread.sleep(3000);
 
       int afterCnt = volume.getReferenceCount();
       assertEquals(beforeCnt, afterCnt);

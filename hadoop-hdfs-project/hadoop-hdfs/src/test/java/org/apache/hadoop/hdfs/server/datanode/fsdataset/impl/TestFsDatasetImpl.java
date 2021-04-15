@@ -1826,7 +1826,7 @@ public class TestFsDatasetImpl {
       ((LocalReplica) info).getMetaFile().createNewFile();
       blockList.add(info);
 
-      // Create a runtime exception
+      // Create a runtime exception.
       dataset.asyncDiskService.shutdown();
 
       beforeCnt = vol.getReferenceCount();
