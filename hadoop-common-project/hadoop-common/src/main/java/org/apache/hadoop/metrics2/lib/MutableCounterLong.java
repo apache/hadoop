@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.LongAdder;
 @InterfaceStability.Evolving
 public class MutableCounterLong extends MutableCounter {
 
-  private LongAdder value = new LongAdder();
+  private final LongAdder value = new LongAdder();
 
   public MutableCounterLong(MetricsInfo info, long initValue) {
     super(info);

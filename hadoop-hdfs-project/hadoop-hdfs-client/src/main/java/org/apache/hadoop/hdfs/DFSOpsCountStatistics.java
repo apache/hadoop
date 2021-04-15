@@ -155,7 +155,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
   }
 
   private class LongIterator implements Iterator<LongStatistic> {
-    private Iterator<Entry<OpType, LongAdder>> iterator =
+    private final Iterator<Entry<OpType, LongAdder>> iterator =
         opsCount.entrySet().iterator();
 
     @Override
