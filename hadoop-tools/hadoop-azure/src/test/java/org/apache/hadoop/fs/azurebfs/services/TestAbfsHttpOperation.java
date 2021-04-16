@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 
 import org.assertj.core.api.Assertions;
@@ -83,9 +84,9 @@ public class TestAbfsHttpOperation {
 
   private void testIfMaskAndEncodeSuccessful(final String scenario,
       final String url, final String expectedMaskedUrl)
-      throws UnsupportedEncodingException {
+      throws UnsupportedEncodingException, MalformedURLException {
 
-    Assertions.assertThat(UriUtils.getMaskedUrl(url))
+    Assertions.assertThat(UriUtils.getMaskedUrl(new URL(url)))
         .describedAs(url + " (" + scenario + ") after masking should be: "
             + expectedMaskedUrl).isEqualTo(expectedMaskedUrl);
 

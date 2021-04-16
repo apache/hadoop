@@ -19,8 +19,15 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.AND_MARK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
 
 /**
  * Utility class to help with Abfs url transformation to blob urls.
@@ -28,9 +35,9 @@ import java.util.regex.Pattern;
 public final class UriUtils {
   private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
   private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
-  public static final String SIGNATURE_QUERY_PARAM_KEY = "sig=";
-  private static final String[] MASK_PARAM_KEYS = {"skoid=", "saoid=", "suoid=",
-      SIGNATURE_QUERY_PARAM_KEY};
+  private static final ArrayList<String> MASK_PARAM_KEYS = new ArrayList<>(
+      Arrays.asList("skoid=", "saoid=", "suoid=", "sig="));
+  private static final String MASK = "XXXX";
 
   /**
    * Checks whether a string includes abfs url.
@@ -78,6 +85,37 @@ public final class UriUtils {
     return testUniqueForkId == null ? "/test" : "/" + testUniqueForkId + "/test";
   }
 
+  public static List<QueryKeyValuePair> getUrlQueryParamKeyValueList(String query) {
+    String[] queryParameters = query.split(AND_MARK);
+    List<QueryKeyValuePair> keyValueList = new ArrayList<>();
+    for (String parameter : queryParameters) {
+      keyValueList.add(new QueryKeyValuePair(parameter.split(EQUAL)));
+    }
+    return keyValueList;
+  }
+
+  public static String maskUrlQueryParameters(
+      List<QueryKeyValuePair> keyValueList,
+      ArrayList<String> queryParamsToMask) {
+    StringBuilder maskedUrl = new StringBuilder();
+    for (QueryKeyValuePair keyValuePair : keyValueList) {
+      String key = keyValuePair.getKey();
+      maskedUrl.append(key);
+      maskedUrl.append(EQUAL);
+      if (queryParamsToMask.contains(key + EQUAL)) {
+        if (key.contains("oid")) { //partial mask
+          maskedUrl.append(keyValuePair.getValue(), 0, 4);
+        }
+        maskedUrl.append(MASK);
+      } else {
+        maskedUrl.append(keyValuePair.getValue());
+      }
+      maskedUrl.append(AND_MARK);
+    }
+    maskedUrl.deleteCharAt(maskedUrl.length() - 1);
+    return maskedUrl.toString();
+  }
+
   public static String encodedUrlStr(String url) {
     try {
       return URLEncoder.encode(url, "UTF-8");
@@ -86,28 +124,33 @@ public final class UriUtils {
     }
   }
 
-  public static String getMaskedUrl(String url) {
-    for (String qpKey : MASK_PARAM_KEYS) {
-      int qpStrIdx = url.indexOf('&' + qpKey);
-      if (qpStrIdx == -1) {
-        qpStrIdx = url.indexOf('?' + qpKey);
-        if (qpStrIdx == -1) {
-          continue;
-        }
-      }
-      int startIdx = qpStrIdx + qpKey.length() + 1;
-      int ampIdx = url.indexOf("&", startIdx);
-      int endIndex = (ampIdx != -1) ? ampIdx : url.length();
-      if (qpKey.equals(SIGNATURE_QUERY_PARAM_KEY)) {
-        String signature = url.substring(startIdx, endIndex);
-        url = url.replace(signature, "XXXX");
-      } else {
-        url = url.substring(0, startIdx + 4) + "XXXX" + url.substring(endIndex);
-      }
-    }
-    return url;
+  public static String getMaskedUrl(URL url) {
+    String queryString = url.getQuery();
+    List<QueryKeyValuePair> queryKeyValueList = getUrlQueryParamKeyValueList(
+        queryString);
+    String maskedQueryString = maskUrlQueryParameters(queryKeyValueList,
+        MASK_PARAM_KEYS);
+    return url.toString().replace(queryString, maskedQueryString);
   }
 
   private UriUtils() {
+  }
+}
+
+class QueryKeyValuePair {
+  private final String key;
+  private final String value;
+
+  public QueryKeyValuePair(String[] kvPair) {
+    key = kvPair[0];
+    value = kvPair[1];
+  }
+
+  String getKey() {
+    return key;
+  }
+
+  String getValue() {
+    return value;
   }
 }
