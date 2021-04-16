@@ -1666,11 +1666,6 @@ public class ViewFileSystem extends FileSystem {
     }
 
     @Override
-    public boolean mkdirs(Path dir) throws IOException {
-      return mkdirs(dir, null);
-    }
-
-    @Override
     public FSDataInputStream open(Path f, int bufferSize)
         throws AccessControlException, FileNotFoundException, IOException {
       checkPathIsSlash(f);
