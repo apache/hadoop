@@ -22,7 +22,6 @@
 #include "hdfspp/hdfs_ext.h"
 #include "native_mini_dfs.h"
 #include "os/thread.h"
-#include "x-platform/c-api/syscall.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -127,8 +126,7 @@ static int hdfsCurlData(const char *host, const tPort port, const char *dirNm,
   EXPECT_NONNULL(pw = getpwuid(uid));
 
   int fd = -1;
-  EXPECT_NONNEGATIVE(fd = x_platform_syscall_create_and_open_temp_file(
-                         tmpFile, sizeof tmpFile));
+  EXPECT_NONNEGATIVE(fd = mkstemp(tmpFile));
 
   tSize sz = 0;
   while (sz < fileSz) {
