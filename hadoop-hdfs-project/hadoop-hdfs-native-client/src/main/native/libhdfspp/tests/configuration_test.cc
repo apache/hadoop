@@ -299,12 +299,11 @@ TEST(ConfigurationTest, TestFileReads)
   // Single stream
   {
     TempFile tempFile;
-    writeSimpleConfig(tempFile.GetFileName(), "key1", "value1");
+    writeSimpleConfig(tempFile.filename, "key1", "value1");
 
     ConfigurationLoader config_loader;
     config_loader.ClearSearchPath();
-    optional<Configuration> config =
-        config_loader.LoadFromFile<Configuration>(tempFile.GetFileName());
+    optional<Configuration> config = config_loader.LoadFromFile<Configuration>(tempFile.filename);
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
   }
@@ -312,18 +311,16 @@ TEST(ConfigurationTest, TestFileReads)
   // Multiple files
   {
     TempFile tempFile;
-    writeSimpleConfig(tempFile.GetFileName(), "key1", "value1");
+    writeSimpleConfig(tempFile.filename, "key1", "value1");
 
     ConfigurationLoader loader;
-    optional<Configuration> config =
-        loader.LoadFromFile<Configuration>(tempFile.GetFileName());
+    optional<Configuration> config = loader.LoadFromFile<Configuration>(tempFile.filename);
     ASSERT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
     TempFile tempFile2;
-    writeSimpleConfig(tempFile2.GetFileName(), "key2", "value2");
-    optional<Configuration> config2 =
-        loader.OverlayResourceFile(*config, tempFile2.GetFileName());
+    writeSimpleConfig(tempFile2.filename, "key2", "value2");
+    optional<Configuration> config2 = loader.OverlayResourceFile(*config, tempFile2.filename);
     ASSERT_TRUE(config2 && "Parse second stream");
     EXPECT_EQ("value1", config2->GetWithDefault("key1", ""));
     EXPECT_EQ("value2", config2->GetWithDefault("key2", ""));
@@ -353,13 +350,13 @@ TEST(ConfigurationTest, TestFileReads)
   {
     TempDir tempDir1;
     TempFile tempFile1(tempDir1.path + "/file1.xml");
-    writeSimpleConfig(tempFile1.GetFileName(), "key1", "value1");
+    writeSimpleConfig(tempFile1.filename, "key1", "value1");
     TempDir tempDir2;
     TempFile tempFile2(tempDir2.path + "/file2.xml");
-    writeSimpleConfig(tempFile2.GetFileName(), "key2", "value2");
+    writeSimpleConfig(tempFile2.filename, "key2", "value2");
     TempDir tempDir3;
     TempFile tempFile3(tempDir3.path + "/file3.xml");
-    writeSimpleConfig(tempFile3.GetFileName(), "key3", "value3");
+    writeSimpleConfig(tempFile3.filename, "key3", "value3");
 
     ConfigurationLoader loader;
     loader.SetSearchPath(tempDir1.path + ":" + tempDir2.path + ":" + tempDir3.path);
@@ -380,7 +377,7 @@ TEST(ConfigurationTest, TestDefaultConfigs) {
   {
     TempDir tempDir;
     TempFile coreSite(tempDir.path + "/core-site.xml");
-    writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
 
     ConfigurationLoader loader;
     loader.SetSearchPath(tempDir.path);
