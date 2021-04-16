@@ -385,7 +385,7 @@ public final class FSImageFormatProtobuf {
           if (n1 == null) {
             return n2 == null ? 0 : -1;
           } else if (n2 == null) {
-            return -1;
+            return 1;
           } else {
             return n1.ordinal() - n2.ordinal();
           }
