@@ -17,16 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.StringUtils;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.HttpHeaders;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -44,19 +48,29 @@ public class NetworkTopologyServlet extends DfsServlet {
 
   public static final String PATH_SPEC = "/topology";
 
+  protected static final String FORMAT_JSON = "json";
+  protected static final String FORMAT_TEXT = "text";
+
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
     final ServletContext context = getServletContext();
+
+    String format = parseAcceptHeader(request);
+    if (FORMAT_TEXT.equals(format)) {
+      response.setContentType("text/plain; charset=UTF-8");
+    } else if (FORMAT_JSON.equals(format)) {
+      response.setContentType("application/json; charset=UTF-8");
+    }
+
     NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
     BlockManager bm = nn.getNamesystem().getBlockManager();
     List<Node> leaves = bm.getDatanodeManager().getNetworkTopology()
         .getLeaves(NodeBase.ROOT);
 
-    response.setContentType("text/plain; charset=UTF-8");
     try (PrintStream out = new PrintStream(
             response.getOutputStream(), false, "UTF-8")) {
-      printTopology(out, leaves);
+      printTopology(out, leaves, format);
     } catch (Throwable t) {
       String errMsg = "Print network topology failed. "
               + StringUtils.stringifyException(t);
@@ -74,8 +88,10 @@ public class NetworkTopologyServlet extends DfsServlet {
    *
    * @param stream print stream
    * @param leaves leaves nodes under base scope
+   * @param format the response format
    */
-  public void printTopology(PrintStream stream, List<Node> leaves) {
+  public void printTopology(PrintStream stream, List<Node> leaves,
+      String format) throws BadFormatException, IOException {
     if (leaves.isEmpty()) {
       stream.print("No DataNodes");
       return;
@@ -95,6 +111,49 @@ public class NetworkTopologyServlet extends DfsServlet {
     ArrayList<String> racks = new ArrayList<>(tree.keySet());
     Collections.sort(racks);
 
+    if (FORMAT_JSON.equals(format)) {
+      printJsonFormat(stream, tree, racks);
+    } else if (FORMAT_TEXT.equals(format)) {
+      printTextFormat(stream, tree, racks);
+    } else {
+      throw new BadFormatException("Bad format: " + format);
+    }
+  }
+
+  private void printJsonFormat(PrintStream stream, Map<String,
+      TreeSet<String>> tree, ArrayList<String> racks) throws IOException {
+    JsonFactory dumpFactory = new JsonFactory();
+    JsonGenerator dumpGenerator = dumpFactory.createGenerator(stream);
+    dumpGenerator.writeStartArray();
+
+    for(String r : racks) {
+      dumpGenerator.writeStartObject();
+      dumpGenerator.writeFieldName(r);
+      TreeSet<String> nodes = tree.get(r);
+      dumpGenerator.writeStartArray();
+
+      for(String n : nodes) {
+        dumpGenerator.writeStartObject();
+        dumpGenerator.writeStringField("ip", n);
+        String hostname = NetUtils.getHostNameOfIP(n);
+        if(hostname != null) {
+          dumpGenerator.writeStringField("hostname", hostname);
+        }
+        dumpGenerator.writeEndObject();
+      }
+      dumpGenerator.writeEndArray();
+      dumpGenerator.writeEndObject();
+    }
+    dumpGenerator.writeEndArray();
+    dumpGenerator.flush();
+
+    if (!dumpGenerator.isClosed()) {
+      dumpGenerator.close();
+    }
+  }
+
+  private void printTextFormat(PrintStream stream, Map<String,
+      TreeSet<String>> tree, ArrayList<String> racks) {
     for(String r : racks) {
       stream.println("Rack: " + r);
       TreeSet<String> nodes = tree.get(r);
@@ -108,6 +167,21 @@ public class NetworkTopologyServlet extends DfsServlet {
         stream.println();
       }
       stream.println();
+    }
+  }
+
+  @VisibleForTesting
+  static String parseAcceptHeader(HttpServletRequest request) {
+    String format = request.getHeader(HttpHeaders.ACCEPT);
+    return format != null && format.contains(FORMAT_JSON) ?
+            FORMAT_JSON : FORMAT_TEXT;
+  }
+
+  public static class BadFormatException extends Exception {
+    private static final long serialVersionUID = 1L;
+
+    public BadFormatException(String msg) {
+      super(msg);
     }
   }
 }

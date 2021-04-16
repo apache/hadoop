@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -29,6 +31,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -36,7 +40,7 @@ import static org.junit.Assert.assertTrue;
 public class TestNetworkTopologyServlet {
 
   @Test
-  public void testPrintTopology() throws IOException {
+  public void testPrintTopologyTextFormat() throws IOException {
     StaticMapping.resetMap();
     Configuration conf = new HdfsConfiguration();
     int dataNodesNum = 0;
@@ -84,7 +88,59 @@ public class TestNetworkTopologyServlet {
   }
 
   @Test
-  public void testPrintTopologyNoDatanodes() throws IOException {
+  public void testPrintTopologyJsonFormat() throws IOException {
+      StaticMapping.resetMap();
+      Configuration conf = new HdfsConfiguration();
+      int dataNodesNum = 0;
+      final ArrayList<String> rackList = new ArrayList<String>();
+      for (int i = 0; i < 5; i++) {
+          for (int j = 0; j < 2; j++) {
+              rackList.add("/rack" + i);
+              dataNodesNum++;
+          }
+      }
+
+      MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+              .numDataNodes(dataNodesNum)
+              .racks(rackList.toArray(new String[rackList.size()]))
+              .build();
+      cluster.waitActive();
+
+      // get http uri
+      String httpUri = cluster.getHttpUri(0);
+
+      // send http request
+      URL url = new URL(httpUri + "/topology");
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setReadTimeout(20000);
+      conn.setConnectTimeout(20000);
+      conn.setRequestProperty("Accept", "application/json");
+      conn.connect();
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
+      String topology = out.toString();
+
+      // parse json
+      JsonNode racks = new ObjectMapper().readTree(topology);
+
+      // assert rack number
+      assertEquals(racks.size(), 5);
+
+      // assert node number
+      Iterator<JsonNode> elements = racks.elements();
+      int dataNodesCount = 0;
+      while(elements.hasNext()){
+          JsonNode rack = elements.next();
+          Iterator<Map.Entry<String, JsonNode>> fields = rack.fields();
+          while (fields.hasNext()) {
+              dataNodesCount += fields.next().getValue().size();
+          }
+      }
+      assertEquals(dataNodesCount, dataNodesNum);
+  }
+
+  @Test
+  public void testPrintTopologyNoDatanodesTextFormat() throws IOException {
     StaticMapping.resetMap();
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -112,4 +168,35 @@ public class TestNetworkTopologyServlet {
     // assert node number
     assertTrue(topology.contains("No DataNodes"));
   }
+
+    @Test
+    public void testPrintTopologyNoDatanodesJsonFormat() throws IOException {
+        StaticMapping.resetMap();
+        Configuration conf = new HdfsConfiguration();
+        MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+                .numDataNodes(0)
+                .build();
+        cluster.waitActive();
+
+        // get http uri
+        String httpUri = cluster.getHttpUri(0);
+
+        // send http request
+        URL url = new URL(httpUri + "/topology");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setReadTimeout(20000);
+        conn.setConnectTimeout(20000);
+        conn.setRequestProperty("Accept", "application/json");
+        conn.connect();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
+        StringBuilder sb =
+                new StringBuilder("-- Network Topology -- \n");
+        sb.append(out);
+        sb.append("\n-- Network Topology -- ");
+        String topology = sb.toString();
+
+        // assert node number
+        assertTrue(topology.contains("No DataNodes"));
+    }
 }
