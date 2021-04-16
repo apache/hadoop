@@ -316,8 +316,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   private void checkIfConfigIsSet(String configKey){
     AbfsConfiguration conf = getConfiguration();
     String value = conf.get(configKey);
-    Preconditions.checkArgument((value != null && value.trim().length() > 1),
-        configKey + " config is mandatory for the test to run");
+    Assume.assumeTrue(configKey + " config is mandatory for the test to run",
+        value != null && value.trim().length() > 1);
   }
 
   private void assertAccessible(Path testFilePath, FsAction fsAction)
