@@ -20,21 +20,31 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.assertj.core.api.Assertions;
+import org.junit.Assert;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.Assert;
-import org.junit.Test;
-
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Verify the AbfsRestOperationException error message format.
  * */
 public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest{
+  private static final String RETRY_TEST_TOKEN_PROVIDER = "org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider";
+
   public ITestAbfsRestOperationException() throws Exception {
     super();
   }
@@ -113,5 +123,36 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
         "Number of token fetch retries (" + RetryTestTokenProvider.reTryCount
             + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
             + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
+  }
+
+  @Test
+  public void testAuthFailException() throws Exception {
+    Configuration config = new Configuration(getRawConfiguration());
+    String accountName = config
+        .get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    // Setup to configure custom token provider
+    config.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + DOT
+        + accountName, "Custom");
+    config.set(
+        FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + DOT + accountName,
+        RETRY_TEST_TOKEN_PROVIDER);
+    // Stop filesystem creation as it will lead to calls to store.
+    config.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
+
+    final AzureBlobFileSystem fs = getFileSystem(config);
+    try {
+      fs.getFileStatus(new Path("/"));
+      fail("Should fail at auth token fetch call");
+    } catch (AbfsRestOperationException e) {
+      String errorDesc = "Should throw RestOp exception on AAD failure";
+      Assertions.assertThat(e.getStatusCode())
+          .describedAs("Incorrect status code. " + errorDesc).isEqualTo(-1);
+      Assertions.assertThat(e.getErrorCode())
+          .describedAs("Incorrect error code. " + errorDesc)
+          .isEqualTo(AzureServiceErrorCode.UNKNOWN);
+      Assertions.assertThat(e.getErrorMessage())
+          .describedAs("Incorrect error message. " + errorDesc)
+          .contains("Auth failure: ");
+    }
   }
 }
