@@ -121,7 +121,7 @@ public class FsDatasetCache {
   private final HashMap<ExtendedBlockId, Value> mappableBlockMap =
       new HashMap<ExtendedBlockId, Value>();
 
-  private final AtomicLong numBlocksCached = new AtomicLong(0);
+  private final LongAdder numBlocksCached = new LongAdder();
 
   private final FsDatasetImpl dataset;
 
@@ -205,7 +205,7 @@ public class FsDatasetCache {
       for (Map.Entry<ExtendedBlockId, MappableBlock> entry : entrySet) {
         mappableBlockMap.put(entry.getKey(),
             new Value(keyToMappableBlock.get(entry.getKey()), State.CACHED));
-        numBlocksCached.addAndGet(1);
+        numBlocksCached.increment();
         dataset.datanode.getMetrics().incrBlocksCached(1);
       }
     }
@@ -470,7 +470,7 @@ public class FsDatasetCache {
           dataset.datanode.
               getShortCircuitRegistry().processBlockMlockEvent(key);
         }
-        numBlocksCached.addAndGet(1);
+        numBlocksCached.increment();
         dataset.datanode.getMetrics().incrBlocksCached(1);
         success = true;
       } finally {
@@ -562,7 +562,7 @@ public class FsDatasetCache {
       }
       long newUsedBytes = cacheLoader.
           release(key, value.mappableBlock.getLength());
-      numBlocksCached.addAndGet(-1);
+      numBlocksCached.decrement();
       dataset.datanode.getMetrics().incrBlocksUncached(1);
       if (revocationTimeMs != 0) {
         LOG.debug("Uncaching of {} completed. usedBytes = {}",
@@ -616,7 +616,7 @@ public class FsDatasetCache {
   }
 
   public long getNumBlocksCached() {
-    return numBlocksCached.get();
+    return numBlocksCached.longValue();
   }
 
   public synchronized boolean isCached(String bpid, long blockId) {
