@@ -1402,7 +1402,11 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
     hdfsBlockLocations *locations = new struct hdfsBlockLocations();
     (*locations_out) = locations;
 
+#ifdef HAVE_EXPLICIT_BZERO
     explicit_bzero(locations, sizeof(*locations));
+#else
+    bzero(locations, sizeof(*locations));
+#endif
     locations->fileLength = ppLocations->getFileLength();
     locations->isLastBlockComplete = ppLocations->isLastBlockComplete();
     locations->isUnderConstruction = ppLocations->isUnderConstruction();
