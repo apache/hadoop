@@ -47,7 +47,12 @@ bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
 void XPlatform::Syscall::ClearBufferSafely(void* buffer,
                                            const size_t sz_bytes) {
   if (buffer != nullptr) {
+#ifdef HAVE_EXPLICIT_BZERO
     explicit_bzero(buffer, sz_bytes);
+#else
+    // fallback to bzero
+    bzero(buffer, sz_bytes);
+#endif
   }
 }
 
