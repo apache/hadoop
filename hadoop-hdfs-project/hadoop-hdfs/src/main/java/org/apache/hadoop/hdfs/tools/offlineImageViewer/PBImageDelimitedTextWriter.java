@@ -146,7 +146,13 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
   PBImageDelimitedTextWriter(PrintStream out, String delimiter,
                              String tempPath, boolean printStoragePolicy)
       throws IOException {
-    super(out, delimiter, tempPath);
+    this(out, delimiter, tempPath, printStoragePolicy, 1, "-");
+  }
+
+  PBImageDelimitedTextWriter(PrintStream out, String delimiter,
+      String tempPath, boolean printStoragePolicy, int threads,
+      String parallelOut) throws IOException {
+    super(out, delimiter, tempPath, threads, parallelOut);
     this.printStoragePolicy = printStoragePolicy;
   }
 

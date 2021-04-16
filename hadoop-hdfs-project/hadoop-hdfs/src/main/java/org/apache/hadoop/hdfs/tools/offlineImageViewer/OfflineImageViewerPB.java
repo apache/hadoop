@@ -107,6 +107,7 @@ public class OfflineImageViewerPB {
       + "                       Delimited outputs. If not set, the processor\n"
       + "                       constructs the namespace in memory \n"
       + "                       before outputting text.\n"
+      + "-threads <args>        Use multiple threads to process sub-sections.\n"
       + "-h,--help              Display usage information and exit\n";
 
   /**
@@ -132,6 +133,7 @@ public class OfflineImageViewerPB {
     options.addOption("delimiter", true, "");
     options.addOption("sp", false, "");
     options.addOption("t", "temp", true, "");
+    options.addOption("threads", true, "");
 
     return options;
   }
@@ -185,6 +187,7 @@ public class OfflineImageViewerPB {
     String delimiter = cmd.getOptionValue("delimiter",
         PBImageTextWriter.DEFAULT_DELIMITER);
     String tempPath = cmd.getOptionValue("t", "");
+    int threads = Integer.parseInt(cmd.getOptionValue("threads", "1"));
 
     Configuration conf = new Configuration();
     PrintStream out = null;
@@ -227,15 +230,14 @@ public class OfflineImageViewerPB {
         boolean printStoragePolicy = cmd.hasOption("sp");
         try (PBImageDelimitedTextWriter writer =
             new PBImageDelimitedTextWriter(out, delimiter,
-                tempPath, printStoragePolicy);
-            RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
-          writer.visit(r);
+                tempPath, printStoragePolicy, threads, outputFile)) {
+          writer.visit(inputFile);
         }
         break;
       case "DETECTCORRUPTION":
         try (PBImageCorruptionDetector detector =
             new PBImageCorruptionDetector(out, delimiter, tempPath)) {
-          detector.visit(new RandomAccessFile(inputFile, "r"));
+          detector.visit(inputFile);
         }
         break;
       default:

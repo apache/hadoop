@@ -337,7 +337,7 @@ public class PBImageCorruptionDetector extends PBImageTextWriter {
         if (parentId != -1) {
           entryBuilder.setParentId(parentId);
         }
-        printIfNotEmpty(entryBuilder.build());
+        printIfNotEmpty(out, entryBuilder.build());
       }
     }
   }
