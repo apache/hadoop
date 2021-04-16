@@ -210,6 +210,8 @@
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.3.0</woodstox.version>
+    <json-smart.version>2.4.2</json-smart.version>
+    <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
   </properties>
 
   <dependencyManagement>
@@ -1566,7 +1568,7 @@
       <dependency>
           <groupId>com.nimbusds</groupId>
           <artifactId>nimbus-jose-jwt</artifactId>
-          <version>7.9</version>
+          <version>${nimbus-jose-jwt.version}</version>
           <scope>compile</scope>
           <exclusions>
           <exclusion>
@@ -1589,7 +1591,7 @@
           -->
         <groupId>net.minidev</groupId>
         <artifactId>json-smart</artifactId>
-        <version>2.3</version>
+        <version>${json-smart.version}</version>
       </dependency>
       <dependency>
         <groupId>org.skyscreamer</groupId>
