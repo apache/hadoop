@@ -65,6 +65,8 @@ if(WIN32)
     set(OUT_DIR bin)
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+    # using old default behavior on GCC >= 10.0
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon")
     set(OS_DIR ${CMAKE_SOURCE_DIR}/main/native/libhdfs/os/posix)
 
     # IMPORTANT: OUT_DIR MUST be relative to maven's

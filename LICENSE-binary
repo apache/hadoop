@@ -240,7 +240,7 @@ com.google.guava:guava:20.0
 com.google.guava:guava:27.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
-com.nimbusds:nimbus-jose-jwt:4.41.1
+com.nimbusds:nimbus-jose-jwt:9.8.1
 com.squareup.okhttp:okhttp:2.7.5
 com.squareup.okio:okio:1.6.0
 com.zaxxer:HikariCP-java7:2.4.12
@@ -283,7 +283,7 @@ javax.inject:javax.inject:1
 log4j:log4j:1.2.17
 net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.2
-net.minidev:json-smart:2.3
+net.minidev:json-smart:2.4.2
 org.apache.avro:avro:1.7.7
 org.apache.commons:commons-collections4:4.2
 org.apache.commons:commons-compress:1.19
