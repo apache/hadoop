@@ -78,7 +78,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Some long running Balancer tasks
+ * Some long running Balancer tasks.
  */
 public class TestBalancer2 {
 
@@ -94,8 +94,8 @@ public class TestBalancer2 {
   private final static String RACK0 = "/rack0";
   private final static String RACK1 = "/rack1";
   private final static String RACK2 = "/rack2";
-  private final static String fileName = "/tmp.txt";
-  private final static Path filePath = new Path(fileName);
+  private final static String FILE_NAME = "/tmp.txt";
+  private final static Path FILE_PATH = new Path(FILE_NAME);
   private MiniDFSCluster cluster;
 
   @After
@@ -106,7 +106,7 @@ public class TestBalancer2 {
     }
   }
 
-  ClientProtocol client;
+  private ClientProtocol client;
 
   static final int DEFAULT_BLOCK_SIZE = 100;
   static final int DEFAULT_RAM_DISK_BLOCK_SIZE = 5 * 1024 * 1024;
@@ -131,7 +131,7 @@ public class TestBalancer2 {
 
     conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
     conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
-    conf.setInt(DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_KEY, 5*1000);
+    conf.setInt(DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_KEY, 5 * 1000);
   }
 
   static void initConfWithRamDisk(Configuration conf,
@@ -142,24 +142,25 @@ public class TestBalancer2 {
     conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     conf.setInt(DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC, 1);
-    conf.setInt(DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_KEY, 5*1000);
+    conf.setInt(DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_KEY, 5 * 1000);
     LazyPersistTestCase.initCacheManipulator();
 
     conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
   }
 
   /**
-   * Test special case. Two replicas belong to same block should not in same node.
+   * Test special case. Two replicas belong to same block should not in same
+   * node.
    * We have 2 nodes.
    * We have a block in (DN0,SSD) and (DN1,DISK).
    * Replica in (DN0,SSD) should not be moved to (DN1,SSD).
    * Otherwise DN1 has 2 replicas.
    */
-  @Test(timeout=100000)
+  @Test(timeout = 100000)
   public void testTwoReplicaShouldNotInSameDN() throws Exception {
     final Configuration conf = new HdfsConfiguration();
 
-    int blockSize = 5 * 1024 * 1024 ;
+    int blockSize = 5 * 1024 * 1024;
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
@@ -167,7 +168,7 @@ public class TestBalancer2 {
 
     conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
 
-    int numOfDatanodes =2;
+    int numOfDatanodes = 2;
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(2)
         .racks(new String[]{"/default/rack0", "/default/rack0"})
@@ -184,12 +185,12 @@ public class TestBalancer2 {
     //set "/bar" directory with ONE_SSD storage policy.
     DistributedFileSystem fs = cluster.getFileSystem();
     Path barDir = new Path("/bar");
-    fs.mkdir(barDir,new FsPermission((short)777));
+    fs.mkdir(barDir, new FsPermission((short) 777));
     fs.setStoragePolicy(barDir, HdfsConstants.ONESSD_STORAGE_POLICY_NAME);
 
     // Insert 30 blocks. So (DN0,SSD) and (DN1,DISK) are about half full,
     // and (DN0,SSD) and (DN1,DISK) are about 15% full.
-    long fileLen  = 30 * blockSize;
+    long fileLen = 30 * blockSize;
     // fooFile has ONE_SSD policy. So
     // (DN0,SSD) and (DN1,DISK) have 2 replicas belong to same block.
     // (DN0,DISK) and (DN1,SSD) have 2 replicas belong to same block.
@@ -214,10 +215,10 @@ public class TestBalancer2 {
    * One DN has two files on RAM_DISK, other DN has no files on RAM_DISK.
    * Then verify that the balancer does not migrate files on RAM_DISK across DN.
    */
-  @Test(timeout=300000)
+  @Test(timeout = 300000)
   public void testBalancerWithRamDisk() throws Exception {
-    final int SEED = 0xFADED;
-    final short REPL_FACT = 1;
+    final int seed = 0xFADED;
+    final short replicationFactor = 1;
     Configuration conf = new Configuration();
 
     final int defaultRamDiskCapacity = 10;
@@ -233,33 +234,34 @@ public class TestBalancer2 {
     cluster = new MiniDFSCluster
         .Builder(conf)
         .numDataNodes(1)
-        .storageCapacities(new long[] { ramDiskStorageLimit, diskStorageLimit })
-        .storageTypes(new StorageType[] { RAM_DISK, DEFAULT })
+        .storageCapacities(new long[]{ramDiskStorageLimit, diskStorageLimit})
+        .storageTypes(new StorageType[]{RAM_DISK, DEFAULT})
         .build();
 
     cluster.waitActive();
     // Create few files on RAM_DISK
-    final String METHOD_NAME = GenericTestUtils.getMethodName();
-    final Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
-    final Path path2 = new Path("/" + METHOD_NAME + ".02.dat");
+    final String methodName = GenericTestUtils.getMethodName();
+    final Path path1 = new Path("/" + methodName + ".01.dat");
+    final Path path2 = new Path("/" + methodName + ".02.dat");
 
     DistributedFileSystem fs = cluster.getFileSystem();
-    DFSClient client = fs.getClient();
+    DFSClient dfsClient = fs.getClient();
     DFSTestUtil.createFile(fs, path1, true,
         DEFAULT_RAM_DISK_BLOCK_SIZE, 4 * DEFAULT_RAM_DISK_BLOCK_SIZE,
-        DEFAULT_RAM_DISK_BLOCK_SIZE, REPL_FACT, SEED, true);
+        DEFAULT_RAM_DISK_BLOCK_SIZE, replicationFactor, seed, true);
     DFSTestUtil.createFile(fs, path2, true,
         DEFAULT_RAM_DISK_BLOCK_SIZE, 1 * DEFAULT_RAM_DISK_BLOCK_SIZE,
-        DEFAULT_RAM_DISK_BLOCK_SIZE, REPL_FACT, SEED, true);
+        DEFAULT_RAM_DISK_BLOCK_SIZE, replicationFactor, seed, true);
 
     // Sleep for a short time to allow the lazy writer thread to do its job
     Thread.sleep(6 * 1000);
 
-    // Add another fresh DN with the same type/capacity without files on RAM_DISK
-    StorageType[][] storageTypes = new StorageType[][] {{RAM_DISK, DEFAULT}};
+    // Add another fresh DN with the same type/capacity without files on
+    // RAM_DISK
+    StorageType[][] storageTypes = new StorageType[][]{{RAM_DISK, DEFAULT}};
     long[][] storageCapacities = new long[][]{{ramDiskStorageLimit,
-        diskStorageLimit}};
-    cluster.startDataNodes(conf, REPL_FACT, storageTypes, true, null,
+            diskStorageLimit}};
+    cluster.startDataNodes(conf, replicationFactor, storageTypes, true, null,
         null, null, storageCapacities, null, false, false, false, null);
 
     cluster.triggerHeartbeats();
@@ -273,12 +275,14 @@ public class TestBalancer2 {
     assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
 
     // Verify files are still on RAM_DISK
-    DFSTestUtil.verifyFileReplicasOnStorageType(fs, client, path1, RAM_DISK);
-    DFSTestUtil.verifyFileReplicasOnStorageType(fs, client, path2, RAM_DISK);
+    DFSTestUtil.verifyFileReplicasOnStorageType(fs, dfsClient, path1, RAM_DISK);
+    DFSTestUtil.verifyFileReplicasOnStorageType(fs, dfsClient, path2, RAM_DISK);
   }
 
-  /** Balancer should not move blocks with size < minBlockSize. */
-  @Test(timeout=60000)
+  /**
+   * Balancer should not move blocks with size < minBlockSize.
+   */
+  @Test(timeout = 60000)
   public void testMinBlockSizeAndSourceNodes() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -299,11 +303,11 @@ public class TestBalancer2 {
         ClientProtocol.class).getProxy();
 
     // fill up the cluster to be 80% full
-    for(int i = 0; i < lengths.length; i++) {
+    for (int i = 0; i < lengths.length; i++) {
       final long size = lengths[i];
       final Path p = new Path("/file" + i + "_size" + size);
-      try(OutputStream out = dfs.create(p)) {
-        for(int j = 0; j < size; j++) {
+      try (OutputStream out = dfs.create(p)) {
+        for (int j = 0; j < size; j++) {
           out.write(j);
         }
       }
@@ -320,7 +324,7 @@ public class TestBalancer2 {
     final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
 
     { // run Balancer with min-block-size=50
-      final BalancerParameters p = Balancer.Cli.parse(new String[] {
+      final BalancerParameters p = Balancer.Cli.parse(new String[]{
           "-policy", BalancingPolicy.Node.INSTANCE.getName(),
           "-threshold", "1"
       });
@@ -337,10 +341,10 @@ public class TestBalancer2 {
     { // run Balancer with empty nodes as source nodes
       final Set<String> sourceNodes = new HashSet<>();
       final List<DataNode> datanodes = cluster.getDataNodes();
-      for(int i = capacities.length; i < datanodes.size(); i++) {
+      for (int i = capacities.length; i < datanodes.size(); i++) {
         sourceNodes.add(datanodes.get(i).getDisplayName());
       }
-      final BalancerParameters p = Balancer.Cli.parse(new String[] {
+      final BalancerParameters p = Balancer.Cli.parse(new String[]{
           "-policy", BalancingPolicy.Node.INSTANCE.getName(),
           "-threshold", "1",
           "-source", StringUtils.join(sourceNodes, ',')
@@ -358,7 +362,7 @@ public class TestBalancer2 {
       final Set<String> sourceNodes = new HashSet<>();
       final List<DataNode> datanodes = cluster.getDataNodes();
       sourceNodes.add(datanodes.get(0).getDisplayName());
-      final BalancerParameters p = Balancer.Cli.parse(new String[] {
+      final BalancerParameters p = Balancer.Cli.parse(new String[]{
           "-policy", BalancingPolicy.Node.INSTANCE.getName(),
           "-threshold", "1",
           "-source", StringUtils.join(sourceNodes, ',')
@@ -375,10 +379,10 @@ public class TestBalancer2 {
     { // run Balancer with all filled node as source nodes
       final Set<String> sourceNodes = new HashSet<>();
       final List<DataNode> datanodes = cluster.getDataNodes();
-      for(int i = 0; i < capacities.length; i++) {
+      for (int i = 0; i < capacities.length; i++) {
         sourceNodes.add(datanodes.get(i).getDisplayName());
       }
-      final BalancerParameters p = Balancer.Cli.parse(new String[] {
+      final BalancerParameters p = Balancer.Cli.parse(new String[]{
           "-policy", BalancingPolicy.Node.INSTANCE.getName(),
           "-threshold", "1",
           "-source", StringUtils.join(sourceNodes, ',')
@@ -395,34 +399,36 @@ public class TestBalancer2 {
 
   /**
    * Verify balancer won't violate upgrade domain block placement policy.
+   *
    * @throws Exception
    */
-  @Test(timeout=100000)
+  @Test(timeout = 100000)
   public void testUpgradeDomainPolicyAfterBalance() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
     conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
         BlockPlacementPolicyWithUpgradeDomain.class,
         BlockPlacementPolicy.class);
-    long[] capacities =  new long[] { CAPACITY, CAPACITY, CAPACITY };
+    long[] capacities = new long[]{CAPACITY, CAPACITY, CAPACITY};
     String[] hosts = {"host0", "host1", "host2"};
-    String[] racks = { RACK0, RACK1, RACK1 };
-    String[] UDs = { "ud0", "ud1", "ud2" };
+    String[] racks = {RACK0, RACK1, RACK1};
+    String[] uds = {"ud0", "ud1", "ud2"};
     runBalancerAndVerifyBlockPlacmentPolicy(conf, capacities, hosts, racks,
-        UDs, CAPACITY, "host3", RACK2, "ud2");
+        uds, CAPACITY, "host3", RACK2, "ud2");
   }
 
   /**
    * Verify balancer won't violate the default block placement policy.
+   *
    * @throws Exception
    */
-  @Test(timeout=100000)
+  @Test(timeout = 100000)
   public void testRackPolicyAfterBalance() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
-    long[] capacities =  new long[] { CAPACITY, CAPACITY };
+    long[] capacities = new long[]{CAPACITY, CAPACITY};
     String[] hosts = {"host0", "host1"};
-    String[] racks = { RACK0, RACK1 };
+    String[] racks = {RACK0, RACK1};
     runBalancerAndVerifyBlockPlacmentPolicy(conf, capacities, hosts, racks,
         null, CAPACITY, "host2", RACK1, null);
   }
@@ -438,7 +444,7 @@ public class TestBalancer2 {
     DatanodeManager dm = cluster.getNamesystem().getBlockManager().
         getDatanodeManager();
     if (UDs != null) {
-      for(int i = 0; i < UDs.length; i++) {
+      for (int i = 0; i < UDs.length; i++) {
         DatanodeID datanodeId = cluster.getDataNodes().get(i).getDatanodeId();
         dm.getDatanode(datanodeId).setUpgradeDomain(UDs[i]);
       }
@@ -454,13 +460,13 @@ public class TestBalancer2 {
       long totalUsedSpace = totalCapacity * 8 / 10;
 
       final long fileSize = totalUsedSpace / numOfDatanodes;
-      DFSTestUtil.createFile(cluster.getFileSystem(0), filePath, false, 1024,
+      DFSTestUtil.createFile(cluster.getFileSystem(0), FILE_PATH, false, 1024,
           fileSize, DEFAULT_BLOCK_SIZE, (short) numOfDatanodes, 0, false);
 
       // start up an empty node with the same capacity on the same rack as the
       // pinned host.
-      cluster.startDataNodes(conf, 1, true, null, new String[] { newRack },
-          new String[] { newHost }, new long[] { newCapacity });
+      cluster.startDataNodes(conf, 1, true, null, new String[]{newRack},
+          new String[]{newHost}, new long[]{newCapacity});
       if (newUD != null) {
         DatanodeID newId = cluster.getDataNodes().get(
             numOfDatanodes).getDatanodeId();
@@ -478,7 +484,7 @@ public class TestBalancer2 {
       BlockPlacementPolicy placementPolicy =
           cluster.getNamesystem().getBlockManager().getBlockPlacementPolicy();
       List<LocatedBlock> locatedBlocks = client.
-          getBlockLocations(fileName, 0, fileSize).getLocatedBlocks();
+          getBlockLocations(FILE_NAME, 0, fileSize).getLocatedBlocks();
       for (LocatedBlock locatedBlock : locatedBlocks) {
         BlockPlacementStatus status = placementPolicy.verifyBlockPlacement(
             locatedBlock.getLocations(), numOfDatanodes);
@@ -493,9 +499,10 @@ public class TestBalancer2 {
    * Make sure that balancer can't move pinned blocks.
    * If specified favoredNodes when create file, blocks will be pinned use
    * sticky bit.
+   *
    * @throws Exception
    */
-  @Test(timeout=100000)
+  @Test(timeout = 100000)
   public void testBalancerWithPinnedBlocks() throws Exception {
     // This test assumes stick-bit based block pin mechanism available only
     // in Linux/Unix. It can be unblocked on Windows when HDFS-7759 is ready to
@@ -506,9 +513,9 @@ public class TestBalancer2 {
     initConf(conf);
     conf.setBoolean(DFS_DATANODE_BLOCK_PINNING_ENABLED, true);
 
-    long[] capacities =  new long[] { CAPACITY, CAPACITY };
+    long[] capacities = new long[]{CAPACITY, CAPACITY};
     String[] hosts = {"host0", "host1"};
-    String[] racks = { RACK0, RACK1 };
+    String[] racks = {RACK0, RACK1};
     int numOfDatanodes = capacities.length;
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(capacities.length)
@@ -529,13 +536,13 @@ public class TestBalancer2 {
       favoredNodes[i] = new InetSocketAddress(hosts[i], port);
     }
 
-    DFSTestUtil.createFile(cluster.getFileSystem(0), filePath, false, 1024,
+    DFSTestUtil.createFile(cluster.getFileSystem(0), FILE_PATH, false, 1024,
         totalUsedSpace / numOfDatanodes, DEFAULT_BLOCK_SIZE,
         (short) numOfDatanodes, 0, false, favoredNodes);
 
     // start up an empty node with the same capacity
-    cluster.startDataNodes(conf, 1, true, null, new String[] { RACK2 },
-        new long[] { CAPACITY });
+    cluster.startDataNodes(conf, 1, true, null, new String[]{RACK2},
+        new long[]{CAPACITY});
 
     totalCapacity += CAPACITY;
 
@@ -583,7 +590,7 @@ public class TestBalancer2 {
       DataNodeTestUtils.triggerHeartbeat(dataNodes.get(i));
       DataNodeTestUtils.triggerBlockReport(dataNodes.get(i));
       // Create nodes with: 80%, 85%, 90%, 95%, 100%.
-      int capacityForThisDatanode = (int)capacity
+      int capacityForThisDatanode = (int) capacity
           - diffBetweenNodes * (numOfOverUtilizedDn - i - 1);
       TestBalancer.createFile(cluster, new Path("test_big" + i),
           capacityForThisDatanode, (short) 1, 0);
@@ -609,7 +616,7 @@ public class TestBalancer2 {
     cluster.triggerBlockReports();
     cluster.waitFirstBRCompleted(0, 6000);
 
-    final BalancerParameters p = Balancer.Cli.parse(new String[] {
+    final BalancerParameters p = Balancer.Cli.parse(new String[]{
         "-policy", BalancingPolicy.Node.INSTANCE.getName(),
         "-threshold", "1",
         "-sortTopNodes"
@@ -669,7 +676,7 @@ public class TestBalancer2 {
   public void testMaxIterationTime() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
-    int blockSize = 10*1024*1024; // 10MB block size
+    int blockSize = 10 * 1024 * 1024; // 10MB block size
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, blockSize);
     // limit the worker thread count of Balancer to have only 1 queue per DN
@@ -684,7 +691,7 @@ public class TestBalancer2 {
     conf.setLong(DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_KEY, 500L);
     // setup the cluster
     final long capacity = 10L * blockSize;
-    final long[] dnCapacities = new long[] {capacity, capacity};
+    final long[] dnCapacities = new long[]{capacity, capacity};
     final short rep = 1;
     final long seed = 0xFAFAFA;
     cluster = new MiniDFSCluster.Builder(conf)
