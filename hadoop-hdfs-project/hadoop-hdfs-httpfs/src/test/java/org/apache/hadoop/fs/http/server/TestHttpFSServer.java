@@ -537,6 +537,33 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
   }
 
+  private void deleteWithHttp(String filename, String perms,
+      String unmaskedPerms) throws Exception {
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    // Remove leading / from filename
+    if (filename.charAt(0) == '/') {
+      filename = filename.substring(1);
+    }
+    String pathOps;
+    if (perms == null) {
+      pathOps = MessageFormat.format("/webhdfs/v1/{0}?user.name={1}&op=DELETE",
+          filename, user);
+    } else {
+      pathOps = MessageFormat.format(
+          "/webhdfs/v1/{0}?user.name={1}&permission={2}&op=DELETE",
+          filename, user, perms);
+    }
+    if (unmaskedPerms != null) {
+      pathOps = pathOps + "&unmaskedpermission=" + unmaskedPerms;
+    }
+    URL url = new URL(TestJettyHelper.getJettyURL(), pathOps);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.addRequestProperty("Content-Type", "application/octet-stream");
+    conn.setRequestMethod("DELETE");
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+  }
+
   /**
    * Talks to the http interface to create a directory.
    *
@@ -780,6 +807,26 @@ public class TestHttpFSServer extends HFSTestCase {
     createWithHttp("/perm/p-321", "321");
     statusJson = getStatus("/perm/p-321", "GETFILESTATUS");
     Assert.assertTrue("321".equals(getPerms(statusJson)));
+  }
+
+  /**
+   * Validate create and delete calls.
+   */
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testCreateDelete() throws Exception {
+    final String dir = "/testCreateDelete";
+    final String path = dir + "/file";
+
+    createHttpFSServer(false, false);
+
+    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs.mkdirs(new Path(dir));
+
+    createWithHttp(path, null);
+    deleteWithHttp(path, null, null);
   }
 
   /**

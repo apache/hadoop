@@ -55,8 +55,10 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,6 +120,9 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.ResourceFilters;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 
 /** Web-hdfs NameNode implementation. */
 @Path("")
@@ -1555,6 +1560,24 @@ public class NamenodeWebHdfsMethods {
 
     switch(op.getValue()) {
     case DELETE: {
+      Configuration conf =
+          (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+      long trashInterval =
+          conf.getLong(FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT);
+      if (trashInterval > 0) {
+        LOG.info("{} is {} , trying to archive {} instead of removing",
+            FS_TRASH_INTERVAL_KEY, trashInterval, fullpath);
+        org.apache.hadoop.fs.Path path =
+            new org.apache.hadoop.fs.Path(fullpath);
+        FileSystem fullyResolvedFs = FileSystem.get(path.toUri(), conf);
+        Trash trash = new Trash(fullyResolvedFs, conf);
+        boolean movedToTrash = trash.moveToTrash(path);
+        if (movedToTrash) {
+          final String js = JsonUtil.toJsonString("boolean", true);
+          return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+        }
+        LOG.error("Could not move {} to Trash, attempting removal", fullpath);
+      }
       final boolean b = cp.delete(fullpath, recursive.getValue());
       final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();

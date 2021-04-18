@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
@@ -743,6 +744,13 @@ public final class FSOperations {
      */
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
+      boolean movedToTrash = Trash.moveToAppropriateTrash(fs, path,
+          fs.getConf());
+      if (movedToTrash) {
+        HttpFSServerWebApp.getMetrics().incrOpsDelete();
+        return toJSON(
+            StringUtils.toLowerCase(HttpFSFileSystem.DELETE_JSON), true);
+      }
       boolean deleted = fs.delete(path, recursive);
       HttpFSServerWebApp.get().getMetrics().incrOpsDelete();
       return toJSON(
