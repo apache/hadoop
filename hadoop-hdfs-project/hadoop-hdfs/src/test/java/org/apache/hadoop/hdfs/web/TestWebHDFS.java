@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
@@ -58,6 +60,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
 
+import org.apache.hadoop.hdfs.web.resources.DeleteSkipTrashParam;
+import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.QuotaUsage;
@@ -1559,8 +1563,12 @@ public class TestWebHDFS {
       HttpURLConnection.HTTP_OK, conn.getResponseCode());
 
     JSONObject responseJson = new JSONObject(response);
-    Assert.assertTrue("Response didn't give us a location. " + response,
-      responseJson.has("Location"));
+    if (!TYPE.equals("DELETE")) {
+      Assert.assertTrue("Response didn't give us a location. " + response,
+          responseJson.has("Location"));
+    } else {
+      Assert.assertTrue(responseJson.getBoolean("boolean"));
+    }
 
     //Test that the DN allows CORS on Create
     if(TYPE.equals("CREATE")) {
@@ -1572,14 +1580,15 @@ public class TestWebHDFS {
     }
   }
 
-  @Test
   /**
    * Test that when "&noredirect=true" is added to operations CREATE, APPEND,
    * OPEN, and GETFILECHECKSUM the response (which is usually a 307 temporary
    * redirect) is a 200 with JSON that contains the redirected location
    */
+  @Test
   public void testWebHdfsNoRedirect() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 5);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     LOG.info("Started cluster");
     InetSocketAddress addr = cluster.getNameNode().getHttpAddress();
@@ -1618,6 +1627,26 @@ public class TestWebHDFS {
             + Param.toSortedString("&", new NoRedirectParam(true)));
     LOG.info("Sending append request " + url);
     checkResponseContainsLocation(url, "POST");
+
+    // setup some permission to allow moving file to .Trash location
+    cluster.getFileSystem().setPermission(new Path("/testWebHdfsNoRedirect"),
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+    Path userDir = new Path(FileSystem.USER_HOME_PREFIX);
+    Path trashDir = new Path(FileSystem.USER_HOME_PREFIX, DEFAULT_HADOOP_HTTP_STATIC_USER);
+    Path trashPath = new Path(FileSystem.USER_HOME_PREFIX,
+        new Path(DEFAULT_HADOOP_HTTP_STATIC_USER, FileSystem.TRASH_PREFIX));
+    cluster.getFileSystem().mkdirs(userDir, FsPermission.getDirDefault());
+    cluster.getFileSystem().mkdir(trashDir, FsPermission.getDirDefault());
+    cluster.getFileSystem().mkdir(trashPath, FsPermission.getDirDefault());
+    cluster.getFileSystem().setOwner(trashPath, DEFAULT_HADOOP_HTTP_STATIC_USER, HADOOP_USER_GROUP_STATIC_OVERRIDES_DEFAULT);
+    cluster.getFileSystem().setPermission(new Path("/"), new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+
+    url = new URL("http", addr.getHostString(), addr.getPort(),
+        WebHdfsFileSystem.PATH_PREFIX + "/testWebHdfsNoRedirect" + "?op=DELETE"
+            + Param.toSortedString("&", new RecursiveParam(true))
+            + Param.toSortedString("&", new DeleteSkipTrashParam(true)));
+    LOG.info("Sending append request " + url);
+    checkResponseContainsLocation(url, "DELETE");
   }
 
   @Test

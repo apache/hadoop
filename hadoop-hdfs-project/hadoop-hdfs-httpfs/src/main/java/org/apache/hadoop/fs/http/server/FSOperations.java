@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
@@ -717,18 +718,22 @@ public final class FSOperations {
    */
   @InterfaceAudience.Private
   public static class FSDelete implements FileSystemAccess.FileSystemExecutor<JSONObject> {
-    private Path path;
-    private boolean recursive;
+    private final Path path;
+    private final boolean recursive;
+    private final boolean skipTrash;
 
     /**
      * Creates a Delete executor.
      *
      * @param path path to delete.
      * @param recursive if the delete should be recursive or not.
+     * @param skipTrash if the file must be deleted and not kept in trash
+     *     regardless of fs.trash.interval config value.
      */
-    public FSDelete(String path, boolean recursive) {
+    public FSDelete(String path, boolean recursive, boolean skipTrash) {
       this.path = new Path(path);
       this.recursive = recursive;
+      this.skipTrash = skipTrash;
     }
 
     /**
@@ -743,6 +748,15 @@ public final class FSOperations {
      */
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
+      if (!skipTrash) {
+        boolean movedToTrash = Trash.moveToAppropriateTrash(fs, path,
+            fs.getConf());
+        if (movedToTrash) {
+          HttpFSServerWebApp.getMetrics().incrOpsDelete();
+          return toJSON(
+              StringUtils.toLowerCase(HttpFSFileSystem.DELETE_JSON), true);
+        }
+      }
       boolean deleted = fs.delete(path, recursive);
       HttpFSServerWebApp.get().getMetrics().incrOpsDelete();
       return toJSON(

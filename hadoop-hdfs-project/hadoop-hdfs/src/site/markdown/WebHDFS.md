@@ -462,7 +462,7 @@ See also: [`destination`](#Destination), [FileSystem](../../api/org/apache/hadoo
 * Submit a HTTP DELETE request.
 
         curl -i -X DELETE "http://<host>:<port>/webhdfs/v1/<path>?op=DELETE
-                                      [&recursive=<true |false>]"
+                                      [&recursive=<true|false>][&skiptrash=<true|false>]"
 
     The client receives a response with a [`boolean` JSON object](#Boolean_JSON_Schema):
 
