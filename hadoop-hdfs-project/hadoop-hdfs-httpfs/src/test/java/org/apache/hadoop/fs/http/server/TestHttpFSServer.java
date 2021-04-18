@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -529,6 +530,36 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
   }
 
+  private void deleteWithHttp(String filename, String perms,
+      String unmaskedPerms, Boolean skipTrash) throws Exception {
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    // Remove leading / from filename
+    if (filename.charAt(0) == '/') {
+      filename = filename.substring(1);
+    }
+    String pathOps;
+    if (perms == null) {
+      pathOps = MessageFormat.format("/webhdfs/v1/{0}?user.name={1}&op=DELETE",
+          filename, user);
+    } else {
+      pathOps = MessageFormat.format(
+          "/webhdfs/v1/{0}?user.name={1}&permission={2}&op=DELETE",
+          filename, user, perms);
+    }
+    if (unmaskedPerms != null) {
+      pathOps = pathOps + "&unmaskedpermission=" + unmaskedPerms;
+    }
+    if (skipTrash != null) {
+      pathOps = pathOps + "&skiptrash=" + skipTrash;
+    }
+    URL url = new URL(TestJettyHelper.getJettyURL(), pathOps);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.addRequestProperty("Content-Type", "application/octet-stream");
+    conn.setRequestMethod("DELETE");
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+  }
+
   /**
    * Talks to the http interface to create a directory.
    *
@@ -772,6 +803,37 @@ public class TestHttpFSServer extends HFSTestCase {
     createWithHttp("/perm/p-321", "321");
     statusJson = getStatus("/perm/p-321", "GETFILESTATUS");
     Assert.assertTrue("321".equals(getPerms(statusJson)));
+  }
+
+  /**
+   * Validate create and delete calls.
+   */
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testCreateDelete() throws Exception {
+    final String dir1 = "/testCreateDelete1";
+    final String path1 = dir1 + "/file1";
+    final String dir2 = "/testCreateDelete2";
+    final String path2 = dir2 + "/file2";
+
+    createHttpFSServer(false, false);
+    final Configuration conf = HttpFSServerWebApp.get()
+        .get(FileSystemAccess.class).getFileSystemConfiguration();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 5);
+    writeConf(conf, "hdfs-site.xml");
+
+    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs.mkdirs(new Path(dir1));
+
+    createWithHttp(path1, null);
+    deleteWithHttp(path1, null, null, null);
+
+    fs.mkdirs(new Path(dir2));
+
+    createWithHttp(path2, null);
+    deleteWithHttp(path2, null, null, true);
   }
 
   /**
