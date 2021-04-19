@@ -169,7 +169,6 @@ public class TestBalancer {
   static final double CAPACITY_ALLOWED_VARIANCE = 0.005;  // 0.5%
   static final double BALANCE_ALLOWED_VARIANCE = 0.11;    // 10%+delta
   static final int DEFAULT_BLOCK_SIZE = 100;
-  static final int DEFAULT_RAM_DISK_BLOCK_SIZE = 5 * 1024 * 1024;
   private static final Random r = new Random();
 
   static {

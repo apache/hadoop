@@ -723,10 +723,12 @@ public class TestBalancer2 {
           LOG.info("NNC to work on: " + nnc);
           Balancer b = new Balancer(nnc, bParams, conf);
           Balancer.Result r = b.runOneIteration();
-          // Since no block cannot be moved in 2 seconds (i.e.,
-          // 4MB/s * 2s = 8MB < 10MB), NO_MOVE_PROGRESS will be reported.
-          // When a block move is not canceled in 2 seconds properly and then
-          // a block is moved unexpectedly, IN_PROGRESS will be reported.
+          // Since no block can be moved in 500 milli-seconds (i.e.,
+          // 4MB/s * 0.5s = 2MB < 10MB), NO_MOVE_PROGRESS will be reported.
+          // When a block move is not canceled in 500 ms properly
+          // (highly unlikely) and then a block is moved unexpectedly,
+          // IN_PROGRESS will be reported. This is highly unlikely unexpected
+          // case. See HDFS-15989.
           assertEquals("We expect ExitStatus.NO_MOVE_PROGRESS to be reported.",
               ExitStatus.NO_MOVE_PROGRESS, r.getExitStatus());
           assertEquals(0, r.getBlocksMoved());
