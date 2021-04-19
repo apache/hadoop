@@ -82,6 +82,20 @@ public class TestAbfsHttpOperation {
         "http://www.testurl.net?abc=saoidxyz&mnop=sigabc");
   }
 
+  @Test
+  public void testUrlWithNullValues()
+      throws MalformedURLException, UnsupportedEncodingException {
+    testIfMaskAndEncodeSuccessful("Where param to be masked has null value",
+        "http://www.testurl.net?abc=xyz&saoid=&mnop=abcsig",
+        "http://www.testurl.net?abc=xyz&saoid=&mnop=abcsig");
+    testIfMaskAndEncodeSuccessful("Where visible param has null value",
+        "http://www.testurl.net?abc=xyz&pqr=&mnop=abcd",
+        "http://www.testurl.net?abc=xyz&pqr=&mnop=abcd");
+    testIfMaskAndEncodeSuccessful("Where last param has null value",
+        "http://www.testurl.net?abc=xyz&pqr=&mnop=",
+        "http://www.testurl.net?abc=xyz&pqr=&mnop=");
+  }
+
   private void testIfMaskAndEncodeSuccessful(final String scenario,
       final String url, final String expectedMaskedUrl)
       throws UnsupportedEncodingException, MalformedURLException {

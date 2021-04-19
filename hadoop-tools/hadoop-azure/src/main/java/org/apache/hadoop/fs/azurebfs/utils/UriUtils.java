@@ -21,10 +21,15 @@ package org.apache.hadoop.fs.azurebfs.utils;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.AND_MARK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
@@ -35,8 +40,11 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
 public final class UriUtils {
   private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
   private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
-  private static final ArrayList<String> MASK_PARAM_KEYS = new ArrayList<>(
-      Arrays.asList("skoid=", "saoid=", "suoid=", "sig="));
+  private static final ArrayList<String> FULL_MASK_PARAM_KEYS = new ArrayList<>(
+      Collections.singleton("sig="));
+  private static final ArrayList<String> PARTIAL_MASK_PARAM_KEYS =
+      new ArrayList<>(
+      Arrays.asList("skoid=", "saoid=", "suoid="));
   private static final String MASK = "XXXX";
 
   /**
@@ -85,30 +93,30 @@ public final class UriUtils {
     return testUniqueForkId == null ? "/test" : "/" + testUniqueForkId + "/test";
   }
 
-  public static List<QueryKeyValuePair> getUrlQueryParamKeyValueList(String query) {
-    String[] queryParameters = query.split(AND_MARK);
-    List<QueryKeyValuePair> keyValueList = new ArrayList<>();
-    for (String parameter : queryParameters) {
-      keyValueList.add(new QueryKeyValuePair(parameter.split(EQUAL)));
-    }
-    return keyValueList;
-  }
-
-  public static String maskUrlQueryParameters(
-      List<QueryKeyValuePair> keyValueList,
-      ArrayList<String> queryParamsToMask) {
+  public static String maskUrlQueryParameters(List<NameValuePair> keyValueList,
+      ArrayList<String> queryParamsForFullMask,
+      ArrayList<String> queryParamsForPartialMask) {
     StringBuilder maskedUrl = new StringBuilder();
-    for (QueryKeyValuePair keyValuePair : keyValueList) {
-      String key = keyValuePair.getKey();
-      maskedUrl.append(key);
-      maskedUrl.append(EQUAL);
-      if (queryParamsToMask.contains(key + EQUAL)) {
-        if (key.contains("oid")) { //partial mask
-          maskedUrl.append(keyValuePair.getValue(), 0, 4);
-        }
-        maskedUrl.append(MASK);
+    for (NameValuePair keyValuePair : keyValueList) {
+      String key = keyValuePair.getName();
+      if (!key.isEmpty()) {
+        key += EQUAL;
       } else {
-        maskedUrl.append(keyValuePair.getValue());
+        throw new IllegalArgumentException("Query param key can not be empty");
+      }
+
+      String value = keyValuePair.getValue();
+      maskedUrl.append(key);
+      if (value != null && !value.isEmpty()) { //no mask
+        if (queryParamsForFullMask.contains(key)) {
+          maskedUrl.append(MASK);
+        } else if (queryParamsForPartialMask.contains(key)) {
+          int visibleLen = Math.min(4, value.length());
+          maskedUrl.append(value, 0, visibleLen);
+          maskedUrl.append(MASK);
+        } else {
+          maskedUrl.append(value);
+        }
       }
       maskedUrl.append(AND_MARK);
     }
@@ -126,31 +134,13 @@ public final class UriUtils {
 
   public static String getMaskedUrl(URL url) {
     String queryString = url.getQuery();
-    List<QueryKeyValuePair> queryKeyValueList = getUrlQueryParamKeyValueList(
-        queryString);
+    List<NameValuePair> queryKeyValueList = URLEncodedUtils
+        .parse(String.valueOf(queryString), StandardCharsets.UTF_8);
     String maskedQueryString = maskUrlQueryParameters(queryKeyValueList,
-        MASK_PARAM_KEYS);
+        FULL_MASK_PARAM_KEYS, PARTIAL_MASK_PARAM_KEYS);
     return url.toString().replace(queryString, maskedQueryString);
   }
 
   private UriUtils() {
-  }
-}
-
-class QueryKeyValuePair {
-  private final String key;
-  private final String value;
-
-  public QueryKeyValuePair(String[] kvPair) {
-    key = kvPair[0];
-    value = kvPair[1];
-  }
-
-  String getKey() {
-    return key;
-  }
-
-  String getValue() {
-    return value;
   }
 }
