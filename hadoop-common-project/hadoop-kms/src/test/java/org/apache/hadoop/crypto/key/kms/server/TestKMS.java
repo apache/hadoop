@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import java.util.function.Supplier;
 import com.google.common.cache.LoadingCache;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
@@ -91,7 +90,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -111,9 +109,6 @@ import static org.mockito.Mockito.when;
 
 public class TestKMS {
   private static final Logger LOG = LoggerFactory.getLogger(TestKMS.class);
-
-  private static final String SSL_RELOADER_THREAD_NAME =
-      "Truststore reloader thread";
 
   private SSLFactory sslFactory;
 
@@ -538,34 +533,6 @@ public class TestKMS {
         Assert.assertEquals(keystore != null,
             url.getProtocol().equals("https"));
         final URI uri = createKMSUri(getKMSUrl());
-
-        if (ssl) {
-          KeyProvider testKp = createProvider(uri, conf);
-          ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
-          while (threadGroup.getParent() != null) {
-            threadGroup = threadGroup.getParent();
-          }
-          Thread[] threads = new Thread[threadGroup.activeCount()];
-          threadGroup.enumerate(threads);
-          Thread reloaderThread = null;
-          for (Thread thread : threads) {
-            if ((thread.getName() != null)
-                && (thread.getName().contains(SSL_RELOADER_THREAD_NAME))) {
-              reloaderThread = thread;
-            }
-          }
-          Assert.assertTrue("Reloader is not alive", reloaderThread.isAlive());
-          // Explicitly close the provider so we can verify the internal thread
-          // is shutdown
-          testKp.close();
-          boolean reloaderStillAlive = true;
-          for (int i = 0; i < 10; i++) {
-            reloaderStillAlive = reloaderThread.isAlive();
-            if (!reloaderStillAlive) break;
-            Thread.sleep(1000);
-          }
-          Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
-        }
 
         if (kerberos) {
           for (String user : new String[]{"client", "client/host"}) {
@@ -2362,8 +2329,7 @@ public class TestKMS {
                   return null;
                 }
               });
-              // Close the client provider. We will verify all providers'
-              // Truststore reloader threads are closed later.
+              // Close the client provider.
               kp.close();
               return null;
             } finally {
@@ -2374,22 +2340,6 @@ public class TestKMS {
         return null;
       }
     });
-
-    // verify that providers created by KMSTokenRenewer are closed.
-    if (ssl) {
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          final Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
-          for (Thread t : threadSet) {
-            if (t.getName().contains(SSL_RELOADER_THREAD_NAME)) {
-              return false;
-            }
-          }
-          return true;
-        }
-      }, 1000, 10000);
-    }
   }
 
   @Test
