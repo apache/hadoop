@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -485,10 +486,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
+      ReadRequestParameters reqParams = new ReadRequestParameters(
+          ReadRequestParameters.Mode.HTTP_CONNECTION_MODE,
+          position, offset, length,
+          tolerateOobAppends ? "*" : eTag);
       op = IOStatisticsBinding.trackDuration((IOStatisticsStore) ioStatistics,
           StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
-          () -> client.read(path, position, b, offset, length,
-              tolerateOobAppends ? "*" : eTag, cachedSasToken.get()));
+          () -> client.read(path, b, cachedSasToken.get(), reqParams));
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();
