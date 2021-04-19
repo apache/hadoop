@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -93,6 +94,8 @@ public class AbfsRestOperation {
   String getSasToken() {
     return sasToken;
   }
+
+  public ListResultSchema getListResultSchema() { return ((AbfsHttpConnection)this.result).getListResultSchema(); }
 
   /**
    * Initializes a new REST operation.
@@ -210,29 +213,31 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
     try {
-      // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
-      incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-
+      // initialize the HTTP request, add auth info  and open the connection
       switch(client.getAuthType()) {
         case Custom:
         case OAuth:
           LOG.debug("Authenticating request with OAuth2 access token");
-          httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+          httpOperation = new AbfsHttpConnection(url, method, requestHeaders);
+          ((AbfsHttpConnection) httpOperation).setHeader(HttpHeaderConfigurations.AUTHORIZATION,
               client.getAccessToken());
           break;
         case SAS:
+          httpOperation  = new AbfsHttpConnection(url, method, requestHeaders);
           // do nothing; the SAS token should already be appended to the query string
           break;
         case SharedKey:
+          httpOperation  = new AbfsHttpConnection(url, method, requestHeaders);
           // sign the HTTP request
           LOG.debug("Signing request with shared key");
           // sign the HTTP request
           client.getSharedKeyCredentials().signRequest(
-              httpOperation.getConnection(),
+              ((AbfsHttpConnection)httpOperation).getConnection(),
               hasRequestBody ? bufferLength : 0);
           break;
       }
+
+      incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
     } catch (IOException e) {
       LOG.debug("Auth failure: {}, {}", method, url);
       throw new AbfsRestOperationException(-1, null,
@@ -242,12 +247,12 @@ public class AbfsRestOperation {
     try {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
-          httpOperation.getConnection().getRequestProperties());
+          httpOperation.getRequestHeaders());
       AbfsClientThrottlingIntercept.sendingRequest(operationType, abfsCounters);
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
-        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+        ((AbfsHttpConnection)httpOperation).sendRequest(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
         incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
@@ -262,16 +267,23 @@ public class AbfsRestOperation {
       }
     } catch (UnknownHostException ex) {
       String hostname = null;
-      hostname = httpOperation.getHost();
-      LOG.warn("Unknown host name: %s. Retrying to resolve the host name...",
-          hostname);
+      if (httpOperation != null) {
+        hostname = httpOperation.getHost();
+        LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...",
+            hostname));
+      }
+
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
       }
       return false;
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("HttpRequestFailure: {}, {}", httpOperation.toString(), ex);
+        if (httpOperation == null) {
+          LOG.debug("HttpRequestFailure: " + method + "," + url, ex);
+        } else {
+          LOG.debug("HttpRequestFailure: {}, {}", httpOperation.toString(), ex);
+        }
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {

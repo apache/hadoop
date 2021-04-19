@@ -135,7 +135,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private List<ListResultEntrySchema> listPath(String directory)
       throws IOException {
     return getFileSystem().getAbfsClient()
-        .listPath(directory, false, getListMaxResults(), null).getResult()
+        .listPath(directory, false, getListMaxResults(), null)
         .getListResultSchema().paths();
   }
 
