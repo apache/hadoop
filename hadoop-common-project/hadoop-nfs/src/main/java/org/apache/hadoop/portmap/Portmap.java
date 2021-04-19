@@ -106,7 +106,7 @@ final class Portmap {
   }
 
   void start(final int idleTimeMilliSeconds, final SocketAddress tcpAddress,
-      final SocketAddress udpAddress) {
+      final SocketAddress udpAddress) throws InterruptedException {
 
     bossGroup = new NioEventLoopGroup();
     workerGroup = new NioEventLoopGroup(0, Executors.newCachedThreadPool());
@@ -146,16 +146,10 @@ final class Portmap {
         .option(ChannelOption.SO_REUSEADDR, true);
 
     ChannelFuture tcpChannelFuture = null;
-    try {
-      tcpChannelFuture = tcpServer.bind(tcpAddress).sync();
-      tcpChannel = tcpChannelFuture.channel();
-
-      ChannelFuture udpChannelFuture = udpServer.bind(udpAddress).sync();
-      udpChannel = udpChannelFuture.channel();
-
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
+    tcpChannelFuture = tcpServer.bind(tcpAddress);
+    ChannelFuture udpChannelFuture = udpServer.bind(udpAddress);
+    tcpChannel = tcpChannelFuture.sync().channel();
+    udpChannel = udpChannelFuture.sync().channel();
 
     allChannels.add(tcpChannel);
     allChannels.add(udpChannel);

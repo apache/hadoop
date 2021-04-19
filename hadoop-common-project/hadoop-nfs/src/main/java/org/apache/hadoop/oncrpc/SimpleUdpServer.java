@@ -96,7 +96,11 @@ public class SimpleUdpServer {
   public void shutdown() {
     if (ch != null) {
       ch.close().awaitUninterruptibly();
+      ch = null;
     }
-    workerGroup.shutdownGracefully();
+    if (workerGroup != null) {
+      workerGroup.shutdownGracefully();
+      workerGroup = null;
+    }
   }
 }

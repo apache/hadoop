@@ -172,7 +172,7 @@ public class TestFrameDecoder {
   }
 
   @Test
-  public void testFrames() {
+  public void testFrames() throws InterruptedException {
     int serverPort = startRpcServer(true);
 
     XDR xdrOut = createGetportMount();
@@ -190,7 +190,7 @@ public class TestFrameDecoder {
   }
   
   @Test
-  public void testUnprivilegedPort() {
+  public void testUnprivilegedPort() throws InterruptedException {
     // Don't allow connections from unprivileged ports. Given that this test is
     // presumably not being run by root, this will be the case.
     int serverPort = startRpcServer(false);
@@ -221,23 +221,28 @@ public class TestFrameDecoder {
     assertEquals(requestSize, resultSize);
   }
   
-  private static int startRpcServer(boolean allowInsecurePorts) {
+  private static int startRpcServer(boolean allowInsecurePorts)
+      throws InterruptedException {
     Random rand = new Random();
     int serverPort = 30000 + rand.nextInt(10000);
     int retries = 10;    // A few retries in case initial choice is in use.
 
     while (true) {
+      SimpleTcpServer tcpServer = null;
       try {
         RpcProgram program = new TestFrameDecoder.TestRpcProgram("TestRpcProgram",
             "localhost", serverPort, 100000, 1, 2, allowInsecurePorts);
-        SimpleTcpServer tcpServer = new SimpleTcpServer(serverPort, program, 1);
+        tcpServer = new SimpleTcpServer(serverPort, program, 1);
         tcpServer.run();
         break;          // Successfully bound a port, break out.
-      } catch (ChannelException ce) {
+      } catch (InterruptedException | ChannelException e) {
+        if (tcpServer != null) {
+          tcpServer.shutdown();
+        }
         if (retries-- > 0) {
           serverPort += rand.nextInt(20); // Port in use? Try another.
         } else {
-          throw ce;     // Out of retries.
+          throw e;     // Out of retries.
         }
       }
     }

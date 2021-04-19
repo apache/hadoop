@@ -62,16 +62,10 @@ public class SimpleTcpServer {
     this.workerCount = workercount;
   }
 
-  public void run() {
+  public void run() throws InterruptedException {
     // Configure the Server.
     bossGroup = new NioEventLoopGroup();
-
-    if (workerCount == 0) {
-      // Use default workers: 2 * the number of available processors
-      workerGroup = new NioEventLoopGroup(0, Executors.newCachedThreadPool());
-    } else {
-      workerGroup = new NioEventLoopGroup(workerCount, Executors.newCachedThreadPool());
-    }
+    workerGroup = new NioEventLoopGroup(workerCount, Executors.newCachedThreadPool());
 
     server = new ServerBootstrap();
 
@@ -91,12 +85,7 @@ public class SimpleTcpServer {
         .option(ChannelOption.SO_REUSEADDR, true);
 
     // Listen to TCP port
-    ChannelFuture f = null;
-    try {
-      f = server.bind(new InetSocketAddress(port)).sync();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
+    ChannelFuture f = server.bind(new InetSocketAddress(port)).sync();
     ch = f.channel();
     InetSocketAddress socketAddr = (InetSocketAddress) ch.localAddress();
     boundPort = socketAddr.getPort();
@@ -113,9 +102,17 @@ public class SimpleTcpServer {
   public void shutdown() {
     if (ch != null) {
       ch.close().awaitUninterruptibly();
+      ch = null;
     }
 
-    workerGroup.shutdownGracefully();
-    bossGroup.shutdownGracefully();
+    if (workerGroup != null) {
+      workerGroup.shutdownGracefully();
+      workerGroup = null;
+    }
+
+    if (bossGroup != null) {
+      bossGroup.shutdownGracefully();
+      bossGroup = null;
+    }
   }
 }
