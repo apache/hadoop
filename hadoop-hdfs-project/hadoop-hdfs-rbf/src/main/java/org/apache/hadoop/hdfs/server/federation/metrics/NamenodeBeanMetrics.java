@@ -193,7 +193,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getUsed() {
     try {
-      return getRBFMetrics().getUsedCapacity().longValue();
+      return getRBFMetrics().getUsedCapacity();
     } catch (IOException e) {
       LOG.debug("Failed to get the used capacity", e.getMessage());
     }
@@ -203,7 +203,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getFree() {
     try {
-      return getRBFMetrics().getRemainingCapacity().longValue();
+      return getRBFMetrics().getRemainingCapacity();
     } catch (IOException e) {
       LOG.debug("Failed to get remaining capacity", e.getMessage());
     }
@@ -213,7 +213,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getTotal() {
     try {
-      return getRBFMetrics().getTotalCapacity().longValue();
+      return getRBFMetrics().getTotalCapacity();
     } catch (IOException e) {
       LOG.debug("Failed to Get total capacity", e.getMessage());
     }

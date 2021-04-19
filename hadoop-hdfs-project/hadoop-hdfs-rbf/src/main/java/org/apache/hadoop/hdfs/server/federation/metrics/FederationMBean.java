@@ -56,21 +56,45 @@ public interface FederationMBean {
 
   /**
    * Get the total capacity of the federated cluster.
+   * The number could overflow if too big. In that case use
+   * {@link #getTotalCapacityBigInt()} instead.
    * @return Total capacity of the federated cluster.
    */
-  BigInteger getTotalCapacity();
+  long getTotalCapacity();
 
   /**
    * Get the used capacity of the federated cluster.
+   * The number could overflow if too big. In that case use
+   * {@link #getUsedCapacityBigInt()} instead.
    * @return Used capacity of the federated cluster.
    */
-  BigInteger getUsedCapacity();
+  long getUsedCapacity();
 
   /**
    * Get the remaining capacity of the federated cluster.
+   * The number could overflow if too big. In that case use
+   * {@link #getRemainingCapacityBigInt()} instead.
    * @return Remaining capacity of the federated cluster.
    */
-  BigInteger getRemainingCapacity();
+  long getRemainingCapacity();
+
+  /**
+   * Get the total capacity (big integer) of the federated cluster.
+   * @return Total capacity of the federated cluster.
+   */
+  BigInteger getTotalCapacityBigInt();
+
+  /**
+   * Get the used capacity (big integer) of the federated cluster.
+   * @return Used capacity of the federated cluster.
+   */
+  BigInteger getUsedCapacityBigInt();
+
+  /**
+   * Get the remaining capacity (big integer) of the federated cluster.
+   * @return Remaining capacity of the federated cluster.
+   */
+  BigInteger getRemainingCapacityBigInt();
 
   /**
    * Get the total remote storage capacity mounted in the federated cluster.

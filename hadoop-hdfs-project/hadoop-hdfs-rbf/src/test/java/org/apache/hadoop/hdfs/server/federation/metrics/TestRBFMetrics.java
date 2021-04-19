@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getBean;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -32,6 +29,7 @@ import javax.management.MalformedObjectNameException;
 
 import org.apache.commons.collections.ListUtils;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.NamenodeHeartbeatRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
@@ -351,21 +349,32 @@ public class TestRBFMetrics extends TestMetricsBase {
     assertFalse(bean.isSecurityEnabled());
   }
 
-  private void testCapacity(FederationMBean bean) {
+  private void testCapacity(FederationMBean bean) throws  IOException {
     List<MembershipState> memberships = getActiveMemberships();
     assertTrue(memberships.size() > 1);
 
-    BigInteger availableCapacity = new BigInteger("0");
-    BigInteger totalCapacity = new BigInteger("0");
-    BigInteger unitCapacity = new BigInteger(String.valueOf(Long.MAX_VALUE));
+    BigInteger availableCapacity = BigInteger.valueOf(0);
+    BigInteger totalCapacity = BigInteger.valueOf(0);
+    BigInteger unitCapacity = BigInteger.valueOf(Long.MAX_VALUE);
     for (MembershipState mock : memberships) {
       MembershipStats stats = mock.getStats();
       stats.setTotalSpace(Long.MAX_VALUE);
       stats.setAvailableSpace(Long.MAX_VALUE);
-      totalCapacity.add(unitCapacity);
-      availableCapacity.add(unitCapacity);
+      // reset stats to make the new value persistent
+      mock.setStats(stats);
+      // write back the new namenode information to state store
+      refreshNamenodeRegistration(NamenodeHeartbeatRequest.newInstance(mock));
+      totalCapacity = totalCapacity.add(unitCapacity);
+      availableCapacity = availableCapacity.add(unitCapacity);
     }
-    assertEquals(bean.getTotalCapacity(), totalCapacity); // overflow
-    assertEquals(bean.getRemainingCapacity(), availableCapacity); // overflow
+
+    // for local cache update
+    assertEquals(bean.getTotalCapacityBigInt(), totalCapacity);
+    // not equal since overflow happened.
+    assertNotEquals(BigInteger.valueOf(bean.getTotalCapacity()), totalCapacity);
+    assertEquals(bean.getRemainingCapacityBigInt(), availableCapacity);
+    // not equal since overflow happened.
+    assertNotEquals(
+        BigInteger.valueOf(bean.getRemainingCapacity()), availableCapacity);
   }
 }

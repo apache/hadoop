@@ -372,12 +372,27 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
-  public BigInteger getTotalCapacity() {
+  public long getTotalCapacity() {
+    return getNameserviceAggregatedLong(MembershipStats::getTotalSpace);
+  }
+
+  @Override
+  public long getRemainingCapacity() {
+    return getNameserviceAggregatedLong(MembershipStats::getAvailableSpace);
+  }
+
+  @Override
+  public long getUsedCapacity() {
+    return getTotalCapacity() - getRemainingCapacity();
+  }
+
+  @Override
+  public BigInteger getTotalCapacityBigInt() {
     return getNameserviceAggregatedBigInt(MembershipStats::getTotalSpace);
   }
 
   @Override
-  public BigInteger getRemainingCapacity() {
+  public BigInteger getRemainingCapacityBigInt() {
     return getNameserviceAggregatedBigInt(MembershipStats::getAvailableSpace);
   }
 
@@ -387,8 +402,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
-  public BigInteger getUsedCapacity() {
-    return getTotalCapacity().subtract(getRemainingCapacity());
+  public BigInteger getUsedCapacityBigInt() {
+    return getTotalCapacityBigInt().subtract(getRemainingCapacityBigInt());
   }
 
   @Override
@@ -788,11 +803,10 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       ToLongFunction<MembershipStats> f) {
     try {
       List<MembershipState> states = getActiveNamenodeRegistrations();
-      BigInteger sum = new BigInteger("0");
+      BigInteger sum = BigInteger.valueOf(0);
       for (MembershipState state : states) {
         long lvalue = f.applyAsLong(state.getStats());
-        BigInteger bvalue = new BigInteger(String.valueOf(lvalue));
-        sum.add(bvalue);
+        sum = sum.add(BigInteger.valueOf(lvalue));
       }
       return sum;
     } catch (IOException e) {
