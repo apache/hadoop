@@ -418,7 +418,7 @@ public class AzureBlobFileSystem extends FileSystem {
       LOG.debug("Thread interrupted");
       throw new IOException(e);
     } catch(ExecutionException ex) {
-      LOG.debug(ex.getCause().getMessage());
+      LOG.debug("GetContentSummary failed with error " + ex.getCause().getMessage());
       throw new IOException(ex);
     }
   }
