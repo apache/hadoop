@@ -18,6 +18,8 @@
 package org.apache.hadoop.oncrpc;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
@@ -52,7 +54,7 @@ public class SimpleTcpClientHandler extends ChannelInboundHandlerAdapter {
    */
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
-    ctx.channel().closeFuture().awaitUninterruptibly();
+    ctx.channel().close();
   }
 
   @Override

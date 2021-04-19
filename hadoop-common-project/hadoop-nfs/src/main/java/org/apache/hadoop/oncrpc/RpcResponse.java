@@ -45,19 +45,4 @@ public class RpcResponse extends
   public SocketAddress remoteAddress() {
     return this.recipient();
   }
-  /*private final ChannelBuffer data;
-  private final SocketAddress remoteAddress;
-
-  public RpcResponse(ChannelBuffer data, SocketAddress remoteAddress) {
-    this.data = data;
-    this.remoteAddress = remoteAddress;
-  }
-
-  public ChannelBuffer data() {
-    return data;
-  }
-
-  public SocketAddress remoteAddress() {
-    return remoteAddress;
-  }*/
 }

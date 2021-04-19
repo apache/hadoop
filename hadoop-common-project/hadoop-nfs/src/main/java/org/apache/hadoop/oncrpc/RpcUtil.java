@@ -67,7 +67,7 @@ public final class RpcUtil {
   static class RpcFrameDecoder extends ByteToMessageDecoder {
     public static final Logger LOG =
         LoggerFactory.getLogger(RpcFrameDecoder.class);
-    private boolean isLast;
+    private volatile boolean isLast;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buf,
