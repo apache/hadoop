@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -182,7 +182,7 @@ public class FSEditLog implements LogsPurgeable {
   
   // these are statistics counters.
   private long numTransactions;        // number of transactions
-  private final AtomicLong numTransactionsBatchedInSync = new AtomicLong();
+  private final LongAdder numTransactionsBatchedInSync = new LongAdder();
   private long totalTimeTransactions;  // total time for all transactions
   private NameNodeMetrics metrics;
 
@@ -730,7 +730,7 @@ public class FSEditLog implements LogsPurgeable {
       if (metrics != null) { // Metrics non-null only when used inside name node
         metrics.addSync(elapsed);
         metrics.incrTransactionsBatchedInSync(editsBatchedInSync);
-        numTransactionsBatchedInSync.addAndGet(editsBatchedInSync);
+        numTransactionsBatchedInSync.add(editsBatchedInSync);
       }
       
     } finally {
@@ -770,7 +770,7 @@ public class FSEditLog implements LogsPurgeable {
         .append(" Total time for transactions(ms): ")
         .append(totalTimeTransactions)
         .append(" Number of transactions batched in Syncs: ")
-        .append(numTransactionsBatchedInSync.get())
+        .append(numTransactionsBatchedInSync.longValue())
         .append(" Number of syncs: ")
         .append(editLogStream.getNumSync())
         .append(" SyncTimes(ms): ")
@@ -1402,7 +1402,7 @@ public class FSEditLog implements LogsPurgeable {
     
     numTransactions = 0;
     totalTimeTransactions = 0;
-    numTransactionsBatchedInSync.set(0L);
+    numTransactionsBatchedInSync.reset();
 
     // TODO no need to link this back to storage anymore!
     // See HDFS-2174.
