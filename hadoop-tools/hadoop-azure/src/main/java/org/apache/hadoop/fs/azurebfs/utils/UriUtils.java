@@ -134,8 +134,11 @@ public final class UriUtils {
 
   public static String getMaskedUrl(URL url) {
     String queryString = url.getQuery();
+    if (queryString == null) {
+      return url.toString();
+    }
     List<NameValuePair> queryKeyValueList = URLEncodedUtils
-        .parse(String.valueOf(queryString), StandardCharsets.UTF_8);
+        .parse(queryString, StandardCharsets.UTF_8);
     String maskedQueryString = maskUrlQueryParameters(queryKeyValueList,
         FULL_MASK_PARAM_KEYS, PARTIAL_MASK_PARAM_KEYS);
     return url.toString().replace(queryString, maskedQueryString);
