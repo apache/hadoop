@@ -334,7 +334,10 @@ public class ProtobufRpcEngine implements RpcEngine {
         RpcWritable.Buffer.class);
   }
   
- 
+  @VisibleForTesting
+  public static void clearClientCache() {
+    CLIENTS.clearCache();
+  }
 
   @Override
   public RPC.Server getServer(Class<?> protocol, Object protocolImpl,
