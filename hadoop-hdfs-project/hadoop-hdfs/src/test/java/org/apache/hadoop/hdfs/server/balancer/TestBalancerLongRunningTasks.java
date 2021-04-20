@@ -80,10 +80,10 @@ import static org.junit.Assert.assertTrue;
 /**
  * Some long running Balancer tasks.
  */
-public class TestBalancer2 {
+public class TestBalancerLongRunningTasks {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestBalancer2.class);
+      LoggerFactory.getLogger(TestBalancerLongRunningTasks.class);
 
   static {
     GenericTestUtils.setLogLevel(Balancer.LOG, Level.TRACE);
