@@ -619,11 +619,17 @@ public class AuthenticationFilter implements Filter {
                 KerberosAuthenticator.WWW_AUTHENTICATE))) {
           errCode = HttpServletResponse.SC_FORBIDDEN;
         }
+        // After Jetty 9.4.21, sendError() no longer allows a custom message.
+        // use setStatus() to set a custom message.
+        String reason;
         if (authenticationEx == null) {
-          httpResponse.sendError(errCode, "Authentication required");
+          reason = "Authentication required";
         } else {
-          httpResponse.sendError(errCode, authenticationEx.getMessage());
+          reason = authenticationEx.getMessage();
         }
+
+        httpResponse.setStatus(errCode, reason);
+        httpResponse.sendError(errCode, reason);
       }
     }
   }
