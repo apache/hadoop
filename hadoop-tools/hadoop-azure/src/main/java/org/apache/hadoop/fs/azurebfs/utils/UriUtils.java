@@ -41,10 +41,10 @@ public final class UriUtils {
   private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
   private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
   private static final ArrayList<String> FULL_MASK_PARAM_KEYS = new ArrayList<>(
-      Collections.singleton("sig="));
+      Collections.singleton("sig"));
   private static final ArrayList<String> PARTIAL_MASK_PARAM_KEYS =
       new ArrayList<>(
-      Arrays.asList("skoid=", "saoid=", "suoid="));
+      Arrays.asList("skoid", "saoid", "suoid"));
   private static final String MASK = "XXXX";
 
   /**
@@ -99,14 +99,12 @@ public final class UriUtils {
     StringBuilder maskedUrl = new StringBuilder();
     for (NameValuePair keyValuePair : keyValueList) {
       String key = keyValuePair.getName();
-      if (!key.isEmpty()) {
-        key += EQUAL;
-      } else {
+      if (key.isEmpty()) {
         throw new IllegalArgumentException("Query param key can not be empty");
       }
-
       String value = keyValuePair.getValue();
       maskedUrl.append(key);
+      maskedUrl.append(EQUAL);
       if (value != null && !value.isEmpty()) { //no mask
         if (queryParamsForFullMask.contains(key)) {
           maskedUrl.append(MASK);
