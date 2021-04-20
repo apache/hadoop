@@ -88,7 +88,7 @@ public class ReportBadBlockAction implements BPServiceActorAction {
     if (this == obj) {
       return true;
     }
-    if (obj == null || !(obj instanceof ReportBadBlockAction)) {
+    if (!(obj instanceof ReportBadBlockAction)) {
       return false;
     }
     ReportBadBlockAction other = (ReportBadBlockAction) obj;

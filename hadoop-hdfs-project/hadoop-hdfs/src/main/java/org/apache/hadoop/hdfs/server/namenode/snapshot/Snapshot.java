@@ -232,7 +232,7 @@ public class Snapshot implements Comparable<byte[]> {
   public boolean equals(Object that) {
     if (this == that) {
       return true;
-    } else if (that == null || !(that instanceof Snapshot)) {
+    } else if (!(that instanceof Snapshot)) {
       return false;
     }
     return this.id == ((Snapshot)that).id;

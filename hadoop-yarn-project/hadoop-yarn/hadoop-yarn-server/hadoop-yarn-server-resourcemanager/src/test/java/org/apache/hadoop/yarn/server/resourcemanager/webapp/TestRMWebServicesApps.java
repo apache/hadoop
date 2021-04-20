@@ -1201,7 +1201,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   }
 
   @Test
-  public void testAppsQueryWithInvaildDeselects()
+  public void testAppsQueryWithInvalidDeselects()
       throws JSONException, Exception {
     try {
       rm.start();

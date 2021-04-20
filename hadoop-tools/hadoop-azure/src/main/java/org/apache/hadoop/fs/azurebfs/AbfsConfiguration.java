@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation;
+import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerWithOutlierConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.LongConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.StringConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.Base64StringConfigurationValidatorAnnotation;
@@ -199,9 +200,23 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE)
   private boolean enableConditionalCreateOverwrite;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_MKDIR_OVERWRITE, DefaultValue =
+      DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE)
+  private boolean mkdirOverwrite;
+
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,
       DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
   private String azureAppendBlobDirs;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_INFINITE_LEASE_KEY,
+      DefaultValue = DEFAULT_FS_AZURE_INFINITE_LEASE_DIRECTORIES)
+  private String azureInfiniteLeaseDirs;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_LEASE_THREADS,
+      MinValue = MIN_LEASE_THREADS,
+      DefaultValue = DEFAULT_LEASE_THREADS)
+  private int numLeaseThreads;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
       DefaultValue = DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
@@ -291,6 +306,8 @@ public class AbfsConfiguration{
       field.setAccessible(true);
       if (field.isAnnotationPresent(IntegerConfigurationValidatorAnnotation.class)) {
         field.set(this, validateInt(field));
+      } else if (field.isAnnotationPresent(IntegerWithOutlierConfigurationValidatorAnnotation.class)) {
+        field.set(this, validateIntWithOutlier(field));
       } else if (field.isAnnotationPresent(LongConfigurationValidatorAnnotation.class)) {
         field.set(this, validateLong(field));
       } else if (field.isAnnotationPresent(StringConfigurationValidatorAnnotation.class)) {
@@ -621,8 +638,20 @@ public class AbfsConfiguration{
     return this.enableConditionalCreateOverwrite;
   }
 
+  public boolean isEnabledMkdirOverwrite() {
+    return mkdirOverwrite;
+  }
+
   public String getAppendBlobDirs() {
     return this.azureAppendBlobDirs;
+  }
+
+  public String getAzureInfiniteLeaseDirs() {
+    return this.azureInfiniteLeaseDirs;
+  }
+
+  public int getNumLeaseThreads() {
+    return this.numLeaseThreads;
   }
 
   public boolean getCreateRemoteFileSystemDuringInitialization() {
@@ -827,6 +856,21 @@ public class AbfsConfiguration{
 
     // validate
     return new IntegerConfigurationBasicValidator(
+        validator.MinValue(),
+        validator.MaxValue(),
+        validator.DefaultValue(),
+        validator.ConfigurationKey(),
+        validator.ThrowIfInvalid()).validate(value);
+  }
+
+  int validateIntWithOutlier(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
+    IntegerWithOutlierConfigurationValidatorAnnotation validator =
+        field.getAnnotation(IntegerWithOutlierConfigurationValidatorAnnotation.class);
+    String value = get(validator.ConfigurationKey());
+
+    // validate
+    return new IntegerConfigurationBasicValidator(
+        validator.OutlierValue(),
         validator.MinValue(),
         validator.MaxValue(),
         validator.DefaultValue(),

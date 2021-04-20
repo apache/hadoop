@@ -760,7 +760,7 @@ timestamp of that URI.
 
 * Use -a option to change only the access time
 * Use -m option to change only the modification time
-* Use -t option to specify timestamp (in format yyyyMMddHHmmss) instead of current time
+* Use -t option to specify timestamp (in format yyyyMMdd:HHmmss) instead of current time
 * Use -c option to not create file if it does not exist
 
 The timestamp format is as follows
@@ -770,13 +770,13 @@ The timestamp format is as follows
 * HH Two digit hour of the day using 24 hour notation (e.g. 23 stands for 11 pm, 11 stands for 11 am)
 * mm Two digit minutes of the hour
 * ss Two digit seconds of the minute
-e.g. 20180809230000 represents August 9th 2018, 11pm
+e.g. 20180809:230000 represents August 9th 2018, 11pm
 
 Example:
 
 * `hadoop fs -touch pathname`
-* `hadoop fs -touch -m -t 20180809230000 pathname`
-* `hadoop fs -touch -t 20180809230000 pathname`
+* `hadoop fs -touch -m -t 20180809:230000 pathname`
+* `hadoop fs -touch -t 20180809:230000 pathname`
 * `hadoop fs -touch -a pathname`
 
 Exit Code: Returns 0 on success and -1 on error.

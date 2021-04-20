@@ -130,7 +130,7 @@ public class EnumCounters<E extends Enum<E>> {
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
-    } else if (obj == null || !(obj instanceof EnumCounters)) {
+    } else if (!(obj instanceof EnumCounters)) {
       return false;
     }
     final EnumCounters<?> that = (EnumCounters<?>)obj;

@@ -251,7 +251,8 @@ public class ResourceUtils {
   private static Map<String, ResourceInformation> getResourceInformationMapFromConfig(
       Configuration conf) {
     Map<String, ResourceInformation> resourceInformationMap = new HashMap<>();
-    String[] resourceNames = conf.getStrings(YarnConfiguration.RESOURCE_TYPES);
+    String[] resourceNames =
+        conf.getTrimmedStrings(YarnConfiguration.RESOURCE_TYPES);
 
     if (resourceNames != null && resourceNames.length != 0) {
       for (String resourceName : resourceNames) {
@@ -900,5 +901,20 @@ public class ResourceUtils {
                 "Unknown resource: " + resourceName);
       }
     }
+  }
+
+  public static StringBuilder
+      getCustomResourcesStrings(Resource resource) {
+    StringBuilder res = new StringBuilder();
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
+      ResourceInformation[] resources =
+          resource.getResources();
+      for (int i = 2; i < resources.length; i++) {
+        ResourceInformation resInfo = resources[i];
+        res.append(","
+            + resInfo.getName() + "=" + resInfo.getValue());
+      }
+    }
+    return  res;
   }
 }

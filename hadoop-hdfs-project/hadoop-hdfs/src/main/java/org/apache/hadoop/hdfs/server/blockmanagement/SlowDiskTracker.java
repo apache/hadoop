@@ -77,7 +77,7 @@ public class SlowDiskTracker {
    * Number of disks to include in JSON report per operation. We will return
    * disks with the highest latency.
    */
-  private static final int MAX_DISKS_TO_REPORT = 5;
+  private final int maxDisksToReport;
   private static final String DATANODE_DISK_SEPARATOR = ":";
   private final long reportGenerationIntervalMs;
 
@@ -107,6 +107,9 @@ public class SlowDiskTracker {
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
+    this.maxDisksToReport = conf.getInt(
+        DFSConfigKeys.DFS_DATANODE_MAX_DISKS_TO_REPORT_KEY,
+        DFSConfigKeys.DFS_DATANODE_MAX_DISKS_TO_REPORT_DEFAULT);
     this.reportValidityMs = reportGenerationIntervalMs * 3;
   }
 
@@ -153,7 +156,7 @@ public class SlowDiskTracker {
         @Override
         public void run() {
           slowDisksReport = getSlowDisks(diskIDLatencyMap,
-              MAX_DISKS_TO_REPORT, now);
+              maxDisksToReport, now);
 
           cleanUpOldReports(now);
 

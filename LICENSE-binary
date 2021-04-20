@@ -225,7 +225,7 @@ com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.9.9
 com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.9.9
 com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.9.9
 com.fasterxml.uuid:java-uuid-generator:3.1.4
-com.fasterxml.woodstox:woodstox-core:5.0.3
+com.fasterxml.woodstox:woodstox-core:5.3.0
 com.github.davidmoten:rxjava-extras:0.8.0.17
 com.github.stephenc.jcip:jcip-annotations:1.0-1
 com.google:guice:4.0
@@ -240,7 +240,7 @@ com.google.guava:guava:20.0
 com.google.guava:guava:27.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
-com.nimbusds:nimbus-jose-jwt:4.41.1
+com.nimbusds:nimbus-jose-jwt:9.8.1
 com.squareup.okhttp:okhttp:2.7.5
 com.squareup.okio:okio:1.6.0
 com.zaxxer:HikariCP-java7:2.4.12
@@ -283,7 +283,7 @@ javax.inject:javax.inject:1
 log4j:log4j:1.2.17
 net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.2
-net.minidev:json-smart:2.3
+net.minidev:json-smart:2.4.2
 org.apache.avro:avro:1.7.7
 org.apache.commons:commons-collections4:4.2
 org.apache.commons:commons-compress:1.19
@@ -366,7 +366,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanage
 
 com.github.luben:zstd-jni:1.4.3-1
 dnsjava:dnsjava:2.1.7
-org.codehaus.woodstox:stax2-api:3.1.4
+org.codehaus.woodstox:stax2-api:4.2.1
 
 
 BSD 3-Clause
@@ -468,8 +468,8 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk15on:1.60
-org.bouncycastle:bcprov-jdk15on:1.60
+org.bouncycastle:bcpkix-jdk15on:1.68
+org.bouncycastle:bcprov-jdk15on:1.68
 org.checkerframework:checker-qual:2.5.2
 org.codehaus.mojo:animal-sniffer-annotations:1.17
 org.jruby.jcodings:jcodings:1.0.13

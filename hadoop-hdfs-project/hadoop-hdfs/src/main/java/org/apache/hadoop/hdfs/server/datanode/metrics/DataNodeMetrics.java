@@ -152,6 +152,8 @@ public class DataNodeMetrics {
   MutableCounterLong ecReconstructionTasks;
   @Metric("Count of erasure coding failed reconstruction tasks")
   MutableCounterLong ecFailedReconstructionTasks;
+  @Metric("Count of erasure coding invalidated reconstruction tasks")
+  private MutableCounterLong ecInvalidReconstructionTasks;
   @Metric("Nanoseconds spent by decoding tasks")
   MutableCounterLong ecDecodingTimeNanos;
   @Metric("Bytes read by erasure coding worker")
@@ -187,6 +189,15 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong packetsSlowWriteToMirror;
   @Metric MutableCounterLong packetsSlowWriteToDisk;
   @Metric MutableCounterLong packetsSlowWriteToOsCache;
+
+  @Metric("Number of replaceBlock ops between" +
+      " storage types on same host with local copy")
+  private MutableCounterLong replaceBlockOpOnSameHost;
+  @Metric("Number of replaceBlock ops between" +
+      " storage types on same disk mount with same disk tiering feature")
+  private MutableCounterLong replaceBlockOpOnSameMount;
+  @Metric("Number of replaceBlock ops to another node")
+  private MutableCounterLong replaceBlockOpToOtherHost;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   @Metric("Milliseconds spent on calling NN rpc")
@@ -534,6 +545,14 @@ public class DataNodeMetrics {
     ecFailedReconstructionTasks.incr();
   }
 
+  public void incrECInvalidReconstructionTasks() {
+    ecInvalidReconstructionTasks.incr();
+  }
+
+  public long getECInvalidReconstructionTasks() {
+    return ecInvalidReconstructionTasks.value();
+  }
+
   public void incrDataNodeActiveXceiversCount() {
     dataNodeActiveXceiversCount.incr();
   }
@@ -711,4 +730,17 @@ public class DataNodeMetrics {
   public void incrPacketsSlowWriteToOsCache() {
     packetsSlowWriteToOsCache.incr();
   }
+
+  public void incrReplaceBlockOpOnSameMount() {
+    replaceBlockOpOnSameMount.incr();
+  }
+
+  public void incrReplaceBlockOpOnSameHost() {
+    replaceBlockOpOnSameHost.incr();
+  }
+
+  public void incrReplaceBlockOpToOtherHost() {
+    replaceBlockOpToOtherHost.incr();
+  }
+
 }

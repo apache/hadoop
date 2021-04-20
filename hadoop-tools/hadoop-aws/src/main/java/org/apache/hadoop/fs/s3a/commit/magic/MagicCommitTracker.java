@@ -140,7 +140,7 @@ public class MagicCommitTracker extends PutTracker {
         new IOStatisticsSnapshot(iostatistics));
     byte[] bytes = commitData.toBytes();
     LOG.info("Uncommitted data pending to file {};"
-            + " commit metadata for {} parts in {}. sixe: {} byte(s)",
+            + " commit metadata for {} parts in {}. size: {} byte(s)",
         path.toUri(), parts.size(), pendingPartKey, bytesWritten);
     LOG.debug("Closed MPU to {}, saved commit information to {}; data=:\n{}",
         path, pendingPartKey, commitData);

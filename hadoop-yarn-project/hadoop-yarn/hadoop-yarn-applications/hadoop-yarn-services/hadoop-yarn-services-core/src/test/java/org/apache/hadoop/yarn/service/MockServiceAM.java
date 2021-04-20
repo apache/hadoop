@@ -130,6 +130,16 @@ public class MockServiceAM extends ServiceMaster {
   }
 
   @Override
+  protected ClientAMService createClientAMService() {
+    return new ClientAMService(context) {
+      @Override
+      String getNMHostName() {
+        return "0.0.0.0";
+      }
+    };
+  }
+
+  @Override
   protected ServiceScheduler createServiceScheduler(ServiceContext context)
       throws IOException, YarnException {
     return new ServiceScheduler(context) {

@@ -249,8 +249,7 @@ public class TestDirectoryScanner {
   }
 
   /** Create a block file in a random volume. */
-  private long createBlockFile() throws IOException {
-    long id = getFreeBlockId();
+  private long createBlockFile(long id) throws IOException {
     try (
         FsDatasetSpi.FsVolumeReferences volumes = fds.getFsVolumeReferences()) {
       int numVolumes = volumes.size();
@@ -282,8 +281,7 @@ public class TestDirectoryScanner {
   }
 
   /** Create block file and corresponding metafile in a rondom volume. */
-  private long createBlockMetaFile() throws IOException {
-    long id = getFreeBlockId();
+  private long createBlockMetaFile(long id) throws IOException {
 
     try (FsDatasetSpi.FsVolumeReferences refs = fds.getFsVolumeReferences()) {
       int numVolumes = refs.size();
@@ -548,7 +546,7 @@ public class TestDirectoryScanner {
 
       // Test4: A block file exists for which there is no metafile and
       // a block in memory
-      blockId = createBlockFile();
+      blockId = createBlockFile(blockId);
       totalBlocks++;
       scan(totalBlocks, 1, 1, 0, 1, 0);
       verifyAddition(blockId, HdfsConstants.GRANDFATHER_GENERATION_STAMP, 0);
@@ -563,8 +561,12 @@ public class TestDirectoryScanner {
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
       // Test6: A block file and metafile exists for which there is no block in
-      // memory
-      blockId = createBlockMetaFile();
+      blockId = deleteBlockFile();
+      scan(totalBlocks, 1, 0, 1, 0, 0);
+      totalBlocks--;
+      verifyDeletion(blockId);
+
+      blockId = createBlockMetaFile(blockId);
       totalBlocks++;
       scan(totalBlocks, 1, 0, 0, 1, 0);
       verifyAddition(blockId, DEFAULT_GEN_STAMP, 0);
@@ -577,9 +579,10 @@ public class TestDirectoryScanner {
       scan(totalBlocks, 10, 10, 0, 0, 10);
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
-      // Test8: Delete bunch of block files
+      // Test8: Delete bunch of block files and record the ids.
+      List<Long> ids = new ArrayList<>();
       for (int i = 0; i < 10; i++) {
-        blockId = deleteBlockFile();
+        ids.add(deleteBlockFile());
       }
       scan(totalBlocks, 10, 0, 10, 0, 0);
       totalBlocks -= 10;
@@ -587,7 +590,7 @@ public class TestDirectoryScanner {
 
       // Test9: create a bunch of blocks files
       for (int i = 0; i < 10; i++) {
-        blockId = createBlockFile();
+        blockId = createBlockFile(ids.get(i));
       }
       totalBlocks += 10;
       scan(totalBlocks, 10, 10, 0, 10, 0);
@@ -601,8 +604,15 @@ public class TestDirectoryScanner {
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
       // Test11: create a bunch block files and meta files
+      ids.clear();
       for (int i = 0; i < 10; i++) {
-        blockId = createBlockMetaFile();
+        ids.add(deleteBlockFile());
+      }
+      scan(totalBlocks, 10, 0, 10, 0, 0);
+      totalBlocks -= 10;
+
+      for (int i = 0; i < 10; i++) {
+        blockId = createBlockMetaFile(ids.get(i));
       }
       totalBlocks += 10;
       scan(totalBlocks, 10, 0, 0, 10, 0);
@@ -616,9 +626,16 @@ public class TestDirectoryScanner {
       scan(totalBlocks, 0, 0, 0, 0, 0);
 
       // Test13: all the conditions combined
+      long blockId1 = deleteBlockFile();
+      long blockId2 = deleteBlockFile();
+      scan(totalBlocks, 2, 0, 2, 0, 0);
+      totalBlocks -= 2;
+      verifyDeletion(blockId1);
+      verifyDeletion(blockId2);
+
       createMetaFile();
-      createBlockFile();
-      createBlockMetaFile();
+      createBlockFile(blockId1);
+      createBlockMetaFile(blockId2);
       deleteMetaFile();
       deleteBlockFile();
       truncateBlockFile();
@@ -631,9 +648,6 @@ public class TestDirectoryScanner {
       assertTrue("Report complier threads logged no execution time",
           scanner.timeRunningMs.get() > 0L);
 
-      // Test15: validate clean shutdown of DirectoryScanner
-      //// assertTrue(scanner.getRunStatus()); //assumes "real" FSDataset, not
-      // sim
       scanner.shutdown();
       assertFalse(scanner.getRunStatus());
 

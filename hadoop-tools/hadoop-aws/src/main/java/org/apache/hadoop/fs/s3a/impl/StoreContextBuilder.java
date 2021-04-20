@@ -19,8 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.net.URI;
-
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;
@@ -46,7 +45,7 @@ public class StoreContextBuilder {
 
   private UserGroupInformation owner;
 
-  private ListeningExecutorService executor;
+  private ExecutorService executor;
 
   private int executorCapacity;
 
@@ -96,7 +95,7 @@ public class StoreContextBuilder {
   }
 
   public StoreContextBuilder setExecutor(
-      final ListeningExecutorService ex) {
+      final ExecutorService ex) {
     this.executor = ex;
     return this;
   }

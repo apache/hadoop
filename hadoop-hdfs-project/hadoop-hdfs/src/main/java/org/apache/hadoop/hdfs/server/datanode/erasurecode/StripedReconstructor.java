@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.erasurecode;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.io.erasurecode.rawcoder.DecodingValidator;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -103,9 +105,13 @@ abstract class StripedReconstructor {
   private final Configuration conf;
   private final DataNode datanode;
   private final ErasureCodingPolicy ecPolicy;
+  private final ErasureCoderOptions coderOptions;
   private RawErasureDecoder decoder;
   private final ExtendedBlock blockGroup;
   private static final ByteBufferPool BUFFER_POOL = new ElasticByteBufferPool();
+
+  private final boolean isValidationEnabled;
+  private DecodingValidator validator;
 
   // position in striped internal block
   private long positionInBlock;
@@ -136,6 +142,13 @@ abstract class StripedReconstructor {
     cachingStrategy = CachingStrategy.newDefaultStrategy();
 
     positionInBlock = 0L;
+
+    coderOptions = new ErasureCoderOptions(
+        ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits());
+    isValidationEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_VALIDATION_KEY,
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_VALIDATION_VALUE)
+        && !coderOptions.allowChangeInputs();
   }
 
   public void incrBytesRead(boolean local, long delta) {
@@ -196,10 +209,15 @@ abstract class StripedReconstructor {
   // Initialize decoder
   protected void initDecoderIfNecessary() {
     if (decoder == null) {
-      ErasureCoderOptions coderOptions = new ErasureCoderOptions(
-          ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits());
       decoder = CodecUtil.createRawDecoder(conf, ecPolicy.getCodecName(),
           coderOptions);
+    }
+  }
+
+  // Initialize decoding validator
+  protected void initDecodingValidatorIfNecessary() {
+    if (isValidationEnabled && validator == null) {
+      validator = new DecodingValidator(decoder);
     }
   }
 
@@ -284,5 +302,29 @@ abstract class StripedReconstructor {
   @VisibleForTesting
   static ByteBufferPool getBufferPool() {
     return BUFFER_POOL;
+  }
+
+  boolean isValidationEnabled() {
+    return isValidationEnabled;
+  }
+
+  DecodingValidator getValidator() {
+    return validator;
+  }
+
+  protected static void markBuffers(ByteBuffer[] buffers) {
+    for (ByteBuffer buffer: buffers) {
+      if (buffer != null) {
+        buffer.mark();
+      }
+    }
+  }
+
+  protected static void resetBuffers(ByteBuffer[] buffers) {
+    for (ByteBuffer buffer: buffers) {
+      if (buffer != null) {
+        buffer.reset();
+      }
+    }
   }
 }

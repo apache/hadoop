@@ -599,7 +599,7 @@ public class MiniDFSCluster implements AutoCloseable {
                        builder.useConfiguredTopologyMappingClass);
   }
   
-  public class DataNodeProperties {
+  public static class DataNodeProperties {
     final DataNode datanode;
     final Configuration conf;
     String[] dnArgs;
