@@ -130,7 +130,6 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.hadoop.util.ExitUtil;
 
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -8600,11 +8599,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
         }
       } catch (IOException e) {
-        final String msg = "Could not provision Trash directory for existing "
-            + "snapshottable directories. Exiting Namenode.";
-        ExitUtil.terminate(1, msg);
+        LOG.error("Could not provision Trash directory for existing "
+            + "snapshottable directory", e);
       }
-
     }
   }
 
