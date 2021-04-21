@@ -401,9 +401,9 @@ public class TestPread {
     DFSClient dfsClient = fileSys.getClient();
     DFSHedgedReadMetrics metrics = dfsClient.getHedgedReadMetrics();
     // Metrics instance is static, so we need to reset counts from prior tests.
-    metrics.hedgedReadOps.set(0);
-    metrics.hedgedReadOpsWin.set(0);
-    metrics.hedgedReadOpsInCurThread.set(0);
+    metrics.hedgedReadOps.reset();
+    metrics.hedgedReadOpsWin.reset();
+    metrics.hedgedReadOpsInCurThread.reset();
 
     try {
       Path file1 = new Path("hedgedReadMaxOut.dat");
@@ -590,7 +590,7 @@ public class TestPread {
     String filename = "/hedgedReadMaxOut.dat";
     DFSHedgedReadMetrics metrics = dfsClient.getHedgedReadMetrics();
     // Metrics instance is static, so we need to reset counts from prior tests.
-    metrics.hedgedReadOps.set(0);
+    metrics.hedgedReadOps.reset();
     try {
       Path file = new Path(filename);
       output = fileSys.create(file, (short) 2);
