@@ -25,6 +25,7 @@
 #include "fs/filesystem.h"
 #include "fs/filehandle.h"
 #include "x-platform/utils.h"
+#include "x-platform/syscall.h"
 
 #include <limits.h>
 #include <string>
@@ -1395,7 +1396,7 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
     hdfsBlockLocations *locations = new struct hdfsBlockLocations();
     (*locations_out) = locations;
 
-    explicit_bzero(locations, sizeof(*locations));
+    XPlatform::Syscall::ClearBufferSafely(locations, sizeof(*locations));
     locations->fileLength = ppLocations->getFileLength();
     locations->isLastBlockComplete = ppLocations->isLastBlockComplete();
     locations->isUnderConstruction = ppLocations->isUnderConstruction();

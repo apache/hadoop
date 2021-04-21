@@ -18,7 +18,9 @@
 
 #include <gtest/gtest.h>
 
+#include <numeric>
 #include <string>
+#include <vector>
 
 #include "x-platform/syscall.h"
 
@@ -44,4 +46,42 @@ TEST(XPlatformSyscall, FnMatchNegativeQuestionMark) {
   const std::string pattern("a?.doc");
   const std::string str("abc.doc");
   EXPECT_FALSE(XPlatform::Syscall::FnMatch(pattern, str));
+}
+
+TEST(XPlatformSyscall, ClearBufferSafelyChars) {
+  std::vector<char> alphabets(26);
+  std::iota(alphabets.begin(), alphabets.end(), 'a');
+
+  XPlatform::Syscall::ClearBufferSafely(alphabets.data(), alphabets.size());
+  for (const auto alphabet : alphabets) {
+    EXPECT_EQ(alphabet, '\0');
+  }
+}
+
+TEST(XPlatformSyscall, ClearBufferSafelyNumbers) {
+  std::vector<int> numbers(200);
+  std::iota(numbers.begin(), numbers.end(), 0);
+
+  XPlatform::Syscall::ClearBufferSafely(numbers.data(),
+                                        numbers.size() * sizeof(int));
+  for (const auto number : numbers) {
+    EXPECT_EQ(number, 0);
+  }
+}
+
+TEST(XPlatformSyscall, StringCompareIgnoreCaseBasic) {
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase("aBcDeF", "AbCdEf"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase("a1B2c3D4e5F",
+                                                          "A1b2C3d4E5f"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase(
+      "a!1@B#2$c%3^D&4*e(5)F", "A!1@b#2$C%3^d&4*E(5)f"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase(
+      "a<!>1@B#2$c%3^D&4*e(5)F?:", "A<!>1@b#2$C%3^d&4*E(5)f?:"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase("12345", "12345"));
+  EXPECT_TRUE(XPlatform::Syscall::StringCompareIgnoreCase("", ""));
+}
+
+TEST(XPlatformSyscall, StringCompareIgnoreCaseNegative) {
+  EXPECT_FALSE(XPlatform::Syscall::StringCompareIgnoreCase("abcd", "abcde"));
+  EXPECT_FALSE(XPlatform::Syscall::StringCompareIgnoreCase("12345", "abcde"));
 }

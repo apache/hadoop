@@ -51,6 +51,7 @@ find_package(GSasl)
 find_package(Threads)
 
 include(CheckCXXSourceCompiles)
+include(CheckSymbolExists)
 
 # Download and build gtest
 configure_file(CMakeLists-gtest.txt.in googletest-download/CMakeLists.txt)
@@ -167,6 +168,11 @@ if (NOT NO_SASL)
 else (NOT NO_SASL)
     message(STATUS "Compiling with NO SASL SUPPORT")
 endif (NOT NO_SASL)
+
+check_symbol_exists(explicit_bzero "string.h" HAVE_EXPLICIT_BZERO)
+if(HAVE_EXPLICIT_BZERO)
+    add_definitions(-DHAVE_EXPLICIT_BZERO)
+endif()
 
 add_definitions(-DASIO_STANDALONE -DASIO_CPP11_DATE_TIME)
 

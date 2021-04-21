@@ -298,7 +298,7 @@ void FileSystemImpl::Connect(const std::string &server,
 
 void FileSystemImpl::ConnectToDefaultFs(const std::function<void(const Status &, FileSystem *)> &handler) {
   std::string scheme = options_.defaultFS.get_scheme();
-  if (strcasecmp(scheme.c_str(), "hdfs") != 0) {
+  if (!XPlatform::Syscall::StringCompareIgnoreCase(scheme, "hdfs")) {
     std::string error_message;
     error_message += "defaultFS of [" + options_.defaultFS.str() + "] is not supported";
     handler(Status::InvalidArgument(error_message.c_str()), nullptr);

@@ -39,6 +39,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private int maxWriteRequestsToQueue;
 
+  private AbfsLease lease;
+
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -94,6 +96,11 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withLease(final AbfsLease lease) {
+    this.lease = lease;
+    return this;
+  }
+
   public int getWriteBufferSize() {
     return writeBufferSize;
   }
@@ -124,5 +131,16 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public boolean isEnableSmallWriteOptimization() {
     return this.enableSmallWriteOptimization;
+  }
+
+  public AbfsLease getLease() {
+    return this.lease;
+  }
+
+  public String getLeaseId() {
+    if (this.lease == null) {
+      return null;
+    }
+    return this.lease.getLeaseID();
   }
 }

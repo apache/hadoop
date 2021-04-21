@@ -17,6 +17,7 @@
  */
 
 #include <fnmatch.h>
+#include <strings.h>
 #include <unistd.h>
 
 #include <cstring>
@@ -40,4 +41,21 @@ bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
   const auto message_len = strlen(message);
   const auto result = write(1, message, message_len);
   return result == static_cast<ssize_t>(message_len);
+}
+
+void XPlatform::Syscall::ClearBufferSafely(void* buffer,
+                                           const size_t sz_bytes) {
+  if (buffer != nullptr) {
+#ifdef HAVE_EXPLICIT_BZERO
+    explicit_bzero(buffer, sz_bytes);
+#else
+    // fallback to bzero
+    bzero(buffer, sz_bytes);
+#endif
+  }
+}
+
+bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
+                                                 const std::string& b) {
+  return strcasecmp(a.c_str(), b.c_str()) == 0;
 }
