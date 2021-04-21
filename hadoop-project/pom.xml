@@ -1760,7 +1760,7 @@
       <dependency>
         <groupId>io.opentelemetry</groupId>
         <artifactId>opentelemetry-exporter-jaeger</artifactId>
-        <version>1.0.0</version>
+        <version>${opentelemetry.version}</version>
       </dependency>
       <dependency>
         <groupId>io.grpc</groupId>

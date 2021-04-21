@@ -113,7 +113,7 @@ public class Tracer {
       return openTelemetry;
     }
 
-    public Tracer build() {
+    public synchronized Tracer build() {
       if (globalTracer == null) {
         globalTracer = new Tracer(name, initialiseTracer(name).getTracer(name));
         Tracer.globalTracer = globalTracer;
