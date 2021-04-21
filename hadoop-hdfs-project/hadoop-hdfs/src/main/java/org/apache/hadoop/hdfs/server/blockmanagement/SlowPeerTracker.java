@@ -34,6 +34,7 @@ import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -228,6 +229,23 @@ public class SlowPeerTracker {
     public SortedSet<String> getReportingNodes() {
       return reportingNodes;
     }
+  }
+
+  /**
+   * Returns all tracking slow peers.
+   * @param numNodes
+   * @return
+   */
+  public ArrayList<String> getSlowNodes(int numNodes) {
+    Collection<ReportForJson> jsonReports = getJsonReports(numNodes);
+    ArrayList<String> slowNodes = new ArrayList<>();
+    for (ReportForJson jsonReport : jsonReports) {
+      slowNodes.add(jsonReport.getSlowNode());
+    }
+    if (!slowNodes.isEmpty()) {
+      LOG.warn("Slow nodes list: " + slowNodes);
+    }
+    return slowNodes;
   }
 
   /**
