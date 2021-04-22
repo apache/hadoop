@@ -96,6 +96,8 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
               tempDirBase.toPath(), System.currentTimeMillis() + "-").toFile();
         } catch (IOException e) {
           // fallback to the base upon exception.
+          LOG.debug("Unable to create a temporary directory. Fall back to " +
+              " the default system temp directory {}", tempDirBase, e);
           tempDir = tempDirBase;
         }
         dir = tempDir.getAbsolutePath();
