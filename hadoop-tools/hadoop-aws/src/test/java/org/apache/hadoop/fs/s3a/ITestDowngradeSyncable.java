@@ -59,6 +59,8 @@ public class ITestDowngradeSyncable extends AbstractS3ACostTest {
 
   @Test
   public void testHFlushDowngrade() throws Throwable {
+    describe("Verify that hflush() calls can be downgraded from fail"
+        + " to ignore; the relevant counter is updated");
     Path path = methodPath();
     S3AFileSystem fs = getFileSystem();
     final IOStatistics fsIoStats = fs.getIOStatistics();
@@ -84,6 +86,8 @@ public class ITestDowngradeSyncable extends AbstractS3ACostTest {
 
   @Test
   public void testHSyncDowngrade() throws Throwable {
+    describe("Verify that hsync() calls can be downgraded from fail"
+        + " to ignore; the relevant counter is updated");
     Path path = methodPath();
     S3AFileSystem fs = getFileSystem();
     final IOStatistics fsIoStats = fs.getIOStatistics();

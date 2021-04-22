@@ -1054,7 +1054,7 @@ or saved.
 
 These recommendations _apply to all filesystems_. 
 
-To downgrade the S3A connector to simplying warning of the use of
+To downgrade the S3A connector to simply warning of the use of
 `hsync()` or `hflush()` calls, set the option
 `fs.s3a.downgrade.syncable.exceptions` to true.
 

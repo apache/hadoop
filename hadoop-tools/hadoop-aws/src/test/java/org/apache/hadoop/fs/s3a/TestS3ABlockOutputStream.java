@@ -139,7 +139,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
   }
 
   /**
-   * When configured to downgrade, the stream downgrades on.
+   * When configured to downgrade, the stream downgrades on
    * Syncable API calls.
    */
   @Test
