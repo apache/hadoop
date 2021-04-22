@@ -22,17 +22,22 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.AND_MARK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SAOID;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SIGNATURE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SKOID;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SUOID;
 
 /**
  * Utility class to help with Abfs url transformation to blob urls.
@@ -40,12 +45,12 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
 public final class UriUtils {
   private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
   private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
-  private static final ArrayList<String> FULL_MASK_PARAM_KEYS = new ArrayList<>(
-      Collections.singleton("sig"));
-  private static final ArrayList<String> PARTIAL_MASK_PARAM_KEYS =
-      new ArrayList<>(
-      Arrays.asList("skoid", "saoid", "suoid"));
-  private static final String MASK = "XXXX";
+  private static final HashSet<String> FULL_MASK_PARAM_KEYS = new HashSet<>(
+      Collections.singleton(QUERY_PARAM_SIGNATURE));
+  private static final HashSet<String> PARTIAL_MASK_PARAM_KEYS = new HashSet<>(
+      Arrays.asList(QUERY_PARAM_SKOID, QUERY_PARAM_SAOID, QUERY_PARAM_SUOID));
+  private static final String FULL_MASK = "XXXX";
+  private static final Character CHAR_MASK = 'X';
 
   /**
    * Checks whether a string includes abfs url.
@@ -94,24 +99,32 @@ public final class UriUtils {
   }
 
   public static String maskUrlQueryParameters(List<NameValuePair> keyValueList,
-      ArrayList<String> queryParamsForFullMask,
-      ArrayList<String> queryParamsForPartialMask) {
-    StringBuilder maskedUrl = new StringBuilder();
+      HashSet<String> queryParamsForFullMask,
+      HashSet<String> queryParamsForPartialMask) {
+    return maskUrlQueryParameters(keyValueList, queryParamsForFullMask,
+        queryParamsForPartialMask, 256);
+  }
+
+  public static String maskUrlQueryParameters(List<NameValuePair> keyValueList,
+      HashSet<String> queryParamsForFullMask,
+      HashSet<String> queryParamsForPartialMask, int queryLen) {
+    StringBuilder maskedUrl = new StringBuilder(queryLen);
     for (NameValuePair keyValuePair : keyValueList) {
       String key = keyValuePair.getName();
       if (key.isEmpty()) {
-        throw new IllegalArgumentException("Query param key can not be empty");
+        throw new IllegalArgumentException("Query param key should not be empty");
       }
       String value = keyValuePair.getValue();
       maskedUrl.append(key);
       maskedUrl.append(EQUAL);
       if (value != null && !value.isEmpty()) { //no mask
         if (queryParamsForFullMask.contains(key)) {
-          maskedUrl.append(MASK);
+          maskedUrl.append(FULL_MASK);
         } else if (queryParamsForPartialMask.contains(key)) {
-          int visibleLen = Math.min(4, value.length());
-          maskedUrl.append(value, 0, visibleLen);
-          maskedUrl.append(MASK);
+          int valueLen = value.length();
+          int maskedLen = valueLen - Math.min(4, valueLen);
+          maskedUrl.append(StringUtils.repeat(CHAR_MASK, maskedLen));
+          maskedUrl.append(value, maskedLen, valueLen);
         } else {
           maskedUrl.append(value);
         }
@@ -138,7 +151,7 @@ public final class UriUtils {
     List<NameValuePair> queryKeyValueList = URLEncodedUtils
         .parse(queryString, StandardCharsets.UTF_8);
     String maskedQueryString = maskUrlQueryParameters(queryKeyValueList,
-        FULL_MASK_PARAM_KEYS, PARTIAL_MASK_PARAM_KEYS);
+        FULL_MASK_PARAM_KEYS, PARTIAL_MASK_PARAM_KEYS, queryString.length());
     return url.toString().replace(queryString, maskedQueryString);
   }
 

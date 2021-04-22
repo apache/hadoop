@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.utils;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import org.junit.Assert;
@@ -59,43 +60,43 @@ public final class TestUriUtils {
 
   @Test
   public void testMaskUrlQueryParameters() throws Exception {
-    ArrayList<String> fullMask = new ArrayList<>(Arrays.asList("abc", "bcd"));
-    ArrayList<String> partialMask = new ArrayList<>(
+    HashSet<String> fullMask = new HashSet<>(Arrays.asList("abc", "bcd"));
+    HashSet<String> partialMask = new HashSet<>(
         Arrays.asList("pqr", "xyz"));
 
     //Partial and full masking test
     List<NameValuePair> keyValueList = URLEncodedUtils
-        .parse("abc=123&pqr=456&def=789&bcd=012&xyz=678",
+        .parse("abc=123&pqr=45678&def=789&bcd=012&xyz=678",
             StandardCharsets.UTF_8);
     Assert.assertEquals("Incorrect masking",
-        "abc=XXXX&pqr=456XXXX&def=789&bcd=XXXX&xyz=678XXXX",
+        "abc=XXXX&pqr=X5678&def=789&bcd=XXXX&xyz=678",
         UriUtils.maskUrlQueryParameters(keyValueList, fullMask, partialMask));
 
     //For params entered for both full and partial masks, full mask applies
-    partialMask.add("abc=");
+    partialMask.add("abc");
     Assert.assertEquals("Full mask should apply",
-        "abc=XXXX&pqr=456XXXX&def=789&bcd=XXXX&xyz=678XXXX",
+        "abc=XXXX&pqr=X5678&def=789&bcd=XXXX&xyz=678",
         UriUtils.maskUrlQueryParameters(keyValueList, fullMask, partialMask));
 
     //Duplicate key (to be masked) with different values
     keyValueList = URLEncodedUtils
-        .parse("abc=123&pqr=456&abc=789", StandardCharsets.UTF_8);
+        .parse("abc=123&pqr=4561234&abc=789", StandardCharsets.UTF_8);
     Assert.assertEquals("Duplicate key: Both values should get masked",
-        "abc=XXXX&pqr=456XXXX&abc=XXXX",
+        "abc=XXXX&pqr=XXX1234&abc=XXXX",
         UriUtils.maskUrlQueryParameters(keyValueList, fullMask, partialMask));
 
     //Duplicate key (not to be masked) with different values
     keyValueList = URLEncodedUtils
         .parse("abc=123&def=456&pqr=789&def=000&s=1", StandardCharsets.UTF_8);
     Assert.assertEquals("Duplicate key: no value should get masked",
-        "abc=XXXX&def=456&pqr=789XXXX&def=000&s=1",
+        "abc=XXXX&def=456&pqr=789&def=000&s=1",
         UriUtils.maskUrlQueryParameters(keyValueList, fullMask, partialMask));
 
     //Empty param value
     keyValueList = URLEncodedUtils
         .parse("abc=123&def=&pqr=789&s=1", StandardCharsets.UTF_8);
     Assert.assertEquals("Incorrect url with empty query value",
-        "abc=XXXX&def=&pqr=789XXXX&s=1",
+        "abc=XXXX&def=&pqr=789&s=1",
         UriUtils.maskUrlQueryParameters(keyValueList, fullMask, partialMask));
 
     //Empty param key
@@ -111,14 +112,14 @@ public final class TestUriUtils {
         .parse("abc=123&pqr=789&s=1", StandardCharsets.UTF_8);
     keyValueList.add(new BasicNameValuePair("null1", null));
     Assert.assertEquals("Null value, incorrect query construction",
-        "abc=XXXX&pqr=789XXXX&s=1&null1=",
+        "abc=XXXX&pqr=789&s=1&null1=",
         UriUtils.maskUrlQueryParameters(keyValueList, fullMask, partialMask));
 
     //Param (to be masked) with null value
     keyValueList.add(new BasicNameValuePair("null2", null));
     fullMask.add("null2");
     Assert.assertEquals("No mask should be added for null value",
-        "abc=XXXX&pqr=789XXXX&s=1&null1=&null2=", UriUtils
+        "abc=XXXX&pqr=789&s=1&null1=&null2=", UriUtils
             .maskUrlQueryParameters(keyValueList, fullMask,
                 partialMask)); //no mask
   }

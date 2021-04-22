@@ -82,6 +82,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long connectionTimeMs;
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
+  private boolean shouldMask = false;
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -145,6 +146,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public String getRequestId() {
     return requestId;
+  }
+
+  public void setMaskForSAS() {
+    shouldMask = true;
   }
 
   public int getBytesSent() {
@@ -230,6 +235,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   public String getMaskedUrl() {
+    if (!shouldMask) {
+      return url.toString();
+    }
     if (this.maskedUrl != null) {
       return this.maskedUrl;
     }
