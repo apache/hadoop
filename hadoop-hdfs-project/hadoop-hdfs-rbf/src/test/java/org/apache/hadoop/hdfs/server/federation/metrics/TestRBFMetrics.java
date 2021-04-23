@@ -18,7 +18,11 @@
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getBean;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -349,7 +353,7 @@ public class TestRBFMetrics extends TestMetricsBase {
     assertFalse(bean.isSecurityEnabled());
   }
 
-  private void testCapacity(FederationMBean bean) throws  IOException {
+  private void testCapacity(FederationMBean bean) throws IOException {
     List<MembershipState> memberships = getActiveMemberships();
     assertTrue(memberships.size() > 1);
 
