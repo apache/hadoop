@@ -8575,13 +8575,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public synchronized void checkAndProvisionSnapshotTrashRoots() {
     if (isSnapshotTrashRootEnabled && (haEnabled && inActiveState()
         || !haEnabled) && !blockManager.isInSafeMode()) {
+      SnapshottableDirectoryStatus dirStatus = null;
       try {
         SnapshottableDirectoryStatus[] dirStatusList =
             getSnapshottableDirListing();
         if (dirStatusList == null) {
           return;
         }
-        for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+        for (SnapshottableDirectoryStatus status : dirStatusList) {
+          dirStatus = status;
           String currDir = dirStatus.getFullPath().toString();
           if (!currDir.endsWith(Path.SEPARATOR)) {
             currDir += Path.SEPARATOR;
@@ -8599,8 +8601,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
         }
       } catch (IOException e) {
-        LOG.error("Could not provision Trash directory for existing "
-            + "snapshottable directory", e);
+        if (dirStatus == null) {
+          LOG.error("Failed to get snapshottable directory list", e);
+        } else {
+          LOG.error("Could not provision Trash directory for existing "
+              + "snapshottable directory {}", dirStatus, e);
+        }
       }
     }
   }
