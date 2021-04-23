@@ -277,8 +277,13 @@ public interface FsVolumeSpi
      * the block data and meta-data files.
      *
      * @param blockId the block ID
-     * @param blockFile the path to the block data file
-     * @param metaFile the path to the block meta-data file
+     * @param basePath The full path to the directory the block is stored in
+     * @param blockFile The block filename, with no path
+     * @param metaFile The meta filename, with no path. If blockFile is not null
+     *                 then the metaFile and blockFile should have the same
+     *                 prefix, with the meta file having a suffix like
+     *                 "_1234.meta". To save memory, if the blockFile is present
+     *                 we store only the meta file suffix in the object
      * @param vol the volume that contains the block
      */
     public ScanInfo(long blockId, File basePath, String blockFile,
