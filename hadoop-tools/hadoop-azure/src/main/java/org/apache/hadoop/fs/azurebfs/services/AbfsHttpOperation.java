@@ -241,7 +241,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     if (maskedUrl != null) {
       return maskedUrl;
     }
-    maskedUrl = UriUtils.getMaskedUrl(this.url);
+    maskedUrl = UriUtils.getMaskedUrl(url);
     return maskedUrl;
   }
 

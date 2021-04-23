@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -61,9 +62,8 @@ public final class TestUriUtils {
   // If a config for partial masking is introduced, this test will have to be
   // modified for the config-controlled partial mask length
   public void testMaskUrlQueryParameters() throws Exception {
-    HashSet<String> fullMask = new HashSet<>(Arrays.asList("abc", "bcd"));
-    HashSet<String> partialMask = new HashSet<>(
-        Arrays.asList("pqr", "xyz"));
+    Set<String> fullMask = new HashSet<>(Arrays.asList("abc", "bcd"));
+    Set<String> partialMask = new HashSet<>(Arrays.asList("pqr", "xyz"));
 
     //Partial and full masking test
     List<NameValuePair> keyValueList = URLEncodedUtils
