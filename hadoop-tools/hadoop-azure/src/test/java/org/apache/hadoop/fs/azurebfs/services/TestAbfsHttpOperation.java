@@ -34,24 +34,24 @@ public class TestAbfsHttpOperation {
   public void testMaskingAndEncoding()
       throws MalformedURLException, UnsupportedEncodingException {
     testIfMaskAndEncodeSuccessful("Where sig is the only query param",
-        "http://www.testurl.net?sig=abcd", "http://www.testurl.net?sig=XXXX");
+        "http://www.testurl.net?sig=abcd", "http://www.testurl.net?sig=XXXXX");
 
     testIfMaskAndEncodeSuccessful("Where oid is the only query param",
         "http://www.testurl.net?saoid=abcdef",
-        "http://www.testurl.net?saoid=XXcdef");
+        "http://www.testurl.net?saoid=abcXXX");
 
     testIfMaskAndEncodeSuccessful("Where sig is the first query param, oid is last",
         "http://www.testurl.net?sig=abcd&abc=xyz&saoid=pqrs456",
-        "http://www.testurl.net?sig=XXXX&abc=xyz&saoid=XXXs456");
+        "http://www.testurl.net?sig=XXXXX&abc=xyz&saoid=pqrsXXX");
 
     testIfMaskAndEncodeSuccessful(
         "Where sig/oid are neither first nor last query param",
         "http://www.testurl.net?lmn=abc&sig=abcd&suoid=mnop789&abc=xyz",
-        "http://www.testurl.net?lmn=abc&sig=XXXX&suoid=XXXp789&abc=xyz");
+        "http://www.testurl.net?lmn=abc&sig=XXXXX&suoid=mnopXXX&abc=xyz");
 
     testIfMaskAndEncodeSuccessful("Where sig is the last query param, oid is first",
         "http://www.testurl.net?skoid=pqrs123&abc=xyz&sig=abcd",
-        "http://www.testurl.net?skoid=XXXs123&abc=xyz&sig=XXXX");
+        "http://www.testurl.net?skoid=pqrsXXX&abc=xyz&sig=XXXXX");
 
     testIfMaskAndEncodeSuccessful("Where sig/oid query param are not present",
         "http://www.testurl.net?abc=xyz", "http://www.testurl.net?abc=xyz");

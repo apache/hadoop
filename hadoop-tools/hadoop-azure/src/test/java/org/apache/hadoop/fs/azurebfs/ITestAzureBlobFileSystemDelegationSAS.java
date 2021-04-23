@@ -404,10 +404,10 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     String encodedUrl = result.getMaskedEncodedUrl();
     Assertions.assertThat(url.substring(url.indexOf("sig=")))
         .describedAs("Signature query param should be masked")
-        .startsWith("sig=XXXX");
+        .startsWith("sig=XXXXX");
     Assertions.assertThat(encodedUrl.substring(encodedUrl.indexOf("sig%3D")))
         .describedAs("Signature query param should be masked")
-        .startsWith("sig%3DXXXX");
+        .startsWith("sig%3DXXXXX");
   }
 
   @Test

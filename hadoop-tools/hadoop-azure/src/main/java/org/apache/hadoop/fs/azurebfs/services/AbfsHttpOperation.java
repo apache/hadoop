@@ -67,6 +67,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private int statusCode;
   private String statusDescription;
   private String storageErrorCode = "";
+  private static final int DEFAULT_QUERY_STRINGBUILDER_CAPACITY = 550;
+  private static final int PARTIAL_MASK_VISIBLE_LEN = 4;
   private String storageErrorMessage  = "";
   private String clientRequestId = "";
   private String requestId  = "";
@@ -238,19 +240,19 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     if (!shouldMask) {
       return url.toString();
     }
-    if (this.maskedUrl != null) {
-      return this.maskedUrl;
+    if (maskedUrl != null) {
+      return maskedUrl;
     }
-    this.maskedUrl = UriUtils.getMaskedUrl(this.url);
-    return this.maskedUrl;
+    maskedUrl = UriUtils.getMaskedUrl(this.url);
+    return maskedUrl;
   }
 
   public String getMaskedEncodedUrl() {
-    if (this.maskedEncodedUrl != null) {
-      return this.maskedEncodedUrl;
+    if (maskedEncodedUrl != null) {
+      return maskedEncodedUrl;
     }
-    this.maskedEncodedUrl = UriUtils.encodedUrlStr(getMaskedUrl());
-    return this.maskedEncodedUrl;
+    maskedEncodedUrl = UriUtils.encodedUrlStr(getMaskedUrl());
+    return maskedEncodedUrl;
   }
 
   /**

@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -45,12 +46,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 public final class UriUtils {
   private static final String ABFS_URI_REGEX = "[^.]+\\.dfs\\.(preprod\\.){0,1}core\\.windows\\.net";
   private static final Pattern ABFS_URI_PATTERN = Pattern.compile(ABFS_URI_REGEX);
-  private static final HashSet<String> FULL_MASK_PARAM_KEYS = new HashSet<>(
+  private static final Set<String> FULL_MASK_PARAM_KEYS = new HashSet<>(
       Collections.singleton(QUERY_PARAM_SIGNATURE));
-  private static final HashSet<String> PARTIAL_MASK_PARAM_KEYS = new HashSet<>(
+  private static final Set<String> PARTIAL_MASK_PARAM_KEYS = new HashSet<>(
       Arrays.asList(QUERY_PARAM_SKOID, QUERY_PARAM_SAOID, QUERY_PARAM_SUOID));
-  private static final String FULL_MASK = "XXXX";
   private static final Character CHAR_MASK = 'X';
+  private static final String FULL_MASK = "XXXXX";
+  private static final int DEFAULT_QUERY_STRINGBUILDER_CAPACITY = 550;
+  private static final int PARTIAL_MASK_VISIBLE_LEN = 18;
 
   /**
    * Checks whether a string includes abfs url.
@@ -99,15 +102,25 @@ public final class UriUtils {
   }
 
   public static String maskUrlQueryParameters(List<NameValuePair> keyValueList,
-      HashSet<String> queryParamsForFullMask,
-      HashSet<String> queryParamsForPartialMask) {
+      Set<String> queryParamsForFullMask,
+      Set<String> queryParamsForPartialMask) {
     return maskUrlQueryParameters(keyValueList, queryParamsForFullMask,
-        queryParamsForPartialMask, 256);
+        queryParamsForPartialMask, DEFAULT_QUERY_STRINGBUILDER_CAPACITY);
   }
 
+  /**
+   * Generic function to mask a set of query parameters partially/fully and
+   * return the resultant query string
+   * @param keyValueList List of NameValuePair instances for query keys/values
+   * @param queryParamsForFullMask values for these params will appear as "XXXX"
+   * @param queryParamsForPartialMask values will be masked with 'X', except for
+   *                                  the last PARTIAL_MASK_VISIBLE_LEN characters
+   * @param queryLen to initialize StringBuilder for the masked query
+   * @return the masked url query part
+   */
   public static String maskUrlQueryParameters(List<NameValuePair> keyValueList,
-      HashSet<String> queryParamsForFullMask,
-      HashSet<String> queryParamsForPartialMask, int queryLen) {
+      Set<String> queryParamsForFullMask,
+      Set<String> queryParamsForPartialMask, int queryLen) {
     StringBuilder maskedUrl = new StringBuilder(queryLen);
     for (NameValuePair keyValuePair : keyValueList) {
       String key = keyValuePair.getName();
@@ -122,9 +135,10 @@ public final class UriUtils {
           maskedUrl.append(FULL_MASK);
         } else if (queryParamsForPartialMask.contains(key)) {
           int valueLen = value.length();
-          int maskedLen = valueLen - Math.min(4, valueLen);
+          int maskedLen = valueLen > PARTIAL_MASK_VISIBLE_LEN
+              ? PARTIAL_MASK_VISIBLE_LEN : valueLen / 2;
+          maskedUrl.append(value, 0, valueLen - maskedLen);
           maskedUrl.append(StringUtils.repeat(CHAR_MASK, maskedLen));
-          maskedUrl.append(value, maskedLen, valueLen);
         } else {
           maskedUrl.append(value);
         }
