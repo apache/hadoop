@@ -16,8 +16,6 @@
  */
 package org.apache.hadoop.hdfs.server.common.blockaliasmap.impl;
 
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -28,7 +26,9 @@ import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;

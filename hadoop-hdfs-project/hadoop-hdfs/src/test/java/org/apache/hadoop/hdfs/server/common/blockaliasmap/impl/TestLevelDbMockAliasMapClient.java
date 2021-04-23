@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.hdfs.server.common.blockaliasmap.impl;
 
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -26,6 +25,7 @@ import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.iq80.leveldb.DBException;
 import org.junit.After;
 import org.junit.Before;
