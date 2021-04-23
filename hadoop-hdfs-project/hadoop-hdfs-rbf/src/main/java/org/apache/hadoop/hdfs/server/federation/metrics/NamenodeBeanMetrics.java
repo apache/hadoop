@@ -825,7 +825,7 @@ public class NamenodeBeanMetrics
 
   @Override
   public String getEnteringMaintenanceNodes() {
-    return "N/A";
+    return "{}";
   }
 
   @Override
