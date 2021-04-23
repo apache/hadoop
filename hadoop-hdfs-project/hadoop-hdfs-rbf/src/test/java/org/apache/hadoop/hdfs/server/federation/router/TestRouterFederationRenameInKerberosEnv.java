@@ -64,17 +64,21 @@ import static org.junit.Assert.assertTrue;
 /**
  * Basic tests of router federation rename. Rename across namespaces.
  */
-public class TestRouterFederationRenameInKerberosEnv extends ClientBaseWithFixes {
+public class TestRouterFederationRenameInKerberosEnv
+    extends ClientBaseWithFixes {
 
   private static final int NUM_SUBCLUSTERS = 2;
   private static final int NUM_DNS = 6;
 
   private static String clientPrincipal = "client@EXAMPLE.COM";
-  private static String serverPrincipal =  System.getenv().get("USERNAME") + "/localhost@EXAMPLE.COM";
-  private static String keytab = new File(System.getProperty("test.dir", "target"),
-      UUID.randomUUID().toString()).getAbsolutePath();
+  private static String serverPrincipal =  System.getenv().get("USERNAME")
+      + "/localhost@EXAMPLE.COM";
+  private static String keytab = new File(
+      System.getProperty("test.dir", "target"),
+      UUID.randomUUID().toString())
+      .getAbsolutePath();
 
-  private final static Configuration baseConf = new Configuration(false);
+  private static Configuration baseConf = new Configuration(false);
 
   private static MiniKdc kdc;
 
@@ -93,18 +97,24 @@ public class TestRouterFederationRenameInKerberosEnv extends ClientBaseWithFixes
     kdc.createPrincipal(new File(keytab), clientPrincipal, serverPrincipal);
 
 
-    baseConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
+    baseConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+        true);
 
     SecurityUtil.setAuthenticationMethod(KERBEROS, baseConf);
-    baseConf.set(RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_KEY, serverPrincipal);
+    baseConf.set(RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_KEY,
+        serverPrincipal);
     baseConf.set(RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY, keytab);
-    baseConf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, serverPrincipal);
+    baseConf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY,
+        serverPrincipal);
     baseConf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, keytab);
-    baseConf.set(DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, serverPrincipal);
+    baseConf.set(DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY,
+        serverPrincipal);
     baseConf.set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, keytab);
-    baseConf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    baseConf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY,
+        true);
 
-    baseConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, DFS_DATA_TRANSFER_PROTECTION_DEFAULT);
+    baseConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY,
+        DFS_DATA_TRANSFER_PROTECTION_DEFAULT);
     baseConf.setBoolean(IGNORE_SECURE_PORTS_FOR_TESTING_KEY, true);
 
     DistCpProcedure.enableForTest();
@@ -202,11 +212,12 @@ public class TestRouterFederationRenameInKerberosEnv extends ClientBaseWithFixes
     try {
       call.call();
       assertFalse(verifyFileExists(testRouter.getFileSystem(), path));
-      assertTrue(
-          verifyFileExists(testRouter.getFileSystem(), renamedPath + "/file"));
+      assertTrue(verifyFileExists(testRouter.getFileSystem(),
+          renamedPath + "/file"));
     } catch (Exception ex) {
       exceptionThrown = true;
-      assertTrue(verifyFileExists(testRouter.getFileSystem(), path + "/file"));
+      assertTrue(verifyFileExists(testRouter.getFileSystem(),
+          path + "/file"));
       assertFalse(verifyFileExists(testRouter.getFileSystem(), renamedPath));
     } finally {
       FileContext fileContext = testRouter.getFileContext();
@@ -237,7 +248,8 @@ public class TestRouterFederationRenameInKerberosEnv extends ClientBaseWithFixes
     String renamedDir =
         cluster.getFederatedTestDirectoryForNS(ns1) + "/" + getMethodName();
     testRenameDir(router, dir, renamedDir, false, () -> {
-      UserGroupInformation ugi = UserGroupInformation.loginUserFromKeytabAndReturnUGI(clientPrincipal, keytab);
+      UserGroupInformation ugi = UserGroupInformation
+          .loginUserFromKeytabAndReturnUGI(clientPrincipal, keytab);
       ugi.doAs((PrivilegedExceptionAction<Boolean>) () -> {
         DFSClient client = router.getClient();
         ClientProtocol clientProtocol = client.getNamenode();

@@ -20,11 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.fedbalance.DistCpProcedure;
@@ -117,12 +113,13 @@ public class RouterFederationRename {
         try {
           // Neet TGT
           scheduler.submit(job);
-          LOG.info("Rename {} to {} from namespace {} to {}. JobId={}.", src, dst,
-              srcLoc.getNameserviceId(), dstLoc.getNameserviceId(), job.getId());
+          LOG.info("Rename {} to {} from namespace {} to {}. JobId={}.", src,
+              dst, srcLoc.getNameserviceId(), dstLoc.getNameserviceId(),
+              job.getId());
           scheduler.waitUntilDone(job);
           if (job.getError() != null) {
-            throw new IOException("Rename of " + src + " to " + dst + " failed.",
-                job.getError());
+            throw new IOException("Rename of " + src + " to " + dst +
+                " failed.", job.getError());
           }
           return true;
         } finally {
