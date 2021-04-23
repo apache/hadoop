@@ -1749,6 +1749,14 @@ public class TestRouterRpc {
   }
 
   @Test
+  public void testNamenodeMetricsEnteringMaintenanceNodes() throws IOException {
+    final NamenodeBeanMetrics metrics =
+            router.getRouter().getNamenodeMetrics();
+
+    assertEquals("{}", metrics.getEnteringMaintenanceNodes());
+  }
+
+  @Test
   public void testCacheAdmin() throws Exception {
     DistributedFileSystem routerDFS = (DistributedFileSystem) routerFS;
     // Verify cache directive commands.
