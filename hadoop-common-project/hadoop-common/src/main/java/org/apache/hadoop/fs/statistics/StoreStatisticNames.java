@@ -85,6 +85,12 @@ public final class StoreStatisticNames {
   public static final String OP_IS_FILE = "op_is_file";
 
   /** {@value}. */
+  public static final String OP_HFLUSH = "op_hflush";
+
+  /** {@value}. */
+  public static final String OP_HSYNC = "op_hsync";
+
+  /** {@value}. */
   public static final String OP_IS_DIRECTORY = "op_is_directory";
 
   /** {@value}. */
