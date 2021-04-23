@@ -67,8 +67,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private int statusCode;
   private String statusDescription;
   private String storageErrorCode = "";
-  private static final int DEFAULT_QUERY_STRINGBUILDER_CAPACITY = 550;
-  private static final int PARTIAL_MASK_VISIBLE_LEN = 4;
   private String storageErrorMessage  = "";
   private String clientRequestId = "";
   private String requestId  = "";
