@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -181,7 +182,7 @@ public class AbfsRestOperation {
     } catch (AzureBlobFileSystemException aze) {
       throw aze;
     } catch (IOException e) {
-      throw new RuntimeException("Error while tracking Duration of an "
+      throw new UncheckedIOException("Error while tracking Duration of an "
           + "AbfsRestOperation call", e);
     }
   }
