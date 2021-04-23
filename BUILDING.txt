@@ -51,14 +51,13 @@ Known issues:
   and run your IDE and Docker etc inside that VM.
 
 ----------------------------------------------------------------------------------
-Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
+Installing required packages for clean install of Ubuntu 18.04 LTS Desktop.
+(For Ubuntu 20.04, gcc/g++ and cmake bundled with Ubuntu can be used.
+Refer to  dev-support/docker/Dockerfile):
 
-* Oracle JDK 1.8 (preferred)
-  $ sudo apt-get purge openjdk*
-  $ sudo apt-get install software-properties-common
-  $ sudo add-apt-repository ppa:webupd8team/java
+* Open JDK 1.8
   $ sudo apt-get update
-  $ sudo apt-get install oracle-java8-installer
+  $ sudo apt-get -y install java-8-openjdk
 * Maven
   $ sudo apt-get -y install maven
 * Native libraries
@@ -86,12 +85,13 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
   $ curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2
   $ tar --bzip2 -xf boost_1_72_0.tar.bz2 && cd boost_1_72_0
   $ ./bootstrap.sh --prefix=/usr/
-  $ ./b2 --without-python install
+  $ ./b2 --without-python
+  $ sudo ./b2 --without-python install
 
 Optional packages:
 
 * Snappy compression (only used for hadoop-mapreduce-client-nativetask)
-  $ sudo apt-get install snappy libsnappy-dev
+  $ sudo apt-get install libsnappy-dev
 * Intel ISA-L library for erasure coding
   Please refer to https://01.org/intel%C2%AE-storage-acceleration-library-open-source-version
   (OR https://github.com/01org/isa-l)

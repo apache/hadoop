@@ -1835,9 +1835,9 @@ public class NameNode extends ReconfigurableBase implements
     }
   }
 
-  synchronized void monitorHealth() 
-      throws HealthCheckFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
+  synchronized void monitorHealth() throws IOException {
+    String operationName = "monitorHealth";
+    namesystem.checkSuperuserPrivilege(operationName);
     if (!haEnabled) {
       return; // no-op, if HA is not enabled
     }
@@ -1859,9 +1859,9 @@ public class NameNode extends ReconfigurableBase implements
     }
   }
   
-  synchronized void transitionToActive() 
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
+  synchronized void transitionToActive() throws IOException {
+    String operationName = "transitionToActive";
+    namesystem.checkSuperuserPrivilege(operationName);
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
@@ -1876,18 +1876,18 @@ public class NameNode extends ReconfigurableBase implements
     state.setState(haContext, ACTIVE_STATE);
   }
 
-  synchronized void transitionToStandby()
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
+  synchronized void transitionToStandby() throws IOException {
+    String operationName = "transitionToStandby";
+    namesystem.checkSuperuserPrivilege(operationName);
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
     state.setState(haContext, STANDBY_STATE);
   }
 
-  synchronized void transitionToObserver()
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
+  synchronized void transitionToObserver() throws IOException {
+    String operationName = "transitionToObserver";
+    namesystem.checkSuperuserPrivilege(operationName);
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }

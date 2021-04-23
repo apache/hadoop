@@ -82,23 +82,28 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 
 /**
  * A {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
  * href="http://store.azure.com/">Windows Azure</a>
  */
 @InterfaceStability.Evolving
-public class AzureBlobFileSystem extends FileSystem {
+public class AzureBlobFileSystem extends FileSystem
+    implements IOStatisticsSource {
   public static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystem.class);
   private URI uri;
   private Path workingDir;
@@ -161,11 +166,8 @@ public class AzureBlobFileSystem extends FileSystem {
     sb.append("uri=").append(uri);
     sb.append(", user='").append(abfsStore.getUser()).append('\'');
     sb.append(", primaryUserGroup='").append(abfsStore.getPrimaryGroup()).append('\'');
-    if (abfsCounters != null) {
-      sb.append(", Statistics: {").append(abfsCounters.formString("{", "=",
-          "}", true));
-      sb.append("}");
-    }
+    sb.append(", \nIOStatistics: {").append(ioStatisticsToString(getIOStatistics()));
+    sb.append("}");
     sb.append('}');
     return sb.toString();
   }
@@ -424,7 +426,9 @@ public class AzureBlobFileSystem extends FileSystem {
    * @param statistic the Statistic to be incremented.
    */
   private void incrementStatistic(AbfsStatistic statistic) {
-    abfsCounters.incrementCounter(statistic, 1);
+    if (abfsCounters != null) {
+      abfsCounters.incrementCounter(statistic, 1);
+    }
   }
 
   /**
@@ -488,7 +492,9 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug("AzureBlobFileSystem.close");
     IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager);
     this.isClosed = true;
-    LOG.debug("Closing Abfs: " + toString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Closing Abfs: {}", toString());
+    }
   }
 
   @Override
@@ -502,6 +508,26 @@ public class AzureBlobFileSystem extends FileSystem {
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
       return null;
+    }
+  }
+
+  /**
+   * Break the current lease on an ABFS file if it exists. A lease that is broken cannot be
+   * renewed. A new lease may be obtained on the file immediately.
+   *
+   * @param f file name
+   * @throws IOException on any exception while breaking the lease
+   */
+  public void breakLease(final Path f) throws IOException {
+    LOG.debug("AzureBlobFileSystem.breakLease path: {}", f);
+
+    Path qualifiedPath = makeQualified(f);
+
+    try (DurationInfo ignored = new DurationInfo(LOG, false, "Break lease for %s",
+        qualifiedPath)) {
+      abfsStore.breakLease(qualifiedPath);
+    } catch(AzureBlobFileSystemException ex) {
+      checkException(f, ex);
     }
   }
 
@@ -1290,6 +1316,12 @@ public class AzureBlobFileSystem extends FileSystem {
     return abfsStore.getIsNamespaceEnabled();
   }
 
+  /**
+   * Returns the counter() map in IOStatistics containing all the counters
+   * and their values.
+   *
+   * @return Map of IOStatistics counters.
+   */
   @VisibleForTesting
   Map<String, Long> getInstrumentationMap() {
     return abfsCounters.toMap();
@@ -1309,5 +1341,15 @@ public class AzureBlobFileSystem extends FileSystem {
     default:
       return super.hasPathCapability(p, capability);
     }
+  }
+
+  /**
+   * Getter for IOStatistic instance in AzureBlobFilesystem.
+   *
+   * @return the IOStatistic instance from abfsCounters.
+   */
+  @Override
+  public IOStatistics getIOStatistics() {
+    return abfsCounters != null ? abfsCounters.getIOStatistics() : null;
   }
 }
