@@ -27,6 +27,7 @@ import java.security.MessageDigest;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -834,7 +835,7 @@ public class SequenceFile {
   }
   
   /** Write key/value pairs to a sequence-format file. */
-  public static class Writer implements java.io.Closeable, Syncable {
+  public static class Writer implements java.io.Closeable, Syncable, StreamCapabilities {
     private Configuration conf;
     FSDataOutputStream out;
     boolean ownOutputStream = true;
@@ -1363,9 +1364,21 @@ public class SequenceFile {
 
     @Override
     public void hflush() throws IOException {
-      if (out != null) {
-        out.hflush();
+      if (out!=null) {
+        if (out.hasCapability(StreamCapabilities.HFLUSH)) {
+          out.hflush();
+        } else {
+          out.flush();
+        }
       }
+    }
+
+    @Override
+    public boolean hasCapability(String capability) {
+      if (capability!=null) {
+        return out.hasCapability(capability);
+      }
+      return false;
     }
     
     /** Returns the configuration of this file. */
