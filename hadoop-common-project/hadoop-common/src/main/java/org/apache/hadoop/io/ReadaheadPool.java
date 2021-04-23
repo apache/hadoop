@@ -29,6 +29,7 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_WILLNEED;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
@@ -59,7 +60,17 @@ public class ReadaheadPool {
       return instance;
     }
   }
-  
+
+  @VisibleForTesting
+  public static void resetInstance() {
+    synchronized (ReadaheadPool.class) {
+      if (instance != null) {
+        instance.pool.shutdownNow();
+        instance = null;
+      }
+    }
+  }
+
   private ReadaheadPool() {
     pool = new ThreadPoolExecutor(POOL_SIZE, MAX_POOL_SIZE, 3L, TimeUnit.SECONDS,
         new ArrayBlockingQueue<Runnable>(CAPACITY));
