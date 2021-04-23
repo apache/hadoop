@@ -45,6 +45,7 @@ import static org.junit.Assert.assertEquals;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
+import javax.management.AttributeNotFoundException;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 
@@ -126,6 +127,20 @@ public class TestMetricsSourceAdapter {
     assertTrue(metricsRecord.metrics().iterator().hasNext());
     Thread.sleep(100); // skip JMX cache TTL
     assertEquals(1L, (Number)sa.getAttribute("C1"));
+
+    // Validate the String method metric in the tag
+    try {
+      sa.getAttribute("tag.MapInString");
+      assertFalse(true);
+    } catch (AttributeNotFoundException anfe) {
+      assertTrue(true);
+    }
+    try {
+      Object obj = sa.getAttribute("MapInString");
+      assertEquals("N/A", obj);
+    } catch (AttributeNotFoundException anfe) {
+      assertTrue(false);
+    }
   }
 
   @SuppressWarnings("unused")
@@ -141,6 +156,9 @@ public class TestMetricsSourceAdapter {
     public void incrementCnt() {
       c1.incr();
     }
+
+    @Metric("String method metric")
+    public String mapInString() { return "N/A"; }
   }
 
   /**

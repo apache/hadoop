@@ -267,9 +267,10 @@ class MetricsSourceAdapter implements DynamicMBean {
     return numMetrics;
   }
 
-  private static String tagName(String name, int recNo) {
+  private static String tagName(
+      String name, int recNo, boolean isStringMetric) {
     StringBuilder sb = new StringBuilder(name.length() + 16);
-    sb.append("tag.").append(name);
+    sb.append(isStringMetric ? "" : "tag.").append(name);
     if (recNo > 0) {
       sb.append('.').append(recNo);
     }
@@ -277,7 +278,7 @@ class MetricsSourceAdapter implements DynamicMBean {
   }
 
   private void setAttrCacheTag(MetricsTag tag, int recNo) {
-    String key = tagName(tag.name(), recNo);
+    String key = tagName(tag.name(), recNo, tag.isStringMetric());
     attrCache.put(key, new Attribute(key, tag.value()));
   }
 

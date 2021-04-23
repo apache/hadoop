@@ -246,8 +246,14 @@ public class MetricsAsserts {
   }
 
   public static String getStringMetric(String name, MetricsRecordBuilder rb) {
+    return getStringMetric(name, rb, false);
+  }
+
+  public static String getStringMetric(
+      String name, MetricsRecordBuilder rb, boolean isMethod) {
     ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-    verify(rb, atLeast(0)).tag(eqName(info(name, "")), captor.capture());
+    verify(rb, atLeast(0)).tag(
+        eqName(info(name, "")), captor.capture(), eq(isMethod));
     checkCaptured(captor, name);
     return captor.getValue();
   }

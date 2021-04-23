@@ -60,9 +60,9 @@ class MethodMetric extends MutableMetric {
       case GAUGE:
         return newGauge(resType);
       case DEFAULT:
-        return resType == String.class ? newTag(resType) : newGauge(resType);
+        return resType == String.class ? newTag(resType, true) : newGauge(resType);
       case TAG:
-        return newTag(resType);
+        return newTag(resType, false);
       default:
         checkArg(metricType, false, "unsupported metric type");
         return null;
@@ -122,13 +122,25 @@ class MethodMetric extends MutableMetric {
     throw new MetricsException("Unsupported gauge type: "+ t.getName());
   }
 
-  MutableMetric newTag(Class<?> resType) {
+  /**
+   * This function creates a MetricsTag for both Tag and String Metric.
+   * @param resType result type from the function call
+   * @param isStringMetric if the method is not annotated as tag,
+   *                       it is a metric; otherwise a tag and will
+   *                       be prefixed by "tag." in jmx metric name
+   * @return
+   */
+  MutableMetric newTag(Class<?> resType, boolean isStringMetric) {
     if (resType == String.class) {
       return new MutableMetric() {
         @Override public void snapshot(MetricsRecordBuilder rb, boolean all) {
           try {
             Object ret = method.invoke(obj, (Object[]) null);
-            rb.tag(info, (String) ret);
+            if (!isStringMetric) {
+              rb.tag(info, (String) ret);
+            } else {
+              rb.tag(info, (String) ret, true);
+            }
           } catch (Exception ex) {
             LOG.error("Error invoking method "+ method.getName(), ex);
           }
