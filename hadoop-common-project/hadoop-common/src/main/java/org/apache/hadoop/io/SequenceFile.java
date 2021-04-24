@@ -1378,7 +1378,7 @@ public class SequenceFile {
 
     @Override
     public boolean hasCapability(String capability) {
-      if (capability != null) {
+      if (out !=null && capability != null) {
         return out.hasCapability(capability);
       }
       return false;
