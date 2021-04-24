@@ -835,7 +835,7 @@ public class SequenceFile {
   }
   
   /** Write key/value pairs to a sequence-format file. */
-  public static class Writer implements java.io.Closeable, Syncable, StreamCapabilities {
+  public static class Writer implements java.io.Closeable, Syncable, Flushable, StreamCapabilities {
     private Configuration conf;
     FSDataOutputStream out;
     boolean ownOutputStream = true;
@@ -1364,18 +1364,21 @@ public class SequenceFile {
 
     @Override
     public void hflush() throws IOException {
-      if (out!=null) {
-        if (out.hasCapability(StreamCapabilities.HFLUSH)) {
-          out.hflush();
-        } else {
-          out.flush();
-        }
+      if (out != null) {
+        out.hflush();
+      }
+    }
+
+    @Override
+    public void flush() throws IOException {
+      if (out != null) {
+        out.flush();
       }
     }
 
     @Override
     public boolean hasCapability(String capability) {
-      if (capability!=null) {
+      if (capability != null) {
         return out.hasCapability(capability);
       }
       return false;
