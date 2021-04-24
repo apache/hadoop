@@ -386,18 +386,6 @@
       <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
       <version>${opentelemetry.version}-alpha</version>
     </dependency>
-    <dependency>
-      <groupId>io.opentelemetry</groupId>
-      <artifactId>opentelemetry-exporter-jaeger</artifactId>
-      <version>${opentelemetry.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.grpc</groupId>
-      <artifactId>grpc-netty-shaded</artifactId>
-      <version>1.26.0</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>

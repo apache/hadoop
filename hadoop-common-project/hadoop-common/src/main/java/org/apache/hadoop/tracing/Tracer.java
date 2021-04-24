@@ -106,8 +106,7 @@ public class Tracer {
     static OpenTelemetry initialiseTracer(String name) {
       //TODO: Explore the possibility of moving these properties to config or environment variables
       System.setProperty("otel.metrics.exporter", "none");
-      System.setProperty("otel.traces.exporter", "jaeger");
-      System.setProperty("otel.exporter.jaeger.endpoint", "http://localhost:14250");
+      System.setProperty("otel.traces.exporter", "none");
       System.setProperty("otel.resource.attributes", String.format("service.name=%s", name));
       OpenTelemetry openTelemetry = OpenTelemetrySdkAutoConfiguration.initialize();
       return openTelemetry;
