@@ -25,13 +25,16 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
  * An interface for Abfs counters.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface AbfsCounters {
+public interface AbfsCounters extends IOStatisticsSource, DurationTrackerFactory {
 
   /**
    * Increment a AbfsStatistic by a long value.
@@ -63,4 +66,12 @@ public interface AbfsCounters {
   @VisibleForTesting
   Map<String, Long> toMap();
 
+  /**
+   * Start a DurationTracker for a request.
+   *
+   * @param key Name of the DurationTracker statistic.
+   * @return an instance of DurationTracker.
+   */
+  @Override
+  DurationTracker trackDuration(String key);
 }
