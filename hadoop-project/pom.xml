@@ -2284,9 +2284,9 @@
               <source>${javac.version}</source>
               <target>${javac.version}</target>
               <compilerArguments>
-                <Xlint/>
-				<Xlint:-unchecked/>
-                <Xmaxwarns>9999</Xmaxwarns>
+                <arg>-Xlint</arg>
+                <arg>-Xlint:unchecked</arg>
+                <arg>-Xmaxwarns=9999</arg>
               </compilerArguments>
             </configuration>
           </plugin>
