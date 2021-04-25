@@ -78,13 +78,8 @@ public class TestJvmMetrics {
     for (JvmMetricsInfo info : JvmMetricsInfo.values()) {
       if (info.name().startsWith("Mem")) {
         verify(rb).addGauge(eq(info), anyFloat());
-      } else if (info.name().startsWith("Gc") &&
-          !info.name().equals("GcTimePercentage")) {
-        verify(rb).addCounter(eq(info), anyLong());
       } else if (info.name().startsWith("Threads")) {
         verify(rb).addGauge(eq(info), anyInt());
-      } else if (info.name().startsWith("Log")) {
-        verify(rb).addCounter(eq(info), anyLong());
       }
     }
   }

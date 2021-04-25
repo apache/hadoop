@@ -111,8 +111,8 @@ jthrowable newIOException(JNIEnv* env, const char *fmt, ...)
 const char* terror(int errnum)
 {
 
-#if defined(__sun)
-// MT-Safe under Solaris which doesn't support sys_errlist/sys_nerr
+#if defined(__sun) || defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 32)
+// MT-Safe under Solaris or glibc >= 2.32 not supporting sys_errlist/sys_nerr
   return strerror(errnum); 
 #else
   if ((errnum < 0) || (errnum >= sys_nerr)) {

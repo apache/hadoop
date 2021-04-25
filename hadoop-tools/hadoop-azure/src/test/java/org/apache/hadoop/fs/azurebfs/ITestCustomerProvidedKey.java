@@ -772,7 +772,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
       String fileName, int fileSize) throws IOException {
     byte[] fileContent = getRandomBytesArray(fileSize);
     Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-    ContractTestUtils.verifyFileContents(fs, testFilePath,fileContent);
+    ContractTestUtils.verifyFileContents(fs, testFilePath,fileCttpHeaderConfigurationontent);
     return fileContent;
   }
 
