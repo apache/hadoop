@@ -108,7 +108,8 @@ public abstract class FSAclBaseTest {
 
   @After
   public void destroyFileSystems() {
-    IOUtils.cleanup(null, fs, fsAsBruce, fsAsDiana, fsAsSupergroupMember);
+    IOUtils.cleanupWithLogger(null, fs, fsAsBruce, fsAsDiana,
+        fsAsSupergroupMember);
     fs = fsAsBruce = fsAsDiana = fsAsSupergroupMember = fsAsBob = null;
   }
 

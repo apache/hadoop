@@ -949,11 +949,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           return new ReplicaInputStreams(
               blockInStream, metaInStream, ref, datanode.getFileIoProvider());
         } catch (IOException e) {
-          IOUtils.cleanup(null, blockInStream);
+          IOUtils.cleanupWithLogger(null, blockInStream);
           throw e;
         }
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
     }
@@ -1421,7 +1421,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         replica = append(b.getBlockPoolId(), replicaInfo, newGS,
             b.getNumBytes());
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
       return new ReplicaHandler(replica, ref);
@@ -1553,7 +1553,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               replica = (ReplicaInPipeline) replicaInfo;
             }
           } catch (IOException e) {
-            IOUtils.cleanup(null, ref);
+            IOUtils.cleanupWithLogger(null, ref);
             throw e;
           }
           return new ReplicaHandler(replica, ref);
@@ -1648,7 +1648,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               + " for block " + b.getBlockId());
         }
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
 
@@ -1752,7 +1752,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         // bump the replica's generation stamp to newGS
         rbw.getReplicaInfo().bumpReplicaGS(newGS);
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
       return new ReplicaHandler(rbw, ref);
@@ -1905,7 +1905,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       try {
         newReplicaInfo = v.createTemporary(b);
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
 
@@ -2463,7 +2463,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         success = true;
       } finally {
         if (!success) {
-          cacheManager.numBlocksFailedToCache.incrementAndGet();
+          cacheManager.numBlocksFailedToCache.increment();
         }
       }
       blockFileName = info.getBlockURI().toString();

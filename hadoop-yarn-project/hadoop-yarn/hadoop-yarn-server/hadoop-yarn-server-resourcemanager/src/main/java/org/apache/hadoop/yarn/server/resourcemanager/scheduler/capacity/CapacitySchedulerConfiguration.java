@@ -2029,7 +2029,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       AUTO_CREATE_CHILD_QUEUE_PREFIX + "enabled";
 
   @Private
-  private static final String AUTO_QUEUE_CREATION_V2_PREFIX =
+  protected static final String AUTO_QUEUE_CREATION_V2_PREFIX =
       "auto-queue-creation-v2.";
 
   @Private
@@ -2350,11 +2350,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getAutoCreatedQueueTemplateConfPrefix(queuePath);
 
     StringBuilder resourceString = new StringBuilder();
+
     resourceString
         .append("[" + AbsoluteResourceType.MEMORY.toString().toLowerCase() + "="
             + resource.getMemorySize() + ","
             + AbsoluteResourceType.VCORES.toString().toLowerCase() + "="
-            + resource.getVirtualCores() + "]");
+            + resource.getVirtualCores()
+            + ResourceUtils.
+            getCustomResourcesStrings(resource) + "]");
 
     setCapacityByLabel(leafQueueConfPrefix, label, resourceString.toString());
   }
@@ -2385,11 +2388,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         queuePath);
 
     StringBuilder resourceString = new StringBuilder();
+
     resourceString
         .append("[" + AbsoluteResourceType.MEMORY.toString().toLowerCase() + "="
             + resource.getMemorySize() + ","
             + AbsoluteResourceType.VCORES.toString().toLowerCase() + "="
-            + resource.getVirtualCores() + "]");
+            + resource.getVirtualCores()
+            + ResourceUtils.
+            getCustomResourcesStrings(resource) + "]");
 
     setMaximumCapacityByLabel(leafQueueConfPrefix, label, resourceString.toString());
   }
@@ -2489,11 +2495,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     StringBuilder resourceString = new StringBuilder();
+
     resourceString
         .append("[" + AbsoluteResourceType.MEMORY.toString().toLowerCase() + "="
             + resource.getMemorySize() + ","
             + AbsoluteResourceType.VCORES.toString().toLowerCase() + "="
-            + resource.getVirtualCores() + "]");
+            + resource.getVirtualCores()
+            + ResourceUtils.
+            getCustomResourcesStrings(resource) + "]");
 
     String prefix = getQueuePrefix(queue) + type;
     if (!label.isEmpty()) {
@@ -2567,8 +2576,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   private void updateResourceValuesFromConfig(Set<String> resourceTypes,
       Resource resource, String[] splits) {
 
+    String resourceName = splits[0].trim();
+
     // If key is not a valid type, skip it.
-    if (!resourceTypes.contains(splits[0])) {
+    if (!resourceTypes.contains(resourceName)
+        && !ResourceUtils.getResourceTypes().containsKey(resourceName)) {
+      LOG.error(resourceName + " not supported.");
       return;
     }
 
@@ -2581,9 +2594,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       resourceValue = UnitsConversionUtil.convert(units, "Mi", resourceValue);
     }
 
+    // Custom resource type defined by user.
+    // Such as GPU FPGA etc.
+    if (!resourceTypes.contains(resourceName)) {
+      resource.setResourceInformation(resourceName, ResourceInformation
+          .newInstance(resourceName, units, resourceValue));
+      return;
+    }
+
     // map it based on key.
     AbsoluteResourceType resType = AbsoluteResourceType
-        .valueOf(StringUtils.toUpperCase(splits[0].trim()));
+        .valueOf(StringUtils.toUpperCase(resourceName));
     switch (resType) {
     case MEMORY :
       resource.setMemorySize(resourceValue);
@@ -2592,8 +2613,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       resource.setVirtualCores(resourceValue.intValue());
       break;
     default :
-      resource.setResourceInformation(splits[0].trim(), ResourceInformation
-          .newInstance(splits[0].trim(), units, resourceValue));
+      resource.setResourceInformation(resourceName, ResourceInformation
+          .newInstance(resourceName, units, resourceValue));
       break;
     }
   }

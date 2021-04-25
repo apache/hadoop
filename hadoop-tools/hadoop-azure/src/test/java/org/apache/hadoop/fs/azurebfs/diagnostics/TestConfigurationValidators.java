@@ -24,11 +24,14 @@ import org.junit.Test;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_LEASE_DURATION;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
-
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.INFINITE_LEASE_DURATION;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_LEASE_DURATION;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_LEASE_DURATION;
 
 /**
  * Test configuration validators.
@@ -56,6 +59,26 @@ public class TestConfigurationValidators extends Assert {
     IntegerConfigurationBasicValidator integerConfigurationValidator = new IntegerConfigurationBasicValidator(
         MIN_BUFFER_SIZE, MAX_BUFFER_SIZE, DEFAULT_READ_BUFFER_SIZE, FAKE_KEY, true);
     integerConfigurationValidator.validate("3072");
+  }
+
+  @Test
+  public void testIntegerWithOutlierConfigValidator() throws Exception {
+    IntegerConfigurationBasicValidator integerConfigurationValidator = new IntegerConfigurationBasicValidator(
+        INFINITE_LEASE_DURATION, MIN_LEASE_DURATION, MAX_LEASE_DURATION, DEFAULT_LEASE_DURATION, FAKE_KEY,
+        false);
+
+    assertEquals(INFINITE_LEASE_DURATION, (int) integerConfigurationValidator.validate("-1"));
+    assertEquals(DEFAULT_LEASE_DURATION, (int) integerConfigurationValidator.validate(null));
+    assertEquals(MIN_LEASE_DURATION, (int) integerConfigurationValidator.validate("15"));
+    assertEquals(MAX_LEASE_DURATION, (int) integerConfigurationValidator.validate("60"));
+  }
+
+  @Test(expected = InvalidConfigurationValueException.class)
+  public void testIntegerWithOutlierConfigValidatorThrowsIfMissingValidValue() throws Exception {
+    IntegerConfigurationBasicValidator integerConfigurationValidator = new IntegerConfigurationBasicValidator(
+        INFINITE_LEASE_DURATION, MIN_LEASE_DURATION, MAX_LEASE_DURATION, DEFAULT_LEASE_DURATION, FAKE_KEY,
+        true);
+    integerConfigurationValidator.validate("14");
   }
 
   @Test

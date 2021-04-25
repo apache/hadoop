@@ -741,7 +741,7 @@ public class TestRollingUpgrade {
       // do checkpoint in SNN again
       snn.doCheckpoint();
     } finally {
-      IOUtils.cleanup(null, dfs);
+      IOUtils.cleanupWithLogger(null, dfs);
       if (snn != null) {
         snn.shutdown();
       }
