@@ -206,7 +206,8 @@ public class TestNameNodeMXBean {
               cluster.getDataNodes().get(3).getDatanodeId());
       decommissionedNode.setDecommissioned();
 
-      // Assert the location field is included in the mxbeanName under different states
+      // Assert the location field is included in the mxbeanName
+      // under different states
       String alivenodeinfo1 = (String) (mbs.getAttribute(mxbeanName,
               "LiveNodes"));
       Map<String, Map<String, Object>> liveNodes1 =
