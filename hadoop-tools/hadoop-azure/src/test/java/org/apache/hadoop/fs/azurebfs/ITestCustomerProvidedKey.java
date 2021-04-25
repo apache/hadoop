@@ -196,7 +196,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to append with correct CPK headers
     AppendRequestParameters appendRequestParameters =
         new AppendRequestParameters(
-        0, 0, 5, Mode.APPEND_MODE, false);
+        0, 0, 5, Mode.APPEND_MODE, false, null);
     byte[] buffer = getRandomBytesArray(5);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
@@ -239,7 +239,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to append without CPK headers
     AppendRequestParameters appendRequestParameters =
         new AppendRequestParameters(
-        0, 0, 5, Mode.APPEND_MODE, false);
+        0, 0, 5, Mode.APPEND_MODE, false, null);
     byte[] buffer = getRandomBytesArray(5);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
@@ -548,7 +548,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
-        abfsClient2.flush(testFileName, 0, false, false, null);
+        abfsClient2.flush(testFileName, 0, false, false, null, null);
       });
     }
 
@@ -558,14 +558,14 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
       try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
           .get(conf); AbfsClient abfsClient3 = fs3.getAbfsClient()) {
         LambdaTestUtils.intercept(IOException.class, () -> {
-          abfsClient3.flush(testFileName, 0, false, false, null);
+          abfsClient3.flush(testFileName, 0, false, false, null, null);
         });
       }
     }
 
     //  With correct CPK
     AbfsRestOperation abfsRestOperation = abfsClient
-        .flush(testFileName, 0, false, false, null);
+        .flush(testFileName, 0, false, false, null, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, expectedCPKSha);
@@ -772,7 +772,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
       String fileName, int fileSize) throws IOException {
     byte[] fileContent = getRandomBytesArray(fileSize);
     Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-    ContractTestUtils.verifyFileContents(fs, testFilePath,fileCttpHeaderConfigurationontent);
+    ContractTestUtils.verifyFileContents(fs, testFilePath, fileContent);
     return fileContent;
   }
 
