@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.assertj.core.api.Assertions;
@@ -129,9 +130,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "different-1234567890123456789012");
-    conf.set("fs.abfs.impl.disable.cache", "true");
-    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
-        .get(conf); FSDataInputStream iStream = fs2.open(new Path(fileName))) {
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+         FSDataInputStream iStream = fs2.open(new Path(fileName))) {
       int len = 8 * ONE_MB;
       byte[] b = new byte[len];
       LambdaTestUtils.intercept(IOException.class, () -> {
@@ -178,9 +178,9 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "12345678901234567890123456789012");
-    conf.set("fs.abfs.impl.disable.cache", "true");
-    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
-        .get(conf); AbfsClient abfsClient2 = fs2.getAbfsClient()) {
+
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+         AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         abfsClient2.read(fileName, 0, buffer, 0, length, eTag, null);
       });
@@ -213,9 +213,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "different-1234567890123456789012");
-    conf.set("fs.abfs.impl.disable.cache", "true");
-    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
-        .get(conf); AbfsClient abfsClient2 = fs2.getAbfsClient()) {
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+         AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         abfsClient2.append(fileName, buffer, appendRequestParameters, null);
       });
@@ -257,9 +256,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "12345678901234567890123456789012");
-    conf.set("fs.abfs.impl.disable.cache", "true");
-    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
-        .get(conf); AbfsClient abfsClient2 = fs2.getAbfsClient()) {
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+         AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         abfsClient2.append(fileName, buffer, appendRequestParameters, null);
       });
@@ -321,7 +319,6 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
     //  Create fs2 with different CPK
     Configuration conf = new Configuration();
-    conf.set("fs.abfs.impl.disable.cache", "true");
     conf.addResource(TEST_CONFIGURATION_FILE_NAME);
     conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
     conf.unset(FS_AZURE_ABFS_ACCOUNT_NAME);
@@ -330,7 +327,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "123456789012345678901234567890ab");
     conf.set("fs.defaultFS", "abfs://" + fileSystemName + "@" + accountName);
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
+    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
 
     //  Read from fs1 and write to fs2, fs1 and fs2 are having different CPK
     Path fs2DestFilePath = new Path("fs2-dest-file.txt");
@@ -416,8 +413,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "different-1234567890123456789012");
-    conf.set("fs.abfs.impl.disable.cache", "true");
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.get(conf);
+    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
     AbfsClient abfsClient2 = fs2.getAbfsClient();
     abfsRestOperation = abfsClient2.listPath(testDirName, false, INT_50, null);
     assertListstatus(fs, abfsRestOperation, testPath);
@@ -513,9 +509,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertCPKHeaders(abfsRestOperation, false);
     assertNoCPKResponseHeadersPresent(abfsRestOperation);
 
-    Assertions
-        .assertThatThrownBy(() -> fs.getFileStatus(new Path(testFileName)))
-        .isInstanceOf(FileNotFoundException.class);
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        (() -> fs.getFileStatus(new Path(testFileName))));
 
     FileStatus fileStatusAfterRename = fs.getFileStatus(new Path(newName));
     Assertions.assertThat(fileStatusAfterRename.getLen())
@@ -550,9 +545,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
         "different-1234567890123456789012");
-    conf.set("fs.abfs.impl.disable.cache", "true");
-    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem
-        .get(conf); AbfsClient abfsClient2 = fs2.getAbfsClient()) {
+    try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+         AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         abfsClient2.flush(testFileName, 0, false, false, null);
       });
@@ -778,7 +772,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
       String fileName, int fileSize) throws IOException {
     byte[] fileContent = getRandomBytesArray(fileSize);
     Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-    verifyContent(fs, testFilePath, fileContent);
+    ContractTestUtils.verifyFileContents(fs, testFilePath,fileContent);
     return fileContent;
   }
 
@@ -863,19 +857,6 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     return testFilePath;
   }
 
-  private void verifyContent(AzureBlobFileSystem fs, Path testFilePath,
-      byte[] fileContent) throws IOException {
-    int fileSize = fileContent.length;
-    try (FSDataInputStream iStream = fs.open(testFilePath)) {
-      byte[] buffer = new byte[fileSize];
-      int bytesRead = iStream.read(buffer, 0, fileSize);
-      assertEquals(bytesRead, fileSize);
-      for (int i = 0; i < fileSize; i++) {
-        assertEquals(fileContent[i], buffer[i]);
-      }
-    }
-  }
-
   private String convertXmsPropertiesToCommaSeparatedString(
       final Hashtable<String, String> properties)
       throws CharacterCodingException {
@@ -947,10 +928,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         differentCpk);
     conf.set("fs.defaultFS",
         "abfs://" + getFileSystemName() + "@" + accountName);
-    conf.set("fs.abfs.impl.disable.cache", "true");
     AzureBlobFileSystem sameFSWithDifferentCPK =
-        (AzureBlobFileSystem) FileSystem
-        .get(conf);
+        (AzureBlobFileSystem) FileSystem.newInstance(conf);
     return sameFSWithDifferentCPK;
   }
 
