@@ -673,7 +673,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     Path subdir = new Path(destDir, "subdir");
     // file 2
     Path destFile2 = new Path(subdir, "file2");
-    Path destFile3 = new Path(subdir, "file3");
+    Path destFile3 = new Path(subdir, "file3 with space");
     List<Path> destinations = Lists.newArrayList(destFile1, destFile2,
         destFile3);
     List<SinglePendingCommit> commits = new ArrayList<>(3);
