@@ -431,7 +431,7 @@ public class CommitOperations {
     if (!localFile.isFile()) {
       throw new FileNotFoundException("Not a file: " + localFile);
     }
-    String destURI = destPath.toString();
+    String destURI = destPath.toUri().toString();
     String destKey = fs.pathToKey(destPath);
     String uploadId = null;
 
