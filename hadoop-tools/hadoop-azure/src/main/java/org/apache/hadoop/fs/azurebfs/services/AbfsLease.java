@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableScheduledFuture;
@@ -31,8 +29,10 @@ import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.N
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 
@@ -193,10 +193,6 @@ public final class AbfsLease {
   @VisibleForTesting
   public int getAcquireRetryCount() {
     return acquireRetryCount;
-  }
-
-  public void setListenerOperation(String op) {
-    tracingContext.setOperation(op);
   }
 
   @VisibleForTesting

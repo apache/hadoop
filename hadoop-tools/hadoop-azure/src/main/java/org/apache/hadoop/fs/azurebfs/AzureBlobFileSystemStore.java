@@ -52,7 +52,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;

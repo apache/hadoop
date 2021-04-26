@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
-import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.junit.Assert;
@@ -215,7 +215,11 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     out.write(0);
     out.hsync();
 
+    fs.registerListener(new TracingHeaderValidator(
+        getConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
+        HdfsOperationConstants.BREAK_LEASE, false, 0));
     fs.breakLease(testFilePath);
+    fs.registerListener(null);
 
     LambdaTestUtils.intercept(IOException.class, ERR_LEASE_EXPIRED, () -> {
       out.write(1);
@@ -313,14 +317,16 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
     fs.createNewFile(testFilePath);
-    TracingContext tracingContext = getTestTracingContext(fs, false);
-    tracingContext.setListener(new TracingHeaderValidator(getConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.TEST_OP, true, 0));
+    TracingContext tracingContext = getTestTracingContext(fs, true);
+    Listener listener = new TracingHeaderValidator(
+        getConfiguration().getClientCorrelationID(), fs.getFileSystemID(),
+        HdfsOperationConstants.TEST_OP, true, 0);
+    tracingContext.setListener(listener);
 
     AbfsLease lease = new AbfsLease(fs.getAbfsClient(),
         testFilePath.toUri().getPath(), tracingContext);
     Assert.assertNotNull("Did not successfully lease file", lease.getLeaseID());
-    lease.setListenerOperation(HdfsOperationConstants.RELEASE_LEASE);
+    listener.setOperation(HdfsOperationConstants.RELEASE_LEASE);
     lease.free();
     lease.getTracingContext().setListener(null);
     Assert.assertEquals("Unexpected acquire retry count", 0, lease.getAcquireRetryCount());
