@@ -341,7 +341,7 @@
   {#LiveNodes}
   <tr>
     <td ng-value="{state}">{state}</td>
-    <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
+    <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
     <td ng-value="{state}-{name}"><a href='{dnWebAddress}'>{dnWebAddress}</a></td>
     <td ng-value="{lastContact}">{lastContact}s</td>
     <td ng-value="{lastBlockReport}">{lastBlockReport}m</td>
@@ -364,7 +364,7 @@
   {#DeadNodes}
   <tr class="danger">
     <td ng-value="{state}">{state}</td>
-    <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
+    <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
     <td></td>
     <td>{#helper_relative_time value="{lastContact}"/}</td>
     <td></td>
@@ -393,7 +393,7 @@
     </thead>
     {#EnteringMaintenanceNodes}
     <tr>
-      <td>{name} ({xferaddr})</td>
+      <td>{location}/{name} ({xferaddr})</td>
       <td>{underReplicatedBlocks}</td>
       <td>{maintenanceOnlyReplicas}</td>
       <td>{underReplicateInOpenFiles}</td>
@@ -419,7 +419,7 @@
   </thead>
   {#DecomNodes}
   <tr>
-    <td>{name} ({xferaddr})</td>
+    <td>{location}/{name} ({xferaddr})</td>
     <td>{underReplicatedBlocks}</td>
     <td>{decommissionOnlyReplicas}</td>
     <td>{underReplicateInOpenFiles}</td>
@@ -448,7 +448,7 @@ No nodes are decommissioning.
   </thead>
   {#LiveNodes}
   <tr>
-    <td>{name} ({xferaddr})</td>
+    <td>{location}/{name} ({xferaddr})</td>
     <td>{#helper_date_tostring value="{lastVolumeFailureDate}"/}</td>
     <td>{volfails}</td>
     <td>{estimatedCapacityLostTotal|fmt_bytes}</td>
