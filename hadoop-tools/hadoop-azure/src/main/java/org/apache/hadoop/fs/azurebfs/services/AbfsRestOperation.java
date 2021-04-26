@@ -172,7 +172,7 @@ public class AbfsRestOperation {
   /**
    * Execute a AbfsRestOperation. Track the Duration of a request if
    * abfsCounters isn't null.
-   *
+   * @param tracingContext TracingContext instance to track correlation IDs
    */
   public void execute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
@@ -192,6 +192,7 @@ public class AbfsRestOperation {
   /**
    * Executes the REST operation with retry, by issuing one or more
    * HTTP operations.
+   * @param tracingContext TracingContext instance to track correlation IDs
    */
   private void completeExecute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
