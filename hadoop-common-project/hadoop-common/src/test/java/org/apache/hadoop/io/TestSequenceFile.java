@@ -30,6 +30,7 @@ import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -38,6 +39,7 @@ import static org.junit.Assert.fail;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.times;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -728,6 +730,33 @@ public class TestSequenceFile {
         "Could not find a deserializer for the Key class: '" +
             RandomDatum.class.getName() + "'."));
     }
+  }
+
+  @Test
+  public void testSequenceFileWriter() throws Exception {
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path p = new Path(GenericTestUtils.getTempPath("testCreateUsesFSArg.seq"));
+    FSDataOutputStream out = fs.create(p);
+    FSDataOutputStream spyOut = Mockito.spy(out);
+    SequenceFile.Writer writer = SequenceFile.createWriter(
+        fs, conf, p, NullWritable.class, NullWritable.class);
+
+    writer.setOutputStream(spyOut);
+    writer.flush();
+    writer.hflush();
+    writer.hasCapability(StreamCapabilities.HFLUSH);
+    Mockito.verify(spyOut, times(1)).hflush();
+    Mockito.verify(spyOut, times(1)).flush();
+    Mockito.verify(spyOut, times(1)).hasCapability(StreamCapabilities.HFLUSH);
+
+    writer.setOutputStream(null);
+
+    // below statements should not throw NullPointerException, although output stream is null
+    writer.flush();
+    writer.hflush();
+    Assert.assertFalse(writer.hasCapability(StreamCapabilities.HFLUSH));
+
+    writer.close();
   }
 
   /** For debugging and testing. */
