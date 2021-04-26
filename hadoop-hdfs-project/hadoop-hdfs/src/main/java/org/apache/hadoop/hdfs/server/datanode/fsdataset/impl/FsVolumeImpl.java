@@ -1379,7 +1379,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
           long blockId = Block.getBlockId(file.getName());
           verifyFileLocation(file, bpFinalizedDir,
               blockId);
-          report.add(new ScanInfo(blockId, null, file, this));
+          report.add(new ScanInfo(blockId, dir, null, fileNames.get(i), this));
         }
         continue;
       }
@@ -1402,7 +1402,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
         }
       }
       verifyFileLocation(blockFile, bpFinalizedDir, blockId);
-      report.add(new ScanInfo(blockId, blockFile, metaFile, this));
+      report.add(new ScanInfo(blockId, dir, blockFile.getName(),
+          metaFile == null ? null : metaFile.getName(), this));
     }
     return report;
   }
