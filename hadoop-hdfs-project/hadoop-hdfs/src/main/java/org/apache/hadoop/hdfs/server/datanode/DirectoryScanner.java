@@ -582,7 +582,7 @@ public class DirectoryScanner implements Runnable {
       long blockId, FsVolumeSpi vol) {
     statsRecord.missingBlockFile++;
     statsRecord.missingMetaFile++;
-    diffRecord.add(new ScanInfo(blockId, null, null, vol));
+    diffRecord.add(new ScanInfo(blockId, null, null, null, vol));
   }
 
   /**
