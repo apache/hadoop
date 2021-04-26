@@ -1658,7 +1658,7 @@ public class DatanodeManager {
       BlockUnderConstructionFeature uc = b.getUnderConstructionFeature();
       if(uc == null) {
         throw new IOException("Recovery block " + b +
-            "where it is not under construction.");
+            " where it is not under construction.");
       }
       final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
       // Skip stale nodes during recovery

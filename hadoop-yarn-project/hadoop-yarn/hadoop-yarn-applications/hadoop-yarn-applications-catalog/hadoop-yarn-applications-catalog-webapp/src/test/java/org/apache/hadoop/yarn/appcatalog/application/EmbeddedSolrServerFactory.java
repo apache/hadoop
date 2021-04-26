@@ -82,12 +82,10 @@ public final class EmbeddedSolrServerFactory {
       solrHomeDir.mkdirs();
     }
 
-    final SolrResourceLoader loader = new SolrResourceLoader(
-        solrHomeDir.toPath());
     final Path configSetPath = Paths.get(configSetHome).toAbsolutePath();
 
     final NodeConfig config = new NodeConfig.NodeConfigBuilder(
-        "embeddedSolrServerNode", loader)
+        "embeddedSolrServerNode", solrHomeDir.toPath())
             .setConfigSetBaseDirectory(configSetPath.toString()).build();
 
     final EmbeddedSolrServer embeddedSolrServer = new EmbeddedSolrServer(config,

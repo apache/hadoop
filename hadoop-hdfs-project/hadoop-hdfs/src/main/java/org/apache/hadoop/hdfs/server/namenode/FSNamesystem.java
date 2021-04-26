@@ -2429,10 +2429,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws  IOException
    */
   void setStoragePolicy(String src, String policyName) throws IOException {
-    if (policyName.equalsIgnoreCase(
-            HdfsConstants.ALLNVDIMM_STORAGE_POLICY_NAME)) {
-      requireEffectiveLayoutVersionForFeature(Feature.NVDIMM_SUPPORT);
-    }
     final String operationName = "setStoragePolicy";
     checkOperation(OperationCategory.WRITE);
     checkStoragePolicyEnabled("set storage policy", true);
@@ -3574,9 +3570,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     if (type != null) {
       requireEffectiveLayoutVersionForFeature(Feature.QUOTA_BY_STORAGE_TYPE);
-    }
-    if (type == StorageType.NVDIMM) {
-      requireEffectiveLayoutVersionForFeature(Feature.NVDIMM_SUPPORT);
     }
     checkOperation(OperationCategory.WRITE);
     final String operationName = getQuotaCommand(nsQuota, ssQuota);
@@ -6492,6 +6485,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("infoAddr", node.getInfoAddr())
           .put("infoSecureAddr", node.getInfoSecureAddr())
           .put("xferaddr", node.getXferAddr())
+          .put("location", node.getNetworkLocation())
           .put("lastContact", getLastContact(node))
           .put("usedSpace", getDfsUsed(node))
           .put("adminState", node.getAdminState().toString())
@@ -6541,6 +6535,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("decommissioned", node.isDecommissioned())
           .put("adminState", node.getAdminState().toString())
           .put("xferaddr", node.getXferAddr())
+          .put("location", node.getNetworkLocation())
           .build();
       info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
     }
@@ -6562,6 +6557,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Map<String, Object> innerinfo = ImmutableMap
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
+          .put("location", node.getNetworkLocation())
           .put("underReplicatedBlocks",
           node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("decommissionOnlyReplicas",
@@ -6589,6 +6585,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Map<String, Object> attrMap = ImmutableMap
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
+          .put("location", node.getNetworkLocation())
           .put("underReplicatedBlocks",
               node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("maintenanceOnlyReplicas",
