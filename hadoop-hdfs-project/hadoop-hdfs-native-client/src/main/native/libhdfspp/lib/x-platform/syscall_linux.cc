@@ -21,7 +21,6 @@
 #include <unistd.h>
 
 #include <cstring>
-#include <vector>
 
 #include "syscall.h"
 
@@ -47,21 +46,16 @@ bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
 void XPlatform::Syscall::ClearBufferSafely(void* buffer,
                                            const size_t sz_bytes) {
   if (buffer != nullptr) {
+#ifdef HAVE_EXPLICIT_BZERO
     explicit_bzero(buffer, sz_bytes);
+#else
+    // fallback to bzero
+    bzero(buffer, sz_bytes);
+#endif
   }
 }
 
 bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
                                                  const std::string& b) {
   return strcasecmp(a.c_str(), b.c_str()) == 0;
-}
-
-int XPlatform::Syscall::CreateAndOpenTempFile(std::vector<char>& pattern) {
-  // Make space for mkstemp to add NULL character at the end
-  pattern.resize(pattern.size() + 1);
-  return mkstemp(pattern.data());
-}
-
-bool XPlatform::Syscall::CloseFile(const int file_descriptor) {
-  return close(file_descriptor) == 0;
 }

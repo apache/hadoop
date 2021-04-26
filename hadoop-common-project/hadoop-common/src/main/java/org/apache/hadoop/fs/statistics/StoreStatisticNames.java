@@ -317,6 +317,30 @@ public final class StoreStatisticNames {
       = "action_http_get_request";
 
   /**
+   * An HTTP DELETE request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_DELETE_REQUEST
+      = "action_http_delete_request";
+
+  /**
+   * An HTTP PUT request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_PUT_REQUEST
+      = "action_http_put_request";
+
+  /**
+   * An HTTP PATCH request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_PATCH_REQUEST
+      = "action_http_patch_request";
+
+  /**
+   * An HTTP POST request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_POST_REQUEST
+      = "action_http_post_request";
+
+  /**
    * An HTTP HEAD request was made: {@value}.
    */
   public static final String OBJECT_METADATA_REQUESTS

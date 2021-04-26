@@ -50,9 +50,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.StreamStatisticNames;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -478,34 +475,28 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         waitForTaskToComplete();
       }
     }
-    final Future<Void> job =
-        completionService.submit(IOStatisticsBinding
-            .trackDurationOfCallable((IOStatisticsStore) ioStatistics,
-                StreamStatisticNames.TIME_SPENT_ON_PUT_REQUEST,
-                () -> {
-                  AbfsPerfTracker tracker = client.getAbfsPerfTracker();
-                  try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
-                      "writeCurrentBufferToService", "append")) {
-                    AppendRequestParameters.Mode
-                        mode = APPEND_MODE;
-                    if (isFlush & isClose) {
-                      mode = FLUSH_CLOSE_MODE;
-                    } else if (isFlush) {
-                      mode = FLUSH_MODE;
-                    }
-                    AppendRequestParameters reqParams = new AppendRequestParameters(
-                        offset, 0, bytesLength, mode, false, leaseId);
-                    AbfsRestOperation op = client.append(path, bytes, reqParams,
-                        cachedSasToken.get(),
-                        new TracingContext(tracingContext));
-                    cachedSasToken.update(op.getSasToken());
-                    perfInfo.registerResult(op.getResult());
-                    byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
-                    perfInfo.registerSuccess(true);
-                    return null;
-                  }
-                })
-        );
+    final Future<Void> job = completionService.submit(() -> {
+      AbfsPerfTracker tracker = client.getAbfsPerfTracker();
+          try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
+              "writeCurrentBufferToService", "append")) {
+            AppendRequestParameters.Mode
+                mode = APPEND_MODE;
+            if (isFlush & isClose) {
+              mode = FLUSH_CLOSE_MODE;
+            } else if (isFlush) {
+              mode = FLUSH_MODE;
+            }
+            AppendRequestParameters reqParams = new AppendRequestParameters(
+                offset, 0, bytesLength, mode, false, leaseId);
+            AbfsRestOperation op = client.append(path, bytes, reqParams,
+                cachedSasToken.get(), new TracingContext(tracingContext));
+            cachedSasToken.update(op.getSasToken());
+            perfInfo.registerResult(op.getResult());
+            byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
+            perfInfo.registerSuccess(true);
+            return null;
+          }
+        });
 
     if (outputStreamStatistics != null) {
       if (job.isCancelled()) {

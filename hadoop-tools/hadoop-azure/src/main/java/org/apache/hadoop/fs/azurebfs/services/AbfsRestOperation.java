@@ -19,12 +19,12 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -169,12 +170,31 @@ public class AbfsRestOperation {
   }
 
   /**
-   * @param tracingContext Tracks identifiers for request header
+   * Execute a AbfsRestOperation. Track the Duration of a request if
+   * abfsCounters isn't null.
+   *
+   */
+  public void execute(TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
+
+    try {
+      IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
+          AbfsStatistic.getStatNameFromHttpCall(method),
+          () -> completeExecute(tracingContext));
+    } catch (AzureBlobFileSystemException aze) {
+      throw aze;
+    } catch (IOException e) {
+      throw new UncheckedIOException("Error while tracking Duration of an "
+          + "AbfsRestOperation call", e);
+    }
+  }
+
+  /**
    * Executes the REST operation with retry, by issuing one or more
    * HTTP operations.
    */
-   @VisibleForTesting
-   public void execute(TracingContext tracingContext) throws AzureBlobFileSystemException {
+  private void completeExecute(TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
     String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
     if (latencyHeader != null && !latencyHeader.isEmpty()) {
@@ -272,6 +292,8 @@ public class AbfsRestOperation {
           && httpOperation.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
         incrementCounter(AbfsStatistic.BYTES_RECEIVED,
             httpOperation.getBytesReceived());
+      } else if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+        incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
     } catch (UnknownHostException ex) {
       String hostname = null;
