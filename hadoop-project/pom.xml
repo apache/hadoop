@@ -2294,11 +2294,11 @@
               <fork>true</fork>
               <source>${javac.version}</source>
               <target>${javac.version}</target>
-              <compilerArgs>
-                <arg>-Xlint</arg>
-                <arg>-Xlint:unchecked</arg>
-                <arg>-Xmaxwarns=9999</arg>
-              </compilerArgs>
+              <compilerArguments>
+                <Xlint/>
+				<Xlint:-unchecked/>
+                <Xmaxwarns>9999</Xmaxwarns>
+              </compilerArguments>
             </configuration>
           </plugin>
         </plugins>
