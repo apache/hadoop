@@ -126,7 +126,6 @@ public class TestRouterFederationRenameInKerberosEnv
     DistCpProcedure.disableForTest();
   }
 
-  //@AfterClass
   @After
   @Override
   public void tearDown() throws Exception {

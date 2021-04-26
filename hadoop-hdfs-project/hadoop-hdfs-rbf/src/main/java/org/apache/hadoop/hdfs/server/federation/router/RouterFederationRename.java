@@ -111,7 +111,6 @@ public class RouterFederationRename {
         BalanceProcedureScheduler scheduler = rpcServer.getFedRenameScheduler();
         countIncrement();
         try {
-          // Neet TGT
           scheduler.submit(job);
           LOG.info("Rename {} to {} from namespace {} to {}. JobId={}.", src,
               dst, srcLoc.getNameserviceId(), dstLoc.getNameserviceId(),
