@@ -45,6 +45,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -135,6 +136,8 @@ public class TestRouterRefreshSuperUserGroupsConfiguration {
     when(ugi.getRealUser()).thenReturn(impersonator);
     when(ugi.getUserName()).thenReturn("victim");
     when(ugi.getGroups()).thenReturn(Arrays.asList("groupVictim"));
+    when(ugi.getGroupsSet()).thenReturn(new LinkedHashSet<>(Arrays.asList(
+        "groupVictim")));
 
     // Exception should be thrown before applying config
     LambdaTestUtils.intercept(

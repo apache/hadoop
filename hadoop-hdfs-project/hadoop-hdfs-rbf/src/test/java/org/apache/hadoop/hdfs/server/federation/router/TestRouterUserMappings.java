@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,7 +57,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -110,6 +113,16 @@ public class TestRouterUserMappings {
 
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      LOG.info("Getting groups in MockUnixGroupsMapping");
+      String g1 = user + (10 * i + 1);
+      String g2 = user + (10 * i + 2);
+      Set<String> s = Sets.newHashSet(g1, g2);
+      i++;
+      return s;
     }
   }
 
@@ -191,6 +204,10 @@ public class TestRouterUserMappings {
     final List<String> groupNames2 = new ArrayList<>();
     groupNames2.add("gr3");
     groupNames2.add("gr4");
+    final Set<String> groupNamesSet1 = new LinkedHashSet<>();
+    groupNamesSet1.addAll(groupNames1);
+    final Set<String> groupNamesSet2 = new LinkedHashSet<>();
+    groupNamesSet2.addAll(groupNames2);
 
     //keys in conf
     String userKeyGroups = DefaultImpersonationProvider.getTestProvider().
@@ -222,6 +239,8 @@ public class TestRouterUserMappings {
     // set groups for users
     when(ugi1.getGroups()).thenReturn(groupNames1);
     when(ugi2.getGroups()).thenReturn(groupNames2);
+    when(ugi1.getGroupsSet()).thenReturn(groupNamesSet1);
+    when(ugi2.getGroupsSet()).thenReturn(groupNamesSet2);
 
     // check before refresh
     LambdaTestUtils.intercept(AuthorizationException.class,

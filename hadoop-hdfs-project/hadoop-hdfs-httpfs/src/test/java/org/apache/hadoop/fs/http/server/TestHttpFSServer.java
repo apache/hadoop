@@ -61,9 +61,11 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -187,6 +189,11 @@ public class TestHttpFSServer extends HFSTestCase {
     @Override
     public List<String> getGroups(String user) throws IOException {
       return Arrays.asList(HadoopUsersConfTestHelper.getHadoopUserGroups(user));
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      return new HashSet<>(getGroups(user));
     }
 
   }
