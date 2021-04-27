@@ -2264,7 +2264,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         success = true;
       } finally {
         if (!success) {
-          cacheManager.numBlocksFailedToCache.incrementAndGet();
+          cacheManager.numBlocksFailedToCache.increment();
         }
       }
       blockFileName = info.getBlockURI().toString();
