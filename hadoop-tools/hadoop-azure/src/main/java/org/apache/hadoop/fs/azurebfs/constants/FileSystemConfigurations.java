@@ -68,6 +68,8 @@ public final class FileSystemConfigurations {
   public static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT = "localhost";
   public static final int DEFAULT_AZURE_LIST_MAX_RESULTS = 5000;
 
+  public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM = "AES256";
+
   public static final int MAX_CONCURRENT_READ_THREADS = 12;
   public static final int MAX_CONCURRENT_WRITE_THREADS = 8;
   public static final boolean DEFAULT_READ_TOLERATE_CONCURRENT_APPEND = false;
