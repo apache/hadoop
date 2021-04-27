@@ -93,9 +93,11 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.loggingIOStatistics;
 
 /**
  * A {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
@@ -166,8 +168,6 @@ public class AzureBlobFileSystem extends FileSystem
     sb.append("uri=").append(uri);
     sb.append(", user='").append(abfsStore.getUser()).append('\'');
     sb.append(", primaryUserGroup='").append(abfsStore.getPrimaryGroup()).append('\'');
-    sb.append(", \nIOStatistics: {").append(ioStatisticsToString(getIOStatistics()));
-    sb.append("}");
     sb.append('}');
     return sb.toString();
   }
@@ -490,7 +490,12 @@ public class AzureBlobFileSystem extends FileSystem
     // does all the delete-on-exit calls, and may be slow.
     super.close();
     LOG.debug("AzureBlobFileSystem.close");
-    IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager);
+    if (getConf() != null) {
+      String iostatisticsLoggingLevel =
+          this.getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
+              IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
+      loggingIOStatistics(LOG, iostatisticsLoggingLevel, getIOStatistics());
+    }
     this.isClosed = true;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());

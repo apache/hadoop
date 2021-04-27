@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
@@ -247,6 +248,26 @@ public final class IOStatisticsLogging {
       String message,
       Object source) {
     logIOStatisticsAtDebug(LOG, message, source);
+  }
+
+  /**
+   * A method to log IOStatistics from a source.
+   *
+   * @param LOG    Logger for logging.
+   * @param level  LOG level.
+   * @param source Source to LOG.
+   */
+  public static void loggingIOStatistics(Logger LOG, String level,
+      Object source) {
+    if (level.toLowerCase().equals(IOSTATISTICS_LOGGING_LEVEL_INFO)) {
+      IOStatistics stats = retrieveIOStatistics(source);
+      if (stats != null) {
+        LOG.info("IOStatistics: {}", ioStatisticsToPrettyString(stats));
+      }
+    } else {
+      logIOStatisticsAtDebug(LOG, "IOStatistics: {}",
+          source);
+    }
   }
 
   /**

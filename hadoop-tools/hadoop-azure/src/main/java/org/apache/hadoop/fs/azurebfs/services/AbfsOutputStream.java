@@ -331,7 +331,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Closing AbfsOutputStream ", toString());
+      LOG.debug("Closing AbfsOutputStream : {}", toString());
     }
   }
 
