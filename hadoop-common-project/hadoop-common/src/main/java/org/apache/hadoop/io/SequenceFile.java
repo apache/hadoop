@@ -835,7 +835,8 @@ public class SequenceFile {
   }
   
   /** Write key/value pairs to a sequence-format file. */
-  public static class Writer implements java.io.Closeable, Syncable, Flushable, StreamCapabilities {
+  public static class Writer implements java.io.Closeable, Syncable,
+                  Flushable, StreamCapabilities {
     private Configuration conf;
     FSDataOutputStream out;
     boolean ownOutputStream = true;
