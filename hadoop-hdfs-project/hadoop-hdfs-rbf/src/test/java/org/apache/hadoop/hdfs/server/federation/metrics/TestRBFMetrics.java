@@ -367,7 +367,8 @@ public class TestRBFMetrics extends TestMetricsBase {
       // reset stats to make the new value persistent
       mock.setStats(stats);
       // write back the new namenode information to state store
-      refreshNamenodeRegistration(NamenodeHeartbeatRequest.newInstance(mock));
+      assertTrue(refreshNamenodeRegistration(
+          NamenodeHeartbeatRequest.newInstance(mock)));
       totalCapacity = totalCapacity.add(unitCapacity);
       availableCapacity = availableCapacity.add(unitCapacity);
     }
