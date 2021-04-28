@@ -30,6 +30,7 @@ import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -735,28 +736,19 @@ public class TestSequenceFile {
   @Test
   public void testSequenceFileWriter() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
-    Path p = new Path(GenericTestUtils.getTempPath("testCreateUsesFSArg.seq"));
-    FSDataOutputStream out = fs.create(p);
-    FSDataOutputStream spyOut = Mockito.spy(out);
-    SequenceFile.Writer writer = SequenceFile.createWriter(
-        fs, conf, p, NullWritable.class, NullWritable.class);
+    Path p = new Path(GenericTestUtils.getTempPath("testSequenceFileWriter.seq"));
+    try(SequenceFile.Writer writer = SequenceFile.createWriter(
+            fs, conf, p, NullWritable.class, NullWritable.class)) {
 
-    writer.setOutputStream(spyOut);
-    writer.flush();
-    writer.hflush();
-    writer.hasCapability(StreamCapabilities.HFLUSH);
-    Mockito.verify(spyOut, times(1)).hflush();
-    Mockito.verify(spyOut, times(1)).flush();
-    Mockito.verify(spyOut, times(1)).hasCapability(StreamCapabilities.HFLUSH);
-
-    writer.setOutputStream(null);
-
-    // below statements should not throw NullPointerException, although output stream is null
-    writer.flush();
-    writer.hflush();
-    Assert.assertFalse(writer.hasCapability(StreamCapabilities.HFLUSH));
-
-    writer.close();
+      LongWritable key = new LongWritable();
+      key.set(1);
+      Text value = new Text();
+      value.set("value");
+      writer.append(key,value);
+      writer.hflush();
+      writer.hsync();
+      Assertions.assertThat(fs.getFileStatus(p).getLen()).isGreaterThan(0);
+    }
   }
 
   /** For debugging and testing. */

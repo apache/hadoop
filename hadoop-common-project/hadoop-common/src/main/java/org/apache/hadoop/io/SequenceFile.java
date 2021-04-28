@@ -1052,11 +1052,6 @@ public class SequenceFile {
       return new CompressionOption(value, codec);
     }
 
-    @org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting
-    public void setOutputStream(FSDataOutputStream out){
-      this.out = out;
-    }
-
     public static Option syncInterval(int value) {
       return new SyncIntervalOption(value);
     }
