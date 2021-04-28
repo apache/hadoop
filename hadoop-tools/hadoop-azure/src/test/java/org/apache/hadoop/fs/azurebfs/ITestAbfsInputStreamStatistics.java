@@ -21,10 +21,13 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
+import org.junit.After;
+import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.microsoft.fastpath.MockFastpathConnection;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
@@ -42,6 +45,12 @@ public class ITestAbfsInputStreamStatistics
   private static final int ONE_KB = 1024;
   private static final int CUSTOM_BLOCK_BUFFER_SIZE = 4 * 1024;
   private byte[] defBuffer = new byte[ONE_MB];
+
+  @After
+  public void tearDown() throws Exception {
+    super.teardown();
+    deleteMockFastpathFiles();
+  }
 
   public ITestAbfsInputStreamStatistics() throws Exception {
   }
@@ -89,7 +98,18 @@ public class ITestAbfsInputStreamStatistics
    * Test to check statistics from seek operation in AbfsInputStream.
    */
   @Test
+  public void testMockFastpathSeekStatistics() throws IOException {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testSeekStatistics(true);
+  }
+
+  @Test
   public void testSeekStatistics() throws IOException {
+    testSeekStatistics(false);
+  }
+
+  public void testSeekStatistics(boolean isMockFastpathTest) throws IOException {
     describe("Testing the values of statistics from seek operations in "
         + "AbfsInputStream");
 
@@ -106,7 +126,14 @@ public class ITestAbfsInputStreamStatistics
       //Writing a default buffer in a file.
       out.write(defBuffer);
       out.hflush();
-      in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
+      if (isMockFastpathTest) {
+        MockFastpathConnection.registerAppend(defBuffer.length,
+            seekStatPath.getName(), defBuffer, 0, defBuffer.length);
+        addToTestTearDownCleanupList(seekStatPath);
+        in = getMockAbfsInputStream(fs, seekStatPath);
+      } else {
+        in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
+      }
 
       /*
        * Writing 1MB buffer to the file, this would make the fCursor(Current
@@ -177,7 +204,18 @@ public class ITestAbfsInputStreamStatistics
    * Test to check statistics value from read operation in AbfsInputStream.
    */
   @Test
+  public void testMockFastpathReadStatistics() throws IOException {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testReadStatistics(true);
+  }
+
+  @Test
   public void testReadStatistics() throws IOException {
+    testReadStatistics(false);
+  }
+
+  public void testReadStatistics(boolean isMockFastpathTest) throws IOException {
     describe("Testing the values of statistics from read operation in "
         + "AbfsInputStream");
 
@@ -196,7 +234,14 @@ public class ITestAbfsInputStreamStatistics
        */
       out.write(defBuffer);
       out.hflush();
-      in = abfss.openFileForRead(readStatPath, fs.getFsStatistics());
+      if (isMockFastpathTest) {
+        MockFastpathConnection.registerAppend(defBuffer.length,
+            readStatPath.getName(), defBuffer, 0, defBuffer.length);
+        addToTestTearDownCleanupList(readStatPath);
+        in = getMockAbfsInputStream(fs, readStatPath);
+      } else {
+        in = abfss.openFileForRead(readStatPath, fs.getFsStatistics());
+      }
 
       /*
        * Doing file read 10 times.
@@ -240,7 +285,18 @@ public class ITestAbfsInputStreamStatistics
    * Testing AbfsInputStream works with null Statistics.
    */
   @Test
+  public void testMockFastpathWithNullStreamStatistics() throws IOException {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testWithNullStreamStatistics(true);
+  }
+
+  @Test
   public void testWithNullStreamStatistics() throws IOException {
+    testWithNullStreamStatistics(false);
+  }
+
+  public void testWithNullStreamStatistics(boolean isMockFastpathTest) throws IOException {
     describe("Testing AbfsInputStream operations with statistics as null");
 
     AzureBlobFileSystem fs = getFileSystem();
@@ -276,6 +332,13 @@ public class ITestAbfsInputStreamStatistics
           abfsInputStreamContext,
           abfsRestOperation.getResult().getResponseHeader("ETag"));
 
+      if (isMockFastpathTest) {
+        MockFastpathConnection.registerAppend(oneKbBuff.length,
+            nullStatFilePath.getName(), oneKbBuff, 0, oneKbBuff.length);
+        addToTestTearDownCleanupList(nullStatFilePath);
+        in = getMockAbfsInputStream(fs, nullStatFilePath);
+      }
+
       // Verifying that AbfsInputStream Operations works with null statistics.
       assertNotEquals("AbfsInputStream read() with null statistics should "
           + "work", -1, in.read());
@@ -292,7 +355,18 @@ public class ITestAbfsInputStreamStatistics
    * Testing readAhead counters in AbfsInputStream with 30 seconds timeout.
    */
   @Test
+  public void testMockFastpathReadAheadCounters() throws IOException {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testReadAheadCounters(true);
+  }
+
+  @Test
   public void testReadAheadCounters() throws IOException {
+    testReadAheadCounters(false);
+  }
+
+  public void testReadAheadCounters(boolean isMockFastpathTest) throws IOException {
     describe("Test to check correct values for readAhead counters in "
         + "AbfsInputStream");
 
@@ -317,7 +391,14 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.close();
 
-      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics());
+      if (isMockFastpathTest) {
+        MockFastpathConnection.registerAppend(defBuffer.length,
+            readAheadCountersPath.getName(), defBuffer, 0, defBuffer.length);
+        addToTestTearDownCleanupList(readAheadCountersPath);
+        in = getMockAbfsInputStream(fs, readAheadCountersPath);
+      } else {
+        in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics());
+      }
 
       /*
        * Reading 1KB after each i * KB positions. Hence the reads are from 0
@@ -369,7 +450,18 @@ public class ITestAbfsInputStreamStatistics
    * Testing time taken by AbfsInputStream to complete a GET request.
    */
   @Test
+  public void testMockFastpathActionHttpGetRequest() throws IOException {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testActionHttpGetRequest(true);
+  }
+
+  @Test
   public void testActionHttpGetRequest() throws IOException {
+    testActionHttpGetRequest(false);
+  }
+
+  public void testActionHttpGetRequest(boolean isMockFastpathTest) throws IOException {
     describe("Test to check the correct value of Time taken by http get "
         + "request in AbfsInputStream");
     AzureBlobFileSystem fs = getFileSystem();
@@ -382,9 +474,19 @@ public class ITestAbfsInputStreamStatistics
           actionHttpGetRequestPath);
       abfsOutputStream.write('a');
       abfsOutputStream.hflush();
+      byte[] b = new byte[1];
+      b[0] = 'a';
 
-      abfsInputStream =
-          abfss.openFileForRead(actionHttpGetRequestPath, fs.getFsStatistics());
+      if (isMockFastpathTest) {
+        MockFastpathConnection.registerAppend(1024,
+            actionHttpGetRequestPath.getName(), b, 0, b.length);
+        addToTestTearDownCleanupList(actionHttpGetRequestPath);
+        abfsInputStream = getMockAbfsInputStream(fs, actionHttpGetRequestPath);
+      } else {
+        abfsInputStream =
+            abfss.openFileForRead(actionHttpGetRequestPath, fs.getFsStatistics());
+      }
+
       abfsInputStream.read();
       AbfsInputStreamStatisticsImpl abfsInputStreamStatistics =
           (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();

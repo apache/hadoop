@@ -29,10 +29,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.io.IOException;
 
+import com.microsoft.fastpath.MockFastpathConnection;
+
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
+import org.junit.After;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -61,12 +65,29 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   private static final int TEST_FILE_LENGTH = 1024 * 1024 * 8;
   private static final int WAITING_TIME = 1000;
 
+  @After
+  public void tearDown() throws Exception {
+    super.teardown();
+    deleteMockFastpathFiles();
+  }
+
   public ITestAzureBlobFileSystemFlush() throws Exception {
     super();
   }
 
   @Test
+  public void testMockFastpathAbfsOutputStreamAsyncFlushWithRetainUncommittedData() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testAbfsOutputStreamAsyncFlushWithRetainUncommittedData(true);
+  }
+
+  @Test
   public void testAbfsOutputStreamAsyncFlushWithRetainUncommittedData() throws Exception {
+    testAbfsOutputStreamAsyncFlushWithRetainUncommittedData(false);
+  }
+
+  public void testAbfsOutputStreamAsyncFlushWithRetainUncommittedData(boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = path(methodName.getMethodName());
     final byte[] b;
@@ -76,16 +97,22 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
       for (int i = 0; i < 2; i++) {
         stream.write(b);
+        MockFastpathConnection.registerAppend(2 * TEST_BUFFER_SIZE,
+            testFilePath.getName(), b, 0, b.length);
 
         for (int j = 0; j < FLUSH_TIMES; j++) {
           stream.flush();
           Thread.sleep(10);
         }
       }
+
+      addToTestTearDownCleanupList(testFilePath);
     }
 
     final byte[] r = new byte[TEST_BUFFER_SIZE];
-    try (FSDataInputStream inputStream = fs.open(testFilePath, 4 * ONE_MB)) {
+    try (FSDataInputStream inputStream = isMockFastpathTest
+        ? openMockAbfsInputStream(fs, testFilePath)
+        : fs.open(testFilePath, 4 * ONE_MB)) {
       while (inputStream.available() != 0) {
         int result = inputStream.read(r);
 
@@ -96,7 +123,18 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   @Test
+  public void testMockFastpathAbfsOutputStreamSyncFlush() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testAbfsOutputStreamSyncFlush(true);
+  }
+
+  @Test
   public void testAbfsOutputStreamSyncFlush() throws Exception {
+    testAbfsOutputStreamSyncFlush(false);
+  }
+
+  public void testAbfsOutputStreamSyncFlush(boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = path(methodName.getMethodName());
 
@@ -113,8 +151,14 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       }
     }
 
+    MockFastpathConnection.registerAppend(b.length, testFilePath.getName(), b,
+        0, b.length);
+    addToTestTearDownCleanupList(testFilePath);
+
     final byte[] r = new byte[TEST_BUFFER_SIZE];
-    try (FSDataInputStream inputStream = fs.open(testFilePath, 4 * ONE_MB)) {
+    try (FSDataInputStream inputStream = isMockFastpathTest
+        ? openMockAbfsInputStream(fs, testFilePath)
+        : fs.open(testFilePath, 4 * ONE_MB)) {
       int result = inputStream.read(r);
 
       assertNotEquals(-1, result);
@@ -212,16 +256,30 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   @Test
+  public void testMockFastpathFlushWithOutputStreamFlushEnabled() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testFlush(false, true);
+  }
+
+  @Test
   public void testFlushWithOutputStreamFlushEnabled() throws Exception {
-    testFlush(false);
+    testFlush(false, false);
+  }
+
+  @Test
+  public void testMockFastpathFlushWithOutputStreamFlushDisabled() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testFlush(true, true);
   }
 
   @Test
   public void testFlushWithOutputStreamFlushDisabled() throws Exception {
-    testFlush(true);
+    testFlush(true, false);
   }
 
-  private void testFlush(boolean disableOutputStreamFlush) throws Exception {
+  private void testFlush(boolean disableOutputStreamFlush, boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) getFileSystem();
 
     // Simulate setting "fs.azure.disable.outputstream.flush" to true or false
@@ -250,16 +308,33 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
       // Flush commits the data so it can be read.
       stream.flush();
+      MockFastpathConnection.registerAppend(buffer.length,
+          testFilePath.getName(), buffer, 0, buffer.length);
+      addToTestTearDownCleanupList(testFilePath);
 
       // Verify that the data can be read if disableOutputStreamFlush is
       // false; and otherwise cannot be read.
       /* For Appendlob flush is not needed to update data on server */
-      validate(fs.open(testFilePath), buffer, !disableOutputStreamFlush || isAppendBlob);
+      validate(isMockFastpathTest
+          ? openMockAbfsInputStream(fs, testFilePath)
+          : fs.open(testFilePath),
+          buffer, !disableOutputStreamFlush || isAppendBlob);
     }
   }
 
   @Test
+  public void testMockFastpathHflushWithFlushEnabled() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testHflushWithFlushEnabled(true);
+  }
+
+  @Test
   public void testHflushWithFlushEnabled() throws Exception {
+    testHflushWithFlushEnabled(false);
+  }
+
+  public void testHflushWithFlushEnabled(boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     byte[] buffer = getRandomBytesArray();
     String fileName = UUID.randomUUID().toString();
@@ -267,12 +342,26 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, true)) {
       stream.hflush();
-      validate(fs, testFilePath, buffer, true);
+      MockFastpathConnection.registerAppend(buffer.length,
+          testFilePath.getName(), buffer, 0, buffer.length);
+      addToTestTearDownCleanupList(testFilePath);
+      validate(fs, testFilePath, buffer, true, isMockFastpathTest);
     }
   }
 
   @Test
+  public void testMockFastpathHflushWithFlushDisabled() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testHflushWithFlushDisabled(true);
+  }
+
+  @Test
   public void testHflushWithFlushDisabled() throws Exception {
+    testHflushWithFlushDisabled(false);
+  }
+
+  public void testHflushWithFlushDisabled(boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     byte[] buffer = getRandomBytesArray();
     final Path testFilePath = path(methodName.getMethodName());
@@ -283,13 +372,25 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, false)) {
       stream.hflush();
+      MockFastpathConnection.registerAppend(buffer.length,
+          testFilePath.getName(), buffer, 0, buffer.length);
+      addToTestTearDownCleanupList(testFilePath);
       /* For Appendlob flush is not needed to update data on server */
-      validate(fs, testFilePath, buffer, isAppendBlob);
+      validate(fs, testFilePath, buffer, isAppendBlob, isMockFastpathTest);
     }
   }
-
+  @Test
+  public void testMockFastpathHsyncWithFlushEnabled() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testHsyncWithFlushEnabled(true);
+  }
   @Test
   public void testHsyncWithFlushEnabled() throws Exception {
+    testHsyncWithFlushEnabled(false);
+  }
+
+  public void testHsyncWithFlushEnabled(boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     byte[] buffer = getRandomBytesArray();
 
@@ -297,7 +398,10 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, true)) {
       stream.hsync();
-      validate(fs, testFilePath, buffer, true);
+      MockFastpathConnection.registerAppend(buffer.length,
+          testFilePath.getName(), buffer, 0, buffer.length);
+      addToTestTearDownCleanupList(testFilePath);
+      validate(fs, testFilePath, buffer, true, isMockFastpathTest);
     }
   }
 
@@ -335,7 +439,18 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   @Test
+  public void testMockFastpathHsyncWithFlushDisabled() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testHsyncWithFlushDisabled(true);
+  }
+
+  @Test
   public void testHsyncWithFlushDisabled() throws Exception {
+    testHsyncWithFlushDisabled(false);
+  }
+
+  public void testHsyncWithFlushDisabled(boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     byte[] buffer = getRandomBytesArray();
     final Path testFilePath = path(methodName.getMethodName());
@@ -345,8 +460,11 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     }
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, false)) {
       stream.hsync();
+      MockFastpathConnection.registerAppend(buffer.length,
+          testFilePath.getName(), buffer, 0, buffer.length);
+      addToTestTearDownCleanupList(testFilePath);;
       /* For Appendlob flush is not needed to update data on server */
-      validate(fs, testFilePath, buffer, isAppendBlob);
+      validate(fs, testFilePath, buffer, isAppendBlob, isMockFastpathTest);
     }
   }
 
@@ -385,9 +503,16 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       stream.close();
     }
   }
-  private void validate(FileSystem fs, Path path, byte[] writeBuffer, boolean isEqual) throws IOException {
+
+  private void validate(FileSystem fs,
+      Path path,
+      byte[] writeBuffer,
+      boolean isEqual,
+      boolean isMockFastpathTest) throws IOException {
     String filePath = path.toUri().toString();
-    try (FSDataInputStream inputStream = fs.open(path)) {
+    try (FSDataInputStream inputStream = isMockFastpathTest
+        ? openMockAbfsInputStream((AzureBlobFileSystem) fs, path)
+        : fs.open(path)) {
       byte[] readBuffer = new byte[TEST_FILE_LENGTH];
       int numBytesRead = inputStream.read(readBuffer, 0, readBuffer.length);
       if (isEqual) {

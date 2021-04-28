@@ -58,5 +58,9 @@ public final class TestConfigurationKeys {
   public static final String TEST_CONTAINER_PREFIX = "abfs-testcontainer-";
   public static final int TEST_TIMEOUT = 15 * 60 * 1000;
 
+  public static final String FS_AZURE_TEST_FASTPATH_ENABLED = "fs.azure.test.fastpath.enabled";
+  public static final String FS_AZURE_TEST_FASTPATH_JAVA_MOCK_SO_ENABLED = "fs.azure.test.fastpath.javaMockSO.enabled";
+  public static final String FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED = "fs.azure.test.fastpath.mockSo.enabled";
+
   private TestConfigurationKeys() {}
 }

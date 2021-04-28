@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
 
@@ -91,6 +92,23 @@ public class AbstractAbfsTestWithTimeout extends Assert {
   }
 
   /**
+   * Validate Contents written on a file in Abfs using
+   * Fastpath mock inputStream
+   *
+   * @param mockAbfsInputStream MockAbfsInputStream
+   * @param originalByteArray original byte array
+   * @return if content is validated true else, false
+   * @throws IOException
+   */
+  protected boolean validateContent(MockAbfsInputStream mockAbfsInputStream,
+      byte[] originalByteArray)
+      throws IOException {
+    try (FSDataInputStream in = new FSDataInputStream(mockAbfsInputStream)) {
+      return validateContent(in, originalByteArray);
+    }
+  }
+
+  /**
    * Validate Contents written on a file in Abfs.
    *
    * @param fs                AzureBlobFileSystem
@@ -102,28 +120,31 @@ public class AbstractAbfsTestWithTimeout extends Assert {
   protected boolean validateContent(AzureBlobFileSystem fs, Path path,
       byte[] originalByteArray)
       throws IOException {
+    try (FSDataInputStream in = fs.open(path)) {
+      return validateContent(in, originalByteArray);
+    }
+  }
+
+  private boolean validateContent(FSDataInputStream in, byte[] originalByteArray)
+      throws IOException {
     int pos = 0;
     int lenOfOriginalByteArray = originalByteArray.length;
+    byte valueOfContentAtPos = (byte) in.read();
 
-    try (FSDataInputStream in = fs.open(path)) {
-      byte valueOfContentAtPos = (byte) in.read();
-
-      while (valueOfContentAtPos != -1 && pos < lenOfOriginalByteArray) {
-        if (originalByteArray[pos] != valueOfContentAtPos) {
-          assertEquals("Mismatch in content validation at position {}", pos,
-              originalByteArray[pos], valueOfContentAtPos);
-          return false;
-        }
-        valueOfContentAtPos = (byte) in.read();
-        pos++;
-      }
-      if (valueOfContentAtPos != -1) {
-        assertEquals("Expected end of file", -1, valueOfContentAtPos);
+    while (valueOfContentAtPos != -1 && pos < lenOfOriginalByteArray) {
+      if (originalByteArray[pos] != valueOfContentAtPos) {
+        assertEquals("Mismatch in content validation at position {}", pos,
+            originalByteArray[pos], valueOfContentAtPos);
         return false;
       }
-      return true;
+      valueOfContentAtPos = (byte) in.read();
+      pos++;
     }
-
+    if (valueOfContentAtPos != -1) {
+      assertEquals("Expected end of file", -1, valueOfContentAtPos);
+      return false;
+    }
+    return true;
   }
 
 }

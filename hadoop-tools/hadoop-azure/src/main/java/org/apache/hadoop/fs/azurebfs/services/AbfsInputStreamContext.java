@@ -46,6 +46,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean bufferedPreadDisabled;
 
+  private boolean isFastpathEnabled;
+
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -105,6 +107,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withFastpathEnabledState(
+      final boolean isFastpathEnabled) {
+    this.isFastpathEnabled = isFastpathEnabled;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
     if (readBufferSize > readAheadBlockSize) {
       LOG.debug(
@@ -153,4 +161,6 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public boolean isBufferedPreadDisabled() {
     return bufferedPreadDisabled;
   }
+
+  public boolean isFastpathEnabled() { return isFastpathEnabled; }
 }

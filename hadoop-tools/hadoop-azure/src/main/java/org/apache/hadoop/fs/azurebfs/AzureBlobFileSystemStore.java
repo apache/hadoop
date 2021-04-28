@@ -679,11 +679,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       perfInfo.registerSuccess(true);
 
       // Add statistics for InputStream
-      return new AbfsInputStream(client, statistics,
+      return createAbfsInputStreamInstance(client, statistics,
               relativePath, contentLength,
               populateAbfsInputStreamContext(options),
               eTag);
     }
+  }
+
+  @VisibleForTesting
+  protected AbfsInputStream createAbfsInputStreamInstance(final AbfsClient client,
+      final FileSystem.Statistics statistics,
+      final String path,
+      final long contentLength,
+      final AbfsInputStreamContext abfsInputStreamContext,
+      final String eTag) {
+    return new AbfsInputStream(client, statistics, path, contentLength, abfsInputStreamContext, eTag);
   }
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(
@@ -702,6 +712,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
             .withBufferedPreadDisabled(bufferedPreadDisabled)
+            .withFastpathEnabledState(abfsConfiguration.isFastpathEnabled())
             .build();
   }
 
@@ -1717,5 +1728,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     }
     return true;
+  }
+
+  @VisibleForTesting
+  AbfsCounters getAbfsCounters() {
+    return this.abfsCounters;
   }
 }

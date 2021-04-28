@@ -20,11 +20,17 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
+import java.util.Optional;
 
+import org.junit.After;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.Test;
 
+import com.microsoft.fastpath.MockFastpathConnection;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
@@ -45,8 +51,26 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
   public ITestAbfsPositionedRead() throws Exception {
   }
 
+  @After
+  public void tearDown() throws Exception {
+    super.teardown();
+    deleteMockFastpathFiles();
+  }
+
+  @Test
+  public void testMockFastpathPositionedRead() throws IOException {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testPositionedRead(true);
+
+  }
+
   @Test
   public void testPositionedRead() throws IOException {
+    testPositionedRead(false);
+  }
+
+  public void testPositionedRead(boolean isMockFastpathTest) throws IOException {
     describe("Testing positioned reads in AbfsInputStream");
     Path dest = path(methodName.getMethodName());
 
@@ -54,55 +78,64 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
     ContractTestUtils.writeDataset(getFileSystem(), dest, data, data.length,
         TEST_FILE_DATA_SIZE, true);
     int bytesToRead = 10;
-    try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
-      assertTrue(
-          "unexpected stream type "
-              + inputStream.getWrappedStream().getClass().getSimpleName(),
-          inputStream.getWrappedStream() instanceof AbfsInputStream);
-      byte[] readBuffer = new byte[bytesToRead];
-      int readPos = 0;
-      Assertions
-          .assertThat(inputStream.read(readPos, readBuffer, 0, bytesToRead))
-          .describedAs(
-              "AbfsInputStream pread did not read the correct number of bytes")
-          .isEqualTo(bytesToRead);
-      Assertions.assertThat(readBuffer)
-          .describedAs("AbfsInputStream pread did not read correct data")
-          .containsExactly(
-              Arrays.copyOfRange(data, readPos, readPos + bytesToRead));
-      // Read only 10 bytes from offset 0. But by default it will do the seek
-      // and read where the entire 100 bytes get read into the
-      // AbfsInputStream buffer.
-      Assertions
-          .assertThat(Arrays.copyOfRange(
-              ((AbfsInputStream) inputStream.getWrappedStream()).getBuffer(), 0,
-              TEST_FILE_DATA_SIZE))
-          .describedAs(
-              "AbfsInputStream pread did not read more data into its buffer")
-          .containsExactly(data);
-      // Check statistics
-      assertStatistics(inputStream.getIOStatistics(), bytesToRead, 1, 1,
-          TEST_FILE_DATA_SIZE);
-
-      readPos = 50;
-      Assertions
-          .assertThat(inputStream.read(readPos, readBuffer, 0, bytesToRead))
-          .describedAs(
-              "AbfsInputStream pread did not read the correct number of bytes")
-          .isEqualTo(bytesToRead);
-      Assertions.assertThat(readBuffer)
-          .describedAs("AbfsInputStream pread did not read correct data")
-          .containsExactly(
-              Arrays.copyOfRange(data, readPos, readPos + bytesToRead));
-      // Check statistics
-      assertStatistics(inputStream.getIOStatistics(), 2 * bytesToRead, 2, 1,
-          TEST_FILE_DATA_SIZE);
-      // Did positioned read from pos 0 and then 50 but the stream pos should
-      // remain at 0.
-      Assertions.assertThat(inputStream.getPos())
-          .describedAs("AbfsInputStream positioned reads moved stream position")
-          .isEqualTo(0);
+    if (isMockFastpathTest) {
+      MockFastpathConnection.registerAppend(1024, dest.getName(), data, 0,
+          data.length);
+      addToTestTearDownCleanupList(dest);
     }
+
+    FSDataInputStream inputStream = getFileSystem().open(dest);
+    if (isMockFastpathTest) {
+      inputStream = openMockAbfsInputStream(getFileSystem(), inputStream);
+    }
+
+    assertTrue(
+        "unexpected stream type "
+            + inputStream.getWrappedStream().getClass().getSimpleName(),
+        inputStream.getWrappedStream() instanceof AbfsInputStream);
+    byte[] readBuffer = new byte[bytesToRead];
+    int readPos = 0;
+    Assertions
+        .assertThat(inputStream.read(readPos, readBuffer, 0, bytesToRead))
+        .describedAs(
+            "AbfsInputStream pread did not read the correct number of bytes")
+        .isEqualTo(bytesToRead);
+    Assertions.assertThat(readBuffer)
+        .describedAs("AbfsInputStream pread did not read correct data")
+        .containsExactly(
+            Arrays.copyOfRange(data, readPos, readPos + bytesToRead));
+    // Read only 10 bytes from offset 0. But by default it will do the seek
+    // and read where the entire 100 bytes get read into the
+    // AbfsInputStream buffer.
+    Assertions
+        .assertThat(Arrays.copyOfRange(
+            ((AbfsInputStream) inputStream.getWrappedStream()).getBuffer(), 0,
+            TEST_FILE_DATA_SIZE))
+        .describedAs(
+            "AbfsInputStream pread did not read more data into its buffer")
+        .containsExactly(data);
+    // Check statistics
+    assertStatistics(inputStream.getIOStatistics(), bytesToRead, 1, 1,
+        TEST_FILE_DATA_SIZE);
+
+    readPos = 50;
+    Assertions
+        .assertThat(inputStream.read(readPos, readBuffer, 0, bytesToRead))
+        .describedAs(
+            "AbfsInputStream pread did not read the correct number of bytes")
+        .isEqualTo(bytesToRead);
+    Assertions.assertThat(readBuffer)
+        .describedAs("AbfsInputStream pread did not read correct data")
+        .containsExactly(
+            Arrays.copyOfRange(data, readPos, readPos + bytesToRead));
+    // Check statistics
+    assertStatistics(inputStream.getIOStatistics(), 2 * bytesToRead, 2, 1,
+        TEST_FILE_DATA_SIZE);
+    // Did positioned read from pos 0 and then 50 but the stream pos should
+    // remain at 0.
+    Assertions.assertThat(inputStream.getPos())
+        .describedAs("AbfsInputStream positioned reads moved stream position")
+        .isEqualTo(0);
   }
 
   private void assertStatistics(IOStatistics ioStatistics,
@@ -131,17 +164,39 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  public void testMockFastpathPositionedReadWithBufferedReadDisabled() throws IOException {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testPositionedReadWithBufferedReadDisabled(true);
+  }
+
+  @Test
   public void testPositionedReadWithBufferedReadDisabled() throws IOException {
+    testPositionedReadWithBufferedReadDisabled(false);
+  }
+
+  public void testPositionedReadWithBufferedReadDisabled(boolean isMockFastpathTest) throws IOException {
     describe("Testing positioned reads in AbfsInputStream with BufferedReadDisabled");
     Path dest = path(methodName.getMethodName());
     byte[] data = ContractTestUtils.dataset(TEST_FILE_DATA_SIZE, 'a', 'z');
     ContractTestUtils.writeDataset(getFileSystem(), dest, data, data.length,
         TEST_FILE_DATA_SIZE, true);
+    if(isMockFastpathTest) {
+      MockFastpathConnection.registerAppend(
+          TEST_FILE_DATA_SIZE, dest.getName(), data, 0, data.length);
+      addToTestTearDownCleanupList(dest);
+    }
+
     FutureDataInputStreamBuilder builder = getFileSystem().openFile(dest);
     builder.opt(ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE, true);
     FSDataInputStream inputStream = null;
     try {
-      inputStream = builder.build().get();
+      Configuration conf = getFileSystem().getConf();
+      conf.setBoolean(ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE, true);
+      Optional<Configuration> c = Optional.ofNullable(conf);
+      inputStream = isMockFastpathTest
+          ? openMockAbfsInputStream(getFileSystem(), dest, c)
+          : builder.build().get();
     } catch (IllegalArgumentException | UnsupportedOperationException
         | InterruptedException | ExecutionException e) {
       throw new IOException(

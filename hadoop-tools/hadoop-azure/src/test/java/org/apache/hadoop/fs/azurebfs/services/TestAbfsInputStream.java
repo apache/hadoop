@@ -20,11 +20,15 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import java.util.Arrays;
 
 import org.assertj.core.api.Assertions;
+
+import com.microsoft.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,7 +43,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -71,6 +74,11 @@ public class TestAbfsInputStream extends
       REDUCED_READ_BUFFER_AGE_THRESHOLD * 10; // 30 sec
   private static final int ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE = 16 * ONE_MB;
 
+  @After
+  public void tearDown() throws Exception {
+    super.teardown();
+    deleteMockFastpathFiles();
+  }
   private AbfsRestOperation getMockRestOp() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
@@ -116,24 +124,57 @@ public class TestAbfsInputStream extends
       int readAheadQueueDepth,
       int readBufferSize,
       boolean alwaysReadBufferSize,
+      int readAheadBlockSize,
+      boolean isFastpathEnabled) {
+    AbfsInputStreamContext context = getInStmContext(readAheadQueueDepth,
+        readBufferSize, alwaysReadBufferSize, readAheadBlockSize, isFastpathEnabled);
+    return getAbfsInputStream(abfsClient, fileName,fileSize, eTag, context);
+  }
+
+  public AbfsInputStream getAbfsInputStream(AbfsClient abfsClient,
+      String fileName,
+      int fileSize,
+      String eTag,
+      int readAheadQueueDepth,
+      int readBufferSize,
+      boolean alwaysReadBufferSize,
       int readAheadBlockSize) {
-    AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
-    // Create AbfsInputStream with the client instance
+    AbfsInputStreamContext context = getInStmContext(readAheadQueueDepth,
+        readBufferSize, alwaysReadBufferSize, readAheadBlockSize, false);
+    return getAbfsInputStream(abfsClient, fileName,fileSize, eTag, context);
+  }
+
+  private AbfsInputStream getAbfsInputStream(AbfsClient abfsClient,
+      String fileName,
+      int fileSize,
+      String eTag,
+      AbfsInputStreamContext context) {
     AbfsInputStream inputStream = new AbfsInputStream(
         abfsClient,
         null,
         FORWARD_SLASH + fileName,
         fileSize,
-        inputStreamContext.withReadBufferSize(readBufferSize)
-            .withReadAheadQueueDepth(readAheadQueueDepth)
-            .withShouldReadBufferSizeAlways(alwaysReadBufferSize)
-            .withReadAheadBlockSize(readAheadBlockSize),
+        context,
         eTag);
 
     inputStream.setCachedSasToken(
         TestCachedSASToken.getTestCachedSASTokenInstance());
 
     return inputStream;
+  }
+  private AbfsInputStreamContext getInStmContext(int readAheadQueueDepth,
+      int readBufferSize,
+      boolean alwaysReadBufferSize,
+      int readAheadBlockSize,
+      boolean isFastpathEnabled) {
+    AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
+    inputStreamContext.withReadBufferSize(readBufferSize)
+        .withReadAheadQueueDepth(readAheadQueueDepth)
+        .withShouldReadBufferSizeAlways(alwaysReadBufferSize)
+        .withReadAheadBlockSize(readAheadBlockSize)
+        .withFastpathEnabledState(isFastpathEnabled)
+        .build();
+    return inputStreamContext;
   }
 
   private void queueReadAheads(AbfsInputStream inputStream) {
@@ -529,28 +570,38 @@ public class TestAbfsInputStream extends
    * @throws Exception
    */
   @Test
+  public void testMockFastpathDiffReadRequestSizeAndRAHBlockSize() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testDiffReadRequestSizeAndRAHBlockSize(true);
+  }
+
+  @Test
   public void testDiffReadRequestSizeAndRAHBlockSize() throws Exception {
+    testDiffReadRequestSizeAndRAHBlockSize(false);
+  }
+
+  public void testDiffReadRequestSizeAndRAHBlockSize(boolean isMockFastpathTest) throws Exception {
     // Set requestRequestSize = 4MB and readAheadBufferSize=8MB
     resetReadBufferManager(FOUR_MB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
-    testReadAheadConfigs(FOUR_MB, TEST_READAHEAD_DEPTH_4, false, EIGHT_MB);
+    testReadAheadConfigs(FOUR_MB, TEST_READAHEAD_DEPTH_4, false, EIGHT_MB, isMockFastpathTest);
 
     // Test for requestRequestSize =16KB and readAheadBufferSize=16KB
     resetReadBufferManager(SIXTEEN_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
     AbfsInputStream inputStream = testReadAheadConfigs(SIXTEEN_KB,
-        TEST_READAHEAD_DEPTH_2, true, SIXTEEN_KB);
+        TEST_READAHEAD_DEPTH_2, true, SIXTEEN_KB, isMockFastpathTest);
     testReadAheads(inputStream, SIXTEEN_KB, SIXTEEN_KB);
 
     // Test for requestRequestSize =16KB and readAheadBufferSize=48KB
     resetReadBufferManager(FORTY_EIGHT_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
     inputStream = testReadAheadConfigs(SIXTEEN_KB, TEST_READAHEAD_DEPTH_2, true,
-        FORTY_EIGHT_KB);
+        FORTY_EIGHT_KB, isMockFastpathTest);
     testReadAheads(inputStream, SIXTEEN_KB, FORTY_EIGHT_KB);
 
     // Test for requestRequestSize =48KB and readAheadBufferSize=16KB
     resetReadBufferManager(FORTY_EIGHT_KB, INCREASED_READ_BUFFER_AGE_THRESHOLD);
     inputStream = testReadAheadConfigs(FORTY_EIGHT_KB, TEST_READAHEAD_DEPTH_2,
-        true,
-        SIXTEEN_KB);
+        true, SIXTEEN_KB, isMockFastpathTest);
     testReadAheads(inputStream, FORTY_EIGHT_KB, SIXTEEN_KB);
   }
 
@@ -593,7 +644,8 @@ public class TestAbfsInputStream extends
   public AbfsInputStream testReadAheadConfigs(int readRequestSize,
       int readAheadQueueDepth,
       boolean alwaysReadBufferSizeEnabled,
-      int readAheadBlockSize) throws Exception {
+      int readAheadBlockSize,
+      boolean isMockFastpathTest) throws Exception {
     Configuration
         config = new Configuration(
         this.getRawConfiguration());
@@ -613,7 +665,10 @@ public class TestAbfsInputStream extends
     final AzureBlobFileSystem fs = createTestFile(testPath,
         ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE, config);
     byte[] byteBuffer = new byte[ONE_MB];
-    AbfsInputStream inputStream = this.getAbfsStore(fs)
+    AbfsInputStream inputStream = isMockFastpathTest
+        ? new MockAbfsInputStream(this.getAbfsClient(fs), this.getAbfsStore(fs)
+        .openFileForRead(testPath, null))
+        : this.getAbfsStore(fs)
         .openFileForRead(testPath, null);
 
     Assertions.assertThat(inputStream.getBufferSize())
@@ -680,14 +735,19 @@ public class TestAbfsInputStream extends
       character = (character == 'z') ? 'a' : (char) ((int) character + 1);
     }
 
+    MockFastpathConnection.unregisterAppend(testFilePath.getName());
+
     try (FSDataOutputStream outputStream = fs.create(testFilePath)) {
       int bytesWritten = 0;
       while (bytesWritten < testFileSize) {
+        MockFastpathConnection.registerAppend((int) testFileSize,
+            testFilePath.getName(), buffer, 0, buffer.length);
         outputStream.write(buffer);
         bytesWritten += buffer.length;
       }
     }
 
+    addToTestTearDownCleanupList(testFilePath.getName());
     Assertions.assertThat(fs.getFileStatus(testFilePath).getLen())
         .describedAs("File not created of expected size")
         .isEqualTo(testFileSize);

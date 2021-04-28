@@ -23,7 +23,10 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.junit.Assume;
 import org.junit.Test;
+
+import com.microsoft.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -184,11 +187,23 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
 
   }
 
+  @Test
+  public void testMockFastpathResponseStatistics() throws IOException {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testResponseStatistics(true);
+  }
+
+  @Test
+  public void testAbfsHttpResponseStatistics() throws IOException {
+    testResponseStatistics(false);
+  }
+
+
   /**
    * Testing get_response and bytes_received in {@link AbfsRestOperation}.
    */
-  @Test
-  public void testAbfsHttpResponseStatistics() throws IOException {
+  public void testResponseStatistics(boolean isMockFastpathTest) throws IOException {
     describe("Test to check correct values of statistics after Http "
         + "Response is processed.");
 
@@ -206,8 +221,11 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     try {
       // Creating a File and writing some bytes in it.
       out = fs.create(getResponsePath);
-      out.write(testResponseString.getBytes());
+      byte[] buff = testResponseString.getBytes();
+      out.write(buff);
       out.hflush();
+      MockFastpathConnection.registerAppend(
+          buff.length, getResponsePath.getName(), buff, 0, buff.length);
 
       // Set metric baseline
       metricMap = fs.getInstrumentationMap();
@@ -218,11 +236,26 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
 
       // --------------------------------------------------------------------
       // Operation: Create AbfsInputStream
-      in = fs.open(getResponsePath);
-      // Network stats calculation: For Creating AbfsInputStream:
-      // 1 GetFileStatus request to fetch file size = 1 connection and 1 get response
-      expectedConnectionsMade++;
-      expectedGetResponses++;
+       in = fs.open(getResponsePath);
+      if (isMockFastpathTest) {
+        // reset counters
+        metricMap = fs.getInstrumentationMap();
+        expectedConnectionsMade = metricMap.get(CONNECTIONS_MADE.getStatName());
+        expectedGetResponses = metricMap.get(CONNECTIONS_MADE.getStatName());
+        expectedBytesReceived = metricMap.get(BYTES_RECEIVED.getStatName());
+        in = openMockAbfsInputStream(fs, in);
+      }
+
+      if (isMockFastpathTest) {
+        expectedConnectionsMade++; // for FastpathOpen
+        expectedGetResponses++;
+      } else {
+        // In case of REST and non-mock fastpath
+        // Network stats calculation: For Creating AbfsInputStream:
+        // 1 GetFileStatus request to fetch file size = 1 connection and 1 get response
+        expectedConnectionsMade++;
+        expectedGetResponses++;
+      }
       // --------------------------------------------------------------------
 
       // Operation: Read
@@ -241,6 +274,8 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, expectedBytesReceived, metricMap);
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
+      MockFastpathConnection.unregisterAppend(
+          getResponsePath.getName());
     }
 
     // --------------------------------------------------------------------
@@ -255,11 +290,16 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // test method testAbfsHttpSendStatistics]
       StringBuilder largeBuffer = new StringBuilder();
       out = fs.create(getResponsePath);
+      byte[] b = testResponseString.getBytes();
 
       for (int i = 0; i < WRITE_OPERATION_LOOP_COUNT; i++) {
         out.write(testResponseString.getBytes());
         out.hflush();
         largeBuffer.append(testResponseString);
+        MockFastpathConnection.registerAppend(
+            WRITE_OPERATION_LOOP_COUNT * (b.length),
+            getResponsePath.getName(), b,
+            0, b.length);
       }
 
       // sync back to metric baseline
@@ -269,10 +309,26 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // --------------------------------------------------------------------
       // Operation: Create AbfsInputStream
       in = fs.open(getResponsePath);
-      // Network stats calculation: For Creating AbfsInputStream:
-      // 1 GetFileStatus for file size = 1 connection and 1 get response
-      expectedConnectionsMade++;
-      expectedGetResponses++;
+      if (isMockFastpathTest) {
+        // reset counters
+        metricMap = fs.getInstrumentationMap();
+        expectedConnectionsMade = metricMap.get(CONNECTIONS_MADE.getStatName());
+        expectedGetResponses = metricMap.get(CONNECTIONS_MADE.getStatName());
+        expectedBytesReceived = metricMap.get(BYTES_RECEIVED.getStatName());
+        in = openMockAbfsInputStream(fs, in);
+      }
+
+      if (isMockFastpathTest) {
+        expectedConnectionsMade++; // for FastpathOpen
+        expectedGetResponses++;
+      } else {
+        // In case of REST and non-mock fastpath
+        // Network stats calculation: For Creating AbfsInputStream:
+        // 1 GetFileStatus request to fetch file size = 1 connection and 1 get response
+        expectedConnectionsMade++;
+        expectedGetResponses++;
+      }
+
       // --------------------------------------------------------------------
 
       // Operation: Read
@@ -292,6 +348,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, expectedBytesReceived, metricMap);
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
+      MockFastpathConnection.unregisterAppend(getResponsePath.getName());
     }
   }
 

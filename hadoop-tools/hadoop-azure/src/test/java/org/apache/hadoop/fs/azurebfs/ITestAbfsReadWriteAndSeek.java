@@ -20,19 +20,27 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.UUID;
 
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import com.microsoft.fastpath.MockFastpathConnection;
+
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
 /**
  * Test read, write and seek.
@@ -41,13 +49,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
  */
 @RunWith(Parameterized.class)
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
-  private static final Path TEST_PATH = new Path("/testfile");
+  private static final String TEST_PATH = new String("/testfile");
 
   @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
     return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE},
         {DEFAULT_READ_BUFFER_SIZE},
         {APPENDBLOB_MAX_WRITE_BUFFER_SIZE},
+        {17 * ONE_MB},
         {MAX_BUFFER_SIZE}});
   }
 
@@ -58,11 +67,19 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
   }
 
   @Test
-  public void testReadAndWriteWithDifferentBufferSizesAndSeek() throws Exception {
-    testReadWriteAndSeek(size);
+  public void testMockFastpathReadWriteWithDiffBuffSizesAndSeek() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testReadWriteAndSeek(size, true);
   }
 
-  private void testReadWriteAndSeek(int bufferSize) throws Exception {
+  @Test
+  public void testReadWriteWithDiffBuffSizesAndSeek() throws Exception {
+    testReadWriteAndSeek(size, false);
+  }
+
+  private void testReadWriteAndSeek(int bufferSize, boolean isMockFastpathTest) throws Exception {
+    Path testPath = new Path(TEST_PATH + UUID.randomUUID().toString());
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
 
@@ -73,20 +90,38 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
 
-    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+    try (FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(b);
     }
 
+    MockFastpathConnection.registerAppend(b.length, testPath.getName(), b, 0, b.length);
+
     final byte[] readBuffer = new byte[2 * bufferSize];
-    int result;
-    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+    int result = -1;
+    boolean errCaseForUnsuppFastpathBuffSize =  ((bufferSize > 16 * ONE_MB) &&
+        (fs.getAbfsStore().getAbfsConfiguration().isFastpathEnabled() ||
+            isMockFastpathTest));
+    try (FSDataInputStream inputStream = isMockFastpathTest
+        ? openMockAbfsInputStream(fs, fs.open(testPath))
+        : fs.open(testPath)) {
       inputStream.seek(bufferSize);
-      result = inputStream.read(readBuffer, bufferSize, bufferSize);
-      assertNotEquals(-1, result);
-      inputStream.seek(0);
-      result = inputStream.read(readBuffer, 0, bufferSize);
+      if (errCaseForUnsuppFastpathBuffSize) {
+        intercept(UnsupportedOperationException.class,
+            ()-> {
+              inputStream.read(readBuffer, bufferSize, bufferSize);
+            });
+      } else {
+        result = inputStream.read(readBuffer, bufferSize, bufferSize);
+        assertNotEquals(-1, result);
+        inputStream.seek(0);
+        result = inputStream.read(readBuffer, 0, bufferSize);
+      }
     }
-    assertNotEquals("data read in final read()", -1, result);
-    assertArrayEquals(readBuffer, b);
+
+    if (!errCaseForUnsuppFastpathBuffSize) {
+      assertNotEquals("data read in final read()", -1, result);
+      assertArrayEquals(readBuffer, b);
+    }
+    MockFastpathConnection.unregisterAppend(testPath.getName());
   }
 }

@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters.Mode;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -55,19 +56,19 @@ import static org.apache.hadoop.util.StringUtils.toLowerCase;
  */
 public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities, IOStatisticsSource {
-  private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
   //  Footer size is set to qualify for both ORC and parquet files
   public static final int FOOTER_SIZE = 16 * ONE_KB;
   public static final int MAX_OPTIMIZED_READ_ATTEMPTS = 2;
 
   private int readAheadBlockSize;
-  private final AbfsClient client;
+  protected final AbfsClient client;
   private final Statistics statistics;
-  private final String path;
+  protected final String path;
   private final long contentLength;
   private final int bufferSize; // default buffer size
   private final int readAheadQueueDepth;         // initialized in constructor
-  private final String eTag;                  // eTag of the path when InputStream are created
+  protected final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
   private final boolean alwaysReadBufferSize;
@@ -108,6 +109,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
 
+  private boolean isFastPathEnabled = false;
+  protected String fastpathFileHandle = null;
+
   public AbfsInputStream(
           final AbfsClient client,
           final Statistics statistics,
@@ -137,9 +141,32 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
     ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
+    isFastPathEnabled = abfsInputStreamContext.isFastpathEnabled() ?  checkFastpathStatus() : false;
     if (streamStatistics != null) {
       ioStatistics = streamStatistics.getIOStatistics();
     }
+  }
+
+  @VisibleForTesting
+  protected boolean checkFastpathStatus() {
+    try {
+      AbfsRestOperation op;
+      op = executeFastpathOpen(path, eTag);
+
+      this.fastpathFileHandle = op.getFastpathFileHandle();
+      LOG.debug("Fastpath handled opened {}", this.fastpathFileHandle);
+    } catch (AzureBlobFileSystemException e) {
+      LOG.debug("Fastpath status check (Fastpath open) failed with {}", e);
+      return false;
+    }
+
+    return true;
+  }
+
+  @VisibleForTesting
+  protected AbfsRestOperation executeFastpathOpen(String path, String eTag)
+      throws AzureBlobFileSystemException {
+    return client.fastPathOpen(path, eTag);
   }
 
   public String getPath() {
@@ -463,7 +490,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
   }
 
-  int readRemote(long position, byte[] b, int offset, int length) throws IOException {
+  protected int readRemote(long position, byte[] b, int offset, int length) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
@@ -487,12 +514,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       ReadRequestParameters reqParams = new ReadRequestParameters(
-          ReadRequestParameters.Mode.HTTP_CONNECTION_MODE,
+          (isFastPathEnabled ? Mode.FASTPATH_CONNECTION_MODE : Mode.HTTP_CONNECTION_MODE),
           position, offset, length,
-          tolerateOobAppends ? "*" : eTag);
+          tolerateOobAppends ? "*" : eTag,
+          fastpathFileHandle, isOnRESTFallback());
       op = IOStatisticsBinding.trackDuration((IOStatisticsStore) ioStatistics,
           StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
-          () -> client.read(path, b, cachedSasToken.get(), reqParams));
+          () -> executeRead(path, b, cachedSasToken.get(), reqParams));
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();
@@ -520,6 +548,18 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("HTTP request read bytes = {}", bytesRead);
     bytesFromRemoteRead += bytesRead;
     return (int) bytesRead;
+  }
+
+  @VisibleForTesting
+  protected AbfsRestOperation executeRead(String path, byte[] b, String sasToken, ReadRequestParameters reqParam)
+      throws AzureBlobFileSystemException {
+    return client.read(path, b, sasToken, reqParam);
+  }
+
+  private boolean isOnRESTFallback() {
+    // a non null fastpathFileHandle means Fastpath open was successful
+    // but if flag isFastpathEnabled false, it means REST fallback was triggered
+    return ((fastpathFileHandle != null) && !isFastPathEnabled);
   }
 
   /**
@@ -654,9 +694,24 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public synchronized void close() throws IOException {
+    try {
+      if (fastpathFileHandle != null) {
+        executeFastpathClose(path, eTag, fastpathFileHandle);
+      }
+    } catch (Exception ex) {
+      // no failure handling required, ignore
+      LOG.debug("Fastpath close failed {} ", ex);
+    }
+
     closed = true;
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
     LOG.debug("Closing {}", this);
+  }
+
+  @VisibleForTesting
+  protected AbfsRestOperation executeFastpathClose(String path, String eTag, String fastpathFileHandle)
+      throws AzureBlobFileSystemException {
+    return client.fastPathClose(path, eTag, fastpathFileHandle);
   }
 
   /**
@@ -794,4 +849,18 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   long getLimit() {
     return this.limit;
   }
+
+  @VisibleForTesting
+  long getContentLength() {
+    return this.contentLength;
+  }
+
+  @VisibleForTesting
+  AbfsInputStreamContext getContext() { return this.context; }
+
+  @VisibleForTesting
+  String getETag() { return this.eTag; }
+
+  @VisibleForTesting
+  Statistics getFSStatistics() { return this.statistics; }
 }

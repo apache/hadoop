@@ -20,7 +20,11 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
 
+import org.junit.After;
+import org.junit.Assume;
 import org.junit.Test;
+
+import com.microsoft.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -36,12 +40,31 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   public ITestFileSystemProperties() throws Exception {
   }
 
+  @After
+  public void tearDown() throws Exception {
+    super.teardown();
+    deleteMockFastpathFiles();
+  }
+
+  @Test
+  public void testMockFastpathReadWriteBytesToFileAndEnsureThreadPoolCleanup() throws Exception {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testReadWriteBytesToFileAndEnsureThreadPoolCleanup(true);
+  }
+
   @Test
   public void testReadWriteBytesToFileAndEnsureThreadPoolCleanup() throws Exception {
+    testReadWriteBytesToFileAndEnsureThreadPoolCleanup(false);
+  }
+
+  public void testReadWriteBytesToFileAndEnsureThreadPoolCleanup(boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     testWriteOneByteToFileAndEnsureThreadPoolCleanup();
 
-    try(FSDataInputStream inputStream = fs.open(TEST_PATH, 4 * 1024 * 1024)) {
+    try(FSDataInputStream inputStream = isMockFastpathTest
+        ? openMockAbfsInputStream(fs, TEST_PATH)
+        : fs.open(TEST_PATH, 4 * 1024 * 1024)) {
       int i = inputStream.read();
       assertEquals(TEST_DATA, i);
     }
@@ -54,6 +77,10 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
       stream.write(TEST_DATA);
     }
 
+    byte[] buffer = new byte[]{(byte) (TEST_DATA & 0xFF)};
+    MockFastpathConnection.registerAppend(buffer.length, TEST_PATH.getName(),
+        buffer, 0, buffer.length);
+    addToTestTearDownCleanupList(TEST_PATH);
     FileStatus fileStatus = fs.getFileStatus(TEST_PATH);
     assertEquals(1, fileStatus.getLen());
   }

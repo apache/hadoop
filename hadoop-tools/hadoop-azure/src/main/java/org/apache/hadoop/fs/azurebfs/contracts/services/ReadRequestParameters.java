@@ -23,7 +23,8 @@ package org.apache.hadoop.fs.azurebfs.contracts.services;
  */
 public class ReadRequestParameters {
   public enum Mode {
-    HTTP_CONNECTION_MODE
+    HTTP_CONNECTION_MODE,
+    FASTPATH_CONNECTION_MODE
   }
 
   private final long storeFilePosition;
@@ -31,17 +32,23 @@ public class ReadRequestParameters {
   private final int readLength;
   private ReadRequestParameters.Mode mode;
   private final String eTag;
+  private final String fastpathFileHandle;
+  private boolean isRESTFallback;
 
   public ReadRequestParameters(final ReadRequestParameters.Mode mode,
       final long storeFilePosition,
       final int bufferOffset,
       final int readLength,
-      final String eTag) {
+      final String eTag,
+      final String fastpathFileHandle,
+      final boolean isRESTFallback) {
     this.mode = mode;
     this.storeFilePosition = storeFilePosition;
     this.bufferOffset = bufferOffset;
     this.readLength = readLength;
     this.eTag = eTag;
+    this.fastpathFileHandle = fastpathFileHandle;
+    this.isRESTFallback = isRESTFallback;
   }
 
   public long getStoreFilePosition() {
@@ -57,13 +64,24 @@ public class ReadRequestParameters {
   }
 
   public String getETag() {
-    return eTag;
+    return this.eTag;
   }
 
   public ReadRequestParameters.Mode getMode() {
     return this.mode;
   }
 
+  public String getFastpathFileHandle() {
+    return this.fastpathFileHandle;
+  }
+
+  public boolean isRESTFallback() {
+    return this.isRESTFallback;
+  }
+
+  public void setRESTFallback(final boolean RESTFallback) {
+    this.isRESTFallback = RESTFallback;
+  }
   public void setMode(final Mode mode) {
     this.mode = mode;
   }

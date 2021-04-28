@@ -42,4 +42,7 @@ public enum AbfsRestOperationType {
     DeletePath,
     CheckAccess,
     LeasePath,
+    FastpathOpen,
+    FastpathRead,
+    FastpathClose
 }

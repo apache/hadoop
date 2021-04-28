@@ -52,6 +52,7 @@ public final class FileSystemConfigurations {
 
   public static final int ONE_KB = 1024;
   public static final int ONE_MB = ONE_KB * ONE_KB;
+  public static final int FOUR_MB = 4 * ONE_MB;
 
   // Default upload and download buffer size
   public static final int DEFAULT_WRITE_BUFFER_SIZE = 8 * ONE_MB;  // 8 MB
@@ -110,6 +111,7 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS = 5 * 60 * 1000; // 5 mins
 
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
+  public static final boolean DEFAULT_FASTPATH_ENABLE = false;
 
   private FileSystemConfigurations() {}
 }

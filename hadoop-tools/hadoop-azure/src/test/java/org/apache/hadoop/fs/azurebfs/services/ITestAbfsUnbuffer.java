@@ -20,7 +20,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
+import org.junit.After;
+import org.junit.Assume;
 import org.junit.Test;
+
+import com.microsoft.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -47,12 +51,33 @@ public class ITestAbfsUnbuffer extends AbstractAbfsIntegrationTest {
     byte[] data = ContractTestUtils.dataset(16, 'a', 26);
     ContractTestUtils.writeDataset(getFileSystem(), dest, data, data.length,
             16, true);
+    MockFastpathConnection.registerAppend(data.length, dest.getName(), data, 0,
+        data.length);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    super.teardown();
+    MockFastpathConnection.unregisterAppend(dest.getName());
+  }
+
+  @Test
+  public void testMockFastpathUnbuffer() throws IOException {
+    // Run mock test only if feature is set to off
+    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
+    testUnbuffer(true);
   }
 
   @Test
   public void testUnbuffer() throws IOException {
+    testUnbuffer(false);
+  }
+
+  public void testUnbuffer(boolean isMockFastpathTest) throws IOException {
     // Open file, read half the data, and then call unbuffer
-    try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
+    try (FSDataInputStream inputStream = isMockFastpathTest
+        ? openMockAbfsInputStream(getFileSystem(), dest)
+        : getFileSystem().open(dest)) {
       assertTrue("unexpected stream type "
               + inputStream.getWrappedStream().getClass().getSimpleName(),
               inputStream.getWrappedStream() instanceof AbfsInputStream);
