@@ -747,7 +747,7 @@ public class TestSequenceFile {
       LongWritable key = new LongWritable();
       key.set(1);
       Text value = new Text();
-      value.set("value");
+      value.set("somevalue");
       writer.append(key, value);
       writer.flush();
       writer.hflush();
