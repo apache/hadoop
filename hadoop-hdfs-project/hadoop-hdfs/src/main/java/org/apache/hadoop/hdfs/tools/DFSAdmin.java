@@ -1288,9 +1288,10 @@ public class DFSAdmin extends FsShell {
     String disallowSnapshot = "-disallowSnapshot <snapshotDir>:\n" +
         "\tDo not allow snapshots to be taken on a directory any more.\n";
 
-    String provisionSnapshotTrash = "-provisionSnapshotTrash <snapshotDir> [-all]:\n" +
-        "\tProvision trash root in one or all snapshottable directories. Trash permission"
-        + "\t" + HdfsAdmin.TRASH_PERMISSION + ".\n";
+    String provisionSnapshotTrash =
+        "-provisionSnapshotTrash <snapshotDir> [-all]:\n"
+        + "\tProvision trash root in one or all snapshottable directories."
+        + "\tTrash permission is " + HdfsAdmin.TRASH_PERMISSION + ".\n";
 
     String shutdownDatanode = "-shutdownDatanode <datanode_host:ipc_port> [upgrade]\n"
         + "\tSubmit a shutdown request for the given datanode. If an optional\n"
