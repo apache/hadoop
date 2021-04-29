@@ -1,13 +1,13 @@
 import json
 
 try:
-    with open('/opt/metadata/nodeinfo.json') as nodeInfoFile:
-        nodeInfo = json.load(nodeInfoFile)
+    with open('/opt/metadata/node.json') as nodeFile:
+        node = json.load(nodeFile)
 
-    attributes = nodeInfo['attributes']
+    attributes = node['attributes']
     yarn = attributes['YARN']
 
-    hostGroupName = nodeInfo['hostGroup']
+    hostGroupName = node['hostGroup']
 
     print("NODE_ATTRIBUTE:HostGroup,STRING," + hostGroupName)
 
@@ -15,7 +15,7 @@ try:
         print("NODE_ATTRIBUTE:" + i + ",STRING," + yarn[i])
 
 except IOError:
-    print("nodeinfo.json file does not exist!")
+    print("node.json file does not exist!")
 
 except ValueError:
     print("Not in JSON Format!")
