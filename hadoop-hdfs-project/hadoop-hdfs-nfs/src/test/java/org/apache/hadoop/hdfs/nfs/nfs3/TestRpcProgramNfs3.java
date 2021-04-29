@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 
+import io.netty.channel.Channel;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -92,7 +93,6 @@ import org.apache.hadoop.oncrpc.security.SecurityHandler;
 import org.apache.hadoop.security.IdMappingConstant;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.jboss.netty.channel.Channel;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
