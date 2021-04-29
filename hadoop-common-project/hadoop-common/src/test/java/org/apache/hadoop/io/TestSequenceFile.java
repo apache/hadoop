@@ -734,15 +734,16 @@ public class TestSequenceFile {
   @Test
   public void testSequenceFileWriter() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
-    Path p = new Path(GenericTestUtils.getTempPath("testSequenceFileWriter.seq"));
+    Path p = new Path(GenericTestUtils
+      .getTempPath("testSequenceFileWriter.seq"));
     try(SequenceFile.Writer writer = SequenceFile.createWriter(
-            fs, conf, p, NullWritable.class, NullWritable.class)) {
+            fs, conf, p, LongWritable.class, Text.class)) {
 
       LongWritable key = new LongWritable();
       key.set(1);
       Text value = new Text();
       value.set("value");
-      writer.append(key,value);
+      writer.append(key, value);
       writer.hflush();
       writer.hsync();
       Assertions.assertThat(fs.getFileStatus(p).getLen()).isGreaterThan(0);
