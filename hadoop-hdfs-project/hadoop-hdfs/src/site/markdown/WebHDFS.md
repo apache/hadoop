@@ -463,6 +463,10 @@ See also: [`destination`](#Destination), [FileSystem](../../api/org/apache/hadoo
         curl -i -X DELETE "http://<host>:<port>/webhdfs/v1/<path>?op=DELETE
                                       [&recursive=<true|false>][&skiptrash=<true|false>]"
 
+    Default values of queryparams if not provided:
+    1. recursive: false
+    2. skiptrash: false
+
     The client receives a response with a [`boolean` JSON object](#Boolean_JSON_Schema):
 
         HTTP/1.1 200 OK
