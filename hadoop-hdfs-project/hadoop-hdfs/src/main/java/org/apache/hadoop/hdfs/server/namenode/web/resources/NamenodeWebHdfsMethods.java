@@ -1530,9 +1530,10 @@ public class NamenodeWebHdfsMethods {
           final String js = JsonUtil.toJsonString("boolean", true);
           return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
         }
-        // Same is the behavior with rm command. If moveToAppropriateTrash()
-        // returns false, file deletion is attempted.
-        LOG.error("Could not move {} to Trash, attempting removal", fullpath);
+        // Same is the behavior with Delete shell command.
+        // If moveToAppropriateTrash() returns false, file deletion
+        // is attempted rather than throwing Error.
+        LOG.debug("Could not move {} to Trash, attempting removal", fullpath);
       }
       final boolean b = cp.delete(fullpath, recursive.getValue());
       final String js = JsonUtil.toJsonString("boolean", b);

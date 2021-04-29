@@ -53,6 +53,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.apache.hadoop.fs.permission.FsCreateModes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -74,6 +76,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.HTTP_BUFFER_SIZE_DEFAULT;
  */
 @InterfaceAudience.Private
 public final class FSOperations {
+
+  private static final Logger LOG = LoggerFactory.getLogger(FSOperations.class);
 
   private static int bufferSize = 4096;
 
@@ -755,6 +759,10 @@ public final class FSOperations {
           return toJSON(
               StringUtils.toLowerCase(HttpFSFileSystem.DELETE_JSON), true);
         }
+        // Same is the behavior with Delete shell command.
+        // If moveToAppropriateTrash() returns false, file deletion
+        // is attempted rather than throwing Error.
+        LOG.debug("Could not move {} to Trash, attempting removal", path);
       }
       boolean deleted = fs.delete(path, recursive);
       HttpFSServerWebApp.get().getMetrics().incrOpsDelete();
