@@ -2231,4 +2231,12 @@
   </description>
 </property>
 
+  <property>
+    <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+    <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+    <description>
+      The default committer factory for ABFS is for the manifest committer.
+    </description>
+  </property>
+
 </configuration>
