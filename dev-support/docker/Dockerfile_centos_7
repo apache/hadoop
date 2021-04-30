@@ -24,18 +24,19 @@ WORKDIR /root
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN yum makecache -q -y \
+    && yum update -y \
+    && yum install -y centos-release-scl \
+    && yum install -y devtoolset-9 \
     && yum install -y \
     ant \
     bats \
     build-essential \
     bzip2 \
     clang \
-    cmake \
     curl \
+    dnf \
     doxygen \
     fuse \
-    g++ \
-    gcc \
     git \
     gnupg-agent \
     hugo \
@@ -47,12 +48,10 @@ RUN yum makecache -q -y \
     libprotoc-dev \
     libsasl2-dev \
     libsnappy-dev \
-    libssl-dev \
     libtool \
     libzstd-dev \
     locales \
     make \
-    maven \
     nodejs \
     node-yarn \
     npm \
@@ -70,4 +69,110 @@ RUN yum makecache -q -y \
     software-properties-common \
     sudo \
     valgrind \
-    zlib1g-dev
+    zlib1g-dev \
+    dos2unix \
+    vim
+
+RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
+SHELL ["/bin/bash", "--login", "-c"]
+RUN gcc --version
+
+RUN dnf install -y \
+    libtirpc-devel \
+    zlib-devel \
+    lz4-devel \
+    bzip2-devel \
+    openssl-devel \
+    cyrus-sasl-devel \
+    libpmem-devel
+
+
+####
+# Install Maven 3.6.3
+####
+RUN mkdir -p /opt/maven \
+    && cd /tmp \
+    && curl -L -s -S https://mirrors.estointernet.in/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
+        -o apache-maven-3.6.3-bin.tar.gz \
+    && tar xvf apache-maven-3.6.3-bin.tar.gz \
+    && mv apache-maven-3.6.3 /opt/maven
+
+####
+# Install CMake 3.19
+####
+RUN cd /tmp \
+    && curl -L -s -S https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz -o cmake-3.19.0.tar.gz \
+    && tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0 \
+    && ./bootstrap \
+    && make -j$(nproc) \
+    && make install
+
+######
+# Set env vars required to build Hadoop
+######
+ENV MAVEN_HOME /opt/maven/apache-maven-3.6.3
+ENV PATH "${PATH}:${MAVEN_HOME}/bin"
+# JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
+ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
+
+#######
+# Install SpotBugs 4.2.2
+#######
+RUN mkdir -p /opt/spotbugs \
+    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.2.2/spotbugs-4.2.2.tgz \
+      -o /opt/spotbugs.tgz \
+    && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
+    && chmod +x /opt/spotbugs/bin/*
+ENV SPOTBUGS_HOME /opt/spotbugs
+
+#######
+# Install Boost 1.72 (1.71 ships with Focal)
+#######
+# hadolint ignore=DL3003
+RUN mkdir -p /opt/boost-library \
+    && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
+    && mv boost_1_72_0.tar.bz2 /opt/boost-library \
+    && cd /opt/boost-library \
+    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
+    && cd /opt/boost-library/boost_1_72_0 \
+    && ./bootstrap.sh --prefix=/usr/ \
+    && ./b2 --without-python install \
+    && cd /root \
+    && rm -rf /opt/boost-library
+
+######
+# Install Google Protobuf 3.7.1 (3.6.1 ships with Focal)
+######
+# hadolint ignore=DL3003
+RUN mkdir -p /opt/protobuf-src \
+    && curl -L -s -S \
+      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
+      -o /opt/protobuf.tar.gz \
+    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
+    && cd /opt/protobuf-src \
+    && ./configure --prefix=/opt/protobuf \
+    && make "-j$(nproc)" \
+    && make install \
+    && cd /root \
+    && rm -rf /opt/protobuf-src
+ENV PROTOBUF_HOME /opt/protobuf
+ENV PATH "${PATH}:/opt/protobuf/bin"
+
+####
+# Install pylint and python-dateutil
+####
+RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
+
+####
+# Install bower
+####
+# hadolint ignore=DL3008
+#RUN npm install -g bower@1.8.8
+
+####
+# Build Hadoop
+####
+RUN git clone https://github.com/apache/hadoop.git \
+    && cd hadoop \
+    && mvn package -DskipTests -Pnative,dist -Dtar \
+    && cd /root
