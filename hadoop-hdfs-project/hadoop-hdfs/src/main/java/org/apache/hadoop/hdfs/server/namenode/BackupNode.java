@@ -277,6 +277,7 @@ public class BackupNode extends NameNode {
     public void startLogSegment(JournalInfo journalInfo, long epoch,
         long txid) throws IOException {
       namesystem.checkOperation(OperationCategory.JOURNAL);
+      namesystem.checkSuperuserPrivilege("startLogSegment");
       verifyJournalRequest(journalInfo);
       getBNImage().namenodeStartedLogSegment(txid);
     }
@@ -285,6 +286,7 @@ public class BackupNode extends NameNode {
     public void journal(JournalInfo journalInfo, long epoch, long firstTxId,
         int numTxns, byte[] records) throws IOException {
       namesystem.checkOperation(OperationCategory.JOURNAL);
+      namesystem.checkSuperuserPrivilege("journal");
       verifyJournalRequest(journalInfo);
       getBNImage().journal(firstTxId, numTxns, records);
     }
