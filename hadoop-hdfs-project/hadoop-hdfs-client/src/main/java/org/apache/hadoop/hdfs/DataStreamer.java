@@ -913,7 +913,9 @@ class DataStreamer extends Daemon {
                     + "File being written: {}, block: {}, "
                     + "Write pipeline datanodes: {}.",
                     duration, writeTimeout, src, block, nodes);
-                throw new InterruptedIOException("No ack received. ");
+                throw new InterruptedIOException("No ack received after " +
+                    duration / 1000 + "s and a timeout of " +
+                    writeTimeout / 1000 + "s");
               }
               // dataQueue
             } catch (InterruptedException ie) {
