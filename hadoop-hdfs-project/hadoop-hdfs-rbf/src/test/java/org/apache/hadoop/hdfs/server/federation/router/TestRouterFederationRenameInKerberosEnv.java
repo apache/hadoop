@@ -186,9 +186,6 @@ public class TestRouterFederationRenameInKerberosEnv
     // Create test fixtures on NN
     cluster.createTestDirectoriesNamenode();
 
-    // Wait to ensure NN has fully created its test directories
-    Thread.sleep(100);
-
     // Random router for this test
     RouterContext rndRouter = cluster.getRandomRouter();
     setRouter(rndRouter);
