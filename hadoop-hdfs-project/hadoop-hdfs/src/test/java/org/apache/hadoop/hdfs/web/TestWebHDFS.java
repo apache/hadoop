@@ -1644,7 +1644,7 @@ public class TestWebHDFS {
     url = new URL("http", addr.getHostString(), addr.getPort(),
         WebHdfsFileSystem.PATH_PREFIX + "/testWebHdfsNoRedirect" + "?op=DELETE"
             + Param.toSortedString("&", new RecursiveParam(true))
-            + Param.toSortedString("&", new DeleteSkipTrashParam(true)));
+            + Param.toSortedString("&", new DeleteSkipTrashParam(false)));
     LOG.info("Sending append request " + url);
     checkResponseContainsLocation(url, "DELETE");
   }
