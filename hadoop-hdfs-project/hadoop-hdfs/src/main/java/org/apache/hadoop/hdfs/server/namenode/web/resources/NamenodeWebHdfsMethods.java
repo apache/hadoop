@@ -55,8 +55,10 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1565,8 +1567,12 @@ public class NamenodeWebHdfsMethods {
             FS_TRASH_INTERVAL_KEY, trashInterval, fullpath);
         org.apache.hadoop.fs.Path path =
             new org.apache.hadoop.fs.Path(fullpath);
-        boolean movedToTrash = ((NameNode) context.getAttribute("name.node"))
-            .moveToTrash(path);
+        Configuration clonedConf = new Configuration(conf);
+        // To avoid caching FS objects and prevent OOM issues
+        clonedConf.set("fs.hdfs.impl.disable.cache", "true");
+        FileSystem fs = FileSystem.get(clonedConf);
+        boolean movedToTrash = Trash.moveToAppropriateTrash(fs, path,
+            clonedConf);
         if (movedToTrash) {
           final String js = JsonUtil.toJsonString("boolean", true);
           return Response.ok(js).type(MediaType.APPLICATION_JSON).build();

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -415,7 +414,6 @@ public class NameNode extends ReconfigurableBase implements
   /** httpServer */
   protected NameNodeHttpServer httpServer;
   private Thread emptier;
-  private Trash trash;
   /** only used for testing purposes  */
   protected boolean stopRequested = false;
   /** Registration information of this name-node  */
@@ -933,8 +931,7 @@ public class NameNode extends ReconfigurableBase implements
             return dfs;
           }
         });
-    this.trash = new Trash(fs, conf);
-    this.emptier = new Thread(this.trash.getEmptier(), "Trash Emptier");
+    this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);
     this.emptier.start();
   }
@@ -2383,21 +2380,6 @@ public class NameNode extends ReconfigurableBase implements
     }
     FSImageFormatProtobuf.refreshParallelSaveAndLoad(enableParallelLoad);
     return Boolean.toString(enableParallelLoad);
-  }
-
-  // To be used by NamenodeWebHdfsMethods only
-  public boolean moveToTrash(Path path) {
-    if (this.trash != null) {
-      try {
-        return this.trash.moveToTrash(path);
-      } catch (IOException e) {
-        LOG.error("Something went wrong while moving {} to trash", path, e);
-        return false;
-      }
-    }
-    LOG.debug("Trash emptier thread is not initialized. Set positive value"
-        + " for config: {}", FS_TRASH_INTERVAL_KEY);
-    return false;
   }
 
   @Override  // ReconfigurableBase
