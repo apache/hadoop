@@ -90,27 +90,27 @@ RUN dnf install -y \
 ####
 # Install Maven 3.6.3
 ####
-RUN mkdir -p /opt/maven \
-    && cd /tmp \
+RUN mkdir -p /opt/maven /tmp/maven \
     && curl -L -s -S https://mirrors.estointernet.in/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
-        -o apache-maven-3.6.3-bin.tar.gz \
-    && tar xvf apache-maven-3.6.3-bin.tar.gz \
-    && mv apache-maven-3.6.3 /opt/maven
+        -o /tmp/maven/apache-maven-3.6.3-bin.tar.gz \
+    && tar xzf /tmp/maven/apache-maven-3.6.3-bin.tar.gz --strip-components 1 -C /opt/maven
 
 ####
 # Install CMake 3.19
 ####
-RUN cd /tmp \
-    && curl -L -s -S https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz -o cmake-3.19.0.tar.gz \
-    && tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0 \
-    && ./bootstrap \
-    && make -j$(nproc) \
+# hadolint ignore=DL3003
+RUN mkdir -p /tmp/cmake /opt/cmake \
+    && curl -L -s -S https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz -o /tmp/cmake/cmake-3.19.0.tar.gz \
+    && tar xzf /tmp/cmake/cmake-3.19.0.tar.gz --strip-components 1 -C /opt/cmake \
+    && cd /opt/cmake && ./bootstrap \
+    && make "-j$(nproc)" \
     && make install
+    && cd /root
 
 ######
 # Set env vars required to build Hadoop
 ######
-ENV MAVEN_HOME /opt/maven/apache-maven-3.6.3
+ENV MAVEN_HOME /opt/maven
 ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
