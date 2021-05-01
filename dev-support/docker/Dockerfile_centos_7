@@ -168,13 +168,3 @@ RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 ####
 # hadolint ignore=DL3008
 #RUN npm install -g bower@1.8.8
-
-####
-# Build Hadoop
-####
-# hadolint ignore=DL3003
-# hadolint ignore=SC2164
-RUN git clone https://github.com/apache/hadoop.git \
-    && cd hadoop \
-    && mvn package -DskipTests -Pnative,dist -Dtar \
-    && cd /root
