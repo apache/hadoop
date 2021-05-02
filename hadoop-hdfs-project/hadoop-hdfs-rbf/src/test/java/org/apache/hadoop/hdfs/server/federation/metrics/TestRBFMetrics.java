@@ -374,12 +374,12 @@ public class TestRBFMetrics extends TestMetricsBase {
     }
 
     // for local cache update
-    assertEquals(bean.getTotalCapacityBigInt(), totalCapacity);
+    assertEquals(totalCapacity, bean.getTotalCapacityBigInt());
     // not equal since overflow happened.
-    assertNotEquals(BigInteger.valueOf(bean.getTotalCapacity()), totalCapacity);
-    assertEquals(bean.getRemainingCapacityBigInt(), availableCapacity);
+    assertNotEquals(totalCapacity, BigInteger.valueOf(bean.getTotalCapacity()));
+    assertEquals(availableCapacity, bean.getRemainingCapacityBigInt());
     // not equal since overflow happened.
-    assertNotEquals(
-        BigInteger.valueOf(bean.getRemainingCapacity()), availableCapacity);
+    assertNotEquals(availableCapacity,
+        BigInteger.valueOf(bean.getRemainingCapacity()));
   }
 }
