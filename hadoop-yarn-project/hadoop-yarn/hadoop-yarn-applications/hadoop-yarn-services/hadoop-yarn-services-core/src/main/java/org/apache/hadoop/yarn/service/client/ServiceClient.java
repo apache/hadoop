@@ -27,7 +27,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
-import org.apache.curator.shaded.com.google.common.io.Files;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -117,6 +116,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1140,7 +1140,10 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       return;
     }
     String buffer = ServiceApiUtil.jsonSerDeser.toJson(app);
-    File tmpDir = Files.createTempDir();
+    File testDir =
+        new File(System.getProperty("java.io.tmpdir"));
+    File tmpDir = Files.createTempDirectory(
+        testDir.toPath(), System.currentTimeMillis() + "-").toFile();
     if (tmpDir.exists()) {
       String serviceJsonPath = tmpDir.getAbsolutePath() + "/app.json";
       File localFile = new File(serviceJsonPath);
