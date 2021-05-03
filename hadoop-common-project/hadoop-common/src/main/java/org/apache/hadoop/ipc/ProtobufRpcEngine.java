@@ -123,15 +123,15 @@ public class ProtobufRpcEngine implements RpcEngine {
   }
 
   protected static class Invoker implements RpcInvocationHandler {
-    protected final Map<String, Message> returnTypes =
+    private final Map<String, Message> returnTypes = 
         new ConcurrentHashMap<String, Message>();
-    protected boolean isClosed = false;
-    protected final Client.ConnectionId remoteId;
-    protected final Client client;
-    protected final long clientProtocolVersion;
-    protected final String protocolName;
-    protected AtomicBoolean fallbackToSimpleAuth;
-    protected AlignmentContext alignmentContext;
+    private boolean isClosed = false;
+    private final Client.ConnectionId remoteId;
+    private final Client client;
+    private final long clientProtocolVersion;
+    private final String protocolName;
+    private AtomicBoolean fallbackToSimpleAuth;
+    private AlignmentContext alignmentContext;
 
     protected Invoker(Class<?> protocol, InetSocketAddress addr,
         UserGroupInformation ticket, Configuration conf, SocketFactory factory,
@@ -334,6 +334,14 @@ public class ProtobufRpcEngine implements RpcEngine {
     @Override //RpcInvocationHandler
     public ConnectionId getConnectionId() {
       return remoteId;
+    }
+
+    protected long getClientProtocolVersion() {
+      return clientProtocolVersion;
+    }
+
+    protected String getProtocolName() {
+      return protocolName;
     }
   }
 
