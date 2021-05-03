@@ -186,6 +186,7 @@ public class TestRouterRpc {
   private NamenodeProtocol routerNamenodeProtocol;
   /** NameNodeProtocol interface to the Namenode. */
   private NamenodeProtocol nnNamenodeProtocol;
+  private NamenodeProtocol nnNamenodeProtocol1;
 
   /** Filesystem interface to the Router. */
   private FileSystem routerFS;
@@ -367,6 +368,11 @@ public class TestRouterRpc {
     NamenodeContext nn0 = cluster.getNamenode(ns0, null);
     this.nnNamenodeProtocol = NameNodeProxies.createProxy(nn0.getConf(),
         nn0.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
+    // Namenode from the other namespace
+    String ns1 = cluster.getNameservices().get(1);
+    NamenodeContext nn1 = cluster.getNamenode(ns1, null);
+    this.nnNamenodeProtocol1 = NameNodeProxies.createProxy(nn1.getConf(),
+        nn1.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
   }
 
   protected String getNs() {
@@ -1303,30 +1309,14 @@ public class TestRouterRpc {
       // Check with default namespace specified.
       NamespaceInfo rVersion = routerNamenodeProtocol.versionRequest();
       NamespaceInfo nnVersion = nnNamenodeProtocol.versionRequest();
+      NamespaceInfo nnVersion1 = nnNamenodeProtocol1.versionRequest();
       compareVersion(rVersion, nnVersion);
       // Check with default namespace unspecified.
       resolver.setDisableNamespace(true);
-
-      // get version from nn1
-      final String ns1 = cluster.getNameservices().get(1);
-      final NamenodeContext nn1 = cluster.getNamenode(ns1, null);
-      final NamenodeProtocol nn1NamenodeProtocol = NameNodeProxies.createProxy(
-          nn1.getConf(), nn1.getFileSystem().getUri(), NamenodeProtocol.class)
-          .getProxy();
-      final NamespaceInfo nn1Version = nn1NamenodeProtocol.versionRequest();
-
-      // Verify the version is of nn0 or nn1
-      rVersion = routerNamenodeProtocol.versionRequest();
-      assertThat(rVersion.getBlockPoolID()).isIn(
-          nnVersion.getBlockPoolID(), nn1Version.getBlockPoolID());
-      assertThat(rVersion.getNamespaceID()).isIn(
-          nnVersion.getNamespaceID(), nn1Version.getNamespaceID());
-      assertThat(rVersion.getClusterID()).isIn(
-          nnVersion.getClusterID(), nn1Version.getClusterID());
-      assertThat(rVersion.getLayoutVersion()).isIn(
-          nnVersion.getLayoutVersion(), nn1Version.getLayoutVersion());
-      assertThat(rVersion.getCTime()).isIn(
-          nnVersion.getCTime(), nn1Version.getCTime());
+      // Verify the NamespaceInfo is of nn0 or nn1
+      boolean isNN0 =
+          rVersion.getBlockPoolID().equals(nnVersion.getBlockPoolID());
+      compareVersion(rVersion, isNN0 ? nnVersion : nnVersion1);
     } finally {
       resolver.setDisableNamespace(false);
     }
@@ -1395,21 +1385,13 @@ public class TestRouterRpc {
       // Check with default namespace specified.
       long routerTransactionID = routerNamenodeProtocol.getTransactionID();
       long nnTransactionID = nnNamenodeProtocol.getTransactionID();
+      long nnTransactionID1 = nnNamenodeProtocol1.getTransactionID();
       assertEquals(nnTransactionID, routerTransactionID);
       // Check with default namespace unspecified.
       resolver.setDisableNamespace(true);
-
-      // get transaction ID from nn1
-      final String ns1 = cluster.getNameservices().get(1);
-      final NamenodeContext nn1 = cluster.getNamenode(ns1, null);
-      final NamenodeProtocol nn1NamenodeProtocol = NameNodeProxies.createProxy(
-          nn1.getConf(), nn1.getFileSystem().getUri(), NamenodeProtocol.class)
-          .getProxy();
-      final long nn1TransactionID = nn1NamenodeProtocol.getTransactionID();
-
       // Verify the transaction ID is of nn0 or nn1
       routerTransactionID = routerNamenodeProtocol.getTransactionID();
-      assertThat(routerTransactionID).isIn(nnTransactionID, nn1TransactionID);
+      assertThat(routerTransactionID).isIn(nnTransactionID, nnTransactionID1);
     } finally {
       resolver.setDisableNamespace(false);
     }
