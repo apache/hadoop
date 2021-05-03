@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFi
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST_STRING;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1305,8 +1306,27 @@ public class TestRouterRpc {
       compareVersion(rVersion, nnVersion);
       // Check with default namespace unspecified.
       resolver.setDisableNamespace(true);
+
+      // get version from nn1
+      final String ns1 = cluster.getNameservices().get(1);
+      final NamenodeContext nn1 = cluster.getNamenode(ns1, null);
+      final NamenodeProtocol nn1NamenodeProtocol = NameNodeProxies.createProxy(
+          nn1.getConf(), nn1.getFileSystem().getUri(), NamenodeProtocol.class)
+          .getProxy();
+      final NamespaceInfo nn1Version = nn1NamenodeProtocol.versionRequest();
+
+      // Verify the version is of nn0 or nn1
       rVersion = routerNamenodeProtocol.versionRequest();
-      compareVersion(rVersion, nnVersion);
+      assertThat(rVersion.getBlockPoolID()).isIn(
+          nnVersion.getBlockPoolID(), nn1Version.getBlockPoolID());
+      assertThat(rVersion.getNamespaceID()).isIn(
+          nnVersion.getNamespaceID(), nn1Version.getNamespaceID());
+      assertThat(rVersion.getClusterID()).isIn(
+          nnVersion.getClusterID(), nn1Version.getClusterID());
+      assertThat(rVersion.getLayoutVersion()).isIn(
+          nnVersion.getLayoutVersion(), nn1Version.getLayoutVersion());
+      assertThat(rVersion.getCTime()).isIn(
+          nnVersion.getCTime(), nn1Version.getCTime());
     } finally {
       resolver.setDisableNamespace(false);
     }
@@ -1378,8 +1398,18 @@ public class TestRouterRpc {
       assertEquals(nnTransactionID, routerTransactionID);
       // Check with default namespace unspecified.
       resolver.setDisableNamespace(true);
+
+      // get transaction ID from nn1
+      final String ns1 = cluster.getNameservices().get(1);
+      final NamenodeContext nn1 = cluster.getNamenode(ns1, null);
+      final NamenodeProtocol nn1NamenodeProtocol = NameNodeProxies.createProxy(
+          nn1.getConf(), nn1.getFileSystem().getUri(), NamenodeProtocol.class)
+          .getProxy();
+      final long nn1TransactionID = nn1NamenodeProtocol.getTransactionID();
+
+      // Verify the transaction ID is of nn0 or nn1
       routerTransactionID = routerNamenodeProtocol.getTransactionID();
-      assertEquals(nnTransactionID, routerTransactionID);
+      assertThat(routerTransactionID).isIn(nnTransactionID, nn1TransactionID);
     } finally {
       resolver.setDisableNamespace(false);
     }
