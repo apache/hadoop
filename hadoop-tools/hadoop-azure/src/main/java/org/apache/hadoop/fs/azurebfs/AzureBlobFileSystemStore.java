@@ -52,6 +52,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -128,6 +129,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYP
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLUS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
@@ -647,11 +651,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public AbfsInputStream openFileForRead(final Path path,
       final FileSystem.Statistics statistics)
       throws AzureBlobFileSystemException {
-    return openFileForRead(path, Optional.empty(), statistics);
+    return openFileForRead(path, new OpenFileParameters(), statistics);
   }
 
   public AbfsInputStream openFileForRead(final Path path,
-      final Optional<Configuration> options,
+      final OpenFileParameters parameters,
       final FileSystem.Statistics statistics)
       throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForRead", "getPathStatus")) {
@@ -659,14 +663,26 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               client.getFileSystem(),
               path);
 
+      String resourceType;
+      long contentLength;
+      String eTag;
       String relativePath = getRelativePath(path);
+      Configuration options = null;
 
-      final AbfsRestOperation op = client.getPathStatus(relativePath, false);
-      perfInfo.registerResult(op.getResult());
+      try {
+        options = parameters.getOptions();
+        FileStatus fileStatus = parameters.getStatus();
+        resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
+        contentLength = fileStatus.getLen();
+        eTag = ((VersionedFileStatus) fileStatus).getVersion();
+      } catch (Exception ex) {
+        final AbfsRestOperation op = client.getPathStatus(relativePath, false);
+        perfInfo.registerResult(op.getResult());
 
-      final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-      final long contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-      final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+        resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+        contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+        eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      }
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
@@ -681,7 +697,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics,
               relativePath, contentLength,
-              populateAbfsInputStreamContext(options),
+              populateAbfsInputStreamContext(Optional.ofNullable(options)),
               eTag);
     }
   }

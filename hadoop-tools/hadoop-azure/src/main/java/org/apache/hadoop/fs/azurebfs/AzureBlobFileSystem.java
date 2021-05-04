@@ -34,6 +34,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -185,17 +186,17 @@ public class AzureBlobFileSystem extends FileSystem
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
     // bufferSize is unused.
-    return open(path, Optional.empty());
+    return open(path, new OpenFileParameters());
   }
 
   private FSDataInputStream open(final Path path,
-      final Optional<Configuration> options) throws IOException {
+      final OpenFileParameters parameters) throws IOException {
     statIncrement(CALL_OPEN);
     Path qualifiedPath = makeQualified(path);
 
     try {
       InputStream inputStream = abfsStore.openFileForRead(qualifiedPath,
-          options, statistics);
+          parameters, statistics);
       return new FSDataInputStream(inputStream);
     } catch(AzureBlobFileSystemException ex) {
       checkException(path, ex);
@@ -203,17 +204,30 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  /**
+   * Takes config and other options through OpenFileParameters. Ensure that
+   * FileStatus entered is up-to-date, as it will be used to create the
+   * InputStream (with info such as contentLength, eTag)
+   * @param path The location of file to be opened
+   * @param parameters OpenFileParameters instance; can hold FileStatus,
+   *                   Configuration, bufferSize and mandatoryKeys
+   *                   {@link org.apache.hadoop.fs.impl.OpenFileParameters}
+   */
   @Override
-  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
-      final Path path, final OpenFileParameters parameters) throws IOException {
+  public CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final Path path, final OpenFileParameters parameters) {
     LOG.debug("AzureBlobFileSystem.openFileWithOptions path: {}", path);
+    Set<String> mandatoryKeys = parameters.getMandatoryKeys();
+    if (mandatoryKeys == null) {
+      mandatoryKeys = Collections.emptySet();
+    }
     AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
-        parameters.getMandatoryKeys(),
+        mandatoryKeys,
         Collections.emptySet(),
         "for " + path);
     return LambdaUtils.eval(
         new CompletableFuture<>(), () ->
-            open(path, Optional.of(parameters.getOptions())));
+            open(path, parameters));
   }
 
   @Override
