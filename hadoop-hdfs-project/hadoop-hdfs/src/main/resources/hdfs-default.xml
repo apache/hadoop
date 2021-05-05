@@ -874,6 +874,18 @@
 </property>
 
 <property>
+  <name>dfs.datanode.reconcile.blocks.batch.size</name>
+  <value>1000</value>
+  <description>Setting this to define reconcile batch size.</description>
+</property>
+
+<property>
+  <name>dfs.datanode.reconcile.blocks.batch.interval</name>
+  <value>2000</value>
+  <description>Setting this to define interval between batches.</description>
+</property>
+
+<property>
   <name>dfs.heartbeat.interval</name>
   <value>3s</value>
   <description>
