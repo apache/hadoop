@@ -841,7 +841,7 @@ public class TestHttpFSServer extends HFSTestCase {
     fs.mkdirs(new Path(dir2));
 
     createWithHttp(path2, null);
-    deleteWithHttp(path2, null, null, true);
+    deleteWithHttp(path2, null, null, false);
   }
 
   /**

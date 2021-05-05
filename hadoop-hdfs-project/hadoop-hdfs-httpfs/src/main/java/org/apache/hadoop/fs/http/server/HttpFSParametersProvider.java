@@ -258,7 +258,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
      * Constructor.
      */
     public DeleteSkipTrashParam() {
-      super(NAME, false);
+      super(NAME, true);
     }
   }
 

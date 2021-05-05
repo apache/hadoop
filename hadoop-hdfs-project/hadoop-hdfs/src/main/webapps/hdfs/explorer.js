@@ -86,12 +86,12 @@
     $('#delete-trash-modal-title').text("Skip Trash - " + inode_name);
     $('#delete-trash-prompt').text("Skipping Trash might delete file forever."
         + " Do you want to skip-trash " + inode_name
-        + " ? (default behaviour - No)");
+        + " ? Note: File can be moved to Trash only if trash interval is configured.");
 
     $('#skip-trash-button').click(function () {
-      // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>&skiptrash=true
+      // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>
       var url = '/webhdfs/v1' + encode_path(absolute_file_path) +
-          '?op=DELETE' + '&recursive=true&skiptrash=true';
+          '?op=DELETE' + '&recursive=true';
       $.ajax(url,
           {
             type: 'DELETE'
@@ -106,9 +106,9 @@
       });
     })
     $('#trash-button').click(function () {
-      // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>
+      // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>&skiptrash=<true|false>
       var url = '/webhdfs/v1' + encode_path(absolute_file_path) +
-          '?op=DELETE' + '&recursive=true';
+          '?op=DELETE' + '&recursive=true&skiptrash=false';
       $.ajax(url,
           {
             type: 'DELETE'

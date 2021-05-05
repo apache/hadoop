@@ -23,7 +23,7 @@ package org.apache.hadoop.hdfs.web.resources;
 public class DeleteSkipTrashParam extends BooleanParam {
 
   public static final String NAME = "skiptrash";
-  public static final String DEFAULT = FALSE;
+  public static final String DEFAULT = TRUE;
 
   private static final Domain DOMAIN = new Domain(NAME);
 

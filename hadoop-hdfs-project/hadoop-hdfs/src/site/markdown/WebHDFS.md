@@ -466,7 +466,7 @@ See also: [`destination`](#Destination), [FileSystem](../../api/org/apache/hadoo
 
     Default values of queryparams if not provided:
     1. recursive: false
-    2. skiptrash: false
+    2. skiptrash: true
 
     The client receives a response with a [`boolean` JSON object](#Boolean_JSON_Schema):
 
