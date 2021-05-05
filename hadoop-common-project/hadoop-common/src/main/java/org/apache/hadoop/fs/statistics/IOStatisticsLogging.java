@@ -253,11 +253,11 @@ public final class IOStatisticsLogging {
   /**
    * A method to log IOStatistics from a source.
    *
-   * @param LOG    Logger for logging.
+   * @param log    Logger for logging.
    * @param level  LOG level.
    * @param source Source to LOG.
    */
-  public static void loggingIOStatistics(Logger LOG, String level,
+  public static void loggingIOStatistics(Logger log, String level,
       Object source) {
     if (level.toLowerCase().equals(IOSTATISTICS_LOGGING_LEVEL_INFO)) {
       IOStatistics stats = retrieveIOStatistics(source);
@@ -265,7 +265,7 @@ public final class IOStatisticsLogging {
         LOG.info("IOStatistics: {}", ioStatisticsToPrettyString(stats));
       }
     } else {
-      logIOStatisticsAtDebug(LOG, "IOStatistics: {}",
+      logIOStatisticsAtDebug(log, "IOStatistics: {}",
           source);
     }
   }
