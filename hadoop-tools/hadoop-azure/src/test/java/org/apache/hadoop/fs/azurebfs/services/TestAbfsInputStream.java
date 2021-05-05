@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -247,6 +246,11 @@ public class TestAbfsInputStream extends
     verify(mockStore, times(1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))
         .getFileStatus(any(Path.class));
+
+    // test open method that calls openFileWithOptions internally
+    in = fs.open(new Path(testFile + "0"));
+    in.read(readBuf);
+    assertArrayEquals("Open method: Incorrect read data", buffer, readBuf);
   }
 
   /**
