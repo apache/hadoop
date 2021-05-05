@@ -77,7 +77,7 @@ public class FileMonitoringTimerTask extends TimerTask {
     Preconditions.checkNotNull(filePaths, "path to monitor disk file is not set");
     Preconditions.checkNotNull(onFileChange, "action to monitor disk file is not set");
 
-    this.filePaths = filePaths;
+    this.filePaths = new ArrayList<Path>(filePaths);
     this.lastProcessed = new ArrayList<Long>();
     this.filePaths.forEach(path -> this.lastProcessed.add(path.toFile().lastModified()));
     this.onFileChange = onFileChange;
