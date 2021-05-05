@@ -106,7 +106,7 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
           error.getMessage());
       LOG.warn(item);
       result.append(item);
-      if (exitCode.isEmpty() || ACCESS_DENIED.equals(code)) {
+      if (exitCode == null || exitCode.isEmpty() || ACCESS_DENIED.equals(code)) {
         exitCode = code;
       }
     }

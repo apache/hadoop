@@ -76,6 +76,8 @@ public class BasePBImplRecordsTest {
           'a' + rand.nextInt(26),
           'a' + rand.nextInt(26),
           'a' + rand.nextInt(26));
+    } else if (type.equals(Float.class)) {
+      return rand.nextFloat();
     } else if (type instanceof Class) {
       Class clazz = (Class)type;
       if (clazz.isArray()) {

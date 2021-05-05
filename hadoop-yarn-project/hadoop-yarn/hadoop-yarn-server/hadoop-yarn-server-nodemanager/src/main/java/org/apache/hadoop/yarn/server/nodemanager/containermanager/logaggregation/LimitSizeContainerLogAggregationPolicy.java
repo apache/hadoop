@@ -15,34 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.oncrpc;
 
-import java.net.SocketAddress;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.DefaultAddressedEnvelope;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
+import org.apache.hadoop.yarn.server.api.ContainerLogContext;
 
-/**
- * RpcResponse encapsulates a response to a RPC request. It contains the data
- * that is going to cross the wire, as well as the information of the remote
- * peer.
- */
-public class RpcResponse extends
-    DefaultAddressedEnvelope<ByteBuf, SocketAddress> {
-  public RpcResponse(ByteBuf message, SocketAddress recipient) {
-    super(message, recipient, null);
-  }
-
-  public RpcResponse(ByteBuf message, SocketAddress recipient,
-      SocketAddress sender) {
-    super(message, recipient, sender);
-  }
-
-  public ByteBuf data() {
-    return this.content();
-  }
-
-  public SocketAddress remoteAddress() {
-    return this.recipient();
+@Private
+public class LimitSizeContainerLogAggregationPolicy extends
+    AbstractContainerLogAggregationPolicy {
+  public boolean shouldDoLogAggregation(ContainerLogContext logContext) {
+    return logContext.getExitCode()
+        != ContainerExitStatus.KILLED_FOR_EXCESS_LOGS;
   }
 }

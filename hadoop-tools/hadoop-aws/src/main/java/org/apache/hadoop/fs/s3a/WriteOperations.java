@@ -338,4 +338,10 @@ public interface WriteOperations {
       SelectObjectContentRequest request,
       String action)
       throws IOException;
+
+  /**
+   * Increment the write operation counter
+   * of the filesystem.
+   */
+  void incrementWriteOperations();
 }
