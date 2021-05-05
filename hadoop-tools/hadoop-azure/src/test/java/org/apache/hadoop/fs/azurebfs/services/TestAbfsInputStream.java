@@ -23,25 +23,32 @@ import java.io.IOException;
 import org.junit.Assert;
 import org.junit.Test;
 import java.util.Arrays;
+import java.util.Random;
 
 import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TimeoutException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -182,6 +189,64 @@ public class TestAbfsInputStream extends
     super();
     // Reduce thresholdAgeMilliseconds to 3 sec for the tests
     ReadBufferManager.getBufferManager().setThresholdAgeMilliseconds(REDUCED_READ_BUFFER_AGE_THRESHOLD);
+  }
+
+  @Test
+  public void testOpenFileWithOptions() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    String testFolder = "/testFolder";
+    String testFile = testFolder + "/testFile";
+    fs.mkdirs(new Path(testFolder));
+    byte[] buffer = new byte[5];
+    new Random().nextBytes(buffer);
+    for (int i = 0; i<3; i++) {
+      Path file = new Path(testFile + i);
+      fs.create(file);
+      FSDataOutputStream out = fs.append(file);
+      out.write(buffer);
+      out.close();
+    }
+
+    // open with fileStatus from GetPathStatus
+    Path filePath = new Path(testFile + "0");
+    FileStatus fileStatus = fs.getFileStatus(filePath);
+    FSDataInputStream in = fs.openFileWithOptions(filePath,
+        new OpenFileParameters().withStatus(fileStatus)).get();
+    byte[] readBuf = new byte[5];
+    in.read(readBuf);
+    assertArrayEquals(
+        "Open with FileStatus from GetPathStatus: Incorrect read data", buffer,
+        readBuf);
+
+    // open with fileStatus from ListStatus
+    FileStatus[] fileStatuses = fs.listStatus(new Path(testFolder));
+    for (int i = 0; i < fileStatuses.length; i++) {
+      in = fs.openFileWithOptions(new Path(testFile + i),
+          new OpenFileParameters().withStatus(fileStatuses[i])).get();
+      in.read(readBuf);
+      assertArrayEquals(
+          "Open with fileStatus from ListStatus: Incorrect read data", buffer,
+          readBuf);
+    }
+
+    // verify GetPathStatus not invoked when FileStatus is provided
+    AzureBlobFileSystemStore store = new AzureBlobFileSystemStore(fs.getUri(),
+        fs.isSecureScheme(), getRawConfiguration(),
+        new AbfsCountersImpl(fs.getUri()));
+    AzureBlobFileSystemStore mockStore = spy(store);
+
+    mockStore.openFileForRead(new Path(testFile + "2"),
+        new OpenFileParameters().withStatus(fileStatuses[2]), null);
+    verify(mockStore, times(0).description(
+        "GetPathStatus should not be invoked when FileStatus is provided"))
+        .getFileStatus(any(Path.class));
+
+    // verify GetPathStatus invoked when FileStatus not provided
+    mockStore.openFileForRead(new Path(testFile + "2"),
+        new OpenFileParameters(), null);
+    verify(mockStore, times(1).description(
+        "GetPathStatus should be invoked when FileStatus not provided"))
+        .getFileStatus(any(Path.class));
   }
 
   /**

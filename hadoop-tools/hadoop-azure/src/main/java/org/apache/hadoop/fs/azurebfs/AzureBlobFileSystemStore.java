@@ -649,18 +649,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   public AbfsInputStream openFileForRead(final Path path,
       final FileSystem.Statistics statistics)
-      throws AzureBlobFileSystemException {
+      throws IOException {
     return openFileForRead(path, new OpenFileParameters(), statistics);
   }
 
   public AbfsInputStream openFileForRead(final Path path,
       final OpenFileParameters parameters,
-      final FileSystem.Statistics statistics)
-      throws AzureBlobFileSystemException {
-    try (AbfsPerfInfo perfInfo = startTracking("openFileForRead", "getPathStatus")) {
+      final FileSystem.Statistics statistics) throws IOException {
+    try (AbfsPerfInfo perfInfo = startTracking("openFileForRead",
+        "getPathStatus")) {
       LOG.debug("openFileForRead filesystem: {} path: {}",
-              client.getFileSystem(),
-              path);
+          client.getFileSystem(), path);
 
       String resourceType;
       long contentLength;
@@ -668,36 +667,33 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String relativePath = getRelativePath(path);
       Configuration options = null;
 
-      try {
+      FileStatus fileStatus = null;
+      if (parameters != null) {
         options = parameters.getOptions();
-        FileStatus fileStatus = parameters.getStatus();
-        resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
-        contentLength = fileStatus.getLen();
-        eTag = ((VersionedFileStatus) fileStatus).getVersion();
-      } catch (Exception ex) {
-        final AbfsRestOperation op = client.getPathStatus(relativePath, false);
-        perfInfo.registerResult(op.getResult());
-
-        resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-        contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-        eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+        fileStatus = parameters.getStatus();
       }
+      if (fileStatus == null) {
+        fileStatus = getFileStatus(new Path(relativePath));
+      }
+
+      resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
+      contentLength = fileStatus.getLen();
+      eTag = ((VersionedFileStatus) fileStatus).getVersion();
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
-                AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-                AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-                "openFileForRead must be used with files and not directories",
-                null);
+            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+            "openFileForRead must be used with files and not directories",
+            null);
       }
 
       perfInfo.registerSuccess(true);
 
       // Add statistics for InputStream
-      return new AbfsInputStream(client, statistics,
-              relativePath, contentLength,
-              populateAbfsInputStreamContext(Optional.ofNullable(options)),
-              eTag);
+      return new AbfsInputStream(client, statistics, relativePath,
+          contentLength,
+          populateAbfsInputStreamContext(Optional.ofNullable(options)), eTag);
     }
   }
 
