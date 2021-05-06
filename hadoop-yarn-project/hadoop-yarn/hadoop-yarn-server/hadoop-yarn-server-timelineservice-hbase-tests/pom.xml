@@ -406,19 +406,6 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <additionnalDependencies>
-            <additionnalDependency>
-              <groupId>junit</groupId>
-              <artifactId>junit</artifactId>
-              <version>4.11</version>
-            </additionnalDependency>
-          </additionnalDependencies>
-        </configuration>
-      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
