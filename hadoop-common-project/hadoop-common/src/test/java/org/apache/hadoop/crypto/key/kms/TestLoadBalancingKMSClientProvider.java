@@ -39,6 +39,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLHandshakeException;
 
@@ -67,7 +68,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 public class TestLoadBalancingKMSClientProvider {
 
   @Rule
-  public Timeout testTimeout = new Timeout(30 * 1000);
+  public Timeout testTimeout = new Timeout(30, TimeUnit.SECONDS);
 
   @BeforeClass
   public static void setup() throws IOException {
