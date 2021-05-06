@@ -588,7 +588,8 @@ public final class HttpServer2 implements FilterContainer {
           conf.getLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
               FileBasedKeyStoresFactory.DEFAULT_SSL_STORES_RELOAD_INTERVAL);
 
-      if (storesReloadInterval > 0 && (keyStore != null || trustStore != null)) {
+      if (storesReloadInterval > 0 &&
+          (keyStore != null || trustStore != null)) {
         this.configurationChangeMonitor = Optional.of(
             this.makeConfigurationChangeMonitor(storesReloadInterval, sslContextFactory));
       }
@@ -614,17 +615,18 @@ public final class HttpServer2 implements FilterContainer {
       // truststore and keystore certificates.
       //
       timer.schedule(new FileMonitoringTimerTask(
-              locations,
-              path -> {
-                LOG.info("Reloading keystore and truststore certificates.");
-                try {
-                  sslContextFactory.reload(factory -> { });
-                } catch (Exception ex) {
-                  LOG.error("Failed to reload SSL keystore and truststore certificates", ex);
-                }
-              },null),
-          reloadInterval,
-          reloadInterval
+            locations,
+            path -> {
+              LOG.info("Reloading keystore and truststore certificates.");
+              try {
+                sslContextFactory.reload(factory -> { });
+              } catch (Exception ex) {
+                LOG.error("Failed to reload SSL keystore " +
+                    "and truststore certificates", ex);
+              }
+            },null),
+        reloadInterval,
+        reloadInterval
       );
       return timer;
     }

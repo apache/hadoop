@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.TimerTask;
@@ -52,11 +51,12 @@ public class FileMonitoringTimerTask extends TimerTask {
   private List<Long> lastProcessed;
 
   /**
-   * See {@link #FileMonitoringTimerTask(List, Consumer, Consumer)}
+   * See {@link #FileMonitoringTimerTask(List, Consumer, Consumer)}.
    *
    * @param filePath The file to monitor.
    * @param onFileChange What to do when the file changes.
-   * @param onChangeFailure What to do when <code>onFileChange</code> throws an exception.
+   * @param onChangeFailure What to do when <code>onFileChange</code>
+   *                        throws an exception.
    */
   public FileMonitoringTimerTask(Path filePath, Consumer<Path> onFileChange,
                                  Consumer<Throwable> onChangeFailure) {
@@ -64,22 +64,26 @@ public class FileMonitoringTimerTask extends TimerTask {
   }
 
   /**
-   * Create file monitoring task to be scheduled using a standard Java {@link java.util.Timer}
-   * instance.
+   * Create file monitoring task to be scheduled using a standard
+   * Java {@link java.util.Timer} instance.
    *
    * @param filePaths The path to the file to monitor.
    * @param onFileChange The function to call when the file has changed.
-   * @param onChangeFailure The function to call when an exception is thrown during the
-   *                       file change processing.
+   * @param onChangeFailure The function to call when an exception is
+   *                       thrown during the file change processing.
    */
-  public FileMonitoringTimerTask(List<Path> filePaths, Consumer<Path> onFileChange,
+  public FileMonitoringTimerTask(List<Path> filePaths,
+                                 Consumer<Path> onFileChange,
                                  Consumer<Throwable> onChangeFailure) {
-    Preconditions.checkNotNull(filePaths, "path to monitor disk file is not set");
-    Preconditions.checkNotNull(onFileChange, "action to monitor disk file is not set");
+    Preconditions.checkNotNull(filePaths,
+        "path to monitor disk file is not set");
+    Preconditions.checkNotNull(onFileChange,
+        "action to monitor disk file is not set");
 
     this.filePaths = new ArrayList<Path>(filePaths);
     this.lastProcessed = new ArrayList<Long>();
-    this.filePaths.forEach(path -> this.lastProcessed.add(path.toFile().lastModified()));
+    this.filePaths.forEach(path ->
+        this.lastProcessed.add(path.toFile().lastModified()));
     this.onFileChange = onFileChange;
     this.onChangeFailure = onChangeFailure;
   }
@@ -88,8 +92,9 @@ public class FileMonitoringTimerTask extends TimerTask {
   public void run() {
     int modified = -1;
     for (int i = 0; i < filePaths.size() && modified < 0; i++) {
-      if (lastProcessed.get(i) != filePaths.get(i).toFile().lastModified())
+      if (lastProcessed.get(i) != filePaths.get(i).toFile().lastModified()) {
         modified = i;
+      }
     }
     if (modified > -1) {
       Path filePath = filePaths.get(modified);
