@@ -198,7 +198,7 @@ public class TestAbfsInputStream extends
     fs.mkdirs(new Path(testFolder));
     byte[] buffer = new byte[5];
     new Random().nextBytes(buffer);
-    for (int i = 0; i<3; i++) {
+    for (int i = 0; i < 3; i++) {
       Path file = new Path(testFile + i);
       fs.create(file);
       FSDataOutputStream out = fs.append(file);
@@ -212,17 +212,19 @@ public class TestAbfsInputStream extends
     FSDataInputStream in = fs.openFileWithOptions(filePath,
         new OpenFileParameters().withStatus(fileStatus)).get();
     byte[] readBuf = new byte[5];
-    in.read(readBuf);
+    assertEquals("Incorrect number of bytes read", buffer.length,
+        in.read(readBuf));
     assertArrayEquals(
         "Open with FileStatus from GetPathStatus: Incorrect read data", buffer,
         readBuf);
 
     // open with fileStatus from ListStatus
     FileStatus[] fileStatuses = fs.listStatus(new Path(testFolder));
-    for (int i = 0; i < fileStatuses.length; i++) {
+    for (int i = 0; i < 3; i++) {
       in = fs.openFileWithOptions(new Path(testFile + i),
           new OpenFileParameters().withStatus(fileStatuses[i])).get();
-      in.read(readBuf);
+      assertEquals("Incorrect number of bytes read", buffer.length,
+          in.read(readBuf));
       assertArrayEquals(
           "Open with fileStatus from ListStatus: Incorrect read data", buffer,
           readBuf);
@@ -237,7 +239,13 @@ public class TestAbfsInputStream extends
     mockStore.openFileForRead(new Path(testFile + "2"),
         new OpenFileParameters().withStatus(fileStatuses[2]), null);
     verify(mockStore, times(0).description(
-        "GetPathStatus should not be invoked when FileStatus is provided"))
+        "FileStatus [from ListPaths result] provided, GetFileStatus should not be invoked"))
+        .getFileStatus(any(Path.class));
+
+    mockStore.openFileForRead(new Path(testFile + "0"),
+        new OpenFileParameters().withStatus(fileStatus), null);
+    verify(mockStore, times(0).description(
+        "FileStatus [from GetPathStatus result] provided, GetFileStatus should not be invoked again"))
         .getFileStatus(any(Path.class));
 
     // verify GetPathStatus invoked when FileStatus not provided
@@ -246,11 +254,6 @@ public class TestAbfsInputStream extends
     verify(mockStore, times(1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))
         .getFileStatus(any(Path.class));
-
-    // test open method that calls openFileWithOptions internally
-    in = fs.open(new Path(testFile + "0"));
-    in.read(readBuf);
-    assertArrayEquals("Open method: Incorrect read data", buffer, readBuf);
   }
 
   /**

@@ -204,13 +204,13 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   /**
-   * Takes config and other options through OpenFileParameters. Ensure that
+   * Takes config and other options through
+   * {@link org.apache.hadoop.fs.impl.OpenFileParameters}. Ensure that
    * FileStatus entered is up-to-date, as it will be used to create the
    * InputStream (with info such as contentLength, eTag)
    * @param path The location of file to be opened
    * @param parameters OpenFileParameters instance; can hold FileStatus,
    *                   Configuration, bufferSize and mandatoryKeys
-   *                   {@link org.apache.hadoop.fs.impl.OpenFileParameters}
    */
   @Override
   public CompletableFuture<FSDataInputStream> openFileWithOptions(

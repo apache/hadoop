@@ -656,29 +656,26 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public AbfsInputStream openFileForRead(final Path path,
       final OpenFileParameters parameters,
       final FileSystem.Statistics statistics) throws IOException {
-    try (AbfsPerfInfo perfInfo = startTracking("openFileForRead",
-        "getPathStatus")) {
+    try (AbfsPerfInfo perfInfo = startTracking("openFileForRead", "getPathStatus")) {
       LOG.debug("openFileForRead filesystem: {} path: {}",
           client.getFileSystem(), path);
 
-      String resourceType;
-      long contentLength;
-      String eTag;
-      String relativePath = getRelativePath(path);
-      Configuration options = null;
+      Optional<Configuration> options = Optional.empty();
 
       FileStatus fileStatus = null;
       if (parameters != null) {
-        options = parameters.getOptions();
+        options = Optional.ofNullable(parameters.getOptions());
         fileStatus = parameters.getStatus();
       }
+
+      String relativePath = getRelativePath(path);
       if (fileStatus == null) {
         fileStatus = getFileStatus(new Path(relativePath));
       }
 
-      resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
-      contentLength = fileStatus.getLen();
-      eTag = ((VersionedFileStatus) fileStatus).getVersion();
+      String resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
+      long contentLength = fileStatus.getLen();
+      String eTag = ((VersionedFileStatus) fileStatus).getVersion();
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
@@ -692,8 +689,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics, relativePath,
-          contentLength,
-          populateAbfsInputStreamContext(Optional.ofNullable(options)), eTag);
+          contentLength, populateAbfsInputStreamContext(options), eTag);
     }
   }
 
