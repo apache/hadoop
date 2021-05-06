@@ -24,6 +24,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 import org.assertj.core.api.Assertions;
 
@@ -190,67 +191,85 @@ public class TestAbfsInputStream extends
     ReadBufferManager.getBufferManager().setThresholdAgeMilliseconds(REDUCED_READ_BUFFER_AGE_THRESHOLD);
   }
 
+  private void writeBufferToNewFile(Path testFile, byte[] buffer) throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
+    fs.create(testFile);
+    FSDataOutputStream out = fs.append(testFile);
+    out.write(buffer);
+    out.close();
+  }
+
+  private void verifyOpenWithProvidedStatus(Path path, FileStatus fileStatus,
+      byte[] buf, AbfsRestOperationType source) throws IOException,
+      ExecutionException,
+      InterruptedException {
+    byte[] readBuf = new byte[buf.length];
+    FSDataInputStream in = getFileSystem().openFileWithOptions(path,
+        new OpenFileParameters().withStatus(fileStatus)).get();
+    assertEquals(String.format(
+        "Open with fileStatus [from %s result]: Incorrect number of bytes read",
+        source), buf.length, in.read(readBuf));
+    assertArrayEquals(String
+        .format("Open with fileStatus [from %s result]: Incorrect read data",
+            source), readBuf, buf);
+  }
+
   @Test
   public void testOpenFileWithOptions() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     String testFolder = "/testFolder";
-    String testFile = testFolder + "/testFile";
+    Path smallTestFile = new Path(testFolder + "/testFile0");
+    Path largeTestFile = new Path(testFolder + "/testFile1");
     fs.mkdirs(new Path(testFolder));
-    byte[] buffer = new byte[5];
-    new Random().nextBytes(buffer);
-    for (int i = 0; i < 3; i++) {
-      Path file = new Path(testFile + i);
-      fs.create(file);
-      FSDataOutputStream out = fs.append(file);
-      out.write(buffer);
-      out.close();
-    }
+    int readBufferSize = getConfiguration().getReadBufferSize();
+    byte[] largeBuffer = new byte[readBufferSize + 5];
+    byte[] smallBuffer = new byte[5];
+    new Random().nextBytes(largeBuffer);
+    new Random().nextBytes(smallBuffer);
+    writeBufferToNewFile(smallTestFile, smallBuffer);
+    writeBufferToNewFile(largeTestFile, largeBuffer);
 
     // open with fileStatus from GetPathStatus
-    Path filePath = new Path(testFile + "0");
-    FileStatus fileStatus = fs.getFileStatus(filePath);
-    FSDataInputStream in = fs.openFileWithOptions(filePath,
-        new OpenFileParameters().withStatus(fileStatus)).get();
-    byte[] readBuf = new byte[5];
-    assertEquals("Incorrect number of bytes read", buffer.length,
-        in.read(readBuf));
-    assertArrayEquals(
-        "Open with FileStatus from GetPathStatus: Incorrect read data", buffer,
-        readBuf);
+    verifyOpenWithProvidedStatus(smallTestFile, fs.getFileStatus(smallTestFile),
+        smallBuffer, AbfsRestOperationType.GetPathStatus);
+    verifyOpenWithProvidedStatus(largeTestFile, fs.getFileStatus(largeTestFile),
+        largeBuffer, AbfsRestOperationType.GetPathStatus);
 
     // open with fileStatus from ListStatus
     FileStatus[] fileStatuses = fs.listStatus(new Path(testFolder));
-    for (int i = 0; i < 3; i++) {
-      in = fs.openFileWithOptions(new Path(testFile + i),
-          new OpenFileParameters().withStatus(fileStatuses[i])).get();
-      assertEquals("Incorrect number of bytes read", buffer.length,
-          in.read(readBuf));
-      assertArrayEquals(
-          "Open with fileStatus from ListStatus: Incorrect read data", buffer,
-          readBuf);
-    }
+    verifyOpenWithProvidedStatus(smallTestFile, fileStatuses[0], smallBuffer,
+        AbfsRestOperationType.ListPaths);
+    verifyOpenWithProvidedStatus(largeTestFile, fileStatuses[1], largeBuffer,
+        AbfsRestOperationType.ListPaths);
 
-    // verify GetPathStatus not invoked when FileStatus is provided
+    // verify number of GetPathStatus invocations
     AzureBlobFileSystemStore store = new AzureBlobFileSystemStore(fs.getUri(),
         fs.isSecureScheme(), getRawConfiguration(),
         new AbfsCountersImpl(fs.getUri()));
-    AzureBlobFileSystemStore mockStore = spy(store);
+    checkGetPathStatusCalls(smallTestFile, fs.getFileStatus(smallTestFile),
+        spy(store), AbfsRestOperationType.GetPathStatus);
+    checkGetPathStatusCalls(largeTestFile, fs.getFileStatus(largeTestFile),
+        spy(store), AbfsRestOperationType.GetPathStatus);
+    checkGetPathStatusCalls(smallTestFile, fileStatuses[0], spy(store),
+        AbfsRestOperationType.ListPaths);
+    checkGetPathStatusCalls(largeTestFile, fileStatuses[1], spy(store),
+        AbfsRestOperationType.ListPaths);
 
-    mockStore.openFileForRead(new Path(testFile + "2"),
-        new OpenFileParameters().withStatus(fileStatuses[2]), null);
-    verify(mockStore, times(0).description(
-        "FileStatus [from ListPaths result] provided, GetFileStatus should not be invoked"))
-        .getFileStatus(any(Path.class));
+  }
 
-    mockStore.openFileForRead(new Path(testFile + "0"),
+  void checkGetPathStatusCalls(Path testFile, FileStatus fileStatus,
+      AzureBlobFileSystemStore mockStore, AbfsRestOperationType source)
+      throws IOException {
+
+    // verify GetPathStatus not invoked when FileStatus is provided
+    mockStore.openFileForRead(testFile,
         new OpenFileParameters().withStatus(fileStatus), null);
-    verify(mockStore, times(0).description(
-        "FileStatus [from GetPathStatus result] provided, GetFileStatus should not be invoked again"))
+    verify(mockStore, times(0).description((String.format(
+        "FileStatus [from %s result] provided, GetFileStatus should not be invoked", source))))
         .getFileStatus(any(Path.class));
 
     // verify GetPathStatus invoked when FileStatus not provided
-    mockStore.openFileForRead(new Path(testFile + "2"),
-        new OpenFileParameters(), null);
+    mockStore.openFileForRead(testFile, new OpenFileParameters(), null);
     verify(mockStore, times(1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))
         .getFileStatus(any(Path.class));
