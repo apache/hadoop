@@ -34,8 +34,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -78,6 +81,8 @@ public class TestRouterAdminCLI {
   private static RouterClient client;
   private static Router router;
 
+  private static DistributedFileSystem hdfs;
+
   private static final String TEST_USER = "test-user";
 
   private final ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -102,10 +107,12 @@ public class TestRouterAdminCLI {
 
     // Start routers
     cluster.startRouters();
+    cluster.startCluster();
 
     routerContext = cluster.getRandomRouter();
     router = routerContext.getRouter();
     stateStore = router.getStateStore();
+    hdfs = cluster.getCluster().getFileSystem();
 
     Configuration routerConf = new Configuration();
     InetSocketAddress routerSocket = router.getAdminServerAddress();
@@ -698,6 +705,46 @@ public class TestRouterAdminCLI {
       // set back login user
       UserGroupInformation.setLoginUser(superUser);
     }
+  }
+
+  @Test
+  public void testInitViewFsToMountTable() throws Exception {
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    String nnAddress = cluster.getRandomNamenode().getNamenode().getHostAndPort();
+
+    String src = "/data";
+    Path destPath = new Path("hdfs://" + nnAddress + "/data");
+    String user = "user1";
+    String group = "group1";
+    String clusterName = "ClusterX";
+
+    // 0.mkdir destPath
+    hdfs.mkdirs(destPath);
+    // 1.set owner
+    hdfs.setOwner(destPath, user, group);
+    // 2.set viewFs mapping
+    admin.getConf().set("fs.viewfs.mounttable.ClusterX.link." + src, destPath.toString());
+    // 3.run initialization
+    String[] argv = new String[]{"-initViewFsToMountTable", clusterName};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    // 4.gets the mount point entries
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance("/");
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    List<MountTable> mountTables = getResponse.getEntries();
+    // 5.check
+    assertEquals(1, mountTables.size());
+    assertEquals(user, mountTables.get(0).getOwnerName());
+    assertEquals(group, mountTables.get(0).getGroupName());
+    assertEquals(destPath.toUri().getPath(), mountTables.get(0).
+        getDestinations().get(0).getDest());
+    assertEquals(nnAddress, mountTables.get(0).
+        getDestinations().get(0).getNameserviceId());
+    assertEquals(src, mountTables.get(0).getSourcePath());
   }
 
   @Test

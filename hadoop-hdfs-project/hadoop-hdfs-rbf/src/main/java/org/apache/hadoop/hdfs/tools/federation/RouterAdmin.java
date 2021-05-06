@@ -249,6 +249,10 @@ public class RouterAdmin extends Configured implements Tool {
       if (argv.length < 2) {
         return false;
       }
+    } else if ("-initViewFsToMountTable".equals(cmd)) {
+      if (argv.length < 2) {
+        return false;
+      }
     } else if ("-getDestination".equals(cmd)) {
       if (argv.length < 2) {
         return false;
@@ -392,8 +396,9 @@ public class RouterAdmin extends Configured implements Tool {
       } else if ("-refresh".equals(cmd)) {
         refresh(address);
       } else if ("-initViewFsToMountTable".equals(cmd)) {
-        if (initViewFsToMountTable(argv, i)) {
-          System.out.println("Successfully init ViewFs mapping to router " + argv[i]);
+        if (initViewFsToMountTable(argv[i])) {
+          System.out.println("Successfully init ViewFs mapping to router " +
+              argv[i]);
         } else {
           exitCode = -1;
         }
@@ -1052,53 +1057,63 @@ public class RouterAdmin extends Configured implements Tool {
   
   /**
    * initViewFsToMountTable.
-   *
-   * @param parameters The specified cluster to initialize.
-   * @param i Index in the parameters
+   * @param clusterName The specified cluster to initialize.
    * @return If the quota was updated.
    * @throws IOException Error adding the mount point.
    */
-  public boolean initViewFsToMountTable(String[] parameters, int i) throws IOException {
-    String clusterName = parameters[i++];
-    if (clusterName == null) {
-      System.out.println("Please enter the cluster name.");
-      return false;
-    }
+  public boolean initViewFsToMountTable(String clusterName)
+      throws IOException {
+    // fs.viewfs.mounttable.ClusterX.link./data
     final String mountTablePrefix =
         Constants.CONFIG_VIEWFS_PREFIX + "." + clusterName + "." +
             Constants.CONFIG_VIEWFS_LINK + "./";
     Map<String, String> viewFsMap = getConf().getValByRegex(mountTablePrefix);
-    if (viewFsMap.size() == 0) {
-      System.out.println("Please check the cluster name and veiwfs " +
-          "configuration.");
+    if (viewFsMap.isEmpty()) {
+      System.out.println("There is no ViewFs mapping to initialize.");
+      return true;
     }
-    for (String key : viewFsMap.keySet()) {
-      Path path = new Path(viewFsMap.get(key));
-      String owner = null;
-      String group = null;
-      FsPermission mode = null;
-      try {
-        FileSystem fs = path.getFileSystem(getConf());
-        if (fs.exists(path)) {
-          FileStatus fileStatus = fs.getFileStatus(path);
-          owner = fileStatus.getOwner();
-          group = fileStatus.getGroup();
-          mode = fileStatus.getPermission();
-        }
-      } catch (Exception e) {
-        LOG.warn("Exception encountered", e);
-      }
+    for (Entry<String, String> entry : viewFsMap.entrySet()) {
+      Path path = new Path(entry.getValue());
       DestinationOrder order = DestinationOrder.HASH;
-      String mount =
-          key.split(clusterName + "." + Constants.CONFIG_VIEWFS_LINK + ".")[1];
-      String dest = path.toUri().getPath();
+      String[] mount = entry.getKey().split(
+              clusterName + "." + Constants.CONFIG_VIEWFS_LINK + ".");
+      if (mount.length < 2) {
+        System.out.println("Added Mount Point failed " + entry.getKey());
+        continue;
+      }
       String[] nss = new String[]{path.toUri().getAuthority()};
-      addMount(mount, nss, dest, false, false, order,
-          new ACLEntity(owner, group, mode));
+      boolean added = addMount(
+          mount[1], nss, path.toUri().getPath(), false,
+          false, order, getACLEntityFormHdfsPath(path));
+      if (added) {
+        System.out.println("added mount point " + mount[1]);
+      }
     }
     return true;
   }
-  
+
+  /**
+   * Returns ACLEntity according to a HDFS pat.
+   * @param path A path of HDFS.
+   */
+  public ACLEntity getACLEntityFormHdfsPath(Path path){
+    String owner = null;
+    String group = null;
+    FsPermission mode = null;
+    try {
+      FileSystem fs = path.getFileSystem(getConf());
+      if (fs.exists(path)) {
+        FileStatus fileStatus = fs.getFileStatus(path);
+        owner = fileStatus.getOwner();
+        group = fileStatus.getGroup();
+        mode = fileStatus.getPermission();
+      }
+    } catch (IOException e) {
+      System.out.println("Exception encountered " + e);
+    }
+    return new ACLEntity(owner, group, mode);
+  }
+
   /**
    * Update storage type quota of specified mount table.
    *
