@@ -32,5 +32,6 @@ import java.util.concurrent.TimeUnit;
 public class UnitTestcaseTimeLimit {
   public final int timeOutSecs = 10;
   
-  @Rule public TestRule globalTimeout = new Timeout(timeOutSecs, TimeUnit.SECONDS);
+  @Rule public TestRule globalTimeout =
+      new Timeout(timeOutSecs, TimeUnit.SECONDS);
 }
