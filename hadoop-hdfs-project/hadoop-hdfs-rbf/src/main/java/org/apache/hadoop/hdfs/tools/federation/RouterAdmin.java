@@ -34,6 +34,10 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.viewfs.Constants;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -132,7 +136,7 @@ public class RouterAdmin extends Configured implements Tool {
           {"-add", "-update", "-rm", "-ls", "-getDestination", "-setQuota",
               "-setStorageTypeQuota", "-clrQuota", "-clrStorageTypeQuota",
               "-safemode", "-nameservice", "-getDisabledNameservices",
-              "-refresh", "-refreshRouterArgs",
+              "-refresh", "-initViewFsToMountTable", "-refreshRouterArgs",
               "-refreshSuperUserGroupsConfiguration"};
       StringBuilder usage = new StringBuilder();
       usage.append("Usage: hdfs dfsrouteradmin :\n");
@@ -171,7 +175,10 @@ public class RouterAdmin extends Configured implements Tool {
       return "\t[-clrQuota <path>]";
     } else if (cmd.equals("-clrStorageTypeQuota")) {
       return "\t[-clrStorageTypeQuota <path>]";
-    } else if (cmd.equals("-safemode")) {
+    }  else if (cmd.equals("-initViewFsToMountTable")) {
+      return "\t[-initViewFsToMountTable <clusterName>," +
+          "-initViewFsToMountTable ClusterX]";
+    }else if (cmd.equals("-safemode")) {
       return "\t[-safemode enter | leave | get]";
     } else if (cmd.equals("-nameservice")) {
       return "\t[-nameservice enable | disable <nameservice>]";
@@ -384,7 +391,14 @@ public class RouterAdmin extends Configured implements Tool {
         getDisabledNameservices();
       } else if ("-refresh".equals(cmd)) {
         refresh(address);
-      } else if ("-refreshRouterArgs".equals(cmd)) {
+      } else if ("-initViewFsToMountTable".equals(cmd)) {
+        if (initViewFsToMountTable(argv, i)) {
+          System.out.println("Successfully init ViewFs mapping to router " + argv[i]);
+        } else {
+          exitCode = -1;
+        }
+      }
+      else if ("-refreshRouterArgs".equals(cmd)) {
         exitCode = genericRefresh(argv, i);
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
         exitCode = refreshSuperUserGroupsConfiguration();
@@ -1035,7 +1049,56 @@ public class RouterAdmin extends Configured implements Tool {
         .updateMountTableEntry(updateRequest);
     return updateResponse.getStatus();
   }
-
+  
+  /**
+   * initViewFsToMountTable.
+   *
+   * @param parameters The specified cluster to initialize.
+   * @param i Index in the parameters
+   * @return If the quota was updated.
+   * @throws IOException Error adding the mount point.
+   */
+  public boolean initViewFsToMountTable(String[] parameters, int i) throws IOException {
+    String clusterName = parameters[i++];
+    if (clusterName == null) {
+      System.out.println("Please enter the cluster name.");
+      return false;
+    }
+    final String mountTablePrefix =
+        Constants.CONFIG_VIEWFS_PREFIX + "." + clusterName + "." +
+            Constants.CONFIG_VIEWFS_LINK + "./";
+    Map<String, String> viewFsMap = getConf().getValByRegex(mountTablePrefix);
+    if (viewFsMap.size() == 0) {
+      System.out.println("Please check the cluster name and veiwfs " +
+          "configuration.");
+    }
+    for (String key : viewFsMap.keySet()) {
+      Path path = new Path(viewFsMap.get(key));
+      String owner = null;
+      String group = null;
+      FsPermission mode = null;
+      try {
+        FileSystem fs = path.getFileSystem(getConf());
+        if (fs.exists(path)) {
+          FileStatus fileStatus = fs.getFileStatus(path);
+          owner = fileStatus.getOwner();
+          group = fileStatus.getGroup();
+          mode = fileStatus.getPermission();
+        }
+      } catch (Exception e) {
+        LOG.warn("Exception encountered", e);
+      }
+      DestinationOrder order = DestinationOrder.HASH;
+      String mount =
+          key.split(clusterName + "." + Constants.CONFIG_VIEWFS_LINK + ".")[1];
+      String dest = path.toUri().getPath();
+      String[] nss = new String[]{path.toUri().getAuthority()};
+      addMount(mount, nss, dest, false, false, order,
+          new ACLEntity(owner, group, mode));
+    }
+    return true;
+  }
+  
   /**
    * Update storage type quota of specified mount table.
    *
