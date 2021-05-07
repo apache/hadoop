@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.junit.Assert;
 import org.junit.Test;
+
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -214,7 +215,7 @@ public class TestAbfsInputStream extends
             source), readBuf, buf);
   }
 
-  void checkGetPathStatusCalls(Path testFile, FileStatus fileStatus,
+  private void checkGetPathStatusCalls(Path testFile, FileStatus fileStatus,
       AzureBlobFileSystemStore mockStore, AbfsRestOperationType source)
       throws IOException {
 
@@ -242,24 +243,27 @@ public class TestAbfsInputStream extends
     Path largeTestFile = new Path(testFolder + "/testFile1");
     fs.mkdirs(new Path(testFolder));
     int readBufferSize = getConfiguration().getReadBufferSize();
-    byte[] largeBuffer = new byte[readBufferSize + 5];
     byte[] smallBuffer = new byte[5];
-    new Random().nextBytes(largeBuffer);
+    byte[] largeBuffer = new byte[readBufferSize + 5];
     new Random().nextBytes(smallBuffer);
+    new Random().nextBytes(largeBuffer);
     writeBufferToNewFile(smallTestFile, smallBuffer);
     writeBufferToNewFile(largeTestFile, largeBuffer);
 
+    FileStatus[] getFileStatusResults = {fs.getFileStatus(smallTestFile),
+        fs.getFileStatus(largeTestFile)};
+    FileStatus[] listStatusResults = fs.listStatus(new Path(testFolder));
+
     // open with fileStatus from GetPathStatus
-    verifyOpenWithProvidedStatus(smallTestFile, fs.getFileStatus(smallTestFile),
+    verifyOpenWithProvidedStatus(smallTestFile, getFileStatusResults[0],
         smallBuffer, AbfsRestOperationType.GetPathStatus);
-    verifyOpenWithProvidedStatus(largeTestFile, fs.getFileStatus(largeTestFile),
+    verifyOpenWithProvidedStatus(largeTestFile, getFileStatusResults[1],
         largeBuffer, AbfsRestOperationType.GetPathStatus);
 
     // open with fileStatus from ListStatus
-    FileStatus[] fileStatuses = fs.listStatus(new Path(testFolder));
-    verifyOpenWithProvidedStatus(smallTestFile, fileStatuses[0], smallBuffer,
+    verifyOpenWithProvidedStatus(smallTestFile, listStatusResults[0], smallBuffer,
         AbfsRestOperationType.ListPaths);
-    verifyOpenWithProvidedStatus(largeTestFile, fileStatuses[1], largeBuffer,
+    verifyOpenWithProvidedStatus(largeTestFile, listStatusResults[1], largeBuffer,
         AbfsRestOperationType.ListPaths);
 
     // verify number of GetPathStatus invocations
@@ -267,13 +271,13 @@ public class TestAbfsInputStream extends
         fs.isSecureScheme(), getRawConfiguration(),
         new AbfsCountersImpl(fs.getUri()));
     AzureBlobFileSystemStore mockStore = spy(store);
-    checkGetPathStatusCalls(smallTestFile, fs.getFileStatus(smallTestFile),
+    checkGetPathStatusCalls(smallTestFile, getFileStatusResults[0],
         mockStore, AbfsRestOperationType.GetPathStatus);
-    checkGetPathStatusCalls(largeTestFile, fs.getFileStatus(largeTestFile),
+    checkGetPathStatusCalls(largeTestFile, getFileStatusResults[1],
         mockStore, AbfsRestOperationType.GetPathStatus);
-    checkGetPathStatusCalls(smallTestFile, fileStatuses[0],
+    checkGetPathStatusCalls(smallTestFile, listStatusResults[0],
         mockStore, AbfsRestOperationType.ListPaths);
-    checkGetPathStatusCalls(largeTestFile, fileStatuses[1],
+    checkGetPathStatusCalls(largeTestFile, listStatusResults[1],
         mockStore, AbfsRestOperationType.ListPaths);
   }
 
