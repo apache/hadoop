@@ -1053,7 +1053,7 @@ public class RouterAdmin extends Configured implements Tool {
         .updateMountTableEntry(updateRequest);
     return updateResponse.getStatus();
   }
-  
+
   /**
    * initViewFsToMountTable.
    * @param clusterName The specified cluster to initialize.
