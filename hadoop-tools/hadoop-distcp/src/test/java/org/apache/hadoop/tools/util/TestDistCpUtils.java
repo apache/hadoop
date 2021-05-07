@@ -1361,6 +1361,15 @@ public class TestDistCpUtils {
     return base + "/" + location;
   }
 
+  public static String createTestSetupWithOnlyFile(FileSystem fs,
+      FsPermission perm) throws IOException {
+    String location = String.valueOf(rand.nextLong());
+    fs.mkdirs(new Path("/tmp1/" + location));
+    fs.setPermission(new Path("/tmp1/" + location), perm);
+    createFile(fs, new Path("/tmp1/" + location + "/file"));
+    return "/tmp1/" + location + "/file";
+  }
+
   public static void delete(FileSystem fs, String path) {
     try {
       if (fs != null) {

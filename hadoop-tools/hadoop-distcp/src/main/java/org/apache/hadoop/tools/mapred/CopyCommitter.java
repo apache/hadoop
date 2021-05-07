@@ -553,10 +553,6 @@ public class CopyCommitter extends FileOutputCommitter {
         conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
     List<Path> targets = new ArrayList<>(1);
     targets.add(targetFinalPath);
-    Path resultNonePath = Path.getPathWithoutSchemeAndAuthority(targetFinalPath)
-        .toString().startsWith(DistCpConstants.HDFS_RESERVED_RAW_DIRECTORY_NAME)
-        ? DistCpConstants.RAW_NONE_PATH
-        : DistCpConstants.NONE_PATH;
     //
     // Set up options to be the same from the CopyListing.buildListing's
     // perspective, so to collect similar listings as when doing the copy
@@ -568,7 +564,7 @@ public class CopyCommitter extends FileOutputCommitter {
         conf.getBoolean(DistCpConstants.CONF_LABEL_USE_ITERATOR, false);
     LOG.info("Scanning destination directory {} with thread count: {}",
         targetFinalPath, threads);
-    DistCpOptions options = new DistCpOptions.Builder(targets, resultNonePath)
+    DistCpOptions options = new DistCpOptions.Builder(targets, targetFinalPath)
         .withOverwrite(overwrite)
         .withSyncFolder(syncFolder)
         .withNumListstatusThreads(threads)
