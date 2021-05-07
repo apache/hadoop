@@ -1166,7 +1166,7 @@ class DataXceiver extends Receiver implements Runnable {
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
       String msg = "Not able to receive block " + block.getBlockId() +
           " from " + peer.getRemoteAddressString() + " because threads " +
-          "quota is exceeded.";
+          "quota is exceeded ";
       LOG.warn(msg);
       sendResponse(ERROR, msg);
       return;
