@@ -34,7 +34,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -712,7 +711,8 @@ public class TestRouterAdminCLI {
     // re-set system out for testing
     System.setOut(new PrintStream(out));
     stateStore.loadCache(MountTableStoreImpl.class, true);
-    String nnAddress = cluster.getRandomNamenode().getNamenode().getHostAndPort();
+    String nnAddress = cluster.getRandomNamenode().
+        getNamenode().getHostAndPort();
 
     String src = "/data";
     Path destPath = new Path("hdfs://" + nnAddress + "/data");
@@ -725,26 +725,28 @@ public class TestRouterAdminCLI {
     // 1.set owner
     hdfs.setOwner(destPath, user, group);
     // 2.set viewFs mapping
-    admin.getConf().set("fs.viewfs.mounttable.ClusterX.link." + src, destPath.toString());
+    admin.getConf().set(
+        "fs.viewfs.mounttable.ClusterX.link." + src, destPath.toString());
     // 3.run initialization
     String[] argv = new String[]{"-initViewFsToMountTable", clusterName};
     assertEquals(0, ToolRunner.run(admin, argv));
     // 4.gets the mount point entries
     stateStore.loadCache(MountTableStoreImpl.class, true);
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
-        .newInstance("/");
+        .newInstance(src);
     GetMountTableEntriesResponse getResponse = client.getMountTableManager()
         .getMountTableEntries(getRequest);
     List<MountTable> mountTables = getResponse.getEntries();
     // 5.check
     assertEquals(1, mountTables.size());
-    assertEquals(user, mountTables.get(0).getOwnerName());
-    assertEquals(group, mountTables.get(0).getGroupName());
-    assertEquals(destPath.toUri().getPath(), mountTables.get(0).
+    MountTable mountTable = mountTables.get(0);
+    assertEquals(user, mountTable.getOwnerName());
+    assertEquals(group, mountTable.getGroupName());
+    assertEquals(destPath.toUri().getPath(), mountTable.
         getDestinations().get(0).getDest());
-    assertEquals(nnAddress, mountTables.get(0).
+    assertEquals(nnAddress, mountTable.
         getDestinations().get(0).getNameserviceId());
-    assertEquals(src, mountTables.get(0).getSourcePath());
+    assertEquals(src, mountTable.getSourcePath());
   }
 
   @Test
@@ -857,6 +859,13 @@ public class TestRouterAdminCLI {
     assertTrue(out.toString().contains("\t[-clrQuota <path>]"));
     out.reset();
 
+    argv = new String[] {"-initViewFsToMountTable"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    System.err.println(out.toString());
+    assertTrue(out.toString().
+        contains("[-initViewFsToMountTable <clusterName>]"));
+    out.reset();
+
     argv = new String[] {"-safemode"};
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(out.toString().contains("\t[-safemode enter | leave | get]"));
@@ -899,6 +908,7 @@ public class TestRouterAdminCLI {
         + " <quota in bytes or quota size string>]\n"
         + "\t[-clrQuota <path>]\n"
         + "\t[-clrStorageTypeQuota <path>]\n"
+        +"\t[-initViewFsToMountTable <clusterName>]\n"
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
         + "\t[-getDisabledNameservices]\n"
