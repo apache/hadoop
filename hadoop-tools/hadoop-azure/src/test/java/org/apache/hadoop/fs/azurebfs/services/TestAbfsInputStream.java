@@ -27,6 +27,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
 import org.assertj.core.api.Assertions;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -200,9 +201,8 @@ public class TestAbfsInputStream extends
   }
 
   private void verifyOpenWithProvidedStatus(Path path, FileStatus fileStatus,
-      byte[] buf, AbfsRestOperationType source) throws IOException,
-      ExecutionException,
-      InterruptedException {
+      byte[] buf, AbfsRestOperationType source)
+      throws IOException, ExecutionException, InterruptedException {
     byte[] readBuf = new byte[buf.length];
     FSDataInputStream in = getFileSystem().openFileWithOptions(path,
         new OpenFileParameters().withStatus(fileStatus)).get();
@@ -212,6 +212,26 @@ public class TestAbfsInputStream extends
     assertArrayEquals(String
         .format("Open with fileStatus [from %s result]: Incorrect read data",
             source), readBuf, buf);
+  }
+
+  void checkGetPathStatusCalls(Path testFile, FileStatus fileStatus,
+      AzureBlobFileSystemStore mockStore, AbfsRestOperationType source)
+      throws IOException {
+
+    // verify GetPathStatus not invoked when FileStatus is provided
+    mockStore.openFileForRead(testFile,
+        new OpenFileParameters().withStatus(fileStatus), null);
+    verify(mockStore, times(0).description((String.format(
+        "FileStatus [from %s result] provided, GetFileStatus should not be invoked", source))))
+        .getFileStatus(any(Path.class));
+
+    // verify GetPathStatus invoked when FileStatus not provided
+    mockStore.openFileForRead(testFile, new OpenFileParameters(), null);
+    verify(mockStore, times(1).description(
+        "GetPathStatus should be invoked when FileStatus not provided"))
+        .getFileStatus(any(Path.class));
+
+    Mockito.reset(mockStore); //clears invocation count for next test case
   }
 
   @Test
@@ -246,33 +266,15 @@ public class TestAbfsInputStream extends
     AzureBlobFileSystemStore store = new AzureBlobFileSystemStore(fs.getUri(),
         fs.isSecureScheme(), getRawConfiguration(),
         new AbfsCountersImpl(fs.getUri()));
+    AzureBlobFileSystemStore mockStore = spy(store);
     checkGetPathStatusCalls(smallTestFile, fs.getFileStatus(smallTestFile),
-        spy(store), AbfsRestOperationType.GetPathStatus);
+        mockStore, AbfsRestOperationType.GetPathStatus);
     checkGetPathStatusCalls(largeTestFile, fs.getFileStatus(largeTestFile),
-        spy(store), AbfsRestOperationType.GetPathStatus);
-    checkGetPathStatusCalls(smallTestFile, fileStatuses[0], spy(store),
-        AbfsRestOperationType.ListPaths);
-    checkGetPathStatusCalls(largeTestFile, fileStatuses[1], spy(store),
-        AbfsRestOperationType.ListPaths);
-
-  }
-
-  void checkGetPathStatusCalls(Path testFile, FileStatus fileStatus,
-      AzureBlobFileSystemStore mockStore, AbfsRestOperationType source)
-      throws IOException {
-
-    // verify GetPathStatus not invoked when FileStatus is provided
-    mockStore.openFileForRead(testFile,
-        new OpenFileParameters().withStatus(fileStatus), null);
-    verify(mockStore, times(0).description((String.format(
-        "FileStatus [from %s result] provided, GetFileStatus should not be invoked", source))))
-        .getFileStatus(any(Path.class));
-
-    // verify GetPathStatus invoked when FileStatus not provided
-    mockStore.openFileForRead(testFile, new OpenFileParameters(), null);
-    verify(mockStore, times(1).description(
-        "GetPathStatus should be invoked when FileStatus not provided"))
-        .getFileStatus(any(Path.class));
+        mockStore, AbfsRestOperationType.GetPathStatus);
+    checkGetPathStatusCalls(smallTestFile, fileStatuses[0],
+        mockStore, AbfsRestOperationType.ListPaths);
+    checkGetPathStatusCalls(largeTestFile, fileStatuses[1],
+        mockStore, AbfsRestOperationType.ListPaths);
   }
 
   /**
