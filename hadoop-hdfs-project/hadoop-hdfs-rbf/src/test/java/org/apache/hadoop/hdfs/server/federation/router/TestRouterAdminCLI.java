@@ -740,6 +740,8 @@ public class TestRouterAdminCLI {
     // 5.check
     assertEquals(1, mountTables.size());
     MountTable mountTable = mountTables.get(0);
+    List<RemoteLocation> destinations = mountTable.getDestinations();
+    assertEquals(1, destinations.size());
     assertEquals(user, mountTable.getOwnerName());
     assertEquals(group, mountTable.getGroupName());
     assertEquals(destPath.toUri().getPath(), mountTable.
@@ -908,7 +910,7 @@ public class TestRouterAdminCLI {
         + " <quota in bytes or quota size string>]\n"
         + "\t[-clrQuota <path>]\n"
         + "\t[-clrStorageTypeQuota <path>]\n"
-        +"\t[-initViewFsToMountTable <clusterName>]\n"
+        + "\t[-initViewFsToMountTable <clusterName>]\n"
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
         + "\t[-getDisabledNameservices]\n"

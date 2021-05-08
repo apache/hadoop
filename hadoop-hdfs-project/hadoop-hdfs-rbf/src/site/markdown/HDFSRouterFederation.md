@@ -242,9 +242,9 @@ Mount table permission can be set by following command:
 The option mode is UNIX-style permissions for the mount table. Permissions are specified in octal, e.g. 0755. By default, this is set to 0755.
 
 #### Init ViewFs To Router
-Router supports initializing the ViewFS mount point to the Router. The mapping directory protocol of ViewFS must be HDFS, and the initializer only supports one-to-one mapping.
+Router supports initializing the [ViewFs](../hadoop-hdfs/ViewFs.html) mount point to the Router. The mapping directory protocol of ViewFS must be HDFS, and the initializer only supports one-to-one mapping.
 
-For example, use the following viewfs to configure the initial mount table to the router.
+For example, use the following [ViewFs](../hadoop-hdfs/ViewFs.html) to configure the initial mount table to the router.
 
     <configuration>
       <property>
@@ -253,7 +253,7 @@ For example, use the following viewfs to configure the initial mount table to th
       </property>
     </configuration>
 
-The ViewFS mount table can be initialized to the Router by using the following command:
+The [ViewFs](../hadoop-hdfs/ViewFs.html) mount table can be initialized to the Router by using the following command:
 
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -initViewFsToMountTable ClusterX
 
