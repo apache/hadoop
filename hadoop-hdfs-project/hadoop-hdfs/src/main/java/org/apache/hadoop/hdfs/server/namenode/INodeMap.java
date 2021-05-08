@@ -29,14 +29,63 @@ import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LatchLock;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.PartitionedGSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Storing all the {@link INode}s and maintaining the mapping between INode ID
  * and INode.  
  */
 public class INodeMap {
+  static final int NAMESPACE_KEY_DEBTH = 2;
+  static final int NUM_RANGES_STATIC = 256;  // power of 2
+
+  public static class INodeKeyComparator implements Comparator<INode> {
+    INodeKeyComparator() {
+      FSDirectory.LOG.info("Namespace key debth = {}", NAMESPACE_KEY_DEBTH);
+    }
+
+    @Override
+    public int compare(INode i1, INode i2) {
+      if (i1 == null || i2 == null) {
+        throw new NullPointerException("Cannot compare null INodes");
+      }
+      long[] key1 = i1.getNamespaceKey(NAMESPACE_KEY_DEBTH);
+      long[] key2 = i2.getNamespaceKey(NAMESPACE_KEY_DEBTH);
+      for(int l = 0; l < NAMESPACE_KEY_DEBTH; l++) {
+        if(key1[l] == key2[l]) continue;
+        return (key1[l] < key2[l] ? -1 : 1);
+      }
+      return 0;
+    }
+  }
+
+  /**
+   * INodeKeyComparator with Hashed Parent
+   *
+   */
+  public static class HPINodeKeyComparator implements Comparator<INode> {
+    HPINodeKeyComparator() {
+      FSDirectory.LOG.info("Namespace key debth = {}", NAMESPACE_KEY_DEBTH);
+    }
+
+    @Override
+    public int compare(INode i1, INode i2) {
+      if (i1 == null || i2 == null) {
+        throw new NullPointerException("Cannot compare null INodes");
+      }
+      long[] key1 = i1.getNamespaceKey(NAMESPACE_KEY_DEBTH);
+      long[] key2 = i2.getNamespaceKey(NAMESPACE_KEY_DEBTH);
+      long key1_0 = INode.indexOf(key1);
+      long key2_0 = INode.indexOf(key2);
+      if(key1_0 != key2_0)
+        return (key1_0 < key2_0 ? -1 : 1);
+      for(int l = 1; l < NAMESPACE_KEY_DEBTH; l++) {
+        if(key1[l] == key2[l]) continue;
+        return (key1[l] < key2[l] ? -1 : 1);
+      }
+      return 0;
+    }
+  }
+
   public static class INodeIdComparator implements Comparator<INode> {
     @Override
     public int compare(INode i1, INode i2) {
@@ -50,8 +99,6 @@ public class INodeMap {
   }
 
   public class INodeMapLock extends LatchLock<ReentrantReadWriteLock> {
-    Logger LOG = LoggerFactory.getLogger(INodeMapLock.class);
-
     private ReentrantReadWriteLock childLock;
 
     INodeMapLock() {
@@ -146,8 +193,22 @@ public class INodeMap {
     this.namesystem = ns;
     // Compute the map capacity by allocating 1% of total memory
     int capacity = LightWeightGSet.computeCapacity(1, "INodeMap");
-    this.map = new PartitionedGSet<>(capacity, new INodeIdComparator(),
+    this.map = new PartitionedGSet<>(capacity, new INodeKeyComparator(),
             new INodeMapLock(), rootDir);
+
+    // Pre-populate initial empty partitions
+    PartitionedGSet<INode, INodeWithAdditionalFields> pgs =
+        (PartitionedGSet<INode, INodeWithAdditionalFields>) map;
+    PermissionStatus perm = new PermissionStatus(
+        "", "", new FsPermission((short) 0));
+    for(int p = 0; p < NUM_RANGES_STATIC; p++) {
+      INodeDirectory key = new INodeDirectory(
+          INodeId.ROOT_INODE_ID, "range key".getBytes(), perm, 0);
+      key.setParent(new INodeDirectory((long)p, null, perm, 0));
+      pgs.addNewPartition(key);
+    }
+
+    map.put(rootDir);
   }
 
   /**
