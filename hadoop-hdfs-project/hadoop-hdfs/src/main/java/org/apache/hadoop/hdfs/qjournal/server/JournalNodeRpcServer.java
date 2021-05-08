@@ -268,7 +268,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
       String jid, String nameServiceId,
       long sinceTxId, boolean inProgressOk)
       throws IOException {
-    checkSuperuserPrivilege();    
+    checkSuperuserPrivilege();
     RemoteEditLogManifest manifest = jn.getOrCreateJournal(jid, nameServiceId)
         .getEditLogManifest(sinceTxId, inProgressOk);
     
