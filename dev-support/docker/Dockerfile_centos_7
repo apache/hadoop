@@ -57,9 +57,9 @@ RUN yum update -y \
     valgrind \
     zlib-devel
 
+# Set GCC 9 as the default C/C++ compiler
 RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
 SHELL ["/bin/bash", "--login", "-c"]
-RUN gcc --version
 
 ####
 # Install Maven 3.6.3
@@ -143,6 +143,19 @@ RUN mkdir -p /opt/protobuf-src \
     && rm -rf /opt/protobuf-src
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
+
+####
+# Install Node.js
+####
+# hadolint ignore=DL3003
+RUN mkdir -p /tmp/node \
+    && curl -L -s -S https://nodejs.org/dist/v14.16.1/node-v14.16.1.tar.gz -o /tmp/node-v14.16.1.tar.gz \
+    && tar xzf /tmp/node-v14.16.1.tar.gz --strip-components 1 -C /tmp/node \
+    && cd /tmp/node \
+    && ./configure \
+    && make "-j$(nproc)" \
+    && make install \
+    && cd /root
 
 ####
 # Install pylint and python-dateutil
