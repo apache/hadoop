@@ -1753,7 +1753,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public void readUnlock(String opName,
       Supplier<String> lockReportInfoSupplier) {
-    this.fsLock.readUnlock(opName, lockReportInfoSupplier);
+    this.fsLock.readUnlock(opName, lockReportInfoSupplier, true);
   }
 
   @Override
@@ -1786,7 +1786,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override
   public boolean hasWriteLock() {
-    return this.fsLock.isWriteLockedByCurrentThread();
+    return this.fsLock.isWriteLockedByCurrentThread() ||
+        fsLock.haswWriteChildLock();
   }
   @Override
   public boolean hasReadLock() {
@@ -1799,6 +1800,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public int getWriteHoldCount() {
     return this.fsLock.getWriteHoldCount();
+  }
+
+  public FSNamesystemLock getFSLock() {
+    return this.fsLock;
   }
 
   /** Lock the checkpoint lock */
