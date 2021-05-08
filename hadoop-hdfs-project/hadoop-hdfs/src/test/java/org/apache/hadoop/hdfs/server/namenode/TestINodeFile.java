@@ -1017,23 +1017,38 @@ public class TestINodeFile {
 
       final Path dir = new Path("/dir");
       hdfs.mkdirs(dir);
-      INodeDirectory dirNode = getDir(fsdir, dir);
-      INode dirNodeFromNode = fsdir.getInode(dirNode.getId());
-      assertSame(dirNode, dirNodeFromNode);
+      cluster.getNamesystem().readLock();
+      try {
+        INodeDirectory dirNode = getDir(fsdir, dir);
+        INode dirNodeFromNode = fsdir.getInode(dirNode.getId());
+        assertSame(dirNode, dirNodeFromNode);
+      } finally {
+        cluster.getNamesystem().readUnlock();
+      }
 
       // set quota to dir, which leads to node replacement
       hdfs.setQuota(dir, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
-      dirNode = getDir(fsdir, dir);
-      assertTrue(dirNode.isWithQuota());
-      // the inode in inodeMap should also be replaced
-      dirNodeFromNode = fsdir.getInode(dirNode.getId());
-      assertSame(dirNode, dirNodeFromNode);
+      cluster.getNamesystem().readLock();
+      try {
+        INodeDirectory dirNode = getDir(fsdir, dir);
+        assertTrue(dirNode.isWithQuota());
+        // the inode in inodeMap should also be replaced
+        INode dirNodeFromNode = fsdir.getInode(dirNode.getId());
+        assertSame(dirNode, dirNodeFromNode);
+      } finally {
+        cluster.getNamesystem().readUnlock();
+      }
 
       hdfs.setQuota(dir, -1, -1);
-      dirNode = getDir(fsdir, dir);
-      // the inode in inodeMap should also be replaced
-      dirNodeFromNode = fsdir.getInode(dirNode.getId());
-      assertSame(dirNode, dirNodeFromNode);
+      cluster.getNamesystem().readLock();
+      try {
+        INodeDirectory dirNode = getDir(fsdir, dir);
+        // the inode in inodeMap should also be replaced
+        INode dirNodeFromNode = fsdir.getInode(dirNode.getId());
+        assertSame(dirNode, dirNodeFromNode);
+      } finally {
+        cluster.getNamesystem().readUnlock();
+      }
     } finally {
       if (cluster != null) {
         cluster.shutdown();
