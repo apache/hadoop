@@ -151,11 +151,11 @@ ENV PATH "${PATH}:/opt/protobuf/bin"
 RUN mkdir -p /tmp/node \
     && curl -L -s -S https://nodejs.org/dist/v14.16.1/node-v14.16.1.tar.gz -o /tmp/node-v14.16.1.tar.gz \
     && tar xzf /tmp/node-v14.16.1.tar.gz --strip-components 1 -C /tmp/node \
-    && cd /tmp/node \
+    && cd /tmp/node || exit \
     && ./configure \
     && make "-j$(nproc)" \
     && make install \
-    && cd /root
+    && cd /root || exit
 
 ####
 # Install pylint and python-dateutil
