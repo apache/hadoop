@@ -485,6 +485,8 @@ public abstract class Server {
   private final int maxDataLength;
   private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
 
+  private boolean getRealIp;
+
   volatile private boolean running = true;         // true while server runs
   private CallQueueManager<Call> callQueue;
 
@@ -792,6 +794,7 @@ public abstract class Server {
     // the priority level assigned by scheduler, 0 by default
     private long clientStateId;
     private boolean isCallCoordinated;
+    private  String realClientIp = null; // the real client Ip
 
     Call() {
       this(RpcConstants.INVALID_CALL_ID, RpcConstants.INVALID_RETRY_COUNT,
@@ -858,6 +861,15 @@ public abstract class Server {
     public Void run() throws Exception {
       return null;
     }
+
+    public void setRealClientIp(String ip) {
+      realClientIp = ip;
+    }
+
+    public String getRealClientIp() {
+      return realClientIp;
+    }
+
     // should eventually be abstract but need to avoid breaking tests
     public UserGroupInformation getRemoteUser() {
       return null;
@@ -2696,12 +2708,19 @@ public abstract class Server {
       }
 
       CallerContext callerContext = null;
+      String realClientIp = null;
       if (header.hasCallerContext()) {
         callerContext =
             new CallerContext.Builder(header.getCallerContext().getContext())
                 .setSignature(header.getCallerContext().getSignature()
                     .toByteArray())
                 .build();
+
+          if (getRealIp && callerContext.getContext().
+              startsWith(CallerContext.CLIENT_IP_STR)) {
+            realClientIp = callerContext.getContext().split(",")[0].
+                replace(CallerContext.CLIENT_IP_STR + ":", "");
+          }
       }
 
       RpcCall call = new RpcCall(this, header.getCallId(),
@@ -2709,6 +2728,11 @@ public abstract class Server {
           ProtoUtil.convert(header.getRpcKind()),
           header.getClientId().toByteArray(), span, callerContext);
 
+      if (realClientIp != null) {
+        if (NetUtils.isValidIPv4(realClientIp)) {
+          call.setRealClientIp(realClientIp);
+        }
+      }
       // Save the priority level assignment by the scheduler
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
       call.markCallCoordinated(false);
@@ -3112,9 +3136,11 @@ public abstract class Server {
 
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
     this.authorize = 
-      conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
+      conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
                       false);
-
+    this.getRealIp = conf.getBoolean(
+        CommonConfigurationKeys.IPC_SERVER_RPC_GET_REAL_CLIENT_IP_KEY,
+        CommonConfigurationKeys.IPC_SERVER_RPC_GET_REAL_CLIENT_IP_DEFAULT);
     // configure supported authentications
     this.enabledAuthMethods = getAuthMethods(secretManager, conf);
     this.negotiateResponse = buildNegotiateResponse(enabledAuthMethods);

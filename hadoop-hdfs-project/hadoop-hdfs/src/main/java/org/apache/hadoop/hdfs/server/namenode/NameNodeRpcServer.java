@@ -1888,7 +1888,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   private static String getClientMachine() {
-    String clientMachine = Server.getRemoteAddress();
+    String clientMachine;
+    Server.Call call = Server.getCurCall().get();
+    if (call != null) {
+      clientMachine = call.getRealClientIp();
+      if (clientMachine != null) {
+        return clientMachine;
+      }
+    }
+    clientMachine = Server.getRemoteAddress();
     if (clientMachine == null) { //not a RPC client
       clientMachine = "";
     }

@@ -548,14 +548,14 @@ public class RouterRpcClient {
    * It adds trace info "clientIp:ip" to caller context if it's absent.
    */
   private void appendClientIpToCallerContextIfAbsent() {
-    String clientIpInfo = CLIENT_IP_STR + ":" + Server.getRemoteAddress();
+    String clientIpInfo = CallerContext.CLIENT_IP_STR + ":" + Server.getRemoteAddress();
     final CallerContext ctx = CallerContext.getCurrent();
     if (isClientIpInfoAbsent(clientIpInfo, ctx)) {
       String origContext = ctx == null ? null : ctx.getContext();
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
       CallerContext.setCurrent(
-          new CallerContext.Builder(origContext, contextFieldSeparator)
-              .append(clientIpInfo)
+          new CallerContext.Builder(clientIpInfo, contextFieldSeparator)
+              .append(origContext)
               .setSignature(origSignature)
               .build());
     }
