@@ -65,6 +65,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY */
   public static final int     IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT =
     1024*1024;
+  /** Get the user's real IP */
+  public static final String  IPC_SERVER_RPC_GET_REAL_CLIENT_IP_KEY =
+      "ipc.server.get.real.client.ip";
+  public static final boolean  IPC_SERVER_RPC_GET_REAL_CLIENT_IP_DEFAULT =
+      false;
   /** Number of threads in RPC server reading from the socket */
   public static final String  IPC_SERVER_RPC_READ_THREADS_KEY =
     "ipc.server.read.threadpool.size";
