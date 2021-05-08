@@ -177,18 +177,23 @@ public class FSImage implements Closeable {
  
   void format(FSNamesystem fsn, String clusterId, boolean force)
       throws IOException {
-    long fileCount = fsn.getFilesTotal();
-    // Expect 1 file, which is the root inode
-    Preconditions.checkState(fileCount == 1,
-        "FSImage.format should be called with an uninitialized namesystem, has " +
-        fileCount + " files");
-    NamespaceInfo ns = NNStorage.newNamespaceInfo();
-    LOG.info("Allocated new BlockPoolId: " + ns.getBlockPoolID());
-    ns.clusterID = clusterId;
-    
-    storage.format(ns);
-    editLog.formatNonFileJournals(ns, force);
-    saveFSImageInAllDirs(fsn, 0);
+    fsn.readLock();
+    try {
+      long fileCount = fsn.getFilesTotal();
+      // Expect 1 file, which is the root inode
+      Preconditions.checkState(fileCount == 1,
+          "FSImage.format should be called with an uninitialized namesystem, has " +
+              fileCount + " files");
+      NamespaceInfo ns = NNStorage.newNamespaceInfo();
+      LOG.info("Allocated new BlockPoolId: " + ns.getBlockPoolID());
+      ns.clusterID = clusterId;
+
+      storage.format(ns);
+      editLog.formatNonFileJournals(ns, force);
+      saveFSImageInAllDirs(fsn, 0);
+    } finally {
+      fsn.readUnlock();
+    }
   }
   
   /**

@@ -17,44 +17,139 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.util.GSet;
+import org.apache.hadoop.util.LatchLock;
 import org.apache.hadoop.util.LightWeightGSet;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.PartitionedGSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Storing all the {@link INode}s and maintaining the mapping between INode ID
  * and INode.  
  */
 public class INodeMap {
-  
-  static INodeMap newInstance(INodeDirectory rootDir) {
-    // Compute the map capacity by allocating 1% of total memory
-    int capacity = LightWeightGSet.computeCapacity(1, "INodeMap");
-    GSet<INode, INodeWithAdditionalFields> map =
-        new LightWeightGSet<>(capacity);
-    map.put(rootDir);
-    return new INodeMap(map);
+  public static class INodeIdComparator implements Comparator<INode> {
+    @Override
+    public int compare(INode i1, INode i2) {
+      if (i1 == null || i2 == null) {
+        throw new NullPointerException("Cannot compare null INodesl");
+      }
+      long id1 = i1.getId();
+      long id2 = i2.getId();
+      return id1 < id2 ? -1 : id1 == id2 ? 0 : 1;
+    }
+  }
+
+  public class INodeMapLock extends LatchLock<ReentrantReadWriteLock> {
+    Logger LOG = LoggerFactory.getLogger(INodeMapLock.class);
+
+    private ReentrantReadWriteLock childLock;
+
+    INodeMapLock() {
+      this(null);
+    }
+
+    private INodeMapLock(ReentrantReadWriteLock childLock) {
+      assert namesystem != null : "namesystem is null";
+      this.childLock = childLock;
+    }
+
+    @Override
+    protected boolean isReadTopLocked() {
+      return namesystem.getFSLock().isReadLocked();
+    }
+
+    @Override
+    protected boolean isWriteTopLocked() {
+      return namesystem.getFSLock().isWriteLocked();
+    }
+
+    @Override
+    protected void readTopdUnlock() {
+      namesystem.getFSLock().readUnlock("INodeMap", null, false);
+    }
+
+    @Override
+    protected void writeTopUnlock() {
+      namesystem.getFSLock().writeUnlock("INodeMap", false, null, false);
+    }
+
+    @Override
+    protected boolean hasReadChildLock() {
+      return this.childLock.getReadHoldCount() > 0 || hasWriteChildLock();
+    }
+
+    @Override
+    protected void readChildLock() {
+      // LOG.info("readChildLock: thread = {}, {}", Thread.currentThread().getId(), Thread.currentThread().getName());
+      this.childLock.readLock().lock();
+      namesystem.getFSLock().addChildLock(this);
+      // LOG.info("readChildLock: done");
+    }
+
+    @Override
+    protected void readChildUnlock() {
+      // LOG.info("readChildUnlock: thread = {}, {}", Thread.currentThread().getId(), Thread.currentThread().getName());
+      this.childLock.readLock().unlock();
+      // LOG.info("readChildUnlock: done");
+    }
+
+    @Override
+    protected boolean hasWriteChildLock() {
+      return this.childLock.isWriteLockedByCurrentThread();
+    }
+
+    @Override
+    protected void writeChildLock() {
+      // LOG.info("writeChildLock: thread = {}, {}", Thread.currentThread().getId(), Thread.currentThread().getName());
+      this.childLock.writeLock().lock();
+      namesystem.getFSLock().addChildLock(this);
+      // LOG.info("writeChildLock: done");
+    }
+
+    @Override
+    protected void writeChildUnlock() {
+      // LOG.info("writeChildUnlock: thread = {}, {}", Thread.currentThread().getId(), Thread.currentThread().getName());
+      this.childLock.writeLock().unlock();
+      // LOG.info("writeChildUnlock: done");
+    }
+
+    @Override
+    protected LatchLock<ReentrantReadWriteLock> clone() {
+      return new INodeMapLock(new ReentrantReadWriteLock(false)); // not fair
+    }
+  }
+
+  static INodeMap newInstance(INodeDirectory rootDir,
+      FSNamesystem ns) {
+    return new INodeMap(rootDir, ns);
   }
 
   /** Synchronized by external lock. */
   private final GSet<INode, INodeWithAdditionalFields> map;
-  
+  private FSNamesystem namesystem;
+
   public Iterator<INodeWithAdditionalFields> getMapIterator() {
     return map.iterator();
   }
 
-  private INodeMap(GSet<INode, INodeWithAdditionalFields> map) {
-    Preconditions.checkArgument(map != null);
-    this.map = map;
+  private INodeMap(INodeDirectory rootDir, FSNamesystem ns) {
+    this.namesystem = ns;
+    // Compute the map capacity by allocating 1% of total memory
+    int capacity = LightWeightGSet.computeCapacity(1, "INodeMap");
+    this.map = new PartitionedGSet<>(capacity, new INodeIdComparator(),
+            new INodeMapLock(), rootDir);
   }
-  
+
   /**
    * Add an {@link INode} into the {@link INode} map. Replace the old value if 
    * necessary. 
@@ -137,5 +232,28 @@ public class INodeMap {
    */
   public void clear() {
     map.clear();
+  }
+
+  public void latchWriteLock(INodesInPath iip, INode[] missing) {
+    assert namesystem.hasReadLock() : "must have namesysem lock";
+    assert iip.length() > 0 : "INodesInPath has 0 length";
+    if(!(map instanceof PartitionedGSet)) {
+      return;
+    }
+    // Locks partitions along the path starting from the first existing parent
+    // Locking is in the hierarchical order
+    INode[] allINodes = new INode[Math.min(1, iip.length()) + missing.length];
+    allINodes[0] = iip.getLastINode();
+    System.arraycopy(missing, 0, allINodes, 1, missing.length);
+    /*
+    // Locks all the partitions along the path in the hierarchical order
+    INode[] allINodes = new INode[iip.length() + missing.length];
+    INode[] existing = iip.getINodesArray();
+    System.arraycopy(existing, 0, allINodes, 0, existing.length);
+    System.arraycopy(missing, 0, allINodes, existing.length, missing.length);
+    */
+
+    ((PartitionedGSet<INode, INodeWithAdditionalFields>)
+        map).latchWriteLock(allINodes);
   }
 }
