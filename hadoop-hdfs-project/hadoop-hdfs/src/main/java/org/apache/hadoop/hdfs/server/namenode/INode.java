@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -577,6 +578,43 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return name == null? null: DFSUtil.bytes2String(name);
   }
 
+  private long[] namespaceKey;
+
+  /**
+   * Key of an INode.
+   * Defines partitioning of INodes in the INodeMap.
+   *
+   * @param level how many levels to be included in the key
+   * @return
+   */
+  public long[] getNamespaceKey(int level) {
+    if(namespaceKey == null) {  // generate the namespace key
+      long[] buf = new long[level];
+      INode cur = this;
+      for(int l = 0; l < level; l++) {
+        long curId = (cur == null) ? 0L : cur.getId();
+        buf[level - l - 1] = curId;
+        cur =  (cur == null) ? null : cur.parent;
+      }
+      buf[0] = indexOf(buf);
+      namespaceKey = buf;
+    }
+    return namespaceKey;
+  }
+
+  private final static long LARGE_PRIME = 512927357;
+  public static long indexOf(long[] key) {
+    if(key[key.length-1] == INodeId.ROOT_INODE_ID) {
+      return key[0];
+    }
+    long idx = LARGE_PRIME * key[0];
+    idx = (idx ^ (idx >> 32)) & (INodeMap.NUM_RANGES_STATIC -1);
+    return idx;
+  }
+
+  /**
+   * Key of a snapshot Diff Element
+   */
   @Override
   public final byte[] getKey() {
     return getLocalNameBytes();
@@ -636,7 +674,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   @Override
   public String toString() {
-    return getLocalName();
+    return getLocalName() + ": " + Arrays.toString(namespaceKey);
   }
 
   @VisibleForTesting
