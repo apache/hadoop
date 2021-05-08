@@ -265,10 +265,13 @@ class FSDirMkdirOp {
     // create the missing directories along the path
     INode[] missing = new INode[numMissing];
     final int last = iip.length();
+    INode parent = existing.getLastINode();
     for (int i = existing.length();  i < last; i++) {
       byte[] component = iip.getPathComponent(i);
       missing[i - existing.length()] =
           createDirectoryINode(fsd, existing, component, perm);
+      missing[i - existing.length()].setParent(parent.asDirectory());
+      parent = missing[i - existing.length()];
     }
     return missing;
   }
