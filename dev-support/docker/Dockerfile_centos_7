@@ -166,4 +166,4 @@ RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 # Install bower
 ####
 # hadolint ignore=DL3008
-#RUN npm install -g bower@1.8.8
+RUN npm install -g bower@1.8.8
