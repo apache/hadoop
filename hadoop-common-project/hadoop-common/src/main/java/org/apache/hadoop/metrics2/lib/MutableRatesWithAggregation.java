@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Iterator;

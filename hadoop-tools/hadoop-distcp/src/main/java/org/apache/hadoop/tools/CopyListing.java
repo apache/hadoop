@@ -35,7 +35,7 @@ import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 
 /**
  * The CopyListing abstraction is responsible for how the list of
