@@ -50,7 +50,7 @@ public class ImageMetadata {
    */
   public String getNameTag() {
     parseImageCoordinates();
-    if (!tag.equals("")) {
+    if (!tag.isEmpty()) {
       return image + ":" + tag;
     } else {
       return image;
@@ -72,7 +72,7 @@ public class ImageMetadata {
    * image name and tag.
    */
   public void parseImageCoordinates() {
-    if (imageCoordinates == null || imageCoordinates.equals("")) {
+    if (imageCoordinates == null || imageCoordinates.isEmpty()) {
       throw new IllegalArgumentException("Invalid image coordinates, null" +
           " or empty.");
     }

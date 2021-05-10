@@ -86,7 +86,7 @@ public class ImageTagToManifestV2Plugin extends AbstractService
       throws IOException {
     LOG.debug("Getting manifest for imageTag: " + imageTag);
 
-    if (imageTag == null || imageTag.equals("")) {
+    if (imageTag == null || imageTag.isEmpty()) {
       throw new IOException("Unable to read the HDFS manifest file for a null "
           + "or empty imageTag");
     }
