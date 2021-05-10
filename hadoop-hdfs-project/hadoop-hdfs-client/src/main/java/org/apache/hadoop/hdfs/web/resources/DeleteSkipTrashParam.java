@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,34 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.oncrpc;
-
-import java.net.SocketAddress;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.DefaultAddressedEnvelope;
+package org.apache.hadoop.hdfs.web.resources;
 
 /**
- * RpcResponse encapsulates a response to a RPC request. It contains the data
- * that is going to cross the wire, as well as the information of the remote
- * peer.
+ * SkipTrash param to be used by DELETE query.
  */
-public class RpcResponse extends
-    DefaultAddressedEnvelope<ByteBuf, SocketAddress> {
-  public RpcResponse(ByteBuf message, SocketAddress recipient) {
-    super(message, recipient, null);
+public class DeleteSkipTrashParam extends BooleanParam {
+
+  public static final String NAME = "skiptrash";
+  public static final String DEFAULT = FALSE;
+
+  private static final Domain DOMAIN = new Domain(NAME);
+
+  /**
+   * Constructor.
+   * @param value the parameter value.
+   */
+  public DeleteSkipTrashParam(final Boolean value) {
+    super(DOMAIN, value);
   }
 
-  public RpcResponse(ByteBuf message, SocketAddress recipient,
-      SocketAddress sender) {
-    super(message, recipient, sender);
+  /**
+   * Constructor.
+   * @param str a string representation of the parameter value.
+   */
+  public DeleteSkipTrashParam(final String str) {
+    this(DOMAIN.parse(str));
   }
 
-  public ByteBuf data() {
-    return this.content();
-  }
-
-  public SocketAddress remoteAddress() {
-    return this.recipient();
+  @Override
+  public String getName() {
+    return NAME;
   }
 }

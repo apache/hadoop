@@ -37,7 +37,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <ignoreTestFailure>true</ignoreTestFailure>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.39.v20210325</jetty.version>
+    <jetty.version>9.4.40.v20210413</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -206,7 +206,7 @@
     <assertj.version>3.12.2</assertj.version>
     <jline.version>3.9.0</jline.version>
     <powermock.version>1.5.6</powermock.version>
-    <solr.version>7.7.0</solr.version>
+    <solr.version>8.8.2</solr.version>
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.3.0</woodstox.version>
@@ -2283,11 +2283,12 @@
               <fork>true</fork>
               <source>${javac.version}</source>
               <target>${javac.version}</target>
-              <compilerArguments>
-                <Xlint/>
-				<Xlint:-unchecked/>
-                <Xmaxwarns>9999</Xmaxwarns>
-              </compilerArguments>
+              <compilerArgs>
+                <arg>-Xlint</arg>
+                <arg>-Xlint:unchecked</arg>
+                <arg>-Xmaxwarns</arg>
+                <arg>9999</arg>
+              </compilerArgs>
             </configuration>
           </plugin>
         </plugins>

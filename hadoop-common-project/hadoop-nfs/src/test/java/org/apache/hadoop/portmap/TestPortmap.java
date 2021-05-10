@@ -43,7 +43,7 @@ public class TestPortmap {
   private int xid;
 
   @BeforeClass
-  public static void setup() {
+  public static void setup() throws InterruptedException {
     pm.start(SHORT_TIMEOUT_MILLISECONDS, new InetSocketAddress("localhost", 0),
         new InetSocketAddress("localhost", 0));
   }

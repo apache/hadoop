@@ -22,7 +22,7 @@ Common problems working with S3 are
 
 1. Classpath setup
 1. Authentication
-1. S3 Inconsistency side-effects
+1. Incorrect configuration
 
 
 Troubleshooting IAM Assumed Roles is covered in its
@@ -1027,7 +1027,7 @@ at the end of a write operation. If a process terminated unexpectedly, or failed
 to call the `close()` method on an output stream, the pending data will have
 been lost.
 
-### File `flush()`, `hsync` and `hflush()` calls do not save data to S3
+### File `flush()` calls do not save data to S3
 
 Again, this is due to the fact that the data is cached locally until the
 `close()` operation. The S3A filesystem cannot be used as a store of data
@@ -1035,6 +1035,39 @@ if it is required that the data is persisted durably after every
 `Syncable.hflush()` or `Syncable.hsync()` call.
 This includes resilient logging, HBase-style journaling
 and the like. The standard strategy here is to save to HDFS and then copy to S3.
+
+### <a name="syncable"></a> `UnsupportedOperationException` "S3A streams are not Syncable. See HADOOP-17597."
+
+The application has tried to call either the `Syncable.hsync()` or `Syncable.hflush()`
+methods on an S3A output stream. This has been rejected because the
+connector isn't saving any data at all. The `Syncable` API, especially the
+`hsync()` call, are critical for applications such as HBase to safely
+persist data.
+
+The S3A connector throws an `UnsupportedOperationException` when these API calls
+are made, because the guarantees absolutely cannot be met: nothing is being flushed
+or saved.
+
+* Applications which intend to invoke the Syncable APIs call `hasCapability("hsync")` on
+  the stream to see if they are supported.
+* Or catch and downgrade `UnsupportedOperationException`.
+
+These recommendations _apply to all filesystems_. 
+
+To downgrade the S3A connector to simply warning of the use of
+`hsync()` or `hflush()` calls, set the option
+`fs.s3a.downgrade.syncable.exceptions` to true.
+
+```xml
+<property>
+  <name>fs.s3a.downgrade.syncable.exceptions</name>
+  <value>true</value>
+</property>
+```
+
+The count of invocations of the two APIs are collected
+in the S3A filesystem Statistics/IOStatistics and so
+their use can be monitored.
 
 ### `RemoteFileChangedException` and read-during-overwrite
 

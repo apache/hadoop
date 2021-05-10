@@ -90,7 +90,8 @@ public class NameNodeLayoutVersion {
     QUOTA_BY_STORAGE_TYPE(-63, -61, "Support quota for specific storage types"),
     ERASURE_CODING(-64, -61, "Support erasure coding"),
     EXPANDED_STRING_TABLE(-65, -61, "Support expanded string table in fsimage"),
-    NVDIMM_SUPPORT(-66, -61, "Support NVDIMM storage type");
+    SNAPSHOT_MODIFICATION_TIME(-66, -61, "Support modification time for snapshot"),
+    NVDIMM_SUPPORT(-67, -61, "Support NVDIMM storage type");
 
     private final FeatureInfo info;
 
