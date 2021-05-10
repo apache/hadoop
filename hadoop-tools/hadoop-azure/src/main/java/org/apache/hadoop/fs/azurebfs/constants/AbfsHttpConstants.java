@@ -39,6 +39,11 @@ public final class AbfsHttpConstants {
   public static final String GET_ACCESS_CONTROL = "getAccessControl";
   public static final String CHECK_ACCESS = "checkAccess";
   public static final String GET_STATUS = "getStatus";
+  public static final String ACQUIRE_LEASE_ACTION = "acquire";
+  public static final String BREAK_LEASE_ACTION = "break";
+  public static final String RELEASE_LEASE_ACTION = "release";
+  public static final String RENEW_LEASE_ACTION = "renew";
+  public static final String DEFAULT_LEASE_BREAK_PERIOD = "0";
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
   public static final String TOKEN_VERSION = "2";

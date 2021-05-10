@@ -118,6 +118,14 @@ public class FSConfigToCSConfigArgumentHandler {
         "pc", "percentage",
         "Converts FS queue weights to percentages",
         false),
+    DISABLE_PREEMPTION("disable preemption", "dp", "disable-preemption",
+        "Disable the preemption with nopolicy or observeonly mode. " +
+            "Preemption is enabled by default. " +
+            "nopolicy removes ProportionalCapacityPreemptionPolicy from " +
+            "the list of monitor policies, " +
+            "observeonly sets " +
+            "yarn.resourcemanager.monitor.capacity.preemption.observe_only " +
+            "to true.", true),
     HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
@@ -251,6 +259,12 @@ public class FSConfigToCSConfigArgumentHandler {
         cliParser.getOptionValue(CliOption.CONVERSION_RULES.shortSwitch);
     String outputDir =
         cliParser.getOptionValue(CliOption.OUTPUT_DIR.shortSwitch);
+    FSConfigToCSConfigConverterParams.
+        PreemptionMode preemptionMode =
+        FSConfigToCSConfigConverterParams.
+            PreemptionMode.fromString(cliParser.
+                getOptionValue(CliOption.DISABLE_PREEMPTION.shortSwitch));
+
     boolean convertPlacementRules =
         !cliParser.hasOption(
             CliOption.SKIP_PLACEMENT_RULES_CONVERSION.shortSwitch);
@@ -260,6 +274,10 @@ public class FSConfigToCSConfigArgumentHandler {
     checkFile(CliOption.CONVERSION_RULES, conversionRulesFile);
     checkDirectory(CliOption.OUTPUT_DIR, outputDir);
     checkOutputDirDoesNotContainXmls(yarnSiteXmlFile, outputDir);
+    if (cliParser.hasOption(CliOption.
+        DISABLE_PREEMPTION.shortSwitch)) {
+      checkDisablePreemption(preemptionMode);
+    }
 
     // check mapping-rules.json if we intend to generate it
     if (!cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch) &&
@@ -281,6 +299,7 @@ public class FSConfigToCSConfigArgumentHandler {
             cliParser.hasOption(CliOption.RULES_TO_FILE.shortSwitch))
         .withUsePercentages(
             cliParser.hasOption(CliOption.CONVERT_PERCENTAGES.shortSwitch))
+        .withDisablePreemption(preemptionMode)
         .build();
   }
 
@@ -380,6 +399,16 @@ public class FSConfigToCSConfigArgumentHandler {
       throw new PreconditionException(
           String.format("Specified path %s does not exist " +
           "(As value of parameter %s)", filePath, cliOption.name));
+    }
+  }
+
+  private static void checkDisablePreemption(FSConfigToCSConfigConverterParams.
+      PreemptionMode preemptionMode) {
+    if (preemptionMode == FSConfigToCSConfigConverterParams.
+        PreemptionMode.ENABLED) {
+      throw new PreconditionException(
+          "Specified disable-preemption mode is illegal, " +
+              " use nopolicy or observeonly.");
     }
   }
 

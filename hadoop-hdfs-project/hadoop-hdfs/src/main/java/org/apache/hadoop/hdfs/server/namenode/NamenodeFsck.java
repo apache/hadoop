@@ -377,9 +377,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    */
   public void fsck() throws AccessControlException {
     final long startTime = Time.monotonicNow();
+    String operationName = "fsck";
     try {
       if(blockIds != null) {
-        namenode.getNamesystem().checkSuperuserPrivilege();
+        namenode.getNamesystem().checkSuperuserPrivilege(operationName, path);
         StringBuilder sb = new StringBuilder();
         sb.append("FSCK started by " +
             UserGroupInformation.getCurrentUser() + " from " +

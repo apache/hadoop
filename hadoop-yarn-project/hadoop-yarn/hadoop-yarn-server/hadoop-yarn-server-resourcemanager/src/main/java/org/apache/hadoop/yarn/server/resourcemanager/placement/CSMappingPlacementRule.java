@@ -37,11 +37,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 /**
  * This class is responsible for making application submissions to queue
@@ -54,6 +53,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 public class CSMappingPlacementRule extends PlacementRule {
   private static final Logger LOG = LoggerFactory
       .getLogger(CSMappingPlacementRule.class);
+  private static final String DOT = ".";
+  private static final String DOT_REPLACEMENT = "_dot_";
 
   private CapacitySchedulerQueueManager queueManager;
   private List<MappingRule> mappingRules;
@@ -131,11 +132,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
 
     if (groups == null) {
-      //We cannot use Groups#getUserToGroupsMappingService here, because when
-      //tests change the HADOOP_SECURITY_GROUP_MAPPING, Groups won't refresh its
-      //cached instance of groups, so we might get a Group instance which
-      //ignores the HADOOP_SECURITY_GROUP_MAPPING settings.
-      groups = new Groups(conf);
+      groups = Groups.getUserToGroupsMappingService(conf);
     }
 
     MappingRuleValidationContext validationContext = buildValidationContext();
@@ -184,6 +181,10 @@ public class CSMappingPlacementRule extends PlacementRule {
       LOG.warn(
           "Group provider hasn't been set, cannot query groups for user {}",
           user);
+      //enforcing empty primary group instead of null, which would be considered
+      //as unknown variable and would evaluate to '%primary_group'
+      vctx.put("%primary_group", "");
+      vctx.put("%secondary_group", "");
       return;
     }
     Set<String> groupsSet = groups.getGroupsSet(user);
@@ -192,24 +193,33 @@ public class CSMappingPlacementRule extends PlacementRule {
       vctx.putExtraDataset("groups", groupsSet);
       return;
     }
-    String secondaryGroup = null;
     Iterator<String> it = groupsSet.iterator();
-    String primaryGroup = it.next();
+    String primaryGroup = cleanName(it.next());
+
+    ArrayList<String> secondaryGroupList = new ArrayList<>();
 
     while (it.hasNext()) {
-      String group = it.next();
-      if (this.queueManager.getQueue(group) != null) {
-        secondaryGroup = group;
-        break;
-      }
+      String groupName = cleanName(it.next());
+      secondaryGroupList.add(groupName);
     }
 
-    if (secondaryGroup == null && LOG.isDebugEnabled()) {
-      LOG.debug("User {} is not associated with any Secondary group", user);
+    if (secondaryGroupList.size() == 0) {
+      //if we have no chance to have a secondary group to speed up evaluation
+      //we simply register it as a regular variable with "" as a value
+      vctx.put("%secondary_group", "");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("User {} does not have any potential Secondary group", user);
+      }
+    } else {
+      vctx.putConditional(
+          MappingRuleConditionalVariables.SecondaryGroupVariable.VARIABLE_NAME,
+          new MappingRuleConditionalVariables.SecondaryGroupVariable(
+              this.queueManager,
+              secondaryGroupList
+              ));
     }
 
     vctx.put("%primary_group", primaryGroup);
-    vctx.put("%secondary_group", secondaryGroup);
     vctx.putExtraDataset("groups", groupsSet);
   }
 
@@ -217,7 +227,7 @@ public class CSMappingPlacementRule extends PlacementRule {
       ApplicationSubmissionContext asc, String user) {
     VariableContext vctx = new VariableContext();
 
-    vctx.put("%user", user);
+    vctx.put("%user", cleanName(user));
     //If the specified matches the default it means NO queue have been specified
     //as per ClientRMService#submitApplication which sets the queue to default
     //when no queue is provided.
@@ -511,6 +521,17 @@ public class CSMappingPlacementRule extends PlacementRule {
       //config information to leak to the client side
       throw new YarnException("Application submission have been rejected by a" +
           " mapping rule. Please see the logs for details");
+    }
+  }
+
+  private String cleanName(String name) {
+    if (name.contains(DOT)) {
+      String converted = name.replaceAll("\\.", DOT_REPLACEMENT);
+      LOG.warn("Name {} is converted to {} when it is used as a queue name.",
+          name, converted);
+      return converted;
+    } else {
+      return name;
     }
   }
 }

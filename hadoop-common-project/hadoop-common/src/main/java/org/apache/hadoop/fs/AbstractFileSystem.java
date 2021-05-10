@@ -1353,7 +1353,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   
   @Override //Object
   public boolean equals(Object other) {
-    if (other == null || !(other instanceof AbstractFileSystem)) {
+    if (!(other instanceof AbstractFileSystem)) {
       return false;
     }
     return myUri.equals(((AbstractFileSystem) other).myUri);

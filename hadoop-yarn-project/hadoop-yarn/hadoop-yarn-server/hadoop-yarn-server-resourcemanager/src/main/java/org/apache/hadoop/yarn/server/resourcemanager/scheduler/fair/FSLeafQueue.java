@@ -352,9 +352,19 @@ public class FSLeafQueue extends FSQueue {
         continue;
       }
       assigned = sched.assignContainer(node);
-      if (!assigned.equals(none())) {
-        LOG.debug("Assigned container in queue:{} container:{}",
-            getName(), assigned);
+
+      boolean isContainerAssignedOrReserved = !assigned.equals(none());
+      boolean isContainerReserved =
+                assigned.equals(FairScheduler.CONTAINER_RESERVED);
+
+      // check if an assignment or a reservation was made.
+      if (isContainerAssignedOrReserved) {
+        // only log container assignment if there was an actual allocation,
+        // not a reservation.
+        if (!isContainerReserved && LOG.isDebugEnabled()) {
+          LOG.debug("Assigned container in queue:{} container:{}",
+              getName(), assigned);
+        }
         break;
       }
     }

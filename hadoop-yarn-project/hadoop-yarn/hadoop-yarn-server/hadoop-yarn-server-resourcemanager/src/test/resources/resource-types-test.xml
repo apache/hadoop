@@ -17,6 +17,6 @@
 <configuration>
     <property>
         <name>yarn.resource-types</name>
-        <value>yarn.io/gpu</value>
+        <value>yarn.io/gpu, yarn.io/fpga, testType</value>
     </property>
 </configuration>

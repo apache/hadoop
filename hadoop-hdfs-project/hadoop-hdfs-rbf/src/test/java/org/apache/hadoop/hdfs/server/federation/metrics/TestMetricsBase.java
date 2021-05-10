@@ -259,4 +259,15 @@ public class TestMetricsBase {
     assertTrue(response.getResult());
     return record;
   }
+
+  // refresh namenode registration for new attributes
+  public boolean refreshNamenodeRegistration(NamenodeHeartbeatRequest request)
+      throws IOException {
+    boolean result = membershipStore.namenodeHeartbeat(request).getResult();
+    membershipStore.loadCache(true);
+    MembershipNamenodeResolver resolver =
+        (MembershipNamenodeResolver) router.getNamenodeResolver();
+    resolver.loadCache(true);
+    return result;
+  }
 }

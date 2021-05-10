@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -340,11 +338,14 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     }
 
     for (CSQueue queue : existingQueues.getQueues()) {
-      if (!((AbstractCSQueue) queue).isDynamicQueue() && newQueues.get(
-          queue.getQueuePath()) == null && !(
-          queue instanceof AutoCreatedLeafQueue && conf
-              .isAutoCreateChildQueueEnabled(
-                  queue.getParent().getQueuePath()))) {
+      boolean isDanglingDynamicQueue = isDanglingDynamicQueue(
+          newQueues, existingQueues, queue);
+      boolean isRemovable = isDanglingDynamicQueue || !isDynamicQueue(queue)
+          && newQueues.get(queue.getQueuePath()) == null
+          && !(queue instanceof AutoCreatedLeafQueue &&
+          conf.isAutoCreateChildQueueEnabled(queue.getParent().getQueuePath()));
+
+      if (isRemovable) {
         existingQueues.remove(queue);
       }
     }
@@ -434,5 +435,33 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   public QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
       getQueueStateManager() {
     return this.queueStateManager;
+  }
+
+  private boolean isDynamicQueue(CSQueue queue) {
+    return (queue instanceof AbstractCSQueue) &&
+        ((AbstractCSQueue) queue).isDynamicQueue();
+  }
+
+  private boolean isDanglingDynamicQueue(
+      CSQueueStore newQueues, CSQueueStore existingQueues,
+      CSQueue queue) {
+    if (!isDynamicQueue(queue)) {
+      return false;
+    }
+    if (queue.getParent() == null) {
+      return true;
+    }
+    if (newQueues.get(queue.getParent().getQueuePath()) != null) {
+      return false;
+    }
+    CSQueue parent = existingQueues.get(queue.getParent().getQueuePath());
+    if (parent == null) {
+      return true;
+    }
+    // A dynamic queue is dangling, if its parent is not parsed in newQueues
+    // or if its parent is not a dynamic queue. Dynamic queues are not parsed in
+    // newQueues but they are deleted automatically, so it is safe to assume
+    // that existingQueues contain valid dynamic queues.
+    return !isDynamicQueue(parent);
   }
 }

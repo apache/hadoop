@@ -30,6 +30,35 @@ public final class FSConfigToCSConfigConverterParams {
   private boolean convertPlacementRules;
   private boolean placementRulesToFile;
   private boolean usePercentages;
+  private PreemptionMode preemptionMode;
+
+  public enum PreemptionMode {
+    ENABLED("enabled"),
+    NO_POLICY("nopolicy"),
+    OBSERVE_ONLY("observeonly");
+
+    private String cliOption;
+
+    PreemptionMode(String cliOption) {
+      this.cliOption = cliOption;
+    }
+
+    public String getCliOption() {
+      return cliOption;
+    }
+
+    public static PreemptionMode fromString(String cliOption) {
+      if (cliOption != null && cliOption.trim().
+          equals(PreemptionMode.OBSERVE_ONLY.getCliOption())) {
+        return PreemptionMode.OBSERVE_ONLY;
+      } else if (cliOption != null && cliOption.trim().
+          equals(PreemptionMode.NO_POLICY.getCliOption())) {
+        return PreemptionMode.NO_POLICY;
+      } else {
+        return PreemptionMode.ENABLED;
+      }
+    }
+  }
 
   private FSConfigToCSConfigConverterParams() {
     //must use builder
@@ -71,6 +100,10 @@ public final class FSConfigToCSConfigConverterParams {
     return usePercentages;
   }
 
+  public PreemptionMode getPreemptionMode() {
+    return preemptionMode;
+  }
+
   @Override
   public String toString() {
     return "FSConfigToCSConfigConverterParams{" +
@@ -99,6 +132,7 @@ public final class FSConfigToCSConfigConverterParams {
     private boolean convertPlacementRules;
     private boolean placementRulesToFile;
     private boolean usePercentages;
+    private PreemptionMode preemptionMode;
 
     private Builder() {
     }
@@ -152,6 +186,11 @@ public final class FSConfigToCSConfigConverterParams {
       return this;
     }
 
+    public Builder withDisablePreemption(PreemptionMode preemptionMode) {
+      this.preemptionMode = preemptionMode;
+      return this;
+    }
+
     public FSConfigToCSConfigConverterParams build() {
       FSConfigToCSConfigConverterParams params =
           new FSConfigToCSConfigConverterParams();
@@ -164,6 +203,7 @@ public final class FSConfigToCSConfigConverterParams {
       params.convertPlacementRules = this.convertPlacementRules;
       params.placementRulesToFile = this.placementRulesToFile;
       params.usePercentages = this.usePercentages;
+      params.preemptionMode = this.preemptionMode;
       return params;
     }
   }

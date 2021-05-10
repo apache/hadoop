@@ -18,25 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.util.Time;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -58,13 +48,13 @@ import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AbsoluteResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AbsoluteResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.SchedulerContainer;
@@ -74,8 +64,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleC
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
 
@@ -114,7 +113,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   private final boolean fullPathQueueNamingPolicy = false;
 
-  // Track capacities like used-capcity/abs-used-capacity/capacity/abs-capacity,
+  // Track capacities like
+  // used-capacity/abs-used-capacity/capacity/abs-capacity,
   // etc.
   QueueCapacities queueCapacities;
 
@@ -360,6 +360,10 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     writeLock.lock();
     try {
+      if (isDynamicQueue() && getParent() instanceof ParentQueue) {
+        ((ParentQueue) getParent()).getAutoCreatedQueueTemplate()
+            .setTemplateEntriesForChild(configuration, getQueuePath());
+      }
       // get labels
       this.accessibleLabels =
           configuration.getAccessibleNodeLabels(getQueuePath());
@@ -962,7 +966,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     if (defaultAppLifetime < 0) {
       // If default lifetime was not set at this level but was set somewhere in
       // the parent's hierarchy, set default lifetime to parent queue's default
-      // only if parent queue's lifetime is less than current queueu's max
+      // only if parent queue's lifetime is less than current queue's max
       // lifetime. Otherwise, use current queue's max lifetime value for its
       // default lifetime.
       if (defaultAppLifetimeWasSpecifiedInConfig) {
@@ -1012,7 +1016,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     // At this point, the master preemption switch is enabled down to this
     // queue's level. Determine whether or not intra-queue preemption is enabled
-    // down to this queu's level and return that value.
+    // down to this queue's level and return that value.
     return configuration.getIntraQueuePreemptionDisabled(q.getQueuePath(),
         parentQ.getIntraQueuePreemptionDisabledInHierarchy());
   }
@@ -1065,7 +1069,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       // Doing this because: for non-exclusive allocation, we make sure there's
       // idle resource on the partition, to avoid wastage, such resource will be
       // leveraged as much as we can, and preemption policy will reclaim it back
-      // when partitoned-resource-request comes back.
+      // when partitioned-resource-request comes back.
       Resource currentLimitResource = getCurrentLimitResource(nodePartition,
           clusterResource, currentResourceLimits, schedulingMode);
 
@@ -1115,7 +1119,7 @@ public abstract class AbstractCSQueue implements CSQueue {
         // Can not assign to this queue
         if (LOG.isDebugEnabled()) {
           LOG.debug("Failed to assign to queue: " + getQueuePath()
-              + " nodePatrition: " + nodePartition
+              + " nodePartition: " + nodePartition
               + ", usedResources: " + queueUsage.getUsed(nodePartition)
               + ", clusterResources: " + clusterResource
               + ", reservedResources: " + resourceCouldBeUnreserved
@@ -1488,6 +1492,44 @@ public abstract class AbstractCSQueue implements CSQueue {
     return ret;
   }
 
+  void updateMaxAppRelatedField(CapacitySchedulerConfiguration conf,
+      LeafQueue leafQueue, String label) {
+    int maxApplications = conf.getMaximumApplicationsPerQueue(queuePath);
+    if (maxApplications < 0) {
+      int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
+      if (maxGlobalPerQueueApps > 0) {
+        // In absolute mode, should
+        // shrink when change to corresponding label capacity.
+        maxApplications = this.capacityConfigType
+            != CapacityConfigType.ABSOLUTE_RESOURCE ?
+          maxGlobalPerQueueApps :
+            (int) (maxGlobalPerQueueApps * queueCapacities
+                .getAbsoluteCapacity(label));
+      } else{
+        maxApplications = (int) (conf.getMaximumSystemApplications()
+            * queueCapacities.getAbsoluteCapacity(label));
+      }
+    }
+    leafQueue.setMaxApplications(maxApplications);
+
+    int maxApplicationsPerUser = Math.min(maxApplications,
+        (int) (maxApplications
+            * (leafQueue.getUsersManager().getUserLimit() / 100.0f)
+            * leafQueue.getUsersManager().getUserLimitFactor()));
+    if (leafQueue.getUsersManager().getUserLimitFactor() == -1) {
+      maxApplicationsPerUser =  maxApplications;
+    }
+
+    leafQueue.setMaxApplicationsPerUser(maxApplicationsPerUser);
+    LOG.info("LeafQueue:" + leafQueue.getQueuePath() +
+        "update max app related, maxApplications="
+        + maxApplications + ", maxApplicationsPerUser="
+        + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
+        .getAbsoluteCapacity(label) + ", Cap: " + queueCapacities
+        .getCapacity(label) + ", MaxCap : " + queueCapacities
+        .getMaximumCapacity(label));
+  }
+
   private void deriveCapacityFromAbsoluteConfigurations(String label,
       Resource clusterResource, ResourceCalculator rc) {
 
@@ -1521,42 +1563,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     queueCapacities.setAbsoluteMaximumCapacity(label,
         queueCapacities.getMaximumCapacity(label) * parent.getQueueCapacities()
             .getAbsoluteMaximumCapacity(label));
-
-    // Re-visit max applications for a queue based on absolute capacity if
-    // needed.
-    if (this instanceof LeafQueue) {
-      LeafQueue leafQueue = (LeafQueue) this;
-      CapacitySchedulerConfiguration conf = csContext.getConfiguration();
-      int maxApplications = conf.getMaximumApplicationsPerQueue(queuePath);
-      if (maxApplications < 0) {
-        int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
-        if (maxGlobalPerQueueApps > 0) {
-          maxApplications = (int) (maxGlobalPerQueueApps * queueCapacities
-              .getAbsoluteCapacity(label));
-        } else{
-          maxApplications =
-              (int) (conf.getMaximumSystemApplications() * queueCapacities
-                  .getAbsoluteCapacity(label));
-        }
-      }
-      leafQueue.setMaxApplications(maxApplications);
-
-      int maxApplicationsPerUser = Math.min(maxApplications,
-          (int) (maxApplications
-              * (leafQueue.getUsersManager().getUserLimit() / 100.0f)
-              * leafQueue.getUsersManager().getUserLimitFactor()));
-      if (leafQueue.getUsersManager().getUserLimitFactor() == -1) {
-        maxApplicationsPerUser =  maxApplications;
-      }
-
-      leafQueue.setMaxApplicationsPerUser(maxApplicationsPerUser);
-      LOG.info("LeafQueue:" + leafQueue.getQueuePath() + ", maxApplications="
-          + maxApplications + ", maxApplicationsPerUser="
-          + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
-          .getAbsoluteCapacity(label) + ", Cap: " + queueCapacities
-          .getCapacity(label) + ", MaxCap : " + queueCapacities
-          .getMaximumCapacity(label));
-    }
   }
 
   void updateEffectiveResources(Resource clusterResource) {
@@ -1602,6 +1608,13 @@ public abstract class AbstractCSQueue implements CSQueue {
         // percentage, we have to calculate percentage and update.
         ResourceCalculator rc = this.csContext.getResourceCalculator();
         deriveCapacityFromAbsoluteConfigurations(label, clusterResource, rc);
+        // Re-visit max applications for a queue based on absolute capacity if
+        // needed.
+        if (this instanceof LeafQueue) {
+          LeafQueue leafQueue = (LeafQueue) this;
+          CapacitySchedulerConfiguration conf = csContext.getConfiguration();
+          updateMaxAppRelatedField(conf, leafQueue, label);
+        }
       } else{
         queueResourceQuotas.setEffectiveMinResource(label, Resources
             .multiply(resourceByLabel,

@@ -187,8 +187,6 @@ public class TestAsyncDispatcher {
         when(event.getType()).thenReturn(TestEnum.TestEventType);
         dispatcher.getEventHandler().handle(event);
       }
-      verify(log, atLeastOnce()).info("Event type: TestEventType, " +
-              "Event record counter: 5000");
       Thread.sleep(2000);
       //Make sure more than one event to take
       verify(log, atLeastOnce()).

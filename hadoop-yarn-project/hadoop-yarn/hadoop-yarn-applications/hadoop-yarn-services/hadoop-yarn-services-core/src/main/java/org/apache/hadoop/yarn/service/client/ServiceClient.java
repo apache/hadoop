@@ -27,7 +27,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
-import org.apache.curator.shaded.com.google.common.io.Files;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -117,6 +116,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -557,7 +557,13 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
 
     // Write the definition first and then submit - AM will read the definition
     ServiceApiUtil.createDirAndPersistApp(fs, appDir, service);
-    ApplicationId appId = submitApp(service);
+    ApplicationId appId;
+    try {
+      appId = submitApp(service);
+    } catch(YarnException e){
+      actionDestroy(serviceName);
+      throw e;
+    }
     cachedAppInfo.put(serviceName, new AppInfo(appId, service
         .getKerberosPrincipal().getPrincipalName()));
     service.setId(appId.toString());
@@ -1134,7 +1140,10 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       return;
     }
     String buffer = ServiceApiUtil.jsonSerDeser.toJson(app);
-    File tmpDir = Files.createTempDir();
+    File testDir =
+        new File(System.getProperty("java.io.tmpdir"));
+    File tmpDir = Files.createTempDirectory(
+        testDir.toPath(), System.currentTimeMillis() + "-").toFile();
     if (tmpDir.exists()) {
       String serviceJsonPath = tmpDir.getAbsolutePath() + "/app.json";
       File localFile = new File(serviceJsonPath);
@@ -1362,7 +1371,13 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       ServiceApiUtil.validateAndResolveService(service, fs, getConfig());
       // see if it is actually running and bail out;
       verifyNoLiveAppInRM(serviceName, "start");
-      ApplicationId appId = submitApp(service);
+      ApplicationId appId;
+      try {
+        appId = submitApp(service);
+      } catch (YarnException e) {
+        actionDestroy(serviceName);
+        throw e;
+      }
       cachedAppInfo.put(serviceName, new AppInfo(appId, service
           .getKerberosPrincipal().getPrincipalName()));
       service.setId(appId.toString());
