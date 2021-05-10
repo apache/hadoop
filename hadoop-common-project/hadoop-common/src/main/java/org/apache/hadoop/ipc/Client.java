@@ -50,6 +50,7 @@ import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -613,6 +614,10 @@ public class Client implements AutoCloseable {
       return false;
     }
 
+    private synchronized boolean shouldAuthenticateUsingDelegationTokens() throws IOException {
+      return UserGroupInformation.getCurrentUser().isFromDelegationToken();
+    }
+
     private synchronized AuthMethod setupSaslConnection(IpcStreams streams)
         throws IOException {
       // Do not use Client.conf here! We must use ConnectionId.conf, since the
@@ -691,7 +696,7 @@ public class Client implements AutoCloseable {
           InetSocketAddress bindAddr = null;
           if (ticket != null && ticket.hasKerberosCredentials()) {
             KerberosInfo krbInfo = 
-              remoteId.getProtocol().getAnnotation(KerberosInfo.class);
+                remoteId.getProtocol().getAnnotation(KerberosInfo.class);
             if (krbInfo != null) {
               String principal = ticket.getUserName();
               String host = SecurityUtil.getHostFromPrincipal(principal);
@@ -755,7 +760,7 @@ public class Client implements AutoCloseable {
           final short MAX_BACKOFF = 5000;
           closeConnection();
           disposeSasl();
-          if (shouldAuthenticateOverKrb()) {
+          if (shouldAuthenticateOverKrb() || shouldAuthenticateUsingDelegationTokens()) {
             if (currRetries < maxRetries) {
               if(LOG.isDebugEnabled()) {
                 LOG.debug("Exception encountered while connecting to "
@@ -766,6 +771,19 @@ public class Client implements AutoCloseable {
                 UserGroupInformation.getLoginUser().reloginFromKeytab();
               } else if (UserGroupInformation.isLoginTicketBased()) {
                 UserGroupInformation.getLoginUser().reloginFromTicketCache();
+              } else if (shouldAuthenticateUsingDelegationTokens()) {
+                UserGroupInformation currUser = UserGroupInformation.getCurrentUser();
+                for (AbstractDelegationTokenIdentifier delegationToken:
+                    currUser.getAllDelegationTokens(currUser.getCredentials())){
+                  LOG.debug("Delegation token for current user after SASL failure " +
+                          "and before refresh ugi is {}", delegationToken.toString());
+                }
+                currUser.reloginFromDelegationTokens();
+                for (AbstractDelegationTokenIdentifier delegationToken:
+                    currUser.getAllDelegationTokens(currUser.getCredentials())){
+                  LOG.debug("Delegation token for current user after SASL failure " +
+                          "and after refresh ugi is {}", delegationToken.toString());
+                }
               }
               // have granularity of milliseconds
               //we are sleeping with the Connection lock held but since this
@@ -1609,6 +1627,26 @@ public class Client implements AutoCloseable {
 
       if (call.error != null) {
         if (call.error instanceof RemoteException) {
+          //We got a delegation token expired error and we want to retry to refresh it
+          //Since the delegation token's can be externally managed we want the fail
+          //call to be ignored and retried
+          Exception unwrapped = ((RemoteException)call.error).unwrapRemoteException(
+                  org.apache.hadoop.security.token.SecretManager.InvalidToken.class);
+          UserGroupInformation currUser = UserGroupInformation.getCurrentUser();
+          if(unwrapped instanceof org.apache.hadoop.security.token.SecretManager.InvalidToken &&
+                  currUser.isFromDelegationToken()) {
+            for (AbstractDelegationTokenIdentifier delegationToken:
+                currUser.getAllDelegationTokens(currUser.getCredentials())){
+              LOG.debug("Delegation Token before refresh is {}", delegationToken.getTrackingId());
+            }
+            currUser.reloginFromDelegationTokens();
+            call.error = new RetriableException(unwrapped);
+            for (AbstractDelegationTokenIdentifier delegationToken:
+                  currUser.getAllDelegationTokens(currUser.getCredentials())){
+              LOG.debug("Delegation Token after refresh is {} {}", delegationToken.getTrackingId(),
+                delegationToken.toString());
+            }
+          }
           call.error.fillInStackTrace();
           throw call.error;
         } else { // local exception
