@@ -514,6 +514,44 @@ public class TestRouterRpc {
   }
 
   @Test
+  public void testProxyListFilesWithOverwrite() throws IOException {
+    // Create a parent point as well as a subfolder mount
+    // /parent
+    //    ns0 -> /parent
+    // /parent/sub1
+    //    ns0 -> /parent/sub1
+    String parent = "/parent";
+    String sub1 = parent + "/sub1";
+    Path parentPath = new Path(parent);
+    // Add mount point
+    for (RouterContext rc : cluster.getRouters()) {
+      MockResolver resolver =
+          (MockResolver) rc.getRouter().getSubclusterResolver();
+      resolver.addLocation(parent, ns, parent);
+      resolver.addLocation(sub1, ns, sub1);
+    }
+    // The sub1 folder created is the same as the sub1 mount point directory
+    nnFS.mkdirs(new Path(sub1));
+
+    FileStatus[] routerFsResult = routerFS.listStatus(parentPath);
+    FileStatus[] nnFsResult = nnFS.listStatus(parentPath);
+    // Checking
+    assertEquals(1, routerFsResult.length);
+    assertEquals(1, nnFsResult.length);
+
+    FileStatus nnFileStatus = nnFsResult[0];
+    FileStatus routerFileStatus = routerFsResult[0];
+
+    assert nnFileStatus != null;
+    assert routerFileStatus != null;
+
+    assertEquals(nnFileStatus.getPath().getName(),
+        routerFileStatus.getPath().getName());
+    assertEquals(nnFileStatus.getModificationTime(),
+        routerFileStatus.getModificationTime());
+  }
+
+  @Test
   public void testProxyListFilesWithConflict()
       throws IOException, InterruptedException {
 

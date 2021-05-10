@@ -854,9 +854,8 @@ public class RouterClientProtocol implements ClientProtocol {
         } else {
           if (shouldAddMountPoint(child,
                 lastName, startAfter, remainingEntries)) {
-            // This may overwrite existing listing entries with the mount point
-            // TODO don't add if already there?
-            nnListing.put(child, dirStatus);
+            // Do not overwrite existing listing entries with the mount point
+            nnListing.putIfAbsent(child, dirStatus);
           }
         }
       }
