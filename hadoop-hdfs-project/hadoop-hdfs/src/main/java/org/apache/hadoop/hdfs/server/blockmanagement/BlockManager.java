@@ -2831,9 +2831,12 @@ public class BlockManager implements BlockStatsMXBean {
       namesystem.writeUnlock();
     }
 
-    for (Block b : invalidatedBlocks) {
-      blockLog.debug("BLOCK* processReport 0x{}: {} on node {} size {} does not"
-          + " belong to any file", strBlockReportId, b, node, b.getNumBytes());
+    if(blockLog.isDebugEnabled()) {
+      for (Block b : invalidatedBlocks) {
+        blockLog.debug("BLOCK* processReport 0x{}: {} on node {} size {} " +
+                        "does not belong to any file.", strBlockReportId, b,
+                         node, b.getNumBytes());
+      }
     }
 
     // Log the block report processing stats from Namenode perspective
