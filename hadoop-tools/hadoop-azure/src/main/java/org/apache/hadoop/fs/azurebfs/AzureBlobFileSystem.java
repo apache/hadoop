@@ -56,7 +56,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -79,7 +78,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.ContentSummaryProcessor;
-import org.apache.hadoop.fs.azurebfs.utils.ABFSContentSummary;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -410,17 +408,12 @@ public class AzureBlobFileSystem extends FileSystem
   @Override
   public ContentSummary getContentSummary(Path path) throws IOException {
     try {
-      ABFSContentSummary contentSummary =
-          (new ContentSummaryProcessor(abfsStore)).getContentSummary(path);
-      return new Builder().length(contentSummary.getLength())
-          .directoryCount(contentSummary.getDirectoryCount())
-          .fileCount(contentSummary.getFileCount())
-          .spaceConsumed(contentSummary.getSpaceConsumed()).build();
+      return (new ContentSummaryProcessor(abfsStore)).getContentSummary(path);
     } catch (InterruptedException e) {
       LOG.debug("Thread interrupted");
       throw new IOException(e);
     } catch(ExecutionException ex) {
-      LOG.debug("GetContentSummary failed with error " + ex.getCause().getMessage());
+      LOG.debug("GetContentSummary failed with error: {}", ex.getMessage());
       throw new IOException(ex);
     }
   }

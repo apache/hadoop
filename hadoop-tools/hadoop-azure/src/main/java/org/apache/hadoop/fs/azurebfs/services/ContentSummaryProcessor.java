@@ -33,9 +33,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.utils.ABFSContentSummary;
 
 public class ContentSummaryProcessor {
   private static final int CORE_POOL_SIZE = 1;
@@ -65,7 +65,7 @@ public class ContentSummaryProcessor {
     this.abfsStore = abfsStore;
   }
 
-  public ABFSContentSummary getContentSummary(Path path)
+  public ContentSummary getContentSummary(Path path)
           throws IOException, ExecutionException, InterruptedException {
     try {
       processDirectoryTree(path);
@@ -83,8 +83,10 @@ public class ContentSummaryProcessor {
       LOG.debug("Executor shutdown");
     }
     LOG.debug("Processed content summary of subtree under given path");
-    return new ABFSContentSummary(totalBytes.get(), directoryCount.get(),
-        fileCount.get(), totalBytes.get());
+    ContentSummary.Builder builder = new ContentSummary.Builder()
+        .directoryCount(directoryCount.get()).fileCount(fileCount.get())
+        .length(totalBytes.get()).spaceConsumed(totalBytes.get());
+    return builder.build();
   }
 
   /**
