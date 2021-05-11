@@ -500,8 +500,8 @@ public class ProtobufRpcEngine implements RpcEngine {
       }
 
       protected Writable call(RPC.Server server, String protocol,
-        RpcWritable.Buffer request, long receiveTime, String methodName,
-        String protoName, long clientVersion) throws Exception {
+          RpcWritable.Buffer request, long receiveTime, String methodName,
+          String protoName, long clientVersion) throws Exception {
         if (server.verbose)
           LOG.info("Call: protocol=" + protocol + ", method=" + methodName);
         
