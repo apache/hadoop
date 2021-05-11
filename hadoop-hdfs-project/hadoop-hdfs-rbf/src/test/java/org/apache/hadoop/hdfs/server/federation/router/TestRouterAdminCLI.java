@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_PREFIX;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -713,42 +714,108 @@ public class TestRouterAdminCLI {
     stateStore.loadCache(MountTableStoreImpl.class, true);
     String nnAddress = cluster.getRandomNamenode().
         getNamenode().getHostAndPort();
+    String baseDir = "/initViewFs";
+    String src1 = baseDir + "/data1";
+    Path destPath1 = new Path("hdfs://" + nnAddress + src1);
+    String user1 = "user1";
+    String group1 = "group1";
+    String clusterName1 = "ClusterX";
 
-    String src = "/data";
-    Path destPath = new Path("hdfs://" + nnAddress + "/data");
-    String user = "user1";
-    String group = "group1";
-    String clusterName = "ClusterX";
+    String src2 = baseDir + "/data2";
+    String clusterName2 = "ClusterY";
+
+    String src3 = baseDir + "/inExistent";
+    Path destPath3 = new Path("hdfs://" + nnAddress + src3);
+    String clusterName3 = "ClusterZ";
 
     // 0.mkdir destPath
-    hdfs.mkdirs(destPath);
+    hdfs.mkdirs(destPath1);
     // 1.set owner
-    hdfs.setOwner(destPath, user, group);
+    hdfs.setOwner(destPath1, user1, group1);
     // 2.set viewFs mapping
-    admin.getConf().set(
-        "fs.viewfs.mounttable.ClusterX.link." + src, destPath.toString());
-    // 3.run initialization
-    String[] argv = new String[]{"-initViewFsToMountTable", clusterName};
+    // Use different clusterName and mount points
+    admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
+        clusterName1 + ".link." + src1, destPath1.toString());
+    admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
+        clusterName2 + ".link." + src2, destPath1.toString());
+
+    // 3.run initialization,Specify a ClusterName
+    String[] argv = new String[]{"-initViewFsToMountTable", clusterName1};
     assertEquals(0, ToolRunner.run(admin, argv));
     // 4.gets the mount point entries
     stateStore.loadCache(MountTableStoreImpl.class, true);
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
-        .newInstance(src);
+        .newInstance(src1);
     GetMountTableEntriesResponse getResponse = client.getMountTableManager()
         .getMountTableEntries(getRequest);
     List<MountTable> mountTables = getResponse.getEntries();
-    // 5.check
+    // 5.Checking
     assertEquals(1, mountTables.size());
     MountTable mountTable = mountTables.get(0);
     List<RemoteLocation> destinations = mountTable.getDestinations();
     assertEquals(1, destinations.size());
-    assertEquals(user, mountTable.getOwnerName());
-    assertEquals(group, mountTable.getGroupName());
-    assertEquals(destPath.toUri().getPath(), mountTable.
+    assertEquals(user1, mountTable.getOwnerName());
+    assertEquals(group1, mountTable.getGroupName());
+    assertEquals(destPath1.toUri().getPath(), mountTable.
         getDestinations().get(0).getDest());
     assertEquals(nnAddress, mountTable.
         getDestinations().get(0).getNameserviceId());
-    assertEquals(src, mountTable.getSourcePath());
+    assertEquals(src1, mountTable.getSourcePath());
+
+    // Specify allCluster to initialize all mappings
+    argv = new String[]{"-rm", src1};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    argv = new String[]{"-initViewFsToMountTable", "allClusters"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getRequest = GetMountTableEntriesRequest
+        .newInstance(baseDir);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTables = getResponse.getEntries();
+    assertEquals(2, mountTables.size());
+    for (MountTable mountTable1 : mountTables) {
+      mountTable1 = mountTables.get(0);
+      destinations = mountTable1.getDestinations();
+      assertEquals(1, destinations.size());
+      assertEquals(user1, mountTable1.getOwnerName());
+      assertEquals(group1, mountTable1.getGroupName());
+      assertEquals(destPath1.toUri().getPath(), mountTable1.
+          getDestinations().get(0).getDest());
+      assertEquals(nnAddress, mountTable1.
+          getDestinations().get(0).getNameserviceId());
+      assertEquals(src1, mountTable1.getSourcePath());
+    }
+    // When the mount directory does not exist
+    admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
+        clusterName3 + ".link." + src3, destPath3.toString());
+    // set user
+    UserGroupInformation userA = UserGroupInformation.createUserForTesting(
+        TEST_USER, new String[]{TEST_USER});
+    UserGroupInformation.setLoginUser(userA);
+    argv = new String[]{"-initViewFsToMountTable", clusterName3};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getRequest = GetMountTableEntriesRequest
+        .newInstance(src3);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTables = getResponse.getEntries();
+    // Checking
+    assertEquals(1, mountTables.size());
+    mountTable = mountTables.get(0);
+    destinations = mountTable.getDestinations();
+    assertEquals(1, destinations.size());
+    assertEquals(TEST_USER, mountTable.getOwnerName());
+    assertEquals(TEST_USER, mountTable.getGroupName());
+    assertEquals(destPath3.toUri().getPath(), mountTable.
+        getDestinations().get(0).getDest());
+    assertEquals(nnAddress, mountTable.
+        getDestinations().get(0).getNameserviceId());
+    assertEquals(src3, mountTable.getSourcePath());
   }
 
   @Test
@@ -865,7 +932,7 @@ public class TestRouterAdminCLI {
     assertEquals(-1, ToolRunner.run(admin, argv));
     System.err.println(out.toString());
     assertTrue(out.toString().
-        contains("[-initViewFsToMountTable <clusterName>]"));
+        contains("[-initViewFsToMountTable <clusterName>] | allClusters"));
     out.reset();
 
     argv = new String[] {"-safemode"};
@@ -910,7 +977,7 @@ public class TestRouterAdminCLI {
         + " <quota in bytes or quota size string>]\n"
         + "\t[-clrQuota <path>]\n"
         + "\t[-clrStorageTypeQuota <path>]\n"
-        + "\t[-initViewFsToMountTable <clusterName>]\n"
+        + "\t[-initViewFsToMountTable <clusterName>] | allClusters\n"
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
         + "\t[-getDisabledNameservices]\n"

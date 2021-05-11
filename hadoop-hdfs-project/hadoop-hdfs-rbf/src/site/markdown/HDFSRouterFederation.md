@@ -251,11 +251,15 @@ For example, use the following [ViewFs](../hadoop-hdfs/ViewFs.html) to configure
         <name>fs.viewfs.mounttable.ClusterX.link./data</name>
         <value>hdfs://nn1-clusterx.example.com:8020/data</value>
       </property>
+      <property>
+        <name>fs.viewfs.mounttable.ClusterY.link./project</name>
+        <value>hdfs://nn1-clustery.example.com:8020/project</value>
+      </property>
     </configuration>
 
 The [ViewFs](../hadoop-hdfs/ViewFs.html) mount table can be initialized to the Router by using the following command:
 
-    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -initViewFsToMountTable ClusterX
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -initViewFsToMountTable <clusterName>] | allClusters
 
 #### Quotas
 Router-based federation supports global quota at mount table level. Mount table entries may spread multiple subclusters and the global quota will be

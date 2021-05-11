@@ -177,7 +177,7 @@ public class RouterAdmin extends Configured implements Tool {
     } else if (cmd.equals("-clrStorageTypeQuota")) {
       return "\t[-clrStorageTypeQuota <path>]";
     }  else if (cmd.equals("-initViewFsToMountTable")) {
-      return "\t[-initViewFsToMountTable <clusterName>]";
+      return "\t[-initViewFsToMountTable <clusterName>] | allClusters";
     }else if (cmd.equals("-safemode")) {
       return "\t[-safemode enter | leave | get]";
     } else if (cmd.equals("-nameservice")) {
@@ -1063,9 +1063,16 @@ public class RouterAdmin extends Configured implements Tool {
   public boolean initViewFsToMountTable(String clusterName)
       throws IOException {
     // fs.viewfs.mounttable.ClusterX.link./data
-    final String mountTablePrefix =
-        Constants.CONFIG_VIEWFS_PREFIX + "." + clusterName + "." +
-            Constants.CONFIG_VIEWFS_LINK + ".";
+    final String mountTablePrefix;
+    if (clusterName.equals("allClusters")) {
+      mountTablePrefix =
+          Constants.CONFIG_VIEWFS_PREFIX + ".*" +
+              Constants.CONFIG_VIEWFS_LINK + ".";
+    } else {
+      mountTablePrefix =
+          Constants.CONFIG_VIEWFS_PREFIX + "." + clusterName + "." +
+              Constants.CONFIG_VIEWFS_LINK + ".";
+    }
     final String rootPath = "/";
     Map<String, String> viewFsMap = getConf().getValByRegex(
         mountTablePrefix  + rootPath);
