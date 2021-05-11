@@ -542,8 +542,8 @@ public class TestRouterRpc {
     FileStatus nnFileStatus = nnFsResult[0];
     FileStatus routerFileStatus = routerFsResult[0];
 
-    assert nnFileStatus != null;
-    assert routerFileStatus != null;
+    assertNotNull(nnFileStatus);
+    assertNotNull(routerFileStatus);
 
     assertEquals(nnFileStatus.getPath().getName(),
         routerFileStatus.getPath().getName());
