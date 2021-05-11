@@ -126,7 +126,7 @@ public class TestGpuResourcePlugin {
   }
 
   @Test
-  public void testNodeGPUUtilization()
+  public void testAvgNodeGpuUtilization()
       throws Exception {
     GpuDiscoverer gpuDiscoverer = createNodeGPUUtilizationDiscoverer();
 
@@ -134,7 +134,7 @@ public class TestGpuResourcePlugin {
         new GpuNodeResourceUpdateHandler(gpuDiscoverer, new Configuration());
 
     Assert.assertEquals(0.5F,
-        gpuNodeResourceUpdateHandler.getNodeGpuUtilization(), 1e-6);
+        gpuNodeResourceUpdateHandler.getAvgNodeGpuUtilization(), 1e-6);
   }
 
   private GpuDiscoverer createNodeGPUUtilizationDiscoverer()

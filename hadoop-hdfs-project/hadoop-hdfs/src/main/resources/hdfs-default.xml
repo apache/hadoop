@@ -874,6 +874,18 @@
 </property>
 
 <property>
+  <name>dfs.datanode.reconcile.blocks.batch.size</name>
+  <value>1000</value>
+  <description>Setting this to define reconcile batch size.</description>
+</property>
+
+<property>
+  <name>dfs.datanode.reconcile.blocks.batch.interval</name>
+  <value>2000</value>
+  <description>Setting this to define interval between batches.</description>
+</property>
+
+<property>
   <name>dfs.heartbeat.interval</name>
   <value>3s</value>
   <description>
@@ -3735,11 +3747,11 @@
 
 <property>
   <name>dfs.namenode.quota.init-threads</name>
-  <value>4</value>
+  <value>12</value>
   <description>
     The number of concurrent threads to be used in quota initialization. The
     speed of quota initialization also affects the namenode fail-over latency.
-    If the size of name space is big, try increasing this.
+    If the size of name space is big, try increasing this to 16 or higher.
   </description>
 </property>
 

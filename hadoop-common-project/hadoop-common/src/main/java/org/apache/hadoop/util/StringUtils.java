@@ -41,6 +41,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.log4j.LogManager;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
@@ -752,6 +753,7 @@ public class StringUtils {
         public void run() {
           LOG.info(toStartupShutdownString("SHUTDOWN_MSG: ", new String[]{
             "Shutting down " + classname + " at " + hostname}));
+          LogManager.shutdown();
         }
       }, SHUTDOWN_HOOK_PRIORITY);
 

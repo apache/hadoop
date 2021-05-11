@@ -55,8 +55,10 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,6 +120,9 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.ResourceFilters;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 
 /** Web-hdfs NameNode implementation. */
 @Path("")
@@ -1503,10 +1508,13 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(RecursiveParam.NAME) @DefaultValue(RecursiveParam.DEFAULT)
           final RecursiveParam recursive,
       @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
-          final SnapshotNameParam snapshotName
+          final SnapshotNameParam snapshotName,
+      @QueryParam(DeleteSkipTrashParam.NAME)
+      @DefaultValue(DeleteSkipTrashParam.DEFAULT)
+          final DeleteSkipTrashParam skiptrash
       ) throws IOException, InterruptedException {
     return delete(ugi, delegation, username, doAsUser, ROOT, op, recursive,
-        snapshotName);
+        snapshotName, skiptrash);
   }
 
   /** Handle HTTP DELETE request. */
@@ -1527,34 +1535,53 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(RecursiveParam.NAME) @DefaultValue(RecursiveParam.DEFAULT)
           final RecursiveParam recursive,
       @QueryParam(SnapshotNameParam.NAME) @DefaultValue(SnapshotNameParam.DEFAULT)
-          final SnapshotNameParam snapshotName
+          final SnapshotNameParam snapshotName,
+      @QueryParam(DeleteSkipTrashParam.NAME)
+      @DefaultValue(DeleteSkipTrashParam.DEFAULT)
+          final DeleteSkipTrashParam skiptrash
       ) throws IOException, InterruptedException {
 
-    init(ugi, delegation, username, doAsUser, path, op, recursive, snapshotName);
+    init(ugi, delegation, username, doAsUser, path, op, recursive,
+        snapshotName, skiptrash);
 
-    return doAs(ugi, new PrivilegedExceptionAction<Response>() {
-      @Override
-      public Response run() throws IOException {
-          return delete(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, recursive, snapshotName);
-      }
-    });
+    return doAs(ugi, () -> delete(
+        path.getAbsolutePath(), op, recursive, snapshotName, skiptrash));
   }
 
   protected Response delete(
-      final UserGroupInformation ugi,
-      final DelegationParam delegation,
-      final UserParam username,
-      final DoAsParam doAsUser,
       final String fullpath,
       final DeleteOpParam op,
       final RecursiveParam recursive,
-      final SnapshotNameParam snapshotName
-      ) throws IOException {
+      final SnapshotNameParam snapshotName,
+      final DeleteSkipTrashParam skipTrash) throws IOException {
     final ClientProtocol cp = getRpcClientProtocol();
 
     switch(op.getValue()) {
     case DELETE: {
+      Configuration conf =
+          (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+      long trashInterval =
+          conf.getLong(FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT);
+      if (trashInterval > 0 && !skipTrash.getValue()) {
+        LOG.info("{} is {} , trying to archive {} instead of removing",
+            FS_TRASH_INTERVAL_KEY, trashInterval, fullpath);
+        org.apache.hadoop.fs.Path path =
+            new org.apache.hadoop.fs.Path(fullpath);
+        Configuration clonedConf = new Configuration(conf);
+        // To avoid caching FS objects and prevent OOM issues
+        clonedConf.set("fs.hdfs.impl.disable.cache", "true");
+        FileSystem fs = FileSystem.get(clonedConf);
+        boolean movedToTrash = Trash.moveToAppropriateTrash(fs, path,
+            clonedConf);
+        if (movedToTrash) {
+          final String js = JsonUtil.toJsonString("boolean", true);
+          return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+        }
+        // Same is the behavior with Delete shell command.
+        // If moveToAppropriateTrash() returns false, file deletion
+        // is attempted rather than throwing Error.
+        LOG.debug("Could not move {} to Trash, attempting removal", fullpath);
+      }
       final boolean b = cp.delete(fullpath, recursive.getValue());
       final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();

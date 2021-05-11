@@ -949,11 +949,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           return new ReplicaInputStreams(
               blockInStream, metaInStream, ref, datanode.getFileIoProvider());
         } catch (IOException e) {
-          IOUtils.cleanup(null, blockInStream);
+          IOUtils.cleanupWithLogger(null, blockInStream);
           throw e;
         }
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
     }
@@ -1421,7 +1421,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         replica = append(b.getBlockPoolId(), replicaInfo, newGS,
             b.getNumBytes());
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
       return new ReplicaHandler(replica, ref);
@@ -1553,7 +1553,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               replica = (ReplicaInPipeline) replicaInfo;
             }
           } catch (IOException e) {
-            IOUtils.cleanup(null, ref);
+            IOUtils.cleanupWithLogger(null, ref);
             throw e;
           }
           return new ReplicaHandler(replica, ref);
@@ -1648,7 +1648,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               + " for block " + b.getBlockId());
         }
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
 
@@ -1752,7 +1752,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         // bump the replica's generation stamp to newGS
         rbw.getReplicaInfo().bumpReplicaGS(newGS);
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
       return new ReplicaHandler(rbw, ref);
@@ -1905,7 +1905,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       try {
         newReplicaInfo = v.createTemporary(b);
       } catch (IOException e) {
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
         throw e;
       }
 
@@ -2262,9 +2262,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       datanode.checkDiskErrorAsync(r.getVolume());
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("blockId=" + blockId + ", replica=" + r);
-    }
+    LOG.debug("blockId={}, replica={}", blockId, r);
     return null;
   }
 
@@ -2334,15 +2332,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             continue;
           }
         } catch(IllegalArgumentException e) {
-          LOG.warn("Parent directory check failed; replica " + info
-              + " is not backed by a local file");
+          LOG.warn("Parent directory check failed; replica {} is " +
+              "not backed by a local file", info);
         }
         removing = volumeMap.remove(bpid, invalidBlks[i]);
         addDeletingBlock(bpid, removing.getBlockId());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Block file " + removing.getBlockURI()
-              + " is to be deleted");
-        }
+        LOG.debug("Block file {} is to be deleted", removing.getBlockURI());
         if (removing instanceof ReplicaInPipeline) {
           ((ReplicaInPipeline) removing).releaseAllBytesReserved();
         }
@@ -2383,8 +2378,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               dataStorage.getTrashDirectoryForReplica(bpid, removing));
         }
       } catch (ClosedChannelException e) {
-        LOG.warn("Volume " + v + " is closed, ignore the deletion task for " +
-            "block " + invalidBlks[i]);
+        LOG.warn("Volume {} is closed, ignore the deletion task for " +
+            "block: {}", v, invalidBlks[i]);
       }
     }
     if (!errors.isEmpty()) {
@@ -2463,7 +2458,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         success = true;
       } finally {
         if (!success) {
-          cacheManager.numBlocksFailedToCache.incrementAndGet();
+          cacheManager.numBlocksFailedToCache.increment();
         }
       }
       blockFileName = info.getBlockURI().toString();

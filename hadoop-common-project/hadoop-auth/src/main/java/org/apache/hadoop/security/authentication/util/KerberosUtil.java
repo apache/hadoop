@@ -79,11 +79,16 @@ public class KerberosUtil {
    *
    * @return Oid instance
    * @param oidName The oid Name
+   * @throws ClassNotFoundException for backward compatibility.
+   * @throws GSSException for backward compatibility.
    * @throws NoSuchFieldException if the input is not supported.
+   * @throws IllegalAccessException for backward compatibility.
+   *
    */
   @Deprecated
   public static Oid getOidInstance(String oidName)
-      throws NoSuchFieldException {
+      throws ClassNotFoundException, GSSException, NoSuchFieldException,
+      IllegalAccessException {
     switch (oidName) {
     case "GSS_SPNEGO_MECH_OID":
       return GSS_SPNEGO_MECH_OID;

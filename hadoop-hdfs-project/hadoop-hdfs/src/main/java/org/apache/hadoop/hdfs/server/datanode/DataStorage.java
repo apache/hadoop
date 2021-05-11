@@ -1071,12 +1071,26 @@ public class DataStorage extends Storage {
   }
 
   private static class LinkArgs {
-    File src;
-    File dst;
+    private File srcDir;
+    private File dstDir;
+    private String blockFile;
 
-    LinkArgs(File src, File dst) {
-      this.src = src;
-      this.dst = dst;
+    LinkArgs(File srcDir, File dstDir, String blockFile) {
+      this.srcDir = srcDir;
+      this.dstDir = dstDir;
+      this.blockFile = blockFile;
+    }
+
+    public File src() {
+      return new File(srcDir, blockFile);
+    }
+
+    public File dst() {
+      return new File(dstDir, blockFile);
+    }
+
+    public String blockFile() {
+      return blockFile;
     }
   }
 
@@ -1102,8 +1116,9 @@ public class DataStorage extends Storage {
     }
 
     final ArrayList<LinkArgs> idBasedLayoutSingleLinks = Lists.newArrayList();
-    linkBlocksHelper(from, to, oldLV, hl, upgradeToIdBasedLayout, to,
-        idBasedLayoutSingleLinks);
+    final Map<File, File> pathCache = new HashMap<>();
+    linkBlocksHelper(from, to, hl, upgradeToIdBasedLayout, to,
+        idBasedLayoutSingleLinks, pathCache);
 
     // Detect and remove duplicate entries.
     final ArrayList<LinkArgs> duplicates =
@@ -1129,7 +1144,7 @@ public class DataStorage extends Storage {
               idBasedLayoutSingleLinks.size());
           for (int j = iCopy; j < upperBound; j++) {
             LinkArgs cur = idBasedLayoutSingleLinks.get(j);
-            HardLink.createHardLink(cur.src, cur.dst);
+            HardLink.createHardLink(cur.src(), cur.dst());
           }
           return null;
         }
@@ -1162,9 +1177,9 @@ public class DataStorage extends Storage {
       @Override
       public int compare(LinkArgs a, LinkArgs b) {
         return ComparisonChain.start().
-            compare(a.src.getName(), b.src.getName()).
-            compare(a.src, b.src).
-            compare(a.dst, b.dst).
+            compare(a.blockFile(), b.blockFile()).
+            compare(a.src(), b.src()).
+            compare(a.dst(), b.dst()).
             result();
       }
     });
@@ -1174,8 +1189,8 @@ public class DataStorage extends Storage {
     boolean addedPrev = false;
     for (int i = 0; i < all.size(); i++) {
       LinkArgs args = all.get(i);
-      long blockId = Block.getBlockId(args.src.getName());
-      boolean isMeta = Block.isMetaFilename(args.src.getName());
+      long blockId = Block.getBlockId(args.blockFile());
+      boolean isMeta = Block.isMetaFilename(args.blockFile());
       if ((prevBlockId == null) ||
           (prevBlockId.longValue() != blockId)) {
         prevBlockId = blockId;
@@ -1214,10 +1229,10 @@ public class DataStorage extends Storage {
     TreeMap<Long, List<LinkArgs>> highestGenstamps =
         new TreeMap<Long, List<LinkArgs>>();
     for (LinkArgs duplicate : duplicates) {
-      if (!Block.isMetaFilename(duplicate.src.getName())) {
+      if (!Block.isMetaFilename(duplicate.blockFile())) {
         continue;
       }
-      long blockId = Block.getBlockId(duplicate.src.getName());
+      long blockId = Block.getBlockId(duplicate.blockFile());
       List<LinkArgs> prevHighest = highestGenstamps.get(blockId);
       if (prevHighest == null) {
         List<LinkArgs> highest = new LinkedList<LinkArgs>();
@@ -1226,8 +1241,8 @@ public class DataStorage extends Storage {
         continue;
       }
       long prevGenstamp =
-          Block.getGenerationStamp(prevHighest.get(0).src.getName());
-      long genstamp = Block.getGenerationStamp(duplicate.src.getName());
+          Block.getGenerationStamp(prevHighest.get(0).blockFile());
+      long genstamp = Block.getGenerationStamp(duplicate.blockFile());
       if (genstamp < prevGenstamp) {
         continue;
       }
@@ -1241,19 +1256,19 @@ public class DataStorage extends Storage {
     // from the duplicates list.
     for (Iterator<LinkArgs> iter = duplicates.iterator(); iter.hasNext(); ) {
       LinkArgs duplicate = iter.next();
-      long blockId = Block.getBlockId(duplicate.src.getName());
+      long blockId = Block.getBlockId(duplicate.blockFile());
       List<LinkArgs> highest = highestGenstamps.get(blockId);
       if (highest != null) {
         boolean found = false;
         for (LinkArgs high : highest) {
-          if (high.src.getParent().equals(duplicate.src.getParent())) {
+          if (high.src().getParent().equals(duplicate.src().getParent())) {
             found = true;
             break;
           }
         }
         if (!found) {
           LOG.warn("Unexpectedly low genstamp on {}.",
-              duplicate.src.getAbsolutePath());
+              duplicate.src().getAbsolutePath());
           iter.remove();
         }
       }
@@ -1264,25 +1279,25 @@ public class DataStorage extends Storage {
     // preserving one block file / metadata file pair.
     TreeMap<Long, LinkArgs> longestBlockFiles = new TreeMap<Long, LinkArgs>();
     for (LinkArgs duplicate : duplicates) {
-      if (Block.isMetaFilename(duplicate.src.getName())) {
+      if (Block.isMetaFilename(duplicate.blockFile())) {
         continue;
       }
-      long blockId = Block.getBlockId(duplicate.src.getName());
+      long blockId = Block.getBlockId(duplicate.blockFile());
       LinkArgs prevLongest = longestBlockFiles.get(blockId);
       if (prevLongest == null) {
         longestBlockFiles.put(blockId, duplicate);
         continue;
       }
-      long blockLength = duplicate.src.length();
-      long prevBlockLength = prevLongest.src.length();
+      long blockLength = duplicate.src().length();
+      long prevBlockLength = prevLongest.src().length();
       if (blockLength < prevBlockLength) {
         LOG.warn("Unexpectedly short length on {}.",
-            duplicate.src.getAbsolutePath());
+            duplicate.src().getAbsolutePath());
         continue;
       }
       if (blockLength > prevBlockLength) {
         LOG.warn("Unexpectedly short length on {}.",
-            prevLongest.src.getAbsolutePath());
+            prevLongest.src().getAbsolutePath());
       }
       longestBlockFiles.put(blockId, duplicate);
     }
@@ -1291,21 +1306,22 @@ public class DataStorage extends Storage {
     // arbitrarily selected by us.
     for (Iterator<LinkArgs> iter = all.iterator(); iter.hasNext(); ) {
       LinkArgs args = iter.next();
-      long blockId = Block.getBlockId(args.src.getName());
+      long blockId = Block.getBlockId(args.blockFile());
       LinkArgs bestDuplicate = longestBlockFiles.get(blockId);
       if (bestDuplicate == null) {
         continue; // file has no duplicates
       }
-      if (!bestDuplicate.src.getParent().equals(args.src.getParent())) {
-        LOG.warn("Discarding {}.", args.src.getAbsolutePath());
+      if (!bestDuplicate.src().getParent().equals(args.src().getParent())) {
+        LOG.warn("Discarding {}.", args.src().getAbsolutePath());
         iter.remove();
       }
     }
   }
 
-  static void linkBlocksHelper(File from, File to, int oldLV, HardLink hl,
-  boolean upgradeToIdBasedLayout, File blockRoot,
-      List<LinkArgs> idBasedLayoutSingleLinks) throws IOException {
+  static void linkBlocksHelper(File from, File to, HardLink hl,
+      boolean upgradeToIdBasedLayout, File blockRoot,
+      List<LinkArgs> idBasedLayoutSingleLinks, Map<File, File> pathCache)
+      throws IOException {
     if (!from.exists()) {
       return;
     }
@@ -1345,8 +1361,18 @@ public class DataStorage extends Storage {
               throw new IOException("Failed to mkdirs " + blockLocation);
             }
           }
-          idBasedLayoutSingleLinks.add(new LinkArgs(new File(from, blockName),
-              new File(blockLocation, blockName)));
+          /**
+           * The destination path is 32x32, so 1024 distinct paths. Therefore
+           * we cache the destination path and reuse the same File object on
+           * potentially thousands of blocks located on this volume.
+           * This method is called recursively so the cache is passed through
+           * each recursive call. There is one cache per volume, and it is only
+           * accessed by a single thread so no locking is needed.
+           */
+          File cachedDest = pathCache
+              .computeIfAbsent(blockLocation, k -> blockLocation);
+          idBasedLayoutSingleLinks.add(new LinkArgs(from,
+              cachedDest, blockName));
           hl.linkStats.countSingleLinks++;
         }
       } else {
@@ -1369,8 +1395,8 @@ public class DataStorage extends Storage {
     if (otherNames != null) {
       for (int i = 0; i < otherNames.length; i++) {
         linkBlocksHelper(new File(from, otherNames[i]),
-            new File(to, otherNames[i]), oldLV, hl, upgradeToIdBasedLayout,
-            blockRoot, idBasedLayoutSingleLinks);
+            new File(to, otherNames[i]), hl, upgradeToIdBasedLayout,
+            blockRoot, idBasedLayoutSingleLinks, pathCache);
       }
     }
   }

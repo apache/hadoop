@@ -15,20 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.log;
 
-/**
- * A log4J Appender that simply counts logging events in three levels:
- * fatal, error and warn. The class name is used in log4j.properties
- * @deprecated use {@link org.apache.hadoop.log.metrics.EventCounter} instead
- */
-@Deprecated
-public class EventCounter extends org.apache.hadoop.log.metrics.EventCounter {
-  static {
-    // The logging system is not started yet.
-    System.err.println("WARNING: "+ EventCounter.class.getName() +
-        " is deprecated. Please use "+
-        org.apache.hadoop.log.metrics.EventCounter.class.getName() +
-        " in all the log4j.properties files.");
-  }
+#include <gtest/gtest.h>
+
+#include <string>
+
+#include "x-platform/syscall.h"
+
+TEST(XPlatformSyscall, FnMatchBasicPath) {
+  const std::string pattern("*.doc");
+  const std::string str(R"(some\path\abcd.doc)");
+  EXPECT_TRUE(XPlatform::Syscall::FnMatch(pattern, str));
+}
+
+TEST(XPlatformSyscall, FnMatchNegativePath) {
+  const std::string pattern("x*.doc");
+  const std::string str(R"(y\abcd.doc)");
+  EXPECT_FALSE(XPlatform::Syscall::FnMatch(pattern, str));
 }
