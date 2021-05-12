@@ -55,6 +55,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
@@ -872,8 +873,12 @@ final class OBSObjectBucketUtils {
       directories.add(p.toString());
     }
     while (p.compareTo(sourcePath) > 0) {
-      p = p.getParent();
-      if (p.isRoot() || p.compareTo(sourcePath) == 0) {
+      Optional<Path> parent = p.getOptionalParentPath();
+      if (!parent.isPresent()) {
+        break;
+      }
+      p = parent.get();
+      if (p.compareTo(sourcePath) == 0) {
         break;
       }
       directories.add(p.toString());
