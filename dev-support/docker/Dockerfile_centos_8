@@ -81,12 +81,10 @@ SHELL ["/bin/bash", "--login", "-c"]
 ####
 # Install Maven 3.6.3
 ####
-RUN mkdir -p /opt/maven \
-    && cd /tmp \
+RUN mkdir -p /opt/maven /tmp/maven \
     && curl -L -s -S https://mirrors.estointernet.in/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
-        -o apache-maven-3.6.3-bin.tar.gz \
-    && tar xvf apache-maven-3.6.3-bin.tar.gz \
-    && mv apache-maven-3.6.3 /opt/maven
+        -o /tmp/maven/apache-maven-3.6.3-bin.tar.gz \
+    && tar xzf /tmp/maven/apache-maven-3.6.3-bin.tar.gz --strip-components 1 -C /opt/maven
 
 ####
 # Install CMake 3.19
