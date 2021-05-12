@@ -514,41 +514,6 @@ public class TestRouterRpc {
   }
 
   @Test
-  public void testRenameWithTrash()
-      throws IOException, URISyntaxException, InterruptedException {
-    String user = "user1";
-    String srcRoot = "/home/" + user;
-    String file = srcRoot + "/test";
-    String dest = "/user/" + user + "/" +
-        FileSystem.TRASH_PREFIX + srcRoot;
-
-    for (RouterContext rc : cluster.getRouters()) {
-      MockResolver resolver =
-          (MockResolver) rc.getRouter().getSubclusterResolver();
-      resolver.removeLocation("/", ns, "/");
-      resolver.addLocation("/home/" + user, ns, "/home/" + user);
-    }
-    Path filePath = new Path(file);
-    Path srcPath = new Path(srcRoot);
-    Path destPath = new Path(dest);
-    nnFS.mkdirs(destPath);
-    nnFS.setOwner(destPath, user, user);
-
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
-    DFSClient client = getRouterContext().getClient(ugi);
-
-    routerFS.create(filePath);
-    routerFS.setOwner(srcPath, user, user);
-    FileStatus fileStatus = routerFS.getFileStatus(srcPath);
-    assertNotNull(fileStatus);
-    assertEquals(user, fileStatus.getOwner());
-    assertTrue(client.exists(file));
-    client.rename(file, dest);
-    assertEquals(1, nnFS.listStatus(destPath).length);
-    assertTrue(nnFS.exists(new Path(destPath + "/test")));
-  }
-
-  @Test
   public void testProxyListFilesWithConflict()
       throws IOException, InterruptedException {
 

@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -589,19 +588,6 @@ public class RouterClientProtocol implements ClientProtocol {
     return rpcClient.invokeSequential(locations, method, Long.class, null);
   }
 
-  /**
-   * Use the combination of src locations and dst to return RemoteParam.
-   */
-  private RemoteParam getRenameDestWithTrash(
-      final List<RemoteLocation> srcLocations, String dest) {
-    final Map<RemoteLocation, String> dstMap = new HashMap<>();
-    for (RemoteLocation srcLocation : srcLocations) {
-      // Use this dst for this source location
-      dstMap.put(srcLocation, dest);
-    }
-    return new RemoteParam(dstMap);
-  }
-
   @Deprecated
   @Override
   public boolean rename(final String src, final String dst)
@@ -610,20 +596,13 @@ public class RouterClientProtocol implements ClientProtocol {
 
     final List<RemoteLocation> srcLocations =
         rpcServer.getLocationsForPath(src, true, false);
-    final String trashRoot = FileSystem.USER_HOME_PREFIX + "/" +
-        RouterRpcServer.getRemoteUser().getUserName() + "/" +
-        FileSystem.TRASH_PREFIX;
-    RemoteParam dstParam;
+    final List<RemoteLocation> dstLocations =
+        rpcServer.getLocationsForPath(dst, false, false);
+    // srcLocations may be trimmed by getRenameDestinations()
     final List<RemoteLocation> locs = new LinkedList<>(srcLocations);
-    if (dst.startsWith(trashRoot)) {
-      dstParam = getRenameDestWithTrash(srcLocations, dst);
-    } else {
-      final List<RemoteLocation> dstLocations =
-          rpcServer.getLocationsForPath(dst, false, false);
-      dstParam = getRenameDestinations(locs, dstLocations, trashRoot);
-      if (locs.isEmpty()) {
-        return rbfRename.routerFedRename(src, dst, srcLocations, dstLocations);
-      }
+    RemoteParam dstParam = getRenameDestinations(locs, dstLocations);
+    if (locs.isEmpty()) {
+      return rbfRename.routerFedRename(src, dst, srcLocations, dstLocations);
     }
     RemoteMethod method = new RemoteMethod("rename",
         new Class<?>[] {String.class, String.class},
@@ -640,22 +619,17 @@ public class RouterClientProtocol implements ClientProtocol {
   public void rename2(final String src, final String dst,
       final Options.Rename... options) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
+
     final List<RemoteLocation> srcLocations =
         rpcServer.getLocationsForPath(src, true, false);
-    final String trashRoot = FileSystem.USER_HOME_PREFIX + "/" +
-        RouterRpcServer.getRemoteUser().getUserName() + "/" +
-        FileSystem.TRASH_PREFIX;
-    RemoteParam dstParam;
+    final List<RemoteLocation> dstLocations =
+        rpcServer.getLocationsForPath(dst, false, false);
+    // srcLocations may be trimmed by getRenameDestinations()
     final List<RemoteLocation> locs = new LinkedList<>(srcLocations);
-    if (dst.startsWith(trashRoot)) {
-      dstParam = getRenameDestWithTrash(srcLocations, dst);
-    } else {
-      final List<RemoteLocation> dstLocations =
-          rpcServer.getLocationsForPath(dst, false, false);
-      dstParam = getRenameDestinations(locs, dstLocations, trashRoot);
-      if (locs.isEmpty()) {
-        rbfRename.routerFedRename(src, dst, srcLocations, dstLocations);
-      }
+    RemoteParam dstParam = getRenameDestinations(locs, dstLocations);
+    if (locs.isEmpty()) {
+      rbfRename.routerFedRename(src, dst, srcLocations, dstLocations);
+      return;
     }
     RemoteMethod method = new RemoteMethod("rename2",
         new Class<?>[] {String.class, String.class, options.getClass()},
@@ -1844,16 +1818,14 @@ public class RouterClientProtocol implements ClientProtocol {
    *          path may be located. On return this list is trimmed to include
    *          only the paths that have corresponding destinations in the same
    *          namespace.
-   * @param dstLocations The destination path
-   * @param trashRoot The trashRoot path
+   * @param dst The destination path
    * @return A map of all eligible source namespaces and their corresponding
    *         replacement value.
    * @throws IOException If the dst paths could not be determined.
    */
   private RemoteParam getRenameDestinations(
       final List<RemoteLocation> srcLocations,
-      final List<RemoteLocation> dstLocations,
-      String trashRoot) throws IOException {
+      final List<RemoteLocation> dstLocations) throws IOException {
 
     final Map<RemoteLocation, String> dstMap = new HashMap<>();
 
@@ -1861,7 +1833,7 @@ public class RouterClientProtocol implements ClientProtocol {
     while (iterator.hasNext()) {
       RemoteLocation srcLocation = iterator.next();
       RemoteLocation eligibleDst =
-          getFirstMatchingLocation(srcLocation, dstLocations, trashRoot);
+          getFirstMatchingLocation(srcLocation, dstLocations);
       if (eligibleDst != null) {
         // Use this dst for this source location
         dstMap.put(srcLocation, eligibleDst.getDest());
@@ -1881,11 +1853,8 @@ public class RouterClientProtocol implements ClientProtocol {
    * @return The first matchin location in the list.
    */
   private RemoteLocation getFirstMatchingLocation(RemoteLocation location,
-      List<RemoteLocation> locations, String trashRoot) {
+      List<RemoteLocation> locations) {
     for (RemoteLocation loc : locations) {
-      if (loc.getSrc().startsWith(trashRoot)){
-        return loc;
-      }
       if (loc.getNameserviceId().equals(location.getNameserviceId())) {
         // Return first matching location
         return loc;
