@@ -604,18 +604,12 @@ public class FileUtil {
       return dir.length();
     } else {
       File[] allFiles = dir.listFiles();
-      if(allFiles != null) {
-         for (int i = 0; i < allFiles.length; i++) {
-           boolean isSymLink;
-           try {
-             isSymLink = org.apache.commons.io.FileUtils.isSymlink(allFiles[i]);
-           } catch(IOException ioe) {
-             isSymLink = true;
-           }
-           if(!isSymLink) {
-             size += getDU(allFiles[i]);
-           }
-         }
+      if (allFiles != null) {
+        for (File f : allFiles) {
+          if (!org.apache.commons.io.FileUtils.isSymlink(f)) {
+            size += getDU(f);
+          }
+        }
       }
       return size;
     }
