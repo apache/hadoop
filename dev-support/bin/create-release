@@ -201,7 +201,7 @@ function set_defaults
 
   DOCKER=false
   DOCKERCACHE=false
-  DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile"
+  DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile_centos_7"
   DOCKERRAN=false
 
   CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
