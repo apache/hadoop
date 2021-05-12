@@ -386,7 +386,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "writeCurrentBufferToService", "append")) {
       AppendRequestParameters reqParams = new AppendRequestParameters(offset, 0,
-          bytesLength, APPEND_MODE, true, leaseId);
+          bytesLength, APPEND_MODE, true, lease);
       AbfsRestOperation op = client.append(path, bytes, reqParams, cachedSasToken.get());
       cachedSasToken.update(op.getSasToken());
       if (outputStreamStatistics != null) {
@@ -460,7 +460,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
               mode = FLUSH_MODE;
             }
             AppendRequestParameters reqParams = new AppendRequestParameters(
-                offset, 0, bytesLength, mode, false, leaseId);
+                offset, 0, bytesLength, mode, false, lease);
             AbfsRestOperation op = client.append(path, bytes, reqParams,
                 cachedSasToken.get());
             cachedSasToken.update(op.getSasToken());

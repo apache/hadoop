@@ -209,6 +209,16 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
   private String azureAppendBlobDirs;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_ENFORCE_LEASE,
+          DefaultValue = DEFAULT_FS_AZURE_WRITE_ENFORCE_LEASE)
+  private boolean azureWriteEnforceLease;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LEASE_DURATION,
+          MinValue = MIN_LEASE_DURATION,
+          MaxValue = MAX_LEASE_DURATION,
+          DefaultValue = DEFAULT_FS_AZURE_WRITE_LEASE_DURATION)
+  private int azureWriteLeaseDuration;
+
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_INFINITE_LEASE_KEY,
       DefaultValue = DEFAULT_FS_AZURE_INFINITE_LEASE_DIRECTORIES)
   private String azureInfiniteLeaseDirs;
@@ -644,6 +654,14 @@ public class AbfsConfiguration{
 
   public String getAppendBlobDirs() {
     return this.azureAppendBlobDirs;
+  }
+
+  public boolean isLeaseEnforced() {
+    return this.azureWriteEnforceLease;
+  }
+
+  public int getWriteLeaseDuration() {
+    return this.azureWriteLeaseDuration;
   }
 
   public String getAzureInfiniteLeaseDirs() {

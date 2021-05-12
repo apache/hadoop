@@ -87,6 +87,12 @@ public final class ConfigurationKeys {
   /** Provides a config to provide comma separated path prefixes on which Appendblob based files are created
    *  Default is empty. **/
   public static final String FS_AZURE_APPEND_BLOB_KEY = "fs.azure.appendblob.directories";
+  /** Provides a config control to disable or enable lease enforcement during write operations - appends and creates.
+   *  Default is false. **/
+  public static final String FS_AZURE_WRITE_ENFORCE_LEASE = "fs.azure.write.enforcelease";
+  /** Provides a config control to set lease duration in seconds if lease is to be enforced during write operations - appends and creates.
+   *  It is applicable for Hierarchical Namespace enabled accounts only. The lease duration must be between 15 and 60 seconds. Default is 60. **/
+  public static final String FS_AZURE_WRITE_LEASE_DURATION = "fs.azure.write.lease.duration";
   /** Provides a config to provide comma separated path prefixes which support infinite leases.
    *  Files under these paths will be leased when created or opened for writing and the lease will
    *  be released when the file is closed. The lease may be broken with the breakLease method on
