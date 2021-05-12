@@ -23,14 +23,27 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createSubdirs;
+import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS;
+import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT;
+import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.PENDING_DIR_NAME;
 import static org.junit.Assert.*;
+
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.Assert;
 
@@ -39,7 +52,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapFile;
@@ -47,6 +62,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -55,6 +71,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +81,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 @SuppressWarnings("unchecked")
-public class TestFileOutputCommitter {
+@RunWith(Parameterized.class)
+public class TestFileOutputCommitter extends AbstractHadoopTestBase {
   private static final Path outDir = new Path(
       System.getProperty("test.build.data",
           System.getProperty("java.io.tmpdir")),
@@ -88,14 +106,60 @@ public class TestFileOutputCommitter {
   private Text key2 = new Text("key2");
   private Text val1 = new Text("val1");
   private Text val2 = new Text("val2");
+  private int mvThreads;
 
+  public TestFileOutputCommitter(int threads) {
+    this.mvThreads = threads;
+  }
+
+  @Parameterized.Parameters(name="{0}")
+  public static Collection getParameters() {
+    // -1 is covered in separate test case
+    return Arrays.asList(new Object[] { 0, 1, 2, 4 });
+  }
+
+  @Test
+  public void testNegativeThreadCount() throws Exception {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, -1);
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
+    assertFalse("Threadpool disabled for v1 with -1 thread count",
+        committer.isParallelMoveEnabled());
+    assertEquals("Threadpool disabled for thread config of -1",
+        1, committer.moveThreads);
+  }
+
+  @Test
+  public void testThreadsWithAlgoV2() throws Exception {
+    testThreadsWithAlgoV2(mvThreads);
+  }
+
+  @Test
+  public void testNegativeThreadCountAlgoV2() throws Exception {
+    testThreadsWithAlgoV2(-1);
+  }
+
+  public void testThreadsWithAlgoV2(int threads) throws Exception {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, 2);
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, threads);
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
+    assertFalse("Threadpool disabled for algo v2", committer.isParallelMoveEnabled());
+  }
   
   private static void cleanup() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = outDir.getFileSystem(conf);
     fs.delete(outDir, true);
   }
-  
+
   @Before
   public void setUp() throws IOException {
     cleanup();
@@ -144,6 +208,7 @@ public class TestFileOutputCommitter {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -237,6 +302,19 @@ public class TestFileOutputCommitter {
     assertThat(output).isEqualTo(expectedOutput.toString());
   }
 
+  private void validateSpecificFile(File expectedFile) throws IOException {
+    assertTrue("Could not find "+expectedFile, expectedFile.exists());
+    StringBuffer expectedOutput = new StringBuffer();
+    expectedOutput.append(key1).append('\t').append(val1).append("\n");
+    expectedOutput.append(val1).append("\n");
+    expectedOutput.append(val2).append("\n");
+    expectedOutput.append(key2).append("\n");
+    expectedOutput.append(key1).append("\n");
+    expectedOutput.append(key2).append('\t').append(val2).append("\n");
+    String output = slurp(expectedFile);
+    assertEquals(output, expectedOutput.toString());
+  }
+
   private void validateMapFileOutputContent(
       FileSystem fs, Path dir) throws IOException {
     // map output is a directory with index and data files
@@ -266,6 +344,7 @@ public class TestFileOutputCommitter {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(
         FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -288,7 +367,7 @@ public class TestFileOutputCommitter {
 
     // check task and job temp directories exist
     File jobOutputDir = new File(
-        new Path(outDir, FileOutputCommitter.PENDING_DIR_NAME).toString());
+        new Path(outDir, PENDING_DIR_NAME).toString());
     File taskOutputDir = new File(Path.getPathWithoutSchemeAndAuthority(
         committer.getWorkPath()).toString());
     assertTrue("job temp dir does not exist", jobOutputDir.exists());
@@ -313,6 +392,234 @@ public class TestFileOutputCommitter {
 
     // validate output
     validateContent(outDir);
+    FileUtil.fullyDelete(new File(outDir.toString()));
+  }
+
+  private void createAndCommitTask(Configuration conf, String attempt, TaskAttemptID tID,
+      int version, boolean taskCleanup, final boolean setupJob) throws IOException, InterruptedException {
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    conf.setInt(
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+        version);
+    conf.setBoolean(
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED,
+        taskCleanup);
+    JobContext jContext = new JobContextImpl(conf, tID.getJobID());
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, tID);
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
+
+    // setup
+    if (setupJob) {
+      committer.setupJob(jContext);
+    }
+    committer.setupTask(tContext);
+
+    // write output
+    TextOutputFormat theOutputFormat = new TextOutputFormat();
+    RecordWriter theRecordWriter = theOutputFormat.getRecordWriter(tContext);
+    writeOutput(theRecordWriter, tContext);
+
+    String filename = String.format("dummy-file-%s-", tID.getTaskID());
+    ContractTestUtils.TreeScanResults created =
+        createSubdirs(FileSystem.get(conf),
+            committer.getWorkPath(), 3, 3, 2, 0,
+            "sub-dir-", filename, "0");
+    LOG.info("Created subdirs: {}, toString: {}", created.getDirectories(),
+        created);
+
+    // check task and job temp directories exist
+    File jobOutputDir = new File(
+        new Path(outDir, PENDING_DIR_NAME).toString());
+    File taskOutputDir = new File(Path.getPathWithoutSchemeAndAuthority(
+        committer.getWorkPath()).toString());
+    assertTrue("job temp dir does not exist", jobOutputDir.exists());
+    assertTrue("task temp dir does not exist", taskOutputDir.exists());
+
+    // do commit
+    committer.commitTask(tContext);
+    assertTrue("job temp dir does not exist", jobOutputDir.exists());
+
+    if (version == 1 || taskCleanup) {
+      // Task temp dir gets renamed in v1 and deleted if taskCleanup is
+      // enabled in v2
+      assertFalse("task temp dir still exists", taskOutputDir.exists());
+    } else {
+      // By default, in v2 the task temp dir is only deleted during commitJob
+      assertTrue("task temp dir does not exist", taskOutputDir.exists());
+    }
+  }
+
+  private void createNTasks(Configuration conf, int version, boolean taskCleanup)
+      throws IOException, InterruptedException {
+    for (int i = 0; i <= 9; i++) {
+      String attempt = String.format("attempt_200707121733_0001_m_%03d_0", i);
+      TaskAttemptID taskID = TaskAttemptID.forName(attempt);
+      createAndCommitTask(conf, attempt, taskID, version, taskCleanup, i == 0);
+    }
+  }
+
+  private void testCommitterInternalWithMultipleTasks(int version, boolean taskCleanup,
+      boolean parallelCommit) throws Exception {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    conf.setBoolean(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT, parallelCommit);
+
+    // Create multiple tasks and commit
+    createNTasks(conf, version, taskCleanup);
+
+    JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, jContext);
+    try (DurationInfo du = new DurationInfo(LOG,
+        "commit job with with mvThreads: %s", mvThreads)) {
+      committer.commitJob(jContext);
+    }
+
+    //Verify if temp dirs are cleared up
+    if (committer.hasOutputPath()) {
+      Path path = new Path(committer.getOutputPath(), PENDING_DIR_NAME);
+      final FileSystem fs = path.getFileSystem(conf);
+      ContractTestUtils.assertPathDoesNotExist(fs,
+          "Job attempt path should have been deleted",
+          path);
+    }
+
+    RemoteIterator<LocatedFileStatus>  it = FileSystem.get(conf).listFiles(outDir, true);
+    while(it.hasNext()) {
+      LocatedFileStatus fileStatus = it.next();
+      Path file = fileStatus.getPath();
+      if (file.getName().equals("_SUCCESS")) {
+        continue;
+      }
+      // Validate only real file (ignoring dummy-file-* created via createSubdirs() here).
+      if (fileStatus.isFile() && !file.getName().contains("dummy-file-")) {
+        LOG.info("validate file:{}", file);
+        validateSpecificFile(new File(file.toUri().getPath()));
+      } else {
+        LOG.info("Not validating {}", file.toString());
+      }
+    }
+    FileUtil.fullyDelete(new File(outDir.toString()));
+  }
+
+  private void testAbortWithMultipleTasksV1(int version, boolean taskCleanup,
+      boolean parallelCommit) throws IOException, InterruptedException {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    conf.setBoolean(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT, parallelCommit);
+
+    // Create multiple tasks and commit
+    createNTasks(conf, version, taskCleanup);
+
+    JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, jContext);
+    LOG.info("Running with mvThreads:{}", mvThreads);
+    // Abort the job
+    committer.abortJob(jContext, JobStatus.State.FAILED);
+    File expectedFile = new File(new Path(outDir, PENDING_DIR_NAME)
+        .toString());
+    assertFalse("job temp dir still exists", expectedFile.exists());
+    assertEquals("Output directory not empty", 0, new File(outDir.toString())
+        .listFiles().length);
+    verifyNumScheduledTasks(committer);
+    FileUtil.fullyDelete(new File(outDir.toString()));
+  }
+
+  @Test
+  public void testCommitterInternalWithMultipleTasksV1() throws Exception {
+    testCommitterInternalWithMultipleTasks(1, true, false);
+  }
+
+  @Test
+  public void testCommitterInternalWithMultipleTasksV1Parallel() throws Exception {
+    testCommitterInternalWithMultipleTasks(1, true, true);
+  }
+
+  @Test
+  public void testAbortWithMultipleTasksV1() throws IOException, InterruptedException {
+    testAbortWithMultipleTasksV1(1, true, false);
+  }
+  @Test
+  public void testAbortWithMultipleTasksV1Parallel() throws IOException, InterruptedException {
+    testAbortWithMultipleTasksV1(1, true, true);
+  }
+
+  static class CustomJobContextImpl extends JobContextImpl implements Progressable {
+    FileOutputCommitter committer;
+
+    public CustomJobContextImpl(Configuration conf, JobID jobId) {
+      super(conf, jobId);
+    }
+
+    public void progress() {
+      if (committer != null && committer.isParallelMoveEnabled()) {
+        throw new RuntimeException("Throwing exception during progress. mvThreads"
+            + committer.moveThreads);
+      }
+    }
+
+    public void setCommitter(FileOutputCommitter committer) {
+      this.committer = committer;
+    }
+  }
+
+  @Test
+  public void testV1CommitterInternalWithException() throws Exception {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    conf.setInt(
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, 1);
+    conf.setBoolean(
+        FileOutputCommitter.FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED, true);
+    // Custom job context which can be used for triggering exceptions
+    CustomJobContextImpl jContext = new CustomJobContextImpl(conf, taskID.getJobID());
+    TaskAttemptContextImpl tContext = new TaskAttemptContextImpl(conf, taskID);
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
+    //This will help in triggering exceptions when parallel threads are enabled
+    jContext.setCommitter(committer);
+
+    // setup
+    committer.setupJob(jContext);
+    committer.setupTask(tContext);
+
+    // write output
+    TextOutputFormat theOutputFormat = new TextOutputFormat();
+    RecordWriter theRecordWriter = theOutputFormat.getRecordWriter(tContext);
+    writeOutput(theRecordWriter, tContext);
+
+    // check task and job temp directories exist
+    File jobOutputDir = new File(
+        new Path(outDir, PENDING_DIR_NAME).toString());
+    File taskOutputDir = new File(Path.getPathWithoutSchemeAndAuthority(
+        committer.getWorkPath()).toString());
+    assertTrue("job temp dir does not exist", jobOutputDir.exists());
+    assertTrue("task temp dir does not exist", taskOutputDir.exists());
+
+    // do commit
+    committer.commitTask(tContext);
+    assertTrue("job temp dir does not exist", jobOutputDir.exists());
+
+    try {
+      committer.commitJob(jContext);
+      if (committer.isParallelMoveEnabled()) {
+        // Exception is thrown from CustomJobContextImpl, only when parallel file moves are enabled.
+        Assert.fail("Commit successful: wrong behavior for version 1. moveThreads:" + mvThreads);
+      }
+    } catch(IOException e) {
+      if (committer.isParallelMoveEnabled()) {
+        assertTrue("Exception from getProgress should have been caught",
+            e.getMessage().contains("Throwing exception during progress"));
+      }
+    }
+
+    // Clear off output dir
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
@@ -346,6 +653,7 @@ public class TestFileOutputCommitter {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -400,6 +708,7 @@ public class TestFileOutputCommitter {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -444,6 +753,7 @@ public class TestFileOutputCommitter {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         2);
@@ -484,6 +794,7 @@ public class TestFileOutputCommitter {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -539,6 +850,7 @@ public class TestFileOutputCommitter {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -587,6 +899,7 @@ public class TestFileOutputCommitter {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, 3);
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
@@ -598,11 +911,17 @@ public class TestFileOutputCommitter {
     }
   }
 
+  private void verifyNumScheduledTasks(FileOutputCommitter committer) {
+      assertEquals("Scheduled tasks should have been 0 after shutting down thread pool",
+          0, committer.getNumCompletedTasks());
+  }
+
   private void testAbortInternal(int version)
       throws IOException, InterruptedException {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -626,11 +945,12 @@ public class TestFileOutputCommitter {
     assertFalse("task temp dir still exists", expectedFile.exists());
 
     committer.abortJob(jContext, JobStatus.State.FAILED);
-    expectedFile = new File(new Path(outDir, FileOutputCommitter.PENDING_DIR_NAME)
+    expectedFile = new File(new Path(outDir, PENDING_DIR_NAME)
         .toString());
     assertFalse("job temp dir still exists", expectedFile.exists());
     assertEquals("Output directory not empty", 0, new File(outDir.toString())
         .listFiles().length);
+    verifyNumScheduledTasks(committer);
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
@@ -713,6 +1033,7 @@ public class TestFileOutputCommitter {
     assertTrue(th.getMessage().contains("fake delete failed"));
     assertTrue("job temp dir does not exists", jobTmpDir.exists());
     FileUtil.fullyDelete(new File(outDir.toString()));
+    verifyNumScheduledTasks(committer);
   }
 
   @Test
@@ -816,6 +1137,7 @@ public class TestFileOutputCommitter {
     // validate output
     validateContent(OUT_SUB_DIR);
     FileUtil.fullyDelete(new File(outDir.toString()));
+    verifyNumScheduledTasks(amCommitter);
   }
 
   @Test
