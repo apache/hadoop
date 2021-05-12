@@ -50,6 +50,7 @@ import static java.util.concurrent.TimeUnit.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,7 +61,6 @@ import static org.apache.hadoop.conf.StorageUnit.GB;
 import static org.apache.hadoop.conf.StorageUnit.KB;
 import static org.apache.hadoop.conf.StorageUnit.MB;
 import static org.apache.hadoop.conf.StorageUnit.TB;
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 
 import org.apache.commons.lang3.StringUtils;
@@ -78,7 +78,6 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
-import org.hamcrest.CoreMatchers;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
@@ -1488,44 +1487,47 @@ public class TestConfiguration {
 
     conf.setStorageSize(key, 10, MB);
     // This call returns the value specified in the Key as a double in MBs.
-    assertThat(conf.getStorageSize(key, "1GB", MB),
-        is(10.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1GB", MB))
+        .isEqualTo(10.0);
 
     // Since this key is missing, This call converts the default value of  1GB
     // to MBs are returns that value.
-    assertThat(conf.getStorageSize(nonKey, "1GB", MB),
-        is(1024.0));
+    Assertions.assertThat(conf.getStorageSize(nonKey, "1GB", MB))
+        .isEqualTo(1024.0);
 
 
     conf.setStorageSize(key, 1024, BYTES);
-    assertThat(conf.getStorageSize(key, 100, KB), is(1.0));
+    Assertions.assertThat(conf.getStorageSize(key, 100, KB)).isEqualTo(1.0);
 
-    assertThat(conf.getStorageSize(nonKey, 100.0, KB), is(100.0));
+    Assertions.assertThat(conf.getStorageSize(nonKey, 100.0, KB))
+        .isEqualTo(100.0);
 
     // We try out different kind of String formats to see if they work and
     // during read, we also try to read using a different Storage Units.
     conf.setStrings(key, "1TB");
-    assertThat(conf.getStorageSize(key, "1PB", GB), is(1024.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1PB", GB))
+        .isEqualTo(1024.0);
 
     conf.setStrings(key, "1bytes");
-    assertThat(conf.getStorageSize(key, "1PB", KB), is(0.001));
+    Assertions.assertThat(conf.getStorageSize(key, "1PB", KB))
+        .isEqualTo(0.001);
 
     conf.setStrings(key, "2048b");
-    assertThat(conf.getStorageSize(key, "1PB", KB), is(2.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1PB", KB)).isEqualTo(2.0);
 
     conf.setStrings(key, "64 GB");
-    assertThat(conf.getStorageSize(key, "1PB", GB), is(64.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1PB", GB)).isEqualTo(64.0);
 
     // Match the parsing patterns of getLongBytes, which takes single char
     // suffix.
     conf.setStrings(key, "1T");
-    assertThat(conf.getStorageSize(key, "1GB", TB), is(1.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1GB", TB)).isEqualTo(1.0);
 
     conf.setStrings(key, "1k");
-    assertThat(conf.getStorageSize(key, "1GB", KB), is(1.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1GB", KB)).isEqualTo(1.0);
 
     conf.setStrings(key, "10m");
-    assertThat(conf.getStorageSize(key, "1GB", MB), is(10.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1GB", MB)).isEqualTo(10.0);
 
 
 
@@ -2424,10 +2426,10 @@ public class TestConfiguration {
 
     Configuration.addDeprecation(oldKey, newKey);
 
-    assertThat(conf.getPassword(newKey),
-        CoreMatchers.is(password.toCharArray()));
-    assertThat(conf.getPassword(oldKey),
-        CoreMatchers.is(password.toCharArray()));
+    Assertions.assertThat(conf.getPassword(newKey))
+        .isEqualTo(password.toCharArray());
+    Assertions.assertThat(conf.getPassword(oldKey))
+        .isEqualTo(password.toCharArray());
 
     FileUtil.fullyDelete(tmpDir);
   }
@@ -2453,10 +2455,10 @@ public class TestConfiguration {
 
     Configuration.addDeprecation(oldKey, newKey);
 
-    assertThat(conf.getPassword(newKey),
-        CoreMatchers.is(password.toCharArray()));
-    assertThat(conf.getPassword(oldKey),
-        CoreMatchers.is(password.toCharArray()));
+    Assertions.assertThat(conf.getPassword(newKey))
+        .isEqualTo(password.toCharArray());
+    Assertions.assertThat(conf.getPassword(oldKey))
+        .isEqualTo(password.toCharArray());
 
     FileUtil.fullyDelete(tmpDir);
   }
@@ -2469,7 +2471,7 @@ public class TestConfiguration {
     }
     conf.set("different.prefix" + ".name", "value");
     Map<String, String> prefixedProps = conf.getPropsWithPrefix("prefix.");
-    assertThat(prefixedProps.size(), is(10));
+    Assertions.assertThat(prefixedProps).hasSize(10);
     for (int i = 0; i < 10; i++) {
       assertEquals("value" + i, prefixedProps.get("name" + i));
     }
@@ -2480,7 +2482,7 @@ public class TestConfiguration {
       conf.set("subprefix." + "subname" + i, "value_${foo}" + i);
     }
     prefixedProps = conf.getPropsWithPrefix("subprefix.");
-    assertThat(prefixedProps.size(), is(10));
+    Assertions.assertThat(prefixedProps).hasSize(10);
     for (int i = 0; i < 10; i++) {
       assertEquals("value_bar" + i, prefixedProps.get("subname" + i));
     }

@@ -30,13 +30,12 @@ import javax.naming.NameNotFoundException;
 
 import org.apache.hadoop.util.Time;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 
 /**
@@ -104,7 +103,7 @@ public class TestDNS {
   @Test
   public void testNullInterface() throws Exception {
     String host = DNS.getDefaultHost(null);  // should work.
-    assertThat(host, is(DNS.getDefaultHost(DEFAULT)));
+    Assertions.assertThat(host).isEqualTo(DNS.getDefaultHost(DEFAULT));
     try {
       String ip = DNS.getDefaultIP(null);
       fail("Expected a NullPointerException, got " + ip);
@@ -120,7 +119,8 @@ public class TestDNS {
   @Test
   public void testNullDnsServer() throws Exception {
     String host = DNS.getDefaultHost(getLoopbackInterface(), null);
-    assertThat(host, is(DNS.getDefaultHost(getLoopbackInterface())));
+    Assertions.assertThat(host)
+        .isEqualTo(DNS.getDefaultHost(getLoopbackInterface()));
   }
 
   /**
@@ -130,7 +130,8 @@ public class TestDNS {
   @Test
   public void testDefaultDnsServer() throws Exception {
     String host = DNS.getDefaultHost(getLoopbackInterface(), DEFAULT);
-    assertThat(host, is(DNS.getDefaultHost(getLoopbackInterface())));
+    Assertions.assertThat(host)
+        .isEqualTo(DNS.getDefaultHost(getLoopbackInterface()));
   }
 
   /**
@@ -204,7 +205,7 @@ public class TestDNS {
           getLoopbackInterface(), INVALID_DNS_SERVER, true);
 
       // Expect to get back something other than the cached host name.
-      assertThat(hostname, not(DUMMY_HOSTNAME));
+      Assertions.assertThat(hostname).isNotEqualTo(DUMMY_HOSTNAME);
     } finally {
       // Restore DNS#cachedHostname for subsequent tests.
       changeDnsCachedHostname(oldHostname);
@@ -227,7 +228,7 @@ public class TestDNS {
 
       // Expect to get back the cached host name since there was no hosts
       // file lookup.
-      assertThat(hostname, is(DUMMY_HOSTNAME));
+      Assertions.assertThat(hostname).isEqualTo(DUMMY_HOSTNAME);
     } finally {
       // Restore DNS#cachedHostname for subsequent tests.
       changeDnsCachedHostname(oldHostname);
