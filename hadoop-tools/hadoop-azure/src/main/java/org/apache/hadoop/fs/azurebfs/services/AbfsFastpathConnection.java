@@ -27,8 +27,9 @@ import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
+import com.microsoft.fastpath.FastpathConfigurationOptions;
 import com.microsoft.fastpath.FastpathConnection;
-import com.microsoft.fastpath.exceptions.FastpathException;
+import com.microsoft.abfs.FastpathException;
 import com.microsoft.fastpath.requestParameters.AccessTokenType;
 import com.microsoft.fastpath.requestParameters.FastpathCloseRequestParams;
 import com.microsoft.fastpath.requestParameters.FastpathOpenRequestParams;
@@ -37,6 +38,9 @@ import com.microsoft.fastpath.responseProviders.FastpathCloseResponse;
 import com.microsoft.fastpath.responseProviders.FastpathOpenResponse;
 import com.microsoft.fastpath.responseProviders.FastpathReadResponse;
 import com.microsoft.fastpath.responseProviders.FastpathResponse;
+
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
@@ -49,6 +53,7 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   int defaultTimeout = Integer.valueOf(DEFAULT_TIMEOUT);
   String fastpathFileHandle;
   FastpathResponse response = null;
+  FastpathConfigurationOptions configOptions;
 
   public String getFastpathFileHandle() {
     return fastpathFileHandle;
@@ -60,12 +65,19 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
       final AuthType authType,
       final String authToken,
       List<AbfsHttpHeader> requestHeaders,
-      final String fastpathFileHandle) throws IOException {
+      final String fastpathFileHandle,
+      final AbfsConfiguration config) throws IOException {
     super(opType, url, method, authType, authToken, requestHeaders);
     this.authType = authType;
     this.authToken = authToken;
     this.fastpathFileHandle = fastpathFileHandle;
     this.requestHeaders = requestHeaders;
+    createConfigOptions(config);
+  }
+
+  private void createConfigOptions(final AbfsConfiguration config) {
+    this.configOptions = new com.microsoft.fastpath.FastpathConfigurationOptions();
+    this.configOptions.setUseNativeReadWithByteArray(config.isFastpathByteArrayImplEnabled());
   }
 
   public String getResponseHeader(String httpHeader) {
@@ -165,7 +177,7 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   @VisibleForTesting
   protected FastpathOpenResponse triggerOpen(FastpathOpenRequestParams openRequestParams)
       throws FastpathException {
-    FastpathConnection conn = new FastpathConnection();
+    FastpathConnection conn = new FastpathConnection(this.configOptions);
     return conn.open(openRequestParams);
   }
 
@@ -187,7 +199,7 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   @VisibleForTesting
   protected FastpathReadResponse triggerRead(FastpathReadRequestParams readRequestParams, byte[] buffer)
       throws FastpathException {
-    FastpathConnection conn = new FastpathConnection();
+    FastpathConnection conn = new FastpathConnection(this.configOptions);
     return conn.read(readRequestParams, buffer);
   }
 
@@ -205,7 +217,7 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   @VisibleForTesting
   protected FastpathCloseResponse triggerClose(FastpathCloseRequestParams closeRequestParams)
       throws FastpathException {
-    FastpathConnection conn = new FastpathConnection();
+    FastpathConnection conn = new FastpathConnection(this.configOptions);
     return conn.close(closeRequestParams);
   }
 }

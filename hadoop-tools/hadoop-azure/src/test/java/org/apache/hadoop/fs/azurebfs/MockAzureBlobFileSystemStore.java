@@ -20,13 +20,12 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.net.URI;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
-import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
+import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
 
 public class MockAzureBlobFileSystemStore extends AzureBlobFileSystemStore {
 
@@ -44,6 +43,7 @@ public class MockAzureBlobFileSystemStore extends AzureBlobFileSystemStore {
       final long contentLength,
       final AbfsInputStreamContext abfsInputStreamContext,
       final String eTag) {
-    return new MockAbfsInputStream(client, statistics, path, contentLength, abfsInputStreamContext, eTag);
+    return new MockAbfsInputStream(client, statistics, path, contentLength,
+        abfsInputStreamContext.withFastpathEnabledState(true), eTag);
   }
 }

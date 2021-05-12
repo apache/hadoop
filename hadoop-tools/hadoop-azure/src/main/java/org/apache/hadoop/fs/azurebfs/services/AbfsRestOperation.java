@@ -369,7 +369,7 @@ public class AbfsRestOperation {
   protected AbfsFastpathConnection getFastpathConnection() throws IOException {
     return new AbfsFastpathConnection(operationType, url, method,
         client.getAuthType(), client.getAccessToken(), requestHeaders,
-        fastpathFileHandle);
+        fastpathFileHandle, client.getAbfsConfiguration());
   }
 
   @VisibleForTesting

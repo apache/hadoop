@@ -35,8 +35,10 @@ public class MockAbfsInputStream extends AbfsInputStream {
   }
 
   public MockAbfsInputStream(final AbfsClient client, final AbfsInputStream in) {
-    super(new MockAbfsClient(client), in.getFSStatistics(), in.getPath(), in.getContentLength(), in.getContext(),
+    super(new MockAbfsClient(client), in.getFSStatistics(), in.getPath(),
+        in.getContentLength(), in.getContext().withFastpathEnabledState(true),
         in.getETag());
+
   }
 
   protected boolean checkFastpathStatus() {
