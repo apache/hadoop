@@ -37,7 +37,6 @@ import static org.junit.Assume.assumeTrue;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 /**
@@ -72,9 +71,6 @@ public abstract class FileSystemContractBaseTest {
   protected int getGlobalTimeout() {
     return 30 * 1000;
   }
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @After
   public void tearDown() throws Exception {

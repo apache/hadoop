@@ -40,6 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
@@ -75,15 +76,10 @@ public class TestLocalFileSystem {
   private LocalFileSystem fileSys;
 
   /**
-   * standard test timeout: {@value}.
-   */
-  public static final int DEFAULT_TEST_TIMEOUT = 60 * 1000;
-
-  /**
    * Set the timeout for every test.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(DEFAULT_TEST_TIMEOUT);
+  public Timeout testTimeout = new Timeout(60, TimeUnit.SECONDS);
 
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));

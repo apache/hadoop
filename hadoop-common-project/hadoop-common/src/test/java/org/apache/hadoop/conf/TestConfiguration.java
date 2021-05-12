@@ -78,13 +78,10 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
 public class TestConfiguration {
 
-  @Rule
-  public ExpectedException thrown= ExpectedException.none();
   private static final double DOUBLE_DELTA = 0.000000001f;
   private Configuration conf;
   final static String CONFIG = new File("./test-config-TestConfiguration.xml").getAbsolutePath();
@@ -1533,18 +1530,18 @@ public class TestConfiguration {
 
     // Missing format specification, this should throw.
     conf.setStrings(key, "100");
-    thrown.expect(IllegalArgumentException.class);
-    conf.getStorageSize(key, "1PB", GB);
+    assertThrows(IllegalArgumentException.class,
+        () -> conf.getStorageSize(key, "1PB", GB));
 
     // illegal format specification, this should throw.
     conf.setStrings(key, "1HB");
-    thrown.expect(IllegalArgumentException.class);
-    conf.getStorageSize(key, "1PB", GB);
+    assertThrows(IllegalArgumentException.class,
+        () -> conf.getStorageSize(key, "1PB", GB));
 
     // Illegal number  specification, this should throw.
     conf.setStrings(key, "HadoopGB");
-    thrown.expect(IllegalArgumentException.class);
-    conf.getStorageSize(key, "1PB", GB);
+    assertThrows(IllegalArgumentException.class,
+        () -> conf.getStorageSize(key, "1PB", GB));
   }
 
   @Test
