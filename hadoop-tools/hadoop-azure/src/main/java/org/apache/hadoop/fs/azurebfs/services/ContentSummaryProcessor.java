@@ -23,9 +23,7 @@ import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -69,7 +67,6 @@ public class ContentSummaryProcessor {
 
   public ContentSummary getContentSummary(Path path)
           throws IOException, ExecutionException, InterruptedException {
-//    return gcs_fjp(path);
     try {
       processDirectoryTree(path);
       while (!queue.isEmpty() || numTasks.get() > 0) {
@@ -86,46 +83,6 @@ public class ContentSummaryProcessor {
       LOG.debug("Executor shutdown");
     }
     LOG.debug("Processed content summary of subtree under given path");
-    ContentSummary.Builder builder = new ContentSummary.Builder()
-        .directoryCount(directoryCount.get()).fileCount(fileCount.get())
-        .length(totalBytes.get()).spaceConsumed(totalBytes.get());
-    return builder.build();
-  }
-
-  class GCS extends RecursiveAction {
-    Path path;
-    GCS (Path path) {
-      this.path = path;
-    }
-    @Override
-    protected void compute() {
-      try {
-        for (FileStatus fileStatus1 : abfsStore.listStatus(path)) {
-          if (fileStatus1.isDirectory()) {
-            processDirectory();
-            new GCS(fileStatus1.getPath()).fork();
-          } else {
-            processFile(fileStatus1);
-          }
-        }
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
-  }
-
-  public ContentSummary gcs_fjp (Path path)
-      throws InterruptedException, IOException {
-    ForkJoinPool forkJoinPool = new ForkJoinPool();
-    for (FileStatus fileStatus : abfsStore.listStatus(path)) {
-      if (fileStatus.isDirectory()) {
-        processDirectory();
-        forkJoinPool.invoke(new GCS(fileStatus.getPath()));
-      } else {
-        processFile(fileStatus);
-      }
-    }
-    forkJoinPool.awaitTermination(1, TimeUnit.SECONDS);
     ContentSummary.Builder builder = new ContentSummary.Builder()
         .directoryCount(directoryCount.get()).fileCount(fileCount.get())
         .length(totalBytes.get()).spaceConsumed(totalBytes.get());

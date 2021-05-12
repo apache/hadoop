@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -47,8 +49,8 @@ public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
   private static final int TEST_BUFFER_SIZE = 20;
   private static final int FILES_PER_DIRECTORY = 2;
   private static final int MAX_THREADS = 16;
-  private static final int NUM_FILES_FOR_LIST_MAX_TEST = 10;
-//      DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
+  private static final int NUM_FILES_FOR_LIST_MAX_TEST =
+      DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
 private static final int NUM_CONCURRENT_CALLS = 8;
 
   private final String[] directories = {"/testFolder",
@@ -156,17 +158,18 @@ private static final int NUM_CONCURRENT_CALLS = 8;
   @Test
   public void testConcurrentGetContentSummaryCalls()
       throws InterruptedException, ExecutionException, IOException {
+    AzureBlobFileSystem fs = getFileSystem();
     ExecutorService executorService = new ThreadPoolExecutor(1, MAX_THREADS, 5,
         TimeUnit.SECONDS, new SynchronousQueue<>());
-    ArrayList<Future<ContentSummary>> futures = new ArrayList<>();
+    CompletionService<ContentSummary> completionService =
+        new ExecutorCompletionService<>(executorService);
     createDirectoryStructure();
     for (int i = 0; i < NUM_CONCURRENT_CALLS; i++) {
-      Future<ContentSummary> future = executorService.submit(
-          () -> getFileSystem().getContentSummary(new Path("/testFolder")));
-      futures.add(future);
+      completionService.submit(() -> fs.getContentSummary(new Path(
+          "/testFolder")));
     }
     for (int i = 0; i < NUM_CONCURRENT_CALLS; i++) {
-      ContentSummary contentSummary = futures.get(i).get();
+      ContentSummary contentSummary = completionService.take().get();
       verifyContentSummary(contentSummary, 7, 8 * FILES_PER_DIRECTORY,
           8 * TEST_BUFFER_SIZE);
     }
