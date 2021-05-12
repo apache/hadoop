@@ -106,6 +106,9 @@ public class RouterAdmin extends Configured implements Tool {
   /** Pre-compiled regular expressions to detect duplicated slashes. */
   private static final Pattern SLASHES = Pattern.compile("/+");
 
+  // Parameter matching when initializing ViewFs mount point.
+  private static final String ALL_CLUSTERS = "allClusters";
+
   public static void main(String[] argv) throws Exception {
     Configuration conf = new HdfsConfiguration();
     RouterAdmin admin = new RouterAdmin(conf);
@@ -1055,8 +1058,10 @@ public class RouterAdmin extends Configured implements Tool {
   }
 
   /**
-   * initViewFsToMountTable.
-   * @param clusterName The specified cluster to initialize.
+   * Initialize the ViewFS mount point to the Router,
+   * either to specify a cluster or to initialize it all.
+   * @param clusterName The specified cluster to initialize,
+   * AllCluster was then all clusters.
    * @return If the quota was updated.
    * @throws IOException Error adding the mount point.
    */
@@ -1064,7 +1069,7 @@ public class RouterAdmin extends Configured implements Tool {
       throws IOException {
     // fs.viewfs.mounttable.ClusterX.link./data
     final String mountTablePrefix;
-    if (clusterName.equals("allClusters")) {
+    if (clusterName.equals(ALL_CLUSTERS)) {
       mountTablePrefix =
           Constants.CONFIG_VIEWFS_PREFIX + ".*" +
               Constants.CONFIG_VIEWFS_LINK + ".";

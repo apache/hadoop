@@ -90,6 +90,24 @@ public class TestRouterAdminCLI {
   private static final PrintStream OLD_OUT = System.out;
   private static final PrintStream OLD_ERR = System.err;
 
+  // testInitViewFsToMountTable use
+  private static final String BASEDIR = "/initViewFs";
+  private static final String SRC1 = BASEDIR + "/data1";
+  private static final String USER1 = "user1";
+  private static final String GROUP1 = "group1";
+  private static final String CLUSTER_NAME1 = "ClusterX";
+  private static Path destPath1;
+
+  private static final String SRC2 = BASEDIR + "/data2";
+  private static final String CLUSTER_NAME2 = "ClusterY";
+
+  private static final String SRC3 = BASEDIR + "/inExistent";
+  private static Path destPath3;
+
+  private static String nnAddress;
+
+
+
   @BeforeClass
   public static void globalSetUp() throws Exception {
     cluster = new StateStoreDFSCluster(false, 1,
@@ -707,115 +725,127 @@ public class TestRouterAdminCLI {
     }
   }
 
+  public void setInitViewFsToMountEnv() throws IOException {
+    nnAddress = cluster.getRandomNamenode().
+        getNamenode().getHostAndPort();
+    destPath1 = new Path("hdfs://" + nnAddress + SRC1);
+    destPath3 = new Path("hdfs://" + nnAddress + SRC3);
+    hdfs.mkdirs(destPath1);
+    hdfs.setOwner(destPath1, USER1, GROUP1);
+    admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
+        CLUSTER_NAME1 + ".link." + SRC1, destPath1.toString());
+    admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
+        CLUSTER_NAME1 + ".link." + SRC2, destPath1.toString());
+  }
+
   @Test
-  public void testInitViewFsToMountTable() throws Exception {
+  public void testInitViewFsToMountTableWithSpecificCluster() throws Exception {
     // re-set system out for testing
     System.setOut(new PrintStream(out));
     stateStore.loadCache(MountTableStoreImpl.class, true);
-    String nnAddress = cluster.getRandomNamenode().
-        getNamenode().getHostAndPort();
-    String baseDir = "/initViewFs";
-    String src1 = baseDir + "/data1";
-    Path destPath1 = new Path("hdfs://" + nnAddress + src1);
-    String user1 = "user1";
-    String group1 = "group1";
-    String clusterName1 = "ClusterX";
-
-    String src2 = baseDir + "/data2";
-    String clusterName2 = "ClusterY";
-
-    String src3 = baseDir + "/inExistent";
-    Path destPath3 = new Path("hdfs://" + nnAddress + src3);
-    String clusterName3 = "ClusterZ";
-
-    // 0.mkdir destPath
-    hdfs.mkdirs(destPath1);
-    // 1.set owner
-    hdfs.setOwner(destPath1, user1, group1);
-    // 2.set viewFs mapping
-    // Use different clusterName and mount points
-    admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
-        clusterName1 + ".link." + src1, destPath1.toString());
-    admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
-        clusterName2 + ".link." + src2, destPath1.toString());
-
-    // 3.run initialization,Specify a ClusterName
-    String[] argv = new String[]{"-initViewFsToMountTable", clusterName1};
+    // 1.Initialize the environment
+    setInitViewFsToMountEnv();
+    // 2.Run initialization,Specify a ClusterName
+    String[] argv = new String[]{"-initViewFsToMountTable", CLUSTER_NAME1};
     assertEquals(0, ToolRunner.run(admin, argv));
-    // 4.gets the mount point entries
+    // 3.Gets the mount point entries
     stateStore.loadCache(MountTableStoreImpl.class, true);
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
-        .newInstance(src1);
+        .newInstance(SRC1);
     GetMountTableEntriesResponse getResponse = client.getMountTableManager()
         .getMountTableEntries(getRequest);
     List<MountTable> mountTables = getResponse.getEntries();
-    // 5.Checking
+    // 4.Checking
     assertEquals(1, mountTables.size());
     MountTable mountTable = mountTables.get(0);
     List<RemoteLocation> destinations = mountTable.getDestinations();
     assertEquals(1, destinations.size());
-    assertEquals(user1, mountTable.getOwnerName());
-    assertEquals(group1, mountTable.getGroupName());
+    assertEquals(USER1, mountTable.getOwnerName());
+    assertEquals(GROUP1, mountTable.getGroupName());
     assertEquals(destPath1.toUri().getPath(), mountTable.
         getDestinations().get(0).getDest());
     assertEquals(nnAddress, mountTable.
         getDestinations().get(0).getNameserviceId());
-    assertEquals(src1, mountTable.getSourcePath());
-
-    // Specify allCluster to initialize all mappings
-    argv = new String[]{"-rm", src1};
+    assertEquals(SRC1, mountTable.getSourcePath());
+    // 5.Clear up
+    argv = new String[]{"-rm", SRC1};
     assertEquals(0, ToolRunner.run(admin, argv));
-    stateStore.loadCache(MountTableStoreImpl.class, true);
-    argv = new String[]{"-initViewFsToMountTable", "allClusters"};
-    assertEquals(0, ToolRunner.run(admin, argv));
+  }
 
+  @Test
+  public void testInitViewFsToMountTableWithAllCluster() throws Exception {
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
     stateStore.loadCache(MountTableStoreImpl.class, true);
-    getRequest = GetMountTableEntriesRequest
-        .newInstance(baseDir);
-    getResponse = client.getMountTableManager()
+    // 1.Initialize the environment
+    setInitViewFsToMountEnv();
+    // 2.Specify allCluster to initialize all mappings
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    String[] argv = new String[]{"-initViewFsToMountTable", "allClusters"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    // 3.Gets the mount point entries
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(BASEDIR);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
         .getMountTableEntries(getRequest);
-    mountTables = getResponse.getEntries();
+    List<MountTable> mountTables = getResponse.getEntries();
     assertEquals(2, mountTables.size());
+    // 3.Checking
     for (MountTable mountTable1 : mountTables) {
-      mountTable1 = mountTables.get(0);
-      destinations = mountTable1.getDestinations();
+      List<RemoteLocation> destinations = mountTable1.getDestinations();
       assertEquals(1, destinations.size());
-      assertEquals(user1, mountTable1.getOwnerName());
-      assertEquals(group1, mountTable1.getGroupName());
+      assertEquals(USER1, mountTable1.getOwnerName());
+      assertEquals(GROUP1, mountTable1.getGroupName());
       assertEquals(destPath1.toUri().getPath(), mountTable1.
           getDestinations().get(0).getDest());
       assertEquals(nnAddress, mountTable1.
           getDestinations().get(0).getNameserviceId());
-      assertEquals(src1, mountTable1.getSourcePath());
     }
-    // When the mount directory does not exist
-    admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
-        clusterName3 + ".link." + src3, destPath3.toString());
-    // set user
-    UserGroupInformation userA = UserGroupInformation.createUserForTesting(
-        TEST_USER, new String[]{TEST_USER});
-    UserGroupInformation.setLoginUser(userA);
-    argv = new String[]{"-initViewFsToMountTable", clusterName3};
+    assertEquals(SRC1, mountTables.get(0).getSourcePath());
+    assertEquals(SRC2, mountTables.get(1).getSourcePath());
+    // 5.Clear up
+    argv = new String[]{"-rm", SRC1};
     assertEquals(0, ToolRunner.run(admin, argv));
+    argv = new String[]{"-rm", SRC2};
+    assertEquals(0, ToolRunner.run(admin, argv));
+  }
 
+  @Test
+  public void testInitViewFsToMountTableMountNoExist() throws Exception {
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
     stateStore.loadCache(MountTableStoreImpl.class, true);
-    getRequest = GetMountTableEntriesRequest
-        .newInstance(src3);
-    getResponse = client.getMountTableManager()
+    // 1.Initialize the environment
+    setInitViewFsToMountEnv();
+    // When the mount directory does not exist
+    String clusterName3 = "ClusterZ";
+    admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
+        clusterName3 + ".link." + SRC3, destPath3.toString());
+    // 2.Run initialization,Specify a ClusterName
+    String[] argv = new String[]{"-initViewFsToMountTable", clusterName3};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    // 3.Gets the mount point entries
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(SRC3);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
         .getMountTableEntries(getRequest);
-    mountTables = getResponse.getEntries();
-    // Checking
+    List<MountTable> mountTables = getResponse.getEntries();
+    // 4.Checking
     assertEquals(1, mountTables.size());
-    mountTable = mountTables.get(0);
-    destinations = mountTable.getDestinations();
+    MountTable mountTable = mountTables.get(0);
+    List<RemoteLocation> destinations = mountTable.getDestinations();
     assertEquals(1, destinations.size());
-    assertEquals(TEST_USER, mountTable.getOwnerName());
-    assertEquals(TEST_USER, mountTable.getGroupName());
+    assertEquals(System.getProperty("user.name"), mountTable.getOwnerName());
     assertEquals(destPath3.toUri().getPath(), mountTable.
         getDestinations().get(0).getDest());
     assertEquals(nnAddress, mountTable.
         getDestinations().get(0).getNameserviceId());
-    assertEquals(src3, mountTable.getSourcePath());
+    assertEquals(SRC3, mountTable.getSourcePath());
+    // 5.Clear up
+    argv = new String[]{"-rm", SRC3};
+    assertEquals(0, ToolRunner.run(admin, argv));
   }
 
   @Test
