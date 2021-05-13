@@ -259,7 +259,7 @@ For example, use the following [ViewFs](../hadoop-hdfs/ViewFs.html) to configure
 
 The [ViewFs](../hadoop-hdfs/ViewFs.html) mount table can be initialized to the Router by using the following command:
 
-    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -initViewFsToMountTable <clusterName> | allClusters]
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -initViewFsToMountTable [<clusterName> | allClusters]
 
 #### Quotas
 Router-based federation supports global quota at mount table level. Mount table entries may spread multiple subclusters and the global quota will be
