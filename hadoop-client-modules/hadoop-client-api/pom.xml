@@ -87,6 +87,10 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
+            <configuration>
+              <createSourcesJar>true</createSourcesJar>
+              <shadeSourcesContent>true</shadeSourcesContent>
+            </configuration>
             <dependencies>
               <dependency>
                 <groupId>org.apache.hadoop</groupId>
