@@ -239,7 +239,9 @@ com.google.j2objc:j2objc-annotations:1.1
 com.google.json-simple:json-simple:1.1.1
 com.google.guava:failureaccess:1.0
 com.google.guava:guava:27.0-jre
+com.google.guava:guava:jar:30.1.1-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
+com.google.j2objc:j2objc-annotations:1.3
 com.microsoft.azure:azure-storage:7.0.1
 com.nimbusds:nimbus-jose-jwt:9.8.1
 com.squareup.okhttp:okhttp:2.7.5
@@ -266,16 +268,6 @@ io.grpc:grpc-protobuf-lite:1.26.0
 io.grpc:grpc-stub:1.26.0
 io.netty:netty:3.10.6.Final
 io.netty:netty-all:4.1.61.Final
-io.netty:netty-buffer:4.1.27.Final
-io.netty:netty-codec:4.1.27.Final
-io.netty:netty-codec-http:4.1.27.Final
-io.netty:netty-codec-http2:4.1.27.Final
-io.netty:netty-codec-socks:4.1.27.Final
-io.netty:netty-common:4.1.27.Final
-io.netty:netty-handler:4.1.27.Final
-io.netty:netty-handler-proxy:4.1.27.Final
-io.netty:netty-resolver:4.1.27.Final
-io.netty:netty-transport:4.1.27.Final
 io.opencensus:opencensus-api:0.24.0
 io.opencensus:opencensus-contrib-grpc-metrics:0.24.0
 io.perfmark:perfmark-api:0.19.0
@@ -393,6 +385,7 @@ leveldb v1.13
 
 com.google.protobuf:protobuf-java:2.5.0
 com.google.protobuf:protobuf-java:3.6.1
+com.google.protobuf:protobuf-java:3.7.1
 com.google.re2j:re2j:1.1
 com.jcraft:jsch:0.1.55
 com.thoughtworks.paranamer:paranamer:2.3
@@ -483,6 +476,7 @@ com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
 org.bouncycastle:bcpkix-jdk15on:1.68
 org.bouncycastle:bcprov-jdk15on:1.68
 org.checkerframework:checker-qual:2.5.2
+org.checkerframework:checker-qual:3.8.0
 org.codehaus.mojo:animal-sniffer-annotations:1.17
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
