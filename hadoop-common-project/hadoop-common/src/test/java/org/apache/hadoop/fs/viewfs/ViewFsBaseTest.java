@@ -359,8 +359,8 @@ abstract public class ViewFsBaseTest {
   public void testRenameAcrossMounts1() throws IOException {
     fileContextTestHelper.createFile(fcView, "/user/foo");
     try {
+      // The same Authority can support rename
       fcView.rename(new Path("/user/foo"), new Path("/user2/fooBarBar"));
-      ContractTestUtils.fail("IOException is not thrown on rename operation");
     } catch (IOException e) {
       GenericTestUtils
           .assertExceptionContains("Renames across Mount points not supported",
@@ -376,8 +376,8 @@ abstract public class ViewFsBaseTest {
   public void testRenameAcrossMounts2() throws IOException {
     fileContextTestHelper.createFile(fcView, "/user/foo");
     try {
+      // The same Authority can support rename
       fcView.rename(new Path("/user/foo"), new Path("/data/fooBar"));
-      ContractTestUtils.fail("IOException is not thrown on rename operation");
     } catch (IOException e) {
       GenericTestUtils
           .assertExceptionContains("Renames across Mount points not supported",

@@ -524,7 +524,7 @@ abstract class InodeTree<T> {
         Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH;
     boolean gotMountTableEntry = false;
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    // Compatible with older viewfs conf
+    // Compatible with older ViewFs conf
     Map<String, String> tmpMap = new TreeMap<>(new Comparator<String>() {
       public int compare(String obj1, String obj2) {
         return obj1.compareTo(obj2);

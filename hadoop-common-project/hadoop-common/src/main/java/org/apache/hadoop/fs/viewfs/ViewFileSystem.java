@@ -721,8 +721,14 @@ public class ViewFileSystem extends FileSystem {
     URI srcUri = resSrc.targetFileSystem.getUri();
     URI dstUri = resDst.targetFileSystem.getUri();
 
-    verifyRenameStrategy(srcUri, dstUri,
-        resSrc.targetFileSystem == resDst.targetFileSystem, renameStrategy);
+    if (resSrc.targetFileSystem instanceof NflyFSystem ||
+        resDst.targetFileSystem instanceof NflyFSystem) {
+      verifyRenameStrategy(srcUri, dstUri,
+          resSrc.targetFileSystem == resDst.targetFileSystem, renameStrategy);
+    } else {
+      verifyRenameStrategy(srcUri, dstUri,
+          srcUri.getAuthority().equals(dstUri.getAuthority()), renameStrategy);
+    }
 
     if (resSrc.targetFileSystem instanceof ChRootedFileSystem &&
         resDst.targetFileSystem instanceof ChRootedFileSystem) {

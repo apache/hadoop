@@ -606,7 +606,7 @@ public class ViewFs extends AbstractFileSystem {
     URI srcUri = resSrc.targetFileSystem.getUri();
     URI dstUri = resDst.targetFileSystem.getUri();
     ViewFileSystem.verifyRenameStrategy(srcUri, dstUri,
-        resSrc.targetFileSystem == resDst.targetFileSystem, renameStrategy);
+        dstUri.getAuthority().equals(dstUri.getAuthority()), renameStrategy);
 
     ChRootedFs srcFS = (ChRootedFs) resSrc.targetFileSystem;
     ChRootedFs dstFS = (ChRootedFs) resDst.targetFileSystem;
