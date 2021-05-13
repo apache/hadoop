@@ -735,7 +735,7 @@ public class TestRouterAdminCLI {
     admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
         CLUSTER_NAME1 + ".link." + SRC1, destPath1.toString());
     admin.getConf().set(CONFIG_VIEWFS_PREFIX + "." +
-        CLUSTER_NAME1 + ".link." + SRC2, destPath1.toString());
+        CLUSTER_NAME2 + ".link." + SRC2, destPath1.toString());
   }
 
   @Test
@@ -962,7 +962,7 @@ public class TestRouterAdminCLI {
     assertEquals(-1, ToolRunner.run(admin, argv));
     System.err.println(out.toString());
     assertTrue(out.toString().
-        contains("[-initViewFsToMountTable <clusterName>] | allClusters"));
+        contains("[-initViewFsToMountTable <clusterName> | allClusters]"));
     out.reset();
 
     argv = new String[] {"-safemode"};
@@ -1007,7 +1007,7 @@ public class TestRouterAdminCLI {
         + " <quota in bytes or quota size string>]\n"
         + "\t[-clrQuota <path>]\n"
         + "\t[-clrStorageTypeQuota <path>]\n"
-        + "\t[-initViewFsToMountTable <clusterName>] | allClusters\n"
+        + "\t[-initViewFsToMountTable <clusterName> | allClusters]\n"
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
         + "\t[-getDisabledNameservices]\n"

@@ -180,7 +180,7 @@ public class RouterAdmin extends Configured implements Tool {
     } else if (cmd.equals("-clrStorageTypeQuota")) {
       return "\t[-clrStorageTypeQuota <path>]";
     }  else if (cmd.equals("-initViewFsToMountTable")) {
-      return "\t[-initViewFsToMountTable <clusterName>] | allClusters";
+      return "\t[-initViewFsToMountTable <clusterName> | allClusters]";
     }else if (cmd.equals("-safemode")) {
       return "\t[-safemode enter | leave | get]";
     } else if (cmd.equals("-nameservice")) {
@@ -403,6 +403,7 @@ public class RouterAdmin extends Configured implements Tool {
           System.out.println("Successfully init ViewFs mapping to router " +
               argv[i]);
         } else {
+          System.err.println("Failed when execute command initViewFsToMountTable");
           exitCode = -1;
         }
       } else if ("-refreshRouterArgs".equals(cmd)) {
@@ -1091,7 +1092,7 @@ public class RouterAdmin extends Configured implements Tool {
       String mountKey = entry.getKey();
       DestinationOrder order = DestinationOrder.HASH;
       String mount = mountKey.replaceAll(mountTablePrefix, "");
-      if (!destUri.getScheme().equals("hdfs")) {
+      if (!destUri.getScheme().equals(HdfsConstants.HDFS_URI_SCHEME)) {
         System.out.println("Only supports HDFS, " +
             "added Mount Point failed , " + mountKey);
       }
@@ -1115,7 +1116,7 @@ public class RouterAdmin extends Configured implements Tool {
    * Returns ACLEntity according to a HDFS pat.
    * @param path A path of HDFS.
    */
-  static public ACLEntity getACLEntityFormHdfsPath(
+  static private ACLEntity getACLEntityFormHdfsPath(
       Path path, Configuration conf) {
     String owner = null;
     String group = null;
