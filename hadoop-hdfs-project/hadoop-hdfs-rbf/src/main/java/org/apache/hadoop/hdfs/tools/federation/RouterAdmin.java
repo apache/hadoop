@@ -403,7 +403,8 @@ public class RouterAdmin extends Configured implements Tool {
           System.out.println("Successfully init ViewFs mapping to router " +
               argv[i]);
         } else {
-          System.err.println("Failed when execute command initViewFsToMountTable");
+          System.err.println(
+              "Failed when execute command initViewFsToMountTable");
           exitCode = -1;
         }
       } else if ("-refreshRouterArgs".equals(cmd)) {
