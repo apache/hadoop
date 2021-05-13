@@ -68,6 +68,8 @@ public final class FileSystemConfigurations {
   public static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT = "localhost";
   public static final int DEFAULT_AZURE_LIST_MAX_RESULTS = 5000;
 
+  public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM = "AES256";
+
   public static final int MAX_CONCURRENT_READ_THREADS = 12;
   public static final int MAX_CONCURRENT_WRITE_THREADS = 8;
   public static final boolean DEFAULT_READ_TOLERATE_CONCURRENT_APPEND = false;
@@ -78,6 +80,13 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE = true;
   public static final boolean DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE = true;
   public static final String DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES = "";
+  public static final String DEFAULT_FS_AZURE_INFINITE_LEASE_DIRECTORIES = "";
+  public static final int DEFAULT_LEASE_THREADS = 0;
+  public static final int MIN_LEASE_THREADS = 0;
+  public static final int DEFAULT_LEASE_DURATION = -1;
+  public static final int INFINITE_LEASE_DURATION = -1;
+  public static final int MIN_LEASE_DURATION = 15;
+  public static final int MAX_LEASE_DURATION = 60;
 
   public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = 2;
 

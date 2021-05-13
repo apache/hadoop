@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -35,6 +36,9 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetricsForCustomResources;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 @InterfaceAudience.Private
@@ -58,10 +62,25 @@ public class ClusterMetrics {
   @Metric("Vcore Utilization") MutableGaugeLong utilizedVirtualCores;
   @Metric("Memory Capability") MutableGaugeLong capabilityMB;
   @Metric("Vcore Capability") MutableGaugeLong capabilityVirtualCores;
-  @Metric("GPU Capability") MutableGaugeLong capabilityGPUs;
+  @Metric("RM Event Processor CPU Usage 60 second Avg") MutableGaugeLong
+    rmEventProcCPUAvg;
+  @Metric("RM Event Processor CPU Usage 60 second Max") MutableGaugeLong
+    rmEventProcCPUMax;
+
+  private boolean rmEventProcMonitorEnable = false;
 
   private static final MetricsInfo RECORD_INFO = info("ClusterMetrics",
   "Metrics for the Yarn Cluster");
+
+  private static final String CUSTOM_RESOURCE_CAPABILITY_METRIC_PREFIX =
+      "Capability.";
+  private static final String CUSTOM_RESOURCE_CAPABILITY_METRIC_DESC =
+      "NAME Capability";
+
+  private static CustomResourceMetrics customResourceMetrics;
+
+  private final CustomResourceMetricValue customResourceCapability =
+      new CustomResourceMetricValue();
   
   private static volatile ClusterMetrics INSTANCE = null;
   private static MetricsRegistry registry;
@@ -86,6 +105,17 @@ public class ClusterMetrics {
     if (ms != null) {
       ms.register("ClusterMetrics", "Metrics for the Yarn Cluster", INSTANCE);
     }
+
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
+      customResourceMetrics =
+          new CustomResourceMetrics();
+      Map<String, Long> customResources =
+          customResourceMetrics.initAndGetCustomResources();
+      customResourceMetrics.
+          registerCustomResources(customResources,
+              registry, CUSTOM_RESOURCE_CAPABILITY_METRIC_PREFIX,
+              CUSTOM_RESOURCE_CAPABILITY_METRIC_DESC);
+    }
   }
 
   @VisibleForTesting
@@ -94,6 +124,27 @@ public class ClusterMetrics {
     INSTANCE = null;
   }
   
+  // Indicate whether RM Event Thread CPU Monitor is enabled
+  public void setRmEventProcMonitorEnable(boolean value) {
+    rmEventProcMonitorEnable = value;
+  }
+  public boolean getRmEventProcMonitorEnable() {
+    return rmEventProcMonitorEnable;
+  }
+  // RM Event Processor CPU Usage
+  public long getRmEventProcCPUAvg() {
+    return rmEventProcCPUAvg.value();
+  }
+  public void setRmEventProcCPUAvg(long value) {
+    rmEventProcCPUAvg.set(value);
+  }
+  public long getRmEventProcCPUMax() {
+    return rmEventProcCPUMax.value();
+  }
+  public void setRmEventProcCPUMax(long value) {
+    rmEventProcCPUMax.set(value);
+  }
+
   //Active Nodemanagers
   public int getNumActiveNMs() {
     return numActiveNMs.value();
@@ -209,23 +260,20 @@ public class ClusterMetrics {
     return capabilityVirtualCores.value();
   }
 
-  public long getCapabilityGPUs() {
-    if (capabilityGPUs == null) {
-      return 0;
-    }
+  public Map<String, Long> getCustomResourceCapability() {
+    return customResourceCapability.getValues();
+  }
 
-    return capabilityGPUs.value();
+  public void setCustomResourceCapability(Resource res) {
+    this.customResourceCapability.set(res);
   }
 
   public void incrCapability(Resource res) {
     if (res != null) {
       capabilityMB.incr(res.getMemorySize());
       capabilityVirtualCores.incr(res.getVirtualCores());
-      Integer gpuIndex = ResourceUtils.getResourceTypeIndex()
-          .get(ResourceInformation.GPU_URI);
-      if (gpuIndex != null) {
-        capabilityGPUs.incr(res.
-            getResourceValue(ResourceInformation.GPU_URI));
+      if (customResourceCapability != null) {
+        customResourceCapability.increase(res);
       }
     }
   }
@@ -234,11 +282,8 @@ public class ClusterMetrics {
     if (res != null) {
       capabilityMB.decr(res.getMemorySize());
       capabilityVirtualCores.decr(res.getVirtualCores());
-      Integer gpuIndex = ResourceUtils.getResourceTypeIndex()
-          .get(ResourceInformation.GPU_URI);
-      if (gpuIndex != null) {
-        capabilityGPUs.decr(res.
-            getResourceValue(ResourceInformation.GPU_URI));
+      if (customResourceCapability != null) {
+        customResourceCapability.decrease(res);
       }
     }
   }

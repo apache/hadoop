@@ -160,14 +160,33 @@ public final class Constants {
       DEFAULT_SSL_CHANNEL_MODE =
           DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE;
 
-  //use a custom endpoint?
+  /**
+   * Endpoint. For v4 signing and/or better performance,
+   * this should be the specific endpoint of the region
+   * in which the bucket is hosted.
+   */
   public static final String ENDPOINT = "fs.s3a.endpoint";
 
   /**
-   * Default value of s3 endpoint. If not set explicitly using
-   * {@code AmazonS3#setEndpoint()}, this is used.
+   * Default value of s3 endpoint: {@value}.
+   * It tells the AWS client to work it out by asking the central
+   * endpoint where the bucket lives; caching that
+   * value in the client for the life of the process.
+   * <p>
+   * Note: previously this constant was defined as
+   * {@link #CENTRAL_ENDPOINT}, however the actual
+   * S3A client code used "" as the default when
+   * {@link #ENDPOINT} was unset.
+   * As core-default.xml also set the endpoint to "",
+   * the empty string has long been the <i>real</i>
+   * default value.
    */
-  public static final String DEFAULT_ENDPOINT = "s3.amazonaws.com";
+  public static final String DEFAULT_ENDPOINT = "";
+
+  /**
+   * The central endpoint :{@value}.
+   */
+  public static final String CENTRAL_ENDPOINT = "s3.amazonaws.com";
 
   //Enable path style access? Overrides default virtual hosting
   public static final String PATH_STYLE_ACCESS = "fs.s3a.path.style.access";
@@ -310,7 +329,6 @@ public final class Constants {
    * Default is {@link #FAST_UPLOAD_BUFFER_DISK}
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_BUFFER =
       "fs.s3a.fast.upload.buffer";
 
@@ -319,26 +337,22 @@ public final class Constants {
    * Capacity is limited to available disk space.
    */
 
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_BUFFER_DISK = "disk";
 
   /**
    * Use an in-memory array. Fast but will run of heap rapidly: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_BUFFER_ARRAY = "array";
 
   /**
    * Use a byte buffer. May be more memory efficient than the
    * {@link #FAST_UPLOAD_BUFFER_ARRAY}: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_BYTEBUFFER = "bytebuffer";
 
   /**
    * Default buffer option: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String DEFAULT_FAST_UPLOAD_BUFFER =
       FAST_UPLOAD_BUFFER_DISK;
 
@@ -351,7 +365,6 @@ public final class Constants {
    * <p>
    * Default is {@link #DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS}
    */
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_ACTIVE_BLOCKS =
       "fs.s3a.fast.upload.active.blocks";
 
@@ -359,8 +372,22 @@ public final class Constants {
    * Limit of queued block upload operations before writes
    * block. Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final int DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS = 4;
+
+  /**
+   * Rather than raise an exception when an attempt is
+   * made to call the Syncable APIs, warn and downgrade.
+   * Value: {@value}.
+   */
+  public static final String DOWNGRADE_SYNCABLE_EXCEPTIONS =
+      "fs.s3a.downgrade.syncable.exceptions";
+
+  /**
+   * Default value for syncable invocation.
+   * Value: {@value}.
+   */
+  public static final boolean DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT =
+      false;
 
   /**
    * The capacity of executor queues for operations other than block

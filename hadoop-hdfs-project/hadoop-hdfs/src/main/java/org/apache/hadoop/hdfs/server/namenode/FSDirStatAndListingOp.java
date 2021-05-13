@@ -105,6 +105,7 @@ class FSDirStatAndListingOp {
       // superuser to receive null instead.
       try {
         iip = fsd.resolvePath(pc, srcArg, dirOp);
+        pc.checkSuperuserPrivilege(iip.getPath());
       } catch (AccessControlException ace) {
         return null;
       }
@@ -151,12 +152,14 @@ class FSDirStatAndListingOp {
     BlockManager bm = fsd.getBlockManager();
     fsd.readLock();
     try {
-      final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ);
+      // Just get INodesInPath without access checks, since we check for path
+      // access later
+      final INodesInPath iip = fsd.resolvePath(null, src, DirOp.READ);
       src = iip.getPath();
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (fsd.isPermissionEnabled()) {
-        fsd.checkPathAccess(pc, iip, FsAction.READ);
         fsd.checkUnreadableBySuperuser(pc, iip);
+        fsd.checkPathAccess(pc, iip, FsAction.READ);
       }
 
       final long fileSize = iip.isSnapshot()

@@ -111,10 +111,4 @@ public final class InternalConstants {
    */
   public static final int DEFAULT_UPLOAD_PART_COUNT_LIMIT = 10000;
 
-  /**
-   * Flag to enable AWS Statistics binding. As this is triggering
-   * problems related to region/endpoint setup, it is currently
-   * disabled.
-   */
-  public static final boolean AWS_SDK_METRICS_ENABLED = true;
 }

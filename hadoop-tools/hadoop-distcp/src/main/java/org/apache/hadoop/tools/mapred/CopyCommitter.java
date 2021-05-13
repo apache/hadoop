@@ -564,12 +564,15 @@ public class CopyCommitter extends FileOutputCommitter {
     // thread count is picked up from the job
     int threads = conf.getInt(DistCpConstants.CONF_LABEL_LISTSTATUS_THREADS,
         DistCpConstants.DEFAULT_LISTSTATUS_THREADS);
+    boolean useIterator =
+        conf.getBoolean(DistCpConstants.CONF_LABEL_USE_ITERATOR, false);
     LOG.info("Scanning destination directory {} with thread count: {}",
         targetFinalPath, threads);
     DistCpOptions options = new DistCpOptions.Builder(targets, resultNonePath)
         .withOverwrite(overwrite)
         .withSyncFolder(syncFolder)
         .withNumListstatusThreads(threads)
+        .withUseIterator(useIterator)
         .build();
     DistCpContext distCpContext = new DistCpContext(options);
     distCpContext.setTargetPathExists(targetPathExists);

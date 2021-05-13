@@ -61,6 +61,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected String queueType;
   protected String creationMethod;
   protected String autoCreationEligibility;
+  protected String defaultNodeLabelExpression;
 
   @XmlTransient
   static final float EPSILON = 1e-8f;
@@ -114,6 +115,8 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     creationMethod = CapacitySchedulerInfoHelper.getCreationMethod(parent);
     autoCreationEligibility = CapacitySchedulerInfoHelper
         .getAutoCreationEligibility(parent);
+
+    defaultNodeLabelExpression = parent.getDefaultNodeLabelExpression();
   }
 
   public float getCapacity() {

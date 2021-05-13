@@ -76,8 +76,8 @@ public class TestPrintableString {
         "x\uDB80\uDC00y\uDBFF\uDFFDz\u1050", "x?y?z\u1050");
 
     // Unassigned Unicode
-    expect("Should replace unassigned U+30000 and U+DFFFF",
-        "-\uD880\uDC00-\uDB3F\uDFFF-", "-?-?-");
+    expect("Should replace unassigned U+DFFFF",
+        "-\uDB3F\uDFFF-", "-?-");
 
     // Standalone surrogate character (not in a pair)
     expect("Should replace standalone surrogate U+DB80", "x\uDB80yz", "x?yz");

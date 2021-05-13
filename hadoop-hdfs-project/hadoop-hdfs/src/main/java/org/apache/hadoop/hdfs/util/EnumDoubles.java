@@ -102,7 +102,7 @@ public class EnumDoubles<E extends Enum<E>> {
   public boolean equals(Object obj) {
     if (obj == this) {
       return true;
-    } else if (obj == null || !(obj instanceof EnumDoubles)) {
+    } else if (!(obj instanceof EnumDoubles)) {
       return false;
     }
     final EnumDoubles<?> that = (EnumDoubles<?>)obj;

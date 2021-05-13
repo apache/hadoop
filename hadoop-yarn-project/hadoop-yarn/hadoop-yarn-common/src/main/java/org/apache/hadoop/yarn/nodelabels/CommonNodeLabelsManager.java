@@ -95,6 +95,8 @@ public class CommonNodeLabelsManager extends AbstractService {
       new ConcurrentHashMap<String, RMNodeLabel>();
   protected ConcurrentMap<String, Host> nodeCollections =
       new ConcurrentHashMap<String, Host>();
+  private ConcurrentMap<NodeId, Boolean> isNodeLabelFromHost =
+      new ConcurrentHashMap<NodeId, Boolean>();
 
   protected RMNodeLabel noNodeLabel;
 
@@ -603,6 +605,11 @@ public class CommonNodeLabelsManager extends AbstractService {
     addLabelsToNodeInHost(node, newLabels);
   }
 
+  protected boolean isNodeLabelExplicit(NodeId nodeId) {
+    return !isNodeLabelFromHost.containsKey(nodeId) ||
+        isNodeLabelFromHost.get(nodeId);
+  }
+
   @SuppressWarnings("unchecked")
   protected void internalUpdateLabelsOnNodes(
       Map<NodeId, Set<String>> nodeToLabels, NodeLabelUpdateOperation op)
@@ -637,6 +644,7 @@ public class CommonNodeLabelsManager extends AbstractService {
               node.labels.addAll(labels);
             }
             addNodeToLabels(node.nodeId, labels);
+            isNodeLabelFromHost.put(node.nodeId, true);
           }
           break;
         case REPLACE:
@@ -646,10 +654,9 @@ public class CommonNodeLabelsManager extends AbstractService {
           host.labels.addAll(labels);
           for (Node node : host.nms.values()) {
             replaceNodeForLabels(node.nodeId, node.labels, labels);
-            if (node.labels != null) {
-              replaceLabelsForNode(node.nodeId, node.labels, labels);
-            }
+            replaceLabelsForNode(node.nodeId, node.labels, labels);
             node.labels = null;
+            isNodeLabelFromHost.put(node.nodeId, true);
           }
           break;
         default:
@@ -669,6 +676,7 @@ public class CommonNodeLabelsManager extends AbstractService {
               nm.labels = new HashSet<String>();
             }
             nm.labels.addAll(labels);
+            isNodeLabelFromHost.put(nm.nodeId, false);
             break;
           case REPLACE:
             oldLabels = getLabelsByNode(nodeId);
@@ -679,6 +687,7 @@ public class CommonNodeLabelsManager extends AbstractService {
             }
             nm.labels.clear();
             nm.labels.addAll(labels);
+            isNodeLabelFromHost.put(nm.nodeId, false);
             break;
           default:
             break;

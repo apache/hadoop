@@ -1346,7 +1346,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol(),
               STREAM_WRITE_QUEUE_DURATION.getSymbol(),
               STREAM_WRITE_TOTAL_DATA.getSymbol(),
-              STREAM_WRITE_TOTAL_TIME.getSymbol())
+              STREAM_WRITE_TOTAL_TIME.getSymbol(),
+              INVOCATION_HFLUSH.getSymbol(),
+              INVOCATION_HSYNC.getSymbol())
           .withGauges(
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
@@ -1487,6 +1489,16 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void commitUploaded(long size) {
       incrementCounter(COMMITTER_BYTES_UPLOADED, size);
+    }
+
+    @Override
+    public void hflushInvoked() {
+      incCounter(INVOCATION_HFLUSH.getSymbol(), 1);
+    }
+
+    @Override
+    public void hsyncInvoked() {
+      incCounter(INVOCATION_HSYNC.getSymbol(), 1);
     }
 
     @Override

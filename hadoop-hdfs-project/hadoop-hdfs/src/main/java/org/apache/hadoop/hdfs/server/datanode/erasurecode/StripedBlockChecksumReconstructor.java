@@ -57,6 +57,7 @@ public abstract class StripedBlockChecksumReconstructor
 
   private void init() throws IOException {
     initDecoderIfNecessary();
+    initDecodingValidatorIfNecessary();
     getStripedReader().init();
     // allocate buffer to keep the reconstructed block data
     targetBuffer = allocateBuffer(getBufferSize());
@@ -192,7 +193,16 @@ public abstract class StripedBlockChecksumReconstructor
     for (int i = 0; i < targetIndices.length; i++) {
       tarIndices[i] = targetIndices[i];
     }
-    getDecoder().decode(inputs, tarIndices, outputs);
+
+    if (isValidationEnabled()) {
+      markBuffers(inputs);
+      getDecoder().decode(inputs, tarIndices, outputs);
+      resetBuffers(inputs);
+
+      getValidator().validate(inputs, tarIndices, outputs);
+    } else {
+      getDecoder().decode(inputs, tarIndices, outputs);
+    }
   }
 
   /**

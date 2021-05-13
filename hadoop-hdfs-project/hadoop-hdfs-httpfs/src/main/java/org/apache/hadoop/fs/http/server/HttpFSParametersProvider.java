@@ -81,7 +81,8 @@ public class HttpFSParametersProvider extends ParametersProvider {
         new Class[]{ReplicationParam.class});
     PARAMS_DEF.put(Operation.SETTIMES,
         new Class[]{ModifiedTimeParam.class, AccessTimeParam.class});
-    PARAMS_DEF.put(Operation.DELETE, new Class[]{RecursiveParam.class});
+    PARAMS_DEF.put(Operation.DELETE, new Class[]{RecursiveParam.class,
+        DeleteSkipTrashParam.class});
     PARAMS_DEF.put(Operation.SETACL, new Class[]{AclPermissionParam.class});
     PARAMS_DEF.put(Operation.REMOVEACL, new Class[]{});
     PARAMS_DEF.put(Operation.MODIFYACLENTRIES,
@@ -238,6 +239,25 @@ public class HttpFSParametersProvider extends ParametersProvider {
      * Constructor.
      */
     public RecursiveParam() {
+      super(NAME, false);
+    }
+  }
+
+  /**
+   * Class for delete's skipTrash parameter.
+   */
+  @InterfaceAudience.Private
+  public static class DeleteSkipTrashParam extends BooleanParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.SKIP_TRASH_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public DeleteSkipTrashParam() {
       super(NAME, false);
     }
   }

@@ -16,9 +16,15 @@
  * limitations under the License.
  */
 
+#include <Shlwapi.h>
+#include <WinBase.h>
 #include <Windows.h>
 
+#include <cstring>
+
 #include "syscall.h"
+
+#pragma comment(lib, "Shlwapi.lib")
 
 bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
   return WriteToStdoutImpl(message.c_str());
@@ -26,6 +32,12 @@ bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
 
 int XPlatform::Syscall::WriteToStdout(const char* message) {
   return WriteToStdoutImpl(message) ? 1 : 0;
+}
+
+bool XPlatform::Syscall::FnMatch(const std::string& pattern,
+                                 const std::string& str) {
+  return PathMatchSpecA(static_cast<LPCSTR>(str.c_str()),
+                        static_cast<LPCSTR>(pattern.c_str())) == TRUE;
 }
 
 bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
@@ -39,4 +51,16 @@ bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
   const auto result =
       WriteFile(stdout_handle, message, message_len, &bytes_written, nullptr);
   return result && static_cast<unsigned long>(message_len) == bytes_written;
+}
+
+void XPlatform::Syscall::ClearBufferSafely(void* buffer,
+                                           const size_t sz_bytes) {
+  if (buffer != nullptr) {
+    SecureZeroMemory(buffer, sz_bytes);
+  }
+}
+
+bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
+                                                 const std::string& b) {
+  return _stricmp(a.c_str(), b.c_str()) == 0;
 }

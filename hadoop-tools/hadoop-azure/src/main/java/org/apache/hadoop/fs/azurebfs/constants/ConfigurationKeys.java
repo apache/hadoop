@@ -87,6 +87,15 @@ public final class ConfigurationKeys {
   /** Provides a config to provide comma separated path prefixes on which Appendblob based files are created
    *  Default is empty. **/
   public static final String FS_AZURE_APPEND_BLOB_KEY = "fs.azure.appendblob.directories";
+  /** Provides a config to provide comma separated path prefixes which support infinite leases.
+   *  Files under these paths will be leased when created or opened for writing and the lease will
+   *  be released when the file is closed. The lease may be broken with the breakLease method on
+   *  AzureBlobFileSystem. Default is empty.
+   * **/
+  public static final String FS_AZURE_INFINITE_LEASE_KEY = "fs.azure.infinite-lease.directories";
+  /** Provides a number of threads to use for lease operations for infinite lease directories.
+   *  Must be set to a minimum of 1 if infinite lease directories are to be used. Default is 0. **/
+  public static final String FS_AZURE_LEASE_THREADS = "fs.azure.lease.threads";
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
   public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.read.alwaysReadBufferSize";
   public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.readahead.blocksize";
@@ -134,6 +143,8 @@ public final class ConfigurationKeys {
   public static final String AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
+  /** Server side encryption key */
+  public static final String FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY = "fs.azure.client-provided-encryption-key";
 
   /** End point of ABFS account: {@value}. */
   public static final String AZURE_ABFS_ENDPOINT = "fs.azure.abfs.endpoint";
