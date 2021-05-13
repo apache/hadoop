@@ -49,6 +49,7 @@ import static org.mockito.Mockito.when;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
 
 /**
  * Unit test AbfsInputStream.
@@ -573,7 +574,7 @@ public class TestAbfsInputStream extends
   @Test
   public void testDefaultReadaheadQueueDepth() throws Exception {
     Configuration config = getRawConfiguration();
-    config.unset("fs.azure.readaheadqueue.depth");
+    config.unset(FS_AZURE_READ_AHEAD_QUEUE_DEPTH);
     AzureBlobFileSystem fs = getFileSystem(config);
     Path testFile = new Path("/testFile");
     fs.create(testFile);
