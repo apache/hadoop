@@ -77,6 +77,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -1563,7 +1564,17 @@ public class FSDirectory implements Closeable {
    * @return The inode associated with the given id
    */
   public INode getInode(long id) {
-    return inodeMap.get(id);
+    INode node = inodeMap.get(id);
+    if (null == node) {
+      Iterator<INodeWithAdditionalFields> it = inodeMap.getMapIterator();
+      while (it.hasNext()) {
+        INodeWithAdditionalFields node1 = it.next();
+        if (node1.getId() == id) {
+          return node1;
+        }
+      }
+    }
+    return node;
   }
   
   @VisibleForTesting
