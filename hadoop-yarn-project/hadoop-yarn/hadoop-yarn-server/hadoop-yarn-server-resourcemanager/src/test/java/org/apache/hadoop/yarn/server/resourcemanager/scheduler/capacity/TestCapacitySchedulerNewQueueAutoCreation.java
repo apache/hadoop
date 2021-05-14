@@ -23,7 +23,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -49,6 +48,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Set;
 import java.util.HashSet;
 
+import java.io.IOException;
+
 public class TestCapacitySchedulerNewQueueAutoCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -59,7 +60,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   private MockRM mockRM = null;
   private CapacityScheduler cs;
   private CapacitySchedulerConfiguration csConf;
-  private CapacitySchedulerAutoQueueHandler autoQueueHandler;
+  private CapacitySchedulerQueueManager autoQueueHandler;
   private AutoCreatedQueueDeletionPolicy policy = new
       AutoCreatedQueueDeletionPolicy();
 
@@ -114,8 +115,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     policy.init(cs.getConfiguration(), cs.getRMContext(), cs);
     mockRM.start();
     cs.start();
-    autoQueueHandler = new CapacitySchedulerAutoQueueHandler(
-        cs.getCapacitySchedulerQueueManager());
+    autoQueueHandler = cs.getCapacitySchedulerQueueManager();
     mockRM.registerNode("h1:1234", MAX_MEMORY * GB); // label = x
   }
 
@@ -606,6 +606,34 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals(50, e1.getMaxApplications());
+  }
+
+  @Test(expected = SchedulerDynamicEditException.class)
+  public void testAutoCreateQueueWithAmbiguousNonFullPathParentName()
+      throws Exception {
+    startScheduler();
+
+    createQueue("root.a.a");
+    createQueue("a.a");
+  }
+
+  @Test
+  public void testAutoCreateQueueIfFirstExistingParentQueueIsNotStatic()
+      throws Exception {
+    startScheduler();
+
+    // create a dynamic ParentQueue
+    createQueue("root.a.a-parent-auto.a1-leaf-auto");
+    Assert.assertNotNull(cs.getQueue("root.a.a-parent-auto"));
+
+    // create a new dynamic LeafQueue under the existing ParentQueue
+    createQueue("root.a.a-parent-auto.a2-leaf-auto");
+
+    CSQueue a2Leaf = cs.getQueue("a2-leaf-auto");
+
+    // Make sure a2-leaf-auto is under a-parent-auto
+    Assert.assertEquals("root.a.a-parent-auto",
+        a2Leaf.getParent().getQueuePath());
   }
 
   @Test
@@ -1109,8 +1137,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         "when its dynamic parent is removed", bAutoLeaf);
   }
 
-  protected LeafQueue createQueue(String queuePath) throws YarnException {
-    return autoQueueHandler.autoCreateQueue(
+  protected LeafQueue createQueue(String queuePath) throws YarnException,
+      IOException {
+    return autoQueueHandler.createQueue(
         CSQueueUtils.extractQueuePath(queuePath));
   }
 

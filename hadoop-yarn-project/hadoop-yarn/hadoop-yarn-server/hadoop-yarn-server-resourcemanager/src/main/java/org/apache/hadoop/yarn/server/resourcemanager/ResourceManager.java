@@ -475,12 +475,40 @@ public class ResourceManager extends CompositeService
 
   protected Dispatcher createDispatcher() {
     AsyncDispatcher dispatcher = new AsyncDispatcher("RM Event dispatcher");
-    GenericEventTypeMetrics genericEventTypeMetrics =
+
+    // Add 4 busy event types.
+    GenericEventTypeMetrics
+        nodesListManagerEventTypeMetrics =
         GenericEventTypeMetricsManager.
-        create(dispatcher.getName(), NodesListManagerEventType.class);
-    // We can add more
-    dispatcher.addMetrics(genericEventTypeMetrics,
-        genericEventTypeMetrics.getEnumClass());
+            create(dispatcher.getName(), NodesListManagerEventType.class);
+    dispatcher.addMetrics(nodesListManagerEventTypeMetrics,
+        nodesListManagerEventTypeMetrics
+            .getEnumClass());
+
+    GenericEventTypeMetrics
+        rmNodeEventTypeMetrics =
+        GenericEventTypeMetricsManager.
+            create(dispatcher.getName(), RMNodeEventType.class);
+    dispatcher.addMetrics(rmNodeEventTypeMetrics,
+        rmNodeEventTypeMetrics
+            .getEnumClass());
+
+    GenericEventTypeMetrics
+        rmAppEventTypeMetrics =
+        GenericEventTypeMetricsManager.
+            create(dispatcher.getName(), RMAppEventType.class);
+    dispatcher.addMetrics(rmAppEventTypeMetrics,
+        rmAppEventTypeMetrics
+            .getEnumClass());
+
+    GenericEventTypeMetrics
+        rmAppAttemptEventTypeMetrics =
+        GenericEventTypeMetricsManager.
+            create(dispatcher.getName(), RMAppAttemptEventType.class);
+    dispatcher.addMetrics(rmAppAttemptEventTypeMetrics,
+        rmAppAttemptEventTypeMetrics
+            .getEnumClass());
+
     return dispatcher;
   }
 

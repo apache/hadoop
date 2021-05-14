@@ -233,8 +233,6 @@ public class CapacityScheduler extends
   private AppPriorityACLsManager appPriorityACLManager;
   private boolean multiNodePlacementEnabled;
 
-  private CapacitySchedulerAutoQueueHandler autoQueueHandler;
-
   private boolean printedVerboseLoggingForAsyncScheduling;
 
   /**
@@ -342,9 +340,6 @@ public class CapacityScheduler extends
       this.queueManager = new CapacitySchedulerQueueManager(yarnConf,
           this.labelManager, this.appPriorityACLManager);
       this.queueManager.setCapacitySchedulerContext(this);
-
-      this.autoQueueHandler = new CapacitySchedulerAutoQueueHandler(
-          this.queueManager);
 
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
 
@@ -610,10 +605,10 @@ public class CapacityScheduler extends
       // First randomize the start point
       int start = random.nextInt(partitionSize);
       // Allocate containers of partition [start, end)
-      for (String partititon : partitions) {
+      for (String partition : partitions) {
         if (current++ >= start) {
           CandidateNodeSet<FiCaSchedulerNode> candidates =
-                  cs.getCandidateNodeSet(partititon);
+                  cs.getCandidateNodeSet(partition);
           if (candidates == null) {
             continue;
           }
@@ -624,12 +619,12 @@ public class CapacityScheduler extends
       current = 0;
 
       // Allocate containers of partition [0, start)
-      for (String partititon : partitions) {
+      for (String partition : partitions) {
         if (current++ > start) {
           break;
         }
         CandidateNodeSet<FiCaSchedulerNode> candidates =
-                cs.getCandidateNodeSet(partititon);
+                cs.getCandidateNodeSet(partition);
         if (candidates == null) {
           continue;
         }
@@ -970,7 +965,8 @@ public class CapacityScheduler extends
 
       if (fallbackContext.hasParentQueue()) {
         try {
-          return autoCreateLeafQueue(fallbackContext);
+          writeLock.lock();
+          return queueManager.createQueue(fallbackContext);
         } catch (YarnException | IOException e) {
           // A null queue is expected if the placementContext is null. In order
           // not to disrupt the control flow, if we fail to auto create a queue,
@@ -1007,6 +1003,8 @@ public class CapacityScheduler extends
                 new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
                     message));
           }
+        } finally {
+          writeLock.unlock();
         }
       }
     }
@@ -2557,30 +2555,7 @@ public class CapacityScheduler extends
       throws SchedulerDynamicEditException {
     writeLock.lock();
     try {
-      LOG.info("Removing queue: " + queueName);
-      CSQueue q = this.getQueue(queueName);
-      if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(
-          q.getClass()))) {
-        throw new SchedulerDynamicEditException(
-            "The queue that we are asked " + "to remove (" + queueName
-                + ") is not a AutoCreatedLeafQueue or ReservationQueue");
-      }
-      AbstractAutoCreatedLeafQueue disposableLeafQueue =
-          (AbstractAutoCreatedLeafQueue) q;
-      // at this point we should have no more apps
-      if (disposableLeafQueue.getNumApplications() > 0) {
-        throw new SchedulerDynamicEditException(
-            "The queue " + queueName + " is not empty " + disposableLeafQueue
-                .getApplications().size() + " active apps "
-                + disposableLeafQueue.getPendingApplications().size()
-                + " pending apps");
-      }
-
-      ((AbstractManagedParentQueue) disposableLeafQueue.getParent())
-          .removeChildQueue(q);
-      this.queueManager.removeQueue(queueName);
-      LOG.info(
-          "Removal of AutoCreatedLeafQueue " + queueName + " has succeeded");
+      queueManager.removeLegacyDynamicQueue(queueName);
     } finally {
       writeLock.unlock();
     }
@@ -2629,34 +2604,7 @@ public class CapacityScheduler extends
       throws SchedulerDynamicEditException, IOException {
     writeLock.lock();
     try {
-      if (queue == null) {
-        throw new SchedulerDynamicEditException(
-            "Queue specified is null. Should be an implementation of "
-                + "AbstractAutoCreatedLeafQueue");
-      } else if (!(AbstractAutoCreatedLeafQueue.class
-          .isAssignableFrom(queue.getClass()))) {
-        throw new SchedulerDynamicEditException(
-            "Queue is not an implementation of "
-                + "AbstractAutoCreatedLeafQueue : " + queue.getClass());
-      }
-
-      AbstractAutoCreatedLeafQueue newQueue =
-          (AbstractAutoCreatedLeafQueue) queue;
-
-      if (newQueue.getParent() == null || !(AbstractManagedParentQueue.class.
-          isAssignableFrom(newQueue.getParent().getClass()))) {
-        throw new SchedulerDynamicEditException(
-            "ParentQueue for " + newQueue + " is not properly set"
-                + " (should be set and be a PlanQueue or ManagedParentQueue)");
-      }
-
-      AbstractManagedParentQueue parent =
-          (AbstractManagedParentQueue) newQueue.getParent();
-      String queuePath = newQueue.getQueuePath();
-      parent.addChildQueue(newQueue);
-      this.queueManager.addQueue(queuePath, newQueue);
-
-      LOG.info("Creation of AutoCreatedLeafQueue " + newQueue + " succeeded");
+      queueManager.addLegacyDynamicQueue(queue);
     } finally {
       writeLock.unlock();
     }
@@ -3489,42 +3437,5 @@ public class CapacityScheduler extends
   @VisibleForTesting
   public void setQueueManager(CapacitySchedulerQueueManager qm) {
     this.queueManager = qm;
-  }
-
-  private LeafQueue autoCreateLeafQueue(
-      ApplicationPlacementContext placementContext)
-      throws IOException, YarnException {
-    String leafQueueName = placementContext.getQueue();
-    String parentQueueName = placementContext.getParentQueue();
-
-    if (!StringUtils.isEmpty(parentQueueName)) {
-      CSQueue parentQueue = getQueue(parentQueueName);
-
-      if (parentQueue != null &&
-          conf.isAutoCreateChildQueueEnabled(parentQueue.getQueuePath())) {
-        // Case 1: Handle ManagedParentQueue
-        ManagedParentQueue autoCreateEnabledParentQueue =
-            (ManagedParentQueue) parentQueue;
-        AutoCreatedLeafQueue autoCreatedLeafQueue =
-            new AutoCreatedLeafQueue(
-                this, leafQueueName, autoCreateEnabledParentQueue);
-
-        addQueue(autoCreatedLeafQueue);
-        return autoCreatedLeafQueue;
-
-      } else {
-        try {
-          writeLock.lock();
-          return autoQueueHandler.autoCreateQueue(placementContext);
-        } finally {
-          writeLock.unlock();
-        }
-      }
-    }
-
-    throw new SchedulerDynamicEditException(
-        "Could not auto-create leaf queue for " + leafQueueName
-            + ". Queue mapping does not specify"
-            + " which parent queue it needs to be created under.");
   }
 }

@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 import java.net.InetSocketAddress;
 import java.security.NoSuchAlgorithmException;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -56,7 +57,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
    * Set the timeout for every test
    */
   @Rule
-  public Timeout testTimeout = new Timeout(3 * 60 * 1000);
+  public Timeout testTimeout = new Timeout(3, TimeUnit.MINUTES);
 
   // Set up ZK digest-based credentials for the purposes of the tests,
   // to make sure all of our functionality works with auth and ACLs
