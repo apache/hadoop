@@ -150,7 +150,7 @@ public class TestViewFsFileNestedMount {
     assertEquals(1, fileStatuses.length);
     assertEquals(middleFilePath.getName(), fileStatuses[0].getPath().getName());
     // Nested mount points
-    fileStatuses = vfs.listStatus(son1Path);TestViewFsFileStatusHdfs
+    fileStatuses = vfs.listStatus(son1Path);
     assertEquals(1, fileStatuses.length);
     assertEquals(son1FilePath.getName(), fileStatuses[0].getPath().getName());
 
