@@ -179,7 +179,7 @@ RUN mkdir -p /opt/isa-l-src \
 ###
 # Avoid out of memory errors in builds
 ###
-ENV MAVEN_OPTS -Xms256m -Xmx1536m
+ENV MAVEN_OPTS -Xms256m -Xmx3072m
 
 # Skip gpg verification when downloading Yetus via yetus-wrapper
 ENV HADOOP_SKIP_YETUS_VERIFICATION true
