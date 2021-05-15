@@ -72,9 +72,9 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
   {
     TempDir tempDir;
     TempFile coreSite(tempDir.path + "/core-site.xml");
-    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
     TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
-    writeSimpleConfig(hdfsSite.filename, "key2", "value2");
+    writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigurationLoader loader;
     loader.SetSearchPath(tempDir.path);
@@ -89,7 +89,7 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
   {
     TempDir tempDir;
     TempFile coreSite(tempDir.path + "/core-site.xml");
-    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
 
     ConfigurationLoader loader;
     loader.SetSearchPath(tempDir.path);
@@ -103,7 +103,7 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
   {
     TempDir tempDir;
     TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
-    writeSimpleConfig(hdfsSite.filename, "key2", "value2");
+    writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigurationLoader loader;
     loader.SetSearchPath(tempDir.path);
@@ -121,9 +121,9 @@ TEST(HdfsConfigurationTest, TestConfigParserAPI) {
   {
     TempDir tempDir;
     TempFile coreSite(tempDir.path + "/core-site.xml");
-    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
     TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
-    writeSimpleConfig(hdfsSite.filename, "key2", "value2");
+    writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigParser parser(tempDir.path);
 
@@ -142,9 +142,9 @@ TEST(HdfsConfigurationTest, TestConfigParserAPI) {
   {
     TempDir tempDir;
     TempFile coreSite(tempDir.path + "/core-site.xml");
-    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
     TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
-    writeDamagedConfig(hdfsSite.filename, "key2", "value2");
+    writeDamagedConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigParser parser(tempDir.path);
 
