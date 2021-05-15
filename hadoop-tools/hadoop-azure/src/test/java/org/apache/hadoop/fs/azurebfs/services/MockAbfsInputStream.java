@@ -24,6 +24,10 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
 
 public class MockAbfsInputStream extends AbfsInputStream {
 
+  int errStatus = 0;
+  boolean mockRequestException = false;
+  boolean mockConnectionException = false;
+
   public MockAbfsInputStream(final AbfsClient client,
       final org.apache.hadoop.fs.FileSystem.Statistics statistics,
       final String path,
@@ -58,17 +62,34 @@ public class MockAbfsInputStream extends AbfsInputStream {
 
   protected AbfsRestOperation executeFastpathOpen(String path, String eTag)
       throws AzureBlobFileSystemException {
+    signalErrorConditionToMockClient();
     return ((MockAbfsClient)client).fastPathOpen(path, eTag);
   }
 
   protected AbfsRestOperation executeFastpathClose(String path, String eTag, String fastpathFileHandle)
       throws AzureBlobFileSystemException {
+    signalErrorConditionToMockClient();
     return ((MockAbfsClient)client).fastPathClose(path, eTag, fastpathFileHandle);
   }
 
   protected AbfsRestOperation executeRead(String path, byte[] b, String sasToken, ReadRequestParameters reqParam)
       throws AzureBlobFileSystemException {
+    signalErrorConditionToMockClient();
     return ((MockAbfsClient)client).read(path, b, sasToken, reqParam);
+  }
+
+  private void signalErrorConditionToMockClient() {
+    if (errStatus != 0) {
+      ((MockAbfsClient) client).induceError(errStatus);
+    }
+
+    if (mockRequestException) {
+      ((MockAbfsClient) client).induceRequestException();
+    }
+
+    if (mockConnectionException) {
+      ((MockAbfsClient) client).induceConnectionException();
+    }
   }
 
   public AbfsClient getClient() {
@@ -77,5 +98,23 @@ public class MockAbfsInputStream extends AbfsInputStream {
 
   public Statistics getFSStatistics() {
     return super.getFSStatistics();
+  }
+
+  public void induceError(int httpStatus) {
+    errStatus = httpStatus;
+  }
+
+  public void induceRequestException() {
+    mockRequestException = true;
+  }
+
+  public void induceConnectionException() {
+    mockConnectionException = true;
+  }
+
+  public void resetAllMockErrStates() {
+    errStatus = 0;
+    mockRequestException = false;
+    mockConnectionException = false;
   }
 }

@@ -18,12 +18,15 @@
 
 package com.microsoft.fastpath;
 
+import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.microsoft.abfs.FastpathDrv;
+import com.microsoft.fastpath.driver.FastpathDriver;
+import com.microsoft.fastpath.exceptions.FastpathException;
+import com.microsoft.fastpath.exceptions.FastpathRequestException;
 
-public class MockSharedLib extends FastpathDrv {
+public class MockSharedLib extends FastpathDriver {
   protected static final Logger LOG = LoggerFactory.getLogger(
       MockSharedLib.class);
 
@@ -49,7 +52,7 @@ public class MockSharedLib extends FastpathDrv {
       String jsonResponseString,
       int rdLength,
       long remoteFileOffset,
-      java.nio.ByteBuffer rdBuffer) {
+      ByteBuffer rdBuffer) {
     registerResponse(clientRequestID, jsonResponseString, rdLength, remoteFileOffset, rdBuffer);
   }
 
@@ -109,7 +112,7 @@ public class MockSharedLib extends FastpathDrv {
       final String serializedRequestParams,
       final int rdBufOffset,
       final int readLength,
-      final java.nio.ByteBuffer rdBuffer) throws java.io.IOException {
+      final java.nio.ByteBuffer rdBuffer) throws FastpathException {
     byte[] tmpRdBBuffer = new byte[readLength];
     ReadByteArray(timeout, clientRequestID, serializedRequestParams,
         rdBufOffset, readLength, tmpRdBBuffer);
@@ -123,13 +126,13 @@ public class MockSharedLib extends FastpathDrv {
       final String serializedRequestParams,
       final int rdBufOffset,
       final int readLength,
-      final byte[] rdBuffer) throws java.io.IOException {
+      final byte[] rdBuffer) throws FastpathException {
     ResponseRegisterFields mockResponseRegister = responseRegistry.get(clientRequestId);
     org.junit.Assert.assertTrue(mockResponseRegister != null);
     int len = Math.min((responseRegistry.get(clientRequestId).mockStoreBuffer.length - (int) responseRegistry.get(clientRequestId).remotePosition),
         readLength);
     if (len < 0) {
-      throw new java.io.IOException("invalid offset/read length ");
+      throw new FastpathRequestException("invalid offset/read length ");
     } else if (len == 0) {
       LOG.debug("nothing left to read");
       return responseRegistry.get(clientRequestId).mockResponse;

@@ -27,9 +27,10 @@ import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
-import com.microsoft.fastpath.FastpathConfigurationOptions;
 import com.microsoft.fastpath.FastpathConnection;
-import com.microsoft.abfs.FastpathException;
+import com.microsoft.fastpath.exceptions.FastpathException;
+import com.microsoft.fastpath.exceptions.FastpathRequestException;
+import com.microsoft.fastpath.exceptions.FastpathConnectionException;
 import com.microsoft.fastpath.requestParameters.AccessTokenType;
 import com.microsoft.fastpath.requestParameters.FastpathCloseRequestParams;
 import com.microsoft.fastpath.requestParameters.FastpathOpenRequestParams;
@@ -39,7 +40,7 @@ import com.microsoft.fastpath.responseProviders.FastpathOpenResponse;
 import com.microsoft.fastpath.responseProviders.FastpathReadResponse;
 import com.microsoft.fastpath.responseProviders.FastpathResponse;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsFastpathException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
@@ -53,7 +54,6 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   int defaultTimeout = Integer.valueOf(DEFAULT_TIMEOUT);
   String fastpathFileHandle;
   FastpathResponse response = null;
-  FastpathConfigurationOptions configOptions;
 
   public String getFastpathFileHandle() {
     return fastpathFileHandle;
@@ -65,19 +65,12 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
       final AuthType authType,
       final String authToken,
       List<AbfsHttpHeader> requestHeaders,
-      final String fastpathFileHandle,
-      final AbfsConfiguration config) throws IOException {
+      final String fastpathFileHandle) throws IOException {
     super(opType, url, method, authType, authToken, requestHeaders);
     this.authType = authType;
     this.authToken = authToken;
     this.fastpathFileHandle = fastpathFileHandle;
     this.requestHeaders = requestHeaders;
-    createConfigOptions(config);
-  }
-
-  private void createConfigOptions(final AbfsConfiguration config) {
-    this.configOptions = new com.microsoft.fastpath.FastpathConfigurationOptions();
-    this.configOptions.setUseNativeReadWithByteArray(config.isFastpathByteArrayImplEnabled());
   }
 
   public String getResponseHeader(String httpHeader) {
@@ -159,16 +152,23 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
     throw new FastpathException("Unsupported authType for Fastpath connection");
   }
 
-  private void processFastpathOpenResponse() throws FastpathException {
-    FastpathOpenRequestParams openRequestParams = new FastpathOpenRequestParams(
-        url,
-        getAccessTokenType(authType),
-        authToken,
-        getRequestHeaders(),
-        defaultTimeout);
-    FastpathOpenResponse openResponse = triggerOpen(openRequestParams);
-    setStatusFromFastpathResponse(openResponse);
-    if (openResponse.isSuccessResponse()) {
+  private void processFastpathOpenResponse() throws AbfsFastpathException {
+    FastpathOpenRequestParams openRequestParams;
+    FastpathOpenResponse openResponse = null;
+    try {
+      openRequestParams = new FastpathOpenRequestParams(
+          url,
+          getAccessTokenType(authType),
+          authToken,
+          getRequestHeaders(),
+          defaultTimeout);
+      openResponse = triggerOpen(openRequestParams);
+      setStatusFromFastpathResponse(openResponse);
+    } catch (FastpathException ex) {
+      handleFastpathException(ex);
+    }
+
+    if ((openResponse != null) && (openResponse.isSuccessResponse())) {
       this.fastpathFileHandle = openResponse.getFastpathFileHandle();
       LOG.debug("Fast path open successful [Handle={}]", this.fastpathFileHandle);
     }
@@ -177,19 +177,26 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   @VisibleForTesting
   protected FastpathOpenResponse triggerOpen(FastpathOpenRequestParams openRequestParams)
       throws FastpathException {
-    FastpathConnection conn = new FastpathConnection(this.configOptions);
+    FastpathConnection conn = new FastpathConnection();
     return conn.open(openRequestParams);
   }
 
   private void processFastpathReadResponse(final byte[] buffer,
-      final int buffOffset, final int length) throws FastpathException {
-    FastpathReadRequestParams readRequestParams
-        = new FastpathReadRequestParams(url, getAccessTokenType(authType),
-        authToken, getRequestHeaders(),
-        defaultTimeout, buffOffset, fastpathFileHandle);
-    FastpathReadResponse readResponse = triggerRead(readRequestParams, buffer);
-    setStatusFromFastpathResponse(readResponse);
-    if (readResponse.isSuccessResponse()) {
+      final int buffOffset, final int length) throws AbfsFastpathException {
+    FastpathReadRequestParams readRequestParams = null;
+    FastpathReadResponse readResponse = null;
+    try {
+      readRequestParams = new FastpathReadRequestParams(url,
+          getAccessTokenType(authType),
+          authToken, getRequestHeaders(),
+          defaultTimeout, buffOffset, fastpathFileHandle);
+      readResponse = triggerRead(readRequestParams, buffer);
+      setStatusFromFastpathResponse(readResponse);
+    } catch (FastpathException ex) {
+      handleFastpathException(ex);
+    }
+
+    if ((readResponse != null) && (readResponse.isSuccessResponse())) {
       this.bytesReceived = readResponse.getBytesRead();
       LOG.debug("Fast path read successful [Handle={}] - bytes received = {} ",
           this.fastpathFileHandle, this.bytesReceived);
@@ -199,25 +206,42 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   @VisibleForTesting
   protected FastpathReadResponse triggerRead(FastpathReadRequestParams readRequestParams, byte[] buffer)
       throws FastpathException {
-    FastpathConnection conn = new FastpathConnection(this.configOptions);
+    FastpathConnection conn = new FastpathConnection();
     return conn.read(readRequestParams, buffer);
   }
 
-  private void processFastpathCloseResponse() throws FastpathException {
-    FastpathCloseRequestParams closeRequestParams
-        = new FastpathCloseRequestParams(url, getAccessTokenType(authType),
-        authToken, getRequestHeaders(), defaultTimeout, fastpathFileHandle);
-    FastpathCloseResponse closeResponse = triggerClose(closeRequestParams);
-    setStatusFromFastpathResponse(closeResponse);
-    if (closeResponse.isSuccessResponse()) {
+  private void processFastpathCloseResponse() throws AbfsFastpathException {
+    FastpathCloseRequestParams closeRequestParams = null;
+    FastpathCloseResponse closeResponse = null;
+    try {
+      closeRequestParams
+          = new FastpathCloseRequestParams(url, getAccessTokenType(authType),
+          authToken, getRequestHeaders(), defaultTimeout, fastpathFileHandle);
+      closeResponse = triggerClose(closeRequestParams);
+      setStatusFromFastpathResponse(closeResponse);
+    } catch (FastpathException ex) {
+      handleFastpathException(ex);
+    }
+
+    if ((closeResponse != null) && (closeResponse.isSuccessResponse())) {
       LOG.debug("Fast path close successful [Handle={}]", this.fastpathFileHandle);
     }
   }
 
+  private void handleFastpathException(final FastpathException ex)
+      throws AbfsFastpathException {
+    if (ex instanceof FastpathRequestException) {
+      throw new AbfsFastpathException(ex.getMessage(), ex);
+    }
+
+    throw new AbfsFastpathException(ex.getMessage(), ex);
+  }
+
+
   @VisibleForTesting
   protected FastpathCloseResponse triggerClose(FastpathCloseRequestParams closeRequestParams)
       throws FastpathException {
-    FastpathConnection conn = new FastpathConnection(this.configOptions);
+    FastpathConnection conn = new FastpathConnection();
     return conn.close(closeRequestParams);
   }
 }

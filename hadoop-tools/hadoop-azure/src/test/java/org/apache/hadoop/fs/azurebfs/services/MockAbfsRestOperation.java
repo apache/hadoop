@@ -24,6 +24,10 @@ import java.util.List;
 
 public class MockAbfsRestOperation extends AbfsRestOperation {
 
+  int errStatus = 0;
+  boolean mockRequestException = false;
+  boolean mockConnectionException = false;
+
   MockAbfsRestOperation(final AbfsRestOperationType operationType,
       final AbfsClient client,
       final String method,
@@ -60,9 +64,42 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
   // is this needed
   protected void processResponse(AbfsHttpOperation httpOperation) throws IOException {
     if (isAFastpathRequest()) {
+      signalErrorConditionToMockAbfsFastpathConn((MockAbfsFastpathConnection)httpOperation);
       ((MockAbfsFastpathConnection)httpOperation).processResponse(buffer, bufferOffset, bufferLength);
     } else {
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
     }
+  }
+
+  private void signalErrorConditionToMockAbfsFastpathConn(MockAbfsFastpathConnection httpOperation) {
+    if (errStatus != 0) {
+      httpOperation.induceError(errStatus);
+    }
+
+    if (mockRequestException) {
+      httpOperation.induceRequestException();
+    }
+
+    if (mockConnectionException) {
+      httpOperation.induceConnectionException();
+    }
+  }
+
+  public void induceError(int httpStatus) {
+    errStatus = httpStatus;
+  }
+
+  public void induceRequestException() {
+    mockRequestException = true;
+  }
+
+  public void induceConnectionException() {
+    mockConnectionException = true;
+  }
+
+  public void resetAllMockErrStates() {
+    errStatus = 0;
+    mockRequestException = false;
+    mockConnectionException = false;
   }
 }

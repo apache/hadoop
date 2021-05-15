@@ -112,7 +112,6 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
   public static final boolean DEFAULT_FASTPATH_ENABLE = false;
-  public static final boolean DEFAULT_FASTPATH_BYTEARRAY_IMPL_ENABLE = false;
 
   private FileSystemConfigurations() {}
 }

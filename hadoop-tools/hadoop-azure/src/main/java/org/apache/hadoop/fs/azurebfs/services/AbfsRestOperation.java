@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsFastpathException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
@@ -37,7 +38,8 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CORR_INDICATOR;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_REST_FALLBACK_CORR_INDICATOR;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -74,6 +76,7 @@ public class AbfsRestOperation {
   private AbfsCounters abfsCounters;
   protected String fastpathFileHandle;
   private String fastpathCorrIndicator = "";
+  private FastpathStatus fastpathReqStatus;
 
   public AbfsHttpOperation getResult() {
     return result;
@@ -106,9 +109,6 @@ public class AbfsRestOperation {
     return ((AbfsFastpathConnection) this.result).getFastpathFileHandle();
   }
 
-  public void flagFastpathRESTFallbackCorrIndicator() {
-    fastpathCorrIndicator = FASTPATH_REST_FALLBACK_CORR_INDICATOR;
-  }
   /**
    * Initializes a new REST operation.
    *
@@ -188,6 +188,30 @@ public class AbfsRestOperation {
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
+  }
+
+  public void setFastpathRequestStatus(FastpathStatus status) {
+    this.fastpathReqStatus = status;
+    updateCorrelationIdIndicator();
+  }
+
+  // TODO  once clientCorrId change is ready, pass this through tracing context
+  private void updateCorrelationIdIndicator() {
+    switch(this.fastpathReqStatus) {
+    case FASTPATH:
+      fastpathCorrIndicator = FASTPATH_CORR_INDICATOR;
+        break;
+    case REQ_FAIL_REST_FALLBACK:
+      fastpathCorrIndicator = FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR;
+      break;
+    case CONN_FAIL_REST_FALLBACK:
+      fastpathCorrIndicator = FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;
+      break;
+    }
+  }
+
+  public FastpathStatus getFastpathRequestStatus() {
+    return fastpathReqStatus;
   }
 
   /**
@@ -315,7 +339,6 @@ public class AbfsRestOperation {
       }
 
       processResponse(httpOperation);
-      //httpOperation.processResponse(buffer, bufferOffset, bufferLength);
 
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
@@ -345,6 +368,10 @@ public class AbfsRestOperation {
         }
       }
 
+      if (ex instanceof AbfsFastpathException) {
+        throw (AbfsFastpathException) ex;
+      }
+
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
       }
@@ -369,7 +396,7 @@ public class AbfsRestOperation {
   protected AbfsFastpathConnection getFastpathConnection() throws IOException {
     return new AbfsFastpathConnection(operationType, url, method,
         client.getAuthType(), client.getAccessToken(), requestHeaders,
-        fastpathFileHandle, client.getAbfsConfiguration());
+        fastpathFileHandle);
   }
 
   @VisibleForTesting

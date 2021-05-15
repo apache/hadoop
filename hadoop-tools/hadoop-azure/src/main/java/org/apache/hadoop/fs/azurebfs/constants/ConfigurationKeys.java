@@ -204,7 +204,6 @@ public final class ConfigurationKeys {
    * Config control to enable alternate store connection using Fastpath
    */
   public static final String FS_AZURE_FASTPATH_ENABLE = "fs.azure.fastpath.enable";
-  public static final String FS_AZURE_FASTPATH_BYTEARRAY_IMPL_ENABLE = "fs.azure.fastpath.bytearrayImpl.enable";
 
   private ConfigurationKeys() {}
 }

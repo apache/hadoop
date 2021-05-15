@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters.Mode;
+import org.apache.hadoop.fs.azurebfs.services.FastpathStatus;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -517,11 +518,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           (isFastPathEnabled ? Mode.FASTPATH_CONNECTION_MODE : Mode.HTTP_CONNECTION_MODE),
           position, offset, length,
           tolerateOobAppends ? "*" : eTag,
-          fastpathFileHandle, isOnRESTFallback());
+          fastpathFileHandle, getFastpathStatusAtRead());
       op = IOStatisticsBinding.trackDuration((IOStatisticsStore) ioStatistics,
           StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
           () -> executeRead(path, b, cachedSasToken.get(), reqParams));
       cachedSasToken.update(op.getSasToken());
+      // switch to REST permanently if fastpath connection had a problem.
+      if (isFastPathEnabled &&
+          (op.getFastpathRequestStatus() == FastpathStatus.CONN_FAIL_REST_FALLBACK)) {
+        isFastPathEnabled = false;
+      }
+
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();
       }
@@ -556,10 +563,20 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return client.read(path, b, sasToken, reqParam);
   }
 
-  private boolean isOnRESTFallback() {
-    // a non null fastpathFileHandle means Fastpath open was successful
-    // but if flag isFastpathEnabled false, it means REST fallback was triggered
-    return ((fastpathFileHandle != null) && !isFastPathEnabled);
+  private FastpathStatus getFastpathStatusAtRead() {
+    // First check fastpathFileHandle to check Fastpath Open status
+    // then check if isFastpathEnabled was toggled as part of REST fallback
+    if (fastpathFileHandle != null) {
+      // a non null fastpathFileHandle means Fastpath open was successful
+      // but if flag isFastpathEnabled false, it means REST fallback was triggered
+      if (isFastPathEnabled) {
+        return FastpathStatus.FASTPATH;
+      } else {
+        return FastpathStatus.CONN_FAIL_REST_FALLBACK;
+      }
+    }
+
+    return FastpathStatus.FASTPATH_DISABLED;
   }
 
   /**

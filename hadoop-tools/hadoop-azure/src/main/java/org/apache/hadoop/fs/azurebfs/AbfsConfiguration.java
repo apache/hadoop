@@ -125,10 +125,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FASTPATH_ENABLE)
   private boolean enableFastpath;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_FASTPATH_BYTEARRAY_IMPL_ENABLE,
-      DefaultValue = DEFAULT_FASTPATH_BYTEARRAY_IMPL_ENABLE)
-  private boolean enableFastpathByteArrayImpl;
-
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL)
   private int minBackoffInterval;
@@ -587,8 +583,6 @@ public class AbfsConfiguration{
   }
 
   public boolean isFastpathEnabled() { return this.enableFastpath; }
-
-  public boolean isFastpathByteArrayImplEnabled() { return this.enableFastpathByteArrayImpl; }
 
   public int getMinBackoffIntervalMilliseconds() {
     return this.minBackoffInterval;

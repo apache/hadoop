@@ -34,6 +34,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import com.microsoft.fastpath.exceptions.FastpathRequestException;
+
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
@@ -50,6 +52,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsFastpathException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
@@ -744,9 +748,10 @@ public class AbfsClient implements Closeable {
       op.updateIOReqParams(buffer,
           reqParams.getBufferOffset(),
           reqParams.getReadLength());
-      if (reqParams.isRESTFallback()) {
-        op.flagFastpathRESTFallbackCorrIndicator();
+      if (reqParams.getFastpathStatus() != FastpathStatus.FASTPATH_DISABLED) {
+        op.setFastpathRequestStatus(reqParams.getFastpathStatus());
       }
+
       op.execute();
     }
 
@@ -1196,21 +1201,17 @@ public class AbfsClient implements Closeable {
     try {
       op.execute();
       return op;
-    } catch (AzureBlobFileSystemException ex) {
-      // if fastpath request failed due to HTTP 500 and above, retry on REST
-      if ((reqParams.getMode() == Mode.FASTPATH_CONNECTION_MODE)
-          && ((op.getResult() == null) ||
-          // Fastpath threw irrecoverable exception
-          (op.getResult().getStatusCode() >= 500))) {
+    } catch (AbfsFastpathException ex) {
+      // Fastpath threw irrecoverable exception
         reqParams.setMode(Mode.HTTP_CONNECTION_MODE);
-        // TODO  once clientCorrId change is ready, pass this through tracing context
-        reqParams.setRESTFallback(true);
+        if (ex.getCause() instanceof FastpathRequestException) {
+          reqParams.setFastpathStatus(FastpathStatus.REQ_FAIL_REST_FALLBACK);
+        } else {
+          reqParams.setFastpathStatus(FastpathStatus.CONN_FAIL_REST_FALLBACK);
+        }
+
         return read(path, buffer, op.getSasToken(), reqParams);
       }
-
-      // for other scenarios, throw the error back
-      throw ex;
-    }
   }
 
   @VisibleForTesting

@@ -31,7 +31,13 @@ import com.microsoft.fastpath.responseProviders.FastpathCloseResponse;
 import com.microsoft.fastpath.responseProviders.FastpathOpenResponse;
 import com.microsoft.fastpath.responseProviders.FastpathReadResponse;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+
 public class MockAbfsFastpathConnection extends AbfsFastpathConnection {
+
+  int errStatus = 0;
+  boolean mockRequestException = false;
+  boolean mockConnectionException = false;
 
   public MockAbfsFastpathConnection(final org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType opType,
       final URL url,
@@ -47,18 +53,53 @@ public class MockAbfsFastpathConnection extends AbfsFastpathConnection {
   protected FastpathOpenResponse triggerOpen(FastpathOpenRequestParams openRequestParams)
       throws FastpathException {
     MockFastpathConnection conn = new MockFastpathConnection();
+    signalErrorConditionToMockFastpathConn(conn);
     return conn.open(openRequestParams);
   }
 
   protected FastpathReadResponse triggerRead(FastpathReadRequestParams readRequestParams, byte[] buffer)
       throws FastpathException {
     MockFastpathConnection conn = new MockFastpathConnection();
+    signalErrorConditionToMockFastpathConn(conn);
     return conn.read(readRequestParams, buffer);
   }
 
   protected FastpathCloseResponse triggerClose(FastpathCloseRequestParams closeRequestParams)
       throws FastpathException {
     MockFastpathConnection conn = new MockFastpathConnection();
+    signalErrorConditionToMockFastpathConn(conn);
     return conn.close(closeRequestParams);
+  }
+
+  private void signalErrorConditionToMockFastpathConn(MockFastpathConnection conn) {
+    if (errStatus != 0) {
+      conn.induceError(errStatus);
+    }
+
+    if (mockRequestException) {
+      conn.induceRequestException();
+    }
+
+    if (mockConnectionException) {
+      conn.induceConnectionException();
+    }
+  }
+
+  public void induceError(int httpStatus) {
+    errStatus = httpStatus;
+  }
+
+  public void induceRequestException() {
+    mockRequestException = true;
+  }
+
+  public void induceConnectionException() {
+    mockConnectionException = true;
+  }
+
+  public void resetAllMockErrStates() {
+    errStatus = 0;
+    mockRequestException = false;
+    mockConnectionException = false;
   }
 }

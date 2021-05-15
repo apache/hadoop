@@ -113,7 +113,8 @@ public final class AbfsHttpConstants {
   public static final char CHAR_PLUS = '+';
 
   public static final String FASTPATH_CORR_INDICATOR = "_FP";
-  public static final String FASTPATH_REST_FALLBACK_CORR_INDICATOR = "_RFB";
+  public static final String FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR = "_R_FB";
+  public static final String FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR = "_R_FB";
 
   private AbfsHttpConstants() {}
 }

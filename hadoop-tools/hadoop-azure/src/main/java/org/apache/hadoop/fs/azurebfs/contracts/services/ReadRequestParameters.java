@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
+import org.apache.hadoop.fs.azurebfs.services.FastpathStatus;
+
 /**
  * Saves the different request parameters for read
  */
@@ -33,7 +35,7 @@ public class ReadRequestParameters {
   private ReadRequestParameters.Mode mode;
   private final String eTag;
   private final String fastpathFileHandle;
-  private boolean isRESTFallback;
+  private FastpathStatus fastpathStatus = FastpathStatus.FASTPATH_DISABLED;
 
   public ReadRequestParameters(final ReadRequestParameters.Mode mode,
       final long storeFilePosition,
@@ -41,14 +43,14 @@ public class ReadRequestParameters {
       final int readLength,
       final String eTag,
       final String fastpathFileHandle,
-      final boolean isRESTFallback) {
+      final FastpathStatus fastpathStatus) {
     this.mode = mode;
     this.storeFilePosition = storeFilePosition;
     this.bufferOffset = bufferOffset;
     this.readLength = readLength;
     this.eTag = eTag;
     this.fastpathFileHandle = fastpathFileHandle;
-    this.isRESTFallback = isRESTFallback;
+    this.fastpathStatus = fastpathStatus;
   }
 
   public long getStoreFilePosition() {
@@ -75,12 +77,12 @@ public class ReadRequestParameters {
     return this.fastpathFileHandle;
   }
 
-  public boolean isRESTFallback() {
-    return this.isRESTFallback;
+  public FastpathStatus getFastpathStatus() {
+    return this.fastpathStatus;
   }
 
-  public void setRESTFallback(final boolean RESTFallback) {
-    this.isRESTFallback = RESTFallback;
+  public void setFastpathStatus(final FastpathStatus fastpathStatus) {
+    this.fastpathStatus = fastpathStatus;
   }
   public void setMode(final Mode mode) {
     this.mode = mode;
