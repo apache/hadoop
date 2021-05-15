@@ -161,7 +161,7 @@ pipeline {
                         YETUS_ARGS+=("--github-write-comment")
                         YETUS_ARGS+=("--github-use-emoji-vote")
 
-                        "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
+                        bash -x "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''
                 }
             }
