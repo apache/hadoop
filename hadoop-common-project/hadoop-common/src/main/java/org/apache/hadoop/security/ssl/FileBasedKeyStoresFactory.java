@@ -273,8 +273,8 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     } else {
       KeyStore keystore = KeyStore.getInstance(keystoreType);
       keystore.load(null, null);
-      KeyManagerFactory keyMgrFactory = KeyManagerFactory
-              .getInstance(SSLFactory.SSLCERTIFICATE);
+      KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(
+          SSLFactory.KEY_MANAGER_SSLCERTIFICATE);
 
       keyMgrFactory.init(keystore, null);
       keyManagers = keyMgrFactory.getKeyManagers();
