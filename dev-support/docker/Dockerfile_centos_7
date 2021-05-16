@@ -58,8 +58,7 @@ RUN yum update -y \
     zlib-devel
 
 # Set GCC 9 as the default C/C++ compiler
-RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
-SHELL ["/bin/bash", "--login", "-c"]
+RUN echo "scl enable devtoolset-9 bash" >> /etc/bashrc
 
 ####
 # Install Maven 3.6.3
