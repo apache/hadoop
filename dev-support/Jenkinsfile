@@ -142,7 +142,7 @@ pipeline {
                         YETUS_ARGS+=("--git-offline")
                         YETUS_ARGS+=("--docker")
                         YETUS_ARGS+=("--dockerfile=${SOURCEDIR}/dev-support/docker/Dockerfile_centos_7")
-                        YETUS_ARGS+=("--docker-bash-debug=true")
+                        YETUS_ARGS+=("--docker-bash-debug=false")
                         YETUS_ARGS+=("--mvn-custom-repos")
 
                         # effectively treat dev-suport as a custom maven module
