@@ -42,6 +42,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.OperationDuration;
 import org.apache.hadoop.util.ToolRunner;
 
+import static org.apache.hadoop.fs.s3a.S3AFileSystem.isCSEEnabled;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
@@ -55,6 +56,7 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SERVICE_
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SUCCESS;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.hamcrest.Matchers.is;
 
 /**
  * Test the S3 Select CLI through some operations against landsat
@@ -88,6 +90,7 @@ public class ITestS3SelectCLI extends AbstractS3SelectTest {
     Assume.assumeFalse("the standard landsat bucket doesn't have versioning",
         changeDetectionPolicy.getSource() == Source.VersionId
             && changeDetectionPolicy.isRequireVersion());
+    Assume.assumeThat("Skipping test if CSE is enabled", isCSEEnabled, is(false));
   }
 
   @Override

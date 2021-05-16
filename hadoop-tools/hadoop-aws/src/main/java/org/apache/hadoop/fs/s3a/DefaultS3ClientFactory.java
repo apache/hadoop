@@ -52,12 +52,10 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID;
-import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_MATERIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_METHOD;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
@@ -149,82 +147,59 @@ public class DefaultS3ClientFactory extends Configured
    *
    * @return new AmazonS3 client.
    */
-  private AmazonS3 newAmazonS3EncryptionClient(
+  protected AmazonS3 newAmazonS3EncryptionClient(
       final ClientConfiguration awsConf,
       final S3ClientCreationParameters parameters){
 
     AmazonS3 client;
-    try {
-      AmazonS3EncryptionClientV2Builder builder =
-          new AmazonS3EncryptionClientV2Builder();
-      Configuration conf = getConf();
+    AmazonS3EncryptionClientV2Builder builder =
+        new AmazonS3EncryptionClientV2Builder();
+    Configuration conf = getConf();
 
+    //CSE-KMS Method
+    String kmsKeyId = conf.get(CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID);
+    // Check if kmsKeyID is not null
+    Preconditions.checkArgument(kmsKeyId != null, "CSE-KMS method "
+        + "requires KMS key ID. Use " + CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID
+        + " property to set it. ");
 
-      S3AEncryptionMethods encryptionMethod = S3AEncryptionMethods.getMethod(
-          conf.get(CLIENT_SIDE_ENCRYPTION_METHOD));
+    EncryptionMaterialsProvider materialsProvider =
+        new KMSEncryptionMaterialsProvider(kmsKeyId);
 
-      if (encryptionMethod == S3AEncryptionMethods.CSE_KMS) {
-        //CSE-KMS Method
+    builder.withEncryptionMaterialsProvider(materialsProvider);
+    builder.withCredentials(parameters.getCredentialSet())
+        .withClientConfiguration(awsConf)
+        .withPathStyleAccessEnabled(parameters.isPathStyleAccess());
 
-        String kmsKeyId = conf.get(CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID);
-        // Check if kmsKeyID is not null
-        Preconditions.checkArgument(kmsKeyId != null, "CSE-KMS method "
-            + "requires KMS key ID. Use " + CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID
-            + " property to set it. ");
-
-        EncryptionMaterialsProvider materialsProvider =
-            new KMSEncryptionMaterialsProvider(kmsKeyId);
-
-        builder.withEncryptionMaterialsProvider(materialsProvider);
-      } else {
-        //CSE-CUSTOM method
-
-        Class<? extends S3ACSEMaterialProviderConfig> materialProviderClass =
-            conf.getClass(CLIENT_SIDE_ENCRYPTION_MATERIALS_PROVIDER,
-                null, S3ACSEMaterialProviderConfig.class);
-
-        // Check if materialProviderClass is not null
-        Preconditions.checkArgument(materialProviderClass != null,
-            "CSE-CUSTOM method requires implementation class with custom algo."
-                + " Use " + CLIENT_SIDE_ENCRYPTION_MATERIALS_PROVIDER
-                + " property to set it.");
-
-        S3ACSEMaterialProviderConfig materialProviderConfig =
-            ReflectionUtils.newInstance(materialProviderClass, null);
-
-        builder.withEncryptionMaterialsProvider(
-            materialProviderConfig.buildEncryptionProvider());
-      }
-
-      builder.withCredentials(parameters.getCredentialSet())
-          .withClientConfiguration(awsConf)
-          .withPathStyleAccessEnabled(parameters.isPathStyleAccess());
-
-      // if metrics are not null, then add in the builder.
-      if (parameters.getMetrics() != null) {
-        builder.withMetricsCollector(new AwsStatisticsCollector(parameters.getMetrics()));
-      }
-
-      // Setting the endpoint and crypto configs
-      AmazonS3EncryptionClientV2Builder.EndpointConfiguration epr
-          = createEndpointConfiguration(parameters.getEndpoint(), awsConf, getConf().getTrimmed(AWS_REGION));
-      if (epr != null) {
-        builder.withEndpointConfiguration(epr);
-
-        CryptoConfigurationV2 cryptoConfigurationV2 =
-            new CryptoConfigurationV2(CryptoMode.AuthenticatedEncryption)
-                .withAwsKmsRegion(RegionUtils.getRegion(epr.getSigningRegion()))
-                .withRangeGetMode(CryptoRangeGetMode.ALL);
-
-        builder.withCryptoConfiguration(cryptoConfigurationV2);
-      }
-
-      client = builder.build();
-
-    } catch (IOException e) {
-      throw new RuntimeException(
-          "Error while initializing AmazonS3EncryptionClientV2", e);
+    // if metrics are not null, then add in the builder.
+    if (parameters.getMetrics() != null) {
+      LOG.debug("Creating Amazon client with AWS metrics");
+      builder.withMetricsCollector(
+          new AwsStatisticsCollector(parameters.getMetrics()));
     }
+
+    // Create cryptoConfig
+    CryptoConfigurationV2 cryptoConfigurationV2 =
+        new CryptoConfigurationV2(CryptoMode.AuthenticatedEncryption)
+            .withRangeGetMode(CryptoRangeGetMode.ALL);
+
+    // Setting the endpoint and KMS region in cryptoConfig
+    AmazonS3EncryptionClientV2Builder.EndpointConfiguration epr
+        = createEndpointConfiguration(parameters.getEndpoint(), awsConf);
+    if (epr != null) {
+      LOG.debug(
+          "Building the AmazonS3 Encryption client with endpoint configs");
+      builder.withEndpointConfiguration(epr);
+      cryptoConfigurationV2
+          .withAwsKmsRegion(RegionUtils.getRegion(epr.getSigningRegion()));
+      LOG.debug("KMS region used: {}",
+          cryptoConfigurationV2.getAwsKmsRegion());
+    } else {
+      // forcefully look for the region; extra HEAD call required.
+      builder.setForceGlobalBucketAccessEnabled(true);
+    }
+    builder.withCryptoConfiguration(cryptoConfigurationV2);
+    client = builder.build();
 
     return client;
   }

@@ -27,7 +27,9 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -37,7 +39,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 /**
  * Tests to verify S3 Client-Side Encryption (CSE).
  */
-public abstract class ITestS3AEncryptionCSE extends AbstractS3ATestBase {
+public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
 
   private static final List<Integer> SIZES =
       new ArrayList<>(Arrays.asList(0, 1, 255, 4095));
@@ -76,7 +78,7 @@ public abstract class ITestS3AEncryptionCSE extends AbstractS3ATestBase {
 
   /**
    * Test to verify if we get same content length of files in S3 CSE using
-   * listStatus on the parent directory.
+   * listStatus and listFiles on the parent directory.
    */
   @Test
   public void testDirectoryListingFileLengths() throws IOException {
@@ -92,17 +94,32 @@ public abstract class ITestS3AEncryptionCSE extends AbstractS3ATestBase {
       writeThenReadFile(child, i);
     }
 
-    // Getting the content lengths of files inside the directory via
-    // directory listing.
+    // Getting the content lengths of files inside the directory via FileStatus.
     List<Integer> fileLengthDirListing = new ArrayList<>();
     for (FileStatus fileStatus : fs.listStatus(parentDir)) {
       fileLengthDirListing.add((int) fileStatus.getLen());
     }
-
-    // Assert the file length we got against expected file length.
+    // Assert the file length we got against expected file length for
+    // ListStatus.
     Assertions.assertThat(fileLengthDirListing)
-        .describedAs("File length isn't same "
-            + "as expected from directory listing").containsExactlyInAnyOrderElementsOf(SIZES);
+        .describedAs("File lengths isn't same "
+            + "as expected from FileStatus dir. listing")
+        .containsExactlyInAnyOrderElementsOf(SIZES);
+
+
+    // Getting the content lengths of files inside the directory via ListFiles.
+    RemoteIterator<LocatedFileStatus> listDir = fs.listFiles(parentDir, true);
+    List<Integer> fileLengthListLocated = new ArrayList<>();
+    while(listDir.hasNext()) {
+      LocatedFileStatus fileStatus = listDir.next();
+      fileLengthListLocated.add((int) fileStatus.getLen());
+    }
+    // Assert the file length we got against expected file length for
+    // LocatedFileStatus.
+    Assertions.assertThat(fileLengthListLocated)
+        .describedAs("File lengths isn't same "
+            + "as expected from LocatedFileStatus dir. listing")
+        .containsExactlyInAnyOrderElementsOf(SIZES);
 
   }
 

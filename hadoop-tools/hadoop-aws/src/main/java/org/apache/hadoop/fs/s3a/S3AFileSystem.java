@@ -357,6 +357,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private AuditManagerS3A auditManager =
       AuditIntegration.stubAuditManager();
 
+  /**
+   * S3 client side encryption adds padding to the content length of constant
+   * length of 16 bytes(at the moment, since we have only 1 content
+   * encryption algorithm). Use this to subtract while listing the content
+   * length when certain conditions are met.
+   */
+  public static final int CSE_PADDING_LENGTH = 16;
+
+  /**
+   * Is this S3AFS instance using S3 client side encryption?
+   */
+  public static boolean isCSEEnabled;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -542,6 +555,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
       listing = new Listing(listingOperationCallbacks, createStoreContext());
+      isCSEEnabled = conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) != null;
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -553,7 +567,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       stopAllServices();
       throw e;
     }
-
   }
 
   /**
@@ -3659,27 +3672,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // look for the simple file
         ObjectMetadata meta = getObjectMetadata(key);
         LOG.debug("Found exact file: normal file {}", key);
-
-        // if S3 Client side encryption is enabled then use unencrypted
-        // content length.
-        if (this.getConf().get(CLIENT_SIDE_ENCRYPTION_METHOD) != null) {
-          return new S3AFileStatus(Long.parseLong(
-              meta.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH)),
-              dateToLong(meta.getLastModified()),
-              path,
-              getDefaultBlockSize(path),
-              username,
-              meta.getETag(),
-              meta.getVersionId());
-        } else {
-          return new S3AFileStatus(meta.getContentLength(),
-              dateToLong(meta.getLastModified()),
-              path,
-              getDefaultBlockSize(path),
-              username,
-              meta.getETag(),
-              meta.getVersionId());
+        long contentLength = meta.getContentLength();
+        // check if CSE is enabled, then use unencrypted content length.
+        if (meta.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
+            && isCSEEnabled
+            && contentLength >= CSE_PADDING_LENGTH) {
+          contentLength = Long.parseLong(meta.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH));
         }
+        return new S3AFileStatus(contentLength,
+            dateToLong(meta.getLastModified()),
+            path,
+            getDefaultBlockSize(path),
+            username,
+            meta.getETag(),
+            meta.getVersionId());
       } catch (AmazonServiceException e) {
         // if the response is a 404 error, it just means that there is
         // no file at that path...the remaining checks will be needed.

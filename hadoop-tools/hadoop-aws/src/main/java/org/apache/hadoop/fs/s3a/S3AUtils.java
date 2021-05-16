@@ -86,6 +86,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AFileSystem.CSE_PADDING_LENGTH;
+import static org.apache.hadoop.fs.s3a.S3AFileSystem.isCSEEnabled;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -526,6 +528,10 @@ public final class S3AUtils {
       String eTag,
       String versionId) {
     long size = summary.getSize();
+    // check if cse is enabled; strip out constant padding length.
+    if(isCSEEnabled && size >= CSE_PADDING_LENGTH) {
+      size -= CSE_PADDING_LENGTH;
+    }
     return createFileStatus(keyPath,
         objectRepresentsDirectory(summary.getKey(), size),
         size, summary.getLastModified(), blockSize, owner, eTag, versionId);
@@ -573,6 +579,12 @@ public final class S3AUtils {
    */
   public static boolean objectRepresentsDirectory(final String name,
       final long size) {
+    //if CSE is enabled, dir markers are padded as well so size check should
+    // be removed
+    if (isCSEEnabled) {
+      return !name.isEmpty()
+          && name.charAt(name.length() - 1) == '/';
+    }
     return !name.isEmpty()
         && name.charAt(name.length() - 1) == '/'
         && size == 0L;

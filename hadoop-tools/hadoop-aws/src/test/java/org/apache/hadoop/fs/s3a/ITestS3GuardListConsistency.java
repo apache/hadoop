@@ -50,7 +50,9 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
+import static org.apache.hadoop.fs.s3a.S3AFileSystem.isCSEEnabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.hamcrest.Matchers.is;
 
 /**
  * Test S3Guard list consistency feature by injecting delayed listObjects()
@@ -70,13 +72,16 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     invoker = new Invoker(new S3ARetryPolicy(getConfiguration()),
         Invoker.NO_OP
     );
+    Assume.assumeThat("Skipping test if CSE is enabled", isCSEEnabled, is(false));
     Assume.assumeTrue("No metadata store in test filesystem",
         getFileSystem().hasMetadataStore());
   }
 
   @Override
   public void teardown() throws Exception {
-    clearInconsistency(getFileSystem());
+    if (getFileSystem().getAmazonS3Client() instanceof InconsistentAmazonS3Client) {
+      clearInconsistency(getFileSystem());
+    }
     super.teardown();
   }
 

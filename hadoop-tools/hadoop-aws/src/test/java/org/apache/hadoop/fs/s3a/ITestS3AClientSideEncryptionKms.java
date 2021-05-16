@@ -33,7 +33,8 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfKmsKeyIdIsNotSet;
 /**
  * Testing the S3 CSE - KME method.
  */
-public class ITestS3AEncryptionCSEKms extends ITestS3AEncryptionCSE {
+public class ITestS3AClientSideEncryptionKms
+    extends ITestS3AClientSideEncryption {
 
   private static final String KMS_KEY_WRAP_ALGO = "kms+context";
   private static final String KMS_CONTENT_ENCRYPTION_ALGO = "AES/GCM/NoPadding";

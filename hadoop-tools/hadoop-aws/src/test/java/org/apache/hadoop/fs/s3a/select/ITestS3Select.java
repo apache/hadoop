@@ -66,6 +66,7 @@ import org.apache.hadoop.util.DurationInfo;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_NORMAL;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
+import static org.apache.hadoop.fs.s3a.S3AFileSystem.isCSEEnabled;
 import static org.apache.hadoop.fs.s3a.select.CsvFile.ALL_QUOTES;
 import static org.apache.hadoop.fs.s3a.select.SelectBinding.expandBackslashChars;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.*;
@@ -73,6 +74,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 
 /**
@@ -105,6 +107,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     csvPath = path(getMethodName() + ".csv");
     Assume.assumeTrue("S3 Select is not enabled",
         getFileSystem().hasPathCapability(csvPath, S3_SELECT_CAPABILITY));
+    Assume.assumeThat("Skipping test if CSE is enabled", isCSEEnabled, is(false));
     selectConf = new Configuration(false);
     selectConf.setBoolean(SELECT_ERRORS_INCLUDE_SQL, true);
     createStandardCsvFile(getFileSystem(), csvPath, ALL_QUOTES);
