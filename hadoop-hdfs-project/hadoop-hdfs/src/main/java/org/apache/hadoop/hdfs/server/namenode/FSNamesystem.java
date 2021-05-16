@@ -124,7 +124,12 @@ import org.apache.hadoop.hdfs.server.common.ECTopologyVerifier;
 import org.apache.hadoop.hdfs.server.namenode.metrics.ReplicatedBlocksMBean;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
-import org.apache.hadoop.util.*;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -6492,6 +6497,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("infoAddr", node.getInfoAddr())
           .put("infoSecureAddr", node.getInfoSecureAddr())
           .put("xferaddr", node.getXferAddr())
+          .put("location", node.getNetworkLocation())
           .put("lastContact", getLastContact(node))
           .put("usedSpace", getDfsUsed(node))
           .put("adminState", node.getAdminState().toString())
@@ -6541,6 +6547,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("decommissioned", node.isDecommissioned())
           .put("adminState", node.getAdminState().toString())
           .put("xferaddr", node.getXferAddr())
+          .put("location", node.getNetworkLocation())
           .build();
       info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
     }
@@ -6562,6 +6569,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Map<String, Object> innerinfo = ImmutableMap
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
+          .put("location", node.getNetworkLocation())
           .put("underReplicatedBlocks",
           node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("decommissionOnlyReplicas",
@@ -6589,6 +6597,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Map<String, Object> attrMap = ImmutableMap
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
+          .put("location", node.getNetworkLocation())
           .put("underReplicatedBlocks",
               node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("maintenanceOnlyReplicas",
@@ -8563,25 +8572,36 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Check if snapshot roots are created for all existing snapshottable
    * directories. Create them if not.
+   * Only the active NameNode needs to execute this in HA setup once it is out
+   * of safe mode.
+   *
+   * The function gets called while exiting safe mode or post starting the
+   * services in Active NameNode, but comes into effect post whichever event
+   * happens later.
    */
   @Override
-  public void checkAndProvisionSnapshotTrashRoots() {
-    if (isSnapshotTrashRootEnabled) {
+  public synchronized void checkAndProvisionSnapshotTrashRoots() {
+    if (isSnapshotTrashRootEnabled && (haEnabled && inActiveState()
+        || !haEnabled) && !blockManager.isInSafeMode()) {
+      SnapshottableDirectoryStatus dirStatus = null;
       try {
         SnapshottableDirectoryStatus[] dirStatusList =
             getSnapshottableDirListing();
         if (dirStatusList == null) {
           return;
         }
-        for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+        for (SnapshottableDirectoryStatus status : dirStatusList) {
+          dirStatus = status;
           String currDir = dirStatus.getFullPath().toString();
           if (!currDir.endsWith(Path.SEPARATOR)) {
             currDir += Path.SEPARATOR;
           }
           String trashPath = currDir + FileSystem.TRASH_PREFIX;
-          HdfsFileStatus fileStatus = getFileInfo(trashPath, false, false, false);
+          HdfsFileStatus fileStatus =
+              getFileInfo(trashPath, false, false, false);
           if (fileStatus == null) {
-            LOG.info("Trash doesn't exist for snapshottable directory {}. " + "Creating trash at {}", currDir, trashPath);
+            LOG.info("Trash doesn't exist for snapshottable directory {}. "
+                + "Creating trash at {}", currDir, trashPath);
             PermissionStatus permissionStatus =
                 new PermissionStatus(getRemoteUser().getShortUserName(), null,
                     SHARED_TRASH_PERMISSION);
@@ -8589,12 +8609,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
         }
       } catch (IOException e) {
-        final String msg =
-            "Could not provision Trash directory for existing "
-                + "snapshottable directories. Exiting Namenode.";
-        ExitUtil.terminate(1, msg);
+        if (dirStatus == null) {
+          LOG.error("Failed to get snapshottable directory list", e);
+        } else {
+          LOG.error("Could not provision Trash directory for existing "
+              + "snapshottable directory {}", dirStatus, e);
+        }
       }
-
     }
   }
 

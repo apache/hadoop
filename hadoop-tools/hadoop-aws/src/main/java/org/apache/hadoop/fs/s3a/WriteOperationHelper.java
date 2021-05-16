@@ -693,4 +693,9 @@ public class WriteOperationHelper implements WriteOperations {
           }
         });
   }
+
+  @Override
+  public void incrementWriteOperations() {
+    owner.incrementWriteOperations();
+  }
 }

@@ -628,7 +628,8 @@ public class DecayRpcScheduler implements RpcScheduler,
     List<AtomicLong> costList = callCosts.get(identity);
     long currentCost = costList == null ? 0 : costList.get(0).get();
     int priority = computePriorityLevel(currentCost, identity);
-    LOG.debug("compute priority for {} priority {}", identity, priority);
+    LOG.debug("compute priority for identity: {}={}", identity,
+        priority);
     return priority;
   }
 
@@ -666,7 +667,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   void setPriorityLevel(UserGroupInformation ugi, int priority) {
     String identity = getIdentity(newSchedulable(ugi));
     priority = Math.min(numLevels - 1, priority);
-    LOG.info("Setting priority for user:" + identity + "=" + priority);
+    LOG.info("Setting priority for user: {}={}", identity, priority);
     staticPriorities.put(identity, priority);
   }
 
@@ -735,11 +736,9 @@ public class DecayRpcScheduler implements RpcScheduler,
     responseTimeCountInCurrWindow.getAndIncrement(priorityLevel);
     responseTimeTotalInCurrWindow.getAndAdd(priorityLevel,
         queueTime+processingTime);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("addResponseTime for call: {}  priority: {} queueTime: {} " +
-          "processingTime: {} ", callName, priorityLevel, queueTime,
-          processingTime);
-    }
+    LOG.debug("addResponseTime for call: {}  priority: {} queueTime: {} " +
+        "processingTime: {} ", callName, priorityLevel, queueTime,
+        processingTime);
   }
 
   // Update the cached average response time at the end of the decay window
@@ -763,10 +762,8 @@ public class DecayRpcScheduler implements RpcScheduler,
         responseTimeAvgInLastWindow.set(i, 0);
       }
       responseTimeCountInLastWindow.set(i, responseTimeCount);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("updateAverageResponseTime queue: {} Average: {} Count: {}",
-            i, averageResponseTime, responseTimeCount);
-      }
+      LOG.debug("updateAverageResponseTime queue: {} Average: {} Count: {}",
+          i, averageResponseTime, responseTimeCount);
       // Reset for next decay window
       responseTimeTotalInCurrWindow.set(i, 0);
       responseTimeCountInCurrWindow.set(i, 0);

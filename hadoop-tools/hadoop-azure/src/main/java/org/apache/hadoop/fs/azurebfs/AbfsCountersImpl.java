@@ -19,24 +19,23 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.net.URI;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
-import org.apache.hadoop.metrics2.AbstractMetric;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStoreBuilder;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
-import org.apache.hadoop.metrics2.MetricsCollector;
-import org.apache.hadoop.metrics2.MetricsInfo;
-import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
  * Instrumentation of Abfs counters.
@@ -62,6 +61,8 @@ public class AbfsCountersImpl implements AbfsCounters {
   private final MetricsRegistry registry =
       new MetricsRegistry("abfsMetrics").setContext(CONTEXT);
 
+  private final IOStatisticsStore ioStatisticsStore;
+
   private static final AbfsStatistic[] STATISTIC_LIST = {
       CALL_CREATE,
       CALL_OPEN,
@@ -85,7 +86,17 @@ public class AbfsCountersImpl implements AbfsCounters {
       BYTES_SENT,
       BYTES_RECEIVED,
       READ_THROTTLES,
-      WRITE_THROTTLES
+      WRITE_THROTTLES,
+      SERVER_UNAVAILABLE
+  };
+
+  private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
+      HTTP_HEAD_REQUEST,
+      HTTP_GET_REQUEST,
+      HTTP_DELETE_REQUEST,
+      HTTP_PUT_REQUEST,
+      HTTP_PATCH_REQUEST,
+      HTTP_POST_REQUEST
   };
 
   public AbfsCountersImpl(URI uri) {
@@ -95,9 +106,17 @@ public class AbfsCountersImpl implements AbfsCounters {
         fileSystemInstanceId.toString());
     registry.tag(METRIC_BUCKET, "Hostname from the FS URL", uri.getHost());
 
+    IOStatisticsStoreBuilder ioStatisticsStoreBuilder = iostatisticsStore();
+    // Declaring the counters.
     for (AbfsStatistic stats : STATISTIC_LIST) {
+      ioStatisticsStoreBuilder.withCounters(stats.getStatName());
       createCounter(stats);
     }
+    // Declaring the DurationTrackers.
+    for (AbfsStatistic durationStats : DURATION_TRACKER_LIST) {
+      ioStatisticsStoreBuilder.withDurationTracking(durationStats.getStatName());
+    }
+    ioStatisticsStore = ioStatisticsStoreBuilder.build();
   }
 
   /**
@@ -149,6 +168,7 @@ public class AbfsCountersImpl implements AbfsCounters {
    */
   @Override
   public void incrementCounter(AbfsStatistic statistic, long value) {
+    ioStatisticsStore.incrementCounter(statistic.getStatName(), value);
     MutableCounterLong counter = lookupCounter(statistic.getStatName());
     if (counter != null) {
       counter.incr(value);
@@ -189,98 +209,35 @@ public class AbfsCountersImpl implements AbfsCounters {
   /**
    * {@inheritDoc}
    *
-   * Creating a map of all the counters for testing.
+   * Map of all the counters for testing.
    *
-   * @return a map of the metrics.
+   * @return a map of the IOStatistics counters.
    */
   @VisibleForTesting
   @Override
   public Map<String, Long> toMap() {
-    MetricsToMap metricBuilder = new MetricsToMap(null);
-    registry.snapshot(metricBuilder, true);
-    return metricBuilder.getMap();
+    return ioStatisticsStore.counters();
   }
 
-  protected static class MetricsToMap extends MetricsRecordBuilder {
-    private final MetricsCollector parent;
-    private final Map<String, Long> map =
-        new HashMap<>();
+  /**
+   * Returning the instance of IOStatisticsStore used to collect the metrics
+   * in AbfsCounters.
+   *
+   * @return instance of IOStatistics.
+   */
+  @Override
+  public IOStatistics getIOStatistics() {
+    return ioStatisticsStore;
+  }
 
-    MetricsToMap(MetricsCollector parent) {
-      this.parent = parent;
-    }
-
-    @Override
-    public MetricsRecordBuilder tag(MetricsInfo info, String value) {
-      return this;
-    }
-
-    @Override
-    public MetricsRecordBuilder add(MetricsTag tag) {
-      return this;
-    }
-
-    @Override
-    public MetricsRecordBuilder add(AbstractMetric metric) {
-      return this;
-    }
-
-    @Override
-    public MetricsRecordBuilder setContext(String value) {
-      return this;
-    }
-
-    @Override
-    public MetricsRecordBuilder addCounter(MetricsInfo info, int value) {
-      return tuple(info, value);
-    }
-
-    @Override
-    public MetricsRecordBuilder addCounter(MetricsInfo info, long value) {
-      return tuple(info, value);
-    }
-
-    @Override
-    public MetricsRecordBuilder addGauge(MetricsInfo info, int value) {
-      return tuple(info, value);
-    }
-
-    @Override
-    public MetricsRecordBuilder addGauge(MetricsInfo info, long value) {
-      return tuple(info, value);
-    }
-
-    public MetricsToMap tuple(MetricsInfo info, long value) {
-      return tuple(info.name(), value);
-    }
-
-    public MetricsToMap tuple(String name, long value) {
-      map.put(name, value);
-      return this;
-    }
-
-    @Override
-    public MetricsRecordBuilder addGauge(MetricsInfo info, float value) {
-      return tuple(info, (long) value);
-    }
-
-    @Override
-    public MetricsRecordBuilder addGauge(MetricsInfo info, double value) {
-      return tuple(info, (long) value);
-    }
-
-    @Override
-    public MetricsCollector parent() {
-      return parent;
-    }
-
-    /**
-     * Get the map.
-     *
-     * @return the map of metrics.
-     */
-    public Map<String, Long> getMap() {
-      return map;
-    }
+  /**
+   * Tracks the duration of a statistic.
+   *
+   * @param key name of the statistic.
+   * @return DurationTracker for that statistic.
+   */
+  @Override
+  public DurationTracker trackDuration(String key) {
+    return ioStatisticsStore.trackDuration(key);
   }
 }

@@ -39,13 +39,12 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAbfsStreamStatistics.class);
 
-  private static final int LARGE_NUMBER_OF_OPS = 999999;
+  private static final int LARGE_NUMBER_OF_OPS = 99;
 
   /***
    * Testing {@code incrementReadOps()} in class {@code AbfsInputStream} and
    * {@code incrementWriteOps()} in class {@code AbfsOutputStream}.
    *
-   * @throws Exception
    */
   @Test
   public void testAbfsStreamOps() throws Exception {

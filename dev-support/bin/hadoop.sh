@@ -355,6 +355,7 @@ function personality_modules
       fi
     ;;
     unit)
+      extra="-Dsurefire.rerunFailingTestsCount=2"
       if [[ "${BUILDMODE}" = full ]]; then
         ordering=mvnsrc
       elif [[ "${CHANGED_MODULES[*]}" =~ \. ]]; then
@@ -363,7 +364,7 @@ function personality_modules
 
       if [[ ${TEST_PARALLEL} = "true" ]] ; then
         if hadoop_test_parallel; then
-          extra="-Pparallel-tests"
+          extra="${extra} -Pparallel-tests"
           if [[ -n ${TEST_THREADS:-} ]]; then
             extra="${extra} -DtestsThreadCount=${TEST_THREADS}"
           fi

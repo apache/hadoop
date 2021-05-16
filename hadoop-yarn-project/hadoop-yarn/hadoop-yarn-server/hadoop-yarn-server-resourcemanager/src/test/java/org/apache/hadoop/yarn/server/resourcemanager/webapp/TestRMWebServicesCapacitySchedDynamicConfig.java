@@ -38,14 +38,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerAutoQueueHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -85,7 +83,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   private static final int GB = 1024;
   protected static MockRM RM;
 
-  private CapacitySchedulerAutoQueueHandler autoQueueHandler;
+  private CapacitySchedulerQueueManager autoQueueHandler;
   private CapacitySchedulerConfiguration csConf;
 
   private static class ExpectedQueueWithProperties {
@@ -330,13 +328,13 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
 
   private void initAutoQueueHandler() throws Exception {
     CapacityScheduler cs = (CapacityScheduler) RM.getResourceScheduler();
-    autoQueueHandler = new CapacitySchedulerAutoQueueHandler(
-        cs.getCapacitySchedulerQueueManager());
+    autoQueueHandler = cs.getCapacitySchedulerQueueManager();
     MockNM nm1 = RM.registerNode("h1:1234", 1200 * GB); // label = x
   }
 
-  private LeafQueue createQueue(String queuePath) throws YarnException {
-    return autoQueueHandler.autoCreateQueue(
+  private LeafQueue createQueue(String queuePath) throws YarnException,
+      IOException {
+    return autoQueueHandler.createQueue(
         CSQueueUtils.extractQueuePath(queuePath));
   }
 
