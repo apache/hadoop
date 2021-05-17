@@ -67,6 +67,8 @@ public class ClusterMetricsInfo {
   private int activeNodes;
   private int shutdownNodes;
 
+  private int containerAssignedPerSecond;
+
   // Total used resource of the cluster, including all partitions
   private ResourceInfo totalUsedResourcesAcrossPartition;
 
@@ -158,6 +160,8 @@ public class ClusterMetricsInfo {
     this.shutdownNodes = clusterMetrics.getNumShutdownNMs();
     this.totalNodes = activeNodes + lostNodes + decommissionedNodes
         + rebootedNodes + unhealthyNodes + decommissioningNodes + shutdownNodes;
+    this.containerAssignedPerSecond = clusterMetrics
+        .getContainerAssignedPerSecond();
   }
 
   public int getAppsSubmitted() {
@@ -410,5 +414,9 @@ public class ClusterMetricsInfo {
 
   public boolean getCrossPartitionMetricsAvailable() {
     return crossPartitionMetricsAvailable;
+  }
+
+  public int getContainerAssignedPerSecond() {
+    return this.containerAssignedPerSecond;
   }
 }
