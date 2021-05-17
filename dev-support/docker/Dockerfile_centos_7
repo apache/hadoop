@@ -79,6 +79,10 @@ RUN echo "export CC=${HOME}/.gcc/9.3.0/bin/gcc" >> /etc/bashrc
 RUN echo "export CXX=${HOME}/.gcc/9.3.0/bin/g++" >> /etc/bashrc
 RUN echo "export PATH=${HOME}/.gcc/9.3.0/bin:${PATH}" >> /etc/bashrc
 RUN echo "export LD_LIBRARY_PATH=${HOME}/.gcc/9.3.0/lib64:${LD_LIRBARY_PATH}" >> /etc/bashrc
+ENV CC "${HOME}/.gcc/9.3.0/bin/gcc"
+ENV CXX "${HOME}/.gcc/9.3.0/bin/g++"
+ENV PATH "${HOME}/.gcc/9.3.0/bin:${PATH}"
+ENV LD_LIBRARY_PATH "${HOME}/.gcc/9.3.0/lib64:${LD_LIRBARY_PATH}"
 
 ####
 # Install Maven 3.6.3
