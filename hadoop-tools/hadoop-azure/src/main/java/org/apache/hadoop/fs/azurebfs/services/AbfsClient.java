@@ -360,7 +360,8 @@ public class AbfsClient implements Closeable {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
 
-    if (lease != null && !lease.getLeaseID().isEmpty() && isFile) {
+    if (lease != null &&  lease.getLeaseID() != null && !lease.getLeaseID().isEmpty() && isFile) {
+      lease.setLeaseAcquired(true);
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_PROPOSED_LEASE_ID, lease.getLeaseID()));
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_DURATION, String.valueOf(abfsConfiguration.getWriteLeaseDuration())));
     }
@@ -394,11 +395,6 @@ public class AbfsClient implements Closeable {
         }
       }
       throw ex;
-    }
-
-    if (lease != null  && !lease.getLeaseID().isEmpty() && isFile)
-    {
-      lease.setLeaseAcquired(true);
     }
 
     return op;
@@ -573,7 +569,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation append(final String path, final byte[] buffer,
-      AppendRequestParameters reqParams, final String cachedSasToken)
+      AppendRequestParameters reqParams, final String cachedSasToken, AbfsLease lease)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addCustomerProvidedKeyHeaders(requestHeaders);
@@ -581,10 +577,6 @@ public class AbfsClient implements Closeable {
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
         HTTP_METHOD_PATCH));
-    if (reqParams.getLease() != null && reqParams.getLease().isInfiniteLease()
-            && reqParams.getLease().getLeaseID() != null && !reqParams.getLease().getLeaseID().isEmpty()) {
-      requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, reqParams.getLease().getLeaseID()));
-    }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, APPEND_ACTION);
@@ -598,21 +590,25 @@ public class AbfsClient implements Closeable {
       }
     }
 
-    if (reqParams.getLease() != null && !reqParams.getLease().isInfiniteLease()
-            && reqParams.getLease().getLeaseID() != null && !reqParams.getLease().getLeaseID().isEmpty()) {
-      if (!reqParams.getLease().isLeaseAcquired()) {
-        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_CLOSE_MODE ? ACQUIRE_RELEASE_LEASE_ACTION : ACQUIRE_LEASE_ACTION));
-        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_PROPOSED_LEASE_ID, reqParams.getLease().getLeaseID()));
-        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_DURATION, String.valueOf(abfsConfiguration.getWriteLeaseDuration())));
-      } else if (reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_CLOSE_MODE) {
-        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, RELEASE_LEASE_ACTION));
-        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ID, reqParams.getLease().getLeaseID()));
+    if (lease != null && lease.getLeaseID() != null && !lease.getLeaseID().isEmpty()) {
+      if (lease.isInfiniteLease()) {
+        requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, lease.getLeaseID()));
       } else {
-        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, AUTO_RENEW_LEASE_ACTION));
-        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ID, reqParams.getLease().getLeaseID()));
+        if (!lease.isLeaseAcquired()) {
+          lease.setLeaseAcquired(true);
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION,
+              reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_CLOSE_MODE ? ACQUIRE_RELEASE_LEASE_ACTION : ACQUIRE_LEASE_ACTION));
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_PROPOSED_LEASE_ID, lease.getLeaseID()));
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_DURATION, String.valueOf(abfsConfiguration.getWriteLeaseDuration())));
+        } else if (reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_CLOSE_MODE) {
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, RELEASE_LEASE_ACTION));
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ID, lease.getLeaseID()));
+        } else {
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, AUTO_RENEW_LEASE_ACTION));
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ID, lease.getLeaseID()));
+        }
       }
     }
-
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
@@ -676,7 +672,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData,
-                                 boolean isClose, final String cachedSasToken, final String leaseId)
+                                 boolean isClose, final String cachedSasToken, AbfsLease lease)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addCustomerProvidedKeyHeaders(requestHeaders);
@@ -684,8 +680,24 @@ public class AbfsClient implements Closeable {
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
             HTTP_METHOD_PATCH));
-    if (leaseId != null) {
-      requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
+
+    if (lease != null && lease.getLeaseID() != null && !lease.getLeaseID().isEmpty()) {
+      if (lease.isInfiniteLease()) {
+        requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, lease.getLeaseID()));
+      } else {
+        if (!lease.isLeaseAcquired()) {
+          lease.setLeaseAcquired(true);
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, isClose ? ACQUIRE_RELEASE_LEASE_ACTION : ACQUIRE_LEASE_ACTION));
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_PROPOSED_LEASE_ID, lease.getLeaseID()));
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_DURATION, String.valueOf(abfsConfiguration.getWriteLeaseDuration())));
+        } else if (isClose) {
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, RELEASE_LEASE_ACTION));
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ID, lease.getLeaseID()));
+        } else {
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, AUTO_RENEW_LEASE_ACTION));
+          requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ID, lease.getLeaseID()));
+        }
+      }
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();

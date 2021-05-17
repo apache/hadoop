@@ -196,11 +196,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to append with correct CPK headers
     AppendRequestParameters appendRequestParameters =
         new AppendRequestParameters(
-        0, 0, 5, Mode.APPEND_MODE, false, null);
+        0, 0, 5, Mode.APPEND_MODE, false);
     byte[] buffer = getRandomBytesArray(5);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .append(fileName, buffer, appendRequestParameters, null);
+        .append(fileName, buffer, appendRequestParameters, null, null);
     assertCPKHeaders(abfsRestOperation, true);
     assertResponseHeader(abfsRestOperation, true, X_MS_ENCRYPTION_KEY_SHA256,
         getCPKSha(fs));
@@ -216,7 +216,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
-        abfsClient2.append(fileName, buffer, appendRequestParameters, null);
+        abfsClient2.append(fileName, buffer, appendRequestParameters, null, null);
       });
     }
 
@@ -225,7 +225,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
         .get(conf); AbfsClient abfsClient3 = fs3.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
-        abfsClient3.append(fileName, buffer, appendRequestParameters, null);
+        abfsClient3.append(fileName, buffer, appendRequestParameters, null, null);
       });
     }
   }
@@ -239,11 +239,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to append without CPK headers
     AppendRequestParameters appendRequestParameters =
         new AppendRequestParameters(
-        0, 0, 5, Mode.APPEND_MODE, false, null);
+        0, 0, 5, Mode.APPEND_MODE, false);
     byte[] buffer = getRandomBytesArray(5);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .append(fileName, buffer, appendRequestParameters, null);
+        .append(fileName, buffer, appendRequestParameters, null, null);
     assertCPKHeaders(abfsRestOperation, false);
     assertResponseHeader(abfsRestOperation, false, X_MS_ENCRYPTION_KEY_SHA256,
         "");
@@ -259,7 +259,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
-        abfsClient2.append(fileName, buffer, appendRequestParameters, null);
+        abfsClient2.append(fileName, buffer, appendRequestParameters, null, null);
       });
     }
   }
@@ -467,7 +467,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsRestOperation abfsRestOperation = abfsClient
         .createPath(testFileName, true, true,
             isNamespaceEnabled ? getOctalNotation(permission) : null,
-            isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
+            isNamespaceEnabled ? getOctalNotation(umask) : null, false, null, null);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));

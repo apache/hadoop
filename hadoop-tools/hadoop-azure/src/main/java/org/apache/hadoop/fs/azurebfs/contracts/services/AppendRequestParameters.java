@@ -35,20 +35,17 @@ public class AppendRequestParameters {
   private final int length;
   private final Mode mode;
   private final boolean isAppendBlob;
-  private AbfsLease lease;
 
   public AppendRequestParameters(final long position,
       final int offset,
       final int length,
       final Mode mode,
-      final boolean isAppendBlob,
-      AbfsLease lease) {
+      final boolean isAppendBlob) {
     this.position = position;
     this.offset = offset;
     this.length = length;
     this.mode = mode;
     this.isAppendBlob = isAppendBlob;
-    this.lease = lease;
   }
 
   public long getPosition() {
@@ -69,9 +66,5 @@ public class AppendRequestParameters {
 
   public boolean isAppendBlob() {
     return this.isAppendBlob;
-  }
-
-  public AbfsLease getLease() {
-    return this.lease;
   }
 }

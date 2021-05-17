@@ -51,13 +51,13 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_PARALLEL_ACC
 /**
  * Test lease operations.
  */
-public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
+public class ITestAzureBlobFileSystemInfiniteLease extends AbstractAbfsIntegrationTest {
   private static final int TEST_EXECUTION_TIMEOUT = 30 * 1000;
   private static final int LONG_TEST_EXECUTION_TIMEOUT = 90 * 1000;
   private static final String TEST_FILE = "testfile";
   private final boolean isHNSEnabled;
 
-  public ITestAzureBlobFileSystemLease() throws Exception {
+  public ITestAzureBlobFileSystemInfiniteLease() throws Exception {
     super();
 
     this.isHNSEnabled = getConfiguration()
@@ -309,7 +309,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.mkdirs(testFilePath.getParent());
     fs.createNewFile(testFilePath);
 
-    AbfsLease lease = new AbfsLease(fs.getAbfsClient(), testFilePath.toUri().getPath());
+    AbfsLease lease = new AbfsLease(fs.getAbfsClient(), testFilePath.toUri().getPath(), false);
     Assert.assertNotNull("Did not successfully lease file", lease.getLeaseID());
     lease.free();
     Assert.assertEquals("Unexpected acquire retry count", 0, lease.getAcquireRetryCount());
@@ -321,7 +321,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         .doCallRealMethod()
         .when(mockClient).acquireLease(anyString(), anyInt());
 
-    lease = new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1);
+    lease = new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1, false);
     Assert.assertNotNull("Acquire lease should have retried", lease.getLeaseID());
     lease.free();
     Assert.assertEquals("Unexpected acquire retry count", 2, lease.getAcquireRetryCount());
@@ -330,7 +330,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
         .when(mockClient).acquireLease(anyString(), anyInt());
 
     LambdaTestUtils.intercept(AzureBlobFileSystemException.class, () -> {
-      new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1);
+      new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1, false);
     });
   }
 }
