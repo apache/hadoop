@@ -442,6 +442,7 @@ public class ContainerManagerImpl extends CompositeService implements
     ApplicationImpl app = new ApplicationImpl(dispatcher, p.getUser(), fc,
         appId, creds, context, p.getAppLogAggregationInitedTime());
     context.getApplications().put(appId, app);
+    metrics.runningApplication();
     app.handle(new ApplicationInitEvent(appId, acls, logAggregationContext));
   }
 
@@ -1137,6 +1138,7 @@ public class ContainerManagerImpl extends CompositeService implements
                   applicationID, credentials, context);
           if (context.getApplications().putIfAbsent(applicationID,
               application) == null) {
+            metrics.runningApplication();
             LOG.info("Creating a new application reference for app "
                 + applicationID);
             LogAggregationContext logAggregationContext =
