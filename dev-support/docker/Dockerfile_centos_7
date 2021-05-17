@@ -67,14 +67,18 @@ RUN dnf install -y \
 # Install GCC 9.3.0
 ####
 # hadolint ignore=DL3003
-RUN mkdir -p /tmp/gcc /opt/gcc \
+RUN mkdir -p /tmp/gcc /opt/gcc ~/.gcc \
     && curl -L -s -S https://ftp.gnu.org/gnu/gcc/gcc-9.3.0/gcc-9.3.0.tar.gz  -o /tmp/gcc/gcc-9.3.0.tar.gz \
     && tar xzf /tmp/gcc/gcc-9.3.0.tar.gz --strip-components 1 -C /opt/gcc \
-    && cd /opt/gcc \
-    && ./configure --enable-languages=c,c++ --disable-multilib \
+    && cd /opt/gcc || exit \
+    && ./configure --enable-languages=c,c++ --disable-multilib --prefix=$HOME/.gcc/9.3.0 \
     && make -j1 \
     && make install \
-    && cd /root
+    && cd /root || exit
+RUN echo "export CC=${HOME}/.gcc/9.3.0/bin/gcc" >> /etc/bashrc
+RUN echo "export CXX=${HOME}/.gcc/9.3.0/bin/g++" >> /etc/bashrc
+RUN echo "export PATH=${HOME}/.gcc/9.3.0/bin:${PATH}" >> /etc/bashrc
+RUN echo "export LD_LIBRARY_PATH=${HOME}/.gcc/9.3.0/lib64:${LD_LIRBARY_PATH}" >> /etc/bashrc
 
 ####
 # Install Maven 3.6.3
