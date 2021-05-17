@@ -232,7 +232,10 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
 #endif
 
   loadAesCtr(env);
+#if !defined(OPENSSL_NO_SM4)
   loadSm4Ctr(env);
+#endif
+
 #if OPENSSL_VERSION_NUMBER >= 0x10101001L
   int ret = dlsym_OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
   if(!ret) {
@@ -245,7 +248,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
   if (jthr) {
     (*env)->DeleteLocalRef(env, jthr);
     THROW(env, "java/lang/UnsatisfiedLinkError",  \
-        "Cannot find AES-CTR/SM4-CTR support, is your version of Openssl new enough?");
+        "Cannot find AES-CTR support, is your version of Openssl new enough?");
     return;
   }
 }
