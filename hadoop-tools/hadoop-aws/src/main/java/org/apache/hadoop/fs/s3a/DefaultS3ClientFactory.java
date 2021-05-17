@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
 
@@ -54,7 +55,7 @@ import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROT
 @InterfaceStability.Unstable
 public class DefaultS3ClientFactory extends Configured
     implements S3ClientFactory {
-
+  private static Configuration conf;
   private static final String S3_SERVICE_NAME = "s3";
 
   /**
@@ -71,7 +72,7 @@ public class DefaultS3ClientFactory extends Configured
   public AmazonS3 createS3Client(
       final URI uri,
       final S3ClientCreationParameters parameters) throws IOException {
-    Configuration conf = getConf();
+    conf = getConf();
     final ClientConfiguration awsConf = S3AUtils
         .createAwsConf(conf,
             uri.getHost(),
@@ -212,17 +213,19 @@ public class DefaultS3ClientFactory extends Configured
 
     final URI epr = RuntimeHttpUtils.toUri(endpoint, awsConf);
     LOG.debug("Endpoint URI = {}", epr);
-
-    String region;
-    if (!ServiceUtils.isS3USStandardEndpoint(endpoint)) {
-      LOG.debug("Endpoint {} is not the default; parsing", epr);
-      region = AwsHostNameUtils.parseRegion(
-          epr.getHost(),
-          S3_SERVICE_NAME);
-    } else {
-      // US-east, set region == null.
-      LOG.debug("Endpoint {} is the standard one; declare region as null", epr);
-      region = null;
+    String region = conf != null ? conf.getTrimmed(AWS_REGION) : "";
+    if (StringUtils.isBlank(region)) {
+      if (!ServiceUtils.isS3USStandardEndpoint(endpoint)) {
+        LOG.debug("Endpoint {} is not the default; parsing", epr);
+        region = AwsHostNameUtils.parseRegion(
+            epr.getHost(),
+            S3_SERVICE_NAME);
+      } else {
+        // US-east, set region == null.
+        LOG.debug("Endpoint {} is the standard one; declare region as null",
+            epr);
+        region = null;
+      }
     }
     LOG.debug("Region for endpoint {}, URI {} is determined as {}",
         endpoint, epr, region);
