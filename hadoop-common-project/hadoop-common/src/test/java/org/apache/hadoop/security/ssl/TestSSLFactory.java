@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.security.ssl;
 
+import static java.security.Security.getProperty;
+import static java.security.Security.setProperty;
 import static org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory.SSL_TRUSTSTORE_LOCATION_TPL_KEY;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.TRUST_STORE_PASSWORD_DEFAULT;
 import static org.apache.hadoop.security.ssl.SSLFactory.Mode.CLIENT;
@@ -25,7 +27,6 @@ import static org.apache.hadoop.security.ssl.SSLFactory.SSL_REQUIRE_CLIENT_CERT_
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
@@ -40,14 +41,11 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLHandshakeException;
@@ -57,8 +55,6 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
-import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.Map;
@@ -376,15 +372,14 @@ public class TestSSLFactory {
   @Test
   public void testDifferentAlgorithm() throws Exception {
     Configuration conf = createConfiguration(false, true);
-    Security.setProperty("ssl.KeyManagerFactory.algorithm", "UnknownX509");
+    String currAlg = getProperty("ssl.KeyManagerFactory.algorithm");
+    setProperty("ssl.KeyManagerFactory.algorithm", "PKIX");
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     try {
-      Exception e =
-          assertThrows(NoSuchAlgorithmException.class, () -> sslFactory.init());
-      assertTrue(e.getMessage().contains(
-          "UnknownX509 KeyManagerFactory not available"));
+      sslFactory.init();
     } finally {
       sslFactory.destroy();
+      setProperty("ssl.KeyManagerFactory.algorithm", currAlg);
     }
   }
 
