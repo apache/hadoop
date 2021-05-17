@@ -67,11 +67,11 @@ RUN dnf install -y \
 # Install GCC 9.3.0
 ####
 # hadolint ignore=DL3003
-RUN mkdir -p /tmp/gcc /opt/gcc ~/.gcc \
+RUN mkdir -p /tmp/gcc /opt/gcc ${HOME}/.gcc \
     && curl -L -s -S https://ftp.gnu.org/gnu/gcc/gcc-9.3.0/gcc-9.3.0.tar.gz  -o /tmp/gcc/gcc-9.3.0.tar.gz \
     && tar xzf /tmp/gcc/gcc-9.3.0.tar.gz --strip-components 1 -C /opt/gcc \
     && cd /opt/gcc || exit \
-    && ./configure --enable-languages=c,c++ --disable-multilib --prefix=$HOME/.gcc/9.3.0 \
+    && ./configure --enable-languages=c,c++ --disable-multilib --prefix=${HOME}/.gcc/9.3.0 \
     && make -j1 \
     && make install \
     && cd /root || exit
