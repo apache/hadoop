@@ -557,3 +557,24 @@ JNIEXPORT jstring JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_getLibrary
   }
 #endif
 }
+
+JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_isSupportedSuite
+    (JNIEnv *env, jclass clazz, jint alg, jint padding)
+{
+  if (padding != NOPADDING) {
+    return JNI_FALSE;
+  }
+
+  if (alg == AES_CTR && (dlsym_EVP_aes_256_ctr != NULL && dlsym_EVP_aes_128_ctr != NULL)) {
+    return JNI_TRUE;
+  }
+
+  if (alg == SM4_CTR) {
+#if OPENSSL_VERSION_NUMBER >= 0x10101001L && !defined(OPENSSL_NO_SM4)
+    if (dlsym_EVP_sm4_ctr != NULL) {
+      return JNI_TRUE;
+    }
+#endif
+  }
+  return JNI_FALSE;
+}
