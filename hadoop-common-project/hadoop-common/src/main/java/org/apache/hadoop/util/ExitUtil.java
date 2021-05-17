@@ -232,7 +232,6 @@ public final class ExitUtil {
     try {
       if (status != 0) {
         //exit indicates a problem, log it
-        LOG.debug("Halt with status {}: {}", status, msg, ee);
         LOG.info("Halt with status {}: {}", status, msg, ee);
       }
     } catch (Exception ignored) {
