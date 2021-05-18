@@ -136,8 +136,8 @@ public final class ReloadingX509TrustManager implements X509TrustManager {
       in.close();
     }
 
-    TrustManagerFactory trustManagerFactory = 
-      TrustManagerFactory.getInstance(SSLFactory.SSLCERTIFICATE);
+    TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(
+        SSLFactory.TRUST_MANAGER_SSLCERTIFICATE);
     trustManagerFactory.init(ks);
     TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
     for (TrustManager trustManager1 : trustManagers) {
