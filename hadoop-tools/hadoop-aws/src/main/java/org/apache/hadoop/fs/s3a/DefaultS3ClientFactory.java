@@ -204,7 +204,8 @@ public class DefaultS3ClientFactory extends Configured
   @VisibleForTesting
   public static AwsClientBuilder.EndpointConfiguration
       createEndpointConfiguration(
-      final String endpoint, final ClientConfiguration awsConf, String awsRegion) {
+      final String endpoint, final ClientConfiguration awsConf,
+      String awsRegion) {
     LOG.debug("Creating endpoint configuration for {}", endpoint);
     if (endpoint == null || endpoint.isEmpty()) {
       // the default endpoint...we should be using null at this point.
