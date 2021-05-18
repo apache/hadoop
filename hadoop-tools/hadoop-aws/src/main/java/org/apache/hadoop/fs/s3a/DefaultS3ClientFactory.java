@@ -55,7 +55,7 @@ import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROT
 @InterfaceStability.Unstable
 public class DefaultS3ClientFactory extends Configured
     implements S3ClientFactory {
-  private static Configuration conf;
+
   private static final String S3_SERVICE_NAME = "s3";
 
   /**
@@ -72,7 +72,7 @@ public class DefaultS3ClientFactory extends Configured
   public AmazonS3 createS3Client(
       final URI uri,
       final S3ClientCreationParameters parameters) throws IOException {
-    conf = getConf();
+    Configuration conf = getConf();
     final ClientConfiguration awsConf = S3AUtils
         .createAwsConf(conf,
             uri.getHost(),
@@ -133,7 +133,7 @@ public class DefaultS3ClientFactory extends Configured
     // endpoint set up is a PITA
     AwsClientBuilder.EndpointConfiguration epr
         = createEndpointConfiguration(parameters.getEndpoint(),
-        awsConf);
+        awsConf, getConf().getTrimmed(AWS_REGION));
     if (epr != null) {
       // an endpoint binding was constructed: use it.
       b.withEndpointConfiguration(epr);
@@ -198,12 +198,13 @@ public class DefaultS3ClientFactory extends Configured
    *
    * @param endpoint possibly null endpoint.
    * @param awsConf config to build the URI from.
+   * @param awsRegion AWS S3 Region if the corresponding config is set.
    * @return a configuration for the S3 client builder.
    */
   @VisibleForTesting
   public static AwsClientBuilder.EndpointConfiguration
       createEndpointConfiguration(
-          final String endpoint, final ClientConfiguration awsConf) {
+      final String endpoint, final ClientConfiguration awsConf, String awsRegion) {
     LOG.debug("Creating endpoint configuration for {}", endpoint);
     if (endpoint == null || endpoint.isEmpty()) {
       // the default endpoint...we should be using null at this point.
@@ -213,7 +214,7 @@ public class DefaultS3ClientFactory extends Configured
 
     final URI epr = RuntimeHttpUtils.toUri(endpoint, awsConf);
     LOG.debug("Endpoint URI = {}", epr);
-    String region = conf != null ? conf.getTrimmed(AWS_REGION) : "";
+    String region = awsRegion;
     if (StringUtils.isBlank(region)) {
       if (!ServiceUtils.isS3USStandardEndpoint(endpoint)) {
         LOG.debug("Endpoint {} is not the default; parsing", epr);

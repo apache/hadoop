@@ -46,7 +46,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     getFileSystem().getConf().set(AWS_REGION, AWS_REGION_TEST);
 
     //Creating an endpoint config with a custom endpoint.
-    AwsClientBuilder.EndpointConfiguration epr = createEpr(AWS_ENDPOINT_TEST);
+    AwsClientBuilder.EndpointConfiguration epr = createEpr(AWS_ENDPOINT_TEST,
+        getFileSystem().getConf().getTrimmed(AWS_REGION));
     //Checking if setting region config bypasses the endpoint region.
     Assertions.assertThat(epr.getSigningRegion())
         .describedAs("There is a region mismatch")
@@ -63,7 +64,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
     //Creating an endpoint config with a custom endpoint containing a region.
     AwsClientBuilder.EndpointConfiguration eprRandom =
-        createEpr(AWS_ENDPOINT_TEST_WITH_REGION);
+        createEpr(AWS_ENDPOINT_TEST_WITH_REGION,
+            getFileSystem().getConf().getTrimmed(AWS_REGION));
     String regionFromEndpoint =
         AwsHostNameUtils
             .parseRegionFromAwsPartitionPattern(AWS_ENDPOINT_TEST_WITH_REGION);
@@ -81,8 +83,9 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    * @param endpoint the endpoint to be used for EndpointConfiguration creation.
    * @return an instance of EndpointConfiguration.
    */
-  private AwsClientBuilder.EndpointConfiguration createEpr(String endpoint) {
+  private AwsClientBuilder.EndpointConfiguration createEpr(String endpoint,
+      String awsRegion) {
     return DefaultS3ClientFactory.createEndpointConfiguration(endpoint,
-        new ClientConfiguration());
+        new ClientConfiguration(), awsRegion);
   }
 }
