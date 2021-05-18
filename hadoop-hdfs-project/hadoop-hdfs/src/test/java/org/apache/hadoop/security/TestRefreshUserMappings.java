@@ -34,8 +34,11 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -83,6 +86,16 @@ public class TestRefreshUserMappings {
   
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) {
+      LOG.info("Getting groups in MockUnixGroupsMapping");
+      String g1 = user + (10 * i + 1);
+      String g2 = user + (10 * i + 2);
+      Set<String> s = Sets.newHashSet(g1, g2);
+      i++;
+      return s;
     }
   }
   
@@ -196,6 +209,8 @@ public class TestRefreshUserMappings {
     // set groups for users
     when(ugi1.getGroups()).thenReturn(groupNames1);
     when(ugi2.getGroups()).thenReturn(groupNames2);
+    when(ugi1.getGroupsSet()).thenReturn(new LinkedHashSet<>(groupNames1));
+    when(ugi2.getGroupsSet()).thenReturn(new LinkedHashSet<>(groupNames2));
 
 
     // check before
