@@ -84,6 +84,8 @@ ENV CXX "${HOME}/.gcc/9.3.0/bin/g++"
 ENV PATH "${HOME}/.gcc/9.3.0/bin:${PATH}"
 ENV LD_LIBRARY_PATH "${HOME}/.gcc/9.3.0/lib64:${LD_LIRBARY_PATH}"
 
+SHELL ["/bin/bash", "-l", "-c"]
+
 ####
 # Install Maven 3.6.3
 ####
