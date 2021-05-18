@@ -214,7 +214,7 @@ public class MockFastpathConnection
   }
 
   private static ByteBuffer clone(ByteBuffer original) {
-    ByteBuffer clone = ByteBuffer.allocate(original.capacity());
+    ByteBuffer clone = ByteBuffer.allocateDirect(original.capacity());
     original.rewind();
     clone.put(original);
     original.rewind();
