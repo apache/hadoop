@@ -21,7 +21,8 @@ package org.apache.hadoop.yarn.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,7 +58,8 @@ public class ConfiguredRMFailoverProxyProvider<T>
     this.protocol = protocol;
     this.rmProxy.checkAllowedProtocols(this.protocol);
     this.conf = new YarnConfiguration(configuration);
-    Collection<String> rmIds = HAUtil.getRMHAIds(conf);
+    ArrayList<String> rmIds = new ArrayList(HAUtil.getRMHAIds(conf));
+    Collections.shuffle(rmIds);
     this.rmServiceIds = rmIds.toArray(new String[rmIds.size()]);
     conf.set(YarnConfiguration.RM_HA_ID, rmServiceIds[currentProxyIndex]);
 
