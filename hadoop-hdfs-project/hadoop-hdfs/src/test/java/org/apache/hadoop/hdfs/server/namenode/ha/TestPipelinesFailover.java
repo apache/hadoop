@@ -324,7 +324,7 @@ public class TestPipelinesFailover {
    * DN running the recovery should then fail to commit the synchronization
    * and a later retry will succeed.
    */
-  @Test(timeout=30000)
+  @Test(timeout=60000)
   public void testFailoverRightBeforeCommitSynchronization() throws Exception {
     final Configuration conf = new Configuration();
     // Disable permissions so that another user can recover the lease.

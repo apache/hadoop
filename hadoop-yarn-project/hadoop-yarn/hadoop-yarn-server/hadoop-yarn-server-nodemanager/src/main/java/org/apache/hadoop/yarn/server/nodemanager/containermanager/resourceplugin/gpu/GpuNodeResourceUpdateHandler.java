@@ -79,19 +79,48 @@ public class GpuNodeResourceUpdateHandler extends NodeResourceUpdaterPlugin {
     res.setResourceValue(GPU_URI, nUsableGpus);
   }
 
-  public float getNodeGpuUtilization() throws Exception{
+  /**
+   *
+   * @return The average physical GPUs used in this node.
+   *
+   * For example:
+   * Node with total 4 GPUs
+   * Physical used 2.4 GPUs
+   * Will return 2.4/4 = 0.6f
+   *
+   * @throws Exception when any error happens
+   */
+  public float getAvgNodeGpuUtilization() throws Exception{
     List<PerGpuDeviceInformation> gpuList =
         gpuDiscoverer.getGpuDeviceInformation().getGpus();
-    Float totalGpuUtilization = 0F;
+    Float avgGpuUtilization = 0F;
     if (gpuList != null &&
         gpuList.size() != 0) {
 
-      totalGpuUtilization = gpuList
-          .stream()
-          .map(g -> g.getGpuUtilizations().getOverallGpuUtilization())
-          .collect(Collectors.summingDouble(Float::floatValue))
-          .floatValue() / gpuList.size();
+      avgGpuUtilization = getTotalNodeGpuUtilization() / gpuList.size();
     }
+    return avgGpuUtilization;
+  }
+
+  /**
+   *
+   * @return The total physical GPUs used in this node.
+   *
+   * For example:
+   * Node with total 4 GPUs
+   * Physical used 2.4 GPUs
+   * Will return 2.4f
+   *
+   * @throws Exception when any error happens
+   */
+  public float getTotalNodeGpuUtilization() throws Exception{
+    List<PerGpuDeviceInformation> gpuList =
+        gpuDiscoverer.getGpuDeviceInformation().getGpus();
+    Float totalGpuUtilization = gpuList
+        .stream()
+        .map(g -> g.getGpuUtilizations().getOverallGpuUtilization())
+        .collect(Collectors.summingDouble(Float::floatValue))
+        .floatValue();
     return totalGpuUtilization;
   }
 }

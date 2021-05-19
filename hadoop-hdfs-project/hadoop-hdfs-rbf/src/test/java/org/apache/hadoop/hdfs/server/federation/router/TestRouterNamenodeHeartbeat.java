@@ -17,15 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMESERVICES;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
@@ -103,6 +109,38 @@ public class TestRouterNamenodeHeartbeat {
     server.stop();
     assertEquals(STATE.STOPPED, server.getServiceState());
     server.close();
+  }
+
+  @Test
+  public void testLocalNamenodeHeartbeatService() throws IOException {
+    Router router = new Router();
+    Configuration conf = new Configuration();
+    assertEquals(null, DFSUtil.getNamenodeNameServiceId(conf));
+
+    // case 1: no local nn is configured
+    router.setConf(conf);
+    assertNull(router.createLocalNamenodeHeartbeatService());
+
+    // case 2: local nn is configured
+    conf.set(DFS_NAMESERVICES, "ns1");
+    assertEquals("ns1", DFSUtil.getNamenodeNameServiceId(conf));
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"),
+        "nn1,nn2");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"),
+        "localhost:8020");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"),
+        "ns1-nn2.example.com:8020");
+    router.setConf(conf);
+    NamenodeHeartbeatService heartbeatService =
+        router.createLocalNamenodeHeartbeatService();
+    assertNotNull(heartbeatService);
+    // we have to start the service to get the serviceAddress assigned
+    heartbeatService.init(conf);
+    assertEquals("ns1-nn1:localhost:8020",
+        heartbeatService.getNamenodeDesc());
+    heartbeatService.stop();
   }
 
   @Test

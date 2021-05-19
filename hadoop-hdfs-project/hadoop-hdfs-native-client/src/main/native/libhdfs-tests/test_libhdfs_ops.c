@@ -58,7 +58,7 @@ void permission_disp(short permissions, char *rtr) {
       default:
         perm = "???";
       }
-      strncpy(rtr, perm, 3);
+      memcpy(rtr, perm, 3);
       rtr+=3;
     }
 }

@@ -483,6 +483,14 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void hflushInvoked() {
+    }
+
+    @Override
+    public void hsyncInvoked() {
+    }
+
+    @Override
     public void close() throws IOException {
     }
 

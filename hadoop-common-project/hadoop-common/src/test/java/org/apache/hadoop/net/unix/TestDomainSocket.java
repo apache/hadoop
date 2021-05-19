@@ -759,6 +759,6 @@ public class TestDomainSocket {
     readerThread.join();
     Assert.assertFalse(failed.get());
     Assert.assertEquals(3, bytesRead.get());
-    IOUtils.cleanup(null, socks);
+    IOUtils.cleanupWithLogger(null, socks);
   }
 }

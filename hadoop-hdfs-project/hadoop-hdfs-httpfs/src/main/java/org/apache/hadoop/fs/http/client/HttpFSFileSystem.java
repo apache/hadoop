@@ -122,6 +122,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACLSPEC_PARAM = "aclspec";
   public static final String DESTINATION_PARAM = "destination";
   public static final String RECURSIVE_PARAM = "recursive";
+  public static final String SKIP_TRASH_PARAM = "skiptrash";
   public static final String SOURCES_PARAM = "sources";
   public static final String OWNER_PARAM = "owner";
   public static final String GROUP_PARAM = "group";

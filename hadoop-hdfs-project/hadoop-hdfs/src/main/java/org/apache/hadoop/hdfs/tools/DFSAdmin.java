@@ -38,6 +38,7 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
@@ -461,7 +462,7 @@ public class DFSAdmin extends FsShell {
     "\t[-fetchImage <local directory>]\n" +
     "\t[-allowSnapshot <snapshotDir>]\n" +
     "\t[-disallowSnapshot <snapshotDir>]\n" +
-      "\t[-provisionSnapshotTrash <snapshotDir>]\n" +
+      "\t[-provisionSnapshotTrash <snapshotDir> [-all]]\n" +
     "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
     "\t[-evictWriters <datanode_host:ipc_port>]\n" +
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
@@ -793,14 +794,7 @@ public class DFSAdmin extends FsShell {
     System.out.println("Disallowing snapshot on " + argv[1] + " succeeded");
   }
 
-  /**
-   * Provision trash root in a snapshottable directory.
-   * Usage: hdfs dfsadmin -provisionSnapshotTrash snapshotDir
-   * @param argv List of of command line parameters.
-   * @exception IOException
-   */
-  public void provisionSnapshotTrash(String[] argv) throws IOException {
-    Path p = new Path(argv[1]);
+  private void provisionSnapshotTrashInternal(Path p) throws IOException {
     final HdfsAdmin admin = new HdfsAdmin(p.toUri(), getConf());
     Path trashRoot;
     try {
@@ -809,7 +803,35 @@ public class DFSAdmin extends FsShell {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
     System.out.println("Successfully provisioned snapshot trash at " +
-        trashRoot);
+            trashRoot);
+  }
+
+  private void provisionSnapshotTrashAll() throws IOException {
+    // Get all snapshottable directories
+    final DistributedFileSystem dfs = getDFS();
+    SnapshottableDirectoryStatus[] lst = dfs.getSnapshottableDirListing();
+    if (lst != null) {
+      for (SnapshottableDirectoryStatus dirStatus : lst) {
+        final Path p = dirStatus.getFullPath();
+        provisionSnapshotTrashInternal(p);
+      }
+    }
+  }
+
+  /**
+   * Provision trash root in a snapshottable directory.
+   * Usage: hdfs dfsadmin -provisionSnapshotTrash snapshotDir
+   *        hdfs dfsadmin -provisionSnapshotTrash -all
+   * @param argv List of of command line parameters.
+   * @exception IOException
+   */
+  public void provisionSnapshotTrash(String[] argv) throws IOException {
+    if (argv[1].equals("-all")) {
+      provisionSnapshotTrashAll();
+      return;
+    }
+    Path p = new Path(argv[1]);
+    provisionSnapshotTrashInternal(p);
   }
   
   /**
@@ -1266,9 +1288,10 @@ public class DFSAdmin extends FsShell {
     String disallowSnapshot = "-disallowSnapshot <snapshotDir>:\n" +
         "\tDo not allow snapshots to be taken on a directory any more.\n";
 
-    String provisionSnapshotTrash = "-provisionSnapshotTrash <snapshotDir>:\n" +
-        "\tProvision trash root in a snapshottable directory with permission"
-        + "\t" + HdfsAdmin.TRASH_PERMISSION + ".\n";
+    String provisionSnapshotTrash =
+        "-provisionSnapshotTrash <snapshotDir> [-all]:\n"
+        + "\tProvision trash root in one or all snapshottable directories."
+        + "\tTrash permission is " + HdfsAdmin.TRASH_PERMISSION + ".\n";
 
     String shutdownDatanode = "-shutdownDatanode <datanode_host:ipc_port> [upgrade]\n"
         + "\tSubmit a shutdown request for the given datanode. If an optional\n"
@@ -2115,7 +2138,7 @@ public class DFSAdmin extends FsShell {
           + " [-disallowSnapshot <snapshotDir>]");
     } else if ("-provisionSnapshotTrash".equalsIgnoreCase(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-provisionSnapshotTrash <snapshotDir>]");
+          + " [-provisionSnapshotTrash <snapshotDir> [-all]]");
     } else if ("-saveNamespace".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-saveNamespace [-beforeShutdown]]");

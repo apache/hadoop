@@ -63,13 +63,15 @@ public class TestCSMappingPlacementRule {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
-  private Map<String, Set<String>> userGroups = ImmutableMap.of(
-      "alice", ImmutableSet.of("p_alice", "unique", "user"),
-      "bob", ImmutableSet.of("p_bob", "user", "developer"),
-      "charlie", ImmutableSet.of("p_charlie", "user", "tester"),
-      "dave", ImmutableSet.of("user"),
-      "emily", ImmutableSet.of("user", "tester", "developer")
-  );
+  private Map<String, Set<String>> userGroups =
+      ImmutableMap.<String, Set<String>>builder()
+      .put("alice", ImmutableSet.of("p_alice", "unique", "user"))
+      .put("bob", ImmutableSet.of("p_bob", "user", "developer"))
+      .put("charlie", ImmutableSet.of("p_charlie", "user", "tester"))
+      .put("dave", ImmutableSet.of("user"))
+      .put("emily", ImmutableSet.of("user", "tester", "developer"))
+      .put("test.user", ImmutableSet.of("main.grp", "sec.test.grp"))
+      .build();
 
   private void createQueueHierarchy(CapacitySchedulerQueueManager queueManager) {
     MockQueueHierarchyBuilder.create()
@@ -79,6 +81,9 @@ public class TestCSMappingPlacementRule {
         .withManagedParentQueue("root.man")
         .withQueue("root.user.alice")
         .withQueue("root.user.bob")
+        .withQueue("root.user.test_dot_user")
+        .withQueue("root.groups.main_dot_grp")
+        .withQueue("root.groups.sec_dot_test_dot_grp")
         .withQueue("root.secondaryTests.unique")
         .withQueue("root.secondaryTests.user")
         .withQueue("root.ambiguous.user.charlie")
@@ -717,5 +722,53 @@ public class TestCSMappingPlacementRule {
     List<MappingRule> rules = conf.getMappingRules();
 
     assertConfigTestResult(rules);
+  }
+
+  @Test
+  public void testUserNameCleanup() throws IOException {
+    ArrayList<MappingRule> rules = new ArrayList<>();
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createAllMatcher(),
+            (new MappingRuleActions.PlaceToQueueAction("%user", true))
+                .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(
+        "test.user should be placed to root.users.test_dot_user",
+        engine, app, "test.user", "root.user.test_dot_user");
+  }
+
+  @Test
+  public void testPrimaryGroupNameCleanup() throws IOException {
+    ArrayList<MappingRule> rules = new ArrayList<>();
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createAllMatcher(),
+            (new MappingRuleActions.PlaceToQueueAction("%primary_group", true))
+                .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(
+        "Application should have been placed to root.groups.main_dot_grp",
+        engine, app, "test.user", "root.groups.main_dot_grp");
+  }
+
+  @Test
+  public void testSecondaryGroupNameCleanup() throws IOException {
+    ArrayList<MappingRule> rules = new ArrayList<>();
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createAllMatcher(),
+            (new MappingRuleActions.PlaceToQueueAction("%secondary_group", true))
+                .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(
+        "Application should have been placed to root.groups.sec_dot_test_dot_grp",
+        engine, app, "test.user", "root.groups.sec_dot_test_dot_grp");
   }
 }

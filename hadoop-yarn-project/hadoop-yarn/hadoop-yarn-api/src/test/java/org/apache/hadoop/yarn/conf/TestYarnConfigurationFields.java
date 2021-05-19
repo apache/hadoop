@@ -157,6 +157,9 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_SOURCE_FILE);
 
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.HADOOP_HTTP_WEBAPP_SCHEDULER_PAGE);
+
     // Ignore NodeManager "work in progress" variables
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED);

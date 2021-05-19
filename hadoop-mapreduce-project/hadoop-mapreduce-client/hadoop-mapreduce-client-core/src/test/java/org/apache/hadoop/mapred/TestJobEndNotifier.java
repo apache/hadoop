@@ -80,7 +80,7 @@ public class TestJobEndNotifier {
       calledTimes++;
       try {
         // Sleep for a long time
-        Thread.sleep(1000000);
+        Thread.sleep(3000);
       } catch (InterruptedException e) {
         timedOut = true;
       }

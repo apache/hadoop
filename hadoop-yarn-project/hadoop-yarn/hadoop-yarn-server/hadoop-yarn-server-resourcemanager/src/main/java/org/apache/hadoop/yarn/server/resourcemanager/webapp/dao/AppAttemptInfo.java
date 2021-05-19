@@ -51,8 +51,8 @@ public class AppAttemptInfo {
   public AppAttemptInfo() {
   }
 
-  public AppAttemptInfo(ResourceManager rm, RMAppAttempt attempt, String user,
-      String schemePrefix) {
+  public AppAttemptInfo(ResourceManager rm, RMAppAttempt attempt,
+      Boolean hasAccess, String user, String schemePrefix) {
     this.startTime = 0;
     this.containerId = "";
     this.nodeHttpAddress = "";
@@ -65,7 +65,7 @@ public class AppAttemptInfo {
       this.startTime = attempt.getStartTime();
       this.finishedTime = attempt.getFinishTime();
       Container masterContainer = attempt.getMasterContainer();
-      if (masterContainer != null) {
+      if (masterContainer != null && hasAccess) {
         this.containerId = masterContainer.getId().toString();
         this.nodeHttpAddress = masterContainer.getNodeHttpAddress();
         this.nodeId = masterContainer.getNodeId().toString();

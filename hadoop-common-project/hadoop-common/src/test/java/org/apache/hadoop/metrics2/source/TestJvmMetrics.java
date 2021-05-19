@@ -40,6 +40,7 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.metrics2.source.JvmMetricsInfo.*;
 import static org.apache.hadoop.metrics2.impl.MsInfo.*;
@@ -47,7 +48,7 @@ import static org.apache.hadoop.metrics2.impl.MsInfo.*;
 public class TestJvmMetrics {
 
   @Rule
-  public Timeout timeout = new Timeout(30000);
+  public Timeout timeout = new Timeout(30000, TimeUnit.MILLISECONDS);
   private JvmPauseMonitor pauseMonitor;
   private GcTimeMonitor gcTimeMonitor;
 
@@ -78,13 +79,8 @@ public class TestJvmMetrics {
     for (JvmMetricsInfo info : JvmMetricsInfo.values()) {
       if (info.name().startsWith("Mem")) {
         verify(rb).addGauge(eq(info), anyFloat());
-      } else if (info.name().startsWith("Gc") &&
-          !info.name().equals("GcTimePercentage")) {
-        verify(rb).addCounter(eq(info), anyLong());
       } else if (info.name().startsWith("Threads")) {
         verify(rb).addGauge(eq(info), anyInt());
-      } else if (info.name().startsWith("Log")) {
-        verify(rb).addCounter(eq(info), anyLong());
       }
     }
   }

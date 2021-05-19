@@ -273,7 +273,7 @@ public class TestSecureEncryptionZoneWithKMS {
 
   @After
   public void shutdown() throws IOException {
-    IOUtils.cleanup(null, fs);
+    IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
