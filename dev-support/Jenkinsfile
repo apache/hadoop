@@ -139,7 +139,8 @@ pipeline {
 
                         # run in docker mode and specifically point to our
                         # Dockerfile since we don't want to use the auto-pulled version.
-                        YETUS_ARGS+=("--git-offline")                        
+                        YETUS_ARGS+=("--docker")
+                        YETUS_ARGS+=("--git-offline")
                         YETUS_ARGS+=("--mvn-custom-repos")
 
                         # effectively treat dev-suport as a custom maven module
@@ -160,7 +161,7 @@ pipeline {
                         YETUS_ARGS+=("--github-write-comment")
                         YETUS_ARGS+=("--github-use-emoji-vote")
 
-                        "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
+                        sh -x "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''
                 }
             }
