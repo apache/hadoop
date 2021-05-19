@@ -235,7 +235,7 @@ public class AbfsRestOperation {
     try {
       // initialize the HTTP request and open the connection
       if (acquireLease && !requestHeaderUpdated) {
-        UpdateRequestHeaders();
+        updateRequestHeaders();
       }
 
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
@@ -346,7 +346,7 @@ public class AbfsRestOperation {
     }
   }
 
-  private void UpdateRequestHeaders() {
+  private void updateRequestHeaders() {
     requestHeaderUpdated = true;
     boolean containsAutoRenew = requestHeaders.contains(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION,
         AbfsHttpConstants.AUTO_RENEW_LEASE_ACTION));

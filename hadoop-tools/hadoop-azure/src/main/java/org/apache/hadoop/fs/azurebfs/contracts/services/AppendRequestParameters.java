@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
-import org.apache.hadoop.fs.azurebfs.services.AbfsLease;
-
 /**
  * Saves the different request parameters for append
  */

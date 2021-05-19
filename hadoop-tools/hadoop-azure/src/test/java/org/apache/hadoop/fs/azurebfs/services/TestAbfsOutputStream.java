@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;

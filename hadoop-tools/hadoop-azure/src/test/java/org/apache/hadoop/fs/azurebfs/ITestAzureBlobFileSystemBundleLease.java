@@ -19,7 +19,12 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.junit.Test;
 
@@ -103,7 +108,7 @@ public class ITestAzureBlobFileSystemBundleLease extends
       intercept(IOException.class,
           () -> {
         stream2.write(b, 1000, 0);
-        stream2.close();});
+        stream2.close(); });
     }
 
     //Retry Create and append after close
@@ -189,8 +194,7 @@ public class ITestAzureBlobFileSystemBundleLease extends
     String fileName = UUID.randomUUID().toString();
     final Path testFilePath = path(fileName);
 
-    try (FSDataOutputStream stream = fs.create(testFilePath))
-    {
+    try (FSDataOutputStream stream = fs.create(testFilePath)) {
       stream.write(buffer);
       stream.hflush();
       byte[] readBuffer = new byte[buffer.length];
