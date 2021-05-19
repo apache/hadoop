@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -41,7 +42,9 @@ public interface JournalNodeMXBean {
    *
    * @return colon separated host and port.
    */
-  String getHostAndPort();
+  default String getHostAndPort() {
+    return "";
+  }
 
   /**
    * Get list of the clusters of JournalNode's journals
@@ -49,12 +52,16 @@ public interface JournalNodeMXBean {
    *
    * @return list of clusters.
    */
-  List<String> getClusterIds();
+  default List<String> getClusterIds() {
+    return Collections.emptyList() ;
+  }
 
   /**
    * Gets the version of Hadoop.
    *
    * @return the version of Hadoop.
    */
-  String getVersion();
+  default String getVersion() {
+    return "";
+  }
 }
