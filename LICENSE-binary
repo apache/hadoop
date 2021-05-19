@@ -422,50 +422,6 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanage
 
 uriparser2 (hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/third_party/uriparser2)
 
-bootstrap v3.3.6
-broccoli-asset-rev v2.4.2
-broccoli-funnel v1.0.1
-datatables v1.10.8
-em-helpers v0.5.13
-em-table v0.1.6
-ember v2.2.0
-ember-array-contains-helper v1.0.2
-ember-bootstrap v0.5.1
-ember-cli v1.13.13
-ember-cli-app-version v1.0.0
-ember-cli-babel v5.1.6
-ember-cli-content-security-policy v0.4.0
-ember-cli-dependency-checker v1.2.0
-ember-cli-htmlbars v1.0.2
-ember-cli-htmlbars-inline-precompile v0.3.1
-ember-cli-ic-ajax v0.2.1
-ember-cli-inject-live-reload v1.4.0
-ember-cli-jquery-ui v0.0.20
-ember-cli-qunit v1.2.1
-ember-cli-release v0.2.8
-ember-cli-shims v0.0.6
-ember-cli-sri v1.2.1
-ember-cli-test-loader v0.2.1
-ember-cli-uglify v1.2.0
-ember-d3 v0.1.0
-ember-data v2.1.0
-ember-disable-proxy-controllers v1.0.1
-ember-export-application-global v1.0.5
-ember-load-initializers v0.1.7
-ember-qunit v0.4.16
-ember-qunit-notifications v0.1.0
-ember-resolver v2.0.3
-ember-spin-spinner v0.2.3
-ember-truth-helpers v1.2.0
-jquery v2.1.4
-jquery-ui v1.11.4
-loader.js v3.3.0
-momentjs v2.10.6
-qunit v1.19.0
-select2 v4.0.0
-snippet-ss v1.11.0
-spin.js v2.3.2
-
 com.microsoft.azure:azure-cosmosdb:2.4.5
 com.microsoft.azure:azure-cosmosdb-commons:2.4.5
 com.microsoft.azure:azure-cosmosdb-direct:2.4.5
@@ -536,3 +492,7 @@ Public Domain
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/json-bignum.js
 
 aopalliance:aopalliance:1.0
+
+See LICENSE-binary-yarn-ui for yarn-managed packages at hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp
+See LICENSE-binary-hadoop-yarn-applications-catalog-webapp for yarn-managed packages at hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/yarn.lock
+To generate the report, execute 'yarn licenses list' at these two directories.
