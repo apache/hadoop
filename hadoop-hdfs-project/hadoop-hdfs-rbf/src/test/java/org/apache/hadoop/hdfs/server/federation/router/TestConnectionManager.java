@@ -255,6 +255,9 @@ public class TestConnectionManager {
       if (e.getKey().getUgi() == ugi) {
         assertEquals(numOfConns, e.getValue().getNumConnections());
         assertEquals(numOfActiveConns, e.getValue().getNumActiveConnections());
+        // idle + active = total connections
+        assertEquals(numOfConns - numOfActiveConns,
+            e.getValue().getNumIdleConnections());
         connPoolFoundForUser = true;
       }
     }
@@ -265,13 +268,19 @@ public class TestConnectionManager {
 
   @Test
   public void testConfigureConnectionActiveRatio() throws IOException {
-    final int totalConns = 10;
-    int activeConns = 7;
+    // test 1 conn below the threshold and these conns are closed
+    testConnectionCleanup(0.8f, 10, 7, 9);
 
+    // test 2 conn below the threshold and these conns are closed
+    testConnectionCleanup(0.8f, 10, 6, 8);
+  }
+
+  private void testConnectionCleanup(float ratio, int totalConns,
+      int activeConns, int leftConns) throws IOException {
     Configuration tmpConf = new Configuration();
-    // Set dfs.federation.router.connection.min-active-ratio 0.8f
+    // Set dfs.federation.router.connection.min-active-ratio
     tmpConf.setFloat(
-        RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_MIN_ACTIVE_RATIO, 0.8f);
+        RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_MIN_ACTIVE_RATIO, ratio);
     ConnectionManager tmpConnManager = new ConnectionManager(tmpConf);
     tmpConnManager.start();
 
@@ -284,21 +293,20 @@ public class TestConnectionManager {
         TEST_NN_ADDRESS, NamenodeProtocol.class);
     ConnectionPool pool = poolMap.get(connectionPoolId);
 
-    // Test min active ratio is 0.8f
-    assertEquals(0.8f, pool.getMinActiveRatio(), 0.001f);
+    // Test min active ratio is as set value
+    assertEquals(ratio, pool.getMinActiveRatio(), 0.001f);
 
     pool.getConnection().getClient();
     // Test there is one active connection in pool
     assertEquals(1, pool.getNumActiveConnections());
 
-    // Add other 6 active/9 total connections to pool
+    // Add other active-1 connections / totalConns-1 connections to pool
     addConnectionsToPool(pool, totalConns - 1, activeConns - 1);
 
-    // There are 7 active connections.
-    // The active number is less than totalConns(10) * minActiveRatio(0.8f).
+    // There are activeConn connections.
     // We can cleanup the pool
     tmpConnManager.cleanup(pool);
-    assertEquals(totalConns - 1, pool.getNumConnections());
+    assertEquals(leftConns, pool.getNumConnections());
 
     tmpConnManager.close();
   }
