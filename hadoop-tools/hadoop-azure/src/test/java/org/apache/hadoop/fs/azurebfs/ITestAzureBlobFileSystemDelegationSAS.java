@@ -396,7 +396,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   public void testSignatureMask() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     String src = "/testABC/test.xt";
-    fs.create(new Path(src));
+    fs.create(new Path(src)).close();
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null);
     AbfsHttpOperation result = abfsHttpRestOperation.getResult();

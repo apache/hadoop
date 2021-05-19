@@ -251,7 +251,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     // Case 1: Not Overwrite - File does not pre-exist
     // create should be successful
-    fs.create(nonOverwriteFile, false);
+    fs.create(nonOverwriteFile, false).close();
 
     // One request to server to create path should be issued
     createRequestCount++;
@@ -278,7 +278,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     // Case 3: Overwrite - File does not pre-exist
     // create should be successful
-    fs.create(overwriteFilePath, true);
+    fs.create(overwriteFilePath, true).close();
 
     // One request to server to create path should be issued
     createRequestCount++;
@@ -289,7 +289,7 @@ public class ITestAzureBlobFileSystemCreate extends
         fs.getInstrumentationMap());
 
     // Case 4: Overwrite - File pre-exists
-    fs.create(overwriteFilePath, true);
+    fs.create(overwriteFilePath, true).close();
 
     if (enableConditionalCreateOverwrite) {
       // Three requests will be sent to server to create path,

@@ -6,6 +6,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -60,7 +61,7 @@ public class ITestAzureBlobFileSystemBundleLease extends
   @Test
   public void testAppendAfterCreate() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    fs.create(TEST_FILE_PATH);
+    fs.create(TEST_FILE_PATH).close();
     try(FSDataOutputStream stream = fs.append(TEST_FILE_PATH)) {
       final byte[] b = new byte[1024];
       new Random().nextBytes(b);
@@ -75,25 +76,29 @@ public class ITestAzureBlobFileSystemBundleLease extends
   @Test
   public void testMultipleWriter() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    fs.create(TEST_FILE_PATH);
     final byte[] b = new byte[1024];
     new Random().nextBytes(b);
-    try(FSDataOutputStream stream = fs.append(TEST_FILE_PATH)) {
+    try(FSDataOutputStream stream = fs.create(TEST_FILE_PATH)) {
       stream.write(b, 0, 1024);
-      intercept(ConflictException.class,
+      intercept(IOException.class,
           () -> fs.create(TEST_FILE_PATH, true));
       FSDataOutputStream stream2 = fs.append(TEST_FILE_PATH);
-      intercept(ConflictException.class,
-          () -> stream2.write(b, 1000, 0));
+      intercept(IOException.class,
+          () -> {
+        stream2.write(b, 1000, 0);
+        stream2.close();});
     }
 
     //Retry Create and append after close
-    fs.create(TEST_FILE_PATH, true);
+    fs.create(TEST_FILE_PATH, true).close();
     FSDataOutputStream stream2 = fs.append(TEST_FILE_PATH);
     stream2.write(b, 0, 1024);
-
+    stream2.hflush();
+    //Try deletion. It should fail as lease has not been released.
+    intercept(IOException.class,
+            () -> fs.delete(TEST_FILE_PATH, false));
+    stream2.close();
     assertEquals(1024, fs.getFileStatus(TEST_FILE_PATH).getLen());
-    //Try deletion. It should succeed as lease has been released.
     fs.delete(TEST_FILE_PATH, false);
   }
 
@@ -121,6 +126,9 @@ public class ITestAzureBlobFileSystemBundleLease extends
       assertNotEquals(-1, result);
       assertArrayEquals(r, b);
     }
+
+    //Try deletion. It should succeed as lease has been released.
+    fs.delete(testFilePath, false);
   }
 
   @Test
@@ -151,6 +159,9 @@ public class ITestAzureBlobFileSystemBundleLease extends
         assertArrayEquals("buffer read from stream", r, b);
       }
     }
+
+    //Try deletion. It should succeed as lease has been released.
+    fs.delete(testFilePath, false);
   }
 
   @Test
@@ -172,6 +183,9 @@ public class ITestAzureBlobFileSystemBundleLease extends
           buffer,
           readBuffer);
     }
+
+    //Try deletion. It should succeed as lease has been released.
+    fs.delete(testFilePath, false);
   }
 
   @Test
@@ -217,6 +231,9 @@ public class ITestAzureBlobFileSystemBundleLease extends
     FileStatus fileStatus = fs.getFileStatus(testFilePath);
     long expectedWrites = (long) TEST_BUFFER_SIZE * FLUSH_TIMES;
     assertEquals("Wrong file length in " + testFilePath, expectedWrites, fileStatus.getLen());
+
+    //Try deletion. It should succeed as lease has been released.
+    fs.delete(testFilePath, false);
   }
 
   @Test
@@ -260,6 +277,9 @@ public class ITestAzureBlobFileSystemBundleLease extends
     es.shutdownNow();
     FileStatus fileStatus = fs.getFileStatus(testFilePath);
     assertEquals((long) TEST_BUFFER_SIZE * FLUSH_TIMES, fileStatus.getLen());
+
+    //Try deletion. It should succeed as lease has been released.
+    fs.delete(testFilePath, false);
   }
 
   /**
@@ -295,20 +315,23 @@ public class ITestAzureBlobFileSystemBundleLease extends
 
     // Case 1: Not Overwrite - File does not pre-exist
     // create should be successful
-    fs.create(nonOverwriteFile, false);
+    fs.create(nonOverwriteFile, false).close();
 
     // Case 2: Not Overwrite - File pre-exists
     intercept(FileAlreadyExistsException.class,
-        () -> fs.create(nonOverwriteFile, false));
+        () -> fs.create(nonOverwriteFile, false).close());
 
     final Path overwriteFilePath = new Path("/OverwriteTest_FileName_"
         + UUID.randomUUID().toString());
 
     // Case 3: Overwrite - File does not pre-exist
     // create should be successful
-    fs.create(overwriteFilePath, true);
+    fs.create(overwriteFilePath, true).close();
 
     // Case 4: Overwrite - File pre-exists
-    fs.create(overwriteFilePath, true);
+    fs.create(overwriteFilePath, true).close();
+
+    //Try deletion. It should succeed as lease has been released.
+    fs.delete(overwriteFilePath, false);
   }
 }

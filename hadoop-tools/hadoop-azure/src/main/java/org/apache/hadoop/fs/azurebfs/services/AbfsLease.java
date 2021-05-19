@@ -198,6 +198,7 @@ public final class AbfsLease {
   }
 
     public void setLeaseAcquired(boolean isLeaseAcquired) {
+      leaseFreed = !isLeaseAcquired;
       leaseAcquired = isLeaseAcquired;
   }
 
