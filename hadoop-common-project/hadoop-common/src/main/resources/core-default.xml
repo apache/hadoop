@@ -4033,4 +4033,11 @@
     <description>The AbstractFileSystem for Ozone FileSystem o3fs uri</description>
   </property>
 
+  <property>
+    <name>fs.trash.home.dir.prefix</name>
+    <description>The trash home dir prefix. If configured, the trash root is:
+      ${fs.trash.home.dir.prefix}/${user}/.Trash
+      Otherwise, the default trash root is: ${homeDirectory}/.Trash
+    </description>
+  </property>
 </configuration>

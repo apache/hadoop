@@ -3294,8 +3294,7 @@ public abstract class FileSystem extends Configured
    * @return the default implementation returns {@code /user/$USER/.Trash}
    */
   public Path getTrashRoot(Path path) {
-    return this.makeQualified(new Path(getHomeDirectory().toUri().getPath(),
-        TRASH_PREFIX));
+    return this.makeQualified(new Path(getTrashHome(), TRASH_PREFIX));
   }
 
   /**
@@ -3307,16 +3306,16 @@ public abstract class FileSystem extends Configured
    *         {@code /user/$USER/.Trash} exists.
    */
   public Collection<FileStatus> getTrashRoots(boolean allUsers) {
-    Path userHome = new Path(getHomeDirectory().toUri().getPath());
+    Path trashHome = getTrashHome();
     List<FileStatus> ret = new ArrayList<>();
     try {
       if (!allUsers) {
-        Path userTrash = new Path(userHome, TRASH_PREFIX);
+        Path userTrash = new Path(trashHome, TRASH_PREFIX);
         if (exists(userTrash)) {
           ret.add(getFileStatus(userTrash));
         }
       } else {
-        Path homeParent = userHome.getParent();
+        Path homeParent = trashHome.getParent();
         if (exists(homeParent)) {
           FileStatus[] candidates = listStatus(homeParent);
           for (FileStatus candidate : candidates) {
@@ -3332,6 +3331,27 @@ public abstract class FileSystem extends Configured
       LOGGER.warn("Cannot get all trash roots", e);
     }
     return ret;
+  }
+
+  /** Return the Trash home directory.
+   * If ${fs.trash.home.dir.prefix} is configured return:
+   * ${fs.trash.home.dir.prefix}/${user}. Otherwise return ${homeDirectory}
+   */
+  private Path getTrashHome() {
+    String trashHomeDirPrefix = getConf().get(FS_TRASH_HOME_DIR_PREFIX_KEY);
+    if(trashHomeDirPrefix == null || trashHomeDirPrefix.isEmpty()) {
+      return this.makeQualified(getHomeDirectory());
+    } else {
+      String username;
+      try {
+        username = UserGroupInformation.getCurrentUser().getShortUserName();
+      } catch (IOException e) {
+        LOGGER.warn("Unable to get user name. Fall back to system property " +
+            "user.name", e);
+        username = System.getProperty("user.name");
+      }
+      return this.makeQualified(new Path(trashHomeDirPrefix, username));
+    }
   }
 
   /**

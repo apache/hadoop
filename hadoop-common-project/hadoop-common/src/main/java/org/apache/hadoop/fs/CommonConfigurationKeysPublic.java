@@ -214,6 +214,12 @@ public class CommonConfigurationKeysPublic {
   /** Default value for FS_TRASH_INTERVAL_KEY */
   public static final long    FS_TRASH_INTERVAL_DEFAULT = 0;
   /**
+   * Trash home dir prefix. If set, the default trash root dir is
+   * ${fs.trash.home.dir.prefix}/$USER/.Trash . Otherwise, the default trash
+   * root dir is /user/$USER/.Trash
+   */
+  public static final String FS_TRASH_HOME_DIR_PREFIX_KEY = "fs.trash.home.dir.prefix";
+  /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
