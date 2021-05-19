@@ -396,7 +396,6 @@ public class AbfsClient implements Closeable {
       }
       throw ex;
     }
-
     return op;
   }
 

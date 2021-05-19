@@ -1704,14 +1704,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   private AbfsLease maybeCreateFiniteLease(String relativePath, boolean isNamespaceEnabled)
-          throws AzureBlobFileSystemException {
-      boolean enableInfiniteLease = isInfiniteLeaseKey(relativePath);
-      AbfsLease lease = null;
-      if (!enableInfiniteLease && abfsConfiguration.isLeaseEnforced() && isNamespaceEnabled) {
-          lease = new AbfsLease(client, relativePath, false);
-      }
+      throws AzureBlobFileSystemException {
+    boolean enableInfiniteLease = isInfiniteLeaseKey(relativePath);
+    AbfsLease lease = null;
+    if (!enableInfiniteLease && abfsConfiguration.isLeaseEnforced() && isNamespaceEnabled) {
+      lease = new AbfsLease(client, relativePath, false);
+    }
 
-      return lease;
+    return lease;
   }
 
   private AbfsLease maybeCreateLease(String relativePath, boolean isNamespaceEnabled)

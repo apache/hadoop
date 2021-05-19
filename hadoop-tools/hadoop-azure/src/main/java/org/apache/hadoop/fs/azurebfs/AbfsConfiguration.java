@@ -210,13 +210,13 @@ public class AbfsConfiguration{
   private String azureAppendBlobDirs;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_ENFORCE_LEASE,
-          DefaultValue = DEFAULT_FS_AZURE_WRITE_ENFORCE_LEASE)
+      DefaultValue = DEFAULT_FS_AZURE_WRITE_ENFORCE_LEASE)
   private boolean azureWriteEnforceLease;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_WRITE_LEASE_DURATION,
-          MinValue = MIN_LEASE_DURATION,
-          MaxValue = MAX_LEASE_DURATION,
-          DefaultValue = DEFAULT_FS_AZURE_WRITE_LEASE_DURATION)
+      MinValue = MIN_LEASE_DURATION,
+      MaxValue = MAX_LEASE_DURATION,
+      DefaultValue = DEFAULT_FS_AZURE_WRITE_LEASE_DURATION)
   private int azureWriteLeaseDuration;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_INFINITE_LEASE_KEY,
