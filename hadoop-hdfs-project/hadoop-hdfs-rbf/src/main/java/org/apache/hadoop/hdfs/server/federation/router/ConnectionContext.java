@@ -23,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Context to track a connection in a {@link ConnectionPool}. When a client uses
@@ -37,6 +39,9 @@ import org.apache.hadoop.util.Time;
  * </ul>
  */
 public class ConnectionContext {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ConnectionContext.class);
 
   /** Client for the connection. */
   private final ProxyAndInfo<?> client;
@@ -116,11 +121,14 @@ public class ConnectionContext {
    * the RPC proxy would be shut down immediately.
    *
    * @param force whether the connection should be closed anyway.
-   * @throws IllegalStateException when the connection is not idle
    */
-  public synchronized void close(boolean force) throws IllegalStateException {
+  public synchronized void close(boolean force) {
     if (!force && this.numThreads > 0) {
-      throw new IllegalStateException("Active connection cannot be closed");
+      // this is an erroneous case but we have to close the connection
+      // anyway since there will be connection leak if we don't do so
+      // the connection has been moved out of the pool
+      LOG.error("Active connection with {} handlers will be closed",
+          this.numThreads);
     }
     this.closed = true;
     Object proxy = this.client.getProxy();
