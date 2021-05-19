@@ -205,8 +205,6 @@
 This project bundles some components that are also licensed under the Apache
 License Version 2.0:
 
-
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js files)
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/AbstractFuture.java
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
@@ -363,7 +361,7 @@ See licenses-binary/ for text of these licenses.
 BSD 2-Clause
 ------------
 
-hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/io/compress/lz4/{lz4.h,lz4.c,lz4hc.h,lz4hc.c}
+hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-nativetask/src/main/native/lz4/lz4.{c|h}
 hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/util/tree.h
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/compat/{fstatat|openat|unlinkat}.h
 
@@ -379,8 +377,10 @@ hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/bloom/*
 hadoop-common-project/hadoop-common/src/main/native/gtest/gtest-all.cc
 hadoop-common-project/hadoop-common/src/main/native/gtest/include/gtest/gtest.h
 hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/util/bulk_crc32_x86.c
+hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/third_party/protobuf/protobuf/cpp_helpers.h
+hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/third_party/gmock-1.7.0/*/*.{cc|h}
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/d3.v3.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/d3-3.5.17.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/d3-v4.1.1.min.js
 leveldb v1.13
 
 com.google.protobuf:protobuf-java:2.5.0
@@ -402,9 +402,6 @@ org.ow2.asm:asm-tree:9.0
 MIT License
 -----------
 
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-1.6.4.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-nvd3-1.0.9.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/angular-route-1.6.4.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/bootstrap-3.4.1
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.css
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.js
@@ -417,10 +414,13 @@ hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/bootstrap.min.js
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/jquery.js
 hadoop-tools/hadoop-sls/src/main/html/css/bootstrap.min.css
 hadoop-tools/hadoop-sls/src/main/html/css/bootstrap-responsive.min.css
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-catalog/hadoop-yarn-applications-catalog-webapp/node_modules/.bin/r.js
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/dt-1.10.18/*
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jquery
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jt/jquery.jstree.js
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/resources/TERMINAL
+
+uriparser2 (hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/third_party/uriparser2)
 
 bootstrap v3.3.6
 broccoli-asset-rev v2.4.2
@@ -525,8 +525,14 @@ JDOM License
 
 org.jdom:jdom:1.1
 
+Boost Software License, Version 1.0
+-------------
+asio-1.10.2 (hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/third_party/asio-1.10.2)
+rapidxml-1.13 (hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/third_party/rapidxml-1.13)
+tr2 (hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/libhdfspp/third_party/tr2)
 
 Public Domain
 -------------
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/json-bignum.js
 
 aopalliance:aopalliance:1.0
