@@ -19,17 +19,19 @@ package org.apache.hadoop.tools;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.tools.CopyListing.InvalidInputException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -40,7 +42,7 @@ import java.util.HashSet;
 /**
  * This class provides the basic functionality to sync two FileSystems based on
  * the snapshot diff report. More specifically, we have the following settings:
- * 1. Both the source and target FileSystem must be DistributedFileSystem
+ * 1. Both the source and target FileSystem must support getSnapshotDiffReport.
  * 2. Two snapshots (e.g., s1 and s2) have been created on the source FS.
  * The diff between these two snapshots will be copied to the target FS.
  * 3. The target has the same snapshot s1. No changes have been made on the
@@ -73,7 +75,7 @@ class DistCpSync {
   /**
    * Check if three conditions are met before sync.
    * 1. Only one source directory.
-   * 2. Both source and target file system are DFS.
+   * 2. Both source and target file system support snapshot.
    * 3. There is no change between from and the current status in target
    *    file system.
    *  Throw exceptions if first two aren't met, and return false to fallback to
@@ -94,18 +96,26 @@ class DistCpSync {
     final FileSystem snapshotDiffFs = isRdiff() ? tgtFs : srcFs;
     final Path snapshotDiffDir = isRdiff() ? targetDir : sourceDir;
 
-    // currently we require both the source and the target file system are
-    // DistributedFileSystem.
-    if (!(srcFs instanceof DistributedFileSystem) ||
-        !(tgtFs instanceof DistributedFileSystem)) {
-      throw new IllegalArgumentException("The FileSystems needs to" +
-          " be DistributedFileSystem for using snapshot-diff-based distcp");
+    if (!srcFs.hasPathCapability(
+            sourceDir,CommonPathCapabilities.FS_SNAPSHOTS)) {
+      throw new IllegalArgumentException(
+          "The source file system does not support snapshot.");
+    }
+    if (!tgtFs.hasPathCapability(
+            targetDir,CommonPathCapabilities.FS_SNAPSHOTS)) {
+      throw new IllegalArgumentException(
+          "The target file system does not support snapshot.");
+    }
+    try {
+      getSnapshotDiffReportMethod(srcFs);
+      getSnapshotDiffReportMethod(tgtFs);
+    } catch (NoSuchMethodException e) {
+      throw new IllegalArgumentException(
+          "The file system does not support getSnapshotDiffReport", e);
     }
 
-    final DistributedFileSystem targetFs = (DistributedFileSystem) tgtFs;
-
     // make sure targetFS has no change between from and the current states
-    if (!checkNoChange(targetFs, targetDir)) {
+    if (!checkNoChange(tgtFs, targetDir)) {
       // set the source path using the snapshot path
       context.setSourcePaths(Arrays.asList(getSnapshotPath(sourceDir,
           context.getToSnapshot())));
@@ -160,8 +170,7 @@ class DistCpSync {
     List<Path> sourcePaths = context.getSourcePaths();
     final Path sourceDir = sourcePaths.get(0);
     final Path targetDir = context.getTargetPath();
-    final FileSystem tfs = targetDir.getFileSystem(conf);
-    final DistributedFileSystem targetFs = (DistributedFileSystem) tfs;
+    final FileSystem targetFs = targetDir.getFileSystem(conf);
 
     Path tmpDir = null;
     try {
@@ -195,12 +204,10 @@ class DistCpSync {
         context.getTargetPath() : context.getSourcePaths().get(0);
 
     try {
-      DistributedFileSystem fs =
-          (DistributedFileSystem) ssDir.getFileSystem(conf);
       final String from = getSnapshotName(context.getFromSnapshot());
       final String to = getSnapshotName(context.getToSnapshot());
-      SnapshotDiffReport report = fs.getSnapshotDiffReport(ssDir,
-          from, to);
+      SnapshotDiffReport report =
+          getSnapshotDiffReport(ssDir.getFileSystem(conf), ssDir, from, to);
       this.diffMap = new EnumMap<>(SnapshotDiffReport.DiffType.class);
       for (SnapshotDiffReport.DiffType type :
           SnapshotDiffReport.DiffType.values()) {
@@ -265,7 +272,7 @@ class DistCpSync {
     }
   }
 
-  private Path createTargetTmpDir(DistributedFileSystem targetFs,
+  private Path createTargetTmpDir(FileSystem targetFs,
                                   Path targetDir) throws IOException {
     final Path tmp = new Path(targetDir,
         DistCpConstants.HDFS_DISTCP_DIFF_DIRECTORY_NAME + DistCp.rand.nextInt());
@@ -275,8 +282,7 @@ class DistCpSync {
     return tmp;
   }
 
-  private void deleteTargetTmpDir(DistributedFileSystem targetFs,
-                                  Path tmpDir) {
+  private void deleteTargetTmpDir(FileSystem targetFs, Path tmpDir) {
     try {
       if (tmpDir != null) {
         targetFs.delete(tmpDir, true);
@@ -290,11 +296,10 @@ class DistCpSync {
    * Compute the snapshot diff on the given file system. Return true if the diff
    * is empty, i.e., no changes have happened in the FS.
    */
-  private boolean checkNoChange(DistributedFileSystem fs, Path path) {
+  private boolean checkNoChange(FileSystem fs, Path path) {
     try {
       final String from = getSnapshotName(context.getFromSnapshot());
-      SnapshotDiffReport targetDiff =
-          fs.getSnapshotDiffReport(path, from, "");
+      SnapshotDiffReport targetDiff = getSnapshotDiffReport(fs, path, from, "");
       if (!targetDiff.getDiffList().isEmpty()) {
         DistCp.LOG.warn("The target has been modified since snapshot "
             + context.getFromSnapshot());
@@ -310,7 +315,7 @@ class DistCpSync {
   }
 
   private void syncDiff(DiffInfo[] diffs,
-      DistributedFileSystem targetFs, Path tmpDir) throws IOException {
+      FileSystem targetFs, Path tmpDir) throws IOException {
     moveToTmpDir(diffs, targetFs, tmpDir);
     moveToTarget(diffs, targetFs);
   }
@@ -320,7 +325,7 @@ class DistCpSync {
    * directory.
    */
   private void moveToTmpDir(DiffInfo[] diffs,
-      DistributedFileSystem targetFs, Path tmpDir) throws IOException {
+      FileSystem targetFs, Path tmpDir) throws IOException {
     // sort the diffs based on their source paths to make sure the files and
     // subdirs are moved before moving their parents/ancestors.
     Arrays.sort(diffs, DiffInfo.sourceComparator);
@@ -341,7 +346,7 @@ class DistCpSync {
    * from the tmp dir to the final targets.
    */
   private void moveToTarget(DiffInfo[] diffs,
-      DistributedFileSystem targetFs) throws IOException {
+      FileSystem targetFs) throws IOException {
     // sort the diffs based on their target paths to make sure the parent
     // directories are created first.
     Arrays.sort(diffs, DiffInfo.targetComparator);
@@ -596,5 +601,27 @@ class DistCpSync {
       }
     }
     return excludeList;
+  }
+
+  private static Method getSnapshotDiffReportMethod(FileSystem fs)
+      throws NoSuchMethodException {
+    return fs.getClass().getMethod(
+        "getSnapshotDiffReport", Path.class, String.class, String.class);
+  }
+
+  private static SnapshotDiffReport getSnapshotDiffReport(
+      final FileSystem fs,
+      final Path snapshotDir,
+      final String fromSnapshot,
+      final String toSnapshot) throws IOException {
+    try {
+      return (SnapshotDiffReport) getSnapshotDiffReportMethod(fs).invoke(
+          fs, snapshotDir, fromSnapshot, toSnapshot);
+    } catch (InvocationTargetException e) {
+      throw new IOException(e.getCause());
+    } catch (NoSuchMethodException|IllegalAccessException e) {
+      throw new IllegalArgumentException(
+          "failed to invoke getSnapshotDiffReport.", e);
+    }
   }
 }

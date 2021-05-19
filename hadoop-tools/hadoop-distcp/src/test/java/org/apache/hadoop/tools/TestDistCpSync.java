@@ -27,6 +27,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -906,5 +909,87 @@ public class TestDistCpSync {
     } finally {
       deleteFilterFile(filterFile);
     }
+  }
+
+  @Test
+  public void testWebHdfsSync() throws Exception {
+    initData(source);
+    initData(target);
+    enableAndCreateFirstSnapshot();
+
+    // make changes under source
+    int numCreatedModified = changeData(source);
+    dfs.createSnapshot(source, "s2");
+
+    // before sync, make some further changes on source. this should not affect
+    // the later distcp since we're copying (s2-s1) to target
+    final Path toDelete = new Path(source, "foo/d1/foo/f1");
+    dfs.delete(toDelete, true);
+    final Path newdir = new Path(source, "foo/d1/foo/newdir");
+    dfs.mkdirs(newdir);
+
+    final WebHdfsFileSystem webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+    final Path webhdfsSource = webhdfs.makeQualified(source);
+    final Path webhdfsTarget = webhdfs.makeQualified(target);
+
+    SnapshotDiffReport report =
+        webhdfs.getSnapshotDiffReport(source, "s1", "s2");
+    System.out.println(report);
+
+    final DistCpOptions options =
+        new DistCpOptions.Builder(
+            Collections.singletonList(webhdfsSource), webhdfsTarget)
+            .withSyncFolder(true)
+            .withUseDiff("s1", "s2")
+            .build();
+    options.appendToConf(conf);
+    context = new DistCpContext(options);
+
+    conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, webhdfsTarget.toString());
+    conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, webhdfsTarget.toString());
+
+    DistCpSync distCpSync = new DistCpSync(context, conf);
+
+    // do the sync
+    Assert.assertTrue(distCpSync.sync());
+
+    // make sure the source path has been updated to the snapshot path
+    final Path spath = new Path(source,
+        HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
+    Assert.assertEquals(
+        webhdfs.makeQualified(spath), context.getSourcePaths().get(0));
+
+    // build copy listing
+    final Path listingPath = new Path("/tmp/META/fileList.seq");
+    CopyListing listing = new SimpleCopyListing(conf, new Credentials(), distCpSync);
+    listing.buildListing(listingPath, context);
+
+    Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
+    CopyMapper copyMapper = new CopyMapper();
+    StubContext stubContext = new StubContext(conf, null, 0);
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context mapContext =
+        stubContext.getContext();
+    // Enable append
+    mapContext.getConfiguration().setBoolean(
+        DistCpOptionSwitch.APPEND.getConfigLabel(), true);
+    mapContext.getConfiguration().setBoolean(
+        DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), true);
+    copyMapper.setup(mapContext);
+    for (Map.Entry<Text, CopyListingFileStatus> entry : copyListing.entrySet()) {
+      copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
+    }
+
+    // verify that we only list modified and created files/directories
+    Assert.assertEquals(numCreatedModified, copyListing.size());
+
+    // append can not be used since WebHdfsFileSystem does not support
+    // getFileChecksum(Path f, final long length).
+    // f2 is expected to be overwritten.
+    Assert.assertEquals(BLOCK_SIZE * 4, stubContext.getReporter()
+        .getCounter(CopyMapper.Counter.BYTESCOPIED).getValue());
+
+    // verify the source and target now has the same structure
+    verifyCopy(dfs.getFileStatus(spath), dfs.getFileStatus(target), false);
   }
 }
