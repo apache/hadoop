@@ -1949,4 +1949,26 @@ public class TestBlockManager {
     assertEquals(0, ibs.getBlocks());
     assertEquals(0, ibs.getECBlocks());
   }
+
+  @Test
+  public void testValidateReconstructionWorkAndRacksNotEnough() {
+    addNodes(nodes);
+    // Originally on only nodes in rack A.
+    List<DatanodeDescriptor> origNodes = rackA;
+    BlockInfo blockInfo = addBlockOnNodes(0, origNodes);
+    BlockPlacementStatus status = bm.getBlockPlacementStatus(blockInfo);
+    // Block has enough copies, but not enough racks.
+    assertFalse(status.isPlacementPolicySatisfied());
+    DatanodeStorageInfo newNode = DFSTestUtil.createDatanodeStorageInfo(
+            "storage8", "8.8.8.8", "/rackA", "host8");
+    BlockReconstructionWork work = bm.scheduleReconstruction(blockInfo, 3);
+    assertNotNull(work);
+    assertEquals(1, work.getAdditionalReplRequired());
+    // the new targets in rack A.
+    work.setTargets(new DatanodeStorageInfo[]{newNode});
+    // the new targets do not meet the placement policy return false.
+    assertFalse(bm.validateReconstructionWork(work));
+    // validateReconstructionWork return false, need to perform resetTargets().
+    assertNull(work.getTargets());
+  }
 }

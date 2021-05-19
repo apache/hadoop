@@ -2246,7 +2246,8 @@ public class BlockManager implements BlockStatsMXBean {
     }
   }
 
-  private boolean validateReconstructionWork(BlockReconstructionWork rw) {
+  @VisibleForTesting
+  boolean validateReconstructionWork(BlockReconstructionWork rw) {
     BlockInfo block = rw.getBlock();
     int priority = rw.getPriority();
     // Recheck since global lock was released
@@ -2281,6 +2282,7 @@ public class BlockManager implements BlockStatsMXBean {
               placementStatus.getAdditionalReplicasRequired())) {
         // If the new targets do not meet the placement policy, or at least
         // reduce the number of replicas needed, then no use continuing.
+        rw.resetTargets();
         return false;
       }
       // mark that the reconstruction work is to replicate internal block to a
