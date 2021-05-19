@@ -88,6 +88,10 @@ public class MockFastpathConnection
 
   int bufferOffset;
 
+  public MockFastpathConnection() {
+    super(true);
+  }
+
   public static int getReadCounter() {
     return readCount.get();
   }
