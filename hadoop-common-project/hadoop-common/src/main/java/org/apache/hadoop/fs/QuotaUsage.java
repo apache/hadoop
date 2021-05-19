@@ -247,7 +247,7 @@ public class QuotaUsage {
    * |-----14-----| |-------18------| |-----14-----| |-------18------|
    *  ARCHIVE_QUOTA REM_ARCHIVE_QUOTA PROVIDED_QUOTA REM_PROVIDED_QUOTA
    * |-----14-----| |-------18------| |-------18------|
-   *   NVDIMM_QUOTA  REM_NVDIMM_QUOTA FILE_NAME
+   *   NVDIMM_QUOTA  REM_NVDIMM_QUOTA PATHNAME
    */
   private static final String STORAGE_TYPE_SUMMARY_FORMAT = "%14s %18s ";
 
