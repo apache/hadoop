@@ -75,6 +75,11 @@
       <groupId>org.apache.hadoop.thirdparty</groupId>
       <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>

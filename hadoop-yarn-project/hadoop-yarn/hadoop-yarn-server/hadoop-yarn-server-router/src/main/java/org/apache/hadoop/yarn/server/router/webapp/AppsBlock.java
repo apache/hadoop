@@ -56,7 +56,7 @@ public class AppsBlock extends HtmlBlock {
     String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
     AppsInfo apps = RouterWebServiceUtil.genericForward(webAppAddress, null,
         AppsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, null, conf);
 
     setTitle("Applications");
 

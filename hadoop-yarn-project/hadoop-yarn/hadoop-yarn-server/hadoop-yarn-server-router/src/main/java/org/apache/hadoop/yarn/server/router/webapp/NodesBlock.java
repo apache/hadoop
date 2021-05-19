@@ -56,7 +56,7 @@ public class NodesBlock extends HtmlBlock {
     String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
     NodesInfo nodes = RouterWebServiceUtil.genericForward(webAppAddress, null,
         NodesInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES, null, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES, null, null, conf);
 
     setTitle("Nodes");
 
