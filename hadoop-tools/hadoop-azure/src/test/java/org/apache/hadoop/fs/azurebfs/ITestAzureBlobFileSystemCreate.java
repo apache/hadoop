@@ -254,7 +254,8 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.create(nonOverwriteFile, false).close();
 
     // One request to server to create path should be issued
-    createRequestCount++;
+    // One request to server to close should be issued
+    createRequestCount+=2;
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -281,7 +282,8 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.create(overwriteFilePath, true).close();
 
     // One request to server to create path should be issued
-    createRequestCount++;
+    // One request to server to close should be issued
+    createRequestCount+=2;
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
@@ -296,9 +298,10 @@ public class ITestAzureBlobFileSystemCreate extends
       // 1. create without overwrite
       // 2. GetFileStatus to get eTag
       // 3. create with overwrite
-      createRequestCount += 3;
+      // 4. close
+      createRequestCount += 4;
     } else {
-      createRequestCount++;
+      createRequestCount+=2;
     }
 
     assertAbfsStatistics(

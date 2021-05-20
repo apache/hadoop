@@ -148,7 +148,8 @@ public class ITestAzureBlobFileSystemInfiniteLease extends AbstractAbfsIntegrati
   private void twoWriters(AzureBlobFileSystem fs, Path testFilePath, boolean expectException) throws Exception {
     try (FSDataOutputStream out = fs.create(testFilePath)) {
       try (FSDataOutputStream out2 = fs.append(testFilePath)) {
-        out2.writeInt(2);
+        out2.writeInt(1);
+        out2.writeInt(1);
         out2.hsync();
       } catch (IOException e) {
         if (expectException) {
@@ -159,6 +160,12 @@ public class ITestAzureBlobFileSystemInfiniteLease extends AbstractAbfsIntegrati
       }
       out.writeInt(1);
       out.hsync();
+    } catch (IOException e) {
+      if (!expectException) {
+        GenericTestUtils.assertExceptionContains("400", e);
+      } else {
+        throw e;
+      }
     }
 
     Assert.assertTrue("Store leases were not freed", fs.getAbfsStore().areLeasesFreed());
