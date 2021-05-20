@@ -426,15 +426,16 @@ public class MountTableResolver
     readLock.lock();
     try {
       if (this.locationCache == null) {
-        lookupLocation(finalPath);
+        res = lookupLocation(finalPath);
+      } else {
+        Callable<? extends PathLocation> meh = new Callable<PathLocation>() {
+          @Override
+          public PathLocation call() throws Exception {
+            return lookupLocation(finalPath);
+          }
+        };
+        res = this.locationCache.get(finalPath, meh);
       }
-      Callable<? extends PathLocation> meh = new Callable<PathLocation>() {
-        @Override
-        public PathLocation call() throws Exception {
-          return lookupLocation(finalPath);
-        }
-      };
-      res = this.locationCache.get(finalPath, meh);
       if (isTrashPath(path)) {
         List<RemoteLocation> remoteLocations = new ArrayList<>();
         for (RemoteLocation remoteLocation : res.getDestinations()) {
