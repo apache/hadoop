@@ -45,11 +45,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Pattern;
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreCache;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -104,6 +108,8 @@ public class MountTableResolver
   private final Lock readLock = readWriteLock.readLock();
   private final Lock writeLock = readWriteLock.writeLock();
 
+  /** Trash Current matching pattern. */
+  private static final String TRASH_PATTERN = "/(Current|[0-9]+)";
 
   @VisibleForTesting
   public MountTableResolver(Configuration conf) {
@@ -338,6 +344,36 @@ public class MountTableResolver
   }
 
   /**
+   * Check if PATH is the trail associated with the Trash.
+   *
+   * @param path A path.
+   */
+  private static boolean isTrashPath(String path) throws IOException {
+    Pattern pattern = Pattern.compile(getTrashRoot() + TRASH_PATTERN + "/");
+    return pattern.matcher(path).find();
+  }
+  
+  private static String getTrashRoot() throws IOException {
+    // Gets the Trash directory for the current user.
+    return FileSystem.USER_HOME_PREFIX + "/" +
+        RouterRpcServer.getRemoteUser().getUserName() + "/" +
+        FileSystem.TRASH_PREFIX;
+  }
+  
+  /**
+   * Subtract a BaseTrash to get a new path.
+   *
+   * @param path Path to check/insert.
+   * @return New remote location.
+   * @throws IOException If it cannot find the location.
+   */
+  private static String subtractBaseTrashPath(String path)
+      throws IOException {
+    return path.replaceAll("^" +
+        getTrashRoot() + TRASH_PATTERN, "");
+  }
+  
+  /**
    * Replaces the current in-memory cached of the mount table with a new
    * version fetched from the data store.
    */
@@ -381,18 +417,36 @@ public class MountTableResolver
   public PathLocation getDestinationForPath(final String path)
       throws IOException {
     verifyMountTable();
+    PathLocation res;
+    String tmpPath = path;
+    if (isTrashPath(tmpPath)) {
+      tmpPath = subtractBaseTrashPath(tmpPath);
+    }
+    String finalPath = tmpPath;
     readLock.lock();
     try {
       if (this.locationCache == null) {
-        return lookupLocation(path);
+        lookupLocation(finalPath);
       }
       Callable<? extends PathLocation> meh = new Callable<PathLocation>() {
         @Override
         public PathLocation call() throws Exception {
-          return lookupLocation(path);
+          return lookupLocation(finalPath);
         }
       };
-      return this.locationCache.get(path, meh);
+      res = this.locationCache.get(finalPath, meh);
+      if (isTrashPath(path)) {
+        List<RemoteLocation> remoteLocations = new ArrayList<>();
+        for (RemoteLocation remoteLocation : res.getDestinations()) {
+          remoteLocations.add(
+              new RemoteLocation(remoteLocation.getNsId(),
+                  remoteLocation.getNnId(), path, path));
+        }
+        return new PathLocation(path, remoteLocations,
+            res.getDestinationOrder());
+      } else {
+        return res;
+      }
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();
       final IOException ioe;
@@ -450,8 +504,10 @@ public class MountTableResolver
   @Override
   public List<String> getMountPoints(final String str) throws IOException {
     verifyMountTable();
-    final String path = RouterAdmin.normalizeFileSystemPath(str);
-
+    String path = RouterAdmin.normalizeFileSystemPath(str);
+    if (isTrashPath(path)) {
+      path = subtractBaseTrashPath(path);
+    }
     readLock.lock();
     try {
       String from = path;
