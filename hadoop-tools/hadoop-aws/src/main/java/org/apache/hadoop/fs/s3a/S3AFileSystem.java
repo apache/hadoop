@@ -201,7 +201,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.loggingIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
@@ -3543,9 +3543,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Filesystem {} is closed", uri);
     if (getConf() != null) {
       String iostatisticsLoggingLevel =
-          this.getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
+          getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
               IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
-      loggingIOStatistics(LOG, iostatisticsLoggingLevel, getIOStatistics());
+      logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
     }
     try {
       super.close();

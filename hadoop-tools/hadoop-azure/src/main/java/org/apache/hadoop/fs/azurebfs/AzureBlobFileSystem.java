@@ -41,6 +41,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -96,7 +97,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.loggingIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 
 /**
  * A {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
@@ -491,10 +492,11 @@ public class AzureBlobFileSystem extends FileSystem
     LOG.debug("AzureBlobFileSystem.close");
     if (getConf() != null) {
       String iostatisticsLoggingLevel =
-          this.getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
+          getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
               IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
-      loggingIOStatistics(LOG, iostatisticsLoggingLevel, getIOStatistics());
+      logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
     }
+    IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager);
     this.isClosed = true;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());

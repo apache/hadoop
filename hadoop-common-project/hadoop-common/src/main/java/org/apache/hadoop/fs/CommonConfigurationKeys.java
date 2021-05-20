@@ -447,6 +447,14 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IOSTATISTICS_LOGGING_LEVEL_DEBUG
       = "debug";
 
+  /** WARN logging level for IOStatistics logging. */
+  public static final String IOSTATISTICS_LOGGING_LEVEL_WARN
+      = "warn";
+
+  /** ERROR logging level for IOStatistics logging. */
+  public static final String IOSTATISTICS_LOGGING_LEVEL_ERROR
+      = "error";
+
   /** INFO logging level for IOStatistics logging. */
   public static final String IOSTATISTICS_LOGGING_LEVEL_INFO
       = "info";

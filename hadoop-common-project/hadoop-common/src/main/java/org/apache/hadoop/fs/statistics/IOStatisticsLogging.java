@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.statistics;
 
 import javax.annotation.Nullable;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Predicate;
@@ -29,8 +30,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
+import org.apache.log4j.Level;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEBUG;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_ERROR;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_WARN;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
@@ -251,22 +256,29 @@ public final class IOStatisticsLogging {
   }
 
   /**
-   * A method to log IOStatistics from a source.
+   * A method to log IOStatistics from a source at different levels.
    *
    * @param log    Logger for logging.
    * @param level  LOG level.
    * @param source Source to LOG.
    */
-  public static void loggingIOStatistics(Logger log, String level,
+  public static void logIOStatisticsAtLevel(Logger log, String level,
       Object source) {
-    if (level.toLowerCase().equals(IOSTATISTICS_LOGGING_LEVEL_INFO)) {
-      IOStatistics stats = retrieveIOStatistics(source);
-      if (stats != null) {
+    IOStatistics stats = retrieveIOStatistics(source);
+    if (stats != null) {
+      switch (level.toLowerCase(Locale.US)) {
+      case IOSTATISTICS_LOGGING_LEVEL_INFO:
         LOG.info("IOStatistics: {}", ioStatisticsToPrettyString(stats));
+        break;
+      case IOSTATISTICS_LOGGING_LEVEL_ERROR:
+        LOG.error("IOStatistics: {}", ioStatisticsToPrettyString(stats));
+        break;
+      case IOSTATISTICS_LOGGING_LEVEL_WARN:
+        LOG.warn("IOStatistics: {}", ioStatisticsToPrettyString(stats));
+        break;
+      default:
+        logIOStatisticsAtDebug(log, "IOStatistics: {}", source);
       }
-    } else {
-      logIOStatisticsAtDebug(log, "IOStatistics: {}",
-          source);
     }
   }
 
