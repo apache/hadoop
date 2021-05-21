@@ -761,4 +761,16 @@
       (delete the source path directly) and skip (skip both trash and deletion).
     </description>
   </property>
+
+  <property>
+    <name>dfs.federation.router.observer.read.enable</name>
+    <value>false</value>
+    <description>Enable observer read in router</description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.auto-msync-period</name>
+    <value>0</value>
+    <description>Observer auto msync period</description>
+  </property>
 </configuration>

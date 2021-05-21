@@ -160,7 +160,7 @@ public class TestRouterNamenodeHeartbeat {
     // Verify the locator has matching NN entries for each NS
     for (String ns : cluster.getNameservices()) {
       List<? extends FederationNamenodeContext> nns =
-          namenodeResolver.getNamenodesForNameserviceId(ns);
+          namenodeResolver.getNamenodesForNameserviceId(ns, false);
 
       // Active
       FederationNamenodeContext active = nns.get(0);
@@ -184,7 +184,7 @@ public class TestRouterNamenodeHeartbeat {
 
     // Verify the locator has recorded the failover for the failover NS
     List<? extends FederationNamenodeContext> failoverNSs =
-        namenodeResolver.getNamenodesForNameserviceId(failoverNS);
+        namenodeResolver.getNamenodesForNameserviceId(failoverNS, false);
     // Active
     FederationNamenodeContext active = failoverNSs.get(0);
     assertEquals(NAMENODES[1], active.getNamenodeId());
@@ -195,7 +195,7 @@ public class TestRouterNamenodeHeartbeat {
 
     // Verify the locator has the same records for the other ns
     List<? extends FederationNamenodeContext> normalNss =
-        namenodeResolver.getNamenodesForNameserviceId(normalNs);
+        namenodeResolver.getNamenodesForNameserviceId(normalNs, false);
     // Active
     active = normalNss.get(0);
     assertEquals(NAMENODES[0], active.getNamenodeId());
