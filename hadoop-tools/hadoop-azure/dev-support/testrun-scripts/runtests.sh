@@ -35,15 +35,20 @@ properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled"
 values=("{account name}.dfs.core.windows.net" "true" "OAuth")
 generateconfigs
 
+combination=AppendBlob-HNS-OAuth
+properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled"
+"fs.azure.account.auth.type" "fs.azure.test.appendblob.enabled")
+values=("{account name}.dfs.core.windows.net" "true" "OAuth" "true")
+generateconfigs
+
 combination=HNS-SharedKey
 properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled" "fs.azure.account.auth.type")
 values=("{account name}.dfs.core.windows.net" "true" "SharedKey")
 generateconfigs
 
 combination=NonHNS-SharedKey
-properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled" "fs.azure.account.auth.type"
-"fs.azure.test.appendblob.enabled")
-values=("{account name}.dfs.core.windows.net" "false" "SharedKey" "false")
+properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled" "fs.azure.account.auth.type")
+values=("{account name}.dfs.core.windows.net" "false" "SharedKey")
 generateconfigs
 
 
