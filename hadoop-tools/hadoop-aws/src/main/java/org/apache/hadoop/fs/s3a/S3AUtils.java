@@ -418,8 +418,8 @@ public final class S3AUtils {
 
   /**
    * Cue that an AWS exception is likely to be an EOF Exception based
-   * on the message coming back client. This is likely to be brittle,
-   * so only a hint.
+   * on the message coming back from the client. This is likely to be
+   * brittle, so only a hint.
    * @param ex exception
    * @return true if this is believed to be a sign the connection was broken.
    */
