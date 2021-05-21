@@ -85,6 +85,10 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+RUN locale-gen en_US.UTF-8
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+ENV PYTHONIOENCODING=utf-8
+
 ######
 # Set env vars required to build Hadoop
 ######
