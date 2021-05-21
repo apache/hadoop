@@ -1,30 +1,29 @@
-/**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-
-package org.apache.hadoop.yarn.webapp.hamlet;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.yarn.webapp.hamlet2;
 
 import java.io.PrintWriter;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
-import org.apache.hadoop.yarn.webapp.hamlet.HamletImpl;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.*;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.*;
 
 public class TestHamletImpl {
   /**
@@ -35,25 +34,25 @@ public class TestHamletImpl {
     PrintWriter out = spy(new PrintWriter(System.out));
     HamletImpl hi = new HamletImpl(out, 0, false);
     hi.
-      root("start")._attr("name", "value").
-        _("start text").
+        root("start")._attr("name", "value").
+        __("start text").
         elem("sub")._attr("name", "value").
-          _("sub text")._().
+        __("sub text").__().
         elem("sub1")._noEndTag()._attr("boolean", null).
-          _("sub1text")._().
-        _("start text2").
+        __("sub1text").__().
+        __("start text2").
         elem("pre")._pre().
-          _("pre text").
-          elem("i")._inline()._("inline")._()._().
-        elem("i")._inline()._("inline after pre")._().
-        _("start text3").
+        __("pre text").
+        elem("i")._inline().__("inline").__().__().
+        elem("i")._inline().__("inline after pre").__().
+        __("start text3").
         elem("sub2").
-          _("sub2text")._().
+        __("sub2text").__().
         elem("sub3")._noEndTag().
-          _("sub3text")._().
+        __("sub3text").__().
         elem("sub4")._noEndTag().
-          elem("i")._inline()._("inline")._().
-          _("sub4text")._()._();
+        elem("i")._inline().__("inline").__().
+        __("sub4text").__().__();
 
     out.flush();
     assertEquals(0, hi.nestLevel);
@@ -75,11 +74,11 @@ public class TestHamletImpl {
     verify(e).$class("class");
 
     H1 t = mock(H1.class);
-    HamletImpl.setSelector(t, "#id.class")._("heading");
+    HamletImpl.setSelector(t, "#id.class").__("heading");
 
     verify(t).$id("id");
     verify(t).$class("class");
-    verify(t)._("heading");
+    verify(t).__("heading");
   }
 
   @Test public void testSetLinkHref() {
