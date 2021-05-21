@@ -80,12 +80,14 @@ RUN apt-get -q update \
         python3-pkg-resources \
         python3-setuptools \
         python3-wheel \
+        python2.7 \
         rsync \
         shellcheck \
         software-properties-common \
         sudo \
         valgrind \
         zlib1g-dev \
+        phantomjs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -151,23 +153,15 @@ RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 RUN npm install -g bower@1.8.8
 
 ###
-# Install phantomjs built for aarch64
-####
-RUN mkdir -p /opt/phantomjs \
-  && curl -L -s -S \
-    https://github.com/liusheng/phantomjs/releases/download/2.1.1/phantomjs-2.1.1-linux-aarch64.tar.bz2 \
-   -o /opt/phantomjs/phantomjs-2.1.1-linux-aarch64.tar.bz2 \
-  && tar xvjf /opt/phantomjs/phantomjs-2.1.1-linux-aarch64.tar.bz2 --strip-components 1 -C /opt/phantomjs \
-  && cp /opt/phantomjs/bin/phantomjs /usr/bin/ \
-  && rm -rf /opt/phantomjs
-
-###
 # Avoid out of memory errors in builds
 ###
 ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
 # Skip gpg verification when downloading Yetus via yetus-wrapper
 ENV HADOOP_SKIP_YETUS_VERIFICATION true
+
+# Force PhantomJS to be in 'headless' mode, do not connect to Xwindow
+ENV QT_QPA_PLATFORM offscreen
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
