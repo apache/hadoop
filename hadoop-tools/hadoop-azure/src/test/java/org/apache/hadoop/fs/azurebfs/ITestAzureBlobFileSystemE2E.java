@@ -23,10 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.junit.Assume;
 import org.junit.Test;
-
-import com.microsoft.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -34,6 +31,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_TOLERATE_CONCURRENT_APPEND;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -59,35 +57,14 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testMockFastpathReadWriteBytesToFile() throws Exception {
-    // Run mock test only if feature is set to off
-    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
-    testReadWriteBytesToFile(true);
-  }
-
-  @Test
   public void testReadWriteBytesToFile() throws Exception {
-    testReadWriteBytesToFile(false);
-  }
-
-  public void testReadWriteBytesToFile(boolean isMockFastpathTest)
-      throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(methodName.getMethodName());
     testWriteOneByteToFile(testFilePath);
-    byte[] buff = new byte[1];
-    buff[0] = TEST_BYTE;
-
-    MockFastpathConnection.registerAppend(buff.length, testFilePath.getName(),
-        buff, 0, buff.length);
-    try (FSDataInputStream inputStream = isMockFastpathTest
-        ? openMockAbfsInputStream(fs, testFilePath)
-        : fs.open(testFilePath,
+    try(FSDataInputStream inputStream = fs.open(testFilePath,
             TEST_DEFAULT_BUFFER_SIZE)) {
       assertEquals(TEST_BYTE, inputStream.read());
     }
-
-    MockFastpathConnection.unregisterAppend(testFilePath.getName());
   }
 
   @Test (expected = IOException.class)
@@ -109,14 +86,14 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
     try (FSDataInputStream readStream = fs.open(testFilePath)) {
       assertEquals(readBufferSize,
-          readStream.read(bytesToRead, 0, readBufferSize));
+              readStream.read(bytesToRead, 0, readBufferSize));
       try (FSDataOutputStream writeStream = fs.create(testFilePath)) {
         writeStream.write(b);
         writeStream.flush();
       }
 
       assertEquals(readBufferSize,
-          readStream.read(bytesToRead, 0, readBufferSize));
+              readStream.read(bytesToRead, 0, readBufferSize));
     }
   }
 
@@ -151,18 +128,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testMockFastpathWriteWithBufferOffset() throws Exception {
-    // Run mock test only if feature is set to off
-    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
-    testWriteWithBufferOffset(true);
-  }
-
-  @Test
   public void testWriteWithBufferOffset() throws Exception {
-    testWriteWithBufferOffset(false);
-  }
-
-  public void testWriteWithBufferOffset(boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(methodName.getMethodName());
 
@@ -171,53 +137,28 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     try (FSDataOutputStream stream = fs.create(testFilePath)) {
       stream.write(b, TEST_OFFSET, b.length - TEST_OFFSET);
     }
-    MockFastpathConnection.registerAppend(b.length - TEST_OFFSET,
-        testFilePath.getName(), b, TEST_OFFSET, b.length - TEST_OFFSET);
 
     final byte[] r = new byte[TEST_DEFAULT_READ_BUFFER_SIZE];
-    FSDataInputStream inputStream = isMockFastpathTest
-        ? openMockAbfsInputStream(fs, testFilePath)
-        : fs.open(testFilePath,
-        TEST_DEFAULT_BUFFER_SIZE);
+    FSDataInputStream inputStream = fs.open(testFilePath, TEST_DEFAULT_BUFFER_SIZE);
     int result = inputStream.read(r);
 
     assertNotEquals(-1, result);
     assertArrayEquals(r, Arrays.copyOfRange(b, TEST_OFFSET, b.length));
 
     inputStream.close();
-    MockFastpathConnection.unregisterAppend(testFilePath.getName());
   }
 
   @Test
-  public void testMockFastpathReadWriteHeavyBytesToFileWithSmallerChunks()
-      throws Exception {
-    // Run mock test only if feature is set to off
-    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
-    testReadWriteHeavyBytesToFileWithSmallerChunks(true);
-  }
-
-  @Test
-  public void testReadWriteHeavyBytesToFileWithSmallerChunks()
-      throws Exception {
-    testReadWriteHeavyBytesToFileWithSmallerChunks(false);
-  }
-
-  public void testReadWriteHeavyBytesToFileWithSmallerChunks(boolean isMockFastpathTest)
-      throws Exception {
+  public void testReadWriteHeavyBytesToFileWithSmallerChunks() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(methodName.getMethodName());
 
     final byte[] writeBuffer = new byte[5 * 1000 * 1024];
     new Random().nextBytes(writeBuffer);
     write(testFilePath, writeBuffer);
-    MockFastpathConnection.registerAppend(writeBuffer.length,
-        testFilePath.getName(), writeBuffer, 0, writeBuffer.length);
 
     final byte[] readBuffer = new byte[5 * 1000 * 1024];
-    FSDataInputStream inputStream = isMockFastpathTest
-        ? openMockAbfsInputStream(fs, testFilePath)
-        : fs.open(testFilePath,
-        TEST_DEFAULT_BUFFER_SIZE);
+    FSDataInputStream inputStream = fs.open(testFilePath, TEST_DEFAULT_BUFFER_SIZE);
     int offset = 0;
     while (inputStream.read(readBuffer, offset, TEST_OFFSET) > 0) {
       offset += TEST_OFFSET;
@@ -225,37 +166,17 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
     assertArrayEquals(readBuffer, writeBuffer);
     inputStream.close();
-    MockFastpathConnection.unregisterAppend(testFilePath.getName());
-  }
-
-  @Test
-  public void testMockFastpathReadWithFileNotFoundException() throws Exception {
-    // Run mock test only if feature is set to off
-    Assume.assumeFalse(getDefaultFastpathFeatureStatus());
-    testReadWithFileNotFoundException(true);
   }
 
   @Test
   public void testReadWithFileNotFoundException() throws Exception {
-    testReadWithFileNotFoundException(false);
-  }
-
-  public void testReadWithFileNotFoundException(boolean isMockFastpathTest) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(methodName.getMethodName());
     testWriteOneByteToFile(testFilePath);
-    byte[] buff = new byte[1];
-    buff[0] = 'a';
-    MockFastpathConnection.registerAppend(buff.length, testFilePath.getName(),
-        buff, 0, buff.length);
 
-    FSDataInputStream inputStream = isMockFastpathTest
-        ? openMockAbfsInputStream(fs, testFilePath)
-        : fs.open(testFilePath,
-        TEST_DEFAULT_BUFFER_SIZE);
+    FSDataInputStream inputStream = fs.open(testFilePath, TEST_DEFAULT_BUFFER_SIZE);
     fs.delete(testFilePath, true);
     assertFalse(fs.exists(testFilePath));
-    MockFastpathConnection.unregisterAppend(testFilePath.getName());
 
     intercept(FileNotFoundException.class,
             () -> inputStream.read(new byte[1]));
