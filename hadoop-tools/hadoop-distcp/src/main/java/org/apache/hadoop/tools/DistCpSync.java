@@ -97,12 +97,12 @@ class DistCpSync {
     final Path snapshotDiffDir = isRdiff() ? targetDir : sourceDir;
 
     if (!srcFs.hasPathCapability(
-            sourceDir,CommonPathCapabilities.FS_SNAPSHOTS)) {
+            sourceDir, CommonPathCapabilities.FS_SNAPSHOTS)) {
       throw new IllegalArgumentException(
           "The source file system does not support snapshot.");
     }
     if (!tgtFs.hasPathCapability(
-            targetDir,CommonPathCapabilities.FS_SNAPSHOTS)) {
+            targetDir, CommonPathCapabilities.FS_SNAPSHOTS)) {
       throw new IllegalArgumentException(
           "The target file system does not support snapshot.");
     }

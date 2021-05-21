@@ -946,8 +946,10 @@ public class TestDistCpSync {
     options.appendToConf(conf);
     context = new DistCpContext(options);
 
-    conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, webhdfsTarget.toString());
-    conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, webhdfsTarget.toString());
+    conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH,
+        webhdfsTarget.toString());
+    conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH,
+        webhdfsTarget.toString());
 
     DistCpSync distCpSync = new DistCpSync(context, conf);
 
@@ -962,7 +964,8 @@ public class TestDistCpSync {
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
-    CopyListing listing = new SimpleCopyListing(conf, new Credentials(), distCpSync);
+    CopyListing listing =
+        new SimpleCopyListing(conf, new Credentials(), distCpSync);
     listing.buildListing(listingPath, context);
 
     Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
@@ -976,8 +979,8 @@ public class TestDistCpSync {
     mapContext.getConfiguration().setBoolean(
         DistCpOptionSwitch.DIRECT_WRITE.getConfigLabel(), true);
     copyMapper.setup(mapContext);
-    for (Map.Entry<Text, CopyListingFileStatus> entry : copyListing.entrySet()) {
-      copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
+    for (Map.Entry<Text, CopyListingFileStatus> e : copyListing.entrySet()) {
+      copyMapper.map(e.getKey(), e.getValue(), mapContext);
     }
 
     // verify that we only list modified and created files/directories
