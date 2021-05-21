@@ -136,6 +136,9 @@ public final class S3AUtils {
   private static final String EOF_MESSAGE_IN_XML_PARSER
       = "Failed to sanitize XML document destined for handler class";
 
+  private static final String EOF_READ_DIFFERENT_LENGTH
+      = "Data read has a different length than the expected";
+
   private static final String BUCKET_PATTERN = FS_S3A_BUCKET_PREFIX + "%s.%s";
 
   /**
@@ -195,7 +198,7 @@ public final class S3AUtils {
         // interrupted IO, or a socket exception underneath that class
         return translateInterruptedException(exception, innerCause, message);
       }
-      if (signifiesConnectionBroken(exception)) {
+      if (isMessageTranslatableToEOF(exception)) {
         // call considered an sign of connectivity failure
         return (EOFException)new EOFException(message).initCause(exception);
       }
@@ -415,13 +418,14 @@ public final class S3AUtils {
 
   /**
    * Cue that an AWS exception is likely to be an EOF Exception based
-   * on the message coming back from an XML/JSON parser. This is likely
-   * to be brittle, so only a hint.
+   * on the message coming back client. This is likely to be brittle,
+   * so only a hint.
    * @param ex exception
    * @return true if this is believed to be a sign the connection was broken.
    */
-  public static boolean signifiesConnectionBroken(SdkBaseException ex) {
-    return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER);
+  public static boolean isMessageTranslatableToEOF(SdkBaseException ex) {
+    return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER) ||
+            ex.toString().contains(EOF_READ_DIFFERENT_LENGTH);
   }
 
   /**
