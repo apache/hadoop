@@ -4004,12 +4004,13 @@ public abstract class FileSystem extends Configured
      * Background action to act on references being removed.
      */
     private static class StatisticsDataReferenceCleaner implements Runnable {
+      private int REF_QUEUE_POLL_TIMEOUT = 100;
       @Override
       public void run() {
         while (!Thread.interrupted()) {
           try {
             StatisticsDataReference ref =
-                (StatisticsDataReference)STATS_DATA_REF_QUEUE.remove();
+                (StatisticsDataReference)STATS_DATA_REF_QUEUE.remove(REF_QUEUE_POLL_TIMEOUT);
             ref.cleanUp();
           } catch (InterruptedException ie) {
             LOGGER.warn("Cleaner thread interrupted, will stop", ie);
