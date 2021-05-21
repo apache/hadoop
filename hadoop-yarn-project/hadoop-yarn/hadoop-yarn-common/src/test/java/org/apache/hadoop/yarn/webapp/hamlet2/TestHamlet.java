@@ -1,33 +1,31 @@
-/**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
-
-package org.apache.hadoop.yarn.webapp.hamlet;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.yarn.webapp.hamlet2;
 
 import java.util.EnumSet;
 import java.io.PrintWriter;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 
-import static org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.*;
+import static org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.*;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
 
 public class TestHamlet {
 
@@ -36,11 +34,11 @@ public class TestHamlet {
         title("test").
         h1("heading 1").
         p("#id.class").
-          b("hello").
-          em("world!")._().
+        b("hello").
+        em("world!").__().
         div("#footer").
-          _("Brought to you by").
-          a("http://hostname/", "Somebody")._();
+        __("Brought to you by").
+        a("https://hostname/", "Somebody").__();
 
     PrintWriter out = h.getWriter();
     out.flush();
@@ -64,7 +62,7 @@ public class TestHamlet {
     verify(out).print(" id=\"footer\"");
     verify(out).print("Brought to you by");
     verify(out).print("<a");
-    verify(out).print(" href=\"http://hostname/\"");
+    verify(out).print(" href=\"https://hostname/\"");
     verify(out).print("Somebody");
     verify(out).print("</a>");
     verify(out).print("</div>");
@@ -79,9 +77,9 @@ public class TestHamlet {
     TABLE t = h.table("#id");
 
     for (int i = 0; i < 3; ++i) {
-      t.tr().td("1").td("2")._();
+      t.tr().td("1").td("2").__();
     }
-    t._();
+    t.__();
 
     PrintWriter out = h.getWriter();
     out.flush();
@@ -97,12 +95,12 @@ public class TestHamlet {
         meta_http("Content-type", "text/html; charset=utf-8").
         title("test enum attrs").
         link().$rel("stylesheet").
-          $media(EnumSet.of(Media.screen, Media.print)).
-          $type("text/css").$href("style.css")._().
+        $media(EnumSet.of(Media.screen, Media.print)).
+        $type("text/css").$href("style.css").__().
         link().$rel(EnumSet.of(LinkType.index, LinkType.start)).
-          $href("index.html")._();
+        $href("index.html").__();
 
-    h.div("#content")._("content")._();
+    h.div("#content").__("content").__();
 
     PrintWriter out = h.getWriter();
     out.flush();
@@ -126,12 +124,12 @@ public class TestHamlet {
   @Test public void testPreformatted() {
     Hamlet h = newHamlet().
         div().
-          i("inline before pre").
-          pre().
-            _("pre text1\npre text2").
-            i("inline in pre").
-            _("pre text after inline")._().
-          i("inline after pre")._();
+        i("inline before pre").
+        pre().
+        __("pre text1\npre text2").
+        i("inline in pre").
+        __("pre text after inline").__().
+        i("inline after pre").__();
 
     PrintWriter out = h.getWriter();
     out.flush();
@@ -149,8 +147,8 @@ public class TestHamlet {
   @Test public void testSubViews() {
     Hamlet h = newHamlet().
         title("test sub-views").
-        div("#view1")._(TestView1.class)._().
-        div("#view2")._(TestView2.class)._();
+        div("#view1").__(TestView1.class).__().
+        div("#view2").__(TestView2.class).__();
 
     PrintWriter out = h.getWriter();
     out.flush();
