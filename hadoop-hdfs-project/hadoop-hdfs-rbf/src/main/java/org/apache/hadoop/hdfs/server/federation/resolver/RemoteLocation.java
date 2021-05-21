@@ -83,11 +83,11 @@ public class RemoteLocation extends RemoteLocationContext {
   public String getNsId() {
     return this.nameserviceId;
   }
-  
+
   public String getNnId() {
     return this.namenodeId;
   }
-  
+
   @Override
   public String toString() {
     return getNameserviceId() + "->" + this.dstPath;

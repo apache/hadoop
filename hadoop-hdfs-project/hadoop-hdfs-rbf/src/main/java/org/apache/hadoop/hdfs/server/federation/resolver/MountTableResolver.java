@@ -352,14 +352,14 @@ public class MountTableResolver
     Pattern pattern = Pattern.compile(getTrashRoot() + TRASH_PATTERN + "/");
     return pattern.matcher(path).find();
   }
-  
+
   private static String getTrashRoot() throws IOException {
     // Gets the Trash directory for the current user.
     return FileSystem.USER_HOME_PREFIX + "/" +
         RouterRpcServer.getRemoteUser().getUserName() + "/" +
         FileSystem.TRASH_PREFIX;
   }
-  
+
   /**
    * Subtract a BaseTrash to get a new path.
    *
@@ -372,7 +372,7 @@ public class MountTableResolver
     return path.replaceAll("^" +
         getTrashRoot() + TRASH_PATTERN, "");
   }
-  
+
   /**
    * Replaces the current in-memory cached of the mount table with a new
    * version fetched from the data store.
