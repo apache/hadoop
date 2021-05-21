@@ -68,7 +68,7 @@ pipeline {
                                         usernameVariable: 'JIRA_USER')]) {
                         sh '''#!/usr/bin/env bash
 
-                        set -e
+                        set -e -x
 
                         TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
 
