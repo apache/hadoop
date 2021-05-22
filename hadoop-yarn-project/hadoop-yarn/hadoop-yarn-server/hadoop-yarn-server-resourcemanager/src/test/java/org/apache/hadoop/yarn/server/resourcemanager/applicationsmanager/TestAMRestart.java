@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -1313,8 +1314,13 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
       Assert.assertEquals(0,
           queue.getQueueResourceUsage().getUsed().getVirtualCores());
     } else if (getSchedulerType() == SchedulerType.FAIR) {
-      FSLeafQueue queue = ((FairScheduler) scheduler).getQueueManager()
-          .getLeafQueue("root.default", false);
+      // The default queue is not auto created after YARN-7769 so
+      // user-as-default-queue option is used
+      Collection<FSLeafQueue> queues = ((FairScheduler) scheduler)
+          .getQueueManager().getLeafQueues();
+      Assert.assertEquals(1, queues.size());
+
+      FSLeafQueue queue = queues.iterator().next();
       Assert.assertEquals(0, queue.getResourceUsage().getMemorySize());
       Assert.assertEquals(0, queue.getResourceUsage().getVirtualCores());
     }
