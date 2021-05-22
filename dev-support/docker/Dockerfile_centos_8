@@ -33,11 +33,10 @@ RUN yum update -y \
         cyrus-sasl-devel \
         dnf \
         fuse \
-        git \
-        libcurl-devel \
-        fuse \
         fuse-libs \
         fuse-devel \
+        git \
+        libcurl-devel \
         libtool \
         libtirpc-devel \
         lz4-devel \
