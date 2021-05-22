@@ -116,10 +116,11 @@ public class TestQueueManager {
     assertNotNull(queueManager.getLeafQueue("queue1.queue2", false));
     assertNull(queueManager.getLeafQueue("queue1", false));
     
-    // Should never to be able to create a queue under the default queue
+    // Since YARN-7769 FS doesn't create the default queue during init, so
+    // it should be possible to create a queue under the root.default queue
     updateConfiguredLeafQueues(queueManager, "default.queue3");
-    assertNull(queueManager.getLeafQueue("default.queue3", false));
-    assertNotNull(queueManager.getLeafQueue("default", false));
+    assertNotNull(queueManager.getLeafQueue("default.queue3", false));
+    assertNull(queueManager.getLeafQueue("default", false));
   }
 
   /**

@@ -107,10 +107,6 @@ public class QueueManager {
     rootQueue.setDynamic(false);
     queues.put(rootQueue.getName(), rootQueue);
 
-    // Create the default queue
-    FSLeafQueue defaultQueue =
-        getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, true);
-    defaultQueue.setDynamic(false);
     // Recursively reinitialize to propagate queue properties
     rootQueue.reinit(true);
   }

@@ -151,7 +151,7 @@ public class TestFSQueueConverter {
     converter.convertQueueHierarchy(rootQueue);
 
     // root children
-    assertEquals("root children", "default,admins,users,misc",
+    assertEquals("root children", "admins,users,misc,default",
         csConfig.get(PREFIX + "root.queues"));
 
     // root.admins children
