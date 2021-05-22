@@ -35,7 +35,7 @@ ENV DEBCONF_TERSE true
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends python3
 COPY pkg-resolver pkg-resolver
-RUN chmod a+x pkg-resolver/install-common-packages.sh pkg-resolver/resolve.py \
+RUN chmod a+x pkg-resolver/install-common-pkgs.sh pkg-resolver/resolve.py \
     && chmod a+r pkg-resolver/packages.json pkg-resolver/platforms.json
 RUN apt-get -q install -y --no-install-recommends `pkg-resolver/resolve.py ubuntu:focal`
 RUN apt-get clean \
@@ -74,7 +74,7 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 ####
 # Install common packages
 ####
-RUN pkg-resolver/install-common-packages.sh
+RUN pkg-resolver/install-common-pkgs.sh
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
