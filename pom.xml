@@ -448,6 +448,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>**/*.js</exclude>
             <exclude>licenses/**</exclude>
             <exclude>licenses-binary/**</exclude>
+            <exclude>LICENSE-binary-yarn-applications-catalog-webapp</exclude>
+            <exclude>LICENSE-binary-yarn-ui</exclude>
          </excludes>
        </configuration>
       </plugin>
