@@ -42,10 +42,10 @@ RUN chmod a+x pkg-resolver/install-common-pkgs.sh pkg-resolver/resolve.py \
 ######
 # Install packages from apt
 ######
-# hadolint ignore=DL3008
+# hadolint ignore=DL3008,SC2046
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends python3 \
-    && apt-get -q install -y --no-install-recommends "$(pkg-resolver/resolve.py ubuntu:focal)" \
+    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py ubuntu:focal) \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
