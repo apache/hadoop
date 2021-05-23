@@ -16,42 +16,55 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Platform package dependency resolver for building Apache Hadoop.
+"""
+
 import json
 import sys
 
 
 def get_packages(platform):
+    """
+    Resolve and get the list of packages to install for the given platform.
+
+    :param platform: The platform for which the packages needs to be resolved.
+    :return: A list of resolved packages to install.
+    """
     with open('pkg-resolver/packages.json', encoding='utf-8', mode='r') as pkg_file:
         pkgs = json.loads(pkg_file.read())
     packages = []
-    for platforms in pkgs.values():
-        if platforms.get(platform) is None:
-            continue
+    for platforms in filter(lambda x: x.get(platform) is not None, pkgs.values()):
+        if isinstance(platforms.get(platform), list):
+            packages.extend(platforms.get(platform))
         else:
-            if type(platforms.get(platform)) == list:
-                for p in platforms.get(platform):
-                    packages.append(p)
-            else:
-                packages.append(platforms.get(platform))
+            packages.append(platforms.get(platform))
     return packages
 
 
 def get_platforms():
+    """
+    :return: A list of the supported platforms managed by pkg-resolver.
+    """
+
     with open('pkg-resolver/platforms.json', encoding='utf-8', mode='r') as platforms_file:
         return json.loads(platforms_file.read())
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('ERROR: Need at least 1 argument, {} were provided'.format(len(sys.argv) - 1), file=sys.stderr)
+        print('ERROR: Need at least 1 argument, {} were provided'.format(len(sys.argv) - 1),
+              file=sys.stderr)
         sys.exit(1)
 
     supported_platforms = get_platforms()
-    platform = sys.argv[1]
-    if platform not in supported_platforms:
-        print('ERROR: The given platform {} is not supported. '
-              'Please refer to platforms.json for a list of supported platforms'.format(platform), file=sys.stderr)
+    platform_arg = sys.argv[1]
+    if platform_arg not in supported_platforms:
+        print(
+            'ERROR: The given platform {} is not supported. '
+            'Please refer to platforms.json for a list of supported platforms'.format(
+                platform_arg), file=sys.stderr)
         sys.exit(1)
 
-    packages = get_packages(platform)
-    print(' '.join(packages))
+    packages_to_install = get_packages(platform_arg)
+    print(' '.join(packages_to_install))
