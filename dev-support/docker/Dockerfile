@@ -32,13 +32,18 @@ RUN echo APT::Install-Suggests "0"\; >>  /etc/apt/apt.conf.d/10disableextras
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_TERSE true
 
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends python3
 COPY pkg-resolver pkg-resolver
 RUN chmod a+x pkg-resolver/install-common-pkgs.sh pkg-resolver/resolve.py \
     && chmod a+r pkg-resolver/packages.json pkg-resolver/platforms.json
-RUN apt-get -q install -y --no-install-recommends `pkg-resolver/resolve.py ubuntu:focal`
-RUN apt-get clean \
+
+######
+# Install packages from apt
+######
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends python3 \
+    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py ubuntu:focal)
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 RUN locale-gen en_US.UTF-8
