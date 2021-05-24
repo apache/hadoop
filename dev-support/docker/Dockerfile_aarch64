@@ -73,21 +73,21 @@ RUN apt-get -q update \
         npm \
         openjdk-11-jdk \
         openjdk-8-jdk \
+        phantomjs \
         pinentry-curses \
         pkg-config \
+        python2.7 \
         python3 \
         python3-pip \
         python3-pkg-resources \
         python3-setuptools \
         python3-wheel \
-        python2.7 \
         rsync \
         shellcheck \
         software-properties-common \
         sudo \
         valgrind \
         zlib1g-dev \
-        phantomjs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
