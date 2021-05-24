@@ -23,39 +23,20 @@ WORKDIR /root
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+######
+# Platform package dependency resolver
+######
+COPY pkg-resolver pkg-resolver
+RUN chmod a+x pkg-resolver/install-common-pkgs.sh pkg-resolver/resolve.py \
+    && chmod a+r pkg-resolver/packages.json pkg-resolver/platforms.json
+
+######
+# Install packages from yum
+######
+# hadolint ignore=DL3008,SC2046
 RUN yum update -y \
-    && yum install -y centos-release-scl \
-    && yum install -y devtoolset-9 \
-    && yum install -y \
-    ant \
-    build-essential \
-    bzip2 \
-    bzip2-devel \
-    clang \
-    curl \
-    cyrus-sasl-devel \
-    doxygen \
-    fuse \
-    fuse-libs \
-    fuse-devel \
-    git \
-    libcurl-devel \
-    libtirpc-devel \
-    libpmem-devel \
-    libtool \
-    lz4-devel \
-    make \
-    openssl-devel \
-    pinentry-curses \
-    python3 \
-    python3-pip \
-    python3-setuptools \
-    python3-wheel \
-    rsync \
-    snappy-devel \
-    sudo \
-    valgrind \
-    zlib-devel
+    && yum install -y python3 \
+    && yum install -y $(pkg-resolver/resolve.py centos:7)
 
 # Set GCC 9 as the default C/C++ compiler
 RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
@@ -98,55 +79,17 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 ENV PYTHONIOENCODING=utf-8
 
 ######
+# Install common packages
+######
+RUN pkg-resolver/install-common-pkgs.sh
+
+######
 # Set env vars required to build Hadoop
 ######
 ENV MAVEN_HOME /opt/maven
 ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
-
-#######
-# Install SpotBugs 4.2.2
-#######
-RUN mkdir -p /opt/spotbugs \
-    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.2.2/spotbugs-4.2.2.tgz \
-      -o /opt/spotbugs.tgz \
-    && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
-    && chmod +x /opt/spotbugs/bin/*
-ENV SPOTBUGS_HOME /opt/spotbugs
-
-#######
-# Install Boost 1.72 (1.71 ships with Focal)
-#######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/boost-library \
-    && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
-    && mv boost_1_72_0.tar.bz2 /opt/boost-library \
-    && cd /opt/boost-library \
-    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
-    && cd /opt/boost-library/boost_1_72_0 \
-    && ./bootstrap.sh --prefix=/usr/ \
-    && ./b2 --without-python install \
-    && cd /root \
-    && rm -rf /opt/boost-library
-
-######
-# Install Google Protobuf 3.7.1 (3.6.1 ships with Focal)
-######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/protobuf-src \
-    && curl -L -s -S \
-      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
-      -o /opt/protobuf.tar.gz \
-    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
-    && cd /opt/protobuf-src \
-    && ./configure --prefix=/opt/protobuf \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root \
-    && rm -rf /opt/protobuf-src
-ENV PROTOBUF_HOME /opt/protobuf
-ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ####
 # Install Node.js
@@ -160,14 +103,3 @@ RUN mkdir -p /tmp/node \
     && make "-j$(nproc)" \
     && make install \
     && cd /root || exit
-
-####
-# Install pylint and python-dateutil
-####
-RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
-
-####
-# Install bower
-####
-# hadolint ignore=DL3008
-RUN npm install -g bower@1.8.8

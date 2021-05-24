@@ -33,61 +33,19 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_TERSE true
 
 ######
-# Install common dependencies from packages. Versions here are either
-# sufficient or irrelevant.
+# Platform package dependency resolver
 ######
-# hadolint ignore=DL3008
+COPY pkg-resolver pkg-resolver
+RUN chmod a+x pkg-resolver/install-common-pkgs.sh pkg-resolver/resolve.py \
+    && chmod a+r pkg-resolver/packages.json pkg-resolver/platforms.json
+
+######
+# Install packages from apt
+######
+# hadolint ignore=DL3008,SC2046
 RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends \
-        ant \
-        apt-utils \
-        bats \
-        build-essential \
-        bzip2 \
-        clang \
-        cmake \
-        curl \
-        doxygen \
-        fuse \
-        g++ \
-        gcc \
-        git \
-        gnupg-agent \
-        hugo \
-        libbcprov-java \
-        libbz2-dev \
-        libcurl4-openssl-dev \
-        libfuse-dev \
-        libprotobuf-dev \
-        libprotoc-dev \
-        libsasl2-dev \
-        libsnappy-dev \
-        libssl-dev \
-        libtool \
-        libzstd-dev \
-        locales \
-        make \
-        maven \
-        nodejs \
-        node-yarn \
-        npm \
-        openjdk-11-jdk \
-        openjdk-8-jdk \
-        phantomjs \
-        pinentry-curses \
-        pkg-config \
-        python2.7 \
-        python3 \
-        python3-pip \
-        python3-pkg-resources \
-        python3-setuptools \
-        python3-wheel \
-        rsync \
-        shellcheck \
-        software-properties-common \
-        sudo \
-        valgrind \
-        zlib1g-dev \
+    && apt-get -q install -y --no-install-recommends python3 \
+    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py ubuntu:focal::arch64) \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
