@@ -128,7 +128,7 @@ correlate access by S3 clients to the actual operations taking place.
 Note: this logging is described as "Best Effort". There's no guarantee as to
 when logs arrive.
 
-### Rejecting out of span operations
+### Rejecting out-of-span operations
 
 The logging auditor can be configured to raise an exception whenever
 a request is made to S3 outside an audited span -that is: the thread
@@ -153,7 +153,7 @@ and for which spans cannot be attached.
 |----------------------------|--------|
 | `GetBucketLocationRequest` | Used in AWS SDK to determine S3 endpoint |
 | `CopyPartRequest` | Used in AWS SDK during copy operations |
-| `CompleteMultipartUploadRequest` | USed in AWS SDK to complete copy operations |
+| `CompleteMultipartUploadRequest` | Used in AWS SDK to complete copy operations |
 
 The request to initiate a copy/multipart upload is always audited,
 therefore the auditing process does have coverage of rename and multipart
@@ -280,12 +280,71 @@ either globally or for specific buckets:
 </property>
 ```
 
+## Collecting AWS S3 Logs for Analysis
 
+The S3 Bucket(s) must be set up for
+[Server Access Logging](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html).
+
+This will tell AWS S3 to collect access logs of all HTTP requests
+and store them in a different bucket in the same region.
+The logs arrive as files containing a few seconds worth
+of log data, stored under the configured path.
+
+### Enabling logging: Source bucket
+
+1. Create a separate bucket for logs in the same region, if you do not already have one.
+1. In the S3 console, locate the bucket you wish to act as a source for logs,
+   and go to the "properties".
+1. Scroll down to "Server access logging"
+1. Select "edit" and then enable logging, entering a path in a nearby bucket for logs.
+   (Tip: for ease of logging multiple buckets to the same log bucket, use a prefix like
+   `logs/$BUCKET/log-` to isolate different bucket's logs.
+   For example, the path log data from `dev data london` could be
+   `s3://london-log-bucket/logs/dev-data-lon/log-`
+1. Save this.
+
+There's a lag of about an hour between S3 requests being made and the logs
+appearing; don't worry during setup if things do not appear to be working.
+Enable the log, work with the bucket through the "hadoop fs" command line, wait
+an hour, then go and look in the log bucket for the entries.
+The log filename includes the time at which these logs
+began
+
+### Keeping costs down by deleting old logs.
+
+As logs are stored in an S3 bucket, they too run up charges.
+Keep costs down by deleting logs after a period of time, and/or
+set up a workflow to load and coalesce log entries into a compressed
+format and larger files.
+
+It is straightforward to set up a rule to automatically delete old log files.
+
+1. In the S3 console, bring up the bucket which is the destination for the logs,
+   e.g. `london-log-bucket`.
+1. Go to the "Management" tab.
+1. Add a lifecycle rule (alongside the "abort pending uploads" rule you should already have).
+1. Add rule name "Delete old log files".
+1. Select "Limit the scope".
+1. Add the prefix `logs/` to have it delete all logs of all buckets. 
+   Important: you _must not_ have any leading "/", such as `/logs/` -there will be no
+   match and the rule will not work.
+1. In "Lifecycle rule actions", select "Expire current versions"
+   This will delete log entries.
+1. In "Expire current versions of objects", set the number of days to keep
+   log entries.
+1. Finish by pressing the "Create Rule" button 
+
+Keep an eye on the bucket to make sure the deletion is working; it's easy to
+make an error in the prefix, and as logs will be created without limit,
+costs will ramp up.
 
 ## Parsing AWS S3 Logs to extract the referrer header
 
+The [AWS S3 Documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/LogFormat.html)
+covers the log format and includes a hive external table declaration to work with it.
+
 The Java pattern regular expression used in the `hadoop-aws` test suites to
-extract headers is defined in
+extract headers is defined as:
 
 ```
 (?<owner>[^ ]*) (?<bucket>[^ ]*) (?<timestamp>\[(.*?)\]) (?<remoteip>[^ ]*) (?<requester>[^ ]*) (?<requestid>[^ ]*) (?<operation>[^ ]*) (?<key>[^ ]*) (?<requesturi>(-|"[^"]*")) (?<http>(-|[0-9]*)) (?<awserrorcode>[^ ]*) (?<bytessent>[^ ]*) (?<objectsize>[^ ]*) (?<totaltime>[^ ]*) (?<turnaroundtime>[^ ]*) (?<referrer>(-|"[^"]*")) (?<useragent>(-|"[^"]*")) (?<version>[^ ]*) (?<hostid>[^ ]*) (?<sigv>[^ ]*) (?<cypher>[^ ]*) (?<auth>[^ ]*) (?<endpoint>[^ ]*) (?<tls>[^ ]*)*$
