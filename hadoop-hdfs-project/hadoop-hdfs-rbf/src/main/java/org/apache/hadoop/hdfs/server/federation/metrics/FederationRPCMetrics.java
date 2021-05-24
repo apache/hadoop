@@ -209,6 +209,16 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   }
 
   @Override
+  public int getRpcClientNumIdleConnections() {
+    return rpcServer.getRPCClient().getNumIdleConnections();
+  }
+
+  @Override
+  public int getRpcClientNumActiveConnectionsRecently() {
+    return rpcServer.getRPCClient().getNumActiveConnectionsRecently();
+  }
+
+  @Override
   public int getRpcClientNumCreatingConnections() {
     return rpcServer.getRPCClient().getNumCreatingConnections();
   }

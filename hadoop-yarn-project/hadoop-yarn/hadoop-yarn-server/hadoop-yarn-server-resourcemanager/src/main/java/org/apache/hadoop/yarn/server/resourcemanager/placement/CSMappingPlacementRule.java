@@ -25,6 +25,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.*;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -36,11 +37,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 /**
  * This class is responsible for making application submissions to queue
@@ -53,6 +53,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 public class CSMappingPlacementRule extends PlacementRule {
   private static final Logger LOG = LoggerFactory
       .getLogger(CSMappingPlacementRule.class);
+  private static final String DOT = ".";
+  private static final String DOT_REPLACEMENT = "_dot_";
 
   private CapacitySchedulerQueueManager queueManager;
   private List<MappingRule> mappingRules;
@@ -74,12 +76,12 @@ public class CSMappingPlacementRule extends PlacementRule {
   private boolean failOnConfigError = true;
 
   @VisibleForTesting
-  void setGroups(Groups groups) {
+  public void setGroups(Groups groups) {
     this.groups = groups;
   }
 
   @VisibleForTesting
-  void setFailOnConfigError(boolean failOnConfigError) {
+  public void setFailOnConfigError(boolean failOnConfigError) {
     this.failOnConfigError = failOnConfigError;
   }
 
@@ -130,11 +132,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
 
     if (groups == null) {
-      //We cannot use Groups#getUserToGroupsMappingService here, because when
-      //tests change the HADOOP_SECURITY_GROUP_MAPPING, Groups won't refresh its
-      //cached instance of groups, so we might get a Group instance which
-      //ignores the HADOOP_SECURITY_GROUP_MAPPING settings.
-      groups = new Groups(conf);
+      groups = Groups.getUserToGroupsMappingService(conf);
     }
 
     MappingRuleValidationContext validationContext = buildValidationContext();
@@ -183,6 +181,10 @@ public class CSMappingPlacementRule extends PlacementRule {
       LOG.warn(
           "Group provider hasn't been set, cannot query groups for user {}",
           user);
+      //enforcing empty primary group instead of null, which would be considered
+      //as unknown variable and would evaluate to '%primary_group'
+      vctx.put("%primary_group", "");
+      vctx.put("%secondary_group", "");
       return;
     }
     Set<String> groupsSet = groups.getGroupsSet(user);
@@ -191,24 +193,33 @@ public class CSMappingPlacementRule extends PlacementRule {
       vctx.putExtraDataset("groups", groupsSet);
       return;
     }
-    String secondaryGroup = null;
     Iterator<String> it = groupsSet.iterator();
-    String primaryGroup = it.next();
+    String primaryGroup = cleanName(it.next());
+
+    ArrayList<String> secondaryGroupList = new ArrayList<>();
+
     while (it.hasNext()) {
-      String group = it.next();
-      if (this.queueManager.getQueue(group) != null) {
-        secondaryGroup = group;
-        break;
-      }
+      String groupName = cleanName(it.next());
+      secondaryGroupList.add(groupName);
     }
 
-    if (secondaryGroup == null && LOG.isDebugEnabled()) {
-      LOG.debug("User {} is not associated with any Secondary " +
-          "Group. Hence it may use the 'default' queue", user);
+    if (secondaryGroupList.size() == 0) {
+      //if we have no chance to have a secondary group to speed up evaluation
+      //we simply register it as a regular variable with "" as a value
+      vctx.put("%secondary_group", "");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("User {} does not have any potential Secondary group", user);
+      }
+    } else {
+      vctx.putConditional(
+          MappingRuleConditionalVariables.SecondaryGroupVariable.VARIABLE_NAME,
+          new MappingRuleConditionalVariables.SecondaryGroupVariable(
+              this.queueManager,
+              secondaryGroupList
+              ));
     }
 
     vctx.put("%primary_group", primaryGroup);
-    vctx.put("%secondary_group", secondaryGroup);
     vctx.putExtraDataset("groups", groupsSet);
   }
 
@@ -216,14 +227,22 @@ public class CSMappingPlacementRule extends PlacementRule {
       ApplicationSubmissionContext asc, String user) {
     VariableContext vctx = new VariableContext();
 
-    vctx.put("%user", user);
+    vctx.put("%user", cleanName(user));
     //If the specified matches the default it means NO queue have been specified
     //as per ClientRMService#submitApplication which sets the queue to default
     //when no queue is provided.
     //To place queues specifically to default, users must use root.default
     if (!asc.getQueue().equals(YarnConfiguration.DEFAULT_QUEUE_NAME)) {
       vctx.put("%specified", asc.getQueue());
+    } else {
+      //Adding specified as empty will prevent it to be undefined and it won't
+      //try to place the application to a queue named '%specified', queue path
+      //validation will reject the empty path or the path with empty parts,
+      //so we sill still hit the fallback action of this rule if no queue
+      //is specified
+      vctx.put("%specified", "");
     }
+
     vctx.put("%application", asc.getApplicationName());
     vctx.put("%default", "root.default");
     try {
@@ -239,6 +258,12 @@ public class CSMappingPlacementRule extends PlacementRule {
   private String validateAndNormalizeQueue(
       String queueName, boolean allowCreate) throws YarnException {
     MappingQueuePath path = new MappingQueuePath(queueName);
+
+    if (path.hasEmptyPart()) {
+      throw new YarnException("Invalid path returned by rule: '" +
+          queueName + "'");
+    }
+
     String leaf = path.getLeafName();
     String parent = path.getParent();
 
@@ -335,14 +360,19 @@ public class CSMappingPlacementRule extends PlacementRule {
       MappingRule rule, VariableContext variables) {
     MappingRuleResult result = rule.evaluate(variables);
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Evaluated rule '{}' with result: '{}'", rule, result);
+    }
+
     if (result.getResult() == MappingRuleResultType.PLACE) {
       try {
         result.updateNormalizedQueue(validateAndNormalizeQueue(
             result.getQueue(), result.isCreateAllowed()));
       } catch (Exception e) {
-        LOG.info("Cannot place to queue '{}' returned by mapping rule. " +
-            "Reason: {}", result.getQueue(), e.getMessage());
         result = rule.getFallback();
+        LOG.info("Cannot place to queue '{}' returned by mapping rule. " +
+            "Reason: '{}' Fallback operation: '{}'",
+            result.getQueue(), e.getMessage(), result);
       }
     }
 
@@ -451,6 +481,12 @@ public class CSMappingPlacementRule extends PlacementRule {
       }
     }
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Placement final result '{}' for application '{}'",
+          (ret == null ? "null" : ret.getFullQueuePath()),
+          asc.getApplicationId());
+    }
+
     return ret;
   }
 
@@ -485,6 +521,17 @@ public class CSMappingPlacementRule extends PlacementRule {
       //config information to leak to the client side
       throw new YarnException("Application submission have been rejected by a" +
           " mapping rule. Please see the logs for details");
+    }
+  }
+
+  private String cleanName(String name) {
+    if (name.contains(DOT)) {
+      String converted = name.replaceAll("\\.", DOT_REPLACEMENT);
+      LOG.warn("Name {} is converted to {} when it is used as a queue name.",
+          name, converted);
+      return converted;
+    } else {
+      return name;
     }
   }
 }

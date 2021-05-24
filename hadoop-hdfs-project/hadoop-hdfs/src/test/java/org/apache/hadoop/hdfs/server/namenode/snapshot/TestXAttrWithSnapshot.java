@@ -79,7 +79,7 @@ public class TestXAttrWithSnapshot {
 
   @AfterClass
   public static void shutdown() throws Exception {
-    IOUtils.cleanup(null, hdfs);
+    IOUtils.cleanupWithLogger(null, hdfs);
     if (cluster != null) {
       cluster.shutdown();
     }

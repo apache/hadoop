@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
@@ -106,9 +107,7 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
 
   @Override
   public void testRenameDirIntoExistingDir() throws Throwable {
-    describe("Verify renaming a dir into an existing dir puts the files"
-             +" from the source dir into the existing dir"
-             +" and leaves existing files alone");
+    describe("S3A rename into an existing directory returns false");
     FileSystem fs = getFileSystem();
     String sourceSubdir = "source";
     Path srcDir = path(sourceSubdir);
@@ -168,5 +167,10 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     describe("validating results");
     validateAncestorsMoved(src, dest, nestedFile);
 
+  }
+
+  @Override
+  public void testRenameFileUnderFileSubdir() throws Exception {
+    skip("Rename deep paths under files is allowed");
   }
 }

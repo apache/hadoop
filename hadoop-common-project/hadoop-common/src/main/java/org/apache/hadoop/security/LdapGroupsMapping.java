@@ -643,7 +643,29 @@ public class LdapGroupsMapping
       env.put("com.sun.jndi.ldap.read.timeout", conf.get(READ_TIMEOUT,
           String.valueOf(READ_TIMEOUT_DEFAULT)));
 
-      ctx = new InitialDirContext(env);
+      // See HADOOP-17675 for details TLDR:
+      // From a native thread the thread's context classloader is null.
+      // jndi internally in the InitialDirContext specifies the context
+      // classloader for Class.forName, and as it is null, jndi will use the
+      // bootstrap classloader in this case to laod the socket factory
+      // implementation.
+      // BUT
+      // Bootstrap classloader does not have it in its classpath, so throws a
+      // ClassNotFoundException.
+      // This affects Impala for example when it uses LdapGroupsMapping.
+      ClassLoader currentContextLoader =
+          Thread.currentThread().getContextClassLoader();
+      if (currentContextLoader == null) {
+        try {
+          Thread.currentThread().setContextClassLoader(
+              this.getClass().getClassLoader());
+          ctx = new InitialDirContext(env);
+        } finally {
+          Thread.currentThread().setContextClassLoader(null);
+        }
+      } else {
+        ctx = new InitialDirContext(env);
+      }
     }
     return ctx;
   }

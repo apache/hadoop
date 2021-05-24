@@ -30,19 +30,20 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_CONNECTION_TIMEOUT_MS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_DEAD_NODE_INTERVAL_MS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_SUSPECT_NODE_INTERVAL_MS_KEY;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertNotSame;
@@ -73,6 +74,7 @@ public class TestDeadNodeDetection {
         DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_CONNECTION_TIMEOUT_MS_KEY,
         1000);
     conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, 0);
+    conf.setLong(DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_KEY, 100);
   }
 
   @After
@@ -247,42 +249,63 @@ public class TestDeadNodeDetection {
   }
 
   @Test
-  public void testDeadNodeDetectionMaxDeadNodesProbeQueue() throws Exception {
-    conf.setInt(DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_KEY, 1);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
-    cluster.waitActive();
-
-    FileSystem fs = cluster.getFileSystem();
-    Path filePath = new Path("/testDeadNodeDetectionMaxDeadNodesProbeQueue");
-    createFile(fs, filePath);
-
-    // Remove three DNs,
-    cluster.stopDataNode(0);
-    cluster.stopDataNode(0);
-    cluster.stopDataNode(0);
-
-    FSDataInputStream in = fs.open(filePath);
-    DFSInputStream din = (DFSInputStream) in.getWrappedStream();
-    DFSClient dfsClient = din.getDFSClient();
+  public void testDeadNodeDetectionDeadNodeProbe() throws Exception {
+    FileSystem fs = null;
+    FSDataInputStream in = null;
+    Path filePath = new Path("/" + GenericTestUtils.getMethodName());
     try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster.waitActive();
+
+      fs = cluster.getFileSystem();
+      createFile(fs, filePath);
+
+      // Remove three DNs,
+      cluster.stopDataNode(0);
+      cluster.stopDataNode(0);
+      cluster.stopDataNode(0);
+
+      in = fs.open(filePath);
+      DFSInputStream din = (DFSInputStream) in.getWrappedStream();
+      DFSClient dfsClient = din.getDFSClient();
+      DeadNodeDetector deadNodeDetector =
+          dfsClient.getClientContext().getDeadNodeDetector();
+      // Spy suspect queue and dead queue.
+      DeadNodeDetector.UniqueQueue<DatanodeInfo> queue =
+          deadNodeDetector.getSuspectNodesProbeQueue();
+      DeadNodeDetector.UniqueQueue<DatanodeInfo> suspectSpy =
+          Mockito.spy(queue);
+      deadNodeDetector.setSuspectQueue(suspectSpy);
+      queue = deadNodeDetector.getDeadNodesProbeQueue();
+      DeadNodeDetector.UniqueQueue<DatanodeInfo> deadSpy = Mockito.spy(queue);
+      deadNodeDetector.setDeadQueue(deadSpy);
+      // Trigger dead node detection.
       try {
         in.read();
       } catch (BlockMissingException e) {
       }
 
       Thread.sleep(1500);
-      Assert.assertTrue((dfsClient.getClientContext().getDeadNodeDetector()
-          .getDeadNodesProbeQueue().size()
-          + dfsClient.getDeadNodes(din).size()) <= 4);
+      Collection<DatanodeInfo> deadNodes =
+          dfsClient.getDeadNodeDetector().clearAndGetDetectedDeadNodes();
+      assertEquals(3, deadNodes.size());
+      for (DatanodeInfo dead : deadNodes) {
+        // Each node is suspected once then marked as dead.
+        Mockito.verify(suspectSpy, Mockito.times(1)).offer(dead);
+        // All the dead nodes should be scheduled and probed at least once.
+        Mockito.verify(deadSpy, Mockito.atLeastOnce()).offer(dead);
+        Mockito.verify(deadSpy, Mockito.atLeastOnce()).poll();
+      }
     } finally {
-      in.close();
+      if (in != null) {
+        in.close();
+      }
       deleteFile(fs, filePath);
     }
   }
 
   @Test
   public void testDeadNodeDetectionSuspectNode() throws Exception {
-    conf.setInt(DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY, 1);
     DeadNodeDetector.setDisabledProbeThreadForTest(true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
@@ -355,6 +378,18 @@ public class TestDeadNodeDetection {
     assertTrue(newDetector.isAlive());
     assertNotSame(detector, newDetector);
     dfs1.close();
+  }
+
+  @Test
+  public void testDeadNodeDetectorThreadsShutdown() throws Exception {
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .newInstance(new URI("hdfs://127.0.0.1:2001/"), conf);
+    DeadNodeDetector detector = dfs.getClient().getDeadNodeDetector();
+    assertNotNull(detector);
+    dfs.close();
+    assertTrue(detector.isThreadsShutdown());
+    detector = dfs.getClient().getDeadNodeDetector();
+    assertNull(detector);
   }
 
   private void createFile(FileSystem fs, Path filePath) throws IOException {

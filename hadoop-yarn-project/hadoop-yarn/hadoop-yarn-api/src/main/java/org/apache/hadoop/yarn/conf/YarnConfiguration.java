@@ -120,6 +120,8 @@ public class YarnConfiguration extends Configuration {
             CommonConfigurationKeys.ZK_TIMEOUT_MS),
         new DeprecationDelta(RM_ZK_RETRY_INTERVAL_MS,
             CommonConfigurationKeys.ZK_RETRY_INTERVAL_MS),
+        new DeprecationDelta(HADOOP_HTTP_WEBAPP_SCHEDULER_PAGE,
+            YARN_HTTP_WEBAPP_SCHEDULER_PAGE)
     });
     Configuration.addDeprecations(new DeprecationDelta[] {
         new DeprecationDelta("yarn.resourcemanager.display.per-user-apps",
@@ -1952,7 +1954,10 @@ public class YarnConfiguration extends Configuration {
           false;
   public static final String APPLICATION_TAG_BASED_PLACEMENT_USER_WHITELIST =
           APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".username.whitelist";
-
+  public static final String APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION =
+      APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".force-lowercase";
+  public static final boolean DEFAULT_APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION =
+          true;
   /** Enable switch for container log monitoring. */
   public static final String NM_CONTAINER_LOG_MONITOR_ENABLED =
       NM_PREFIX + "container-log-monitor.enable";
@@ -2027,6 +2032,8 @@ public class YarnConfiguration extends Configuration {
    * marked as offline. Values can range from 0.0 to 100.0. If the value is
    * greater than or equal to 100, NM will check for full disk. This applies to
    * nm-local-dirs and nm-log-dirs.
+   *
+   * This applies when disk-utilization-threshold.enabled is true.
    */
   public static final String NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
       NM_DISK_HEALTH_CHECK_PREFIX + "max-disk-utilization-per-disk-percentage";
@@ -2035,6 +2042,17 @@ public class YarnConfiguration extends Configuration {
    */
   public static final float DEFAULT_NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
       90.0F;
+
+  /**
+   * Enable/Disable the disk utilisation percentage
+   * threshold for disk health checker.
+   */
+  public static final String NM_DISK_UTILIZATION_THRESHOLD_ENABLED =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+          "disk-utilization-threshold.enabled";
+
+  public static final
+      boolean DEFAULT_NM_DISK_UTILIZATION_THRESHOLD_ENABLED = true;
 
   /**
    * The low threshold percentage of disk space used when an offline disk is
@@ -2051,9 +2069,23 @@ public class YarnConfiguration extends Configuration {
   /**
    * The minimum space that must be available on a local dir for it to be used.
    * This applies to nm-local-dirs and nm-log-dirs.
+   *
+   * This applies when disk-free-space-threshold.enabled is true.
    */
   public static final String NM_MIN_PER_DISK_FREE_SPACE_MB =
       NM_DISK_HEALTH_CHECK_PREFIX + "min-free-space-per-disk-mb";
+
+  /**
+   * Enable/Disable the minimum disk free
+   * space threshold for disk health checker.
+   */
+  public static final String NM_DISK_FREE_SPACE_THRESHOLD_ENABLED =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+          "disk-free-space-threshold.enabled";
+
+  public static final boolean
+      DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED = true;
+
   /**
    * The minimum space that must be available on an offline
    * disk for it to be marked as online.  The value should not be less
@@ -2460,6 +2492,14 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_HTTP_WEBAPP_EXTERNAL_CLASSES =
       "yarn.http.rmwebapp.external.classes";
 
+  /**
+   * @deprecated This field is deprecated for
+   * {@link #YARN_HTTP_WEBAPP_SCHEDULER_PAGE}
+   */
+  @Deprecated
+  public static final String HADOOP_HTTP_WEBAPP_SCHEDULER_PAGE =
+      "hadoop.http.rmwebapp.scheduler.page.class";
+
   public static final String YARN_HTTP_WEBAPP_SCHEDULER_PAGE =
       "yarn.http.rmwebapp.scheduler.page.class";
 
@@ -2630,6 +2670,20 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "application-https.policy";
 
   public static final String DEFAULT_RM_APPLICATION_HTTPS_POLICY = "NONE";
+
+
+  // If the proxy connection time enabled.
+  public static final String RM_PROXY_TIMEOUT_ENABLED =
+      RM_PREFIX + "proxy.timeout.enabled";
+
+  public static final boolean DEFALUT_RM_PROXY_TIMEOUT_ENABLED =
+      true;
+
+  public static final String RM_PROXY_CONNECTION_TIMEOUT =
+      RM_PREFIX + "proxy.connection.timeout";
+
+  public static final int DEFAULT_RM_PROXY_CONNECTION_TIMEOUT =
+      60000;
 
   /**
    * Interval of time the linux container executor should try cleaning up
@@ -2875,6 +2929,18 @@ public class YarnConfiguration extends Configuration {
           YARN_PREFIX + "dispatcher.print-events-info.threshold";
   public static final int
           DEFAULT_YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD = 5000;
+
+  /** Resource manager dispatcher thread monitor sampling rate.
+   * Units are samples per minute.  This controls how often to sample
+   * the cpu utilization of the resource manager dispatcher thread.
+   * The cpu utilization is displayed on the RM UI as scheduler busy %.
+   * Set to zero to disable the dispatcher thread monitor.
+   */
+  public static final String
+      YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN =
+      YARN_PREFIX + "dispatcher.cpu-monitor.samples-per-min";
+  public static final int
+      DEFAULT_YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN = 60;
 
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH

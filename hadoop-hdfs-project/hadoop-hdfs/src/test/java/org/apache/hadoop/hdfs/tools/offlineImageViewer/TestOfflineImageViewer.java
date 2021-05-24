@@ -74,6 +74,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -153,6 +154,7 @@ public class TestOfflineImageViewer {
   private static final long FILE_NODE_ID_3 = 16394;
   private static final long DIR_NODE_ID = 16391;
   private static final long SAMPLE_TIMESTAMP = 946684800000L;
+  private static TimeZone defaultTimeZone = null;
 
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
@@ -165,6 +167,8 @@ public class TestOfflineImageViewer {
   // multiple tests.
   @BeforeClass
   public static void createOriginalFSImage() throws IOException {
+    defaultTimeZone = TimeZone.getDefault();
+    TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
     File[] nnDirs = MiniDFSCluster.getNameNodeDirectory(
         MiniDFSCluster.getBaseDirectory(), 0, 0);
     tempDir = nnDirs[0];
@@ -369,6 +373,9 @@ public class TestOfflineImageViewer {
     FileUtils.deleteQuietly(tempDir);
     if (originalFsimage != null && originalFsimage.exists()) {
       originalFsimage.delete();
+    }
+    if (defaultTimeZone != null) {
+      TimeZone.setDefault(defaultTimeZone);
     }
   }
 

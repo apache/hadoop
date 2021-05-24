@@ -234,7 +234,7 @@ public class DatasetVolumeChecker {
                   }
                 }), MoreExecutors.directExecutor());
       } else {
-        IOUtils.cleanup(null, reference);
+        IOUtils.cleanupWithLogger(null, reference);
         if (numVolumes.decrementAndGet() == 0) {
           latch.countDown();
         }
@@ -311,7 +311,7 @@ public class DatasetVolumeChecker {
       );
       return true;
     } else {
-      IOUtils.cleanup(null, volumeReference);
+      IOUtils.cleanupWithLogger(null, volumeReference);
     }
     return false;
   }
@@ -404,7 +404,7 @@ public class DatasetVolumeChecker {
     }
 
     private void cleanup() {
-      IOUtils.cleanup(null, reference);
+      IOUtils.cleanupWithLogger(null, reference);
       invokeCallback();
     }
 

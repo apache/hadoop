@@ -85,6 +85,12 @@ public final class StoreStatisticNames {
   public static final String OP_IS_FILE = "op_is_file";
 
   /** {@value}. */
+  public static final String OP_HFLUSH = "op_hflush";
+
+  /** {@value}. */
+  public static final String OP_HSYNC = "op_hsync";
+
+  /** {@value}. */
   public static final String OP_IS_DIRECTORY = "op_is_directory";
 
   /** {@value}. */
@@ -315,6 +321,30 @@ public final class StoreStatisticNames {
    */
   public static final String ACTION_HTTP_GET_REQUEST
       = "action_http_get_request";
+
+  /**
+   * An HTTP DELETE request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_DELETE_REQUEST
+      = "action_http_delete_request";
+
+  /**
+   * An HTTP PUT request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_PUT_REQUEST
+      = "action_http_put_request";
+
+  /**
+   * An HTTP PATCH request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_PATCH_REQUEST
+      = "action_http_patch_request";
+
+  /**
+   * An HTTP POST request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_POST_REQUEST
+      = "action_http_post_request";
 
   /**
    * An HTTP HEAD request was made: {@value}.

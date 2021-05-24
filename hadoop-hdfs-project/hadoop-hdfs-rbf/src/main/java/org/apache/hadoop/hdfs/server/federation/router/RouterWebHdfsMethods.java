@@ -93,6 +93,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +105,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * WebHDFS Router implementation. This is an extension of
@@ -453,21 +456,33 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final String path, final HttpOpParam.Op op, final long openOffset,
       final String excludeDatanodes) throws IOException {
     final RouterRpcServer rpcServer = getRPCServer(router);
-    DatanodeInfo[] dns = null;
+    DatanodeInfo[] dns = {};
+    String resolvedNs = "";
     try {
       dns = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
     } catch (IOException e) {
       LOG.error("Cannot get the datanodes from the RPC server", e);
     }
 
+    if (op == PutOpParam.Op.CREATE) {
+      try {
+        resolvedNs = rpcServer.getCreateLocation(path).getNameserviceId();
+      } catch (IOException e) {
+        LOG.error("Cannot get the name service " +
+            "to create file for path {} ", path, e);
+      }
+    }
+
     HashSet<Node> excludes = new HashSet<Node>();
-    if (excludeDatanodes != null) {
-      Collection<String> collection =
-          getTrimmedStringCollection(excludeDatanodes);
-      for (DatanodeInfo dn : dns) {
-        if (collection.contains(dn.getName())) {
-          excludes.add(dn);
-        }
+    Collection<String> collection =
+        getTrimmedStringCollection(excludeDatanodes);
+    for (DatanodeInfo dn : dns) {
+      String ns = getNsFromDataNodeNetworkLocation(dn.getNetworkLocation());
+      if (collection.contains(dn.getName())) {
+        excludes.add(dn);
+      } else if (op == PutOpParam.Op.CREATE && !ns.equals(resolvedNs)) {
+        // for CREATE, the dest dn should be in the resolved ns
+        excludes.add(dn);
       }
     }
 
@@ -500,6 +515,22 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     }
 
     return getRandomDatanode(dns, excludes);
+  }
+
+  /**
+   * Get the nameservice info from datanode network location.
+   * @param location network location with format `/ns0/rack1`
+   * @return nameservice this datanode is in
+   */
+  @VisibleForTesting
+  public static String getNsFromDataNodeNetworkLocation(String location) {
+    // network location should be in the format of /ns/rack
+    Pattern pattern = Pattern.compile("^/([^/]*)/");
+    Matcher matcher = pattern.matcher(location);
+    if (matcher.find()) {
+      return matcher.group(1);
+    }
+    return "";
   }
 
   /**

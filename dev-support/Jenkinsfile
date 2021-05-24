@@ -35,7 +35,7 @@ pipeline {
         DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='6ab19e71eaf3234863424c6f684b34c1d3dcc0ce'
+        YETUS_VERSION='f9ba0170a5787a5f4662d3769804fef0226a182f'
     }
 
     parameters {
@@ -120,11 +120,11 @@ pipeline {
                         YETUS_ARGS+=("--proclimit=5500")
                         YETUS_ARGS+=("--dockermemlimit=22g")
 
-                        # -1 findbugs issues that show up prior to the patch being applied
-                        YETUS_ARGS+=("--findbugs-strict-precheck")
+                        # -1 spotbugs issues that show up prior to the patch being applied
+                        YETUS_ARGS+=("--spotbugs-strict-precheck")
 
                         # rsync these files back into the archive dir
-                        YETUS_ARGS+=("--archive-list=checkstyle-errors.xml,findbugsXml.xml")
+                        YETUS_ARGS+=("--archive-list=checkstyle-errors.xml,spotbugsXml.xml")
 
                         # URL for user-side presentation in reports and such to our artifacts
                         # (needs to match the archive bits below)
@@ -132,9 +132,6 @@ pipeline {
 
                         # plugins to enable
                         YETUS_ARGS+=("--plugins=all")
-
-                        # use Hadoop's bundled shelldocs
-                        YETUS_ARGS+=("--shelldocs=${WORKSPACE}/${SOURCEDIR}/dev-support/bin/shelldocs")
 
                         # don't let these tests cause -1s because we aren't really paying that
                         # much attention to them
@@ -152,9 +149,6 @@ pipeline {
                         # help keep the ASF boxes clean
                         YETUS_ARGS+=("--sentinel")
 
-                        # use emoji vote so it is easier to find the broken line
-                        YETUS_ARGS+=("--github-use-emoji-vote")
-
                         # test with Java 8 and 11
                         YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
                         YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
@@ -162,6 +156,10 @@ pipeline {
 
                         # custom javadoc goals
                         YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
+
+                        # write Yetus report as GitHub comment (YETUS-1102)
+                        YETUS_ARGS+=("--github-write-comment")
+                        YETUS_ARGS+=("--github-use-emoji-vote")
 
                         "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''
@@ -174,6 +172,19 @@ pipeline {
     post {
         always {
           script {
+            // Publish status if it was missed (YETUS-1059)
+            withCredentials(
+                [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
+                                  passwordVariable: 'GITHUB_TOKEN',
+                                  usernameVariable: 'GITHUB_USER')]) {
+                sh '''#!/usr/bin/env bash
+                    YETUS_ARGS+=("--github-token=${GITHUB_TOKEN}")
+                    YETUS_ARGS+=("--patch-dir=${WORKSPACE}/${PATCHDIR}")
+                    TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/github-status-recovery.sh"
+                    /usr/bin/env bash "${TESTPATCHBIN}" "${YETUS_ARGS[@]}" ${EXTRA_ARGS} || true
+                    '''
+            }
+
             // Yetus output
             archiveArtifacts "${env.PATCHDIR}/**"
             // Publish the HTML report so that it can be looked at

@@ -21,6 +21,7 @@
 
 #include <openssl/rand.h>
 #include <openssl/md5.h>
+#include <openssl/err.h>
 
 #include <iomanip>
 #include <map>
@@ -91,12 +92,19 @@ size_t DigestMD5Authenticator::NextToken(const std::string &payload, size_t off,
   return off;
 }
 
-void DigestMD5Authenticator::GenerateCNonce() {
-  if (!TEST_mock_cnonce_) {
-    char buf[8] = {0,};
-    RAND_pseudo_bytes(reinterpret_cast<unsigned char *>(buf), sizeof(buf));
-    cnonce_ = Base64Encode(std::string(buf, sizeof(buf)));
+Status DigestMD5Authenticator::GenerateCNonce() {
+  if (TEST_mock_cnonce_) {
+    return Status::OK();
   }
+
+  char buf[8] = { 0, };
+  if (RAND_bytes(reinterpret_cast<unsigned char*>(buf), sizeof(buf)) == 1) {
+    cnonce_ = Base64Encode(std::string(buf, sizeof(buf)));
+    return Status::OK();
+  }
+
+  const auto* error = ERR_reason_error_string(ERR_get_error());
+  return Status::Error(error);
 }
 
 Status DigestMD5Authenticator::ParseFirstChallenge(const std::string &payload) {
@@ -155,8 +163,11 @@ Status DigestMD5Authenticator::GenerateFirstResponse(std::string *result) {
     return Status::Unimplemented();
   }
 
+  if (auto status = GenerateCNonce(); !status.ok()) {
+    return status;
+  }
+
   std::stringstream ss;
-  GenerateCNonce();
   ss << "charset=utf-8,username=\"" << QuoteString(username_) << "\""
      << ",authzid=\"" << QuoteString(username_) << "\""
      << ",nonce=\"" << QuoteString(nonce_) << "\""

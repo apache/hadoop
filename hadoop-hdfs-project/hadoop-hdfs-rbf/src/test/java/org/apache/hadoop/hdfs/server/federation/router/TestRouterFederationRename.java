@@ -409,7 +409,7 @@ public class TestRouterFederationRename {
     getRouterFileSystem().delete(new Path(renamedDir), true);
   }
 
-  @Test(timeout = 10000)
+  @Test(timeout = 20000)
   public void testCounter() throws Exception {
     final RouterRpcServer rpcServer = router.getRouter().getRpcServer();
     List<String> nss = cluster.getNameservices();

@@ -190,12 +190,12 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.slf4j.event.Level;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
@@ -1984,15 +1984,6 @@ public class DFSTestUtil {
   }
 
   public static void setNameNodeLogLevel(Level level) {
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, level);
-    GenericTestUtils.setLogLevel(BlockManager.LOG, level);
-    GenericTestUtils.setLogLevel(LeaseManager.LOG, level);
-    GenericTestUtils.setLogLevel(NameNode.LOG, level);
-    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, level);
-    GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, level);
-  }
-
-  public static void setNameNodeLogLevel(org.slf4j.event.Level level) {
     GenericTestUtils.setLogLevel(FSNamesystem.LOG, level);
     GenericTestUtils.setLogLevel(BlockManager.LOG, level);
     GenericTestUtils.setLogLevel(LeaseManager.LOG, level);

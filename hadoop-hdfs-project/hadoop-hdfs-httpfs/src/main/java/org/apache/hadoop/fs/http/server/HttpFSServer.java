@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AccessTimeParam
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DeleteSkipTrashParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DestinationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ECPolicyParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FilterParam;
@@ -285,7 +286,7 @@ public class HttpFSServer {
             }
           });
         } catch (InterruptedException ie) {
-          LOG.info("Open interrupted.", ie);
+          LOG.warn("Open interrupted.", ie);
           Thread.currentThread().interrupt();
         }
         Long offset = params.get(OffsetParam.NAME, OffsetParam.class);
@@ -318,7 +319,7 @@ public class HttpFSServer {
       enforceRootPath(op.value(), path);
       FSOperations.FSHomeDir command = new FSOperations.FSHomeDir();
       JSONObject json = fsExecute(user, command);
-      AUDIT_LOG.info("");
+      AUDIT_LOG.info("Home Directory for [{}]", user);
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
@@ -340,7 +341,7 @@ public class HttpFSServer {
       FSOperations.FSContentSummary command =
           new FSOperations.FSContentSummary(path);
       Map json = fsExecute(user, command);
-      AUDIT_LOG.info("[{}]", path);
+      AUDIT_LOG.info("Content summary for [{}]", path);
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
@@ -348,7 +349,7 @@ public class HttpFSServer {
       FSOperations.FSQuotaUsage command =
           new FSOperations.FSQuotaUsage(path);
       Map json = fsExecute(user, command);
-      AUDIT_LOG.info("[{}]", path);
+      AUDIT_LOG.info("Quota Usage for [{}]", path);
       response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
@@ -548,9 +549,13 @@ public class HttpFSServer {
       case DELETE: {
         Boolean recursive =
           params.get(RecursiveParam.NAME,  RecursiveParam.class);
-        AUDIT_LOG.info("[{}] recursive [{}]", path, recursive);
+        Boolean skipTrashParam = params.get(DeleteSkipTrashParam.NAME,
+            DeleteSkipTrashParam.class);
+        boolean skipTrash = skipTrashParam != null && skipTrashParam;
+        AUDIT_LOG.info("[{}] recursive [{}] skipTrash [{}]", path, recursive,
+            skipTrash);
         FSOperations.FSDelete command =
-          new FSOperations.FSDelete(path, recursive);
+          new FSOperations.FSDelete(path, recursive, skipTrash);
         JSONObject json = fsExecute(user, command);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
@@ -657,14 +662,11 @@ public class HttpFSServer {
         break;
       }
       case CONCAT: {
-        System.out.println("HTTPFS SERVER CONCAT");
         String sources = params.get(SourcesParam.NAME, SourcesParam.class);
-
         FSOperations.FSConcat command =
             new FSOperations.FSConcat(path, sources.split(","));
         fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
-        System.out.println("SENT RESPONSE");
         response = Response.ok().build();
         break;
       }

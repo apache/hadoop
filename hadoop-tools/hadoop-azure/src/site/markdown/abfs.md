@@ -812,6 +812,16 @@ aheads. Specify the value in bytes. The value should be between 16384 to
 104857600 both inclusive (16 KB to 100 MB). The default value will be
 4194304 (4 MB).
 
+`fs.azure.buffered.pread.disable`: By default the positional read API will do a
+seek and read on input stream. This read will fill the buffer cache in
+AbfsInputStream and update the cursor positions. If this optimization is true
+it will skip usage of buffer and do a lock free REST call for reading from blob.
+This optimization is very much helpful for HBase kind of short random read over
+a shared AbfsInputStream instance.
+Note: This is not a config which can be set at cluster level. It can be used as
+an option on FutureDataInputStreamBuilder.
+See FileSystem#openFile(Path path)
+
 To run under limited memory situations configure the following. Especially
 when there are too many writes from the same process. 
 
@@ -876,6 +886,22 @@ directories. "The atomic rename feature is not supported by the ABFS scheme
 enabled for your Azure Storage account."
 The directories can be specified as comma separated values. By default the value
 is "/hbase"
+
+### <a name="infiniteleaseoptions"></a> Infinite Lease Options
+`fs.azure.infinite-lease.directories`: Directories for infinite lease support
+can be specified comma separated in this config. By default, multiple
+clients will be able to write to the same file simultaneously. When writing
+to files contained within the directories specified in this config, the
+client will obtain a lease on the file that will prevent any other clients
+from writing to the file. When the output stream is closed, the lease will be
+released. To revoke a client's write access for a file, the
+AzureBlobFilesystem breakLease method may be called. If the client dies
+before the file can be closed and the lease released, breakLease will need to
+be called before another client will be able to write to the file.
+
+`fs.azure.lease.threads`: This is the size of the thread pool that will be
+used for lease operations for infinite lease directories. By default the value
+is 0, so it must be set to at least 1 to support infinite lease directories.
 
 ### <a name="perfoptions"></a> Perf Options
 

@@ -122,7 +122,7 @@
         <module name="IllegalImport">
           <property name="regexp" value="true"/>
           <property name="illegalPkgs" value="sun, com\.google\.common"/>
-          <property name="illegalClasses" value="^org\.apache\.hadoop\.thirdparty\.com\.google\.common\.base\.(Optional|Function|Predicate|Supplier), ^org\.apache\.hadoop\.thirdparty\.com\.google\.common\.collect\.(ImmutableListMultimap)"/>
+          <property name="illegalClasses" value="^org\.apache\.hadoop\.thirdparty\.com\.google\.common\.io\.BaseEncoding, ^org\.apache\.hadoop\.thirdparty\.com\.google\.common\.base\.(Optional|Function|Predicate|Supplier), ^org\.apache\.hadoop\.thirdparty\.com\.google\.common\.collect\.(ImmutableListMultimap)"/>
         </module>
         <module name="RedundantImport"/>
         <module name="UnusedImports"/>

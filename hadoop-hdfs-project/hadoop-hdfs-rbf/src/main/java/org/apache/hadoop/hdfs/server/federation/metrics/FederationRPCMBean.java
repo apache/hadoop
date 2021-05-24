@@ -77,6 +77,21 @@ public interface FederationRPCMBean {
   int getRpcClientNumActiveConnections();
 
   /**
+   * Get the number of idle RPC connections between the Router and the NNs.
+   * @return Number of idle RPC connections between the Router and the NNs.
+   */
+  int getRpcClientNumIdleConnections();
+
+  /**
+   * Get the number of recently active RPC connections between
+   * the Router and the NNs.
+   *
+   * @return Number of recently active RPC connections between
+   * the Router and the NNs.
+   */
+  int getRpcClientNumActiveConnectionsRecently();
+
+  /**
    * Get the number of RPC connections to be created.
    * @return Number of RPC connections to be created.
    */
