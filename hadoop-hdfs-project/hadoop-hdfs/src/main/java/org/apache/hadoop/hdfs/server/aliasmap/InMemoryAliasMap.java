@@ -327,9 +327,6 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
          TarArchiveOutputStream tOut = new TarArchiveOutputStream(gzOut)){
 
       addFileToTarGzRecursively(tOut, aliasMapDir, "", new Configuration());
-      if (tOut != null) {
-        tOut.finish();
-      }
     }
 
     return outCompressedFile;
