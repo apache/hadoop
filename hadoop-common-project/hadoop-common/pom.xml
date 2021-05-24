@@ -418,7 +418,12 @@
           </execution>
           <execution>
             <id>src-test-compile-protoc</id>
-            <configuration><skip>false</skip></configuration>
+            <configuration>
+              <skip>false</skip>
+              <excludes>
+                <exclude>*legacy.proto</exclude>
+              </excludes>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -439,6 +444,10 @@
             <id>replace-generated-test-sources</id>
             <configuration>
               <skip>false</skip>
+              <excludes>
+                <exclude>**/TestProtosLegacy.java</exclude>
+                <exclude>**/TestRpcServiceProtosLegacy.java</exclude>
+              </excludes>
             </configuration>
           </execution>
           <execution>
@@ -451,6 +460,7 @@
                 <exclude>**/RpcWritable.java</exclude>
                 <exclude>**/ProtobufRpcEngineCallback.java</exclude>
                 <exclude>**/ProtobufRpcEngine.java</exclude>
+                <exclude>**/ProtobufRpcEngine2.java</exclude>
                 <exclude>**/ProtobufRpcEngineProtos.java</exclude>
               </excludes>
             </configuration>
@@ -459,6 +469,9 @@
             <id>replace-test-sources</id>
             <configuration>
               <skip>false</skip>
+              <excludes>
+                <exclude>**/TestProtoBufRpc.java</exclude>
+              </excludes>
             </configuration>
           </execution>
         </executions>
@@ -1050,6 +1063,18 @@
                   </sources>
                 </configuration>
               </execution>
+              <execution>
+                <id>add-test-source-legacy-protobuf</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${basedir}/src/test/arm-java</source>
+                  </sources>
+                </configuration>
+              </execution>
             </executions>
           </plugin>
         </plugins>
@@ -1088,6 +1113,28 @@
                   <clearOutputDirectory>false</clearOutputDirectory>
                   <includes>
                     <include>ProtobufRpcEngine.proto</include>
+                  </includes>
+                </configuration>
+              </execution>
+              <execution>
+                <id>src-test-compile-protoc-legacy</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+                <configuration>
+                  <skip>false</skip>
+                  <!--Generating with old protobuf version for backward compatibility-->
+                  <protocArtifact>
+                    com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+                  </protocArtifact>
+                  <includeDependenciesInDescriptorSet>false</includeDependenciesInDescriptorSet>
+                  <protoSourceRoot>${basedir}/src/test/proto</protoSourceRoot>
+                  <outputDirectory>${project.build.directory}/generated-test-sources/java</outputDirectory>
+                  <clearOutputDirectory>false</clearOutputDirectory>
+                  <includes>
+                    <include>test_legacy.proto</include>
+                    <include>test_rpc_service_legacy.proto</include>
                   </includes>
                 </configuration>
               </execution>
