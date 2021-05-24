@@ -30,8 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.FairQueuePlacementUtils.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.FairQueuePlacementUtils.assureRoot;
@@ -66,9 +65,9 @@ public class SecondaryGroupExistingPlacementRule extends FSPlacementRule {
 
     // All users should have at least one group the primary group. If no groups
     // are returned then there is a real issue.
-    final Set<String> groupSet;
+    final List<String> groupList;
     try {
-      groupSet = groupProvider.getGroupsSet(user);
+      groupList = groupProvider.getGroups(user);
     } catch (IOException ioe) {
       throw new YarnException("Group resolution failed", ioe);
     }
@@ -91,9 +90,8 @@ public class SecondaryGroupExistingPlacementRule extends FSPlacementRule {
           parentQueue);
     }
     // now check the groups inside the parent
-    Iterator<String> it = groupSet.iterator();
-    while (it.hasNext()) {
-      String group = cleanName(it.next());
+    for (int i = 1; i < groupList.size(); i++) {
+      String group = cleanName(groupList.get(i));
       String queueName =
           parentQueue == null ? assureRoot(group) : parentQueue + DOT + group;
       if (configuredQueue(queueName)) {

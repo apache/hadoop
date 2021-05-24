@@ -86,7 +86,7 @@ public class NetworkTagMappingJsonManager implements NetworkTagMappingManager {
         container.getUser());
     List<Group> groups = this.networkTagMapping.getGroups();
     for(Group group : groups) {
-      if (userUGI.getGroupsSet().contains(group.getGroupName())) {
+      if (userUGI.getGroups().contains(group.getGroupName())) {
         return group.getNetworkTagID();
       }
     }

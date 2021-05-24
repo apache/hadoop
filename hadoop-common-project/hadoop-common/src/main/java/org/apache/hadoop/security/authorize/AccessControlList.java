@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -232,9 +231,8 @@ public class AccessControlList implements Writable {
     if (allAllowed || users.contains(ugi.getShortUserName())) {
       return true;
     } else if (!groups.isEmpty()) {
-      Set<String> ugiGroups = ugi.getGroupsSet();
-      for (String group : groups) {
-        if (ugiGroups.contains(group)) {
+      for (String group : ugi.getGroups()) {
+        if (groups.contains(group)) {
           return true;
         }
       }

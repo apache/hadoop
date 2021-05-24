@@ -22,9 +22,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -89,21 +87,12 @@ public class TestCompositeGroupMapping {
     public void cacheGroupsAdd(List<String> groups) throws IOException {
       
     }
-
+    
     protected List<String> toList(String group) {
       if (group != null) {
         return Arrays.asList(new String[] {group});
       }
       return new ArrayList<String>();
-    }
-
-    protected Set<String> toSet(String group) {
-      if (group != null) {
-        Set<String> result = new HashSet<>();
-        result.add(group);
-        return result;
-      }
-      return new HashSet<String>();
     }
     
     protected void checkTestConf(String expectedValue) {
@@ -117,49 +106,32 @@ public class TestCompositeGroupMapping {
   private static class UserProvider extends GroupMappingProviderBase {
     @Override
     public List<String> getGroups(String user) throws IOException {
-      return toList(getGroupInternal(user));
-    }
-
-    @Override
-    public Set<String> getGroupsSet(String user) throws IOException {
-      return toSet(getGroupInternal(user));
-    }
-
-    private String getGroupInternal(String user) throws IOException {
       checkTestConf(PROVIDER_SPECIFIC_CONF_VALUE_FOR_USER);
-
+      
       String group = null;
       if (user.equals(john.name)) {
         group = john.group;
       } else if (user.equals(jack.name)) {
         group = jack.group;
       }
-      return group;
+      
+      return toList(group);
     }
   }
   
   private static class ClusterProvider extends GroupMappingProviderBase {    
     @Override
     public List<String> getGroups(String user) throws IOException {
-      return toList(getGroupsInternal(user));
-    }
-
-    @Override
-    public Set<String> getGroupsSet(String user) throws IOException {
-      return toSet(getGroupsInternal(user));
-    }
-
-    private String getGroupsInternal(String user) throws IOException {
       checkTestConf(PROVIDER_SPECIFIC_CONF_VALUE_FOR_CLUSTER);
-
+      
       String group = null;
       if (user.equals(hdfs.name)) {
         group = hdfs.group;
       } else if (user.equals(jack.name)) { // jack has another group from clusterProvider
         group = jack.group2;
       }
-      return group;
-
+      
+      return toList(group);
     }
   }
   
