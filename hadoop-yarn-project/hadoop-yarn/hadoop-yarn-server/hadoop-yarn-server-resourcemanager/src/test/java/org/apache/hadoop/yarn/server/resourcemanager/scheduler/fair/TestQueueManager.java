@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 import java.util.Collections;
 import java.util.Set;
 
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -36,7 +37,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Test the {@link FairScheduler} queue manager correct queue hierarchies
