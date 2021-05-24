@@ -348,12 +348,14 @@ public class MountTableResolver
    *
    * @param path A path.
    */
-  private static boolean isTrashPath(String path) throws IOException {
+  @VisibleForTesting
+  public static boolean isTrashPath(String path) throws IOException {
     Pattern pattern = Pattern.compile(getTrashRoot() + TRASH_PATTERN + "/");
     return pattern.matcher(path).find();
   }
 
-  private static String getTrashRoot() throws IOException {
+  @VisibleForTesting
+  public static String getTrashRoot() throws IOException {
     // Gets the Trash directory for the current user.
     return FileSystem.USER_HOME_PREFIX + "/" +
         RouterRpcServer.getRemoteUser().getUserName() + "/" +
@@ -361,16 +363,29 @@ public class MountTableResolver
   }
 
   /**
-   * Subtract a BaseTrash to get a new path.
+   * Subtract a TrashCurrent to get a new path.
    *
-   * @param path Path to check/insert.
-   * @return New remote location.
-   * @throws IOException If it cannot find the location.
+   * @param path A path.
    */
-  private static String subtractBaseTrashPath(String path)
+  @VisibleForTesting
+  public static String subtractTrashCurrentPath(String path)
       throws IOException {
     return path.replaceAll("^" +
         getTrashRoot() + TRASH_PATTERN, "");
+  }
+
+  /**
+   * If path is a path related to the trash can,
+   * subtract TrashCurrent to return a new path.
+   *
+   * @param path A path.
+   */
+  private static String processTrashPath(String path) throws IOException {
+    if (isTrashPath(path)) {
+      return subtractTrashCurrentPath(path);
+    } else {
+      return path;
+    }
   }
 
   /**
@@ -418,30 +433,19 @@ public class MountTableResolver
       throws IOException {
     verifyMountTable();
     PathLocation res;
-    String tmpPath = path;
-    if (isTrashPath(tmpPath)) {
-      tmpPath = subtractBaseTrashPath(tmpPath);
-    }
-    String finalPath = tmpPath;
     readLock.lock();
     try {
       if (this.locationCache == null) {
-        res = lookupLocation(finalPath);
+        res = lookupLocation(processTrashPath(path));
       } else {
-        Callable<? extends PathLocation> meh = new Callable<PathLocation>() {
-          @Override
-          public PathLocation call() throws Exception {
-            return lookupLocation(finalPath);
-          }
-        };
-        res = this.locationCache.get(finalPath, meh);
+        Callable<? extends PathLocation> meh = (Callable<PathLocation>) () ->
+            lookupLocation(processTrashPath(path));
+        res = this.locationCache.get(processTrashPath(path), meh);
       }
       if (isTrashPath(path)) {
         List<RemoteLocation> remoteLocations = new ArrayList<>();
         for (RemoteLocation remoteLocation : res.getDestinations()) {
-          remoteLocations.add(
-              new RemoteLocation(remoteLocation.getNsId(),
-                  remoteLocation.getNnId(), path, path));
+          remoteLocations.add(new RemoteLocation(remoteLocation, path));
         }
         return new PathLocation(path, remoteLocations,
             res.getDestinationOrder());
@@ -507,7 +511,7 @@ public class MountTableResolver
     verifyMountTable();
     String path = RouterAdmin.normalizeFileSystemPath(str);
     if (isTrashPath(path)) {
-      path = subtractBaseTrashPath(path);
+      path = subtractTrashCurrentPath(path);
     }
     readLock.lock();
     try {

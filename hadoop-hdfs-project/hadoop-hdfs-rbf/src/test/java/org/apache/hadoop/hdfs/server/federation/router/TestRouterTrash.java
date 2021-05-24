@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.*;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -46,7 +47,9 @@ import java.util.Collections;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * This is a test through the Router move data to the Trash.
@@ -233,5 +236,28 @@ public class TestRouterTrash {
     fileStatuses = nnFs.listStatus(
         new Path(TRASH_ROOT + CURRENT + MOUNT_POINT));
     assertEquals(2, fileStatuses.length);
+  }
+
+  @Test
+  public void testIsTrashPath() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    assertNotNull(ugi);
+    assertTrue(MountTableResolver.isTrashPath(
+        "/user/" + ugi.getUserName() + "/.Trash/Current" + MOUNT_POINT));
+    assertTrue(MountTableResolver.isTrashPath(
+        "/user/" + ugi.getUserName() +
+            "/.Trash/" + Time.now() + MOUNT_POINT));
+    assertFalse(MountTableResolver.isTrashPath(MOUNT_POINT));
+  }
+
+  @Test
+  public void testSubtractTrashCurrentPath() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    assertNotNull(ugi);
+    assertEquals(MOUNT_POINT, MountTableResolver.subtractTrashCurrentPath(
+        "/user/" + ugi.getUserName() + "/.Trash/Current" + MOUNT_POINT));
+    assertEquals(MOUNT_POINT, MountTableResolver.subtractTrashCurrentPath(
+        "/user/" + ugi.getUserName() +
+            "/.Trash/" + Time.now() + MOUNT_POINT));
   }
 }
