@@ -247,6 +247,32 @@ As an example, the endpoint for S3 Frankfurt is `s3.eu-central-1.amazonaws.com`:
   <value>s3.eu-central-1.amazonaws.com</value>
 </property>
 ```
+### <a name="AuthorizationHeaderMalformed"></a> "Authorization Header is Malformed"(400) exception when PrivateLink URL is used in "fs.s3a.endpoint"
+
+When [PrivateLink](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html) URL
+is used instead of standard s3a endpoint, it returns "authorization
+header is malformed" exception. So, if we set fs.s3a.endpoint=bucket.vpce
+-<some_string>.s3.ca-central-1.vpce.amazonaws.com and make s3 calls we get:
+```
+com.amazonaws.services.s3.model.AmazonS3Exception: The authorization header is malformed; the region 'vpce' is wrong; expecting 'ca-central-1'
+(Service: Amazon S3; Status Code: 400; Error Code: AuthorizationHeaderMalformed; Request ID: req-id; S3 Extended Request ID: req-id-2), S3 Extended Request ID: req-id-2:AuthorizationHeaderMalformed: The authorization
+header is malformed; the region 'vpce' is wrong; expecting 'ca-central-1' (Service: Amazon S3; Status Code: 400; Error Code: AuthorizationHeaderMalformed; Request ID: req-id;
+```
+Cause:
+
+Since, endpoint parsing is done in a way that it assumes the AWS S3 region
+would be the 2nd component of the `fs.s3a.endpoint` URL delimited by ".", in
+case of PrivateLink URL, it can't figure out the region and throws an
+authorization exception. Thus, to add support to using PrivateLink URLs we use `fs.s3a.endpoint.region`
+to set the region and bypass this parsing of `fs.s3a.endpoint`, in the case shown above to make it work we'll set the AWS
+S3 region as `ca-central-1`.
+
+```xml
+<property>
+  <name>fs.s3a.endpoint.region</name>
+  <value>ca-central-1</value>
+</property>
+```
 
 ### `Class does not implement AWSCredentialsProvider`
 
