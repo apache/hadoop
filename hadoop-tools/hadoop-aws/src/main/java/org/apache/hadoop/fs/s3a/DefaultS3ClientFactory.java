@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
 
@@ -132,7 +133,7 @@ public class DefaultS3ClientFactory extends Configured
     // endpoint set up is a PITA
     AwsClientBuilder.EndpointConfiguration epr
         = createEndpointConfiguration(parameters.getEndpoint(),
-        awsConf);
+        awsConf, getConf().getTrimmed(AWS_REGION));
     if (epr != null) {
       // an endpoint binding was constructed: use it.
       b.withEndpointConfiguration(epr);
@@ -197,12 +198,14 @@ public class DefaultS3ClientFactory extends Configured
    *
    * @param endpoint possibly null endpoint.
    * @param awsConf config to build the URI from.
+   * @param awsRegion AWS S3 Region if the corresponding config is set.
    * @return a configuration for the S3 client builder.
    */
   @VisibleForTesting
   public static AwsClientBuilder.EndpointConfiguration
       createEndpointConfiguration(
-          final String endpoint, final ClientConfiguration awsConf) {
+      final String endpoint, final ClientConfiguration awsConf,
+      String awsRegion) {
     LOG.debug("Creating endpoint configuration for {}", endpoint);
     if (endpoint == null || endpoint.isEmpty()) {
       // the default endpoint...we should be using null at this point.
@@ -212,17 +215,19 @@ public class DefaultS3ClientFactory extends Configured
 
     final URI epr = RuntimeHttpUtils.toUri(endpoint, awsConf);
     LOG.debug("Endpoint URI = {}", epr);
-
-    String region;
-    if (!ServiceUtils.isS3USStandardEndpoint(endpoint)) {
-      LOG.debug("Endpoint {} is not the default; parsing", epr);
-      region = AwsHostNameUtils.parseRegion(
-          epr.getHost(),
-          S3_SERVICE_NAME);
-    } else {
-      // US-east, set region == null.
-      LOG.debug("Endpoint {} is the standard one; declare region as null", epr);
-      region = null;
+    String region = awsRegion;
+    if (StringUtils.isBlank(region)) {
+      if (!ServiceUtils.isS3USStandardEndpoint(endpoint)) {
+        LOG.debug("Endpoint {} is not the default; parsing", epr);
+        region = AwsHostNameUtils.parseRegion(
+            epr.getHost(),
+            S3_SERVICE_NAME);
+      } else {
+        // US-east, set region == null.
+        LOG.debug("Endpoint {} is the standard one; declare region as null",
+            epr);
+        region = null;
+      }
     }
     LOG.debug("Region for endpoint {}, URI {} is determined as {}",
         endpoint, epr, region);
