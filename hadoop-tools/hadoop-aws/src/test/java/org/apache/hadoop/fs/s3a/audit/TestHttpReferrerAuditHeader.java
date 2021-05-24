@@ -202,7 +202,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
           + " 794"
           + " 55"
           + " 17"
-          + " \"https://audit.example.org/op_create/"
+          + " \"https://audit.example.org/hadoop/1/op_create/"
           + "e8ede3c7-8506-4a43-8268-fe8fcbb510a4-00000278/"
           + "?op=op_create"
           + "&p1=fork-0001/test/testParseBrokenCSVFile"

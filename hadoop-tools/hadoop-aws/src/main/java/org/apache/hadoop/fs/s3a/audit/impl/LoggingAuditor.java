@@ -91,13 +91,6 @@ public class LoggingAuditor
   private final Map<String, String> attributes = new HashMap<>();
 
   /**
-   * UGI principal at time of creation.
-   * This is mapped into the common context if it is not already set there
-   * when a span is created.
-   */
-  private final String principal;
-
-  /**
    * Should the referrer header be added?
    */
   private boolean headerEnabled;
@@ -129,15 +122,12 @@ public class LoggingAuditor
 
 
     // add the principal
-    String p;
     try {
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-      p = ugi.getUserName();
-      addAttribute(PARAM_PRINCIPAL, p);
-    } catch (IOException ignored) {
-      p = "";
+      addAttribute(PARAM_PRINCIPAL, ugi.getUserName());
+    } catch (IOException ex) {
+      LOG.warn("Auditor unable to determine principal", ex);
     }
-    principal = p;
   }
 
   /**
@@ -260,8 +250,6 @@ public class LoggingAuditor
           // thread at the time of creation.
           .withAttribute(PARAM_THREAD0,
               currentThreadID())
-          // principal when the auditor was created.
-          .withAttribute(PARAM_PRINCIPAL, principal)
           .withAttribute(PARAM_TIMESTAMP, Long.toString(getTimestamp()))
           .withEvaluated(context.getEvaluatedEntries())
           .withFilter(filters)

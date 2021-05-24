@@ -64,9 +64,11 @@ public final class HttpReferrerAuditHeader {
 
   /**
    * Format of path to build: {@value}.
-   * the params passed in are (context ID, span ID, op)
+   * the params passed in are (context ID, span ID, op).
+   * Update
+   * {@code TestHttpReferrerAuditHeader.SAMPLE_LOG_ENTRY} on changes
    */
-  public static final String REFERRER_PATH_FORMAT = "hadoop/1/%3$s/%2$s/";
+  public static final String REFERRER_PATH_FORMAT = "/hadoop/1/%3$s/%2$s/";
 
   private static final Logger LOG =
       LoggerFactory.getLogger(HttpReferrerAuditHeader.class);
@@ -185,7 +187,7 @@ public final class HttpReferrerAuditHeader {
           null);
       header = uri.toASCIIString();
     } catch (URISyntaxException e) {
-      WARN_OF_URL_CREATION.warn("Failed to build URI for {}/{}", e);
+      WARN_OF_URL_CREATION.warn("Failed to build URI for auditor: " + e, e);
       header = "";
     }
     return header;
