@@ -798,6 +798,14 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
+  <name>fs.s3a.endpoint.region</name>
+  <description>AWS S3 region for a bucket, which bypasses the parsing of
+ fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
+ while using privateLink URL and explicitly set the bucket region.
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.path.style.access</name>
   <value>false</value>
   <description>Enable S3 path style access ie disabling the default virtual hosting behaviour.
