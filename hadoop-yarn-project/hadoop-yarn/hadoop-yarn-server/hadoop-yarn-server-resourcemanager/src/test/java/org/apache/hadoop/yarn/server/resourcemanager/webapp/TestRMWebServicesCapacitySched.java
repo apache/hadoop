@@ -661,6 +661,58 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     }
   }
 
+  @Test
+  public void testNodeLabelDefaultAPI() throws Exception {
+    CapacitySchedulerConfiguration config =
+        ((CapacityScheduler)rm.getResourceScheduler()).getConfiguration();
+
+    config.setDefaultNodeLabelExpression("root", "ROOT-INHERITED");
+    config.setDefaultNodeLabelExpression("root.a", "root-a-default-label");
+    rm.getResourceScheduler().reinitialize(config, rm.getRMContext());
+
+    //Start RM so that it accepts app submissions
+    rm.start();
+    try {
+      //Get the XML from ws/v1/cluster/scheduler
+      WebResource r = resource();
+      ClientResponse response = r.path("ws/v1/cluster/scheduler")
+          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
+      String xml = response.getEntity(String.class);
+      DocumentBuilder db = DocumentBuilderFactory.newInstance()
+          .newDocumentBuilder();
+      InputSource is = new InputSource();
+      is.setCharacterStream(new StringReader(xml));
+      //Parse the XML we got
+      Document dom = db.parse(is);
+
+      NodeList allQueues = dom.getElementsByTagName("queue");
+      for (int i = 0; i < allQueues.getLength(); ++i) {
+        Node queueNode = allQueues.item(i);
+        Node queuePathNode = getChildNodeByName(queueNode, "queuePath");
+        if (queuePathNode == null) {
+          continue;
+        }
+
+        String queuePath = queuePathNode.getTextContent();
+        if (queuePath != null) {
+          if (queuePath.startsWith("root.a")) {
+            assertEquals("root-a-default-label",
+                getChildNodeByName(queueNode, "defaultNodeLabelExpression")
+                    .getTextContent());
+          } else {
+            assertEquals("ROOT-INHERITED",
+                getChildNodeByName(queueNode, "defaultNodeLabelExpression")
+                    .getTextContent());
+          }
+        }
+      }
+    } finally {
+      rm.stop();
+    }
+  }
+
   private void checkResourcesUsed(JSONObject queue) throws JSONException {
     queue.getJSONObject("resourcesUsed").getInt("memory");
     queue.getJSONObject("resourcesUsed").getInt("vCores");

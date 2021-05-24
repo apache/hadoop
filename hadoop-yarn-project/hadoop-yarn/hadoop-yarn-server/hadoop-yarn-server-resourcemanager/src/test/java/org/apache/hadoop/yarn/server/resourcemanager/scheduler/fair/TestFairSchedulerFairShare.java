@@ -68,6 +68,9 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
       String policy) {
     AllocationFileWriter allocationFileWriter = AllocationFileWriter.create()
         .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("default")
+                .weight(1)
+                .build())
             .subQueue(new AllocationFileQueue.Builder("parentA")
                 .weight(8)
                 .subQueue(new AllocationFileQueue.Builder("childA1").build())

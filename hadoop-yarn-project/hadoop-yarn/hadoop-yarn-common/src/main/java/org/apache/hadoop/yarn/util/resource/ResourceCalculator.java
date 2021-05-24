@@ -225,6 +225,15 @@ public abstract class ResourceCalculator {
    */
   public abstract boolean isInvalidDivisor(Resource r);
 
+
+  /**
+   * Determine if all resources are zero.
+   *
+   * @param r resource
+   * @return true if all divisors are invalid (should not be used), false else
+   */
+  public abstract boolean isAllInvalidDivisor(Resource r);
+
   /**
    * Ratio of resource <code>a</code> to resource <code>b</code>.
    * 

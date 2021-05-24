@@ -137,6 +137,14 @@ public enum Statistic {
       StoreStatisticNames.OP_IS_FILE,
       "Calls of isFile()",
       TYPE_COUNTER),
+  INVOCATION_HFLUSH(
+      StoreStatisticNames.OP_HFLUSH,
+      "Calls of hflush()",
+      TYPE_COUNTER),
+  INVOCATION_HSYNC(
+      StoreStatisticNames.OP_HSYNC,
+      "Calls of hsync()",
+      TYPE_COUNTER),
   INVOCATION_LIST_FILES(
       StoreStatisticNames.OP_LIST_FILES,
       "Calls of listFiles()",

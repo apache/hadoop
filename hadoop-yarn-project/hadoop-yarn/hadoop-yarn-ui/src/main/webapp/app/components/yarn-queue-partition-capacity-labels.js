@@ -37,12 +37,24 @@ export default Ember.Component.extend({
     const userLimit = queue.get("userLimit");
     const userLimitFactor = queue.get("userLimitFactor");
     const isLeafQueue = queue.get("isLeafQueue");
+    const isWeightMode = queue.get("isWeightMode");
+    const isFlexibleDynamicQueue = queue.get("isFlexibleDynamicQueue");
+    const weight = queue.get("weight");
+    const orderingPolicy = queue.get("orderingPolicy");
+    const normalizedWeight = queue.get("normalizedWeight");
+    const creationMethod = queue.get("creationMethod");
 
     return {
       ...partitionMap[filteredParition],
       userLimit,
       userLimitFactor,
-      isLeafQueue
+      isLeafQueue,
+      isWeightMode,
+      weight,
+      normalizedWeight,
+      orderingPolicy,
+      creationMethod,
+      isFlexibleDynamicQueue
     };
   }
 });

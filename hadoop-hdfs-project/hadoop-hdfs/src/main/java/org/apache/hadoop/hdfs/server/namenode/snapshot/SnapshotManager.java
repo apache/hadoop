@@ -457,7 +457,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       // requests.
       throw new SnapshotException(
           "Failed to create the snapshot. The FileSystem has run out of " +
-          "snapshot IDs and ID rollover is not supported.");
+          "snapshot IDs and ID rollover is not supported " +
+              "and the max snapshot limit is: " + maxSnapshotLimit);
     }
     int n = numSnapshots.get();
     checkFileSystemSnapshotLimit(n);

@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.Proportion
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueDeletionPolicy;
 import org.junit.Test;
 
 import java.util.HashSet;
@@ -91,5 +92,47 @@ public class TestSchedulingMonitor {
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ENABLE_MONITORS);
     cs.reinitialize(conf, rm.getRMContext());
     assertTrue(smm.isRSMEmpty());
+    rm.close();
+  }
+
+  @Test(timeout = 10000)
+  public void testRMUpdateAutoCreatedQueueDeletionPolicy() throws Exception {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
+    conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+        AutoCreatedQueueDeletionPolicy.class.getCanonicalName());
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    SchedulingMonitorManager smm = cs.getSchedulingMonitorManager();
+
+    // runningSchedulingMonitors should not be empty when initialize RM
+    // scheduler monitor
+    cs.reinitialize(conf, rm.getRMContext());
+    assertFalse(smm.isRSMEmpty());
+
+    // make sure runningSchedulingPolicies contains all the configured policy
+    // in YARNConfiguration
+    String[] configuredPolicies = conf.getStrings(
+        YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES);
+    Set<String> configurePoliciesSet = new HashSet<>();
+    for (String s : configuredPolicies) {
+      configurePoliciesSet.add(s);
+    }
+    assertTrue(smm.isSameConfiguredPolicies(configurePoliciesSet));
+
+    // make sure the running monitor contains AutoCreatedQueueDeletionPolicy
+    assertTrue(configurePoliciesSet.
+        contains(AutoCreatedQueueDeletionPolicy.class.getCanonicalName()));
+
+    // disable RM scheduler monitor
+    conf.setBoolean(
+        YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_ENABLE_MONITORS);
+    cs.reinitialize(conf, rm.getRMContext());
+    assertTrue(smm.isRSMEmpty());
+    rm.close();
   }
 }

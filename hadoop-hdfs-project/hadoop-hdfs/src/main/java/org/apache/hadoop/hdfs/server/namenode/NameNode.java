@@ -123,6 +123,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
@@ -325,7 +327,8 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY,
           DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
           DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
-          DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY));
+          DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY,
+          DFS_IMAGE_PARALLEL_LOAD_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -1242,8 +1245,9 @@ public class NameNode extends ReconfigurableBase implements
     LOG.info("Formatting using clusterid: {}", clusterId);
     
     FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat);
+    FSNamesystem fsn = null;
     try {
-      FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+      fsn = new FSNamesystem(conf, fsImage);
       fsImage.getEditLog().initJournalsForWrite();
 
       // Abort NameNode format if reformat is disabled and if
@@ -1268,8 +1272,14 @@ public class NameNode extends ReconfigurableBase implements
       fsImage.format(fsn, clusterId, force);
     } catch (IOException ioe) {
       LOG.warn("Encountered exception during format", ioe);
-      fsImage.close();
       throw ioe;
+    } finally {
+      if (fsImage != null) {
+        fsImage.close();
+      }
+      if (fsn != null) {
+        fsn.close();
+      }
     }
     return false;
   }
@@ -1825,9 +1835,9 @@ public class NameNode extends ReconfigurableBase implements
     }
   }
 
-  synchronized void monitorHealth() 
-      throws HealthCheckFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
+  synchronized void monitorHealth() throws IOException {
+    String operationName = "monitorHealth";
+    namesystem.checkSuperuserPrivilege(operationName);
     if (!haEnabled) {
       return; // no-op, if HA is not enabled
     }
@@ -1849,9 +1859,9 @@ public class NameNode extends ReconfigurableBase implements
     }
   }
   
-  synchronized void transitionToActive() 
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
+  synchronized void transitionToActive() throws IOException {
+    String operationName = "transitionToActive";
+    namesystem.checkSuperuserPrivilege(operationName);
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
@@ -1866,18 +1876,18 @@ public class NameNode extends ReconfigurableBase implements
     state.setState(haContext, ACTIVE_STATE);
   }
 
-  synchronized void transitionToStandby()
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
+  synchronized void transitionToStandby() throws IOException {
+    String operationName = "transitionToStandby";
+    namesystem.checkSuperuserPrivilege(operationName);
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
     state.setState(haContext, STANDBY_STATE);
   }
 
-  synchronized void transitionToObserver()
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
+  synchronized void transitionToObserver() throws IOException {
+    String operationName = "transitionToObserver";
+    namesystem.checkSuperuserPrivilege(operationName);
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
@@ -2011,6 +2021,7 @@ public class NameNode extends ReconfigurableBase implements
     public void startActiveServices() throws IOException {
       try {
         namesystem.startActiveServices();
+        namesystem.checkAndProvisionSnapshotTrashRoots();
         startTrashEmptier(getConf());
       } catch (Throwable t) {
         doImmediateShutdown(t);
@@ -2184,6 +2195,8 @@ public class NameNode extends ReconfigurableBase implements
         .equals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY)) {
       reconfBlockPlacementPolicy();
       return newVal;
+    } else if (property.equals(DFS_IMAGE_PARALLEL_LOAD_KEY)) {
+      return reconfigureParallelLoad(newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2357,6 +2370,17 @@ public class NameNode extends ReconfigurableBase implements
       }
     }
     return newVal;
+  }
+
+  String reconfigureParallelLoad(String newVal) {
+    boolean enableParallelLoad;
+    if (newVal == null) {
+      enableParallelLoad = DFS_IMAGE_PARALLEL_LOAD_DEFAULT;
+    } else {
+      enableParallelLoad = Boolean.parseBoolean(newVal);
+    }
+    FSImageFormatProtobuf.refreshParallelSaveAndLoad(enableParallelLoad);
+    return Boolean.toString(enableParallelLoad);
   }
 
   @Override  // ReconfigurableBase

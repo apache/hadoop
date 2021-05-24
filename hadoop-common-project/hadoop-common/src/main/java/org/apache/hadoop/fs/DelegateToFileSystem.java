@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -90,7 +91,11 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
     if (!createParent) { // parent must exist.
       // since this.create makes parent dirs automatically
       // we must throw exception if parent does not exist.
-      final FileStatus stat = getFileStatus(f.getParent());
+      Optional<Path> parentPath = f.getOptionalParentPath();
+      if (!parentPath.isPresent()) {
+        throw new FileNotFoundException("Missing parent:" + f);
+      }
+      final FileStatus stat = getFileStatus(parentPath.get());
       if (stat == null) {
         throw new FileNotFoundException("Missing parent:" + f);
       }

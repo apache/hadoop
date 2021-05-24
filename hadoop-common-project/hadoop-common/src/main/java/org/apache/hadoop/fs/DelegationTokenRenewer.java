@@ -97,7 +97,7 @@ public class DelegationTokenRenewer
     public boolean equals(final Object that) {
       if (this == that) {
         return true;
-      } else if (that == null || !(that instanceof RenewAction)) {
+      } else if (!(that instanceof RenewAction)) {
         return false;
       }
       return token.equals(((RenewAction<?>)that).token);
@@ -107,7 +107,7 @@ public class DelegationTokenRenewer
      * Set a new time for the renewal.
      * It can only be called when the action is not in the queue or any
      * collection because the hashCode may change
-     * @param newTime the new time
+     * @param delay the renewal time
      */
     private void updateRenewalTime(long delay) {
       renewalTime = Time.now() + delay - delay/10;

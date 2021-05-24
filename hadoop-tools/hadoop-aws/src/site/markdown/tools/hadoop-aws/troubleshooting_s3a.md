@@ -22,7 +22,7 @@ Common problems working with S3 are
 
 1. Classpath setup
 1. Authentication
-1. S3 Inconsistency side-effects
+1. Incorrect configuration
 
 
 Troubleshooting IAM Assumed Roles is covered in its
@@ -1027,7 +1027,7 @@ at the end of a write operation. If a process terminated unexpectedly, or failed
 to call the `close()` method on an output stream, the pending data will have
 been lost.
 
-### File `flush()`, `hsync` and `hflush()` calls do not save data to S3
+### File `flush()` calls do not save data to S3
 
 Again, this is due to the fact that the data is cached locally until the
 `close()` operation. The S3A filesystem cannot be used as a store of data
@@ -1035,6 +1035,39 @@ if it is required that the data is persisted durably after every
 `Syncable.hflush()` or `Syncable.hsync()` call.
 This includes resilient logging, HBase-style journaling
 and the like. The standard strategy here is to save to HDFS and then copy to S3.
+
+### <a name="syncable"></a> `UnsupportedOperationException` "S3A streams are not Syncable. See HADOOP-17597."
+
+The application has tried to call either the `Syncable.hsync()` or `Syncable.hflush()`
+methods on an S3A output stream. This has been rejected because the
+connector isn't saving any data at all. The `Syncable` API, especially the
+`hsync()` call, are critical for applications such as HBase to safely
+persist data.
+
+The S3A connector throws an `UnsupportedOperationException` when these API calls
+are made, because the guarantees absolutely cannot be met: nothing is being flushed
+or saved.
+
+* Applications which intend to invoke the Syncable APIs call `hasCapability("hsync")` on
+  the stream to see if they are supported.
+* Or catch and downgrade `UnsupportedOperationException`.
+
+These recommendations _apply to all filesystems_. 
+
+To downgrade the S3A connector to simply warning of the use of
+`hsync()` or `hflush()` calls, set the option
+`fs.s3a.downgrade.syncable.exceptions` to true.
+
+```xml
+<property>
+  <name>fs.s3a.downgrade.syncable.exceptions</name>
+  <value>true</value>
+</property>
+```
+
+The count of invocations of the two APIs are collected
+in the S3A filesystem Statistics/IOStatistics and so
+their use can be monitored.
 
 ### `RemoteFileChangedException` and read-during-overwrite
 
@@ -1126,6 +1159,40 @@ We also recommend using applications/application
 options which do  not rename files when committing work or when copying data
 to S3, but instead write directly to the final destination.
 
+## Rename not behaving as "expected"
+
+S3 is not a filesystem. The S3A connector mimics file and directory rename by
+
+* HEAD then LIST of source path. The source MUST exist, else a `FileNotFoundException`
+  is raised.
+* HEAD then LIST of the destination path.
+  This SHOULD NOT exist.
+  If it does and if the source is a directory, the destination MUST be an empty directory.
+  If the source is a file, the destination MAY be a directory, empty or not.
+  If the destination exists and relevant conditions are not met, a `FileAlreadyExistsException`
+  is raised.
+* If the destination path does not exist, a HEAD request of the parent path
+  to verify that there is no object there.
+  Directory markers are not checked for, nor that the path has any children,
+* File-by-file copy of source objects to destination.
+  Parallelized, with page listings of directory objects and issuing of DELETE requests.
+* Post-delete recreation of source parent directory marker, if needed.
+
+This is slow (`O(data)`) and can cause timeouts on code which is required
+to send regular progress reports/heartbeats -for example, distCp.
+It is _very unsafe_ if the calling code expects atomic renaming as part
+of any commit algorithm.
+This is why the [S3A Committers](committers.md) or similar are needed to safely
+commit output.
+
+There is also the risk of race conditions arising if many processes/threads
+are working with the same directory tree
+[HADOOP-16721](https://issues.apache.org/jira/browse/HADOOP-16721).
+
+To reduce this risk, since Hadoop 3.3.1, the S3A connector no longer verifies the parent directory
+of the destination of a rename is a directory -only that it is _not_ a file.
+You can rename a directory or file deep under a file if you try -after which
+there is no guarantee of the files being found in listings. Try not to do that.
 
 ## <a name="encryption"></a> S3 Server Side Encryption
 

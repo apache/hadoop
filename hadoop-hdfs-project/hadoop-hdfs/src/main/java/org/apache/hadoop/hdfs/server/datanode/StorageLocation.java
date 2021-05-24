@@ -200,7 +200,7 @@ public class StorageLocation
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof StorageLocation)) {
+    if (!(obj instanceof StorageLocation)) {
       return false;
     }
     int comp = compareTo((StorageLocation) obj);

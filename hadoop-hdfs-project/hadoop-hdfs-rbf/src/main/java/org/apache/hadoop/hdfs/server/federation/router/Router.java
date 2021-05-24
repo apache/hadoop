@@ -550,14 +550,20 @@ public class Router extends CompositeService implements
    *
    * @return Updater of the status for the local Namenode.
    */
-  protected NamenodeHeartbeatService createLocalNamenodeHeartbeatService() {
+  @VisibleForTesting
+  public NamenodeHeartbeatService createLocalNamenodeHeartbeatService() {
     // Detect NN running in this machine
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    if (nsId == null) {
+      LOG.error("Cannot find local nameservice id");
+      return null;
+    }
     String nnId = null;
     if (HAUtil.isHAEnabled(conf, nsId)) {
       nnId = HAUtil.getNameNodeId(conf, nsId);
       if (nnId == null) {
         LOG.error("Cannot find namenode id for local {}", nsId);
+        return null;
       }
     }
 
@@ -785,6 +791,15 @@ public class Router extends CompositeService implements
    */
   public RouterAdminServer getAdminServer() {
     return adminServer;
+  }
+
+  /**
+   * Set router configuration.
+   * @param conf
+   */
+  @VisibleForTesting
+  public void setConf(Configuration conf) {
+    this.conf = conf;
   }
 
 }

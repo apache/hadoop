@@ -91,7 +91,6 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.spi.LoggingEvent;
@@ -100,6 +99,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 
@@ -113,7 +113,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 public class TestEditLog {
 
   static {
-    GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FSEditLog.LOG, Level.TRACE);
   }
 
   @Parameters
@@ -1548,7 +1548,8 @@ public class TestEditLog {
       LOG.error("edit log failover didn't work", e);
       fail("Edit log failover didn't work");
     } finally {
-      IOUtils.cleanup(null, streams.toArray(new EditLogInputStream[0]));
+      IOUtils.cleanupWithLogger(null,
+          streams.toArray(new EditLogInputStream[0]));
     }
   }
 
@@ -1598,7 +1599,8 @@ public class TestEditLog {
       LOG.error("edit log failover didn't work", e);
       fail("Edit log failover didn't work");
     } finally {
-      IOUtils.cleanup(null, streams.toArray(new EditLogInputStream[0]));
+      IOUtils.cleanupWithLogger(null,
+          streams.toArray(new EditLogInputStream[0]));
     }
   }
 

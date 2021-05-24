@@ -2246,7 +2246,8 @@ public class BlockManager implements BlockStatsMXBean {
     }
   }
 
-  private boolean validateReconstructionWork(BlockReconstructionWork rw) {
+  @VisibleForTesting
+  boolean validateReconstructionWork(BlockReconstructionWork rw) {
     BlockInfo block = rw.getBlock();
     int priority = rw.getPriority();
     // Recheck since global lock was released
@@ -2281,6 +2282,7 @@ public class BlockManager implements BlockStatsMXBean {
               placementStatus.getAdditionalReplicasRequired())) {
         // If the new targets do not meet the placement policy, or at least
         // reduce the number of replicas needed, then no use continuing.
+        rw.resetTargets();
         return false;
       }
       // mark that the reconstruction work is to replicate internal block to a
@@ -2831,9 +2833,12 @@ public class BlockManager implements BlockStatsMXBean {
       namesystem.writeUnlock();
     }
 
-    for (Block b : invalidatedBlocks) {
-      blockLog.debug("BLOCK* processReport 0x{}: {} on node {} size {} does not"
-          + " belong to any file", strBlockReportId, b, node, b.getNumBytes());
+    if(blockLog.isDebugEnabled()) {
+      for (Block b : invalidatedBlocks) {
+        blockLog.debug("BLOCK* processReport 0x{}: {} on node {} size {} " +
+                        "does not belong to any file.", strBlockReportId, b,
+                         node, b.getNumBytes());
+      }
     }
 
     // Log the block report processing stats from Namenode perspective
@@ -3211,10 +3216,11 @@ public class BlockManager implements BlockStatsMXBean {
         // If the block is an out-of-date generation stamp or state,
         // but we're the standby, we shouldn't treat it as corrupt,
         // but instead just queue it for later processing.
-        // TODO: Pretty confident this should be s/storedBlock/block below,
-        // since we should be postponing the info of the reported block, not
-        // the stored block. See HDFS-6289 for more context.
-        queueReportedBlock(storageInfo, storedBlock, reportedState,
+        // Storing the reported block for later processing, as that is what
+        // comes from the IBR / FBR and hence what we should use to compare
+        // against the memory state.
+        // See HDFS-6289 and HDFS-15422 for more context.
+        queueReportedBlock(storageInfo, replica, reportedState,
             QUEUE_REASON_CORRUPT_STATE);
       } else {
         toCorrupt.add(c);
@@ -4276,10 +4282,11 @@ public class BlockManager implements BlockStatsMXBean {
         // If the block is an out-of-date generation stamp or state,
         // but we're the standby, we shouldn't treat it as corrupt,
         // but instead just queue it for later processing.
-        // TODO: Pretty confident this should be s/storedBlock/block below,
-        // since we should be postponing the info of the reported block, not
-        // the stored block. See HDFS-6289 for more context.
-        queueReportedBlock(storageInfo, storedBlock, reportedState,
+        // Storing the reported block for later processing, as that is what
+        // comes from the IBR / FBR and hence what we should use to compare
+        // against the memory state.
+        // See HDFS-6289 and HDFS-15422 for more context.
+        queueReportedBlock(storageInfo, block, reportedState,
             QUEUE_REASON_CORRUPT_STATE);
       } else {
         markBlockAsCorrupt(c, storageInfo, node);

@@ -389,8 +389,8 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
          <configuration>
           <includeTests>true</includeTests>
         </configuration>
@@ -405,19 +405,6 @@
             <phase>test-compile</phase>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <additionnalDependencies>
-            <additionnalDependency>
-              <groupId>junit</groupId>
-              <artifactId>junit</artifactId>
-              <version>4.11</version>
-            </additionnalDependency>
-          </additionnalDependencies>
-        </configuration>
       </plugin>
 
       <plugin>

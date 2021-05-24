@@ -220,8 +220,9 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
             .getJSONObject("schedulerInfo").getJSONObject("rootQueue")
             .getJSONObject("childQueues").getJSONArray("queue");
 
-        // childQueueInfo consists of subqueue1 and subqueue2 info
-        assertEquals(2, queues.length());
+        assertEquals(1, queues.length());
+
+        // firstChildQueue info contains subqueue1 and subqueue2 info
         JSONObject firstChildQueue = queues.getJSONObject(0);
         new FairSchedulerJsonVerifications(customResourceTypes)
             .verify(firstChildQueue);

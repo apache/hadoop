@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
@@ -465,9 +466,13 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
+    return getFormattedString(String.valueOf(getMemorySize()));
+  }
+
+  private String getFormattedString(String memory) {
     StringBuilder sb = new StringBuilder();
 
-    sb.append("<memory:").append(getMemorySize()).append(", vCores:")
+    sb.append("<memory:").append(memory).append(", vCores:")
         .append(getVirtualCores());
 
     for (int i = 2; i < resources.length; i++) {
@@ -483,6 +488,15 @@ public abstract class Resource implements Comparable<Resource> {
 
     sb.append(">");
     return sb.toString();
+  }
+
+  /**
+   * This method is to get memory in terms of KB|MB|GB.
+   * @return string containing all resources
+   */
+  public String getFormattedString() {
+    return getFormattedString(
+        StringUtils.byteDesc(getMemorySize() * 1024 * 1024));
   }
 
   @Override

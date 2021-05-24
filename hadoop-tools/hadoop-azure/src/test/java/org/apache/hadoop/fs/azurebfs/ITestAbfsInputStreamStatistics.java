@@ -31,7 +31,13 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.io.IOUtils;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 
 public class ITestAbfsInputStreamStatistics
     extends AbstractAbfsIntegrationTest {
@@ -386,12 +392,13 @@ public class ITestAbfsInputStreamStatistics
       abfsInputStream =
           abfss.openFileForRead(actionHttpGetRequestPath, fs.getFsStatistics());
       abfsInputStream.read();
-      AbfsInputStreamStatisticsImpl abfsInputStreamStatistics =
-          (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
-
-      LOG.info("AbfsInputStreamStats info: {}", abfsInputStreamStatistics.toString());
+      IOStatistics ioStatistics = extractStatistics(fs);
+      LOG.info("AbfsInputStreamStats info: {}",
+          ioStatisticsToPrettyString(ioStatistics));
       Assertions.assertThat(
-          abfsInputStreamStatistics.getActionHttpGetRequest())
+          lookupMeanStatistic(ioStatistics,
+              AbfsStatistic.HTTP_GET_REQUEST.getStatName()
+                  + StoreStatisticNames.SUFFIX_MEAN).mean())
           .describedAs("Mismatch in time taken by a GET request")
           .isGreaterThan(0.0);
     } finally {

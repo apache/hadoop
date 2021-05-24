@@ -29,10 +29,10 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 public class TestClientBlockVerification {
 
@@ -42,7 +42,7 @@ public class TestClientBlockVerification {
   static LocatedBlock testBlock = null;
 
   static {
-    GenericTestUtils.setLogLevel(BlockReaderRemote.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(BlockReaderRemote.LOG, Level.TRACE);
   }
   @BeforeClass
   public static void setupCluster() throws Exception {

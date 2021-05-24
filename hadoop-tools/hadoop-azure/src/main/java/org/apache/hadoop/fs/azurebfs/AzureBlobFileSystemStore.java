@@ -39,6 +39,7 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,11 +47,16 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,6 +105,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
+import org.apache.hadoop.fs.azurebfs.services.AbfsLease;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
@@ -125,6 +132,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PAT
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 
 /**
@@ -143,8 +151,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int GET_SET_AGGREGATE_COUNT = 2;
 
+  private final Map<AbfsLease, Object> leaseRefs;
+
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
+  private Set<String> azureInfiniteLeaseDirSet;
   private Trilean isNamespaceEnabled;
   private final AuthType authType;
   private final UserGroupInformation userGroupInformation;
@@ -164,6 +175,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
     final String accountName = authorityParts[1];
+
+    leaseRefs = Collections.synchronizedMap(new WeakHashMap<>());
 
     try {
       this.abfsConfiguration = new AbfsConfiguration(configuration, accountName);
@@ -193,6 +206,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     this.azureAtomicRenameDirSet = new HashSet<>(Arrays.asList(
         abfsConfiguration.getAzureAtomicRenameDirs().split(AbfsHttpConstants.COMMA)));
+    updateInfiniteLeaseDirs();
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
@@ -244,7 +258,24 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   @Override
   public void close() throws IOException {
-    IOUtils.cleanupWithLogger(LOG, client);
+    List<ListenableFuture<?>> futures = new ArrayList<>();
+    for (AbfsLease lease : leaseRefs.keySet()) {
+      if (lease == null) {
+        continue;
+      }
+      ListenableFuture<?> future = client.submit(() -> lease.free());
+      futures.add(future);
+    }
+    try {
+      Futures.allAsList(futures).get();
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted freeing leases", e);
+      Thread.currentThread().interrupt();
+    } catch (ExecutionException e) {
+      LOG.error("Error freeing leases", e);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, client);
+    }
   }
 
   byte[] encodeAttribute(String value) throws UnsupportedEncodingException {
@@ -494,12 +525,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
+      AbfsLease lease = maybeCreateLease(relativePath);
+
       return new AbfsOutputStream(
           client,
           statistics,
           relativePath,
           0,
-          populateAbfsOutputStreamContext(isAppendBlob));
+          populateAbfsOutputStreamContext(isAppendBlob, lease));
     }
   }
 
@@ -571,7 +604,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return op;
   }
 
-  private AbfsOutputStreamContext populateAbfsOutputStreamContext(boolean isAppendBlob) {
+  private AbfsOutputStreamContext populateAbfsOutputStreamContext(boolean isAppendBlob,
+      AbfsLease lease) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
@@ -585,6 +619,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withAppendBlob(isAppendBlob)
             .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
+            .withLease(lease)
             .build();
   }
 
@@ -599,14 +634,25 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               umask,
               isNamespaceEnabled);
 
-      final AbfsRestOperation op = client.createPath(getRelativePath(path), false, true,
+      boolean overwrite =
+          !isNamespaceEnabled || abfsConfiguration.isEnabledMkdirOverwrite();
+      final AbfsRestOperation op = client.createPath(getRelativePath(path),
+          false, overwrite,
               isNamespaceEnabled ? getOctalNotation(permission) : null,
               isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
 
-  public AbfsInputStream openFileForRead(final Path path, final FileSystem.Statistics statistics)
+  public AbfsInputStream openFileForRead(final Path path,
+      final FileSystem.Statistics statistics)
+      throws AzureBlobFileSystemException {
+    return openFileForRead(path, Optional.empty(), statistics);
+  }
+
+  public AbfsInputStream openFileForRead(final Path path,
+      final Optional<Configuration> options,
+      final FileSystem.Statistics statistics)
       throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForRead", "getPathStatus")) {
       LOG.debug("openFileForRead filesystem: {} path: {}",
@@ -635,12 +681,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics,
               relativePath, contentLength,
-              populateAbfsInputStreamContext(),
+              populateAbfsInputStreamContext(options),
               eTag);
     }
   }
 
-  private AbfsInputStreamContext populateAbfsInputStreamContext() {
+  private AbfsInputStreamContext populateAbfsInputStreamContext(
+      Optional<Configuration> options) {
+    boolean bufferedPreadDisabled = options
+        .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
+        .orElse(false);
     return new AbfsInputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
             .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
@@ -651,6 +701,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withShouldReadBufferSizeAlways(
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
+            .withBufferedPreadDisabled(bufferedPreadDisabled)
             .build();
   }
 
@@ -687,13 +738,27 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         isAppendBlob = true;
       }
 
+      AbfsLease lease = maybeCreateLease(relativePath);
+
       return new AbfsOutputStream(
           client,
           statistics,
           relativePath,
           offset,
-          populateAbfsOutputStreamContext(isAppendBlob));
+          populateAbfsOutputStreamContext(isAppendBlob, lease));
     }
+  }
+
+  /**
+   * Break any current lease on an ABFS file.
+   *
+   * @param path file name
+   * @throws AzureBlobFileSystemException on any exception while breaking the lease
+   */
+  public void breakLease(final Path path) throws AzureBlobFileSystemException {
+    LOG.debug("lease path: {}", path);
+
+    client.breakLease(getRelativePath(path));
   }
 
   public void rename(final Path source, final Path destination) throws
@@ -1329,6 +1394,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
+  public boolean isInfiniteLeaseKey(String key) {
+    if (azureInfiniteLeaseDirSet.isEmpty()) {
+      return false;
+    }
+    return isKeyForDirectorySet(key, azureInfiniteLeaseDirSet);
+  }
+
   /**
    * A on-off operation to initialize AbfsClient for AzureBlobFileSystem
    * Operations.
@@ -1618,4 +1690,32 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.isNamespaceEnabled = isNamespaceEnabled;
   }
 
+  private void updateInfiniteLeaseDirs() {
+    this.azureInfiniteLeaseDirSet = new HashSet<>(Arrays.asList(
+        abfsConfiguration.getAzureInfiniteLeaseDirs().split(AbfsHttpConstants.COMMA)));
+    // remove the empty string, since isKeyForDirectory returns true for empty strings
+    // and we don't want to default to enabling infinite lease dirs
+    this.azureInfiniteLeaseDirSet.remove("");
+  }
+
+  private AbfsLease maybeCreateLease(String relativePath)
+      throws AzureBlobFileSystemException {
+    boolean enableInfiniteLease = isInfiniteLeaseKey(relativePath);
+    if (!enableInfiniteLease) {
+      return null;
+    }
+    AbfsLease lease = new AbfsLease(client, relativePath);
+    leaseRefs.put(lease, null);
+    return lease;
+  }
+
+  @VisibleForTesting
+  boolean areLeasesFreed() {
+    for (AbfsLease lease : leaseRefs.keySet()) {
+      if (lease != null && !lease.isFreed()) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

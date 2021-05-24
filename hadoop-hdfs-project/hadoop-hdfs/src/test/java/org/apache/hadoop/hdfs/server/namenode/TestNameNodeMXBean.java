@@ -112,7 +112,7 @@ public class TestNameNodeMXBean {
     MiniDFSCluster cluster = null;
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       cluster.waitActive();
 
       // Set upgrade domain on the first DN.
@@ -171,7 +171,7 @@ public class TestNameNodeMXBean {
           "LiveNodes"));
       Map<String, Map<String, Object>> liveNodes =
           (Map<String, Map<String, Object>>) JSON.parse(alivenodeinfo);
-      assertTrue(liveNodes.size() == 2);
+      assertTrue(liveNodes.size() == 4);
       for (Map<String, Object> liveNode : liveNodes.values()) {
         assertTrue(liveNode.containsKey("nonDfsUsedSpace"));
         assertTrue(((Long)liveNode.get("nonDfsUsedSpace")) >= 0);
@@ -195,6 +195,27 @@ public class TestNameNodeMXBean {
         assertFalse(xferAddr.equals(dnXferAddrInMaintenance) ^ inMaintenance);
       }
       assertEquals(fsn.getLiveNodes(), alivenodeinfo);
+
+      // Put the third DN to decommissioning state.
+      DatanodeDescriptor decommissioningNode = dm.getDatanode(
+              cluster.getDataNodes().get(2).getDatanodeId());
+      decommissioningNode.startDecommission();
+
+      // Put the fourth DN to decommissioned state.
+      DatanodeDescriptor decommissionedNode = dm.getDatanode(
+              cluster.getDataNodes().get(3).getDatanodeId());
+      decommissionedNode.setDecommissioned();
+
+      // Assert the location field is included in the mxbeanName
+      // under different states
+      String alivenodeinfo1 = (String) (mbs.getAttribute(mxbeanName,
+              "LiveNodes"));
+      Map<String, Map<String, Object>> liveNodes1 =
+              (Map<String, Map<String, Object>>) JSON.parse(alivenodeinfo1);
+      for (Map<String, Object> liveNode : liveNodes1.values()) {
+        assertTrue(liveNode.containsKey("location"));
+      }
+
       // get attributes DeadNodes
       String deadNodeInfo = (String) (mbs.getAttribute(mxbeanName,
           "DeadNodes"));

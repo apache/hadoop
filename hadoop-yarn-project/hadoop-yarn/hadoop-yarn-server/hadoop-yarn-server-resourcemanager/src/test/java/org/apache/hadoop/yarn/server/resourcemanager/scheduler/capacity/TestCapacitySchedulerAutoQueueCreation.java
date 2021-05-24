@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
@@ -89,6 +90,7 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -534,6 +536,53 @@ public class TestCapacitySchedulerAutoQueueCreation
       }
     }
   }
+
+
+  @Test
+  public void testAutoQueueCreationFailsForEmptyPathWithAQCAndWeightMode()
+      throws Exception {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+
+    //We need a special configuration we only need a V2 queue auto creation
+    //And weight mode, to allow dynamic auto queue creation for root
+    CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
+    conf.setAutoQueueCreationV2Enabled(ROOT, true);
+    conf.setCapacity("root.default", "1w");
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    //Just a regular mockRM and CapacityScheduler instance
+    MockRM newMockRM = new MockRM(conf);
+    newMockRM.start();
+    ((CapacityScheduler) newMockRM.getResourceScheduler()).start();
+
+    CapacityScheduler newCS =
+        (CapacityScheduler) newMockRM.getResourceScheduler();
+
+    try {
+      //submitting to root..user, this should fail WITHOUT crashing the RM
+      submitApp(newCS, USER0, "user", "root.");
+
+      RMContext rmContext = mock(RMContext.class);
+      when(rmContext.getDispatcher()).thenReturn(dispatcher);
+      newCS.setRMContext(rmContext);
+
+      ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+      SchedulerEvent addAppEvent = new AppAddedSchedulerEvent(
+          appId, "user", USER0);
+      newCS.handle(addAppEvent);
+
+      RMAppEvent event = new RMAppEvent(appId, RMAppEventType.APP_REJECTED,
+          "error");
+      dispatcher.spyOnNextEvent(event, 10000);
+    } finally {
+      ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
+      newMockRM.stop();
+    }
+  }
+
 
   /**
    * This test case checks if a mapping rule can put an application to an auto

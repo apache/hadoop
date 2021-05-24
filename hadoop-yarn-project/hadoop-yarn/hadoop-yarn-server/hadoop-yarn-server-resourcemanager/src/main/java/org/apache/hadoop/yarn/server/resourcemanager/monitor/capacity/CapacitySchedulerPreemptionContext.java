@@ -74,4 +74,8 @@ public interface CapacitySchedulerPreemptionContext {
 
   @Unstable
   IntraQueuePreemptionOrderPolicy getIntraQueuePreemptionOrderPolicy();
+
+  boolean getCrossQueuePreemptionConservativeDRF();
+
+  boolean getInQueuePreemptionConservativeDRF();
 }

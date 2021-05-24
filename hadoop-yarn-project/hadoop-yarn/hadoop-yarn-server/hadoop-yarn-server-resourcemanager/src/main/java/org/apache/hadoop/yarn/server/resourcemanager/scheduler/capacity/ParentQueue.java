@@ -30,6 +30,7 @@ import java.util.Set;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.slf4j.Logger;
@@ -101,6 +102,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   private final boolean allowZeroCapacitySum;
 
+  private AutoCreatedQueueTemplate autoCreatedQueueTemplate;
+
   // effective min ratio per resource, it is used during updateClusterResource,
   // leaf queue can use this to calculate effective resources.
   // This field will not be edited, reference will point to a new immutable map
@@ -152,6 +155,8 @@ public class ParentQueue extends AbstractCSQueue {
       throws IOException {
     writeLock.lock();
     try {
+      autoCreatedQueueTemplate = new AutoCreatedQueueTemplate(
+          csConf, getQueuePath());
       super.setupQueueConfigs(clusterResource, csConf);
       StringBuilder aclsString = new StringBuilder();
       for (Map.Entry<AccessType, AccessControlList> e : acls.entrySet()) {
@@ -173,7 +178,7 @@ public class ParentQueue extends AbstractCSQueue {
               ((ParentQueue) parent).getQueueOrderingPolicyConfigName());
       queueOrderingPolicy.setQueues(childQueues);
 
-      LOG.info(queueName + ", capacity=" + this.queueCapacities.getCapacity()
+      LOG.info(queueName + ", " + getCapacityOrWeightString()
           + ", absoluteCapacity=" + this.queueCapacities.getAbsoluteCapacity()
           + ", maxCapacity=" + this.queueCapacities.getMaximumCapacity()
           + ", absoluteMaxCapacity=" + this.queueCapacities
@@ -462,8 +467,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   public String toString() {
     return queueName + ": " +
-        "numChildQueue= " + childQueues.size() + ", " + 
-        "capacity=" + queueCapacities.getCapacity() + ", " +  
+        "numChildQueue= " + childQueues.size() + ", " +
+        getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
         "usedResources=" + queueUsage.getUsed() + 
         "usedCapacity=" + getUsedCapacity() + ", " + 
@@ -477,6 +482,8 @@ public class ParentQueue extends AbstractCSQueue {
     CapacitySchedulerConfiguration dupCSConfig =
         new CapacitySchedulerConfiguration(
         csContext.getConfiguration(), false);
+    autoCreatedQueueTemplate.setTemplateEntriesForChild(dupCSConfig,
+        childQueuePath);
     if (isLeaf) {
       // set to -1, to disable it
       dupCSConfig.setUserLimitFactor(childQueuePath, -1);
@@ -570,14 +577,37 @@ public class ParentQueue extends AbstractCSQueue {
 
       CSQueue newQueue = createNewQueue(childQueuePath, isLeaf);
       this.childQueues.add(newQueue);
+      updateLastSubmittedTimeStamp();
 
-      // Call updateClusterResource
-      // , which will deal with all effectiveMin/MaxResource
+      // Call updateClusterResource.
+      // Which will deal with all effectiveMin/MaxResource
       // Calculation
       this.updateClusterResource(csContext.getClusterResource(),
           new ResourceLimits(this.csContext.getClusterResource()));
 
       return newQueue;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+
+  // New method to remove child queue
+  public void removeChildQueue(CSQueue queue)
+      throws SchedulerDynamicEditException {
+    writeLock.lock();
+    try {
+      // Now we can do remove and update
+      this.childQueues.remove(queue);
+      this.scheduler.getCapacitySchedulerQueueManager()
+          .removeQueue(queue.getQueuePath());
+
+      // Call updateClusterResource,
+      // which will deal with all effectiveMin/MaxResource
+      // Calculation
+      this.updateClusterResource(csContext.getClusterResource(),
+          new ResourceLimits(this.csContext.getClusterResource()));
+
     } finally {
       writeLock.unlock();
     }
@@ -624,6 +654,18 @@ public class ParentQueue extends AbstractCSQueue {
       Map<String, CSQueue> currentChildQueues = getQueuesMap(childQueues);
       Map<String, CSQueue> newChildQueues = getQueuesMap(
           newlyParsedParentQueue.childQueues);
+
+      // Reinitialize dynamic queues as well, because they are not parsed
+      for (String queue : Sets.difference(currentChildQueues.keySet(),
+          newChildQueues.keySet())) {
+        CSQueue candidate = currentChildQueues.get(queue);
+        if (candidate instanceof AbstractCSQueue) {
+          if (((AbstractCSQueue) candidate).isDynamicQueue()) {
+            candidate.reinitialize(candidate, clusterResource);
+          }
+        }
+      }
+
       for (Map.Entry<String, CSQueue> e : newChildQueues.entrySet()) {
         String newChildQueueName = e.getKey();
         CSQueue newChildQueue = e.getValue();
@@ -1194,7 +1236,9 @@ public class ParentQueue extends AbstractCSQueue {
           // For dynamic queue, we will set weight to 1 every time, because it
           // is possible new labels added to the parent.
           if (((AbstractCSQueue) queue).isDynamicQueue()) {
-            queue.getQueueCapacities().setWeight(nodeLabel, 1f);
+            if (queue.getQueueCapacities().getWeight(nodeLabel) == -1f) {
+              queue.getQueueCapacities().setWeight(nodeLabel, 1f);
+            }
           }
         }
       }
@@ -1606,5 +1650,16 @@ public class ParentQueue extends AbstractCSQueue {
   // This is a locking free method
   Map<String, Float> getEffectiveMinRatioPerResource() {
     return effectiveMinRatioPerResource;
+  }
+
+  @Override
+  public boolean isEligibleForAutoDeletion() {
+    return isDynamicQueue() && getChildQueues().size() == 0 &&
+        csContext.getConfiguration().
+            isAutoExpiredDeletionEnabled(this.getQueuePath());
+  }
+
+  public AutoCreatedQueueTemplate getAutoCreatedQueueTemplate() {
+    return autoCreatedQueueTemplate;
   }
 }

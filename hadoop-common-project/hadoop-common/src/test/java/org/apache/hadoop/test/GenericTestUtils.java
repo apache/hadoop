@@ -30,13 +30,18 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.Enumeration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -46,8 +51,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Appender;
@@ -61,14 +69,26 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
+
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.util.functional.CommonCallableSupplier.submit;
+import static org.apache.hadoop.util.functional.CommonCallableSupplier.waitForCompletion;
 
 /**
  * Test provides some very generic helpers which might be used across the tests
  */
 public abstract class GenericTestUtils {
+
+  public static final int EXECUTOR_THREAD_COUNT = 64;
+
+  private static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(GenericTestUtils.class);
+
+  public static final String PREFIX = "file-";
 
   private static final AtomicInteger sequence = new AtomicInteger();
 
@@ -227,6 +247,22 @@ public abstract class GenericTestUtils {
    */
   public static int uniqueSequenceId() {
     return sequence.incrementAndGet();
+  }
+
+  /**
+   * Creates a directory for the data/logs of the unit test.
+   * It first deletes the directory if it exists.
+   *
+   * @param testClass the unit test class.
+   * @return the Path of the root directory.
+   */
+  public static File setupTestRootDir(Class<?> testClass) {
+    File testRootDir = getTestDir(testClass.getSimpleName());
+    if (testRootDir.exists()) {
+      FileUtil.fullyDelete(testRootDir);
+    }
+    testRootDir.mkdirs();
+    return testRootDir;
   }
 
   /**
@@ -880,5 +916,132 @@ public abstract class GenericTestUtils {
     }
     return threadCount;
   }
+  /**
+   * Write the text to a file asynchronously. Logs the operation duration.
+   * @param fs filesystem
+   * @param path path
+   * @return future to the patch created.
+   */
+  private static CompletableFuture<Path> put(FileSystem fs,
+      Path path, String text) {
+    return submit(EXECUTOR, () -> {
+      try (DurationInfo ignore =
+          new DurationInfo(LOG, false, "Creating %s", path)) {
+        createFile(fs, path, true, text.getBytes(StandardCharsets.UTF_8));
+        return path;
+      }
+    });
+  }
 
+  /**
+   * Build a set of files in a directory tree.
+   * @param fs filesystem
+   * @param destDir destination
+   * @param depth file depth
+   * @param fileCount number of files to create.
+   * @param dirCount number of dirs to create at each level
+   * @return the list of files created.
+   */
+  public static List<Path> createFiles(final FileSystem fs,
+      final Path destDir,
+      final int depth,
+      final int fileCount,
+      final int dirCount) throws IOException {
+    return createDirsAndFiles(fs, destDir, depth, fileCount, dirCount,
+        new ArrayList<Path>(fileCount),
+        new ArrayList<Path>(dirCount));
+  }
+
+  /**
+   * Build a set of files in a directory tree.
+   * @param fs filesystem
+   * @param destDir destination
+   * @param depth file depth
+   * @param fileCount number of files to create.
+   * @param dirCount number of dirs to create at each level
+   * @param paths [out] list of file paths created
+   * @param dirs [out] list of directory paths created.
+   * @return the list of files created.
+   */
+  public static List<Path> createDirsAndFiles(final FileSystem fs,
+      final Path destDir,
+      final int depth,
+      final int fileCount,
+      final int dirCount,
+      final List<Path> paths,
+      final List<Path> dirs) throws IOException {
+    buildPaths(paths, dirs, destDir, depth, fileCount, dirCount);
+    List<CompletableFuture<Path>> futures = new ArrayList<>(paths.size()
+        + dirs.size());
+
+    // create directories. With dir marker retention, that adds more entries
+    // to cause deletion issues
+    try (DurationInfo ignore =
+        new DurationInfo(LOG, "Creating %d directories", dirs.size())) {
+      for (Path path : dirs) {
+        futures.add(submit(EXECUTOR, () ->{
+          fs.mkdirs(path);
+          return path;
+        }));
+      }
+      waitForCompletion(futures);
+    }
+
+    try (DurationInfo ignore =
+        new DurationInfo(LOG, "Creating %d files", paths.size())) {
+      for (Path path : paths) {
+        futures.add(put(fs, path, path.getName()));
+      }
+      waitForCompletion(futures);
+      return paths;
+    }
+  }
+
+  /**
+   * Recursive method to build up lists of files and directories.
+   * @param filePaths list of file paths to add entries to.
+   * @param dirPaths  list of directory paths to add entries to.
+   * @param destDir   destination directory.
+   * @param depth     depth of directories
+   * @param fileCount number of files.
+   * @param dirCount  number of directories.
+   */
+  public static void buildPaths(final List<Path> filePaths,
+      final List<Path> dirPaths, final Path destDir, final int depth,
+      final int fileCount, final int dirCount) {
+    if (depth <= 0) {
+      return;
+    }
+    // create the file paths
+    for (int i = 0; i < fileCount; i++) {
+      String name = filenameOfIndex(i);
+      Path p = new Path(destDir, name);
+      filePaths.add(p);
+    }
+    for (int i = 0; i < dirCount; i++) {
+      String name = String.format("dir-%03d", i);
+      Path p = new Path(destDir, name);
+      dirPaths.add(p);
+      buildPaths(filePaths, dirPaths, p, depth - 1, fileCount, dirCount);
+    }
+  }
+
+  /**
+   * Given an index, return a string to use as the filename.
+   * @param i index
+   * @return name
+   */
+  public static String filenameOfIndex(final int i) {
+    return String.format("%s%03d", PREFIX, i);
+  }
+
+  /**
+   * For submitting work.
+   */
+  private static final BlockingThreadPoolExecutorService EXECUTOR =
+      BlockingThreadPoolExecutorService.newInstance(
+          EXECUTOR_THREAD_COUNT,
+          EXECUTOR_THREAD_COUNT * 2,
+          30, TimeUnit.SECONDS,
+          "test-operations");
 }

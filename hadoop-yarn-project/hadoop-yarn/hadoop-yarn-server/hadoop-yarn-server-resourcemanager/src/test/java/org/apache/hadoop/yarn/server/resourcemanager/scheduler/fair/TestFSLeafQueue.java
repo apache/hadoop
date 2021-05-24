@@ -147,7 +147,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     createSchedulingRequest(1 * 1024, "queueB", "user1");
     scheduler.update();
     Collection<FSLeafQueue> queues = scheduler.getQueueManager().getLeafQueues();
-    assertEquals(3, queues.size());
+    assertEquals(2, queues.size());
   }
 
   @Test
