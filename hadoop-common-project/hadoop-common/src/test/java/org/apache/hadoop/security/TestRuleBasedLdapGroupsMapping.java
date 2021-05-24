@@ -24,9 +24,7 @@ import org.mockito.Mockito;
 
 import javax.naming.NamingException;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.apache.hadoop.security.RuleBasedLdapGroupsMapping
     .CONVERSION_RULE_KEY;
@@ -42,7 +40,7 @@ public class TestRuleBasedLdapGroupsMapping  {
   public void testGetGroupsToUpper() throws NamingException {
     RuleBasedLdapGroupsMapping groupsMapping = Mockito.spy(
         new RuleBasedLdapGroupsMapping());
-    Set<String> groups = new LinkedHashSet<>();
+    List<String> groups = new ArrayList<>();
     groups.add("group1");
     groups.add("group2");
     Mockito.doReturn(groups).when((LdapGroupsMapping) groupsMapping)
@@ -63,7 +61,7 @@ public class TestRuleBasedLdapGroupsMapping  {
   public void testGetGroupsToLower() throws NamingException {
     RuleBasedLdapGroupsMapping groupsMapping = Mockito.spy(
         new RuleBasedLdapGroupsMapping());
-    Set<String> groups = new LinkedHashSet<>();
+    List<String> groups = new ArrayList<>();
     groups.add("GROUP1");
     groups.add("GROUP2");
     Mockito.doReturn(groups).when((LdapGroupsMapping) groupsMapping)
@@ -84,7 +82,7 @@ public class TestRuleBasedLdapGroupsMapping  {
   public void testGetGroupsInvalidRule() throws NamingException {
     RuleBasedLdapGroupsMapping groupsMapping = Mockito.spy(
         new RuleBasedLdapGroupsMapping());
-    Set<String> groups = new LinkedHashSet<>();
+    List<String> groups = new ArrayList<>();
     groups.add("group1");
     groups.add("GROUP2");
     Mockito.doReturn(groups).when((LdapGroupsMapping) groupsMapping)
@@ -95,7 +93,7 @@ public class TestRuleBasedLdapGroupsMapping  {
     conf.set(CONVERSION_RULE_KEY, "none");
     groupsMapping.setConf(conf);
 
-    Assert.assertEquals(groups, groupsMapping.getGroupsSet("admin"));
+    Assert.assertEquals(groups, groupsMapping.getGroups("admin"));
   }
 
 }

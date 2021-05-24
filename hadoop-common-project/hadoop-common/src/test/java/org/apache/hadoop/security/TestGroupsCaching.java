@@ -21,9 +21,9 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -75,7 +75,7 @@ public class TestGroupsCaching {
     private static volatile CountDownLatch latch = null;
 
     @Override
-    public Set<String> getGroupsSet(String user) throws IOException {
+    public List<String> getGroups(String user) throws IOException {
       TESTLOG.info("Getting groups for " + user);
       delayIfNecessary();
 
@@ -86,14 +86,9 @@ public class TestGroupsCaching {
       }
 
       if (blackList.contains(user)) {
-        return Collections.emptySet();
+        return new LinkedList<String>();
       }
-      return new LinkedHashSet<>(allGroups);
-    }
-
-    @Override
-    public List<String> getGroups(String user) throws IOException {
-      return new ArrayList<>(getGroupsSet(user));
+      return new LinkedList<String>(allGroups);
     }
 
     /**
@@ -134,7 +129,7 @@ public class TestGroupsCaching {
       TESTLOG.info("Resetting FakeGroupMapping");
       blackList.clear();
       allGroups.clear();
-      resetRequestCount();
+      requestCount = 0;
       getGroupsDelayMs = 0;
       throwException = false;
       latch = null;
@@ -198,12 +193,6 @@ public class TestGroupsCaching {
 
     @Override
     public List<String> getGroups(String user) throws IOException {
-      requestCount++;
-      throw new IOException("For test");
-    }
-
-    @Override
-    public Set<String> getGroupsSet(String user) throws IOException {
       requestCount++;
       throw new IOException("For test");
     }
@@ -561,7 +550,7 @@ public class TestGroupsCaching {
     FakeGroupMapping.clearBlackList();
 
     // We make an initial request to populate the cache
-    List<String> g1 = groups.getGroups("me");
+    groups.getGroups("me");
 
     // add another group
     groups.cacheGroupsAdd(Arrays.asList("grp3"));

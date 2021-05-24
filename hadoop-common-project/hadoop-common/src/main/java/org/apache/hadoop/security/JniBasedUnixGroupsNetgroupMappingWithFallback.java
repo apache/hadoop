@@ -20,7 +20,6 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.slf4j.Logger;
@@ -59,11 +58,6 @@ public class JniBasedUnixGroupsNetgroupMappingWithFallback implements
   @Override
   public void cacheGroupsAdd(List<String> groups) throws IOException {
     impl.cacheGroupsAdd(groups);
-  }
-
-  @Override
-  public Set<String> getGroupsSet(String user) throws IOException {
-    return impl.getGroupsSet(user);
   }
 
 }

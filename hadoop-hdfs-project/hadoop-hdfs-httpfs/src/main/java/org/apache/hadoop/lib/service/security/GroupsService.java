@@ -27,7 +27,6 @@ import org.apache.hadoop.lib.util.ConfigurationUtils;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 
 @InterfaceAudience.Private
 public class GroupsService extends BaseService implements Groups {
@@ -51,18 +50,9 @@ public class GroupsService extends BaseService implements Groups {
     return Groups.class;
   }
 
-  /**
-   * @deprecated use {@link #getGroupsSet(String user)}
-   */
-  @Deprecated
   @Override
   public List<String> getGroups(String user) throws IOException {
     return hGroups.getGroups(user);
-  }
-
-  @Override
-  public Set<String> getGroupsSet(String user) throws IOException {
-    return hGroups.getGroupsSet(user);
   }
 
 }

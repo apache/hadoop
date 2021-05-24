@@ -96,7 +96,6 @@ import java.text.MessageFormat;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Main class of HttpFSServer server.
@@ -325,7 +324,7 @@ public class HttpFSServer {
     case INSTRUMENTATION: {
       enforceRootPath(op.value(), path);
       Groups groups = HttpFSServerWebApp.get().get(Groups.class);
-      Set<String> userGroups = groups.getGroupsSet(user.getShortUserName());
+      List<String> userGroups = groups.getGroups(user.getShortUserName());
       if (!userGroups.contains(HttpFSServerWebApp.get().getAdminGroup())) {
         throw new AccessControlException(
             "User not in HttpFSServer admin group");

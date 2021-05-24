@@ -18,11 +18,8 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 
@@ -56,7 +53,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
 
   private long timeout = CommonConfigurationKeys.
       HADOOP_SECURITY_GROUP_SHELL_COMMAND_TIMEOUT_DEFAULT;
-  private static final Set<String> EMPTY_GROUPS_SET = Collections.emptySet();
+  private static final List<String> EMPTY_GROUPS = new LinkedList<>();
 
   @Override
   public void setConf(Configuration conf) {
@@ -97,7 +94,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
    */
   @Override
   public List<String> getGroups(String userName) throws IOException {
-    return new ArrayList(getUnixGroups(userName));
+    return getUnixGroups(userName);
   }
 
   /**
@@ -116,11 +113,6 @@ public class ShellBasedUnixGroupsMapping extends Configured
   @Override
   public void cacheGroupsAdd(List<String> groups) throws IOException {
     // does nothing in this provider of user to groups mapping
-  }
-
-  @Override
-  public Set<String> getGroupsSet(String userName) throws IOException {
-    return getUnixGroups(userName);
   }
 
   /**
@@ -200,33 +192,44 @@ public class ShellBasedUnixGroupsMapping extends Configured
    *         group is returned first.
    * @throws IOException if encounter any error when running the command
    */
-  private Set<String> getUnixGroups(String user) throws IOException {
+  private List<String> getUnixGroups(String user) throws IOException {
     ShellCommandExecutor executor = createGroupExecutor(user);
 
-    Set<String> groups;
+    List<String> groups;
     try {
       executor.execute();
       groups = resolveFullGroupNames(executor.getOutput());
     } catch (ExitCodeException e) {
       if (handleExecutorTimeout(executor, user)) {
-        return EMPTY_GROUPS_SET;
+        return EMPTY_GROUPS;
       } else {
         try {
           groups = resolvePartialGroupNames(user, e.getMessage(),
               executor.getOutput());
         } catch (PartialGroupNameException pge) {
           LOG.warn("unable to return groups for user {}", user, pge);
-          return EMPTY_GROUPS_SET;
+          return EMPTY_GROUPS;
         }
       }
     } catch (IOException ioe) {
       if (handleExecutorTimeout(executor, user)) {
-        return EMPTY_GROUPS_SET;
+        return EMPTY_GROUPS;
       } else {
         // If its not an executor timeout, we should let the caller handle it
         throw ioe;
       }
     }
+
+    // remove duplicated primary group
+    if (!Shell.WINDOWS) {
+      for (int i = 1; i < groups.size(); i++) {
+        if (groups.get(i).equals(groups.get(0))) {
+          groups.remove(i);
+          break;
+        }
+      }
+    }
+
     return groups;
   }
 
@@ -239,13 +242,13 @@ public class ShellBasedUnixGroupsMapping extends Configured
    * @return a linked list of group names
    * @throws PartialGroupNameException
    */
-  private Set<String> parsePartialGroupNames(String groupNames,
+  private List<String> parsePartialGroupNames(String groupNames,
       String groupIDs) throws PartialGroupNameException {
     StringTokenizer nameTokenizer =
         new StringTokenizer(groupNames, Shell.TOKEN_SEPARATOR_REGEX);
     StringTokenizer idTokenizer =
         new StringTokenizer(groupIDs, Shell.TOKEN_SEPARATOR_REGEX);
-    Set<String> groups = new LinkedHashSet<>();
+    List<String> groups = new LinkedList<String>();
     while (nameTokenizer.hasMoreTokens()) {
       // check for unresolvable group names.
       if (!idTokenizer.hasMoreTokens()) {
@@ -274,10 +277,10 @@ public class ShellBasedUnixGroupsMapping extends Configured
    * @param userName the user's name
    * @param errMessage error message from the shell command
    * @param groupNames the incomplete list of group names
-   * @return a set of resolved group names
+   * @return a list of resolved group names
    * @throws PartialGroupNameException if the resolution fails or times out
    */
-  private Set<String> resolvePartialGroupNames(String userName,
+  private List<String> resolvePartialGroupNames(String userName,
       String errMessage, String groupNames) throws PartialGroupNameException {
     // Exception may indicate that some group names are not resolvable.
     // Shell-based implementation should tolerate unresolvable groups names,
@@ -319,16 +322,16 @@ public class ShellBasedUnixGroupsMapping extends Configured
   }
 
   /**
-   * Split group names into a set.
+   * Split group names into a linked list.
    *
    * @param groupNames a string representing the user's group names
-   * @return a set of group names
+   * @return a linked list of group names
    */
   @VisibleForTesting
-  protected Set<String> resolveFullGroupNames(String groupNames) {
+  protected List<String> resolveFullGroupNames(String groupNames) {
     StringTokenizer tokenizer =
         new StringTokenizer(groupNames, Shell.TOKEN_SEPARATOR_REGEX);
-    Set<String> groups = new LinkedHashSet<>();
+    List<String> groups = new LinkedList<String>();
     while (tokenizer.hasMoreTokens()) {
       groups.add(tokenizer.nextToken());
     }
