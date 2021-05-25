@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import javax.annotation.Nullable;
 
@@ -55,6 +56,8 @@ public class S3AReadOpContext extends S3AOpContext {
    */
   private final long readahead;
 
+  private final AuditSpan auditSpan;
+
   /**
    * Instantiate.
    * @param path path of read
@@ -65,8 +68,9 @@ public class S3AReadOpContext extends S3AOpContext {
    * @param instrumentation statistics context
    * @param dstFileStatus target file status
    * @param inputPolicy the input policy
-   * @param readahead readahead for GET operations/skip, etc.
    * @param changeDetectionPolicy change detection policy.
+   * @param readahead readahead for GET operations/skip, etc.
+   * @param auditSpan active audit
    */
   public S3AReadOpContext(
       final Path path,
@@ -78,11 +82,13 @@ public class S3AReadOpContext extends S3AOpContext {
       FileStatus dstFileStatus,
       S3AInputPolicy inputPolicy,
       ChangeDetectionPolicy changeDetectionPolicy,
-      final long readahead) {
+      final long readahead,
+      final AuditSpan auditSpan) {
 
     super(isS3GuardEnabled, invoker, s3guardInvoker, stats, instrumentation,
         dstFileStatus);
     this.path = checkNotNull(path);
+    this.auditSpan = auditSpan;
     Preconditions.checkArgument(readahead >= 0,
         "invalid readahead %d", readahead);
     this.inputPolicy = checkNotNull(inputPolicy);
@@ -131,6 +137,14 @@ public class S3AReadOpContext extends S3AOpContext {
    */
   public long getReadahead() {
     return readahead;
+  }
+
+  /**
+   * Get the audit which was active when the file was opened.
+   * @return active span
+   */
+  public AuditSpan getAuditSpan() {
+    return auditSpan;
   }
 
   @Override

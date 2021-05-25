@@ -272,35 +272,28 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
     Path path = path(UPLOAD_PREFIX + "/" + UPLOAD_NAME);
 
     describe("Cleaning up any leftover uploads from previous runs.");
-    // 1. Make sure key doesn't already exist
-    clearAnyUploads(fs, path);
-
-    // 2. Confirm no uploads are listed via API
-    assertNoUploadsAt(fs, path.getParent());
-
-    // 3. Confirm no uploads are listed via CLI
-    describe("Confirming CLI lists nothing.");
-    assertNumUploads(path, 0);
-
-    // 4. Create a upload part
-    describe("Uploading single part.");
-    createPartUpload(fs, fs.pathToKey(path), 128, 1);
-
+    final String key = fs.pathToKey(path);
     try {
-      // 5. Confirm it exists via API..
-      LambdaTestUtils.eventually(5000, /* 5 seconds until failure */
-          1000, /* one second retry interval */
-          () -> {
-            assertEquals("Should be one upload", 1, countUploadsAt(fs, path));
-          });
+      // 1. Make sure key doesn't already exist
+      clearAnyUploads(fs, path);
+
+      // 2. Confirm no uploads are listed via API
+      assertNoUploadsAt(fs, path.getParent());
+
+      // 3. Confirm no uploads are listed via CLI
+      describe("Confirming CLI lists nothing.");
+      assertNumUploads(path, 0);
+
+      // 4. Create a upload part
+      describe("Uploading single part.");
+      createPartUpload(fs, key, 128, 1);
+
+      assertEquals("Should be one upload", 1, countUploadsAt(fs, path));
 
       // 6. Confirm part exists via CLI, direct path and parent path
       describe("Confirming CLI lists one part");
-      LambdaTestUtils.eventually(5000, 1000,
-          () -> { assertNumUploads(path, 1); });
-      LambdaTestUtils.eventually(5000, 1000,
-          () -> { assertNumUploads(path.getParent(), 1); });
-
+      assertNumUploads(path, 1);
+      assertNumUploads(path.getParent(), 1);
       // 7. Use CLI to delete part, assert it worked
       describe("Deleting part via CLI");
       assertNumDeleted(fs, path, 1);
@@ -331,15 +324,15 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
 
     // 2. Create a upload part
     describe("Uploading single part.");
-    createPartUpload(fs, fs.pathToKey(path), 128, 1);
+    final String key = fs.pathToKey(path);
+    createPartUpload(fs, key, 128, 1);
 
+    //try (AuditSpan span = fs.startOperation("multipart", key, null)) {
     try {
+
       // 3. Confirm it exists via API.. may want to wrap with
       // LambdaTestUtils.eventually() ?
-      LambdaTestUtils.eventually(5000, 1000,
-          () -> {
-            assertEquals("Should be one upload", 1, countUploadsAt(fs, path));
-          });
+      assertEquals("Should be one upload", 1, countUploadsAt(fs, path));
 
       // 4. Confirm part does appear in listing with long age filter
       describe("Confirming CLI older age doesn't list");

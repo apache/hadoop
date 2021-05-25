@@ -66,6 +66,7 @@ public class S3ALocatedFileStatus extends LocatedFileStatus {
   /**
    * Generate an S3AFileStatus instance, including etag and
    * version ID, if present.
+   * @return the S3A status.
    */
   public S3AFileStatus toS3AFileStatus() {
     return new S3AFileStatus(
