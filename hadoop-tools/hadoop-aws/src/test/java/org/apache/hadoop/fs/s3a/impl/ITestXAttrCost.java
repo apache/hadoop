@@ -38,6 +38,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_MAP;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_NAMED;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_APPLICATION_XML;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_X_DIRECTORY;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_TYPE;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_STANDARD_HEADERS;
@@ -163,7 +164,7 @@ public class ITestXAttrCost extends AbstractS3ACostTest {
     assertHeader(XA_CONTENT_LENGTH, bytes)
         .isEqualTo("0");
     assertHeaderEntry(xAttrs, XA_CONTENT_TYPE)
-        .isEqualTo(CONTENT_TYPE_OCTET_STREAM);
+        .isEqualTo(CONTENT_TYPE_X_DIRECTORY);
   }
 
   /**

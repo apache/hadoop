@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.test.LambdaTestUtils;
 
@@ -111,16 +112,18 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   @Test
   public void testPutObjectDirect() throws Throwable {
     final S3AFileSystem fs = getFileSystem();
-    ObjectMetadata metadata = fs.newObjectMetadata(-1);
-    metadata.setContentLength(-1);
-    Path path = path("putDirect");
-    final PutObjectRequest put = new PutObjectRequest(fs.getBucket(),
-        path.toUri().getPath(),
-        new ByteArrayInputStream("PUT".getBytes()),
-        metadata);
-    LambdaTestUtils.intercept(IllegalStateException.class,
-        () -> fs.putObjectDirect(put));
-    assertPathDoesNotExist("put object was created", path);
+    try (AuditSpan span = span()) {
+      ObjectMetadata metadata = fs.newObjectMetadata(-1);
+      metadata.setContentLength(-1);
+      Path path = path("putDirect");
+      final PutObjectRequest put = new PutObjectRequest(fs.getBucket(),
+          path.toUri().getPath(),
+          new ByteArrayInputStream("PUT".getBytes()),
+          metadata);
+      LambdaTestUtils.intercept(IllegalStateException.class,
+          () -> fs.putObjectDirect(put));
+      assertPathDoesNotExist("put object was created", path);
+    }
   }
 
   private FSDataOutputStream createNonRecursive(Path path) throws IOException {

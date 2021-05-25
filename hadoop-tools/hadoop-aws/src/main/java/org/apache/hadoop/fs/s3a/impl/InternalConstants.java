@@ -37,6 +37,16 @@ import org.apache.hadoop.fs.s3a.Constants;
  */
 public final class InternalConstants {
 
+  /**
+   * This declared delete as idempotent.
+   * This is an "interesting" topic in past Hadoop FS work.
+   * Essentially: with a single caller, DELETE is idempotent
+   * but in a shared filesystem, it is is very much not so.
+   * Here, on the basis that isn't a filesystem with consistency guarantees,
+   * retryable results in files being deleted.
+  */
+  public static final boolean DELETE_CONSIDERED_IDEMPOTENT = true;
+
   private InternalConstants() {
   }
 
