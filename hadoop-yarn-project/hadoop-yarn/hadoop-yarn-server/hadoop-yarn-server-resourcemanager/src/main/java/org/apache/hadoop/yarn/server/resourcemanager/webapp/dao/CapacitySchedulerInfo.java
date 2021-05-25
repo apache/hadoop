@@ -62,6 +62,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected String creationMethod;
   protected String autoCreationEligibility;
   protected String defaultNodeLabelExpression;
+  protected AutoQueueTemplatePropertiesInfo autoQueueTemplateProperties;
 
   @XmlTransient
   static final float EPSILON = 1e-8f;
@@ -109,6 +110,8 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     if (parent instanceof ParentQueue) {
       orderingPolicyInfo = ((ParentQueue) parent).getQueueOrderingPolicy()
           .getConfigName();
+      autoQueueTemplateProperties = CapacitySchedulerInfoHelper
+            .getAutoCreatedTemplate((ParentQueue) parent);
     }
     mode = CapacitySchedulerInfoHelper.getMode(parent);
     queueType = CapacitySchedulerInfoHelper.getQueueType(parent);
