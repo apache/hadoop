@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl;
+package org.apache.hadoop.fs.store;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,6 +37,16 @@ public class LogExactlyOnce {
   public void warn(String format, Object...args) {
     if (!logged.getAndSet(true)) {
       log.warn(format, args);
+    }
+  }
+  public void info(String format, Object...args) {
+    if (!logged.getAndSet(true)) {
+      log.info(format, args);
+    }
+  }
+  public void error(String format, Object...args) {
+    if (!logged.getAndSet(true)) {
+      log.error(format, args);
     }
   }
 }

@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.fs.RemoteIterator;
 
+import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
+
 /**
  * Encapsulates a Path (path), its FileStatus (stat), and its FileSystem (fs).
  * PathData ensures that the returned path string will be the same as the
@@ -287,20 +289,8 @@ public class PathData implements Comparable<PathData> {
       throws IOException {
     checkIfExists(FileTypeRequirement.SHOULD_BE_DIRECTORY);
     final RemoteIterator<FileStatus> stats = this.fs.listStatusIterator(path);
-    return new RemoteIterator<PathData>() {
-
-      @Override
-      public boolean hasNext() throws IOException {
-        return stats.hasNext();
-      }
-
-      @Override
-      public PathData next() throws IOException {
-        FileStatus file = stats.next();
-        String child = getStringForChildPath(file.getPath());
-        return new PathData(fs, child, file);
-      }
-    };
+    return mappingRemoteIterator(stats,
+        file -> new PathData(fs, getStringForChildPath(file.getPath()), file));
   }
 
   /**

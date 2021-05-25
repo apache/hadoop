@@ -67,7 +67,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -91,7 +90,6 @@ import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
-import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 
@@ -854,21 +852,6 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Call a void operation; any exception raised is logged at info.
-   * This is for test teardowns.
-   * @param log log to use.
-   * @param operation operation to invoke
-   */
-  public static void callQuietly(final Logger log,
-      final Invoker.VoidOperation operation) {
-    try {
-      operation.execute();
-    } catch (Exception e) {
-      log.info(e.toString(), e);
-    }
-  }
-
-  /**
    * Deploy a hadoop service: init and start it.
    * @param conf configuration to use
    * @param service service to configure
@@ -1447,35 +1430,6 @@ public final class S3ATestUtils {
           listFilesHasIt);
     assertTrue("fs.listStatus didn't include " + filePath,
           listStatusHasIt);
-  }
-
-  /**
-   * Wait for a deleted file to no longer be visible.
-   * @param fs filesystem
-   * @param testFilePath path to query
-   * @throws Exception failure
-   */
-  public static void awaitDeletedFileDisappearance(final S3AFileSystem fs,
-      final Path testFilePath) throws Exception {
-    eventually(
-        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
-        () -> intercept(FileNotFoundException.class,
-            () -> fs.getFileStatus(testFilePath)));
-  }
-
-  /**
-   * Wait for a file to be visible.
-   * @param fs filesystem
-   * @param testFilePath path to query
-   * @return the file status.
-   * @throws Exception failure
-   */
-  public static S3AFileStatus awaitFileStatus(S3AFileSystem fs,
-      final Path testFilePath)
-      throws Exception {
-    return (S3AFileStatus) eventually(
-        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
-        () -> fs.getFileStatus(testFilePath));
   }
 
   /**

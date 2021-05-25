@@ -363,7 +363,6 @@ public final class MarkerTool extends S3GuardTool {
 
     // extract the callbacks needed for the rest of the work
     storeContext = fs.createStoreContext();
-    operations = fs.createMarkerToolOperations();
     // filesystem policy.
     // if the -nonauth option is set, this is used to filter
     // out surplus markers from the results.
@@ -417,13 +416,15 @@ public final class MarkerTool extends S3GuardTool {
       minMarkerCount = maxMarkerCount;
       maxMarkerCount = m;
     }
-    ScanResult result = scan(target,
+    // extract the callbacks needed for the rest of the work
+    operations = fs.createMarkerToolOperations(
+        target.toString());
+    return scan(target,
         scanArgs.isDoPurge(),
         minMarkerCount,
         maxMarkerCount,
         scanArgs.getLimit(),
         filterPolicy);
-    return result;
   }
 
   /**

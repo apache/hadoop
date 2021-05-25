@@ -35,6 +35,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitCodeProvider;
@@ -590,6 +591,7 @@ public class ServiceLauncher<S extends Service>
     }
     String name = getServiceName();
     LOG.debug("Launched service {}", name);
+    CommonAuditContext.noteEntryPoint(service);
     LaunchableService launchableService = null;
 
     if (service instanceof LaunchableService) {

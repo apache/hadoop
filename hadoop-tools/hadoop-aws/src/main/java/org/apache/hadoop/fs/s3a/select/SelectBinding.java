@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.select;
 
 import java.io.IOException;
 import java.util.Locale;
-import java.util.Optional;
 
 import com.amazonaws.services.s3.model.CSVInput;
 import com.amazonaws.services.s3.model.CSVOutput;
@@ -28,7 +27,6 @@ import com.amazonaws.services.s3.model.ExpressionType;
 import com.amazonaws.services.s3.model.InputSerialization;
 import com.amazonaws.services.s3.model.OutputSerialization;
 import com.amazonaws.services.s3.model.QuoteFields;
-import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -55,6 +53,7 @@ import static org.apache.hadoop.fs.s3a.select.SelectConstants.*;
  * This class is intended to be instantiated by the owning S3AFileSystem
  * instance to handle the construction of requests: IO is still done exclusively
  * in the filesystem.
+ *
  */
 public class SelectBinding {
 
@@ -70,12 +69,12 @@ public class SelectBinding {
 
   /**
    * Constructor.
-   * @param operations owning FS.
+   * @param operations callback to owner FS, with associated span.
    */
   public SelectBinding(final WriteOperationHelper operations) {
     this.operations = checkNotNull(operations);
     Configuration conf = getConf();
-    this.enabled = conf.getBoolean(FS_S3A_SELECT_ENABLED, true);
+    this.enabled = isSelectEnabled(conf);
     this.errorsIncludeSql = conf.getBoolean(SELECT_ERRORS_INCLUDE_SQL, false);
   }
 
@@ -92,11 +91,19 @@ public class SelectBinding {
   }
 
   /**
+   * Static probe for select being enabled.
+   * @param conf configuration
+   * @return true iff select is enabled.
+   */
+  public static boolean isSelectEnabled(Configuration conf) {
+    return conf.getBoolean(FS_S3A_SELECT_ENABLED, true);
+  }
+
+  /**
    * Build and execute a select request.
    * @param readContext the read context, which includes the source path.
    * @param expression the SQL expression.
    * @param builderOptions query options
-   * @param sseKey optional SSE customer key
    * @param objectAttributes object attributes from a HEAD request
    * @return an FSDataInputStream whose wrapped stream is a SelectInputStream
    * @throws IllegalArgumentException argument failure
@@ -108,7 +115,6 @@ public class SelectBinding {
       final S3AReadOpContext readContext,
       final String expression,
       final Configuration builderOptions,
-      final Optional<SSECustomerKey> sseKey,
       final S3ObjectAttributes objectAttributes) throws IOException {
 
     return new FSDataInputStream(
@@ -118,8 +124,8 @@ public class SelectBinding {
             buildSelectRequest(
                 readContext.getPath(),
                 expression,
-                builderOptions,
-                sseKey)));
+                builderOptions
+            )));
   }
 
   /**
@@ -127,7 +133,6 @@ public class SelectBinding {
    * @param path source path.
    * @param expression the SQL expression.
    * @param builderOptions config to extract other query options from
-   * @param sseKey optional SSE customer key
    * @return the request to serve
    * @throws IllegalArgumentException argument failure
    * @throws IOException problem building/validating the request
@@ -135,16 +140,13 @@ public class SelectBinding {
   public SelectObjectContentRequest buildSelectRequest(
       final Path path,
       final String expression,
-      final Configuration builderOptions,
-      final Optional<SSECustomerKey> sseKey)
+      final Configuration builderOptions)
       throws IOException {
     Preconditions.checkState(isEnabled(),
         "S3 Select is not enabled for %s", path);
 
     SelectObjectContentRequest request = operations.newSelectRequest(path);
     buildRequest(request, expression, builderOptions);
-    // optionally set an SSE key in the input
-    sseKey.ifPresent(request::withSSECustomerKey);
     return request;
   }
 
@@ -427,5 +429,6 @@ public class SelectBinding {
         // backslash substitution must come last
         .replace("\\\\", "\\");
   }
+
 
 }

@@ -57,6 +57,12 @@
     <description>Let's postpone existence checks to the first IO operation </description>
   </property>
 
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.audit.add.referrer.header</name>
+    <value>false</value>
+    <description>Do not add the referrer header to landsat operations</description>
+  </property>
+
   <!-- Convenience definitions. -->
   <property>
     <name>s3guard.null</name>
@@ -164,6 +170,13 @@
   <property>
     <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
     <value>0</value>
+  </property>
+
+  <!-- auditing rejects out of span operations; this ensures that
+        no regressions take place. -->
+  <property>
+    <name>fs.s3a.audit.reject.out.of.span.operations</name>
+    <value>true</value>
   </property>
 
   <!--

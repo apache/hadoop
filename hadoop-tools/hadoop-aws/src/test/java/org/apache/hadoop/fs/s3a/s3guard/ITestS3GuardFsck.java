@@ -44,7 +44,6 @@ import static org.junit.Assume.assumeTrue;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.awaitFileStatus;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
@@ -207,7 +206,6 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     try {
       // create a file with guarded fs
       mkdirs(cwd);
-      awaitFileStatus(guardedFs, cwd);
       // modify the cwd metadata and set that it's not a directory
       final S3AFileStatus newParentFile = MetadataStoreTestBase
           .basicFileStatus(cwd, 1, false, 1);
