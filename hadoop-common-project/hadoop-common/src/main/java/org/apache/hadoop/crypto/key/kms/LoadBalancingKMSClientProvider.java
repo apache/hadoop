@@ -233,6 +233,10 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
   }
 
   private int nextIdx() {
+    if (providers.length == 0) {
+      throw new IOException("No providers configured !");
+    }
+
     while (true) {
       int current = currentIdx.get();
       int next = (current + 1) % providers.length;
