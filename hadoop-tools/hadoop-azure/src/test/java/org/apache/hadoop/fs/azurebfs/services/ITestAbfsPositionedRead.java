@@ -79,7 +79,7 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
         TEST_FILE_DATA_SIZE, true);
     int bytesToRead = 10;
     if (isMockFastpathTest) {
-      MockFastpathConnection.registerAppend(1024, dest.getName(), data, 0,
+      MockFastpathConnection.registerAppend(TEST_FILE_DATA_SIZE, dest.getName(), data, 0,
           data.length);
       addToTestTearDownCleanupList(dest);
     }
