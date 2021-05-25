@@ -109,6 +109,17 @@ public class TestAutoCreatedQueueTemplate {
         newConf.getNonLabeledQueueWeight(TEST_QUEUE_ABC), 10e-6);
   }
 
+  @Test
+  public void testRootTemplate() {
+    conf.set(getTemplateKey("root", "capacity"), "2w");
+
+    AutoCreatedQueueTemplate template =
+        new AutoCreatedQueueTemplate(conf, ROOT);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_A);
+    Assert.assertEquals("root property is not set", 2f,
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_A), 10e-6);
+  }
+
   private String getTemplateKey(String queuePath, String entryKey) {
     return CapacitySchedulerConfiguration.getQueuePrefix(queuePath)
         + AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX + entryKey;
