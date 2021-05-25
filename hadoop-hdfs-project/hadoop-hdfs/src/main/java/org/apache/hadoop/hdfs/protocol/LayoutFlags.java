@@ -23,11 +23,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
-
 /**
  * LayoutFlags represent features which the FSImage and edit logs can either
  * support or not, independently of layout version.
