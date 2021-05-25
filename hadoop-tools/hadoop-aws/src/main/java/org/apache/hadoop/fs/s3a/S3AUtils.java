@@ -133,10 +133,10 @@ public final class S3AUtils {
       S3AEncryptionMethods.SSE_S3.getMethod()
           + " is enabled but an encryption key was set in "
           + SERVER_SIDE_ENCRYPTION_KEY;
-  private static final String EOF_MESSAGE_IN_XML_PARSER
+  public static final String EOF_MESSAGE_IN_XML_PARSER
       = "Failed to sanitize XML document destined for handler class";
 
-  private static final String EOF_READ_DIFFERENT_LENGTH
+  public static final String EOF_READ_DIFFERENT_LENGTH
       = "Data read has a different length than the expected";
 
   private static final String BUCKET_PATTERN = FS_S3A_BUCKET_PREFIX + "%s.%s";

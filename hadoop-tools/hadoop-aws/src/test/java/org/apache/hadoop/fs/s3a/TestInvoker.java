@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
@@ -161,6 +162,15 @@ public class TestInvoker extends Assert {
     ex.setStatusCode(500);
     verifyTranslated(AWSStatus500Exception.class,
         ex);
+  }
+
+  @Test
+  public void testExceptionsWithTranslatableMessage() throws Exception {
+    SdkBaseException xmlParsing = new SdkBaseException(EOF_MESSAGE_IN_XML_PARSER);
+    SdkBaseException differentLength = new SdkBaseException(EOF_READ_DIFFERENT_LENGTH);
+
+    verifyTranslated(EOFException.class, xmlParsing);
+    verifyTranslated(EOFException.class, differentLength);
   }
 
   @Test(expected = org.apache.hadoop.net.ConnectTimeoutException.class)
