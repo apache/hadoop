@@ -489,23 +489,17 @@ public abstract class AbstractAbfsIntegrationTest extends
   public FSDataInputStream openMockAbfsInputStream(AzureBlobFileSystem fs,
       Path testFilePath, Optional<Configuration> opt) throws IOException {
     return new FSDataInputStream(
-        getMockAbfsInputStream(fs, testFilePath, opt, null));
+        getMockAbfsInputStream(fs, testFilePath, opt));
   }
 
   public AbfsInputStream getMockAbfsInputStream(AzureBlobFileSystem fs,
       Path testFilePath) throws IOException {
-    return getMockAbfsInputStream(fs, testFilePath, Optional.empty(), null);
+    return getMockAbfsInputStream(fs, testFilePath, Optional.empty());
   }
 
   public AbfsInputStream getMockAbfsInputStream(AzureBlobFileSystem fs,
-      Path testFilePath, Optional<Configuration> opt,
-      Map<String, String> configs) throws IOException {
+      Path testFilePath, Optional<Configuration> opt) throws IOException {
     Configuration conf = fs.getConf();
-    if (configs != null) {
-      for (String key : configs.keySet()) {
-        conf.set(key, configs.get(key));
-      }
-    }
     conf.setBoolean(FS_AZURE_FASTPATH_ENABLE, true);
     fs = (AzureBlobFileSystem) FileSystem.get(fs.getUri(), conf);
     Path qualifiedPath = makeQualified(testFilePath);

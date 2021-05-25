@@ -187,7 +187,9 @@ public class MockFastpathConnection
     ByteBuffer bb = clone(appendRegister.get(path));
     bb.rewind();
     checkIfExceptionShouldbeThrown();
-    String mockedResponse = getReadResponse();
+    int len = Math.min((bb.capacity() - (int)readParams.getStoreFilePosition()),
+        readParams.getBytesToRead());
+    String mockedResponse = String.format(getReadResponse(), len);
     this.getNativeApiCaller()
         .RegisterReadResponse(readParams.getClientRequestId(),
             mockedResponse,

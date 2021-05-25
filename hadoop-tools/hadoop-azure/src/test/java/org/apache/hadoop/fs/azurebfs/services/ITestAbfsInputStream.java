@@ -152,15 +152,13 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     AbfsInputStream abfsInputStream = (AbfsInputStream) iStream.getWrappedStream();
 
     if (isMockFastpathTest) {
-      Map<String, String> configs = new HashMap<>();
-      configs.put(AZURE_READ_OPTIMIZE_FOOTER_READ, "true");
-      configs.put(AZURE_READ_SMALL_FILES_COMPLETELY, "true");
+      getRawConfiguration().setBoolean(AZURE_READ_OPTIMIZE_FOOTER_READ, true);
+      getRawConfiguration().setBoolean(AZURE_READ_SMALL_FILES_COMPLETELY, true);
       abfsInputStream = getMockAbfsInputStream((AzureBlobFileSystem) fs,
-          testFilePath, Optional.empty(), configs);
+          testFilePath, Optional.empty());
     }
 
     try {
-
       abfsInputStream = spy(abfsInputStream);
       doThrow(new IOException())
           .doCallRealMethod()
@@ -169,7 +167,6 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
       iStream = new FSDataInputStream(abfsInputStream);
       verifyBeforeSeek(abfsInputStream);
-
       seek(iStream, seekPos);
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
