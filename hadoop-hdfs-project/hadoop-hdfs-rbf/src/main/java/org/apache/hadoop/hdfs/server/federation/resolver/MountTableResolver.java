@@ -350,7 +350,8 @@ public class MountTableResolver
    */
   @VisibleForTesting
   public static boolean isTrashPath(String path) throws IOException {
-    Pattern pattern = Pattern.compile(getTrashRoot() + TRASH_PATTERN + "/");
+    Pattern pattern = Pattern.compile(
+        "^" + getTrashRoot() + TRASH_PATTERN + "/");
     return pattern.matcher(path).find();
   }
 

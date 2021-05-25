@@ -69,8 +69,8 @@ public class RemoteLocation extends RemoteLocationContext {
    * @param path Path in the destination namespace.
    */
   public RemoteLocation(RemoteLocation remoteLocation, String path) {
-    this.nameserviceId = remoteLocation.getNsId();
-    this.namenodeId = remoteLocation.getNnId();
+    this.nameserviceId = remoteLocation.nameserviceId;
+    this.namenodeId = remoteLocation.namenodeId;
     this.dstPath = path;
     this.srcPath = path;
   }
@@ -92,14 +92,6 @@ public class RemoteLocation extends RemoteLocationContext {
   @Override
   public String getSrc() {
     return this.srcPath;
-  }
-
-  public String getNsId() {
-    return this.nameserviceId;
-  }
-
-  public String getNnId() {
-    return this.namenodeId;
   }
 
   @Override

@@ -248,6 +248,21 @@ public class TestRouterTrash {
         "/user/" + ugi.getUserName() +
             "/.Trash/" + Time.now() + MOUNT_POINT));
     assertFalse(MountTableResolver.isTrashPath(MOUNT_POINT));
+
+    // Contains TrashCurrent but does not begin with TrashCurrent.
+    assertFalse(MountTableResolver.isTrashPath("/home/user/" +
+        ugi.getUserName() + "/.Trash/Current" + MOUNT_POINT));
+    assertFalse(MountTableResolver.isTrashPath("/home/user/" +
+        ugi.getUserName() + "/.Trash/" + Time.now() + MOUNT_POINT));
+
+    // Special cases.
+    assertFalse(MountTableResolver.isTrashPath(""));
+    assertFalse(MountTableResolver.isTrashPath(
+        "/home/user/empty.Trash/Current"));
+    assertFalse(MountTableResolver.isTrashPath(
+        "/home/user/.Trash"));
+    assertFalse(MountTableResolver.isTrashPath(
+        "/.Trash/Current"));
   }
 
   @Test
@@ -259,5 +274,24 @@ public class TestRouterTrash {
     assertEquals(MOUNT_POINT, MountTableResolver.subtractTrashCurrentPath(
         "/user/" + ugi.getUserName() +
             "/.Trash/" + Time.now() + MOUNT_POINT));
+
+    // Contains TrashCurrent but does not begin with TrashCurrent.
+    assertEquals("/home/user/" + ugi.getUserName() +
+        "/.Trash/Current" + MOUNT_POINT, MountTableResolver.
+        subtractTrashCurrentPath("/home/user/" +
+            ugi.getUserName() + "/.Trash/Current" + MOUNT_POINT));
+    long time = Time.now();
+    assertEquals("/home/user/" + ugi.getUserName() +
+        "/.Trash/" + time + MOUNT_POINT, MountTableResolver.
+        subtractTrashCurrentPath("/home/user/" + ugi.getUserName() +
+            "/.Trash/" + time + MOUNT_POINT));
+    // Special cases.
+    assertEquals("", MountTableResolver.subtractTrashCurrentPath(""));
+    assertEquals("/home/user/empty.Trash/Current", MountTableResolver.
+        subtractTrashCurrentPath("/home/user/empty.Trash/Current"));
+    assertEquals("/home/user/.Trash", MountTableResolver.
+        subtractTrashCurrentPath("/home/user/.Trash"));
+    assertEquals("/.Trash/Current", MountTableResolver.
+        subtractTrashCurrentPath("/.Trash/Current"));
   }
 }
