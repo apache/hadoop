@@ -466,7 +466,9 @@ public class ContentSummary extends QuotaUsage implements Writable{
    * @return Constant-width String representation of Erasure Coding Policy
    */
   public String toErasureCodingPolicy() {
-    return String.format(ERASURECODING_POLICY_FORMAT, erasureCodingPolicy);
+    return String.format(ERASURECODING_POLICY_FORMAT,
+        erasureCodingPolicy.equals("Replicated")
+            ? erasureCodingPolicy : "EC:" + erasureCodingPolicy);
   }
 
   /**
