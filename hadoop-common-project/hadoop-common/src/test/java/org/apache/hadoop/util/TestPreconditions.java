@@ -19,15 +19,10 @@
 package org.apache.hadoop.util;
 
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 
-public class TestValidate {
-  public static final Logger LOG =
-      LoggerFactory.getLogger(TestValidate.class);
-
+public class TestPreconditions {
   private static final String NON_NULL_STRING = "NON_NULL_OBJECT";
   private static final String NON_INT_STRING = "NOT_INT";
   private static final String EXPECTED_ERROR_MSG = "Expected-Error-MSG";
@@ -39,25 +34,25 @@ public class TestValidate {
 
   @Test
   public void testCheckNotNullSuccess() {
-    Validate.checkNotNull(NON_NULL_STRING);
+    Preconditions.checkNotNull(NON_NULL_STRING);
     // null supplier
-    Validate.checkNotNull(NON_NULL_STRING, null);
+    Preconditions.checkNotNull(NON_NULL_STRING, null);
     // ill-formated string supplier
-    Validate.checkNotNull(NON_NULL_STRING, ()-> String.format("%d",
+    Preconditions.checkNotNull(NON_NULL_STRING, ()-> String.format("%d",
         NON_INT_STRING));
     // null pattern to string formatter
-    Validate.checkNotNull(NON_NULL_STRING, NULL_FORMATTER, null, 1);
+    Preconditions.checkNotNull(NON_NULL_STRING, NULL_FORMATTER, null, 1);
     // null arguments to string formatter
-    Validate.checkNotNull(NON_NULL_STRING, EXPECTED_ERROR_MSG_ARGS,
+    Preconditions.checkNotNull(NON_NULL_STRING, EXPECTED_ERROR_MSG_ARGS,
         null, null);
     // illegal format exception
-    Validate.checkNotNull(NON_NULL_STRING, "message %d %d",
+    Preconditions.checkNotNull(NON_NULL_STRING, "message %d %d",
         NON_INT_STRING, 1);
     // insufficient arguments
-    Validate.checkNotNull(NON_NULL_STRING, EXPECTED_ERROR_MSG_ARGS,
+    Preconditions.checkNotNull(NON_NULL_STRING, EXPECTED_ERROR_MSG_ARGS,
         NON_INT_STRING);
     // null format in string supplier
-    Validate.checkNotNull(NON_NULL_STRING,
+    Preconditions.checkNotNull(NON_NULL_STRING,
         () -> String.format(NULL_FORMATTER, NON_INT_STRING));
   }
 
@@ -65,19 +60,19 @@ public class TestValidate {
   public void testCheckNotNullFailure() throws Exception {
     // failure without message
     LambdaTestUtils.intercept(NullPointerException.class,
-        Validate.VALIDATE_IS_NOT_NULL_EX_MESSAGE,
-        () -> Validate.checkNotNull(null));
+        Preconditions.getDefaultNullMSG(),
+        () -> Preconditions.checkNotNull(null));
 
     // failure with message
     errorMessage = EXPECTED_ERROR_MSG;
     LambdaTestUtils.intercept(NullPointerException.class,
         errorMessage,
-        () -> Validate.checkNotNull(null, errorMessage));
+        () -> Preconditions.checkNotNull(null, errorMessage));
 
     // failure with Null message
     LambdaTestUtils.intercept(NullPointerException.class,
         null,
-        () -> Validate.checkNotNull(null, errorMessage));
+        () -> Preconditions.checkNotNull(null, errorMessage));
 
     // failure with message format
     errorMessage = EXPECTED_ERROR_MSG + " %s";
@@ -85,7 +80,7 @@ public class TestValidate {
     String expectedMSG = String.format(errorMessage, arg);
     LambdaTestUtils.intercept(NullPointerException.class,
         expectedMSG,
-        () -> Validate.checkNotNull(null, errorMessage, arg));
+        () -> Preconditions.checkNotNull(null, errorMessage, arg));
 
     // failure with multiple arg message format
     errorMessage = EXPECTED_ERROR_MSG_ARGS;
@@ -93,34 +88,35 @@ public class TestValidate {
         String.format(errorMessage, arg, 1);
     LambdaTestUtils.intercept(NullPointerException.class,
         expectedMSG,
-        () -> Validate.checkNotNull(null, errorMessage, arg, 1));
+        () -> Preconditions.checkNotNull(null, errorMessage, arg, 1));
 
     // illegal format will be thrown if the case is not handled correctly
     LambdaTestUtils.intercept(NullPointerException.class,
-        Validate.VALIDATE_IS_NOT_NULL_EX_MESSAGE,
-        () -> Validate.checkNotNull(null, errorMessage, 1, NON_INT_STRING));
+        Preconditions.getDefaultNullMSG(),
+        () -> Preconditions.checkNotNull(null,
+            errorMessage, 1, NON_INT_STRING));
 
     // illegal format will be thrown for insufficient Insufficient Args
     LambdaTestUtils.intercept(NullPointerException.class,
-        Validate.VALIDATE_IS_NOT_NULL_EX_MESSAGE,
-        () -> Validate.checkNotNull(null, errorMessage, NON_NULL_STRING));
+        Preconditions.getDefaultNullMSG(),
+        () -> Preconditions.checkNotNull(null, errorMessage, NON_NULL_STRING));
 
     // illegal format in supplier
     LambdaTestUtils.intercept(NullPointerException.class,
-        Validate.VALIDATE_IS_NOT_NULL_EX_MESSAGE,
-        () -> Validate.checkNotNull(null,
+        Preconditions.getDefaultNullMSG(),
+        () -> Preconditions.checkNotNull(null,
             () -> String.format(errorMessage, 1, NON_INT_STRING)));
 
     // insufficient arguments in string Supplier
     LambdaTestUtils.intercept(NullPointerException.class,
-        Validate.VALIDATE_IS_NOT_NULL_EX_MESSAGE,
-        () -> Validate.checkNotNull(null,
+        Preconditions.getDefaultNullMSG(),
+        () -> Preconditions.checkNotNull(null,
             () -> String.format(errorMessage, NON_NULL_STRING)));
 
     // null formatter
     LambdaTestUtils.intercept(NullPointerException.class,
-        Validate.VALIDATE_IS_NOT_NULL_EX_MESSAGE,
-        () -> Validate.checkNotNull(null,
+        Preconditions.getDefaultNullMSG(),
+        () -> Preconditions.checkNotNull(null,
             () -> String.format(NULL_FORMATTER, NON_NULL_STRING)));
   }
 }

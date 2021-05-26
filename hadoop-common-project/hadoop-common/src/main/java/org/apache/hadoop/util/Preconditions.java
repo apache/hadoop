@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>This class replaces {@code guava.Preconditions} which provides helpers
@@ -38,18 +39,18 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public final class Validate {
-  public static final Logger LOG =
-      LoggerFactory.getLogger(Validate.class);
+public final class Preconditions {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Preconditions.class);
 
-  public static final String VALIDATE_IS_NOT_NULL_EX_MESSAGE =
+  private static final String VALIDATE_IS_NOT_NULL_EX_MESSAGE =
       "The argument object is NULL";
 
-  private Validate() {
+  private Preconditions() {
   }
 
   /**
-   * <p>Validate that the specified argument is not {@code null},
+   * <p>Preconditions that the specified argument is not {@code null},
    * throwing a NPE exception otherwise.
    *
    * <p>The message of the exception is
@@ -66,7 +67,7 @@ public final class Validate {
   }
 
   /**
-   * <p>Validate that the specified argument is not {@code null},
+   * <p>Preconditions that the specified argument is not {@code null},
    * throwing a NPE exception otherwise.
    *
    * <p>The message of the exception is {@code errorMessage}.</p>
@@ -87,7 +88,7 @@ public final class Validate {
   }
 
   /**
-   * <p>Validate that the specified argument is not {@code null},
+   * <p>Preconditions that the specified argument is not {@code null},
    * throwing a NPE exception otherwise.
    *
    * <p>The message of the exception is {@code String.format(f, m)}.</p>
@@ -105,15 +106,16 @@ public final class Validate {
   public static <T> T checkNotNull(final T obj, final String message,
       final Object... values) {
     // Deferring the evaluation of the message is a tradeoff between the cost
-    // of constructing lambda vs constructing a string object.
-    // Using lambda would allocate an object on every all:
+    // of constructing lambda Vs constructing a string object.
+    // Using lambda would allocate an object on every call:
     //       return checkNotNull(obj, () -> String.format(message, values));
     if (obj == null) {
-      String msg = VALIDATE_IS_NOT_NULL_EX_MESSAGE;
+      String msg;
       try {
         msg = String.format(message, values);
       } catch (Exception e) {
-        LOG.debug("Error formatting message: {}", e.getMessage());
+        LOG.debug("Error formatting message", e);
+        msg = VALIDATE_IS_NOT_NULL_EX_MESSAGE;
       }
       throw new NullPointerException(msg);
     }
@@ -121,7 +123,7 @@ public final class Validate {
   }
 
   /**
-   * <p>Validate that the specified argument is not {@code null},
+   * <p>Preconditions that the specified argument is not {@code null},
    * throwing a NPE exception otherwise.
    *
    * <p>The message of the exception is {@code msgSupplier.get()}.</p>
@@ -137,7 +139,7 @@ public final class Validate {
   public static <T> T checkNotNull(final T obj,
       final Supplier<String> msgSupplier) {
     if (obj == null) {
-      String msg = VALIDATE_IS_NOT_NULL_EX_MESSAGE;
+      String msg;
       try {
         // note that we can get NPE evaluating the message itself;
         // but we do not want this to override the actual NPE.
@@ -147,10 +149,16 @@ public final class Validate {
         // to bloat. On the other hand, swallowing the exception may hide a bug
         // in the caller. Debug level is a good compromise between the two
         // concerns.
-        LOG.debug("Error formatting message: {}", e.getMessage());
+        LOG.debug("Error formatting message", e);
+        msg = VALIDATE_IS_NOT_NULL_EX_MESSAGE;
       }
       throw new NullPointerException(msg);
     }
     return obj;
+  }
+
+  @VisibleForTesting
+  public static String getDefaultNullMSG() {
+    return VALIDATE_IS_NOT_NULL_EX_MESSAGE;
   }
 }
