@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.INVALID_TXID;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.IOException;
@@ -186,9 +187,11 @@ public class JournalSet implements JournalManager {
   final int minimumRedundantJournals;
 
   private boolean closed;
-  
+  private long lastJournalledTxId;
+
   JournalSet(int minimumRedundantResources) {
     this.minimumRedundantJournals = minimumRedundantResources;
+    lastJournalledTxId = INVALID_TXID;
   }
   
   @Override
@@ -438,6 +441,16 @@ public class JournalSet implements JournalManager {
       super();
     }
 
+    /**
+     * Get the last txId journalled in the stream.
+     * The txId is recorded when FSEditLogOp is written to the journal.
+     * JournalSet tracks the txId uniformly for all underlying streams.
+     */
+    @Override
+    public long getLastJournalledTxId() {
+      return lastJournalledTxId;
+    }
+
     @Override
     public void write(final FSEditLogOp op)
         throws IOException {
@@ -449,6 +462,10 @@ public class JournalSet implements JournalManager {
           }
         }
       }, "write op");
+
+      assert lastJournalledTxId < op.txid : "TxId order violation for op=" +
+        op + ", lastJournalledTxId=" + lastJournalledTxId;
+      lastJournalledTxId = op.txid;
     }
 
     @Override
