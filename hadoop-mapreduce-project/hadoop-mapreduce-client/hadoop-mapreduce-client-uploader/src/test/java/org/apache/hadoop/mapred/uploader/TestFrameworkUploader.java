@@ -477,7 +477,7 @@ public class TestFrameworkUploader {
       }
       Assert.assertFalse(uploader.checkSymlink(symlinkOutside));
     } finally {
-      FileUtils.deleteDirectory(parent);
+      FileUtils.forceDelete(parent);
     }
 
   }
