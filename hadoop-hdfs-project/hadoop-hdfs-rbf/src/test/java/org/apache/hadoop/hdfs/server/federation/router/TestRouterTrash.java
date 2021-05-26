@@ -159,7 +159,7 @@ public class TestRouterTrash {
     client = nnContext.getClient(ugi);
     client.mkdirs(MOUNT_POINT, new FsPermission("777"), true);
     assertTrue(client.exists(MOUNT_POINT));
-    // crete test file
+    // create test file
     client.create(FILE, true);
     Path filePath = new Path(FILE);
 
@@ -208,7 +208,7 @@ public class TestRouterTrash {
     client = nnContext.getClient(ugi);
     client.mkdirs(MOUNT_POINT, new FsPermission("777"), true);
     assertTrue(client.exists(MOUNT_POINT));
-    // crete test file
+    // create test file
     client.create(FILE, true);
     Path filePath = new Path(FILE);
 
