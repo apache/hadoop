@@ -380,4 +380,16 @@ public abstract class HATestUtil {
     lastSeenStateId.set(stateId);
     return currentStateId;
   }
+
+  /**
+   * Get last seen stateId from the client AlignmentContext.
+   */
+  public static long getLastSeenStateId(DistributedFileSystem dfs)
+      throws Exception {
+    ObserverReadProxyProvider<?> provider = (ObserverReadProxyProvider<?>)
+        ((RetryInvocationHandler<?>) Proxy.getInvocationHandler(
+            dfs.getClient().getNamenode())).getProxyProvider();
+    ClientGSIContext ac = (ClientGSIContext)(provider.getAlignmentContext());
+    return ac.getLastSeenStateId();
+  }
 }
