@@ -746,17 +746,37 @@ public class ViewFileSystem extends FileSystem {
       return resSrc.targetFileSystem.rename(resSrc.remainingPath, resDst.remainingPath);
     }
   }
+  /**
+   * Checks whether src and destination uris are from same host and port
+   * @param srcUri The source uri
+   * @param destUri The destination uri
+   * @return True if the src and dest have either different hosts or ports
+   */
+  static boolean areSrcDestFromDifferentHosts(URI srcUri, URI destUri) {
+    // Check if schemes are matching
+    if (!srcUri.getScheme().equals(destUri.getScheme())) {
+      return true;
+    }
+    // If both authorities are null, return false
+    if (srcUri.getAuthority() == null && destUri.getAuthority() == null) {
+      return false;
+    }
+    // Any of the authorities is null, they are of different filesystems
+    if (srcUri.getAuthority() == null || destUri.getAuthority() == null) {
+      return true;
+    }
+
+    return (!srcUri.getHost().equals(destUri.getHost())
+        || srcUri.getPort() != destUri.getPort());
+  }
 
   static void verifyRenameStrategy(URI srcUri, URI dstUri,
       boolean isSrcDestSame, ViewFileSystem.RenameStrategy renameStrategy)
       throws IOException {
     switch (renameStrategy) {
     case SAME_FILESYSTEM_ACROSS_MOUNTPOINT:
-      if (srcUri.getAuthority() != null) {
-        if (!(srcUri.getScheme().equals(dstUri.getScheme()) && srcUri
-            .getAuthority().equals(dstUri.getAuthority()))) {
+      if (areSrcDestFromDifferentHosts(srcUri, dstUri)) {
           throw new IOException("Renames across Mount points not supported");
-        }
       }
 
       break;

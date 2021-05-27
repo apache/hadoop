@@ -1515,4 +1515,80 @@ abstract public class ViewFileSystemBaseTest {
     // viewfs inner cache is disabled
     assertEquals(cacheSize + 1, TestFileUtil.getCacheSize());
   }
+
+  @Test
+  public void testAreSrcDestFromDifferentHosts() {
+    // Two abfs paths with same storage account and container.
+    boolean areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("abfs://a@b/c/d"), URI.create("abfs://a@b/x/y"));
+    assertFalse("srcUri and destUri are from same hosts",
+        areDiffFileSystems);
+
+    // Two abfs paths with same storage account and different containers.
+    areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("abfs://a@b/c/d"), URI.create("abfs://c@b/x/y"));
+    assertFalse("srcUri and destUri are from same hosts",
+        areDiffFileSystems);
+
+    // Two abfs paths with different storage accounts and containers.
+    areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("abfs://a@a/c/d"), URI.create("abfs://c@b/x/y"));
+    assertTrue("srcUri and destUri are from different hosts",
+        areDiffFileSystems);
+
+    // One hdfs path and one abfs path
+    areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("abfs://a@b/c/d"), URI.create("hdfs://x/y"));
+    assertTrue("srcUri and destUri are from different hosts",
+        areDiffFileSystems);
+
+    // One local filesystem path and one abfs path
+    areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("abfs://a@b/c/d"), URI.create("file:///x/y"));
+    assertTrue("srcUri and destUri are from different hosts",
+        areDiffFileSystems);
+
+    // One local filesystem path and one hdfs path
+    areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("hdfs://x/y"), URI.create("file:///x/y"));
+    assertTrue("srcUri and destUri are from different hosts",
+        areDiffFileSystems);
+
+    // Two local filesystem paths
+    areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("file:///a/b"), URI.create("file:///x/y"));
+    assertFalse("srcUri and destUri are from same hosts",
+        areDiffFileSystems);
+
+    // Two hdfs paths with same hosts and ports
+    areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("hdfs://localhost:1001/a/b"),
+            URI.create("hdfs://localhost:1001/x/y"));
+    assertFalse("srcUri and destUri are from same hosts",
+        areDiffFileSystems);
+
+    // Two hdfs paths with same hosts but different ports
+    areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("hdfs://localhost:1001/a/b"),
+            URI.create("hdfs://localhost:1002/x/y"));
+    assertTrue("srcUri and destUri are from different hosts",
+        areDiffFileSystems);
+
+    // Two hdfs paths with different hosts but same ports
+    areDiffFileSystems =
+        ViewFileSystem.areSrcDestFromDifferentHosts(
+            URI.create("hdfs://localhost1:1001/a/b"),
+            URI.create("hdfs://localhost2:1001/x/y"));
+    assertTrue("srcUri and destUri are from different hosts",
+        areDiffFileSystems);
+  }
 }
