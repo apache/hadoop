@@ -709,4 +709,60 @@ public abstract class AbstractContractDistCpTest
                     Collections.singletonList(srcDir), destDir)
                     .withDirectWrite(true)));
   }
+
+  @Test
+  public void testDistCpWithFile() throws Exception {
+    describe("Distcp only file");
+
+    Path source = new Path(remoteDir, "file");
+    Path dest = new Path(localDir, "file");
+    dest = localFS.makeQualified(dest);
+
+    mkdirs(remoteFS, remoteDir);
+    mkdirs(localFS, localDir);
+
+    int len = 4;
+    int base = 0x40;
+    byte[] block = dataset(len, base, base + len);
+    ContractTestUtils.createFile(remoteFS, source, true, block);
+    verifyPathExists(remoteFS, "", source);
+    verifyPathExists(localFS, "", localDir);
+
+    DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
+        dest.toString(), null, conf);
+
+    Assertions
+        .assertThat(RemoteIterators.toList(localFS.listFiles(dest, true)))
+        .describedAs("files").hasSize(1);
+    verifyFileContents(localFS, dest, block);
+  }
+
+  @Test
+  public void testDistCpWithUpdateExistFile() throws Exception {
+    describe("Now update an exist file.");
+
+    Path source = new Path(remoteDir, "file");
+    Path dest = new Path(localDir, "file");
+    dest = localFS.makeQualified(dest);
+
+    mkdirs(remoteFS, remoteDir);
+    mkdirs(localFS, localDir);
+
+    int len = 4;
+    int base = 0x40;
+    byte[] block = dataset(len, base, base + len);
+    byte[] destBlock = dataset(len, base, base + len + 1);
+    ContractTestUtils.createFile(remoteFS, source, true, block);
+    ContractTestUtils.createFile(localFS, dest, true, destBlock);
+
+    verifyPathExists(remoteFS, "", source);
+    verifyPathExists(localFS, "", dest);
+    DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
+        dest.toString(), "-delete -update", conf);
+
+    Assertions.assertThat(RemoteIterators.toList(localFS.listFiles(dest, true)))
+        .hasSize(1);
+    verifyFileContents(localFS, dest, block);
+  }
+
 }
