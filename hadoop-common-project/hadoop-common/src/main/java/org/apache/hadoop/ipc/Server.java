@@ -2938,6 +2938,7 @@ public abstract class Server {
              */
             // Re-queue the call and continue
             requeueCall(call);
+            call = null;
             continue;
           }
           if (LOG.isDebugEnabled()) {
