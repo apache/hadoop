@@ -305,7 +305,7 @@ public class TestBalanceProcedureScheduler {
   /**
    * Test scheduler crashes and recovers.
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 180000)
   public void testSchedulerDownAndRecoverJob() throws Exception {
     BalanceProcedureScheduler scheduler = new BalanceProcedureScheduler(CONF);
     scheduler.init(true);
