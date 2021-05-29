@@ -276,8 +276,6 @@
     "ubuntu:focal::arch64": "shellcheck"
   },
   "shasum": {
-    "ubuntu:focal": "shasum",
-    "ubuntu:focal::arch64": "shasum",
     "centos:7": "perl-Digest-SHA",
     "centos:8": "perl-Digest-SHA"
   },
