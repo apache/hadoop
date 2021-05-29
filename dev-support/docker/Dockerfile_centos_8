@@ -48,7 +48,8 @@ RUN mkdir -p /tmp/epel \
 
 RUN dnf --enablerepo=powertools install -y \
     doxygen \
-    snappy-devel
+    snappy-devel \
+    yasm
 
 RUN dnf install -y \
     bouncycastle \
@@ -94,9 +95,9 @@ RUN mkdir -p /opt/zstd /tmp/zstd \
     && make install \
     && cd /root || exit
 
-RUN locale-gen en_US.UTF-8
-ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
-ENV PYTHONIOENCODING=utf-8
+# RUN locale-gen en_US.UTF-8
+# ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+# ENV PYTHONIOENCODING=utf-8
 
 ######
 # Install common packages

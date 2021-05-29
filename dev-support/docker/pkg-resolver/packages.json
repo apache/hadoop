@@ -9,6 +9,12 @@
     "ubuntu:focal": "apt-utils",
     "ubuntu:focal::arch64": "apt-utils"
   },
+  "automake": {
+    "ubuntu:focal": "automake",
+    "ubuntu:focal::arch64": "automake",
+    "centos:7": "automake",
+    "centos:8": "automake"
+  },
   "bats": {
     "ubuntu:focal": "bats",
     "ubuntu:focal::arch64": "bats"
@@ -16,8 +22,7 @@
   "build-essential": {
     "ubuntu:focal": "build-essential",
     "ubuntu:focal::arch64": "build-essential",
-    "centos:7": "build-essential",
-    "centos:8": "build-essential"
+    "centos:7": "build-essential"
   },
   "bzip2": {
     "ubuntu:focal": [
@@ -270,6 +275,12 @@
     "ubuntu:focal": "shellcheck",
     "ubuntu:focal::arch64": "shellcheck"
   },
+  "shasum": {
+    "ubuntu:focal": "shasum",
+    "ubuntu:focal::arch64": "shasum",
+    "centos:7": "perl-Digest-SHA",
+    "centos:8": "perl-Digest-SHA"
+  },
   "software-properties-common": {
     "ubuntu:focal": "software-properties-common",
     "ubuntu:focal::arch64": "software-properties-common"
@@ -285,5 +296,9 @@
     "ubuntu:focal::arch64": "valgrind",
     "centos:7": "valgrind",
     "centos:8": "valgrind"
+  },
+  "yasm": {
+    "ubuntu:focal": "yasm",
+    "ubuntu:focal::arch64": "yasm"
   }
 }
