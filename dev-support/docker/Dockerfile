@@ -36,8 +36,8 @@ ENV DEBCONF_TERSE true
 # Platform package dependency resolver
 ######
 COPY pkg-resolver pkg-resolver
-RUN chmod a+x pkg-resolver/install-common-pkgs.sh pkg-resolver/resolve.py \
-    && chmod a+r pkg-resolver/packages.json pkg-resolver/platforms.json
+RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
+    && chmod a+r pkg-resolver/*.json
 
 ######
 # Install packages from apt
@@ -80,9 +80,14 @@ ENV MAVEN_OPTS -Xms256m -Xmx3072m
 ENV HADOOP_SKIP_YETUS_VERIFICATION true
 
 ####
-# Install common packages
+# Install packages
 ####
 RUN pkg-resolver/install-common-pkgs.sh
+RUN pkg-resolver/install-spotbugs.sh ubuntu:focal
+RUN pkg-resolver/install-boost.sh ubuntu:focal
+RUN pkg-resolver/install-protobuf.sh ubuntu:focal
+RUN pkg-resolver/install-hadolint.sh ubuntu:focal
+RUN pkg-resolver/install-intel-isa-l.sh ubuntu:focal
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.

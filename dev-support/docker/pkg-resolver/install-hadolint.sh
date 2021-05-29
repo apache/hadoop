@@ -16,13 +16,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-######
-# Install pylint and python-dateutil
-######
-pip3 install pylint==2.6.0 python-dateutil==2.8.1
+if [ $# -lt 1 ]; then
+  echo "ERROR: Need at least 1 argument, $# were provided"
+  exit 1
+fi
 
-######
-# Install bower
-######
-# hadolint ignore=DL3008
-npm install -g bower@1.8.8
+pkg-resolver/check_platform.py "$1"
+if [ $? -eq 1 ]; then
+  echo "ERROR: Unsupported platform $1"
+  exit 1
+fi
+
+curl -L -s -S \
+  https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
+  -o /bin/hadolint &&
+  chmod a+rx /bin/hadolint &&
+  shasum -a 512 /bin/hadolint |
+  awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
