@@ -82,9 +82,6 @@ curl -L -s -S \
 ######
 # hadolint ignore=DL3003,DL3008
 mkdir -p /opt/isa-l-src &&
-  apt-get -q update &&
-  apt-get install -y --no-install-recommends automake yasm &&
-  apt-get clean &&
   curl -L -s -S \
     https://github.com/intel/isa-l/archive/v2.29.0.tar.gz \
     -o /opt/isa-l.tar.gz &&
