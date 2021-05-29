@@ -50,7 +50,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     platform_arg = sys.argv[1]
-    if is_supported_platform(platform_arg):
+    if not is_supported_platform(platform_arg):
         print(
             'ERROR: The given platform {} is not supported. '
             'Please refer to platforms.json for a list of supported platforms'.format(
