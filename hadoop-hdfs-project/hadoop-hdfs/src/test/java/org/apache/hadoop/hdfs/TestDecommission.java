@@ -879,7 +879,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    */
   @Test(timeout=180000)
   public void testDecommissionWithCloseFileAndListOpenFiles()
-        throws Exception {
+      throws Exception {
     LOG.info("Starting test testDecommissionWithCloseFileAndListOpenFiles");
 
     // Disable redundancy monitor check so that open files blocking
@@ -892,8 +892,7 @@ public class TestDecommission extends AdminStatesBaseTest {
     startSimpleCluster(1, 3);
     FileSystem fileSys = getCluster().getFileSystem(0);
     FSNamesystem ns = getCluster().getNamesystem(0);
-
-    Path file = new Path("/testDecommissionWithOpenfileReporting.open");
+    Path file = new Path("/openFile");
     FSDataOutputStream st = AdminStatesBaseTest.writeIncompleteFile(fileSys,
         file, (short)3, (short)(fileSize / blockSize));
     for (DataNode d: getCluster().getDataNodes()) {
@@ -911,9 +910,11 @@ public class TestDecommission extends AdminStatesBaseTest {
     refreshNodes(0);
     BlockManagerTestUtil.recheckDecommissionState(dm);
     waitNodeState(dnToDecommission, AdminStates.DECOMMISSION_INPROGRESS);
+    Thread.sleep(3000);
+    //Make sure DatanodeAdminMonitor(DatanodeAdminBackoffMonitor) At least twice run.
 
-    BatchedEntries<OpenFileEntry> batchedListEntries = getCluster().getNameNodeRpc().
-        listOpenFiles(0,
+    BatchedEntries<OpenFileEntry> batchedListEntries = getCluster().
+        getNameNodeRpc(0).listOpenFiles(0,
         EnumSet.of(OpenFilesIterator.OpenFilesType.BLOCKING_DECOMMISSION),
         OpenFilesIterator.FILTER_PATH_DEFAULT);
     assertEquals(1, batchedListEntries.size());
