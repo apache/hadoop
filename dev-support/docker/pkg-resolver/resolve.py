@@ -22,6 +22,7 @@ Platform package dependency resolver for building Apache Hadoop.
 
 import json
 import sys
+from check_platform import is_supported_platform
 
 
 def get_packages(platform):
@@ -42,24 +43,14 @@ def get_packages(platform):
     return packages
 
 
-def get_platforms():
-    """
-    :return: A list of the supported platforms managed by pkg-resolver.
-    """
-
-    with open('pkg-resolver/platforms.json', encoding='utf-8', mode='r') as platforms_file:
-        return json.loads(platforms_file.read())
-
-
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('ERROR: Need at least 1 argument, {} were provided'.format(len(sys.argv) - 1),
               file=sys.stderr)
         sys.exit(1)
 
-    supported_platforms = get_platforms()
     platform_arg = sys.argv[1]
-    if platform_arg not in supported_platforms:
+    if is_supported_platform(platform_arg):
         print(
             'ERROR: The given platform {} is not supported. '
             'Please refer to platforms.json for a list of supported platforms'.format(
