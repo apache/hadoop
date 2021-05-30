@@ -113,8 +113,6 @@ public class TestRouterNetworkTopologyServlet {
     // assert node number
     assertEquals(topology.split("127.0.0.1").length - 1,
         18);
-
-    Thread.sleep(999999999L);
   }
 
   @Test
