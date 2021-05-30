@@ -151,11 +151,11 @@ public class TestRouterNetworkTopologyServlet {
     Iterator<JsonNode> elements = racks.elements();
     int dataNodesCount = 0;
     while(elements.hasNext()){
-        JsonNode rack = elements.next();
-        Iterator<Map.Entry<String, JsonNode>> fields = rack.fields();
-        while (fields.hasNext()) {
-            dataNodesCount += fields.next().getValue().size();
-        }
+      JsonNode rack = elements.next();
+      Iterator<Map.Entry<String, JsonNode>> fields = rack.fields();
+      while (fields.hasNext()) {
+        dataNodesCount += fields.next().getValue().size();
+      }
     }
     assertEquals(dataNodesCount, 18);
   }
@@ -184,28 +184,28 @@ public class TestRouterNetworkTopologyServlet {
     assertTrue(topology.contains("No DataNodes"));
   }
 
-    @Test
-    public void testPrintTopologyNoDatanodesJsonFormat() throws Exception {
-      // get http Address
-      String httpAddress = clusterNoDatanodes.getRandomRouter().getRouter()
-              .getHttpServerAddress().toString();
+   @Test
+   public void testPrintTopologyNoDatanodesJsonFormat() throws Exception {
+     // get http Address
+     String httpAddress = clusterNoDatanodes.getRandomRouter().getRouter()
+         .getHttpServerAddress().toString();
 
-      // send http request
-      URL url = new URL("http:/" + httpAddress + "/topology");
-      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn.setReadTimeout(20000);
-      conn.setConnectTimeout(20000);
-      conn.setRequestProperty("Accept", "application/json");
-      conn.connect();
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
-      StringBuilder sb =
-          new StringBuilder("-- Network Topology -- \n");
-      sb.append(out);
-      sb.append("\n-- Network Topology -- ");
-      String topology = sb.toString();
+     // send http request
+     URL url = new URL("http:/" + httpAddress + "/topology");
+     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+     conn.setReadTimeout(20000);
+     conn.setConnectTimeout(20000);
+     conn.setRequestProperty("Accept", "application/json");
+     conn.connect();
+     ByteArrayOutputStream out = new ByteArrayOutputStream();
+     IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
+     StringBuilder sb =
+         new StringBuilder("-- Network Topology -- \n");
+     sb.append(out);
+     sb.append("\n-- Network Topology -- ");
+     String topology = sb.toString();
 
-      // assert node number
-      assertTrue(topology.contains("No DataNodes"));
-    }
+     // assert node number
+     assertTrue(topology.contains("No DataNodes"));
+   }
 }

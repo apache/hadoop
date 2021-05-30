@@ -19,19 +19,10 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
-import org.apache.hadoop.hdfs.server.namenode.NetworkTopologyServlet;
-import org.apache.hadoop.http.IsActiveServlet;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
-import org.apache.hadoop.net.NodeBase;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.StringUtils;
 
@@ -42,14 +33,9 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.HttpHeaders;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
@@ -78,7 +64,8 @@ public class RouterNetworkTopologyServlet extends HttpServlet {
 
     Router router = RouterHttpServer.getRouterFromContext(context);
     DatanodeInfo[] datanodeReport =
-        router.getRpcServer().getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
+        router.getRpcServer().getDatanodeReport(
+            HdfsConstants.DatanodeReportType.ALL);
 
     try (PrintStream out = new PrintStream(
             response.getOutputStream(), false, "UTF-8")) {
@@ -103,7 +90,7 @@ public class RouterNetworkTopologyServlet extends HttpServlet {
    * @param format the response format
    */
   public void printTopology(PrintStream stream, DatanodeInfo[] datanodeInfos,
-                            String format) throws NetworkTopologyServlet.BadFormatException, IOException {
+      String format) throws IOException, BadFormatException {
     if (datanodeInfos.length == 0) {
       stream.print("No DataNodes");
       return;
@@ -128,7 +115,7 @@ public class RouterNetworkTopologyServlet extends HttpServlet {
     } else if (FORMAT_TEXT.equals(format)) {
       printTextFormat(stream, tree, racks);
     } else {
-      throw new NetworkTopologyServlet.BadFormatException("Bad format: " + format);
+      throw new BadFormatException("Bad format: " + format);
     }
   }
 
