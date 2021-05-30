@@ -18,9 +18,11 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -31,6 +33,8 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ImpersonationProvider;
 import org.apache.hadoop.tools.fedbalance.DistCpProcedure;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -40,11 +44,13 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
@@ -116,8 +122,33 @@ public class TestRouterFederationRenameInKerberosEnv
     baseConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY,
         DFS_DATA_TRANSFER_PROTECTION_DEFAULT);
     baseConf.setBoolean(IGNORE_SECURE_PORTS_FOR_TESTING_KEY, true);
+    baseConf.setClass(HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS,
+        AllowUserImpersonationProvider.class, ImpersonationProvider.class);
 
     DistCpProcedure.enableForTest();
+  }
+
+  /**
+   * {@link ImpersonationProvider} that confirms the user doing the
+   * impersonating is the same as the user running the MiniCluster.
+   */
+  private static class AllowUserImpersonationProvider extends Configured
+      implements ImpersonationProvider {
+    public void init(String configurationPrefix) {
+      // Do nothing
+    }
+
+    public void authorize(UserGroupInformation user, InetAddress remoteAddress)
+        throws AuthorizationException {
+      try {
+        if (!user.getRealUser().getShortUserName()
+            .equals(UserGroupInformation.getCurrentUser().getShortUserName())) {
+          throw new AuthorizationException();
+        }
+      } catch (IOException ioe) {
+        throw new AuthorizationException(ioe);
+      }
+    }
   }
 
   @AfterClass
@@ -191,18 +222,26 @@ public class TestRouterFederationRenameInKerberosEnv
     setRouter(rndRouter);
   }
 
-  protected void createDir(FileSystem fs, String dir) throws IOException {
-    fs.mkdirs(new Path(dir));
-    String file = dir + "/file";
+  protected void prepareEnv(FileSystem fs, Path path, Path renamedPath)
+      throws IOException {
+    // Set permission of parent to 777.
+    fs.setPermission(path.getParent(),
+        FsPermission.createImmutable((short)511));
+    fs.setPermission(renamedPath.getParent(),
+        FsPermission.createImmutable((short)511));
+    // Create src path and file.
+    fs.mkdirs(path);
+    String file = path.toString() + "/file";
     createFile(fs, file, 32);
-    verifyFileExists(fs, dir);
+    verifyFileExists(fs, path.toString());
     verifyFileExists(fs, file);
   }
 
   protected void testRenameDir(RouterContext testRouter, String path,
       String renamedPath, boolean exceptionExpected, Callable<Object> call)
       throws IOException {
-    createDir(testRouter.getFileSystem(), path);
+    prepareEnv(testRouter.getFileSystem(), new Path(path),
+        new Path(renamedPath));
     // rename
     boolean exceptionThrown = false;
     try {
