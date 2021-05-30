@@ -61,6 +61,7 @@ public class TestRouterWebHdfsMethods {
         .admin()
         .build();
     cluster.addRouterOverrides(conf);
+    cluster.setIndependentDNs();
     cluster.startCluster();
     cluster.startRouters();
     cluster.waitClusterUp();

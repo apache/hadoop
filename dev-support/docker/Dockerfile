@@ -85,6 +85,10 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+RUN locale-gen en_US.UTF-8
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+ENV PYTHONIOENCODING=utf-8
+
 ######
 # Set env vars required to build Hadoop
 ######
@@ -179,7 +183,7 @@ RUN mkdir -p /opt/isa-l-src \
 ###
 # Avoid out of memory errors in builds
 ###
-ENV MAVEN_OPTS -Xms256m -Xmx1536m
+ENV MAVEN_OPTS -Xms256m -Xmx3072m
 
 # Skip gpg verification when downloading Yetus via yetus-wrapper
 ENV HADOOP_SKIP_YETUS_VERIFICATION true

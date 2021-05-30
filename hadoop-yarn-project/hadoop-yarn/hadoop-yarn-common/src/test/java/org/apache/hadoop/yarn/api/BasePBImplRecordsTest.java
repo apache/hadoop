@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.api;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.commons.lang3.Range;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
@@ -76,6 +76,8 @@ public class BasePBImplRecordsTest {
           'a' + rand.nextInt(26),
           'a' + rand.nextInt(26),
           'a' + rand.nextInt(26));
+    } else if (type.equals(Float.class)) {
+      return rand.nextFloat();
     } else if (type instanceof Class) {
       Class clazz = (Class)type;
       if (clazz.isArray()) {

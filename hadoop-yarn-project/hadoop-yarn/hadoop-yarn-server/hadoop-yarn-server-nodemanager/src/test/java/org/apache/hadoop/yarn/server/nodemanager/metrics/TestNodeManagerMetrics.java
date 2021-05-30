@@ -103,12 +103,16 @@ public class TestNodeManagerMetrics {
     // Set node gpu utilization
     metrics.setNodeGpuUtilization(35.5F);
 
+    // ApplicationsRunning expected to be 1
+    metrics.runningApplication();
+    metrics.runningApplication();
+    metrics.endRunningApplication();
+
     // availableGB is expected to be floored,
     // while allocatedGB is expected to be ceiled.
     // allocatedGB: 3.75GB allocated memory is shown as 4GB
     // availableGB: 4.25GB available memory is shown as 4GB
-    checkMetrics(10, 1, 1, 1, 1,
-        1, 4, 7, 4, 13, 3, 35.5F);
+    checkMetrics(10, 1, 1, 1, 1, 1, 4, 7, 4, 13, 3, 35.5F, 1);
 
     // Update resource and check available resource again
     metrics.addResource(total);
@@ -120,7 +124,7 @@ public class TestNodeManagerMetrics {
   public static void checkMetrics(int launched, int completed, int failed,
       int killed, int initing, int running, int allocatedGB,
       int allocatedContainers, int availableGB, int allocatedVCores,
-      int availableVCores, Float nodeGpuUtilization) {
+      int availableVCores, Float nodeGpuUtilization, int applicationsRunning) {
     MetricsRecordBuilder rb = getMetrics("NodeManagerMetrics");
     assertCounter("ContainersLaunched", launched, rb);
     assertCounter("ContainersCompleted", completed, rb);
@@ -132,8 +136,8 @@ public class TestNodeManagerMetrics {
     assertGauge("AllocatedVCores", allocatedVCores, rb);
     assertGauge("AllocatedContainers", allocatedContainers, rb);
     assertGauge("AvailableGB", availableGB, rb);
-    assertGauge("AvailableVCores",availableVCores, rb);
+    assertGauge("AvailableVCores", availableVCores, rb);
     assertGauge("NodeGpuUtilization", nodeGpuUtilization, rb);
-
+    assertGauge("ApplicationsRunning", applicationsRunning, rb);
   }
 }

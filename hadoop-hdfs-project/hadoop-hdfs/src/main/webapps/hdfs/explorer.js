@@ -83,22 +83,46 @@
     $('#delete-modal-title').text("Delete - " + inode_name);
     $('#delete-prompt').text("Are you sure you want to delete " + inode_name
       + " ?");
+    $('#delete-trash-modal-title').text("Skip Trash - " + inode_name);
+    $('#delete-trash-prompt').text("Skipping Trash might delete file forever."
+        + " Do you want to skip-trash " + inode_name
+        + " ? (default behaviour - No)");
 
-    $('#delete-button').click(function() {
+    $('#skip-trash-button').click(function () {
+      // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>&skiptrash=true
+      var url = '/webhdfs/v1' + encode_path(absolute_file_path) +
+          '?op=DELETE' + '&recursive=true&skiptrash=true';
+      $.ajax(url,
+          {
+            type: 'DELETE'
+          }).done(function (data) {
+        browse_directory(current_directory);
+      }).fail(network_error_handler(url)
+      ).always(function () {
+        $('#delete-modal').modal('hide');
+        $('#delete-button').button('reset');
+        $('#delete-trash-modal').modal('hide');
+        $('#skip-trash-button').button('reset');
+      });
+    })
+    $('#trash-button').click(function () {
       // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>
       var url = '/webhdfs/v1' + encode_path(absolute_file_path) +
-        '?op=DELETE' + '&recursive=true';
-
+          '?op=DELETE' + '&recursive=true';
       $.ajax(url,
-        { type: 'DELETE'
-        }).done(function(data) {
-          browse_directory(current_directory);
-        }).fail(network_error_handler(url)
-         ).always(function() {
-           $('#delete-modal').modal('hide');
-           $('#delete-button').button('reset');
-        });
+          {
+            type: 'DELETE'
+          }).done(function (data) {
+        browse_directory(current_directory);
+      }).fail(network_error_handler(url)
+      ).always(function () {
+        $('#delete-modal').modal('hide');
+        $('#delete-button').button('reset');
+        $('#delete-trash-modal').modal('hide');
+        $('#trash-button').button('reset');
+      });
     })
+
     $('#delete-modal').modal();
   }
 

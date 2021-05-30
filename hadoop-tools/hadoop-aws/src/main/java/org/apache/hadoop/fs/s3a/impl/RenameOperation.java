@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.s3a.s3guard.RenameTracker;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.OperationDuration;
 
+import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_BLOCK_SIZE;
 import static org.apache.hadoop.fs.s3a.S3AUtils.objectRepresentsDirectory;
@@ -381,7 +382,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * Execute a full recursive rename.
    * There is a special handling of directly markers here -only leaf markers
    * are copied. This reduces incompatibility "regions" across versions.
-Are   * @throws IOException failure
+   * @throws IOException failure
    */
   protected void recursiveDirectoryRename() throws IOException {
     final StoreContext storeContext = getStoreContext();
@@ -596,15 +597,16 @@ Are   * @throws IOException failure
             source.getVersionId(),
             source.getLen());
     // queue the copy operation for execution in the thread pool
-    return submit(getStoreContext().getExecutor(), () ->
-        copySourceAndUpdateTracker(
-            childSourcePath,
-            key,
-            sourceAttributes,
-            callbacks.createReadContext(source),
-            childDestPath,
-            newDestKey,
-            true));
+    return submit(getStoreContext().getExecutor(),
+        callableWithinAuditSpan(getAuditSpan(), () ->
+            copySourceAndUpdateTracker(
+                childSourcePath,
+                key,
+                sourceAttributes,
+                callbacks.createReadContext(source),
+                childDestPath,
+                newDestKey,
+                true)));
   }
 
   /**

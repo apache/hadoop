@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 
 /**
  * A handler for storing and setting auto created queue template settings.
@@ -68,6 +69,10 @@ public class AutoCreatedQueueTemplate {
    */
   public void setTemplateEntriesForChild(Configuration conf,
                                          String childQueuePath) {
+    if (childQueuePath.equals(ROOT)) {
+      return;
+    }
+
     // Get all properties that are explicitly set
     Set<String> alreadySetProps = conf.getPropsWithPrefix(
         CapacitySchedulerConfiguration.getQueuePrefix(childQueuePath)).keySet();
@@ -94,8 +99,8 @@ public class AutoCreatedQueueTemplate {
     List<String> queuePathParts = new ArrayList<>(Arrays.asList(
         queuePath.split("\\.")));
 
-    if (queuePathParts.size() <= 1) {
-      // This is either root or an empty queue name
+    if (queuePathParts.size() <= 1 && !queuePath.equals(ROOT)) {
+      // This is an invalid queue path
       return;
     }
     int queuePathMaxIndex = queuePathParts.size() - 1;
@@ -106,7 +111,10 @@ public class AutoCreatedQueueTemplate {
     // MAX_WILDCARD_LEVEL will be configurable in the future
     int supportedWildcardLevel = Math.min(queuePathMaxIndex - 1,
         MAX_WILDCARD_LEVEL);
-
+    // Allow root to have template properties
+    if (queuePath.equals(ROOT)) {
+      supportedWildcardLevel = 0;
+    }
 
     // Collect all template entries
     while (wildcardLevel <= supportedWildcardLevel) {

@@ -65,7 +65,7 @@ public class MagicCommitTracker extends PutTracker {
    * @param originalDestKey the original key, in the magic directory.
    * @param destKey key for the destination
    * @param pendingsetKey key of the pendingset file
-   * @param writer writer instance to use for operations
+   * @param writer writer instance to use for operations; includes audit span
    */
   public MagicCommitTracker(Path path,
       String bucket,

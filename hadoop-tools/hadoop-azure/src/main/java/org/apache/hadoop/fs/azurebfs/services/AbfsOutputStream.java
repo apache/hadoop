@@ -357,9 +357,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         threadExecutor.shutdownNow();
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Closing AbfsOutputStream ", toString());
-    }
+    LOG.debug("Closing AbfsOutputStream : {}", this);
   }
 
   private synchronized void flushInternal(boolean isClose) throws IOException {

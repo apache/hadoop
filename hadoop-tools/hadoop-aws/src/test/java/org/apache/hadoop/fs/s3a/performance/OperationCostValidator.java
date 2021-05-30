@@ -41,6 +41,7 @@ import org.apache.hadoop.metrics2.lib.MutableMetric;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -169,7 +170,7 @@ public final class OperationCostValidator {
     LOG.info("{}", text);
     LOG.info("state {}", this.toString());
     LOG.info("probes {}", expected);
-    LOG.info("IOStatistics {}", ioStatistics);
+    LOG.info("IOStatistics {}", ioStatisticsToPrettyString(ioStatistics));
     for (ExpectedProbe ed : expected) {
       ed.verify(this, text);
     }

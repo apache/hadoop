@@ -115,6 +115,11 @@ public interface S3ClientFactory {
      */
     private String userAgentSuffix = "";
 
+    /**
+     * List of request handlers to include in the chain
+     * of request execution in the SDK.
+     * @return the handler list
+     */
     public List<RequestHandler2> getRequestHandlers() {
       return requestHandlers;
     }

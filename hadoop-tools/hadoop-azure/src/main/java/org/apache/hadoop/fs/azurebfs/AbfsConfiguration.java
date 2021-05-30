@@ -970,6 +970,11 @@ public class AbfsConfiguration{
     return this.enableAbfsListIterator;
   }
 
+  public String getClientProvidedEncryptionKey() {
+    String accSpecEncKey = accountConf(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY);
+    return rawConfig.get(accSpecEncKey, null);
+  }
+
   @VisibleForTesting
   void setReadBufferSize(int bufferSize) {
     this.readBufferSize = bufferSize;

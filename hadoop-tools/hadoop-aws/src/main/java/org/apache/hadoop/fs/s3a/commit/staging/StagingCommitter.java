@@ -56,6 +56,7 @@ import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
+import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIterator;
 
 /**
  * Committer based on the contributed work of the
@@ -828,6 +829,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
                 ? " dir"
                 : ("file size " + status.getLen() + " bytes"));
       }
+      cleanupRemoteIterator(lf);
     } catch (IOException e) {
       LOG.info("Discarding exception raised when listing {}: " + e, path);
       LOG.debug("stack trace ", e);
