@@ -426,6 +426,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         "different-1234567890123456789012");
     AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
     AbfsClient abfsClient2 = fs2.getAbfsClient();
+    TracingContext tracingContext = getTestTracingContext(fs, false);
     abfsRestOperation = abfsClient2.listPath(testDirName, false, INT_50,
         null, tracingContext);
     assertListstatus(fs, abfsRestOperation, testPath);
