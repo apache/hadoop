@@ -4004,7 +4004,12 @@ public abstract class FileSystem extends Configured
      * Background action to act on references being removed.
      */
     private static class StatisticsDataReferenceCleaner implements Runnable {
-      private static int REF_QUEUE_POLL_TIMEOUT = 100;
+      /**
+       * Represents the timeout period expires for remove reference objects from
+       * the STATS_DATA_REF_QUEUE when the queue is empty.
+       */
+      private static final int REF_QUEUE_POLL_TIMEOUT = 10000;
+
       @Override
       public void run() {
         while (!Thread.interrupted()) {
