@@ -39,6 +39,7 @@ if [ "$version_to_install" != "14.16.1" ]; then
 fi
 
 if [ "$version_to_install" == "14.16.1" ]; then
+  # hadolint ignore=DL3003
   mkdir -p /tmp/node &&
     curl -L -s -S https://nodejs.org/dist/v14.16.1/node-v14.16.1.tar.gz -o /tmp/node-v14.16.1.tar.gz &&
     tar xzf /tmp/node-v14.16.1.tar.gz --strip-components 1 -C /tmp/node &&

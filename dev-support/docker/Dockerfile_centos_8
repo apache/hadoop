@@ -27,8 +27,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Platform package dependency resolver
 ######
 COPY pkg-resolver pkg-resolver
-RUN chmod a+x pkg-resolver/install-common-pkgs.sh pkg-resolver/resolve.py \
-    && chmod a+r pkg-resolver/packages.json pkg-resolver/platforms.json
+RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
+    && chmod a+r pkg-resolver/*.json
 
 ######
 # Install packages from yum
@@ -41,10 +41,7 @@ RUN yum update -y \
 ####
 # Install EPEL
 ####
-RUN mkdir -p /tmp/epel \
-    && curl -L -s -S https://download-ib01.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
-        -o /tmp/epel/epel-release-latest-8.noarch.rpm \
-    && rpm -Uvh /tmp/epel/epel-release-latest-8.noarch.rpm
+RUN pkg-resolver/install-epel.sh centos:8
 
 RUN dnf --enablerepo=powertools install -y \
     doxygen \
@@ -63,46 +60,7 @@ RUN dnf install -y \
 RUN echo "source /opt/rh/gcc-toolset-9/enable" >> /etc/bashrc
 SHELL ["/bin/bash", "--login", "-c"]
 
-####
-# Install Maven 3.6.3
-####
-RUN mkdir -p /opt/maven /tmp/maven \
-    && curl -L -s -S https://mirrors.estointernet.in/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
-        -o /tmp/maven/apache-maven-3.6.3-bin.tar.gz \
-    && tar xzf /tmp/maven/apache-maven-3.6.3-bin.tar.gz --strip-components 1 -C /opt/maven
-
-####
-# Install CMake 3.19
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /tmp/cmake /opt/cmake \
-    && curl -L -s -S https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz -o /tmp/cmake/cmake-3.19.0.tar.gz \
-    && tar xzf /tmp/cmake/cmake-3.19.0.tar.gz --strip-components 1 -C /opt/cmake \
-    && cd /opt/cmake || exit && ./bootstrap \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
-
-####
-# Install zstandard
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/zstd /tmp/zstd \
-    && curl -L -s -S https://github.com/facebook/zstd/archive/refs/tags/v1.4.9.tar.gz -o /tmp/zstd/v1.4.9.tar.gz \
-    && tar xzf /tmp/zstd/v1.4.9.tar.gz --strip-components 1 -C /opt/zstd \
-    && cd /opt/zstd || exit \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
-
-# RUN locale-gen en_US.UTF-8
-# ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
-# ENV PYTHONIOENCODING=utf-8
-
-######
-# Install common packages
-######
-RUN pkg-resolver/install-common-pkgs.sh
+# TODO: Set locale
 
 ######
 # Set env vars required to build Hadoop
@@ -111,3 +69,11 @@ ENV MAVEN_HOME /opt/maven/apache-maven-3.6.3
 ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
+
+######
+# Install packages
+######
+RUN pkg-resolver/install-maven.sh centos:8
+RUN pkg-resolver/install-cmake.sh centos:8
+RUN pkg-resolver/install-zstandard.sh centos:8
+RUN pkg-resolver/install-common-pkgs.sh
