@@ -39,6 +39,7 @@ if [ "$version_to_install" != "1.4.9" ]; then
 fi
 
 if [ "$version_to_install" == "1.4.9" ]; then
+  # hadolint ignore=DL3003
   mkdir -p /opt/zstd /tmp/zstd &&
     curl -L -s -S https://github.com/facebook/zstd/archive/refs/tags/v1.4.9.tar.gz -o /tmp/zstd/v1.4.9.tar.gz &&
     tar xzf /tmp/zstd/v1.4.9.tar.gz --strip-components 1 -C /opt/zstd &&

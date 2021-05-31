@@ -27,26 +27,22 @@ if [ $? -eq 1 ]; then
   exit 1
 fi
 
-default_version="3.19.0"
+default_version="8"
 version_to_install=$default_version
 if [ -n "$2" ]; then
   version_to_install="$2"
 fi
 
-if [ "$version_to_install" != "3.19.0" ]; then
+if [ "$version_to_install" != "8" ]; then
   echo "WARN: Don't know how to install version $version_to_install, installing the default version $default_version instead"
   version_to_install=$default_version
 fi
 
-if [ "$version_to_install" == "3.19.0" ]; then
-  # hadolint ignore=DL3003
-  mkdir -p /tmp/cmake /opt/cmake &&
-    curl -L -s -S https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz -o /tmp/cmake/cmake-3.19.0.tar.gz &&
-    tar xzf /tmp/cmake/cmake-3.19.0.tar.gz --strip-components 1 -C /opt/cmake &&
-    cd /opt/cmake || exit && ./bootstrap &&
-    make "-j$(nproc)" &&
-    make install &&
-    cd /root || exit
+if [ "$version_to_install" == "8" ]; then
+  mkdir -p /tmp/epel &&
+    curl -L -s -S https://download-ib01.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
+      -o /tmp/epel/epel-release-latest-8.noarch.rpm &&
+    rpm -Uvh /tmp/epel/epel-release-latest-8.noarch.rpm
 else
   echo "ERROR: Don't know how to install version $version_to_install"
   exit 1
