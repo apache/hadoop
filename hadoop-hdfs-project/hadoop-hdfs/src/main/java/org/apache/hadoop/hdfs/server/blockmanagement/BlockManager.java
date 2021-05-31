@@ -47,6 +47,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import java.util.concurrent.atomic.AtomicLong;
 import javax.management.ObjectName;
@@ -191,6 +192,9 @@ public class BlockManager implements BlockStatsMXBean {
   private volatile long lowRedundancyBlocksCount = 0L;
   private volatile long scheduledReplicationBlocksCount = 0L;
 
+  private final long deleteBlockLockTimeMs;
+  private final long deleteBlockUnlockIntervalTimeMs;
+
   /** flag indicating whether replication queues have been initialized */
   private boolean initializedReplQueues;
 
@@ -324,6 +328,12 @@ public class BlockManager implements BlockStatsMXBean {
    * {@link #redundancyThread} has run at least one full iteration.
    */
   private final AtomicLong lastRedundancyCycleTS = new AtomicLong(-1);
+  /**
+   * markedDeleteBlockScrubber thread for handling async delete blocks.
+   */
+  private final Daemon markedDeleteBlockScrubberThread =
+      new Daemon(new MarkedDeleteBlockScrubber());
+
   /** Block report thread for handling async reports. */
   private final BlockReportProcessingThread blockReportThread;
 
@@ -423,6 +433,12 @@ public class BlockManager implements BlockStatsMXBean {
   private int numBlocksPerIteration;
 
   /**
+   * The blocks of deleted files are put into the queue,
+   * and the cleanup thread processes these blocks periodically
+   */
+  private final ConcurrentLinkedQueue<List<BlockInfo>> markedDeleteQueue;
+
+  /**
    * Progress of the Reconstruction queues initialisation.
    */
   private double reconstructionQueuesInitProgress = 0.0;
@@ -475,6 +491,14 @@ public class BlockManager implements BlockStatsMXBean {
         datanodeManager.getBlockInvalidateLimit(),
         startupDelayBlockDeletionInMs,
         blockIdManager);
+
+    markedDeleteQueue = new ConcurrentLinkedQueue<>();
+    deleteBlockLockTimeMs = conf.getLong(
+        DFS_NAMENODE_DELETE_BLOCK_LOCK_TIME_MS_KEY,
+        DFS_NAMENODE_DELETE_BLOCK_LOCK_TIME_MS_DEFAULT);
+    deleteBlockUnlockIntervalTimeMs = conf.getLong(
+        DFS_NAMENODE_DELETE_BLOCK_UNLOCK_SLEEP_INTERVAL_MS_KEY,
+        DFS_NAMENODE_DELETE_BLOCK_UNLOCK_SLEEP_INTERVAL_MS_DEFAULT);
 
     // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(
@@ -725,6 +749,8 @@ public class BlockManager implements BlockStatsMXBean {
     datanodeManager.activate(conf);
     this.redundancyThread.setName("RedundancyMonitor");
     this.redundancyThread.start();
+    this.markedDeleteBlockScrubberThread.setName("MarkedDeleteBlockScrubberThread");
+    this.markedDeleteBlockScrubberThread.start();
     this.blockReportThread.start();
     mxBeanName = MBeans.register("NameNode", "BlockStats", this);
     bmSafeMode.activate(blockTotal);
@@ -4912,6 +4938,73 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
+   * Periodically deletes the marked block.
+   */
+  private class MarkedDeleteBlockScrubber implements Runnable {
+    Iterator<BlockInfo> toDeleteIterator = null;
+    boolean isSleep;
+
+    private void toRemove(long time) {
+      // Reentrant write lock, Release the lock when the remove is
+      // complete
+      if (checkToDeleteIterator()) {
+        namesystem.writeLock();
+        try {
+          while (toDeleteIterator.hasNext()) {
+            removeBlock(toDeleteIterator.next());
+            if (Time.now() - time > deleteBlockLockTimeMs) {
+              LOG.info("Clear markedDeleteQueue over "
+                  + deleteBlockLockTimeMs + " millisecond to release the write lock");
+              isSleep = true;
+              break;
+            }
+          }
+        } finally {
+          namesystem.writeUnlock();
+        }
+      }
+    }
+
+    private boolean checkToDeleteIterator() {
+      return toDeleteIterator != null && toDeleteIterator.hasNext();
+    }
+
+    @Override
+    public void run() {
+      LOG.info("Start MarkedDeleteBlockScrubber thread");
+      while (namesystem.isRunning()) {
+        if (!markedDeleteQueue.isEmpty() || checkToDeleteIterator()) {
+          namesystem.writeLock();
+          try {
+            NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+            metrics.setDeleteBlocksQueued(markedDeleteQueue.size());
+            isSleep = false;
+            long startTime = Time.now();
+            toRemove(startTime);
+            while (!markedDeleteQueue.isEmpty()) {
+              List<BlockInfo> markedDeleteList = markedDeleteQueue.poll();
+              if (markedDeleteList != null) {
+                toDeleteIterator = markedDeleteList.listIterator();
+              }
+              toRemove(startTime);
+              if (isSleep) {
+                break;
+              }
+            }
+          } finally {
+            namesystem.writeUnlock();
+          }
+        }
+        try {
+          TimeUnit.MILLISECONDS.sleep(deleteBlockUnlockIntervalTimeMs);
+        } catch (InterruptedException e) {
+          LOG.info("Stopping MarkedDeleteBlockScrubber.");
+        }
+      }
+    }
+  }
+
+  /**
    * Periodically calls computeBlockRecoveryWork().
    */
   private class RedundancyMonitor implements Runnable {
@@ -5257,6 +5350,10 @@ public class BlockManager implements BlockStatsMXBean {
 
   public BlockIdManager getBlockIdManager() {
     return blockIdManager;
+  }
+
+  public ConcurrentLinkedQueue<List<BlockInfo>> getMarkedDeleteQueue() {
+    return markedDeleteQueue;
   }
 
   public long nextGenerationStamp(boolean legacyBlock) throws IOException {

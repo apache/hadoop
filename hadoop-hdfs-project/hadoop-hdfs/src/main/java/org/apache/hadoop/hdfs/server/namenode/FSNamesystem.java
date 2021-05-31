@@ -3385,7 +3385,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getEditLog().logSync();
     logAuditEvent(ret, operationName, src);
     if (toRemovedBlocks != null) {
-      removeBlocks(toRemovedBlocks); // Incremental deletion of blocks
+      blockManager.getMarkedDeleteQueue().add(
+          toRemovedBlocks.getToDeleteList());
     }
     return ret;
   }
