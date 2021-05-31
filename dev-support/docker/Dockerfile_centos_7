@@ -27,8 +27,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Platform package dependency resolver
 ######
 COPY pkg-resolver pkg-resolver
-RUN chmod a+x pkg-resolver/install-common-pkgs.sh pkg-resolver/resolve.py \
-    && chmod a+r pkg-resolver/packages.json pkg-resolver/platforms.json
+RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
+    && chmod a+r pkg-resolver/*.json
 
 ######
 # Install packages from yum
@@ -44,54 +44,7 @@ RUN yum update -y \
 RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
 SHELL ["/bin/bash", "--login", "-c"]
 
-####
-# Install Maven 3.6.3
-####
-RUN mkdir -p /opt/maven /tmp/maven \
-    && curl -L -s -S https://mirrors.estointernet.in/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
-        -o /tmp/maven/apache-maven-3.6.3-bin.tar.gz \
-    && tar xzf /tmp/maven/apache-maven-3.6.3-bin.tar.gz --strip-components 1 -C /opt/maven
-
-####
-# Install CMake 3.19
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /tmp/cmake /opt/cmake \
-    && curl -L -s -S https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz -o /tmp/cmake/cmake-3.19.0.tar.gz \
-    && tar xzf /tmp/cmake/cmake-3.19.0.tar.gz --strip-components 1 -C /opt/cmake \
-    && cd /opt/cmake || exit && ./bootstrap \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
-
-####
-# Install zstandard
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/zstd /tmp/zstd \
-    && curl -L -s -S https://github.com/facebook/zstd/archive/refs/tags/v1.4.9.tar.gz -o /tmp/zstd/v1.4.9.tar.gz \
-    && tar xzf /tmp/zstd/v1.4.9.tar.gz --strip-components 1 -C /opt/zstd \
-    && cd /opt/zstd || exit \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
-
-# RUN locale-gen en_US.UTF-8
-# ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
-# ENV PYTHONIOENCODING=utf-8
-
-######
-# Install yasm
-######
-RUN mkdir -p /tmp/yasm \
-    && curl -L -s -S https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/y/yasm-1.2.0-4.el7.x86_64.rpm \
-        -o /tmp/yasm-1.2.0-4.el7.x86_64.rpm \
-    && rpm -Uvh /tmp/yasm-1.2.0-4.el7.x86_64.rpm
-
-######
-# Install common packages
-######
-RUN pkg-resolver/install-common-pkgs.sh
+# TODO: Set locale
 
 ######
 # Set env vars required to build Hadoop
@@ -101,15 +54,13 @@ ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
 
-####
-# Install Node.js
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /tmp/node \
-    && curl -L -s -S https://nodejs.org/dist/v14.16.1/node-v14.16.1.tar.gz -o /tmp/node-v14.16.1.tar.gz \
-    && tar xzf /tmp/node-v14.16.1.tar.gz --strip-components 1 -C /tmp/node \
-    && cd /tmp/node || exit \
-    && ./configure \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
+
+######
+# Install packages
+######
+RUN pkg-resolver/install-maven.sh centos:7
+RUN pkg-resolver/install-cmake.sh centos:7
+RUN pkg-resolver/install-zstandard.sh centos:7
+RUN pkg-resolver/install-yasm.sh centos:7
+RUN pkg-resolver/install-nodejs.sh centos:7
+RUN pkg-resolver/install-common-pkgs.sh
