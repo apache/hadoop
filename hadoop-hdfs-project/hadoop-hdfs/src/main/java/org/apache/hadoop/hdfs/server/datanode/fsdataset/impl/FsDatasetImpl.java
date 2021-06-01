@@ -2168,6 +2168,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           finalized.add(b);
         }
       }
+      Collections.sort(finalized);
       return finalized;
     }
   }

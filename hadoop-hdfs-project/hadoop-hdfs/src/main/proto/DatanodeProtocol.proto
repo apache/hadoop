@@ -256,9 +256,6 @@ message BlockReportContextProto  {
   // The block report lease ID, or 0 if we are sending without a lease to
   // bypass rate-limiting.
   optional uint64 leaseId = 4 [ default = 0 ];
-
-  // True if the reported blocks are sorted by increasing block IDs
-  optional bool sorted = 5 [default = false];
 }
 
 /**
