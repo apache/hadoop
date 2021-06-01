@@ -22,7 +22,6 @@ import io.opentelemetry.context.Context;
 import io.opentelemetry.sdk.autoconfigure.OpenTelemetrySdkAutoConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 /**
  * No-Op Tracer (for now) to remove HTrace without changing too many files.
  */
@@ -104,12 +103,17 @@ public class Tracer {
     }
 
     static OpenTelemetry initialiseTracer(String name) {
-      //TODO: Explore the possibility of moving these properties to config or environment variables
-      System.setProperty("otel.metrics.exporter", "none");
-      System.setProperty("otel.traces.exporter", "none");
+      //added to avoid test failures
+      setOTelEnvVariables("none", "none");
       System.setProperty("otel.resource.attributes", String.format("service.name=%s", name));
       OpenTelemetry openTelemetry = OpenTelemetrySdkAutoConfiguration.initialize();
       return openTelemetry;
+    }
+
+    //this method is added to set the environment variables for testing
+    private static void setOTelEnvVariables(String metricsExporter, String tracesExporter) {
+      System.setProperty("otel.metrics.exporter", metricsExporter);
+      System.setProperty("otel.traces.exporter", tracesExporter);
     }
 
     public synchronized Tracer build() {
