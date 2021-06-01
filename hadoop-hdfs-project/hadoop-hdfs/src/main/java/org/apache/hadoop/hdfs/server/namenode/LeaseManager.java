@@ -300,8 +300,13 @@ public class LeaseManager {
     Iterator<Long> inodeIdIterator = inodeIds.iterator();
     while (inodeIdIterator.hasNext()) {
       Long inodeId = inodeIdIterator.next();
-      final INodeFile inodeFile =
-          fsnamesystem.getFSDirectory().getInode(inodeId).asFile();
+      INode ucFile = fsnamesystem.getFSDirectory().getInode(inodeId);
+      if (ucFile == null) {
+        //probably got deleted
+        continue;
+      }
+
+      final INodeFile inodeFile = ucFile.asFile();
       if (!inodeFile.isUnderConstruction()) {
         LOG.warn("The file {} is not under construction but has lease.",
             inodeFile.getFullPathName());
