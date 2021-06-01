@@ -93,8 +93,9 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     try (FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(b);
     }
-
-    MockFastpathConnection.registerAppend(b.length, testPath.getName(), b, 0, b.length);
+    if (isMockFastpathTest) {
+      MockFastpathConnection.registerAppend(b.length, testPath.getName(), b, 0, b.length);
+    }
 
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result = -1;
@@ -122,6 +123,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
       assertNotEquals("data read in final read()", -1, result);
       assertArrayEquals(readBuffer, b);
     }
-    MockFastpathConnection.unregisterAppend(testPath.getName());
+    if (isMockFastpathTest) {
+    MockFastpathConnection.unregisterAppend(testPath.getName());}
   }
 }

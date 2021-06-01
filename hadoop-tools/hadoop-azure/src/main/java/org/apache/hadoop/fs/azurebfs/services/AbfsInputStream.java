@@ -446,7 +446,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
-    if (readAheadEnabled && !bypassReadAhead) {
+//    if (readAheadEnabled && !bypassReadAhead) {
+    if (readAheadQueueDepth > 0 && !bypassReadAhead) {
       // try reading from read-ahead
       if (offset != 0) {
         throw new IllegalArgumentException("readahead buffers cannot have non-zero buffer offsets");
