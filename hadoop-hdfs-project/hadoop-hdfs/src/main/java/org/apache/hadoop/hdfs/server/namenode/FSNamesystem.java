@@ -1997,7 +1997,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     for (DatanodeDescriptor dataNode :
         blockManager.getDatanodeManager().getDatanodes()) {
       // Sort open files
-      LightWeightHashSet<Long> dnOpenFiles = dataNode.getLeavingServiceStatus().getOpenFiles();
+      LightWeightHashSet<Long> dnOpenFiles =
+          dataNode.getLeavingServiceStatus().getOpenFiles();
       Long[] dnOpenFileIds = new Long[dnOpenFiles.size()];
       Arrays.sort(dnOpenFiles.toArray(dnOpenFileIds));
       for (Long ucFileId : dnOpenFileIds) {
