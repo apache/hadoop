@@ -446,6 +446,7 @@ static struct mntent* get_layer_mounts(size_t* num_entries_out,
   size_t num_entries = 0;
   size_t entries_capacity = num_entries_per_alloc;
   struct mntent* entries = malloc(sizeof(*entries) * entries_capacity);
+  struct mntent* new_entries;
   if (entries == NULL) {
     fputs("Unable to allocate memory\n", ERRORFILE);
     goto fail;
@@ -484,11 +485,12 @@ static struct mntent* get_layer_mounts(size_t* num_entries_out,
 
     if (num_entries == entries_capacity) {
       entries_capacity += num_entries_per_alloc;
-      entries = realloc(entries, sizeof(*entries) * entries_capacity);
-      if (entries == NULL) {
+      new_entries = realloc(entries, sizeof(*entries) * entries_capacity);
+      if (new_entries == NULL) {
         fputs("Unable to allocate memory\n", ERRORFILE);
         goto fail;
       }
+      entries = new_entries;
     }
 
     if (!copy_mntent(entries + num_entries, me)) {
