@@ -1322,6 +1322,46 @@ void test_trim_function() {
   free(trimmed);
 }
 
+/**
+ * This test is used to verify that concatenate() works correctly
+ */
+void test_concatenate() {
+  char *concatenate(char *concat_pattern, char *return_path_name, int numArgs, ...);
+  printf("\nTesting concatenate function\n");
+
+  // numArgs: 0
+  char *expected1 = "fixed1";
+  char *actual1 = concatenate("fixed1", "test1", 0);
+  if (actual1 == NULL || strcmp(actual1, expected1) != 0) {
+    printf("FAIL: concatenate: test1: expected %s got %s\n", expected1, actual1);
+    exit(1);
+  }
+
+  // numArgs: 1
+  char *expected2 = "fixed1/var1";
+  char *actual2 = concatenate("fixed1/%s", "test2", 1, "var1");
+  if (actual2 == NULL || strcmp(actual2, expected2) != 0) {
+    printf("FAIL: concatenate: test2: expected %s got %s\n", expected2, actual2);
+    exit(1);
+  }
+
+  // numArgs: 2
+  char *expected3 = "fixed1/var1/fixed2/var2";
+  char *actual3 = concatenate("fixed1/%s/fixed2/%s", "test3", 2, "var1", "var2");
+  if (actual3 == NULL || strcmp(actual3, expected3) != 0) {
+    printf("FAIL: concatenate: test3: expected %s got %s\n", expected3, actual3);
+    exit(1);
+  }
+
+  // concat_pattern with field width
+  char *expected4 = "[x         ]";
+  char *actual4 = concatenate("[%-10s]", "test4", 1, "x");
+  if (actual4 == NULL || strcmp(actual4, expected4) != 0) {
+    printf("FAIL: concatenate: test4: expected %s got %s\n", expected4, actual4);
+    exit(1);
+  }
+}
+
 int is_empty(char *name);
 
 void test_is_empty() {
@@ -1762,6 +1802,7 @@ int main(int argc, char **argv) {
 #endif
 
   test_trim_function();
+  test_concatenate();
   printf("\nFinished tests\n");
 
   printf("\nAttempting to clean up from the run\n");

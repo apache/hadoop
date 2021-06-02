@@ -68,8 +68,8 @@ static void display_usage(FILE *stream) {
   fprintf(stream,
       "       container-executor <user> <yarn-user> <command> <command-args>\n"
       "       where command and command-args: \n" \
-      "            initialize container:  %2d appid tokens nm-local-dirs "
-      "nm-log-dirs cmd app...\n"
+      "            initialize container:  %2d appid containerid tokens nm-local-dirs "
+      "nm-log-dirs cmd...\n"
       "            launch container:      %2d appid containerid workdir "
       "container-script tokens http-option pidfile nm-local-dirs nm-log-dirs resources ",
       INITIALIZE_CONTAINER, LAUNCH_CONTAINER);
