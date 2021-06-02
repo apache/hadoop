@@ -454,6 +454,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>**/build/**</exclude>
             <exclude>**/patchprocess/**</exclude>
             <exclude>**/*.js</exclude>
+            <exclude>**/*.json</exclude>
             <exclude>licenses/**</exclude>
             <exclude>licenses-binary/**</exclude>
          </excludes>
