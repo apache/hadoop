@@ -812,10 +812,10 @@ public class TestBalancer {
         conf.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
             DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT,
             TimeUnit.SECONDS, TimeUnit.MILLISECONDS) * 2 +
-            conf.getTimeDuration(
-                DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
-                DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT,
-                TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+        conf.getTimeDuration(
+            DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
+            DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_DEFAULT,
+            TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     LOG.info("namenodes  = " + namenodes);
     LOG.info("parameters = " + p);
     LOG.info("Print stack trace", new Throwable());
