@@ -1385,7 +1385,9 @@ static char* get_docker_mount_options_string(mount_options *options) {
       return NULL;
     }
 
-    idx += sprintf(options_string, "%s", options->opts[0]);
+    if (options->num_opts > 0) {
+        idx += sprintf(options_string, "%s", options->opts[0]);
+    }
     for (i = 1; i < options->num_opts; i++) {
         idx += sprintf(options_string + idx, ",%s", options->opts[i]);
     }
