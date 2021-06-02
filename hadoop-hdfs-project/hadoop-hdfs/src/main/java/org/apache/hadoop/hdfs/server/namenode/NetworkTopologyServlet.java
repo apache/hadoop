@@ -90,7 +90,7 @@ public class NetworkTopologyServlet extends DfsServlet {
    * @param leaves leaves nodes under base scope
    * @param format the response format
    */
-  public void printTopology(PrintStream stream, List<Node> leaves,
+  private void printTopology(PrintStream stream, List<Node> leaves,
       String format) throws BadFormatException, IOException {
     if (leaves.isEmpty()) {
       stream.print("No DataNodes");
@@ -120,7 +120,7 @@ public class NetworkTopologyServlet extends DfsServlet {
     }
   }
 
-  private void printJsonFormat(PrintStream stream, Map<String,
+  protected void printJsonFormat(PrintStream stream, Map<String,
       TreeSet<String>> tree, ArrayList<String> racks) throws IOException {
     JsonFactory dumpFactory = new JsonFactory();
     JsonGenerator dumpGenerator = dumpFactory.createGenerator(stream);
@@ -152,8 +152,8 @@ public class NetworkTopologyServlet extends DfsServlet {
     }
   }
 
-  private void printTextFormat(PrintStream stream, Map<String,
-      TreeSet<String>> tree, ArrayList<String> racks) {
+  protected void printTextFormat(PrintStream stream, Map<String,
+          TreeSet<String>> tree, ArrayList<String> racks) {
     for(String r : racks) {
       stream.println("Rack: " + r);
       TreeSet<String> nodes = tree.get(r);
@@ -171,7 +171,7 @@ public class NetworkTopologyServlet extends DfsServlet {
   }
 
   @VisibleForTesting
-  static String parseAcceptHeader(HttpServletRequest request) {
+  protected static String parseAcceptHeader(HttpServletRequest request) {
     String format = request.getHeader(HttpHeaders.ACCEPT);
     return format != null && format.contains(FORMAT_JSON) ?
             FORMAT_JSON : FORMAT_TEXT;

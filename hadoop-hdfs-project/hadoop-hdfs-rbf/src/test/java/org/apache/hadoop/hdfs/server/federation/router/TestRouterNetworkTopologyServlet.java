@@ -72,7 +72,6 @@ public class TestRouterNetworkTopologyServlet {
         MultipleDestinationMountTableResolver.class);
     clusterNoDatanodes.addNamenodeOverrides(hdfsConf);
     clusterNoDatanodes.addRouterOverrides(routerConf);
-    clusterNoDatanodes.shutdown();
     clusterNoDatanodes.setNumDatanodesPerNameservice(0);
     clusterNoDatanodes.setIndependentDNs();
     clusterNoDatanodes.startCluster();

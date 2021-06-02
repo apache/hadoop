@@ -17,20 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.hdfs.server.namenode.NetworkTopologyServlet;
 import org.apache.hadoop.net.Node;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.StringUtils;
 
 import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.HttpHeaders;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -42,7 +37,7 @@ import java.util.TreeSet;
 /**
  * A servlet to print out the network topology from router.
  */
-public class RouterNetworkTopologyServlet extends HttpServlet {
+public class RouterNetworkTopologyServlet extends NetworkTopologyServlet {
 
   public static final String SERVLET_NAME = "topology";
   public static final String PATH_SPEC = "/topology";
@@ -52,7 +47,7 @@ public class RouterNetworkTopologyServlet extends HttpServlet {
 
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
-          throws IOException {
+      throws IOException {
     final ServletContext context = getServletContext();
 
     String format = parseAcceptHeader(request);
@@ -89,7 +84,7 @@ public class RouterNetworkTopologyServlet extends HttpServlet {
    * @param datanodeInfos datanode Infos
    * @param format the response format
    */
-  public void printTopology(PrintStream stream, DatanodeInfo[] datanodeInfos,
+  private void printTopology(PrintStream stream, DatanodeInfo[] datanodeInfos,
       String format) throws IOException, BadFormatException {
     if (datanodeInfos.length == 0) {
       stream.print("No DataNodes");
@@ -118,70 +113,4 @@ public class RouterNetworkTopologyServlet extends HttpServlet {
       throw new BadFormatException("Bad format: " + format);
     }
   }
-
-  private void printJsonFormat(PrintStream stream, Map<String,
-          TreeSet<String>> tree, ArrayList<String> racks) throws IOException {
-    JsonFactory dumpFactory = new JsonFactory();
-    JsonGenerator dumpGenerator = dumpFactory.createGenerator(stream);
-    dumpGenerator.writeStartArray();
-
-    for(String r : racks) {
-      dumpGenerator.writeStartObject();
-      dumpGenerator.writeFieldName(r);
-      TreeSet<String> nodes = tree.get(r);
-      dumpGenerator.writeStartArray();
-
-      for(String n : nodes) {
-        dumpGenerator.writeStartObject();
-        dumpGenerator.writeStringField("ip", n);
-        String hostname = NetUtils.getHostNameOfIP(n);
-        if(hostname != null) {
-          dumpGenerator.writeStringField("hostname", hostname);
-        }
-        dumpGenerator.writeEndObject();
-      }
-      dumpGenerator.writeEndArray();
-      dumpGenerator.writeEndObject();
-    }
-    dumpGenerator.writeEndArray();
-    dumpGenerator.flush();
-
-    if (!dumpGenerator.isClosed()) {
-      dumpGenerator.close();
-    }
-  }
-
-  private void printTextFormat(PrintStream stream, Map<String,
-          TreeSet<String>> tree, ArrayList<String> racks) {
-    for(String r : racks) {
-      stream.println("Rack: " + r);
-      TreeSet<String> nodes = tree.get(r);
-
-      for(String n : nodes) {
-        stream.print("   " + n);
-        String hostname = NetUtils.getHostNameOfIP(n);
-        if(hostname != null) {
-          stream.print(" (" + hostname + ")");
-        }
-        stream.println();
-      }
-      stream.println();
-    }
-  }
-
-  @VisibleForTesting
-  static String parseAcceptHeader(HttpServletRequest request) {
-    String format = request.getHeader(HttpHeaders.ACCEPT);
-    return format != null && format.contains(FORMAT_JSON) ?
-            FORMAT_JSON : FORMAT_TEXT;
-  }
-
-  public static class BadFormatException extends Exception {
-    private static final long serialVersionUID = 1L;
-
-    public BadFormatException(String msg) {
-      super(msg);
-    }
-  }
-
 }
