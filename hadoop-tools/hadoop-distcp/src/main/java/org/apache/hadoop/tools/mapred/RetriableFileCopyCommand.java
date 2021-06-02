@@ -132,12 +132,14 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     final boolean toAppend = action == FileAction.APPEND;
     final boolean useTempTarget = !toAppend && !directWrite;
     Path targetPath = useTempTarget ? getTempFile(target, context) : target;
+    targetPath = new Path(targetPath.toUri().getPath());
 
     LOG.info("Writing to {} target file path {}", useTempTarget ? "temporary"
         : "direct", targetPath);
 
     final Configuration configuration = context.getConfiguration();
     FileSystem targetFS = target.getFileSystem(configuration);
+    target = new Path(target.toUri().getPath());
 
     try {
       final Path sourcePath = source.getPath();
@@ -263,7 +265,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
 
     Path root = target.equals(targetWorkPath) ? targetWorkPath.getParent()
         : targetWorkPath;
-    Path tempFile = new Path(root, ".distcp.tmp." +
+    Path tempFile = new Path(root, "distcp.tmp." +
         context.getTaskAttemptID().toString() +
         "." + String.valueOf(System.currentTimeMillis()));
     LOG.info("Creating temp file: {}", tempFile);
