@@ -65,15 +65,28 @@ SHELL ["/bin/bash", "--login", "-c"]
 ######
 # Set env vars required to build Hadoop
 ######
-ENV MAVEN_HOME /opt/maven/apache-maven-3.6.3
+ENV MAVEN_HOME /opt/maven
 ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
+
+#######
+# Set env vars for SpotBugs
+#######
+ENV SPOTBUGS_HOME /opt/spotbugs
+
+#######
+# Set env vars for Google Protobuf
+#######ENV PROTOBUF_HOME /opt/protobuf
+ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ######
 # Install packages
 ######
 RUN pkg-resolver/install-maven.sh centos:8
 RUN pkg-resolver/install-cmake.sh centos:8
+RUN pkg-resolver/install-boost.sh centos:8
+RUN pkg-resolver/install-spotbugs.sh centos:8
+RUN pkg-resolver/install-protobuf.sh centos:8
 RUN pkg-resolver/install-zstandard.sh centos:8
 RUN pkg-resolver/install-common-pkgs.sh
