@@ -28,6 +28,7 @@ import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -48,6 +49,7 @@ import static org.mockito.Mockito.when;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
 
 /**
  * Unit test AbfsInputStream.
@@ -567,6 +569,20 @@ public class TestAbfsInputStream extends
         true,
         SIXTEEN_KB);
     testReadAheads(inputStream, FORTY_EIGHT_KB, SIXTEEN_KB);
+  }
+
+  @Test
+  public void testDefaultReadaheadQueueDepth() throws Exception {
+    Configuration config = getRawConfiguration();
+    config.unset(FS_AZURE_READ_AHEAD_QUEUE_DEPTH);
+    AzureBlobFileSystem fs = getFileSystem(config);
+    Path testFile = new Path("/testFile");
+    fs.create(testFile);
+    FSDataInputStream in = fs.open(testFile);
+    Assertions.assertThat(
+        ((AbfsInputStream) in.getWrappedStream()).getReadAheadQueueDepth())
+        .describedAs("readahead queue depth should be set to default value 2")
+        .isEqualTo(2);
   }
 
 

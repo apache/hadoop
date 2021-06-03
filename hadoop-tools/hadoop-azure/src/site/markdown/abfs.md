@@ -803,7 +803,7 @@ pattern is detected.
 `fs.azure.readaheadqueue.depth`: Sets the readahead queue depth in
 AbfsInputStream. In case the set value is negative the read ahead queue depth
 will be set as Runtime.getRuntime().availableProcessors(). By default the value
-will be -1. To disable readaheads, set this value to 0. If your workload is
+will be 2. To disable readaheads, set this value to 0. If your workload is
  doing only random reads (non-sequential) or you are seeing throttling, you
   may try setting this value to 0.
 
