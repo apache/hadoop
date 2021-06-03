@@ -72,8 +72,6 @@ public class FTPFileSystem extends FileSystem {
   public static final String FS_FTP_DATA_CONNECTION_MODE =
       "fs.ftp.data.connection.mode";
   public static final String FS_FTP_TRANSFER_MODE = "fs.ftp.transfer.mode";
-  public static final String E_SAME_DIRECTORY_ONLY =
-      "only same directory renames are supported";
   public static final String FS_FTP_TIMEOUT = "fs.ftp.timeout";
 
   private URI uri;
@@ -686,17 +684,11 @@ public class FTPFileSystem extends FileSystem {
           + " already exists");
     }
     String parentSrc = absoluteSrc.getParent().toUri().toString();
-    String parentDst = absoluteDst.getParent().toUri().toString();
     if (isParentOf(absoluteSrc, absoluteDst)) {
       throw new IOException("Cannot rename " + absoluteSrc + " under itself"
       + " : "+ absoluteDst);
     }
 
-    if (!parentSrc.equals(parentDst)) {
-      throw new IOException("Cannot rename source: " + absoluteSrc
-          + " to " + absoluteDst
-          + " -"+ E_SAME_DIRECTORY_ONLY);
-    }
     String from = absoluteSrc.getName();
     String to = absoluteDst.getName();
     client.changeWorkingDirectory(parentSrc);

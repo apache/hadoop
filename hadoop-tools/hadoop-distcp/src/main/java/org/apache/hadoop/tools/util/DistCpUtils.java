@@ -662,4 +662,20 @@ public class DistCpUtils {
         + ".____distcpSplit____" + srcFileStatus.getChunkOffset()
         + "." + srcFileStatus.getChunkLength());
   }
+
+  /**
+   * Return the target temp file prefix
+   *
+   * The FTPFilesystem can't work well when the file name is starts with comma.
+   *
+   * @param fileSystem target filesystem
+   * @return temp file path prefix
+   */
+  public static String getTargetTempFilePrefix(FileSystem fileSystem) {
+    if (StringUtils.equalsIgnoreCase(fileSystem.getScheme(), "ftp")) {
+      return DistCpConstants.TARGET_TEMP_FILE_PREFIX;
+    } else {
+      return DistCpConstants.TARGET_TEMP_FILE_PREFIX_COMMA;
+    }
+  }
 }

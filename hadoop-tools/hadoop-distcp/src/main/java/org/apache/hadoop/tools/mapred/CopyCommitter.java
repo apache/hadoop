@@ -170,8 +170,9 @@ public class CopyCommitter extends FileOutputCommitter {
       return;
     }
 
+    String tempFilePrefix = DistCpUtils.getTargetTempFilePrefix(targetFS);
     FileStatus[] tempFiles = targetFS.globStatus(
-        new Path(targetWorkPath, ".distcp.tmp." + jobId.replaceAll("job","attempt") + "*"));
+        new Path(targetWorkPath, tempFilePrefix + jobId.replaceAll("job","attempt") + "*"));
 
     if (tempFiles != null && tempFiles.length > 0) {
       for (FileStatus file : tempFiles) {
