@@ -45,10 +45,8 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.tools.DistCpConstants.*;
 
@@ -170,14 +168,35 @@ public class CopyCommitter extends FileOutputCommitter {
       return;
     }
 
-    FileStatus[] tempFiles = targetFS.globStatus(
-        new Path(targetWorkPath, ".distcp.tmp." + jobId.replaceAll("job","attempt") + "*"));
+    String tmpFilePattern = TARGET_TMP_FILE_PREFIX + jobId.replaceAll("job","attempt") + "*";
+    List<FileStatus> tempFiles = listTmpFilePaths(targetFS, targetWorkPath, tmpFilePattern);
 
-    if (tempFiles != null && tempFiles.length > 0) {
+    if (tempFiles != null && tempFiles.size() > 0) {
       for (FileStatus file : tempFiles) {
         LOG.info("Cleaning up " + file.getPath());
         targetFS.delete(file.getPath(), false);
       }
+    }
+  }
+
+  private List<FileStatus> listTmpFilePaths(FileSystem fileSystem, Path targetWorkPath, String pattern) throws IOException {
+    List<Path> tmpPaths = new ArrayList<>();
+    tmpPaths.add(targetWorkPath);
+    listChildrenPaths(fileSystem, targetWorkPath, tmpPaths);
+    List<FileStatus> allTmpFiles = new ArrayList<>(tmpPaths.size());
+    for (Path path : tmpPaths) {
+      FileStatus[] tmpFiles = fileSystem.globStatus(new Path(path, pattern));
+      allTmpFiles.addAll(Arrays.asList(tmpFiles));
+    }
+    return allTmpFiles;
+  }
+
+  private void listChildrenPaths(FileSystem fileSystem, Path targetWorkPath, List<Path> paths) throws IOException {
+    List<Path> directoryPaths = Arrays.stream(fileSystem.listStatus(targetWorkPath))
+            .filter(status -> status.isDirectory()).map(status -> status.getPath()).collect(Collectors.toList());
+    paths.addAll(directoryPaths);
+    for (Path path : directoryPaths) {
+      listChildrenPaths(fileSystem, path, paths);
     }
   }
 

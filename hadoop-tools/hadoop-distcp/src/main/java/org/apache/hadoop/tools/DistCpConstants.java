@@ -191,4 +191,6 @@ public final class DistCpConstants {
 
   public static final String CLASS_INSTANTIATION_ERROR_MSG =
           "Unable to instantiate ";
+
+  public static final String TARGET_TMP_FILE_PREFIX = "distcp.tmp.";
 }

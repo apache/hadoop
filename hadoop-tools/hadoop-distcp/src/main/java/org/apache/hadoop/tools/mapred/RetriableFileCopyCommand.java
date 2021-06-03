@@ -263,7 +263,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
 
     Path root = target.equals(targetWorkPath) ? targetWorkPath.getParent()
         : targetWorkPath;
-    Path tempFile = new Path(root, ".distcp.tmp." +
+    Path tempFile = new Path(root, DistCpConstants.TARGET_TMP_FILE_PREFIX +
         context.getTaskAttemptID().toString() +
         "." + String.valueOf(System.currentTimeMillis()));
     LOG.info("Creating temp file: {}", tempFile);
