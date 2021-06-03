@@ -46,6 +46,7 @@ import java.util.TreeSet;
 @InterfaceAudience.Private
 public class NetworkTopologyServlet extends DfsServlet {
 
+  public static final String SERVLET_NAME = "topology";
   public static final String PATH_SPEC = "/topology";
 
   protected static final String FORMAT_JSON = "json";
@@ -90,7 +91,7 @@ public class NetworkTopologyServlet extends DfsServlet {
    * @param leaves leaves nodes under base scope
    * @param format the response format
    */
-  private void printTopology(PrintStream stream, List<Node> leaves,
+  protected void printTopology(PrintStream stream, List<Node> leaves,
       String format) throws BadFormatException, IOException {
     if (leaves.isEmpty()) {
       stream.print("No DataNodes");

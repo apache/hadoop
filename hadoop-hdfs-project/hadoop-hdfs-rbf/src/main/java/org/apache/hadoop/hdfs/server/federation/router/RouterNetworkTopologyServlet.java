@@ -28,22 +28,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeSet;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * A servlet to print out the network topology from router.
  */
 public class RouterNetworkTopologyServlet extends NetworkTopologyServlet {
-
-  public static final String SERVLET_NAME = "topology";
-  public static final String PATH_SPEC = "/topology";
-
-  protected static final String FORMAT_JSON = "json";
-  protected static final String FORMAT_TEXT = "text";
 
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -61,10 +52,11 @@ public class RouterNetworkTopologyServlet extends NetworkTopologyServlet {
     DatanodeInfo[] datanodeReport =
         router.getRpcServer().getDatanodeReport(
             HdfsConstants.DatanodeReportType.ALL);
+    List<Node> datanodeInfos = Arrays.asList(datanodeReport);
 
     try (PrintStream out = new PrintStream(
             response.getOutputStream(), false, "UTF-8")) {
-      printTopology(out, datanodeReport, format);
+      printTopology(out, datanodeInfos, format);
     } catch (Throwable t) {
       String errMsg = "Print network topology failed. "
               + StringUtils.stringifyException(t);
@@ -72,45 +64,6 @@ public class RouterNetworkTopologyServlet extends NetworkTopologyServlet {
       throw new IOException(errMsg);
     } finally {
       response.getOutputStream().close();
-    }
-  }
-
-  /**
-   * Display each rack and the nodes assigned to that rack, as determined
-   * by the NameNode, in a hierarchical manner.  The nodes and racks are
-   * sorted alphabetically.
-   *
-   * @param stream print stream
-   * @param datanodeInfos datanode Infos
-   * @param format the response format
-   */
-  private void printTopology(PrintStream stream, DatanodeInfo[] datanodeInfos,
-      String format) throws IOException, BadFormatException {
-    if (datanodeInfos.length == 0) {
-      stream.print("No DataNodes");
-      return;
-    }
-
-    // Build a map of rack -> nodes
-    Map<String, TreeSet<String>> tree = new HashMap<>();
-    for(Node dni : datanodeInfos) {
-      String location = dni.getNetworkLocation();
-      String name = dni.getName();
-
-      tree.putIfAbsent(location, new TreeSet<>());
-      tree.get(location).add(name);
-    }
-
-    // Sort the racks (and nodes) alphabetically, display in order
-    ArrayList<String> racks = new ArrayList<>(tree.keySet());
-    Collections.sort(racks);
-
-    if (FORMAT_JSON.equals(format)) {
-      printJsonFormat(stream, tree, racks);
-    } else if (FORMAT_TEXT.equals(format)) {
-      printTextFormat(stream, tree, racks);
-    } else {
-      throw new BadFormatException("Bad format: " + format);
     }
   }
 }
