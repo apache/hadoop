@@ -557,7 +557,7 @@ public class ShuffleHandler extends AuxiliaryService {
         .option(ChannelOption.SO_BACKLOG,
             conf.getInt(SHUFFLE_LISTEN_QUEUE_SIZE,
                 DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE))
-        .option(ChannelOption.SO_KEEPALIVE, true)
+        .childOption(ChannelOption.SO_KEEPALIVE, true)
         .childHandler(pipelineFact);
     port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
     ch = bootstrap.bind(new InetSocketAddress(port)).sync().channel();
@@ -909,6 +909,7 @@ public class ShuffleHandler extends AuxiliaryService {
     public void channelActive(ChannelHandlerContext ctx)
         throws Exception {
       super.channelActive(ctx);
+      LOG.debug("accepted connections={}", accepted.size());
 
       if ((maxShuffleConnections > 0) && (accepted.size() >= maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
@@ -925,6 +926,8 @@ public class ShuffleHandler extends AuxiliaryService {
         return;
       }
       accepted.add(ctx.channel());
+      LOG.debug("added channel: {}. accepted size: {}",
+          ctx.channel(), accepted.size());
     }
 
     @Override
@@ -1327,7 +1330,7 @@ public class ShuffleHandler extends AuxiliaryService {
       }
 
       // Close the connection as soon as the error message is sent.
-      ctx.channel().write(response).addListener(ChannelFutureListener.CLOSE);
+      ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     @Override
