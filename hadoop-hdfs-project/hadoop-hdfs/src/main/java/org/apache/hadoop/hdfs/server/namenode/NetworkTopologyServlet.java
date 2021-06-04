@@ -154,7 +154,7 @@ public class NetworkTopologyServlet extends DfsServlet {
   }
 
   protected void printTextFormat(PrintStream stream, Map<String,
-          TreeSet<String>> tree, ArrayList<String> racks) {
+      TreeSet<String>> tree, ArrayList<String> racks) {
     for(String r : racks) {
       stream.println("Rack: " + r);
       TreeSet<String> nodes = tree.get(r);
