@@ -46,6 +46,7 @@ class Syscall {
    * @param message The char pointer to write to stdout.
    * @returns A boolean indicating whether the write
    * was successful.
+   
    */
   static int WriteToStdout(const char* message);
 
