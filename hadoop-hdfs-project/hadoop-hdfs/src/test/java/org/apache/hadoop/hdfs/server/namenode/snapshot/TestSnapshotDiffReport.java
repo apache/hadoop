@@ -813,6 +813,24 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("subsub1")));
   }
 
+  @Test
+  public void testDiffReportWithQuota() throws Exception {
+    final Path testdir = new Path(sub1, "testdir1");
+    hdfs.mkdirs(testdir);
+    hdfs.allowSnapshot(testdir);
+    // Set quota BEFORE creating the snapshot
+    hdfs.setQuota(testdir, 10, 10);
+    hdfs.createSnapshot(testdir, "s0");
+    final SnapshotDiffReport report =
+        hdfs.getSnapshotDiffReport(testdir, "s0", "");
+    // The diff should be null. Snapshot dir inode should keep the quota.
+    Assert.assertEquals(0, report.getDiffList().size());
+    // Cleanup
+    hdfs.deleteSnapshot(testdir, "s0");
+    hdfs.disallowSnapshot(testdir);
+    hdfs.delete(testdir, true);
+  }
+
   /**
    * Rename a directory to its prior descendant, and verify the diff report.
    */

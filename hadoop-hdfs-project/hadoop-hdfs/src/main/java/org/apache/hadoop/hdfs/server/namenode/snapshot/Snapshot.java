@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
+import org.apache.hadoop.hdfs.server.namenode.DirectoryWithQuotaFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -151,15 +152,13 @@ public class Snapshot implements Comparable<byte[]> {
   /** The root directory of the snapshot. */
   static public class Root extends INodeDirectory {
     Root(INodeDirectory other) {
-      // Always preserve ACL, XAttr.
-      super(other, false, Arrays.asList(other.getFeatures()).stream().filter(
-          input -> {
-            if (AclFeature.class.isInstance(input)
-                || XAttrFeature.class.isInstance(input)) {
-              return true;
-            }
-            return false;
-          }).collect(Collectors.toList()).toArray(new Feature[0]));
+      // Always preserve ACL, XAttr and Quota.
+      super(other, false,
+          Arrays.stream(other.getFeatures()).filter(input ->
+              input instanceof AclFeature
+                  || input instanceof XAttrFeature
+                  || input instanceof DirectoryWithQuotaFeature
+          ).toArray(Feature[]::new));
     }
 
     boolean isMarkedAsDeleted() {
