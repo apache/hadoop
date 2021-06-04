@@ -18,19 +18,19 @@
 
 package org.apache.hadoop.mapred;
 
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
+import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
+import static io.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.fusesource.leveldbjni.JniDBFactory.asString;
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
-import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
-import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static org.jboss.netty.handler.codec.http.HttpMethod.GET;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
-import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -54,6 +54,41 @@ import java.util.regex.Pattern;
 
 import javax.crypto.SecretKey;
 
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.handler.timeout.IdleState;
+import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
@@ -79,7 +114,6 @@ import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
@@ -94,42 +128,6 @@ import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBException;
 import org.iq80.leveldb.Options;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.handler.codec.frame.TooLongFrameException;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.QueryStringDecoder;
-import org.jboss.netty.handler.ssl.SslHandler;
-import org.jboss.netty.handler.stream.ChunkedWriteHandler;
-import org.jboss.netty.handler.timeout.IdleState;
-import org.jboss.netty.handler.timeout.IdleStateAwareChannelHandler;
-import org.jboss.netty.handler.timeout.IdleStateEvent;
-import org.jboss.netty.handler.timeout.IdleStateHandler;
-import org.jboss.netty.util.CharsetUtil;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.Timer;
 import org.eclipse.jetty.http.HttpHeader;
 import org.slf4j.LoggerFactory;
 
@@ -187,8 +185,13 @@ public class ShuffleHandler extends AuxiliaryService {
   public static final String RETRY_AFTER_HEADER = "Retry-After";
 
   private int port;
-  private ChannelFactory selector;
-  private final ChannelGroup accepted = new DefaultChannelGroup();
+  private EventLoopGroup bossGroup;
+  private EventLoopGroup workerGroup;
+  private ServerBootstrap bootstrap;
+  private Channel ch;
+  // FIXME: snemeth: need thread safety. - https://stackoverflow.com/questions/17836976/netty-4-0-instanciate-defaultchannelgroup
+  private final ChannelGroup accepted =
+      new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
   protected HttpPipelineFactory pipelineFact;
   private int sslFileBufferSize;
   
@@ -267,7 +270,6 @@ public class ShuffleHandler extends AuxiliaryService {
   boolean connectionKeepAliveEnabled = false;
   private int connectionKeepAliveTimeOut;
   private int mapOutputMetaInfoCacheSize;
-  private Timer timer;
 
   @Metrics(about="Shuffle output metrics", context="mapred")
   static class ShuffleMetrics implements ChannelFutureListener {
@@ -305,7 +307,7 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
       if (!future.isSuccess()) {
-        future.getChannel().close();
+        future.channel().closeFuture().awaitUninterruptibly();
         return;
       }
       int waitCount = this.reduceContext.getMapsToWait().decrementAndGet();
@@ -313,12 +315,12 @@ public class ShuffleHandler extends AuxiliaryService {
         metrics.operationComplete(future);
         // Let the idle timer handler close keep-alive connections
         if (reduceContext.getKeepAlive()) {
-          ChannelPipeline pipeline = future.getChannel().getPipeline();
+          ChannelPipeline pipeline = future.channel().pipeline();
           TimeoutHandler timeoutHandler =
               (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
           timeoutHandler.setEnabledTimeout(true);
         } else {
-          future.getChannel().close();
+          future.channel().closeFuture().awaitUninterruptibly();
         }
       } else {
         pipelineFact.getSHUFFLE().sendMap(reduceContext);
@@ -505,6 +507,11 @@ public class ShuffleHandler extends AuxiliaryService {
                                         DEFAULT_MAX_SHUFFLE_CONNECTIONS);
     int maxShuffleThreads = conf.getInt(MAX_SHUFFLE_THREADS,
                                         DEFAULT_MAX_SHUFFLE_THREADS);
+    // Since Netty 4.x, the value of 0 threads would default to: 
+    // io.netty.channel.MultithreadEventLoopGroup.DEFAULT_EVENT_LOOP_THREADS
+    // by simply passing 0 value to NioEventLoopGroup constructor below.
+    // However, this logic to determinte thread count
+    // was in place so we can keep it for now.
     if (maxShuffleThreads == 0) {
       maxShuffleThreads = 2 * Runtime.getRuntime().availableProcessors();
     }
@@ -526,10 +533,8 @@ public class ShuffleHandler extends AuxiliaryService {
       .setNameFormat("ShuffleHandler Netty Worker #%d")
       .build();
     
-    selector = new NioServerSocketChannelFactory(
-        HadoopExecutors.newCachedThreadPool(bossFactory),
-        HadoopExecutors.newCachedThreadPool(workerFactory),
-        maxShuffleThreads);
+    bossGroup = new NioEventLoopGroup(maxShuffleThreads, bossFactory);
+    workerGroup = new NioEventLoopGroup(maxShuffleThreads, workerFactory);
     super.serviceInit(new Configuration(conf));
   }
 
@@ -540,22 +545,24 @@ public class ShuffleHandler extends AuxiliaryService {
     userRsrc = new ConcurrentHashMap<String,String>();
     secretManager = new JobTokenSecretManager();
     recoverState(conf);
-    ServerBootstrap bootstrap = new ServerBootstrap(selector);
-    // Timer is shared across entire factory and must be released separately
-    timer = new HashedWheelTimer();
     try {
-      pipelineFact = new HttpPipelineFactory(conf, timer);
+      pipelineFact = new HttpPipelineFactory(conf);
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
-    bootstrap.setOption("backlog", conf.getInt(SHUFFLE_LISTEN_QUEUE_SIZE,
-        DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE));
-    bootstrap.setOption("child.keepAlive", true);
-    bootstrap.setPipelineFactory(pipelineFact);
+
+    bootstrap = new ServerBootstrap();
+    bootstrap.group(bossGroup, workerGroup)
+        .channel(NioServerSocketChannel.class)
+        .option(ChannelOption.SO_BACKLOG,
+            conf.getInt(SHUFFLE_LISTEN_QUEUE_SIZE,
+                DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE))
+        .option(ChannelOption.SO_KEEPALIVE, true)
+        .childHandler(pipelineFact);
     port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
-    Channel ch = bootstrap.bind(new InetSocketAddress(port));
+    ch = bootstrap.bind(new InetSocketAddress(port)).sync().channel();
     accepted.add(ch);
-    port = ((InetSocketAddress)ch.getLocalAddress()).getPort();
+    port = ((InetSocketAddress)ch.localAddress()).getPort();
     conf.set(SHUFFLE_PORT_CONFIG_KEY, Integer.toString(port));
     pipelineFact.SHUFFLE.setPort(port);
     LOG.info(getName() + " listening on port " + port);
@@ -577,17 +584,11 @@ public class ShuffleHandler extends AuxiliaryService {
   @Override
   protected void serviceStop() throws Exception {
     accepted.close().awaitUninterruptibly(10, TimeUnit.SECONDS);
-    if (selector != null) {
-      ServerBootstrap bootstrap = new ServerBootstrap(selector);
-      bootstrap.releaseExternalResources();
-    }
+
     if (pipelineFact != null) {
       pipelineFact.destroy();
     }
-    if (timer != null) {
-      // Release this shared timer resource
-      timer.stop();
-    }
+
     if (stateDb != null) {
       stateDb.close();
     }
@@ -785,9 +786,12 @@ public class ShuffleHandler extends AuxiliaryService {
     }
   }
 
-  static class TimeoutHandler extends IdleStateAwareChannelHandler {
-
+  static class TimeoutHandler extends IdleStateHandler {
     private boolean enabledTimeout;
+
+    public TimeoutHandler() {
+      super(1, 1, 1);
+    }
 
     void setEnabledTimeout(boolean enabledTimeout) {
       this.enabledTimeout = enabledTimeout;
@@ -795,19 +799,18 @@ public class ShuffleHandler extends AuxiliaryService {
 
     @Override
     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
-      if (e.getState() == IdleState.WRITER_IDLE && enabledTimeout) {
-        e.getChannel().close();
+      if (e.state() == IdleState.WRITER_IDLE && enabledTimeout) {
+        ctx.channel().close();
       }
     }
   }
 
-  class HttpPipelineFactory implements ChannelPipelineFactory {
+  class HttpPipelineFactory extends ChannelInitializer<SocketChannel> {
 
     final Shuffle SHUFFLE;
     private SSLFactory sslFactory;
-    private final ChannelHandler idleStateHandler;
 
-    public HttpPipelineFactory(Configuration conf, Timer timer) throws Exception {
+    public HttpPipelineFactory(Configuration conf) throws Exception {
       SHUFFLE = getShuffle(conf);
       if (conf.getBoolean(MRConfig.SHUFFLE_SSL_ENABLED_KEY,
                           MRConfig.SHUFFLE_SSL_ENABLED_DEFAULT)) {
@@ -815,7 +818,6 @@ public class ShuffleHandler extends AuxiliaryService {
         sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
         sslFactory.init();
       }
-      this.idleStateHandler = new IdleStateHandler(timer, 0, connectionKeepAliveTimeOut, 0);
     }
 
     public Shuffle getSHUFFLE() {
@@ -828,27 +830,27 @@ public class ShuffleHandler extends AuxiliaryService {
       }
     }
 
-    @Override
-    public ChannelPipeline getPipeline() throws Exception {
-      ChannelPipeline pipeline = Channels.pipeline();
+    @Override protected void initChannel(SocketChannel ch) throws Exception {
+      ChannelPipeline pipeline = ch.pipeline();
       if (sslFactory != null) {
         pipeline.addLast("ssl", new SslHandler(sslFactory.createSSLEngine()));
       }
       pipeline.addLast("decoder", new HttpRequestDecoder());
-      pipeline.addLast("aggregator", new HttpChunkAggregator(1 << 16));
+      pipeline.addLast("aggregator", new HttpObjectAggregator(1 << 16));
       pipeline.addLast("encoder", new HttpResponseEncoder());
       pipeline.addLast("chunking", new ChunkedWriteHandler());
       pipeline.addLast("shuffle", SHUFFLE);
-      pipeline.addLast("idle", idleStateHandler);
+      pipeline.addLast("idle", new IdleStateHandler(
+          0, connectionKeepAliveTimeOut, 0));
       pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler());
-      return pipeline;
       // TODO factor security manager into pipeline
       // TODO factor out encode/decode to permit binary shuffle
       // TODO factor out decode of index to permit alt. models
     }
   }
 
-  class Shuffle extends SimpleChannelUpstreamHandler {
+  @ChannelHandler.Sharable
+  class Shuffle extends ChannelInboundHandlerAdapter {
     private final IndexCache indexCache;
     private final
     LoadingCache<AttemptPathIdentifier, AttemptPathInfo> pathCache;
@@ -904,9 +906,9 @@ public class ShuffleHandler extends AuxiliaryService {
     }
 
     @Override
-    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt) 
+    public void channelActive(ChannelHandlerContext ctx)
         throws Exception {
-      super.channelOpen(ctx, evt);
+      super.channelActive(ctx);
 
       if ((maxShuffleConnections > 0) && (accepted.size() >= maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
@@ -922,13 +924,13 @@ public class ShuffleHandler extends AuxiliaryService {
         sendError(ctx, "", TOO_MANY_REQ_STATUS, headers);
         return;
       }
-      accepted.add(evt.getChannel());
+      accepted.add(ctx.channel());
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent evt)
+    public void channelRead(ChannelHandlerContext ctx, Object msg)
         throws Exception {
-      HttpRequest request = (HttpRequest) evt.getMessage();
+      HttpRequest request = (HttpRequest) msg;
       if (request.getMethod() != GET) {
           sendError(ctx, METHOD_NOT_ALLOWED);
           return;
@@ -944,7 +946,7 @@ public class ShuffleHandler extends AuxiliaryService {
         sendError(ctx, "Incompatible shuffle request version", BAD_REQUEST);
       }
       final Map<String,List<String>> q =
-        new QueryStringDecoder(request.getUri()).getParameters();
+        new QueryStringDecoder(request.uri()).parameters();
       final List<String> keepAliveList = q.get("keepAlive");
       boolean keepAliveParam = false;
       if (keepAliveList != null && keepAliveList.size() == 1) {
@@ -1004,8 +1006,8 @@ public class ShuffleHandler extends AuxiliaryService {
 
       Map<String, MapOutputInfo> mapOutputInfoMap =
           new HashMap<String, MapOutputInfo>();
-      Channel ch = evt.getChannel();
-      ChannelPipeline pipeline = ch.getPipeline();
+      Channel ch = ctx.channel();
+      ChannelPipeline pipeline = ch.pipeline();
       TimeoutHandler timeoutHandler =
           (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
       timeoutHandler.setEnabledTimeout(false);
@@ -1015,13 +1017,13 @@ public class ShuffleHandler extends AuxiliaryService {
         populateHeaders(mapIds, jobId, user, reduceId, request,
           response, keepAliveParam, mapOutputInfoMap);
       } catch(IOException e) {
-        ch.write(response);
+        ch.writeAndFlush(response);
         LOG.error("Shuffle error in populating headers :", e);
         String errorMessage = getErrorMessage(e);
         sendError(ctx,errorMessage , INTERNAL_SERVER_ERROR);
         return;
       }
-      ch.write(response);
+      ch.writeAndFlush(response);
       //Initialize one ReduceContext object per messageReceived call
       boolean keepAlive = keepAliveParam || connectionKeepAliveEnabled;
       ReduceContext reduceContext = new ReduceContext(mapIds, reduceId, ctx,
@@ -1061,7 +1063,7 @@ public class ShuffleHandler extends AuxiliaryService {
           }
           nextMap = sendMapOutput(
               reduceContext.getCtx(),
-              reduceContext.getCtx().getChannel(),
+              reduceContext.getCtx().channel(),
               reduceContext.getUser(), mapId,
               reduceContext.getReduceId(), info);
           if (null == nextMap) {
@@ -1259,7 +1261,7 @@ public class ShuffleHandler extends AuxiliaryService {
         new ShuffleHeader(mapId, info.partLength, info.rawLength, reduce);
       final DataOutputBuffer dob = new DataOutputBuffer();
       header.write(dob);
-      ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+      ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
       final File spillfile =
           new File(mapOutputInfo.mapOutputFileName.toString());
       RandomAccessFile spill;
@@ -1270,12 +1272,12 @@ public class ShuffleHandler extends AuxiliaryService {
         return null;
       }
       ChannelFuture writeFuture;
-      if (ch.getPipeline().get(SslHandler.class) == null) {
+      if (ch.pipeline().get(SslHandler.class) == null) {
         final FadvisedFileRegion partition = new FadvisedFileRegion(spill,
             info.startOffset, info.partLength, manageOsCache, readaheadLength,
             readaheadPool, spillfile.getAbsolutePath(), 
             shuffleBufferSize, shuffleTransferToAllowed);
-        writeFuture = ch.write(partition);
+        writeFuture = ch.writeAndFlush(partition);
         writeFuture.addListener(new ChannelFutureListener() {
             // TODO error handling; distinguish IO/connection failures,
             //      attribute to appropriate spill output
@@ -1284,7 +1286,7 @@ public class ShuffleHandler extends AuxiliaryService {
             if (future.isSuccess()) {
               partition.transferSuccessful();
             }
-            partition.releaseExternalResources();
+            partition.deallocate();
           }
         });
       } else {
@@ -1293,7 +1295,7 @@ public class ShuffleHandler extends AuxiliaryService {
             info.startOffset, info.partLength, sslFileBufferSize,
             manageOsCache, readaheadLength, readaheadPool,
             spillfile.getAbsolutePath());
-        writeFuture = ch.write(chunk);
+        writeFuture = ch.writeAndFlush(chunk);
       }
       metrics.shuffleConnections.incr();
       metrics.shuffleOutputBytes.incr(info.partLength); // optimistic
@@ -1312,7 +1314,8 @@ public class ShuffleHandler extends AuxiliaryService {
 
     protected void sendError(ChannelHandlerContext ctx, String msg,
         HttpResponseStatus status, Map<String, String> headers) {
-      HttpResponse response = new DefaultHttpResponse(HTTP_1_1, status);
+      FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status,
+              Unpooled.copiedBuffer(msg, CharsetUtil.UTF_8));
       response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
       // Put shuffle version into http header
       response.headers().set(ShuffleHeader.HTTP_HEADER_NAME,
@@ -1322,18 +1325,15 @@ public class ShuffleHandler extends AuxiliaryService {
       for (Map.Entry<String, String> header : headers.entrySet()) {
         response.headers().set(header.getKey(), header.getValue());
       }
-      response.setContent(
-          ChannelBuffers.copiedBuffer(msg, CharsetUtil.UTF_8));
 
       // Close the connection as soon as the error message is sent.
-      ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
+      ctx.channel().write(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
         throws Exception {
-      Channel ch = e.getChannel();
-      Throwable cause = e.getCause();
+      Channel ch = ctx.channel();
       if (cause instanceof TooLongFrameException) {
         sendError(ctx, BAD_REQUEST);
         return;
@@ -1350,8 +1350,7 @@ public class ShuffleHandler extends AuxiliaryService {
       }
 
       LOG.error("Shuffle error: ", cause);
-      if (ch.isConnected()) {
-        LOG.error("Shuffle error " + e);
+      if (ch.isOpen()) {
         sendError(ctx, INTERNAL_SERVER_ERROR);
       }
     }

@@ -17,14 +17,26 @@
  */
 package org.apache.hadoop.mapred;
 
+import io.netty.channel.AbstractChannel;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertTrue;
-import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
-import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -79,18 +91,6 @@ import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.records.Version;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.socket.SocketChannel;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.AbstractChannel;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -193,8 +193,8 @@ public class TestShuffleHandler {
         protected void verifyRequest(String appid, ChannelHandlerContext ctx,
             HttpRequest request, HttpResponse response, URL requestUri)
             throws IOException {
-          SocketChannel channel = (SocketChannel)(ctx.getChannel());
-          socketKeepAlive = channel.getConfig().isKeepAlive();
+          SocketChannel channel = (SocketChannel)(ctx.channel());
+          socketKeepAlive = channel.config().isKeepAlive();
         }
       };
     }
@@ -312,7 +312,7 @@ public class TestShuffleHandler {
               HttpResponseStatus status) {
             if (failures.size() == 0) {
               failures.add(new Error());
-              ctx.getChannel().close();
+              ctx.channel().close();
             }
           }
           @Override
@@ -320,7 +320,7 @@ public class TestShuffleHandler {
               HttpResponseStatus status) {
             if (failures.size() == 0) {
               failures.add(new Error());
-              ctx.getChannel().close();
+              ctx.channel().close();
             }
           }
         };
@@ -417,7 +417,7 @@ public class TestShuffleHandler {
           protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
               Channel ch, String user, String mapId, int reduce,
               MapOutputInfo info) throws IOException {
-            lastSocketAddress.setAddress(ch.getRemoteAddress());
+            lastSocketAddress.setAddress(ch.remoteAddress());
             HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
 
             // send a shuffle header and a lot of data down the channel
@@ -439,7 +439,7 @@ public class TestShuffleHandler {
               HttpResponseStatus status) {
             if (failures.size() == 0) {
               failures.add(new Error());
-              ctx.getChannel().close();
+              ctx.channel().close();
             }
           }
 
@@ -448,7 +448,7 @@ public class TestShuffleHandler {
               HttpResponseStatus status) {
             if (failures.size() == 0) {
               failures.add(new Error());
-              ctx.getChannel().close();
+              ctx.channel().close();
             }
           }
         };
@@ -681,7 +681,7 @@ public class TestShuffleHandler {
     try {
       rc = conns[2].getResponseCode();
       Assert.assertEquals("Expected a too-many-requests response code",
-          ShuffleHandler.TOO_MANY_REQ_STATUS.getCode(), rc);
+          ShuffleHandler.TOO_MANY_REQ_STATUS.code(), rc);
       long backoff = Long.valueOf(
           conns[2].getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
       Assert.assertTrue("The backoff value cannot be negative.", backoff > 0);
@@ -1070,7 +1070,7 @@ public class TestShuffleHandler {
               HttpResponseStatus status) {
             if (failures.size() == 0) {
               failures.add(new Error(message));
-              ctx.getChannel().close();
+              ctx.channel().close();
             }
           }
           @Override
@@ -1137,7 +1137,7 @@ public class TestShuffleHandler {
 
     final ChannelHandlerContext mockCtx =
         mock(ChannelHandlerContext.class);
-    final MessageEvent mockEvt = mock(MessageEvent.class);
+    final Object mockEvt = mock(Object.class);
     final Channel mockCh = mock(AbstractChannel.class);
     final ChannelPipeline mockPipeline = mock(ChannelPipeline.class);
 
@@ -1149,18 +1149,19 @@ public class TestShuffleHandler {
         new ShuffleHandler.TimeoutHandler();
 
     // Mock Netty Channel Context and Channel behavior
-    Mockito.doReturn(mockCh).when(mockCtx).getChannel();
-    when(mockCh.getPipeline()).thenReturn(mockPipeline);
+    Mockito.doReturn(mockCh).when(mockCtx).channel();
+    when(mockCh.pipeline()).thenReturn(mockPipeline);
     when(mockPipeline.get(
         Mockito.any(String.class))).thenReturn(timerHandler);
-    when(mockCtx.getChannel()).thenReturn(mockCh);
+    when(mockCtx.channel()).thenReturn(mockCh);
     Mockito.doReturn(mockFuture).when(mockCh).write(Mockito.any(Object.class));
     when(mockCh.write(Object.class)).thenReturn(mockFuture);
 
     //Mock MessageEvent behavior
-    Mockito.doReturn(mockCh).when(mockEvt).getChannel();
-    when(mockEvt.getChannel()).thenReturn(mockCh);
-    Mockito.doReturn(mockHttpRequest).when(mockEvt).getMessage();
+    //TODO snemeth Why is this commented out?
+    //Mockito.doReturn(mockCh).when(mockEvt).channel();
+    //when(mockEvt.channel()).thenReturn(mockCh);
+    //Mockito.doReturn(mockHttpRequest).when(mockEvt).getMessage();
 
     final ShuffleHandler sh = new MockShuffleHandler();
     Configuration conf = new Configuration();
@@ -1168,7 +1169,7 @@ public class TestShuffleHandler {
     sh.start();
     int maxOpenFiles =conf.getInt(ShuffleHandler.SHUFFLE_MAX_SESSION_OPEN_FILES,
         ShuffleHandler.DEFAULT_SHUFFLE_MAX_SESSION_OPEN_FILES);
-    sh.getShuffle(conf).messageReceived(mockCtx, mockEvt);
+    sh.getShuffle(conf).channelRead(mockCtx, mockEvt);
     assertTrue("Number of Open files should not exceed the configured " +
             "value!-Not Expected",
         listenerList.size() <= maxOpenFiles);
@@ -1184,7 +1185,7 @@ public class TestShuffleHandler {
   public ChannelFuture createMockChannelFuture(Channel mockCh,
       final List<ShuffleHandler.ReduceMapFileCount> listenerList) {
     final ChannelFuture mockFuture = mock(ChannelFuture.class);
-    when(mockFuture.getChannel()).thenReturn(mockCh);
+    when(mockFuture.channel()).thenReturn(mockCh);
     Mockito.doReturn(true).when(mockFuture).isSuccess();
     Mockito.doAnswer(new Answer() {
       @Override
