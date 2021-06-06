@@ -671,11 +671,12 @@ public class DistCpUtils {
    * @param fileSystem target filesystem
    * @return temp file path prefix
    */
-  public static String getTargetTempFilePrefix(FileSystem fileSystem) {
-    if (StringUtils.equalsIgnoreCase(fileSystem.getScheme(), "ftp")) {
-      return DistCpConstants.TARGET_TEMP_FILE_PREFIX;
+  public static String getTargetTempFilePrefix(Path targetPath) {
+    String schema = targetPath.toUri().getScheme();
+    if (StringUtils.equalsIgnoreCase("ftp", schema)) {
+      return DistCpConstants.TARGET_TEMP_FILE_PREFIX_FTP;
     } else {
-      return DistCpConstants.TARGET_TEMP_FILE_PREFIX_COMMA;
+      return DistCpConstants.TARGET_TEMP_FILE_PREFIX_DOT;
     }
   }
 }

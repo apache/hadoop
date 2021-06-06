@@ -193,7 +193,14 @@ public final class DistCpConstants {
   public static final String CLASS_INSTANTIATION_ERROR_MSG =
           "Unable to instantiate ";
 
-  public static final String TARGET_TEMP_FILE_PREFIX_COMMA = ".distcp.tmp.";
+  /**
+   * The prefix of target temp file path.
+   */
+  public static final String TARGET_TEMP_FILE_PREFIX_DOT = ".distcp.tmp.";
 
-  public static final String TARGET_TEMP_FILE_PREFIX = "distcp.tmp.";
+  /**
+   * FTP filesystem can't be work well when the path with dot prefix, so the target tmp file path use the prefix without
+   * dot.
+   */
+  public static final String TARGET_TEMP_FILE_PREFIX_FTP = "distcp.tmp.";
 }
