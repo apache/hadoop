@@ -110,8 +110,8 @@ public class TestRouterNetworkTopologyServlet {
     assertTrue(topology.contains("/ns1/rack6"));
 
     // assert node number
-    assertEquals(topology.split("127.0.0.1").length - 1,
-        18);
+    assertEquals(18,
+        topology.split("127.0.0.1").length - 1);
   }
 
   @Test
@@ -136,7 +136,7 @@ public class TestRouterNetworkTopologyServlet {
     JsonNode racks = new ObjectMapper().readTree(topology);
 
     // assert rack number
-    assertEquals(racks.size(), 6);
+    assertEquals(6, racks.size());
 
     // assert rack info
     assertTrue(topology.contains("/ns0/rack1"));
@@ -156,7 +156,7 @@ public class TestRouterNetworkTopologyServlet {
         dataNodesCount += fields.next().getValue().size();
       }
     }
-    assertEquals(dataNodesCount, 18);
+    assertEquals(18, dataNodesCount);
   }
 
   @Test
