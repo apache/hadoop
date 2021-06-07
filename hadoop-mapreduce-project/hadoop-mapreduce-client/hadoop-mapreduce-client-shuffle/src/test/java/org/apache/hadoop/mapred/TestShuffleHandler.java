@@ -145,7 +145,7 @@ public class TestShuffleHandler {
           for (int i = 0; i < 100; ++i) {
             header.write(dob);
           }
-          return ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+          return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
         }
       };
     }
@@ -305,7 +305,7 @@ public class TestShuffleHandler {
             for (int i = 0; i < 100000; ++i) {
               header.write(dob);
             }
-            return ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+            return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
           }
           @Override
           protected void sendError(ChannelHandlerContext ctx,
@@ -431,7 +431,7 @@ public class TestShuffleHandler {
             for (int i = 0; i < 100000; ++i) {
               header.write(dob);
             }
-            return ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+            return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
           }
 
           @Override
@@ -638,7 +638,7 @@ public class TestShuffleHandler {
             for (int i=0; i<100000; ++i) {
               header.write(dob);
             }
-            return ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+            return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
           }
         };
       }
@@ -663,8 +663,7 @@ public class TestShuffleHandler {
           ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     }
 
-    // FIXME snemeth: connections are accepted in parallel; it's not sequential.
-    // FIXME snemeth: rewrite this test.
+    // FIXME snemeth: connections are accepted in parallel; it's not sequential. rewrite this test.
     // Try to open numerous connections
     for (int i = 0; i < connAttempts; i++) {
       conns[i].connect();
@@ -1084,7 +1083,7 @@ public class TestShuffleHandler {
                 new ShuffleHeader("attempt_12345_1_m_1_0", 5678, 5678, 1);
             DataOutputBuffer dob = new DataOutputBuffer();
             header.write(dob);
-            return ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+            return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
           }
         };
       }
@@ -1139,7 +1138,6 @@ public class TestShuffleHandler {
 
     final ChannelHandlerContext mockCtx =
         mock(ChannelHandlerContext.class);
-    final Object mockEvt = mock(Object.class);
     final Channel mockCh = mock(AbstractChannel.class);
     final ChannelPipeline mockPipeline = mock(ChannelPipeline.class);
 
@@ -1156,14 +1154,7 @@ public class TestShuffleHandler {
     when(mockPipeline.get(
         Mockito.any(String.class))).thenReturn(timerHandler);
     when(mockCtx.channel()).thenReturn(mockCh);
-    Mockito.doReturn(mockFuture).when(mockCh).write(Mockito.any(Object.class));
-    when(mockCh.write(Object.class)).thenReturn(mockFuture);
-
-    //Mock MessageEvent behavior
-    //TODO snemeth Why is this commented out?
-    //Mockito.doReturn(mockCh).when(mockEvt).channel();
-    //when(mockEvt.channel()).thenReturn(mockCh);
-    //Mockito.doReturn(mockHttpRequest).when(mockEvt).getMessage();
+    Mockito.doReturn(mockFuture).when(mockCh).writeAndFlush(Mockito.any(Object.class));
 
     final ShuffleHandler sh = new MockShuffleHandler();
     Configuration conf = new Configuration();
@@ -1171,7 +1162,7 @@ public class TestShuffleHandler {
     sh.start();
     int maxOpenFiles =conf.getInt(ShuffleHandler.SHUFFLE_MAX_SESSION_OPEN_FILES,
         ShuffleHandler.DEFAULT_SHUFFLE_MAX_SESSION_OPEN_FILES);
-    sh.getShuffle(conf).channelRead(mockCtx, mockEvt);
+    sh.getShuffle(conf).channelRead(mockCtx, mockHttpRequest);
     assertTrue("Number of Open files should not exceed the configured " +
             "value!-Not Expected",
         listenerList.size() <= maxOpenFiles);
@@ -1215,7 +1206,7 @@ public class TestShuffleHandler {
           uri = uri.concat("&map=attempt_12345_1_m_" + i + "_0");
         return uri;
       }
-    }).when(mockHttpRequest).getUri();
+    }).when(mockHttpRequest).uri();
     return mockHttpRequest;
   }
 }
