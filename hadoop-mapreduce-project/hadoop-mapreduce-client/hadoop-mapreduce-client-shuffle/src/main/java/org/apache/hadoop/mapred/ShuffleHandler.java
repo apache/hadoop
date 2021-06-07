@@ -1353,7 +1353,7 @@ public class ShuffleHandler extends AuxiliaryService {
       }
 
       LOG.error("Shuffle error: ", cause);
-      if (ch.isOpen()) {
+      if (ch.isActive()) {
         sendError(ctx, INTERNAL_SERVER_ERROR);
       }
     }
