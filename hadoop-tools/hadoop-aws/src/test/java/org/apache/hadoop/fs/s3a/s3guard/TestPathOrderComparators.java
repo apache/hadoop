@@ -21,11 +21,11 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.util.Comparator;
 import java.util.List;
 
+import org.apache.hadoop.util.Lists;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 
-import static org.apache.hadoop.thirdparty.com.google.common.collect.Lists.newArrayList;
 import static org.apache.hadoop.fs.s3a.s3guard.PathOrderComparators.TOPMOST_PATH_FIRST;
 import static org.apache.hadoop.fs.s3a.s3guard.PathOrderComparators.TOPMOST_PATH_LAST;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -119,13 +119,13 @@ public class TestPathOrderComparators {
     List<Path> sort1 = verifySorted(ROOT, DIR_A, DIR_B,
         DIR_A_FILE_1, DIR_A_FILE_2,
         DIR_B_FILE_3, DIR_B_FILE_4);
-    List<Path> sort2 = newArrayList(sort1);
+    List<Path> sort2 = Lists.newArrayList(sort1);
     assertSortsTo(sort2, sort1, true);
   }
 
   @Test
   public void testSortReverse() throws Throwable {
-    List<Path> sort1 = newArrayList(
+    List<Path> sort1 = Lists.newArrayList(
         ROOT,
         DIR_A,
         DIR_B,
@@ -133,7 +133,7 @@ public class TestPathOrderComparators {
         DIR_A_FILE_2,
         DIR_B_FILE_3,
         DIR_B_FILE_4);
-    List<Path> expected = newArrayList(
+    List<Path> expected = Lists.newArrayList(
         DIR_B_FILE_4,
         DIR_B_FILE_3,
         DIR_A_FILE_2,
@@ -146,8 +146,8 @@ public class TestPathOrderComparators {
 
 
   private List<Path> verifySorted(Path... paths) {
-    List<Path> original = newArrayList(paths);
-    List<Path> sorted = newArrayList(paths);
+    List<Path> original = Lists.newArrayList(paths);
+    List<Path> sorted = Lists.newArrayList(paths);
     assertSortsTo(original, sorted, true);
     return sorted;
   }

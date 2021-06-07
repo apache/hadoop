@@ -21,9 +21,9 @@ import static org.junit.Assert.*;
 
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.util.Shell;
@@ -223,8 +223,8 @@ public class TestShellCommandFencer {
    */
   private static class LogAnswer implements Answer {
 
-    private static final List<String> DELEGATE_METHODS = Lists.asList("error",
-        new String[]{"warn", "info", "debug", "trace"});
+    private static final List<String> DELEGATE_METHODS = Arrays.asList(
+        "error", "warn", "info", "debug", "trace");
 
     @Override
     public Object answer(InvocationOnMock invocation) {

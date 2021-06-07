@@ -35,7 +35,6 @@ import java.util.Deque;
 import java.util.List;
 
 import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -265,8 +264,8 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
    * @param <T> type of queue
    */
   private <T> void pushAll(Deque<T> queue, List<T> entries) {
-    List<T> reversed = Lists.reverse(entries);
-    for (T t : reversed) {
+    Collections.reverse(entries);
+    for (T t : entries) {
       queue.push(t);
     }
   }
