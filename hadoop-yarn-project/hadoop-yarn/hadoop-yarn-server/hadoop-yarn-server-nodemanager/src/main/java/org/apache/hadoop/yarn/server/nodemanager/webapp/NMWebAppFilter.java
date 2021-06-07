@@ -19,15 +19,19 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.servlet.Filter;
 import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.inject.Injector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -36,13 +40,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
-import com.google.inject.Injector;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.http.NameValuePair;
 
 @Singleton
-public class NMWebAppFilter extends GuiceContainer{
+public class NMWebAppFilter implements Filter {
 
   private Injector injector;
   private Context nmContext;
@@ -51,26 +53,26 @@ public class NMWebAppFilter extends GuiceContainer{
 
   @Inject
   public NMWebAppFilter(Injector injector, Context nmContext) {
-    super(injector);
     this.injector = injector;
     this.nmContext = nmContext;
   }
 
   @Override
-  public void doFilter(HttpServletRequest request,
-      HttpServletResponse response, FilterChain chain) throws IOException,
-      ServletException {
+  public void init(FilterConfig filterConfig) throws ServletException {
+  }
+
+  @Override
+  public void doFilter(ServletRequest servletRequest,
+                       ServletResponse servletResponse,
+                       FilterChain chain) throws IOException, ServletException {
+    HttpServletRequest request = (HttpServletRequest) servletRequest;
+    HttpServletResponse response = (HttpServletResponse) servletResponse;
+
     String redirectPath = containerLogPageRedirectPath(request);
     if (redirectPath != null) {
-      String redirectMsg =
-          "Redirecting to log server" + " : " + redirectPath;
-      PrintWriter out = response.getWriter();
-      out.println(redirectMsg);
-      response.setHeader("Location", redirectPath);
-      response.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
-      return;
+      response.sendRedirect(redirectPath);
     }
-    super.doFilter(request, response, chain);
+    chain.doFilter(request, response);
   }
 
   private String containerLogPageRedirectPath(HttpServletRequest request) {
@@ -89,7 +91,7 @@ public class NMWebAppFilter extends GuiceContainer{
         try {
           containerId = ContainerId.fromString(containerIdStr);
         } catch (IllegalArgumentException ex) {
-          return redirectPath;
+          return null;
         }
         ApplicationId appId =
             containerId.getApplicationAttemptId().getApplicationId();
@@ -141,5 +143,9 @@ public class NMWebAppFilter extends GuiceContainer{
       }
     }
     return redirectPath;
+  }
+
+  @Override
+  public void destroy() {
   }
 }

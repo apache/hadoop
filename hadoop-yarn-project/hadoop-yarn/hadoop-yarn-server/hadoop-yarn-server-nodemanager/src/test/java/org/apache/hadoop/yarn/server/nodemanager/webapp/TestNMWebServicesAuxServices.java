@@ -30,13 +30,15 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.logging.Logger;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.filter.LoggingFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.http.JettyUtils;
@@ -53,12 +55,13 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.glassfish.jersey.logging.LoggingFeature;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
@@ -68,17 +71,17 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import com.google.inject.Guice;
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
  * Basic sanity Tests for AuxServices.
  *
  */
-public class TestNMWebServicesAuxServices extends JerseyTestBase {
+public class TestNMWebServicesAuxServices extends JerseyTest {
+  private static final Logger LOG =
+      Logger.getLogger(TestNMWebServicesAuxServices.class.getName());
   private static final String AUX_SERVICES_PATH = "auxiliaryservices";
   private static Context nmContext;
   private static Configuration conf = new Configuration();
@@ -148,8 +151,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
       bind(ResourceView.class).toInstance(resourceView);
       bind(ApplicationACLsManager.class).toInstance(aclsManager);
       bind(LocalDirsHandlerService.class).toInstance(dirsHandler);
-
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
     }
   }
 
@@ -175,23 +177,26 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
   }
 
   public TestNMWebServicesAuxServices() {
+    /* TODO: fix or remove this
     super(new WebAppDescriptor.Builder(
         "org.apache.hadoop.yarn.server.nodemanager.webapp")
         .contextListenerClass(GuiceServletConfig.class)
         .filterClass(com.google.inject.servlet.GuiceFilter.class)
         .contextPath("jersey-guice-filter").servletPath("/").build());
+
+     */
   }
 
   @Test
   public void testNodeAuxServicesNone() throws Exception {
     addAuxServices();
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("node")
-        .path(AUX_SERVICES_PATH).accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
+    WebTarget t = target();
+    Response response = t.path("ws").path("v1").path("node")
+        .path(AUX_SERVICES_PATH).request(MediaType.APPLICATION_JSON)
+        .get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     assertEquals("aux services isn't empty",
         new JSONObject().toString(), json.get("services").toString());
   }
@@ -225,14 +230,14 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     AuxServiceRecord r2 = new AuxServiceRecord().name("name2").launchTime(new
         Date(456L));
     addAuxServices(r1, r2);
-    WebResource r = resource();
-    client().addFilter(new LoggingFilter());
+    WebTarget t = target();
+    client().register(new LoggingFeature(LOG));
 
-    ClientResponse response = r.path("ws").path("v1").path("node").path(path)
-        .accept(media).get(ClientResponse.class);
+    Response response = t.path("ws").path("v1").path("node").path(path)
+        .request(media).get(Response.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    JSONObject json = response.getEntity(JSONObject.class);
+        response.getMediaType().toString());
+    JSONObject json = response.readEntity(JSONObject.class);
     JSONObject info = json.getJSONObject("services");
     assertEquals("incorrect number of elements", 1, info.length());
     JSONArray auxInfo = info.getJSONArray("service");
@@ -249,14 +254,14 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     AuxServiceRecord r2 = new AuxServiceRecord().name("name2").launchTime(new
         Date(456L));
     addAuxServices(r1, r2);
-    WebResource r = resource();
+    WebTarget t = target();
 
-    ClientResponse response = r.path("ws").path("v1").path("node")
-        .path(AUX_SERVICES_PATH).accept(MediaType.APPLICATION_XML)
-        .get(ClientResponse.class);
+    Response response = t.path("ws").path("v1").path("node")
+        .path(AUX_SERVICES_PATH).request(MediaType.APPLICATION_XML)
+        .get(Response.class);
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
@@ -272,18 +277,18 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     AuxServices auxServices = mock(AuxServices.class);
     when(auxServices.isManifestEnabled()).thenReturn(false);
     nmContext.setAuxServices(auxServices);
-    WebResource r = resource();
+    WebTarget t = target();
     try {
-      r.path("ws").path("v1").path("node").path(AUX_SERVICES_PATH)
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+      t.path("ws").path("v1").path("node").path(AUX_SERVICES_PATH)
+          .request(MediaType.APPLICATION_JSON).get(JSONObject.class);
       fail("should have thrown exception on invalid user query");
-    } catch (UniformInterfaceException ue) {
-      ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(ClientResponse.Status.BAD_REQUEST,
+    } catch (WebApplicationException we) {
+      Response response = we.getResponse();
+      assertResponseStatusCode(Response.Status.BAD_REQUEST,
           response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject msg = response.getEntity(JSONObject.class);
+          response.getMediaType().toString());
+      JSONObject msg = response.readEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
       assertEquals("incorrect number of elements", 3, exception.length());
       String message = exception.getString("message");

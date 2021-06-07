@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -48,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
@@ -90,7 +89,7 @@ public class LogServlet extends Configured {
 
   @VisibleForTesting
   public String getNMWebAddressFromRM(String nodeId)
-      throws ClientHandlerException, UniformInterfaceException, JSONException {
+      throws ProcessingException, IllegalStateException, JSONException {
     return LogWebServiceUtils.getNMWebAddressFromRM(getConf(), nodeId);
   }
 

@@ -72,4 +72,8 @@ public class SubClusterIdInfo {
     return id.hashCode();
   }
 
+  @Override
+  public String toString() {
+    return id;
+  }
 }
