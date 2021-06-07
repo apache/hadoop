@@ -390,7 +390,7 @@ abstract class SocketIOWithTimeout {
       ConcurrentLinkedDeque<SelectorInfo> selectorQ = providerMap.computeIfAbsent(
           provider, k -> new ConcurrentLinkedDeque<>());
 
-      SelectorInfo selInfo = selectorQ.removeLast(); // last in first out
+      SelectorInfo selInfo = selectorQ.pollLast(); // last in first out
       if (selInfo == null) {
         Selector selector = provider.openSelector();
         // selInfo will be put into selectorQ after `#release()`
