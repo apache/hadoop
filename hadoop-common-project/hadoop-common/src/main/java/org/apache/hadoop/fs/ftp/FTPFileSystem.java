@@ -623,8 +623,8 @@ public class FTPFileSystem extends FileSystem {
   }
 
   /*
-   * Assuming that parent of both source and destination is the same. Is the
-   * assumption correct or it is suppose to work like 'move' ?
+   * The parent of source and destination can be different. It is suppose to
+   * work like 'move'
    */
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
@@ -683,15 +683,15 @@ public class FTPFileSystem extends FileSystem {
       throw new FileAlreadyExistsException("Destination path " + dst
           + " already exists");
     }
-    String parentSrc = absoluteSrc.getParent().toUri().toString();
-    if (isParentOf(absoluteSrc, absoluteDst)) {
-      throw new IOException("Cannot rename " + absoluteSrc + " under itself"
-      + " : "+ absoluteDst);
+
+    Path dstParentPath = absoluteDst.getParent();
+    if (!exists(dstParentPath)) {
+      // when the parent path of dst don't exist, the path need to create.
+      mkdirs(dstParentPath);
     }
 
-    String from = absoluteSrc.getName();
-    String to = absoluteDst.getName();
-    client.changeWorkingDirectory(parentSrc);
+    String from = absoluteSrc.toUri().getPath();
+    String to = absoluteDst.toUri().getPath();
     boolean renamed = client.rename(from, to);
     return renamed;
   }
