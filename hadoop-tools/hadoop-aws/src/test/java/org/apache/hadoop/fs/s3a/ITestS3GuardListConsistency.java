@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
