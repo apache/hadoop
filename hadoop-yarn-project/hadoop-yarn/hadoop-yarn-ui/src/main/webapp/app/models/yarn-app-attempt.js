@@ -24,6 +24,7 @@ export default DS.Model.extend({
   startTime: DS.attr('string'),
   startedTime: DS.attr('string'),
   finishedTime: DS.attr('string'),
+  elapsedTimeMs: DS.attr('string'),
   containerId: DS.attr('string'),
   amContainerId: DS.attr('string'),
   nodeHttpAddress: DS.attr('string'),
@@ -117,11 +118,7 @@ export default DS.Model.extend({
   }.property("logsLink"),
 
   elapsedTime: function() {
-    var elapsedMs = this.get("finishedTs") - this.get("startTs");
-    if (elapsedMs <= 0) {
-      elapsedMs = Date.now() - this.get("startTs");
-    }
-    return Converter.msToElapsedTimeUnit(elapsedMs);
+    return Converter.msToElapsedTimeUnit(this.get("elapsedTimeMs"));
   }.property(),
 
   tooltipLabel: function() {
