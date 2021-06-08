@@ -508,7 +508,6 @@ public class DatanodeManager {
   private boolean isInactive(DatanodeInfo datanode) {
     return datanode.isDecommissioned() || datanode.isEnteringMaintenance() ||
         (avoidStaleDataNodesForRead && datanode.isStale(staleInterval));
-
   }
   
   /**
