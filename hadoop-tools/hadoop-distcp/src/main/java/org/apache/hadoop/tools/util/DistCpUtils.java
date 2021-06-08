@@ -664,11 +664,11 @@ public class DistCpUtils {
   }
 
   /**
-   * Return the target temp file prefix
+   * Return the target temp file prefix.
    *
-   * The FTPFilesystem can't work well when the file name is starts with comma.
+   * The FTPFilesystem can't work well when the file name is starts with dot.
    *
-   * @param fileSystem target filesystem
+   * @param targetPath target path
    * @return temp file path prefix
    */
   public static String getTargetTempFilePrefix(Path targetPath) {

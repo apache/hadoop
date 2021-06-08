@@ -129,15 +129,14 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       throws IOException {
     LOG.info("Copying {} to {}", source.getPath(), target);
 
+    final Configuration configuration = context.getConfiguration();
+    FileSystem targetFS = target.getFileSystem(configuration);
     final boolean toAppend = action == FileAction.APPEND;
     final boolean useTempTarget = !toAppend && !directWrite;
-    Path targetPath = useTempTarget ? getTempFile(target, context) : target;
+    Path targetPath = useTempTarget ? getTempFile(target, context, targetFS) : target;
 
     LOG.info("Writing to {} target file path {}", useTempTarget ? "temporary"
         : "direct", targetPath);
-
-    final Configuration configuration = context.getConfiguration();
-    FileSystem targetFS = target.getFileSystem(configuration);
 
     try {
       final Path sourcePath = source.getPath();
@@ -258,7 +257,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     }
   }
 
-  private Path getTempFile(Path target, Mapper.Context context) {
+  private Path getTempFile(Path target, Mapper.Context context, FileSystem fileSystem) {
     Path targetWorkPath = new Path(context.getConfiguration().
         get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
 
