@@ -167,7 +167,7 @@ class BlockReceiver implements Closeable {
       this.datanode = datanode;
 
       this.clientname = clientname;
-      this.isDatanode = clientname.length() == 0;
+      this.isDatanode = clientname.isEmpty();
       this.isClient = !this.isDatanode;
       this.restartBudget = datanode.getDnConf().restartReplicaExpiry;
       this.datanodeSlowLogThresholdMs =

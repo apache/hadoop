@@ -142,7 +142,7 @@ class SFTPConnectionPool {
     JSch jsch = new JSch();
     Session session = null;
     try {
-      if (user == null || user.length() == 0) {
+      if (user == null || user.isEmpty()) {
         user = System.getProperty("user.name");
       }
 

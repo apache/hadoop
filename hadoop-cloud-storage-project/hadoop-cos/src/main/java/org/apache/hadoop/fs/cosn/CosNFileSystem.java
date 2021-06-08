@@ -354,7 +354,7 @@ public class CosNFileSystem extends FileSystem {
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
 
-    if (key.length() == 0) {
+    if (key.isEmpty()) {
       // root always exists
       return newDirectory(absolutePath);
     }

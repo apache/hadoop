@@ -842,7 +842,7 @@ public class NetworkTopology {
    * is not {@link #PATH_SEPARATOR}
    */
   private static String normalizeNetworkLocationPath(String path) {
-    if (path == null || path.length() == 0) {
+    if (path == null || path.isEmpty()) {
       return ROOT;
     }
 

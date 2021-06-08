@@ -179,7 +179,7 @@ public abstract class AbstractGangliaSink implements MetricsSink {
     if (propertyarr != null && propertyarr.length > 0) {
       for (String metricNValue : propertyarr) {
         String metricNValueArr[] = metricNValue.split(EQUAL);
-        if (metricNValueArr.length != 2 || metricNValueArr[0].length() == 0) {
+        if (metricNValueArr.length != 2 || metricNValueArr[0].isEmpty()) {
           LOG.error("Invalid propertylist for " + gtype.name());
         }
 

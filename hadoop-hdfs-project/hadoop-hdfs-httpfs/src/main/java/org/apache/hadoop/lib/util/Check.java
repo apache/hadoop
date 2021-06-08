@@ -81,7 +81,7 @@ public class Check {
     if (str == null) {
       throw new IllegalArgumentException(name + " cannot be null");
     }
-    if (str.length() == 0) {
+    if (str.isEmpty()) {
       throw new IllegalArgumentException(name + " cannot be empty");
     }
     return str;

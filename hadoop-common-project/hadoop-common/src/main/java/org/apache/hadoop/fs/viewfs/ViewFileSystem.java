@@ -640,7 +640,7 @@ public class ViewFileSystem extends FileSystem {
       suffix = ((NflyFSystem.NflyStatus)status).stripRoot();
     }
     return this.makeQualified(
-        suffix.length() == 0 ? f : new Path(res.resolvedPath, suffix));
+        suffix.isEmpty() ? f : new Path(res.resolvedPath, suffix));
   }
 
   @Override

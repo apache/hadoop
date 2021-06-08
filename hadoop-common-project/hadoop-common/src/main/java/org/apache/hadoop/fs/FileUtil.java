@@ -1497,7 +1497,7 @@ public class FileUtil {
     List<String> classPathEntryList = new ArrayList<String>(
       classPathEntries.length);
     for (String classPathEntry: classPathEntries) {
-      if (classPathEntry.length() == 0) {
+      if (classPathEntry.isEmpty()) {
         continue;
       }
       if (classPathEntry.endsWith("*")) {

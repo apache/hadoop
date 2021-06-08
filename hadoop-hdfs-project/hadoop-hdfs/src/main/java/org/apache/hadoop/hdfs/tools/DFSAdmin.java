@@ -1023,7 +1023,7 @@ public class DFSAdmin extends FsShell {
 
     if (path != null) {
       path = path.trim();
-      if (path.length() == 0) {
+      if (path.isEmpty()) {
         path = OpenFilesIterator.FILTER_PATH_DEFAULT;
       }
     } else {

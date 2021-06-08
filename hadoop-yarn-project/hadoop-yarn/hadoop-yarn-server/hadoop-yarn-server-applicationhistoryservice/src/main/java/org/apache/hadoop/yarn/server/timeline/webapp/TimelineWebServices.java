@@ -300,7 +300,7 @@ public class TimelineWebServices {
       @PathParam("domainId") String domainId) {
     init(res);
     domainId = parseStr(domainId);
-    if (domainId == null || domainId.length() == 0) {
+    if (domainId == null || domainId.isEmpty()) {
       throw new BadRequestException("Domain ID is not specified.");
     }
     TimelineDomain domain = null;
@@ -333,7 +333,7 @@ public class TimelineWebServices {
     init(res);
     owner = parseStr(owner);
     UserGroupInformation callerUGI = getUser(req);
-    if (owner == null || owner.length() == 0) {
+    if (owner == null || owner.isEmpty()) {
       if (callerUGI == null) {
         throw new BadRequestException("Domain owner is not specified.");
       } else {

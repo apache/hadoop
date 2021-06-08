@@ -378,7 +378,7 @@ public abstract class MountTable extends BaseRecord {
   @Override
   public void validate() {
     super.validate();
-    if (this.getSourcePath() == null || this.getSourcePath().length() == 0) {
+    if (this.getSourcePath() == null || this.getSourcePath().isEmpty()) {
       throw new IllegalArgumentException(
           ERROR_MSG_NO_SOURCE_PATH + this);
     }
@@ -392,11 +392,11 @@ public abstract class MountTable extends BaseRecord {
     }
     for (RemoteLocation loc : getDestinations()) {
       String nsId = loc.getNameserviceId();
-      if (nsId == null || nsId.length() == 0) {
+      if (nsId == null || nsId.isEmpty()) {
         throw new IllegalArgumentException(
             ERROR_MSG_INVALID_DEST_NS + this);
       }
-      if (loc.getDest() == null || loc.getDest().length() == 0) {
+      if (loc.getDest() == null || loc.getDest().isEmpty()) {
         throw new IllegalArgumentException(
             ERROR_MSG_INVALID_DEST_PATH + this);
       }

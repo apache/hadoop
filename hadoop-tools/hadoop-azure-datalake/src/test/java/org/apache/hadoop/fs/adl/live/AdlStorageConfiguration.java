@@ -89,7 +89,7 @@ public final class AdlStorageConfiguration {
     }
 
     String fileSystem = fsConfig.get(FILE_SYSTEM_KEY);
-    if (fileSystem == null || fileSystem.trim().length() == 0) {
+    if (fileSystem == null || fileSystem.trim().isEmpty()) {
       throw new IOException("Default file system not configured.");
     }
 

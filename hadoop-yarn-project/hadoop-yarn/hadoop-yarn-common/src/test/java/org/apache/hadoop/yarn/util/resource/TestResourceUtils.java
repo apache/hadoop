@@ -293,7 +293,7 @@ public class TestResourceUtils {
 
       Assert.assertEquals(len, ret.size());
       for (String[] resources : test) {
-        if (resources[0].length() == 0) {
+        if (resources[0].isEmpty()) {
           continue;
         }
         Assert.assertTrue(ret.containsKey(resources[0]));

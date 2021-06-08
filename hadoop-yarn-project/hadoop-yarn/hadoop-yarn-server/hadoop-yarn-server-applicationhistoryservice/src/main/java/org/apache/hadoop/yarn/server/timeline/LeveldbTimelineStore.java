@@ -902,7 +902,7 @@ public class LeveldbTimelineStore extends AbstractService
       byte[] key = createDomainIdKey(entity.getEntityId(),
           entity.getEntityType(), revStartTime);
       if (entity.getDomainId() == null ||
-          entity.getDomainId().length() == 0) {
+          entity.getDomainId().isEmpty()) {
         if (!allowEmptyDomainId) {
           handleError(entity, response, TimelinePutError.NO_DOMAIN);
           return;
@@ -1629,10 +1629,10 @@ public class LeveldbTimelineStore extends AbstractService
     WriteBatch writeBatch = null;
     try {
       writeBatch = db.createWriteBatch();
-      if (domain.getId() == null || domain.getId().length() == 0) {
+      if (domain.getId() == null || domain.getId().isEmpty()) {
         throw new IllegalArgumentException("Domain doesn't have an ID");
       }
-      if (domain.getOwner() == null || domain.getOwner().length() == 0) {
+      if (domain.getOwner() == null || domain.getOwner().isEmpty()) {
         throw new IllegalArgumentException("Domain doesn't have an owner.");
       }
 

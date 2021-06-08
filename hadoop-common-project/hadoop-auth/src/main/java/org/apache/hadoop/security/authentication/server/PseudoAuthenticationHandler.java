@@ -143,7 +143,7 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
 
   private String getUserName(HttpServletRequest request) {
     String queryString = request.getQueryString();
-    if(queryString == null || queryString.length() == 0) {
+    if(queryString == null || queryString.isEmpty()) {
       return null;
     }
     List<NameValuePair> list = URLEncodedUtils.parse(queryString, UTF8_CHARSET);

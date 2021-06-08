@@ -510,7 +510,7 @@ public class ViewFs extends AbstractFileSystem {
       for (FileStatus status : statusLst) {
           String suffix = targetFs.stripOutRoot(status.getPath());
           statusLst[i++] = new ViewFsFileStatus(status, this.makeQualified(
-              suffix.length() == 0 ? f : new Path(res.resolvedPath, suffix)));
+              suffix.isEmpty() ? f : new Path(res.resolvedPath, suffix)));
       }
     }
     return statusLst;
@@ -913,7 +913,7 @@ public class ViewFs extends AbstractFileSystem {
     public T next() throws IOException {
       T status =  innerIter.next();
       String suffix = targetFs.stripOutRoot(status.getPath());
-      Path newPath = makeQualified(suffix.length() == 0 ? originalPath
+      Path newPath = makeQualified(suffix.isEmpty() ? originalPath
           : new Path(resolvedPath, suffix));
       return getViewFsFileStatus(status, newPath);
     }

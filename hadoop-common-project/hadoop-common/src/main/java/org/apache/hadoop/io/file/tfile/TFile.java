@@ -2064,7 +2064,7 @@ public class TFile {
 
     @SuppressWarnings("unchecked")
     static BytesComparator makeComparator(String comparator) {
-      if (comparator.length() == 0) {
+      if (comparator.isEmpty()) {
         // unsorted keys
         return null;
       }

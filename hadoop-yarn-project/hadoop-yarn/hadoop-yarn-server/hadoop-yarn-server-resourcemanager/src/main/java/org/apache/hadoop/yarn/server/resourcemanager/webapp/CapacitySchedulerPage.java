@@ -99,7 +99,7 @@ class CapacitySchedulerPage extends RmView {
     }
 
     private void renderLeafQueueInfoWithPartition(Block html) {
-      String nodeLabelDisplay = nodeLabel.length() == 0
+      String nodeLabelDisplay = nodeLabel.isEmpty()
           ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : nodeLabel;
       // first display the queue's label specific details :
       ResponseInfo ri =
@@ -468,7 +468,7 @@ class CapacitySchedulerPage extends RmView {
         boolean hasAnyLabelLinkedToNM = false;
         if (null != nodeLabelsInfo) {
           for (RMNodeLabel label : nodeLabelsInfo) {
-            if (label.getLabelName().length() == 0) {
+            if (label.getLabelName().isEmpty()) {
               // Skip DEFAULT_LABEL
               continue;
             }
@@ -494,7 +494,7 @@ class CapacitySchedulerPage extends RmView {
             csqinfo.qinfo = null;
             csqinfo.label = label.getLabelName();
             csqinfo.isExclusiveNodeLabel = label.getIsExclusive();
-            String nodeLabelDisplay = csqinfo.label.length() == 0
+            String nodeLabelDisplay = csqinfo.label.isEmpty()
                 ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : csqinfo.label;
             PartitionQueueCapacitiesInfo capacities = sinfo.getCapacities()
                 .getPartitionQueueCapacitiesInfo(csqinfo.label);

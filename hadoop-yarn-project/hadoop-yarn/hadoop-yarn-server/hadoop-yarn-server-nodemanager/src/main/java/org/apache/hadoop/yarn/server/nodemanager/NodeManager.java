@@ -176,7 +176,7 @@ public class NodeManager extends CompositeService
     NodeAttributesProvider attributesProvider = null;
     String providerString =
         conf.get(YarnConfiguration.NM_NODE_ATTRIBUTES_PROVIDER_CONFIG, null);
-    if (providerString == null || providerString.trim().length() == 0) {
+    if (providerString == null || providerString.trim().isEmpty()) {
       return attributesProvider;
     }
     switch (providerString.trim().toLowerCase()) {
@@ -211,7 +211,7 @@ public class NodeManager extends CompositeService
     NodeLabelsProvider provider = null;
     String providerString =
         conf.get(YarnConfiguration.NM_NODE_LABELS_PROVIDER_CONFIG, null);
-    if (providerString == null || providerString.trim().length() == 0) {
+    if (providerString == null || providerString.trim().isEmpty()) {
       // Seems like Distributed Node Labels configuration is not enabled
       return provider;
     }

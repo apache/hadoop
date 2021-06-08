@@ -344,9 +344,9 @@ public class LoggedTaskAttempt implements DeepCompare {
   // In job-history, hostName is saved in the format rackName/NodeName
   //TODO this is a hack! The '/' handling needs fixing.
   void setHostName(String hostName, String rackName) {
-    if (hostName == null || hostName.length() == 0) {
+    if (hostName == null || hostName.isEmpty()) {
       throw new RuntimeException("Invalid entry! Missing hostname");
-    } else if (rackName == null || rackName.length() == 0) {
+    } else if (rackName == null || rackName.isEmpty()) {
       setHostName(hostName);
     } else {
       // make sure that the rackname is prefixed with a '/'

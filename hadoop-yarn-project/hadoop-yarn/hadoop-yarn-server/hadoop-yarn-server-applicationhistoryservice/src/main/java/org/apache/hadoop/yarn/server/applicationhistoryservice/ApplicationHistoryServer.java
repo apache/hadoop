@@ -204,7 +204,7 @@ public class ApplicationHistoryServer extends CompositeService {
     // APPLICATION_HISTORY_STORE is neither null nor empty, it means that the
     // user has enabled it explicitly.
     if (conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE) == null ||
-        conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).length() == 0 ||
+        conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).isEmpty() ||
         conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).equals(
             NullApplicationHistoryStore.class.getName())) {
       return new ApplicationHistoryManagerOnTimelineStore(

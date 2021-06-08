@@ -160,7 +160,7 @@ public class NodeBase implements Node {
           "Network Location is null ");
     }
 
-    if (path.length() == 0) {
+    if (path.isEmpty()) {
       return ROOT;
     }
 

@@ -56,7 +56,7 @@ public class ServletUtil {
       return null;
     }
     s = s.trim();
-    return s.length() == 0? null: s;
+    return s.isEmpty() ? null: s;
   }
   
   /**

@@ -387,13 +387,13 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
 
   private String setJaasConfiguration(Properties config) throws Exception {
     String keytabFile = config.getProperty(ZOOKEEPER_KERBEROS_KEYTAB).trim();
-    if (keytabFile == null || keytabFile.length() == 0) {
+    if (keytabFile == null || keytabFile.isEmpty()) {
       throw new IllegalArgumentException(ZOOKEEPER_KERBEROS_KEYTAB
               + " must be specified");
     }
     String principal = config.getProperty(ZOOKEEPER_KERBEROS_PRINCIPAL)
             .trim();
-    if (principal == null || principal.length() == 0) {
+    if (principal == null || principal.isEmpty()) {
       throw new IllegalArgumentException(ZOOKEEPER_KERBEROS_PRINCIPAL
               + " must be specified");
     }

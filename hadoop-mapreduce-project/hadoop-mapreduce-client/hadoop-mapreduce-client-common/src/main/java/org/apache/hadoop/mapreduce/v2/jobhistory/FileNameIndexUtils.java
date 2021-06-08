@@ -295,7 +295,7 @@ public class FileNameIndexUtils {
   //TODO Maybe handle default values for longs and integers here?
   
   private static String getNonEmptyString(String in) {
-    if (in == null || in.length() == 0) {
+    if (in == null || in.isEmpty()) {
       in = "NA";
     }
     return in;

@@ -58,7 +58,7 @@ public class OBSContract extends AbstractBondedFSContract {
       conf = getConfiguration();
     }
     String fileSystem = conf.get(OBSTestConstants.TEST_FS_OBS_NAME);
-    if (fileSystem == null || fileSystem.trim().length() == 0) {
+    if (fileSystem == null || fileSystem.trim().isEmpty()) {
       isContractTestEnabled = false;
     }
     return isContractTestEnabled;

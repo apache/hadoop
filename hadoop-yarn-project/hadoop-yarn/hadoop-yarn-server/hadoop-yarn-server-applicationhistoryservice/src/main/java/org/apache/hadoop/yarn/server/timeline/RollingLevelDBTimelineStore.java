@@ -1624,10 +1624,10 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     try (WriteBatch domainWriteBatch = domaindb.createWriteBatch();
          WriteBatch ownerWriteBatch = ownerdb.createWriteBatch();) {
 
-      if (domain.getId() == null || domain.getId().length() == 0) {
+      if (domain.getId() == null || domain.getId().isEmpty()) {
         throw new IllegalArgumentException("Domain doesn't have an ID");
       }
-      if (domain.getOwner() == null || domain.getOwner().length() == 0) {
+      if (domain.getOwner() == null || domain.getOwner().isEmpty()) {
         throw new IllegalArgumentException("Domain doesn't have an owner.");
       }
 

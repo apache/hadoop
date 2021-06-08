@@ -203,7 +203,7 @@ class KeyFieldHelper {
     } else {
       keyArgs = arg.substring(2);
     }
-    if (keyArgs == null || keyArgs.length() == 0) {
+    if (keyArgs == null || keyArgs.isEmpty()) {
       return null;
     }
     StringTokenizer st = new StringTokenizer(keyArgs,"nr.,",true);

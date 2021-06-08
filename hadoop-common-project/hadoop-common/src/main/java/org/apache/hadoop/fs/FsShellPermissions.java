@@ -161,7 +161,7 @@ public class FsShellPermissions extends FsCommand {
       }
       owner = matcher.group(1);
       group = matcher.group(3);
-      if (group != null && group.length() == 0) {
+      if (group != null && group.isEmpty()) {
         group = null;
       }
       if (owner == null && group == null) {

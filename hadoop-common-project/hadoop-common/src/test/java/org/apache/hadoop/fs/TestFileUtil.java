@@ -1147,7 +1147,7 @@ public class TestFileUtil {
       Assert.assertNotNull(classPathAttr);
       List<String> expectedClassPaths = new ArrayList<String>();
       for (String classPath: classPaths) {
-        if (classPath.length() == 0) {
+        if (classPath.isEmpty()) {
           continue;
         }
         if (wildcardPath.equals(classPath)) {

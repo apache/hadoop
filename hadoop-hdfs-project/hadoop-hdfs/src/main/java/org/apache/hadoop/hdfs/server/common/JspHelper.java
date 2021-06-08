@@ -60,7 +60,7 @@ public class JspHelper {
   public static String getDefaultWebUserName(Configuration conf) throws IOException {
     String user = conf.get(
         HADOOP_HTTP_STATIC_USER, DEFAULT_HADOOP_HTTP_STATIC_USER);
-    if (user == null || user.length() == 0) {
+    if (user == null || user.isEmpty()) {
       throw new IOException("Cannot determine UGI from request or conf");
     }
     return user;

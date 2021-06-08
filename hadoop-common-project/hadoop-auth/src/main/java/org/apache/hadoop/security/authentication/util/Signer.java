@@ -52,7 +52,7 @@ public class Signer {
    * @return the signed string.
    */
   public synchronized String sign(String str) {
-    if (str == null || str.length() == 0) {
+    if (str == null || str.isEmpty()) {
       throw new IllegalArgumentException("NULL or empty string to sign");
     }
     byte[] secret = secretProvider.getCurrentSecret();

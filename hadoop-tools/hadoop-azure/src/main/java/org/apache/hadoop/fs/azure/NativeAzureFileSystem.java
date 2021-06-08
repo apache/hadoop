@@ -366,7 +366,7 @@ public class NativeAzureFileSystem extends FileSystem {
      * @return  A String correctly formatted for insertion in a JSON text.
      */
     private String quote(String string) {
-        if (string == null || string.length() == 0) {
+        if (string == null || string.isEmpty()) {
             return "\"\"";
         }
 
@@ -1501,7 +1501,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
   // Remove any trailing slash except for the case of a single slash.
   private static String removeTrailingSlash(String key) {
-    if (key.length() == 0 || key.length() == 1) {
+    if (key.isEmpty() || key.length() == 1) {
       return key;
     }
     if (key.charAt(key.length() - 1) == '/') {
@@ -2678,7 +2678,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
-    if (key.length() == 0) { // root always exists
+    if (key.isEmpty()) { // root always exists
       return new FileStatus(
           0,
           true,
@@ -3116,7 +3116,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     String srcKey = pathToKey(absoluteSrcPath);
 
-    if (srcKey.length() == 0) {
+    if (srcKey.isEmpty()) {
       // Cannot rename root of file system
       return false;
     }

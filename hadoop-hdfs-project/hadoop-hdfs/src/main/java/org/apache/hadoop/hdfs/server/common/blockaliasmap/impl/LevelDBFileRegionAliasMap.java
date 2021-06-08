@@ -99,7 +99,7 @@ public class LevelDBFileRegionAliasMap
 
   private static DB createDB(String levelDBPath, boolean createIfMissing,
       String blockPoolID) throws IOException {
-    if (levelDBPath == null || levelDBPath.length() == 0) {
+    if (levelDBPath == null || levelDBPath.isEmpty()) {
       throw new IllegalArgumentException(
           "A valid path needs to be specified for "
               + LevelDBFileRegionAliasMap.class + " using the parameter "

@@ -1143,7 +1143,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String[] mapping =
           StringUtils.getTrimmedStringCollection(mappingValue, ":")
               .toArray(new String[] {});
-      if (mapping.length != 2 || mapping[1].length() == 0) {
+      if (mapping.length != 2 || mapping[1].isEmpty()) {
         throw new IllegalArgumentException(
             "Illegal queue mapping " + mappingValue);
       }
@@ -1207,8 +1207,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String[] mapping =
           StringUtils.getTrimmedStringCollection(mappingValue, ":")
               .toArray(new String[] {});
-      if (mapping.length != 3 || mapping[1].length() == 0
-          || mapping[2].length() == 0) {
+      if (mapping.length != 3 || mapping[1].isEmpty()
+          || mapping[2].isEmpty()) {
         throw new IllegalArgumentException(
             "Illegal queue mapping " + mappingValue);
       }
@@ -1253,8 +1253,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String[] mapping =
           StringUtils.getTrimmedStringCollection(mappingValue, ":")
               .toArray(new String[] {});
-      if (mapping.length != 3 || mapping[1].length() == 0
-          || mapping[2].length() == 0) {
+      if (mapping.length != 3 || mapping[1].isEmpty()
+          || mapping[2].isEmpty()) {
         throw new IllegalArgumentException(
             "Illegal queue mapping " + mappingValue);
       }
@@ -1273,7 +1273,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String[] mapping =
           StringUtils.getTrimmedStringCollection(mappingValue, ":")
               .toArray(new String[] {});
-      if (mapping.length != 2 || mapping[1].length() == 0) {
+      if (mapping.length != 2 || mapping[1].isEmpty()) {
         throw new IllegalArgumentException(
             "Illegal queue mapping " + mappingValue);
       }

@@ -90,7 +90,7 @@ public class FieldSelectionHelper {
     String fieldSpec = null;
     for (i = 0; i < fieldListSpec.length; i++) {
       fieldSpec = fieldListSpec[i];
-      if (fieldSpec.length() == 0) {
+      if (fieldSpec.isEmpty()) {
         continue;
       }
       pos = fieldSpec.indexOf('-');
@@ -100,10 +100,10 @@ public class FieldSelectionHelper {
       } else {
         String start = fieldSpec.substring(0, pos);
         String end = fieldSpec.substring(pos + 1);
-        if (start.length() == 0) {
+        if (start.isEmpty()) {
           start = "0";
         }
-        if (end.length() == 0) {
+        if (end.isEmpty()) {
           allFieldsFrom = Integer.parseInt(start);
           continue;
         }

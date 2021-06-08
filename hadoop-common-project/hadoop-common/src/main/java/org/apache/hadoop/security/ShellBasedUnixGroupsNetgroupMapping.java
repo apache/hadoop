@@ -75,7 +75,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
   @Override
   public void cacheGroupsAdd(List<String> groups) throws IOException {
     for(String group: groups) {
-      if(group.length() == 0) {
+      if(group.isEmpty()) {
         // better safe than sorry (should never happen)
       } else if(group.charAt(0) == '@') {
         if(!NetgroupCache.isCached(group)) {

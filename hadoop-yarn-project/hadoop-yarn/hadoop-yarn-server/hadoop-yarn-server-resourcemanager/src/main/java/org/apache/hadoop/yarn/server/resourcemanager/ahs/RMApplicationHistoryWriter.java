@@ -88,7 +88,7 @@ public class RMApplicationHistoryWriter extends CompositeService {
         conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
           YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED);
     if (conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE) == null ||
-        conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).length() == 0 ||
+        conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).isEmpty() ||
         conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE).equals(
             NullApplicationHistoryStore.class.getName())) {
       historyServiceEnabled = false;

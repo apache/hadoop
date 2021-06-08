@@ -47,7 +47,7 @@ public class TestOBSFileContextMainOperations extends
     Configuration conf = new Configuration();
     conf.addResource(OBSContract.CONTRACT_XML);
     String fileSystem = conf.get(OBSTestConstants.TEST_FS_OBS_NAME);
-    if (fileSystem == null || fileSystem.trim().length() == 0) {
+    if (fileSystem == null || fileSystem.trim().isEmpty()) {
       throw new Exception("Default file system not configured.");
     }
 

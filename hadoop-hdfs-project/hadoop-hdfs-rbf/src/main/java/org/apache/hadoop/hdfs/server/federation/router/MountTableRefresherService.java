@@ -218,7 +218,7 @@ public class MountTableRefresherService extends AbstractService {
     List<MountTableRefresherThread> refreshThreads = new ArrayList<>();
     for (RouterState routerState : cachedRecords) {
       String adminAddress = routerState.getAdminAddress();
-      if (adminAddress == null || adminAddress.length() == 0) {
+      if (adminAddress == null || adminAddress.isEmpty()) {
         // this router has not enabled router admin.
         continue;
       }

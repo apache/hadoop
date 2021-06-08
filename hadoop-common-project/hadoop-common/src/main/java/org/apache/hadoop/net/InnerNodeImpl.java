@@ -226,7 +226,7 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
 
   @Override
   public Node getLoc(String loc) {
-    if (loc == null || loc.length() == 0) {
+    if (loc == null || loc.isEmpty()) {
       return this;
     }
 

@@ -297,7 +297,7 @@ class CosNativeFileSystemStore implements NativeFileSystemStore {
    * @return The multipart upload id.
    */
   public String getUploadId(String key) {
-    if (null == key || key.length() == 0) {
+    if (null == key || key.isEmpty()) {
       return "";
     }
 
