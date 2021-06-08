@@ -19,18 +19,22 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
-
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT;
@@ -38,6 +42,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Tests correct precedence of various configurations that might be returned.
@@ -59,6 +65,12 @@ public class TestAccountConfiguration {
   private static final String TEST_OAUTH_ENDPOINT = "oauthEndpoint";
   private static final String TEST_CLIENT_ID = "clientId";
   private static final String TEST_CLIENT_SECRET = "clientSecret";
+
+  private static final List<String> CONFIG_KEYS =
+      Collections.unmodifiableList(Arrays.asList(
+          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT,
+          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID,
+          FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET));
 
   @Test
   public void testStringPrecedence()
@@ -359,6 +371,33 @@ public class TestAccountConfiguration {
 
     // Global: - , AccountSpecific: OAuth
     testGlobalAndAccountOAuthPrecedence(abfsConf, null, AuthType.OAuth);
+  }
+
+  @Test
+  public void testConfigPropNotFound() throws Throwable {
+    final String accountName = "account";
+
+    final Configuration conf = new Configuration();
+    final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
+
+    for (String key : CONFIG_KEYS) {
+      setAuthConfig(abfsConf, true, AuthType.OAuth);
+      abfsConf.unset(key + "." + accountName);
+      testMissingConfigKey(abfsConf, key);
+    }
+
+    unsetAuthConfig(abfsConf, false);
+    unsetAuthConfig(abfsConf, true);
+  }
+
+  private static void testMissingConfigKey(final AbfsConfiguration abfsConf,
+      final String confKey) throws Throwable {
+    GenericTestUtils.assertExceptionContains("Configuration property "
+            + confKey + " not found.",
+        LambdaTestUtils.verifyCause(
+            ConfigurationPropertyNotFoundException.class,
+            LambdaTestUtils.intercept(TokenAccessProviderException.class,
+                () -> abfsConf.getTokenProvider().getClass().getTypeName())));
   }
 
   public void testGlobalAndAccountOAuthPrecedence(AbfsConfiguration abfsConf,
