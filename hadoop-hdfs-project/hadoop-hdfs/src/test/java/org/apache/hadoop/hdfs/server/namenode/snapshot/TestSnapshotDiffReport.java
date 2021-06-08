@@ -1023,7 +1023,6 @@ public class TestSnapshotDiffReport {
 
     // we always put modification on the file before rename
     verifyDiffReport(root, "s1", "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("foo2")),
         new DiffReportEntry(DiffType.RENAME, DFSUtil.string2Bytes("foo2/bar"),
             DFSUtil.string2Bytes("foo2/bar-new")));

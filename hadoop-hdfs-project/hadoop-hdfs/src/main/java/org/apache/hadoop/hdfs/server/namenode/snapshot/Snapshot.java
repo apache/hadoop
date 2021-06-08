@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
@@ -158,7 +159,20 @@ public class Snapshot implements Comparable<byte[]> {
               input instanceof AclFeature
                   || input instanceof XAttrFeature
                   || input instanceof DirectoryWithQuotaFeature
-          ).toArray(Feature[]::new));
+          ).map(feature -> {
+            if (feature instanceof DirectoryWithQuotaFeature) {
+              // Return copy if feature is quota because a ref could be updated
+              final QuotaCounts quota =
+                  ((DirectoryWithQuotaFeature) feature).getSpaceAllowed();
+              return new DirectoryWithQuotaFeature.Builder()
+                  .nameSpaceQuota(quota.getNameSpace())
+                  .storageSpaceQuota(quota.getStorageSpace())
+                  .typeQuotas(quota.getTypeSpaces())
+                  .build();
+            } else {
+              return feature;
+            }
+          }).toArray(Feature[]::new));
     }
 
     boolean isMarkedAsDeleted() {
