@@ -192,6 +192,7 @@ public class ShuffleHandler extends AuxiliaryService {
   // FIXME: snemeth: need thread safety. - https://stackoverflow.com/questions/17836976/netty-4-0-instanciate-defaultchannelgroup
   private final ChannelGroup accepted =
       new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+  private final AtomicInteger acceptedConnections = new AtomicInteger();
   protected HttpPipelineFactory pipelineFact;
   private int sslFileBufferSize;
   
@@ -908,10 +909,8 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelActive(ChannelHandlerContext ctx)
         throws Exception {
-      super.channelActive(ctx);
-      LOG.debug("accepted connections={}", accepted.size());
-
-      if ((maxShuffleConnections > 0) && (accepted.size() >= maxShuffleConnections)) {
+      int numConnections = acceptedConnections.incrementAndGet();
+      if ((maxShuffleConnections > 0) && (numConnections >= maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
             "greater than or equal to the max allowed shuffle connections (%d)", 
             accepted.size(), maxShuffleConnections));
@@ -923,11 +922,20 @@ public class ShuffleHandler extends AuxiliaryService {
         // fetch failure.
         headers.put(RETRY_AFTER_HEADER, String.valueOf(FETCH_RETRY_DELAY));
         sendError(ctx, "", TOO_MANY_REQ_STATUS, headers);
-        return;
+      } else {
+        super.channelActive(ctx);
+        accepted.add(ctx.channel());
+        LOG.debug("Added channel: {}. Accepted number of connections={}",
+            ctx.channel(), acceptedConnections.get());
       }
-      accepted.add(ctx.channel());
-      LOG.debug("added channel: {}. accepted size: {}",
-          ctx.channel(), accepted.size());
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+      super.channelInactive(ctx);
+      acceptedConnections.decrementAndGet();
+      LOG.debug("New value of Accepted number of connections={}",
+          acceptedConnections.get());
     }
 
     @Override

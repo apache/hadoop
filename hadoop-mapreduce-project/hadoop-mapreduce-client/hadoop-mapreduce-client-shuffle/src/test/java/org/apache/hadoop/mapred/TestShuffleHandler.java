@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import com.google.common.collect.Maps;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -83,6 +84,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.PureJavaCrc32;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -648,7 +650,7 @@ public class TestShuffleHandler {
 
     // setup connections
     int connAttempts = 3;
-    HttpURLConnection conns[] = new HttpURLConnection[connAttempts];
+    HttpURLConnection[] conns = new HttpURLConnection[connAttempts];
 
     for (int i = 0; i < connAttempts; i++) {
       String URLstring = "http://127.0.0.1:" 
@@ -663,40 +665,57 @@ public class TestShuffleHandler {
           ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     }
 
-    // FIXME snemeth: connections are accepted in parallel; it's not sequential. rewrite this test.
     // Try to open numerous connections
     for (int i = 0; i < connAttempts; i++) {
       conns[i].connect();
     }
-
-    //Ensure first connections are okay
-    conns[0].getInputStream();
-    int rc = conns[0].getResponseCode();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
     
-    conns[1].getInputStream();
-    rc = conns[1].getResponseCode();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+    Map<Integer, List<HttpURLConnection>> mapOfConnections = Maps.newHashMap();
+    for (HttpURLConnection conn : conns) {
+      try {
+        conn.getInputStream();
+      } catch (IOException ioe) {
+        LOG.info("Expected - connection should not be open");
+      } catch (NumberFormatException ne) {
+        Assert.fail("Expected a numerical value for RETRY_AFTER header field");
+      } catch (Exception e) {
+        Assert.fail("Expected a IOException");
+      }
+      int statusCode = conn.getResponseCode();
+      LOG.debug("Connection status code: {}", statusCode);
+      mapOfConnections.putIfAbsent(statusCode, new ArrayList<>());
+      List<HttpURLConnection> connectionList = mapOfConnections.get(statusCode);
+      connectionList.add(conn);
+    }
+
+    Assert.assertEquals("Expected only HTTP 200 and HTTP 429 response codes",
+        Sets.newHashSet(
+            HttpURLConnection.HTTP_OK,
+            ShuffleHandler.TOO_MANY_REQ_STATUS.code()),
+        mapOfConnections.keySet());
+    
+    List<HttpURLConnection> successfulConnections =
+        mapOfConnections.get(HttpURLConnection.HTTP_OK);
+    Assert.assertEquals("Expected exactly two requests " +
+            "with HTTP 200 OK response code",
+        2, successfulConnections.size());
+
+    //Ensure exactly one connection is HTTP 429 (TOO MANY REQUESTS)
+    List<HttpURLConnection> closedConnections =
+        mapOfConnections.get(ShuffleHandler.TOO_MANY_REQ_STATUS.code());
+    Assert.assertEquals("Expected exactly one HTTP 429 (Too Many Requests) response code",
+        1, closedConnections.size());
 
     // This connection should be closed because it to above the limit
-    try {
-      rc = conns[2].getResponseCode();
-      Assert.assertEquals("Expected a too-many-requests response code",
-          ShuffleHandler.TOO_MANY_REQ_STATUS.code(), rc);
-      long backoff = Long.valueOf(
-          conns[2].getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
-      Assert.assertTrue("The backoff value cannot be negative.", backoff > 0);
-      conns[2].getInputStream();
-      Assert.fail("Expected an IOException");
-    } catch (IOException ioe) {
-      LOG.info("Expected - connection should not be open");
-    } catch (NumberFormatException ne) {
-      Assert.fail("Expected a numerical value for RETRY_AFTER header field");
-    } catch (Exception e) {
-      Assert.fail("Expected a IOException");
-    }
-    
-    shuffleHandler.stop(); 
+    HttpURLConnection conn = closedConnections.get(0);
+    int rc = conn.getResponseCode();
+    Assert.assertEquals("Expected a HTTP 429 (Too Many Requests) response code",
+        ShuffleHandler.TOO_MANY_REQ_STATUS.code(), rc);
+    long backoff = Long.parseLong(
+        conn.getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
+    Assert.assertTrue("The backoff value cannot be negative.", backoff > 0);
+
+    shuffleHandler.stop();
   }
 
   /**
