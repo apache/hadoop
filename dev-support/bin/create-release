@@ -514,7 +514,7 @@ function dockermode
 
     echo "USER ${user_name}"
     printf "\n\n"
-  ) | docker build -t "${imgname}" -
+  ) | docker build -t "${imgname}" -f - "${BASEDIR}"/dev-support/docker/
 
   run docker run -i -t \
     --privileged \
