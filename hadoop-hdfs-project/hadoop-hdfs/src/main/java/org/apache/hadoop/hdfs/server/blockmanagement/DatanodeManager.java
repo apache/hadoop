@@ -506,7 +506,7 @@ public class DatanodeManager {
   }
 
   private boolean isInactive(DatanodeInfo datanode) {
-    return datanode.isDecommissioned() ||
+    return datanode.isDecommissioned() || datanode.isEnteringMaintenance() ||
         (avoidStaleDataNodesForRead && datanode.isStale(staleInterval));
 
   }
@@ -572,8 +572,8 @@ public class DatanodeManager {
   }
 
   /**
-   * Move decommissioned/stale datanodes to the bottom. Also, sort nodes by
-   * network distance.
+   * Move decommissioned/entering_maintenance/stale datanodes to the bottom.
+   * Also, sort nodes by network distance.
    *
    * @param lb located block
    * @param targetHost target host
@@ -603,7 +603,7 @@ public class DatanodeManager {
     }
 
     DatanodeInfoWithStorage[] di = lb.getLocations();
-    // Move decommissioned/stale datanodes to the bottom
+    // Move decommissioned/entering_maintenance/stale datanodes to the bottom
     Arrays.sort(di, comparator);
 
     // Sort nodes by network distance only for located blocks
