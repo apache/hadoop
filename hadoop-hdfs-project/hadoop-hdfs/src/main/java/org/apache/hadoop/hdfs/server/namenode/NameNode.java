@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import java.util.Set;
 import org.apache.commons.logging.Log;
@@ -91,6 +90,7 @@ import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
