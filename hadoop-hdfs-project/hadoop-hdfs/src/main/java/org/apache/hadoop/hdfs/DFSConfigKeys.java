@@ -655,6 +655,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long
           DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT =
       1000;
+  public static final String DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY =
+      "dfs.datanode.min.outlier.detection.disks";
+  public static final long DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT =
+      5L;
+  public static final String DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY =
+      "dfs.datanode.slowdisk.low.threshold.ms";
+  public static final long DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT =
+      20L;
   public static final String  DFS_DATANODE_HOST_NAME_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_DATANODE_HOST_NAME_KEY;
   public static final String  DFS_NAMENODE_CHECKPOINT_DIR_KEY =

@@ -2375,6 +2375,22 @@
 </property>
 
 <property>
+  <name>dfs.datanode.min.outlier.detection.disks</name>
+  <value>5</value>
+  <description>
+    Minimum number of disks to run outlier detection.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.slowdisk.low.threshold.ms</name>
+  <value>20</value>
+  <description>
+    Threshold in milliseconds below which a disk is definitely not slow.
+  </description>
+</property>
+
+<property>
   <name>hadoop.user.group.metrics.percentiles.intervals</name>
   <value></value>
   <description>
