@@ -467,6 +467,20 @@ An OAuth 2.0 endpoint, username and password are provided in the configuration/J
   password for account
   </description>
 </property>
+<property>
+  <name>fs.azure.account.oauth2.client.id</name>
+  <value></value>
+  <description>
+  Client ID
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.secret</name>
+  <value></value>
+  <description>
+  Optional Secret
+  </description>
+</property>
 ```
 
 ### <a name="oauth-refresh-token"></a> OAuth 2.0: Refresh Token

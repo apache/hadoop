@@ -753,7 +753,9 @@ public class AbfsConfiguration{
           String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
           String username = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_NAME);
           String password = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
-          tokenProvider = new UserPasswordTokenProvider(authEndpoint, username, password);
+          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String clientSecret = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
+          tokenProvider = new UserPasswordTokenProvider(authEndpoint, username, password, clientId, clientSecret);
           LOG.trace("UserPasswordTokenProvider initialized");
         } else if (tokenProviderClass == MsiTokenProvider.class) {
           String authEndpoint = getTrimmedPasswordString(
