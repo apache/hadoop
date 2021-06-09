@@ -685,16 +685,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public void setDeprecatedProperties() {
     DeprecationContext deprecations = deprecationContext.get();
     Properties props = getProps();
-    Properties overlay = getOverlay();
     for (Map.Entry<String, DeprecatedKeyInfo> entry :
         deprecations.getDeprecatedKeyMap().entrySet()) {
       String depKey = entry.getKey();
       if (!overlay.contains(depKey)) {
         for (String newKey : entry.getValue().newKeys) {
-          String val = overlay.getProperty(newKey);
+          String val = overlay.get(newKey);
           if (val != null) {
             props.setProperty(depKey, val);
-            overlay.setProperty(depKey, val);
+            overlay.put(depKey, val);
             break;
           }
         }
@@ -740,18 +739,17 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     updatePropertiesWithDeprecatedKeys(deprecations, names);
 
     // If there are no overlay values we can return early
-    Properties overlayProperties = getOverlay();
-    if (overlayProperties.isEmpty()) {
+    if (overlay.isEmpty()) {
       return names;
     }
     // Update properties and overlays with reverse lookup values
     for (String n : names) {
       String deprecatedKey = deprecations.getReverseDeprecatedKeyMap().get(n);
-      if (deprecatedKey != null && !overlayProperties.containsKey(n)) {
-        String deprecatedValue = overlayProperties.getProperty(deprecatedKey);
+      if (deprecatedKey != null && !overlay.containsKey(n)) {
+        String deprecatedValue = overlay.get(deprecatedKey);
         if (deprecatedValue != null) {
           getProps().setProperty(n, deprecatedValue);
-          overlayProperties.setProperty(n, deprecatedValue);
+          overlay.put(n, deprecatedValue);
         }
       }
     }
@@ -803,7 +801,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   private Properties properties;
-  private Properties overlay;
+  private final ConcurrentHashMap<String, String> overlay = new ConcurrentHashMap<>();
   private ClassLoader classLoader;
   {
     classLoader = Thread.currentThread().getContextClassLoader();
@@ -848,9 +846,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         this.properties = (Properties)other.properties.clone();
       }
 
-      if (other.overlay!=null) {
-        this.overlay = (Properties)other.overlay.clone();
-      }
+      this.overlay.putAll(other.overlay);
 
       this.restrictSystemProps = other.restrictSystemProps;
       if (other.updatingResource != null) {
@@ -1387,7 +1383,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (deprecations.getDeprecatedKeyMap().isEmpty()) {
       getProps();
     }
-    getOverlay().setProperty(name, value);
+    overlay.put(name, value);
     getProps().setProperty(name, value);
     String newSource = (source == null ? "programmatically" : source);
 
@@ -1397,7 +1393,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if(altNames != null) {
         for(String n: altNames) {
           if(!n.equals(name)) {
-            getOverlay().setProperty(n, value);
+            overlay.put(n, value);
             getProps().setProperty(n, value);
             putIntoUpdatingResource(n, new String[] {newSource});
           }
@@ -1408,7 +1404,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       String[] names = handleDeprecation(deprecationContext.get(), name);
       String altSource = "because " + name + " is deprecated";
       for(String n : names) {
-        getOverlay().setProperty(n, value);
+        overlay.put(n, value);
         getProps().setProperty(n, value);
         putIntoUpdatingResource(n, new String[] {altSource});
       }
@@ -1444,7 +1440,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
 
     for(String n: names) {
-      getOverlay().remove(n);
+      overlay.remove(n);
       getProps().remove(n);
     }
   }
@@ -1460,13 +1456,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
   
-  private synchronized Properties getOverlay() {
-    if (overlay==null){
-      overlay=new Properties();
-    }
-    return overlay;
-  }
-
   /** 
    * Get the value of the <code>name</code>. If the key is deprecated,
    * it returns the value of the first key which replaces the deprecated key
@@ -2895,16 +2884,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           updatingResource != null
               ? new ConcurrentHashMap<>(updatingResource) : null;
       loadResources(props, resources, startIdx, fullReload, quietmode);
-      if (overlay != null) {
+      if (!overlay.isEmpty()) {
         props.putAll(overlay);
         if (backup != null) {
-          for (Map.Entry<Object, Object> item : overlay.entrySet()) {
-            String key = (String) item.getKey();
+          overlay.keySet().forEach(key -> {
             String[] source = backup.get(key);
             if (source != null) {
               updatingResource.put(key, source);
             }
-          }
+          });
         }
       }
     }
@@ -2924,7 +2912,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void clear() {
     getProps().clear();
-    getOverlay().clear();
+    overlay.clear();
   }
 
   /**
