@@ -65,6 +65,8 @@ ENV SPOTBUGS_HOME /opt/spotbugs
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
+RUN git config --global user.name "John Doe"
+RUN git config --global user.email johndoe@example.com
 
 ######
 # Install packages
