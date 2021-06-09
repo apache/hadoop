@@ -468,9 +468,7 @@ public class NamenodeBeanMetrics
   private String getNodesImpl(final DatanodeReportType type) {
     final Map<String, Map<String, Object>> info = new HashMap<>();
     try {
-      RouterRpcServer rpcServer = this.router.getRpcServer();
-      DatanodeInfo[] datanodes =
-          rpcServer.getDatanodeReport(type, false, dnReportTimeOut);
+      DatanodeInfo[] datanodes = getRBFMetrics().getDnCache().get(type);
       for (DatanodeInfo node : datanodes) {
         Map<String, Object> innerinfo = new HashMap<>();
         innerinfo.put("infoAddr", node.getInfoAddr());
@@ -499,6 +497,8 @@ public class NamenodeBeanMetrics
     } catch (SubClusterTimeoutException e) {
       LOG.error("Cannot get {} nodes, subclusters timed out responding", type);
     } catch (IOException e) {
+      LOG.error("Cannot get " + type + " nodes", e);
+    } catch (ExecutionException e) {
       LOG.error("Cannot get " + type + " nodes", e);
     }
     return JSON.toString(info);
