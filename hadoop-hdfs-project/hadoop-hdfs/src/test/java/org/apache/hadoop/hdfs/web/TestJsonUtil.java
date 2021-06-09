@@ -50,13 +50,14 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus.Flags;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
+
 import org.junit.Assert;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public class TestJsonUtil {
 

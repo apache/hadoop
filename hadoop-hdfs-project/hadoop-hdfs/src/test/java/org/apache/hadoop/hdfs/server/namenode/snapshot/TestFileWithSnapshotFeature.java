@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import java.util.ArrayList;
+
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -28,11 +29,11 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.util.Lists;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import java.util.ArrayList;
 
 import static org.apache.hadoop.fs.StorageType.DISK;
 import static org.apache.hadoop.fs.StorageType.SSD;

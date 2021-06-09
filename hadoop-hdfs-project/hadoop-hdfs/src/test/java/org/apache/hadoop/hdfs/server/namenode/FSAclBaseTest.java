@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Lists;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -58,7 +59,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests NameNode interaction for all ACL modification APIs.  This test suite

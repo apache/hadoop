@@ -32,6 +32,7 @@ import java.net.URI;
 import java.util.List;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -58,7 +59,6 @@ import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;

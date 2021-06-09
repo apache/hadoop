@@ -31,10 +31,10 @@ import static org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory.SSL_MONIT
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.LoggerFactory;
 
 public final class TestURLConnectionFactory {

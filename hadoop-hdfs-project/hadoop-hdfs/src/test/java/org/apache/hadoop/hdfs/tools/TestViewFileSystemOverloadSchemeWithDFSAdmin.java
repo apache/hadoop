@@ -41,13 +41,13 @@ import org.apache.hadoop.fs.viewfs.ViewFsTestSetup;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests DFSAdmin with ViewFileSystemOverloadScheme with configured mount links.

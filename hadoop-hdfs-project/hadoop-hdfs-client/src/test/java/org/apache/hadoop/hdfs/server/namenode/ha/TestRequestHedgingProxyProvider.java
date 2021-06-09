@@ -38,6 +38,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,7 +56,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.event.Level;
 
 public class TestRequestHedgingProxyProvider {
