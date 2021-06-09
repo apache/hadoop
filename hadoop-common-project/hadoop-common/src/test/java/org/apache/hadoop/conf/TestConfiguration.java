@@ -1757,6 +1757,19 @@ public class TestConfiguration {
   }
 
   @Test
+  public void testRegistry() {
+    System.gc();
+    int existing = Configuration.getInstanceCount();
+
+    Configuration conf = new Configuration();
+    assertEquals(existing + 1, Configuration.getInstanceCount());
+
+    conf = null;
+    System.gc();
+    assertEquals(existing, Configuration.getInstanceCount());
+  }
+
+  @Test
   public void testSize() {
     Configuration conf = new Configuration(false);
     conf.set("a", "A");
