@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
 
 public class TestSortLocatedBlock {
 
-  Configuration conf = new HdfsConfiguration();
+  private Configuration conf = new HdfsConfiguration();
 
   @Before
   public void setup() throws Exception {
@@ -65,15 +65,16 @@ public class TestSortLocatedBlock {
    * @throws Exception
    */
   @Test
-  public void TestSortLocatedBlock() throws Exception {
+  public void testSortLocatedBlockAvoidStaleNodes() throws Exception {
     conf.setBoolean(DFSConfigKeys
         .DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
     MiniDFSCluster miniCluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
     FSNamesystem namesystem = miniCluster.getNamesystem();
-    DatanodeManager dnManager = namesystem.getBlockManager().getDatanodeManager();
+    DatanodeManager dnManager =
+        namesystem.getBlockManager().getDatanodeManager();
     List<DatanodeDescriptor> datanodes =
-        dnManager.getDatanodeListForReport(HdfsConstants.DatanodeReportType.ALL);
+        dnManager.getDatanodeListForReport(DatanodeReportType.ALL);
     DFSTestUtil.formatNameNode(conf);
     NamenodeProtocols rpcServer = miniCluster.getNameNodeRpc();
     DistributedFileSystem fileSystem = miniCluster.getFileSystem();
@@ -83,7 +84,8 @@ public class TestSortLocatedBlock {
     // create file with 5 replication
     String path = "/test";
     final long fileLen = 512;
-    DFSTestUtil.createFile(fileSystem, new Path(path), fileLen, (short)5, 0);
+    DFSTestUtil.createFile(fileSystem, new Path(path),
+        fileLen, (short)5, 0);
 
     DatanodeDescriptor dn0 = datanodes.get(0);
     DatanodeDescriptor dn1 = datanodes.get(1);
