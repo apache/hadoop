@@ -312,7 +312,7 @@ public class StandbyCheckpointer {
         // Even if exception happens, still proceeds to next NN url.
         // so that fail to upload to previous NN does not cause the
         // remaining NN not getting the fsImage.
-        ioes.add(new IOException("Exception during image upload", e));
+        ioes.add(new IOException("Exception during image upload to " + url, e));
       } catch (InterruptedException e) {
         ie = e;
         break;
@@ -341,8 +341,9 @@ public class StandbyCheckpointer {
       throw ie;
     }
 
+    // Do not throw exception since some NNs like ObserverNameNodes could be shutdown
     if (!ioes.isEmpty()) {
-      throw MultipleIOException.createIOException(ioes);
+      LOG.warn("Failed to upload image to some NameNodes", MultipleIOException.createIOException(ioes));
     }
   }
   
@@ -493,9 +494,8 @@ public class StandbyCheckpointer {
           LOG.info("Checkpoint was cancelled: {}", ce.getMessage());
           canceledCount++;
         } catch (InterruptedException ie) {
-          LOG.info("Interrupted during checkpointing", ie);
           // Probably requested shutdown.
-          continue;
+          LOG.info("Interrupted during checkpointing", ie);
         } catch (Throwable t) {
           LOG.error("Exception in doCheckpoint", t);
         } finally {
