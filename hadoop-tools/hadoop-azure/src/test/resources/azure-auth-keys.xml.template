@@ -167,7 +167,8 @@ create the test FS instance.
     <value>false</value>
     <description>If made true, tests will be running under the assumption that
       append blob is enabled and the root directory and contract test root
-      directory will be part of the append blob directories.
+      directory will be part of the append blob directories. Should be false for
+      non-HNS accounts.
     </description>
   </property>
 

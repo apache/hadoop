@@ -26,12 +26,19 @@ set -eo pipefail
 begin
 
 ### ADD THE TEST COMBINATIONS BELOW. DO NOT EDIT THE ABOVE LINES.
+### THE SCRIPT REQUIRES THE FOLLOWING UTILITIES xmlstarlet AND pcregrep.
 
 
 combination=HNS-OAuth
 properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled"
 "fs.azure.account.auth.type")
 values=("{account name}.dfs.core.windows.net" "true" "OAuth")
+generateconfigs
+
+combination=AppendBlob-HNS-OAuth
+properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled"
+"fs.azure.account.auth.type" "fs.azure.test.appendblob.enabled")
+values=("{account name}.dfs.core.windows.net" "true" "OAuth" "true")
 generateconfigs
 
 combination=HNS-SharedKey
