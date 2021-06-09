@@ -2395,7 +2395,8 @@ public class DistributedFileSystem extends FileSystem
       } catch (RpcNoSuchMethodException e) {
         // In case the server doesn't support getSnapshotDiffReportListing,
         // fallback to getSnapshotDiffReport.
-        LOG.warn("Falling back to getSnapshotDiffReport {}", e.getMessage());
+        DFSClient.LOG.warn(
+            "Falling back to getSnapshotDiffReport {}", e.getMessage());
         return dfs.getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
       }
       startPath = report.getLastPath();
