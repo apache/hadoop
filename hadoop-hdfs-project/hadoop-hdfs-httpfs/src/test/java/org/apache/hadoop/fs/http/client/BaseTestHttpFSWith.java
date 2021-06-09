@@ -67,6 +67,7 @@ import org.apache.hadoop.test.TestHdfs;
 import org.apache.hadoop.test.TestHdfsHelper;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -74,8 +75,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import java.io.File;
 import java.io.FileOutputStream;
