@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.yarn.api;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.commons.lang3.Range;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.*;
 import java.nio.ByteBuffer;
