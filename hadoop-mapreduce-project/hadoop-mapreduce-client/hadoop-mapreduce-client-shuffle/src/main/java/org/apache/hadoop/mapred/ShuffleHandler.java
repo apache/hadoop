@@ -849,7 +849,7 @@ public class ShuffleHandler extends AuxiliaryService {
       pipeline.addLast("encoder", new HttpResponseEncoder());
       pipeline.addLast("chunking", new ChunkedWriteHandler());
       pipeline.addLast("shuffle", SHUFFLE);
-      //TODO add a config option for this later
+      //TODO snemeth add a config option for this later
       //https://stackoverflow.com/questions/50612403/catch-all-exception-handling-for-outbound-channelhandler
       pipeline.addLast("outboundExcHandler", new ChannelOutboundHandlerAdapter() {
         @Override
@@ -1080,7 +1080,7 @@ public class ShuffleHandler extends AuxiliaryService {
           return;
         }
       }
-      //TODO add explanation
+      //TODO snemeth add explanation
       //HADOOP-15327
       ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
     }

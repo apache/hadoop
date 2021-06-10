@@ -773,7 +773,7 @@ public class TestShuffleHandler {
     testKeepAliveInternal(conf, ShuffleUrlType.SIMPLE, ShuffleUrlType.WITH_KEEPALIVE);
   }
   
-  //TODO implement keepalive test that used properly mocked ShuffleHandler
+  //TODO snemeth implement keepalive test that used properly mocked ShuffleHandler
   @Test(timeout = 10000)
   public void testKeepAliveInitiallyDisabled() throws Exception {
     Configuration conf = new Configuration();
