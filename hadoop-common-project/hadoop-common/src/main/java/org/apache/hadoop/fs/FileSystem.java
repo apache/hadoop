@@ -4017,7 +4017,10 @@ public abstract class FileSystem extends Configured
             StatisticsDataReference ref =
                 (StatisticsDataReference)STATS_DATA_REF_QUEUE.
                         remove(REF_QUEUE_POLL_TIMEOUT);
-            ref.cleanUp();
+
+            if (null != ref) {
+              ref.cleanUp();
+            }
           } catch (InterruptedException ie) {
             LOGGER.warn("Cleaner thread interrupted, will stop", ie);
             Thread.currentThread().interrupt();
