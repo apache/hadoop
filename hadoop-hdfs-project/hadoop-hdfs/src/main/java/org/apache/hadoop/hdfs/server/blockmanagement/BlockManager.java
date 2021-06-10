@@ -434,7 +434,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   /**
    * The blocks of deleted files are put into the queue,
-   * and the cleanup thread processes these blocks periodically
+   * and the cleanup thread processes these blocks periodically.
    */
   private final ConcurrentLinkedQueue<List<BlockInfo>> markedDeleteQueue;
 
@@ -749,7 +749,8 @@ public class BlockManager implements BlockStatsMXBean {
     datanodeManager.activate(conf);
     this.redundancyThread.setName("RedundancyMonitor");
     this.redundancyThread.start();
-    this.markedDeleteBlockScrubberThread.setName("MarkedDeleteBlockScrubberThread");
+    this.markedDeleteBlockScrubberThread.
+        setName("MarkedDeleteBlockScrubberThread");
     this.markedDeleteBlockScrubberThread.start();
     this.blockReportThread.start();
     mxBeanName = MBeans.register("NameNode", "BlockStats", this);
@@ -4941,8 +4942,8 @@ public class BlockManager implements BlockStatsMXBean {
    * Periodically deletes the marked block.
    */
   private class MarkedDeleteBlockScrubber implements Runnable {
-    Iterator<BlockInfo> toDeleteIterator = null;
-    boolean isSleep;
+    private Iterator<BlockInfo> toDeleteIterator = null;
+    private boolean isSleep;
 
     private void toRemove(long time) {
       // Reentrant write lock, Release the lock when the remove is
@@ -4953,8 +4954,8 @@ public class BlockManager implements BlockStatsMXBean {
           while (toDeleteIterator.hasNext()) {
             removeBlock(toDeleteIterator.next());
             if (Time.now() - time > deleteBlockLockTimeMs) {
-              LOG.info("Clear markedDeleteQueue over "
-                  + deleteBlockLockTimeMs + " millisecond to release the write lock");
+              LOG.info("Clear markedDeleteQueue over " + deleteBlockLockTimeMs
+                  + " millisecond to release the write lock");
               isSleep = true;
               break;
             }

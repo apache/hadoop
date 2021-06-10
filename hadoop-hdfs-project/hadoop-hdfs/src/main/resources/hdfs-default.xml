@@ -6091,6 +6091,22 @@
   </property>
 
   <property>
+    <name>dfs.namenode.delete.block.lock.time.ms</name>
+    <value>1000</value>
+    <description>
+      The maximum write lock time for clearing the blocks of deleted files.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.delete.block.unlock.sleep.interval.ms</name>
+    <value>1000</value>
+    <description>
+      The interval for clearing the blocks of deleted files.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.rpc-address.auxiliary-ports</name>
     <value></value>
     <description>

@@ -33,6 +33,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -488,7 +489,8 @@ public class TestFileTruncate {
    * remaining snapshots are still readable.
    */
   @Test
-  public void testSnapshotWithTruncates() throws IOException {
+  public void testSnapshotWithTruncates()
+      throws IOException, InterruptedException {
     testSnapshotWithTruncates(0, 1, 2);
     testSnapshotWithTruncates(0, 2, 1);
     testSnapshotWithTruncates(1, 0, 2);
@@ -497,7 +499,8 @@ public class TestFileTruncate {
     testSnapshotWithTruncates(2, 1, 0);
   }
 
-  void testSnapshotWithTruncates(int ... deleteOrder) throws IOException {
+  void testSnapshotWithTruncates(int ... deleteOrder)
+      throws IOException, InterruptedException {
     fs.mkdirs(parent);
     fs.setQuota(parent, 100, 1000);
     fs.allowSnapshot(parent);
@@ -590,6 +593,8 @@ public class TestFileTruncate {
     assertThat(contentSummary.getLength(), is(6L));
 
     fs.delete(src, false);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem().getBlockManager());
     assertBlockNotPresent(firstBlk);
 
     // Diskspace consumed should be 0 bytes * 3. []
@@ -671,10 +676,10 @@ public class TestFileTruncate {
           "File does not exist", expected);
     }
 
-    
+
     fs.setPermission(p, FsPermission.createImmutable((short)0664));
     {
-      final UserGroupInformation fooUgi = 
+      final UserGroupInformation fooUgi =
           UserGroupInformation.createUserForTesting("foo", new String[]{"foo"});
       try {
         final FileSystem foofs = DFSTestUtil.getFileSystemAs(fooUgi, conf);
@@ -755,11 +760,11 @@ public class TestFileTruncate {
 
     LocatedBlock newBlock = getLocatedBlocks(p).getLastLocatedBlock();
     /*
-     * For non copy-on-truncate, the truncated block id is the same, but the 
+     * For non copy-on-truncate, the truncated block id is the same, but the
      * GS should increase.
      * The truncated block will be replicated to dn0 after it restarts.
      */
-    assertEquals(newBlock.getBlock().getBlockId(), 
+    assertEquals(newBlock.getBlock().getBlockId(),
         oldBlock.getBlock().getBlockId());
     assertEquals(newBlock.getBlock().getGenerationStamp(),
         oldBlock.getBlock().getGenerationStamp() + 1);
@@ -811,7 +816,7 @@ public class TestFileTruncate {
      * For copy-on-truncate, new block is made with new block id and new GS.
      * The replicas of the new block is 2, then it will be replicated to dn1.
      */
-    assertNotEquals(newBlock.getBlock().getBlockId(), 
+    assertNotEquals(newBlock.getBlock().getBlockId(),
         oldBlock.getBlock().getBlockId());
     assertEquals(newBlock.getBlock().getGenerationStamp(),
         oldBlock.getBlock().getGenerationStamp() + 1);
@@ -864,10 +869,10 @@ public class TestFileTruncate {
 
     LocatedBlock newBlock = getLocatedBlocks(p).getLastLocatedBlock();
     /*
-     * For non copy-on-truncate, the truncated block id is the same, but the 
+     * For non copy-on-truncate, the truncated block id is the same, but the
      * GS should increase.
      */
-    assertEquals(newBlock.getBlock().getBlockId(), 
+    assertEquals(newBlock.getBlock().getBlockId(),
         oldBlock.getBlock().getBlockId());
     assertEquals(newBlock.getBlock().getGenerationStamp(),
         oldBlock.getBlock().getGenerationStamp() + 1);
@@ -1256,7 +1261,8 @@ public class TestFileTruncate {
         cluster.getNamesystem().getFSDirectory().getBlockManager()
             .getTotalBlocks());
     fs.delete(p, true);
-
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem().getBlockManager());
     assertEquals("block num should 0", 0,
         cluster.getNamesystem().getFSDirectory().getBlockManager()
             .getTotalBlocks());
