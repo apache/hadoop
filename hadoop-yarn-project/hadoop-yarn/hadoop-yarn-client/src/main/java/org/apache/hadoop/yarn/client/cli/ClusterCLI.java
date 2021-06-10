@@ -90,8 +90,6 @@ public class ClusterCLI extends YarnCLI {
             + " Also, this option is UNSTABLE, could be removed in future"
             + " releases.");
 
-    createAndStartYarnClient();
-
     int exitCode = -1;
     CommandLine parsedCli = null;
     try {
@@ -101,6 +99,8 @@ public class ClusterCLI extends YarnCLI {
       printUsage(opts);
       return exitCode;
     }
+
+    createAndStartYarnClient();
 
     if (parsedCli.hasOption(DIRECTLY_ACCESS_NODE_LABEL_STORE)) {
       accessLocal = true;
