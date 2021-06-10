@@ -1108,8 +1108,7 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.MODIFY,
             DFSUtil.string2Bytes(flumeFileName)));
 
-    verifyDiffReport(level0A, flumeSnap2Name, "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")));
+    verifyDiffReport(level0A, flumeSnap2Name, "");
 
     verifyDiffReport(level0A, flumeSnap1Name, flumeSnap2Name,
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
@@ -1145,7 +1144,6 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes(flumeFileName)));
 
     verifyDiffReport(level0A, flumeSnap2Name, "",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
         new DiffReportEntry(DiffType.MODIFY,
             DFSUtil.string2Bytes(flumeFileName)));
 

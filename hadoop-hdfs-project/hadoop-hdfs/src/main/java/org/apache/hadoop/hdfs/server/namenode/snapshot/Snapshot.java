@@ -24,7 +24,6 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.stream.Collectors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -155,10 +154,10 @@ public class Snapshot implements Comparable<byte[]> {
     Root(INodeDirectory other) {
       // Always preserve ACL, XAttr and Quota.
       super(other, false,
-          Arrays.stream(other.getFeatures()).filter(input ->
-              input instanceof AclFeature
-                  || input instanceof XAttrFeature
-                  || input instanceof DirectoryWithQuotaFeature
+          Arrays.stream(other.getFeatures()).filter(feature ->
+              feature instanceof AclFeature
+                  || feature instanceof XAttrFeature
+                  || feature instanceof DirectoryWithQuotaFeature
           ).map(feature -> {
             if (feature instanceof DirectoryWithQuotaFeature) {
               // Return copy if feature is quota because a ref could be updated
