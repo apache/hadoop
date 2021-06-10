@@ -116,7 +116,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
     StorageBlockReport reports[] =
         new StorageBlockReport[cluster.getStoragesPerDatanode()];
 
-    ArrayList<Replica> blocks = new ArrayList<Replica>();
+    ArrayList<Replica> blocks = new ArrayList<>();
 
     for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
       Block localBlock = locatedBlock.getBlock().getLocalBlock();

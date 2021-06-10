@@ -3134,7 +3134,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     DatanodeDescriptor dn = storageInfo.getDatanodeDescriptor();
 
-    LOG.debug("Reported block {} on {} size {}  replicaState = {}", block, dn,
+    LOG.debug("Reported block {} on {} size {} replicaState = {}", block, dn,
         block.getNumBytes(), reportedState);
 
     if (shouldPostponeBlocksFromFuture && isGenStampInFuture(block)) {

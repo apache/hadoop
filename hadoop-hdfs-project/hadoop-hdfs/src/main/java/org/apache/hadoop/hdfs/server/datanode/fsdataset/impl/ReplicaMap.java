@@ -221,9 +221,8 @@ class ReplicaMap {
    * @return the number of replicas in the map
    */
   int size(String bpid) {
-    LightWeightResizableGSet<Block, ReplicaInfo> m = null;
     try (AutoCloseableLock l = readLock.acquire()) {
-      m = map.get(bpid);
+      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       return m != null ? m.size() : 0;
     }
   }

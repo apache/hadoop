@@ -466,7 +466,7 @@ public class ProvidedStorageMap {
     }
 
     @Override
-    public boolean removeBlock(BlockInfo b) {
+    boolean removeBlock(BlockInfo b) {
       ProvidedDescriptor dn = (ProvidedDescriptor) getDatanodeDescriptor();
       if (dn.activeProvidedDatanodes() == 0) {
         return super.removeBlock(b);

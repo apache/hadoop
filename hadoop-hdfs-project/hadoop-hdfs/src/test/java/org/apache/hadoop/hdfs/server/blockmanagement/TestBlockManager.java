@@ -97,6 +97,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -1631,8 +1632,9 @@ public class TestBlockManager {
     BlockInfo blockInfo =
         blockManager.getStoredBlock(lb.getBlock().getLocalBlock());
     LOG.info("Block " + blockInfo + " storages: ");
-    for (int i = 0; i < 3; i++) {
-      DatanodeStorageInfo dn = blockInfo.getStorageInfo(i);
+    Iterator<DatanodeStorageInfo> itr = blockInfo.getStorageInfos();
+    while (itr.hasNext()) {
+      DatanodeStorageInfo dn = itr.next();
       LOG.info(" Rack: " + dn.getDatanodeDescriptor().getNetworkLocation()
           + ", DataNode: " + dn.getDatanodeDescriptor().getXferAddr());
     }

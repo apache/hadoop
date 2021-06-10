@@ -271,7 +271,7 @@ public class DatanodeStorageInfo {
     blockList = b.listInsert(blockList, this);
     numBlocks++;
   }
-  public boolean removeBlock(BlockInfo b) {
+  boolean removeBlock(BlockInfo b) {
     blockList = b.listRemove(blockList, this);
     if (b.removeStorage(this)) {
       numBlocks--;
@@ -298,12 +298,6 @@ public class DatanodeStorageInfo {
     return curIndex;
   }
 
-  int getHeadIndex(DatanodeStorageInfo storageInfo) {
-    if (blockList == null) {
-      return -1;
-    }
-    return blockList.findStorageInfo(storageInfo);
-  }
 
   /**
    * Used for testing only.
