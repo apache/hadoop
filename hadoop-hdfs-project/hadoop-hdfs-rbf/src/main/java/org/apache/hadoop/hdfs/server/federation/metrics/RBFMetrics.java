@@ -110,10 +110,6 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   /** Format for a date. */
   private static final String DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
 
-  /** Prevent holding the page from load too long. */
-  private final long timeOut;
-
-
   /** Router interface. */
   private final Router router;
 
@@ -177,8 +173,6 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
     // Initialize the cache for the DN reports
     Configuration conf = router.getConfig();
-    this.timeOut = conf.getTimeDuration(RBFConfigKeys.DN_REPORT_TIME_OUT,
-        RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
     this.topTokenRealOwners = conf.getInt(
         RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY,
         RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT);
@@ -425,6 +419,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
         DatanodeReportType.LIVE, DatanodeInfo::getCapacity);
   }
 
+  /**
+   * Get the cache information of cluster nodes.
+   */
   public LoadingCache<DatanodeReportType, DatanodeInfo[]> getDnCache() {
     return dnCache;
   }
@@ -437,14 +434,24 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
    * @return Aggregated long.
    */
   public long getNameserviceAggregatedLong(
-      DatanodeReportType type, ToLongFunction<DatanodeInfo> f){
-    long size = 0;
+      DatanodeReportType type, ToLongFunction<DatanodeInfo> f) {
+    return Arrays.stream(getDataNodeInfo(type)).mapToLong(f).sum();
+  }
+
+  /**
+   * Get the nodes information of the cluster according to DataNoderePortType.
+   *
+   * @param type a DatanodeReportType
+   * @return nodes information.
+   */
+  public DatanodeInfo[] getDataNodeInfo(DatanodeReportType type) {
+    DatanodeInfo[] datanodeInfo = DatanodeInfo.EMPTY_ARRAY;
     try {
-      size = Arrays.stream(dnCache.get(type)).mapToLong(f).sum();
+      datanodeInfo = dnCache.get(type);
     } catch (ExecutionException e) {
-      LOG.debug("Cannot get " + type + " nodes", e.getMessage());
+      LOG.debug("Cannot get {} nodes {}", type, e.getMessage());
     }
-    return size;
+    return datanodeInfo;
   }
 
   /**
@@ -455,14 +462,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
    * @return Aggregated Integer.
    */
   public int getNameserviceAggregatedInt(
-      DatanodeReportType type, Predicate<DatanodeInfo> f){
-    int size = 0;
-    try {
-      Arrays.stream(dnCache.get(DatanodeReportType.LIVE)).filter(f).count();
-    } catch (ExecutionException e) {
-      LOG.debug("Cannot get " + type + " nodes", e.getMessage());
-    }
-    return size;
+      DatanodeReportType type, Predicate<DatanodeInfo> f) {
+    return (int) Arrays.stream(getDataNodeInfo(type)).filter(f).count();
   }
 
   /**
@@ -471,13 +472,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
    * @return Aggregated Integer.
    */
   public int getNameserviceAggregatedLength(DatanodeReportType type){
-    int size = 0;
-    try {
-      size = dnCache.get(type).length;
-    } catch (ExecutionException e) {
-      LOG.debug("Cannot get " + type + " nodes", e.getMessage());
-    }
-    return size;
+    return getDataNodeInfo(type).length;
   }
 
   @Override

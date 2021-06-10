@@ -499,7 +499,7 @@ public class NamenodeBeanMetrics
     } catch (IOException e) {
       LOG.error("Cannot get " + type + " nodes", e);
     } catch (ExecutionException e) {
-      LOG.error("Cannot get " + type + " nodes", e);
+      LOG.error("Cannot get {} nodes {}", type, e.getMessage());
     }
     return JSON.toString(info);
   }
