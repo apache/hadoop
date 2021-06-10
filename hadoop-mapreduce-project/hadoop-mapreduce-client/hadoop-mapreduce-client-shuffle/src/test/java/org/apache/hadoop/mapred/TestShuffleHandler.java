@@ -772,8 +772,7 @@ public class TestShuffleHandler {
     conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, getKeepAliveTimeout());
     testKeepAliveInternal(conf, ShuffleUrlType.SIMPLE, ShuffleUrlType.WITH_KEEPALIVE);
   }
-
-  //TODO implement error handling test that closes the channel
+  
   //TODO implement keepalive test that used properly mocked ShuffleHandler
   @Test(timeout = 10000)
   public void testKeepAliveInitiallyDisabled() throws Exception {

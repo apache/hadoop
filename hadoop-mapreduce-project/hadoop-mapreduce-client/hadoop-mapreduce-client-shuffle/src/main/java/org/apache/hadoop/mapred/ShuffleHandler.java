@@ -310,12 +310,11 @@ public class ShuffleHandler extends AuxiliaryService {
 
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
-      //TODO write test that reaches closing channel
-      LOG.debug("operationComplete");
+      LOG.trace("operationComplete");
       if (!future.isSuccess()) {
         LOG.error("Future is unsuccessful. Cause: ", future.cause());
-        LOG.error("Closing channel");
-        future.channel().closeFuture().awaitUninterruptibly();
+        LOG.debug("Closing channel");
+        future.channel().close();
         return;
       }
       int waitCount = this.reduceContext.getMapsToWait().decrementAndGet();
@@ -328,8 +327,8 @@ public class ShuffleHandler extends AuxiliaryService {
               (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
           timeoutHandler.setEnabledTimeout(true);
         } else {
-          LOG.error("Closing channel");
-          future.channel().closeFuture().awaitUninterruptibly();
+          LOG.debug("Closing channel");
+          future.channel().close();
         }
       } else {
         pipelineFact.getSHUFFLE().sendMap(reduceContext);
