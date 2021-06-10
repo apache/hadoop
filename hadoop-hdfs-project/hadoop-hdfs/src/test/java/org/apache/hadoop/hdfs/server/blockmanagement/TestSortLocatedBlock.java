@@ -47,8 +47,8 @@ public class TestSortLocatedBlock {
   static final Logger LOG = LoggerFactory
       .getLogger(TestSortLocatedBlock.class);
 
-  static DatanodeManager dm;
-  static final long STALE_INTERVAL = 30 * 1000 * 60;
+  private static DatanodeManager dm;
+  private static final long STALE_INTERVAL = 30 * 1000 * 60;
 
   @BeforeClass
   public static void setup() throws IOException {
@@ -137,7 +137,6 @@ public class TestSortLocatedBlock {
     BlockManager bm = Mockito.mock(BlockManager.class);
     BlockReportLeaseManager blm = new BlockReportLeaseManager(conf);
     Mockito.when(bm.getBlockReportLeaseManager()).thenReturn(blm);
-    DatanodeManager dm = new DatanodeManager(bm, fsn, conf);
-    return dm;
+    return new DatanodeManager(bm, fsn, conf);
   }
 }
