@@ -97,6 +97,8 @@ public class NodeCLI extends YarnCLI {
       }
     }
 
+    createAndStartYarnClient();
+
     int exitCode = -1;
     CommandLine cliParser = null;
     try {
@@ -106,8 +108,6 @@ public class NodeCLI extends YarnCLI {
       printUsage(opts);
       return exitCode;
     }
-
-    createAndStartYarnClient();
 
     if (cliParser.hasOption("status")) {
       if (args.length != 2) {

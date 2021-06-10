@@ -61,6 +61,8 @@ public class QueueCLI extends YarnCLI {
     opts.addOption(HELP_CMD, false, "Displays help for all commands.");
     opts.getOption(STATUS_CMD).setArgName("Queue Name");
 
+    createAndStartYarnClient();
+
     CommandLine cliParser = null;
     try {
       cliParser = new GnuParser().parse(opts, args);
@@ -69,7 +71,7 @@ public class QueueCLI extends YarnCLI {
       printUsage(opts);
       return -1;
     }
-    createAndStartYarnClient();
+
     if (cliParser.hasOption(STATUS_CMD)) {
       if (args.length != 2) {
         printUsage(opts);
