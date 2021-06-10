@@ -64,7 +64,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
@@ -81,6 +83,7 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
@@ -307,7 +310,11 @@ public class ShuffleHandler extends AuxiliaryService {
 
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
+      //TODO write test that reaches closing channel
+      LOG.debug("operationComplete");
       if (!future.isSuccess()) {
+        LOG.error("Future is unsuccessful. Cause: ", future.cause());
+        LOG.error("Closing channel");
         future.channel().closeFuture().awaitUninterruptibly();
         return;
       }
@@ -321,6 +328,7 @@ public class ShuffleHandler extends AuxiliaryService {
               (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
           timeoutHandler.setEnabledTimeout(true);
         } else {
+          LOG.error("Closing channel");
           future.channel().closeFuture().awaitUninterruptibly();
         }
       } else {
@@ -335,14 +343,14 @@ public class ShuffleHandler extends AuxiliaryService {
    */
   private static class ReduceContext {
 
-    private List<String> mapIds;
-    private AtomicInteger mapsToWait;
-    private AtomicInteger mapsToSend;
-    private int reduceId;
-    private ChannelHandlerContext ctx;
-    private String user;
-    private Map<String, Shuffle.MapOutputInfo> infoMap;
-    private String jobId;
+    private final List<String> mapIds;
+    private final AtomicInteger mapsToWait;
+    private final AtomicInteger mapsToSend;
+    private final int reduceId;
+    private final ChannelHandlerContext ctx;
+    private final String user;
+    private final Map<String, Shuffle.MapOutputInfo> infoMap;
+    private final String jobId;
     private final boolean keepAlive;
 
     public ReduceContext(List<String> mapIds, int rId,
@@ -801,6 +809,7 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
       if (e.state() == IdleState.WRITER_IDLE && enabledTimeout) {
+        LOG.debug("Closing channel as writer was idle");
         ctx.channel().close();
       }
     }
@@ -841,6 +850,15 @@ public class ShuffleHandler extends AuxiliaryService {
       pipeline.addLast("encoder", new HttpResponseEncoder());
       pipeline.addLast("chunking", new ChunkedWriteHandler());
       pipeline.addLast("shuffle", SHUFFLE);
+      //TODO add a config option for this later
+      //https://stackoverflow.com/questions/50612403/catch-all-exception-handling-for-outbound-channelhandler
+      pipeline.addLast("outboundExcHandler", new ChannelOutboundHandlerAdapter() {
+        @Override
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+          promise.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+          super.write(ctx, msg, promise);
+        }
+      });
       pipeline.addLast("idle", new IdleStateHandler(
           0, connectionKeepAliveTimeOut, 0));
       pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler());
@@ -909,6 +927,7 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelActive(ChannelHandlerContext ctx)
         throws Exception {
+      LOG.debug("channelActive");
       int numConnections = acceptedConnections.incrementAndGet();
       if ((maxShuffleConnections > 0) && (numConnections >= maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
@@ -941,19 +960,25 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg)
         throws Exception {
+      LOG.debug("channelRead");
       HttpRequest request = (HttpRequest) msg;
-      if (request.getMethod() != GET) {
+      if (request.method() != GET) {
           sendError(ctx, METHOD_NOT_ALLOWED);
           return;
       }
       // Check whether the shuffle version is compatible
+      String shuffleVersion = ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION;
+      if (request.headers() != null) {
+        shuffleVersion = request.headers()
+            .get(ShuffleHeader.HTTP_HEADER_VERSION);
+      }
+      LOG.debug("Shuffle version: {}", shuffleVersion);
       if (!ShuffleHeader.DEFAULT_HTTP_HEADER_NAME.equals(
           request.headers() != null ?
               request.headers().get(ShuffleHeader.HTTP_HEADER_NAME) : null)
           || !ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION.equals(
               request.headers() != null ?
-                  request.headers()
-                      .get(ShuffleHeader.HTTP_HEADER_VERSION) : null)) {
+                  shuffleVersion : null)) {
         sendError(ctx, "Incompatible shuffle request version", BAD_REQUEST);
       }
       final Map<String,List<String>> q =
@@ -971,7 +996,7 @@ public class ShuffleHandler extends AuxiliaryService {
       final List<String> reduceQ = q.get("reduce");
       final List<String> jobQ = q.get("job");
       if (LOG.isDebugEnabled()) {
-        LOG.debug("RECV: " + request.getUri() +
+        LOG.debug("RECV: " + request.uri() +
             "\n  mapId: " + mapIds +
             "\n  reduceId: " + reduceQ +
             "\n  jobId: " + jobQ +
@@ -999,7 +1024,7 @@ public class ShuffleHandler extends AuxiliaryService {
         sendError(ctx, "Bad job parameter", BAD_REQUEST);
         return;
       }
-      final String reqUri = request.getUri();
+      final String reqUri = request.uri();
       if (null == reqUri) {
         // TODO? add upstream?
         sendError(ctx, FORBIDDEN);
@@ -1034,17 +1059,31 @@ public class ShuffleHandler extends AuxiliaryService {
         sendError(ctx,errorMessage , INTERNAL_SERVER_ERROR);
         return;
       }
-      ch.writeAndFlush(response);
-      //Initialize one ReduceContext object per messageReceived call
+      LOG.debug("Writing response: " + response);
+      ch.writeAndFlush(response).addListener(new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture future) {
+          if (future.isSuccess()) {
+            LOG.debug("Written HTTP response object successfully");
+          } else {
+            LOG.error("Error while writing HTTP response object: {}", response);
+          }
+        }
+      });
+      //Initialize one ReduceContext object per channelRead call
       boolean keepAlive = keepAliveParam || connectionKeepAliveEnabled;
       ReduceContext reduceContext = new ReduceContext(mapIds, reduceId, ctx,
           user, mapOutputInfoMap, jobId, keepAlive);
+      LOG.debug("After response");
       for (int i = 0; i < Math.min(maxSessionOpenFiles, mapIds.size()); i++) {
         ChannelFuture nextMap = sendMap(reduceContext);
         if(nextMap == null) {
           return;
         }
       }
+      //TODO add explanation
+      //HADOOP-15327
+      ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
     }
 
     /**
@@ -1072,6 +1111,7 @@ public class ShuffleHandler extends AuxiliaryService {
             info = getMapOutputInfo(mapId, reduceContext.getReduceId(),
                 reduceContext.getJobId(), reduceContext.getUser());
           }
+          LOG.debug("***before sendMapOutput");
           nextMap = sendMapOutput(
               reduceContext.getCtx(),
               reduceContext.getCtx().channel(),
@@ -1320,7 +1360,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
     protected void sendError(ChannelHandlerContext ctx, String message,
         HttpResponseStatus status) {
-      sendError(ctx, message, status, Collections.<String, String>emptyMap());
+      sendError(ctx, message, status, Collections.emptyMap());
     }
 
     protected void sendError(ChannelHandlerContext ctx, String msg,
@@ -1404,11 +1444,7 @@ public class ShuffleHandler extends AuxiliaryService {
       if (!attemptId.equals(that.attemptId)) {
         return false;
       }
-      if (!jobId.equals(that.jobId)) {
-        return false;
-      }
-
-      return true;
+      return jobId.equals(that.jobId);
     }
 
     @Override
