@@ -3815,7 +3815,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private void innerCopyFromLocalFile(boolean delSrc, boolean overwrite,
       Path src, Path dst)
-      throws IOException, FileAlreadyExistsException, AmazonClientException {
+      throws IOException, PathExistsException, AmazonClientException {
     LOG.debug("Copying local file from {} to {}", src, dst);
 
     // Since we have a local file, we don't need to stream into a temporary file
@@ -3854,8 +3854,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final ObjectMetadata om = newObjectMetadata(srcFile.length());
       Progressable progress = null;
       PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcFile);
-      invoker.retry("copyFromLocalFile(" + src + ")", dst.toString(), true,
-              () -> executePut(putObjectRequest, progress));
+      trackDurationOfInvocation(getDurationTrackerFactory(), OBJECT_PUT_REQUESTS.getSymbol(),
+              () -> invoker.retry(
+                      "copyFromLocalFile(" + src + ")", dst.toString(),
+                      true,
+                      () -> executePut(putObjectRequest, progress)));
     }
 
     if (delSrc) {
