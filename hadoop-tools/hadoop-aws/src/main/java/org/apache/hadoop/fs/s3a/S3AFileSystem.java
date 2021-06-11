@@ -79,6 +79,7 @@ import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
+import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -3784,8 +3785,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     checkNotClosed();
     LOG.debug("Copying local file from {} to {}", src, dst);
     trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst, () -> {
-      //  innerCopyFromLocalFile(delSrc, overwrite, src, dst);
-      super.copyFromLocalFile(delSrc, overwrite, src, dst);
+      innerCopyFromLocalFile(delSrc, overwrite, src, dst);
       return null;
     });
   }
@@ -3820,31 +3820,44 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // Since we have a local file, we don't need to stream into a temporary file
     LocalFileSystem local = getLocal(getConf());
-    File srcfile = local.pathToFile(src);
-    if (!srcfile.exists()) {
+    File srcFile = local.pathToFile(src);
+    if (!srcFile.exists()) {
       throw new FileNotFoundException("No file: " + src);
-    }
-    if (!srcfile.isFile()) {
-      throw new FileNotFoundException("Not a file: " + src);
     }
 
     try {
-      FileStatus status = innerGetFileStatus(dst, false, StatusProbeEnum.ALL);
-      if (!status.isFile()) {
-        throw new FileAlreadyExistsException(dst + " exists and is not a file");
+      S3AFileStatus dstStatus = innerGetFileStatus(dst, false, StatusProbeEnum.ALL);
+      if (srcFile.isFile() && dstStatus.isDirectory()) {
+        throw new PathExistsException("Source is file and destination '" + dst + "' is directory");
       }
+
       if (!overwrite) {
-        throw new FileAlreadyExistsException(dst + " already exists");
+        throw new PathExistsException(dst + " already exists");
       }
     } catch (FileNotFoundException e) {
       // no destination, all is well
     }
-    final String key = pathToKey(dst);
-    final ObjectMetadata om = newObjectMetadata(srcfile.length());
-    Progressable progress = null;
-    PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
-    invoker.retry("copyFromLocalFile(" + src + ")", dst.toString(), true,
-        () -> executePut(putObjectRequest, progress));
+
+    if (srcFile.isDirectory()) {
+      // make the directory in the destination
+      String key = pathToKey(dst);
+      createFakeDirectory(key);
+      FileStatus[] contents = local.listStatus(src);
+
+      // copy all directory contents from dst to src: DFS
+      for (FileStatus status: contents) {
+        Path childDst = new Path(dst, status.getPath().getName());
+        innerCopyFromLocalFile(delSrc, overwrite, status.getPath(), childDst);
+      }
+    } else {
+      final String key = pathToKey(dst);
+      final ObjectMetadata om = newObjectMetadata(srcFile.length());
+      Progressable progress = null;
+      PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcFile);
+      invoker.retry("copyFromLocalFile(" + src + ")", dst.toString(), true,
+              () -> executePut(putObjectRequest, progress));
+    }
+
     if (delSrc) {
       local.delete(src, false);
     }

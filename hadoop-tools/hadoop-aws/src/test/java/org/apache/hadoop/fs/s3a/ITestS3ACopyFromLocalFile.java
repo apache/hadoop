@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -100,14 +101,13 @@ public class ITestS3ACopyFromLocalFile extends AbstractS3ATestBase {
   }
 
   @Test
-  @Ignore("HADOOP-15932")
   public void testCopyFileNoOverwriteDirectory() throws Throwable {
     file = createTempFile("hello");
     Path dest = upload(file, true);
     S3AFileSystem fs = getFileSystem();
     fs.delete(dest, false);
     fs.mkdirs(dest);
-    intercept(FileAlreadyExistsException.class,
+    intercept(PathExistsException.class,
         () -> upload(file, true));
   }
 
@@ -120,15 +120,48 @@ public class ITestS3ACopyFromLocalFile extends AbstractS3ATestBase {
         () -> upload(file, true));
   }
 
+  /*
+   * The following path is being created on disk and copied over
+   * /parent/ (trailing slash to make it clear it's  a directory
+   * /parent/test1.txt
+   * /parent/child/test.txt
+   */
   @Test
-  @Ignore("HADOOP-15932")
-  public void testCopyDirectoryFile() throws Throwable {
-    file = File.createTempFile("test", ".txt");
-    // first upload to create
-    intercept(FileNotFoundException.class, "Not a file",
-        () -> upload(file.getParentFile(), true));
+  public void testCopyTreeDirectoryWithoutDelete() throws Throwable {
+    java.nio.file.Path srcDir = Files.createTempDirectory("parent");
+    java.nio.file.Path childDir = Files.createTempDirectory(srcDir, "child");
+    java.nio.file.Path parentFile = Files.createTempFile(srcDir, "test1", ".txt");
+    java.nio.file.Path childFile = Files.createTempFile(childDir, "test2", ".txt");
+
+    Path src = new Path(srcDir.toUri());
+    Path dst = path(srcDir.getFileName().toString());
+    getFileSystem().copyFromLocalFile(false, true, src, dst);
+
+    java.nio.file.Path parent = srcDir.getParent();
+
+    assertPathExists("Parent directory", srcDir, parent);
+    assertPathExists("Child directory", childDir, parent);
+    assertPathExists("Parent file", parentFile, parent);
+    assertPathExists("Child file", childFile, parent);
+
+    if (!Files.exists(srcDir)) {
+      throw new Exception("Folder was deleted when it shouldn't have!");
+    }
   }
 
+  @Test
+  public void testCopyDirectoryWithDelete() throws Throwable {
+    java.nio.file.Path srcDir = Files.createTempDirectory("parent");
+    Files.createTempFile(srcDir, "test1", ".txt");
+
+    Path src = new Path(srcDir.toUri());
+    Path dst = path(srcDir.getFileName().toString());
+    getFileSystem().copyFromLocalFile(true, true, src, dst);
+
+    if (Files.exists(srcDir)) {
+        throw new Exception("Source directory should've been deleted");
+    }
+  }
 
   @Test
   public void testLocalFilesOnly() throws Throwable {
@@ -157,5 +190,12 @@ public class ITestS3ACopyFromLocalFile extends AbstractS3ATestBase {
     File f = File.createTempFile("test", ".txt");
     FileUtils.write(f, text, ASCII);
     return f;
+  }
+
+  private void assertPathExists(String message,
+                                java.nio.file.Path toVerify,
+                                java.nio.file.Path parent) throws IOException {
+    Path qualifiedPath = path(parent.relativize(toVerify).toString());
+    assertPathExists(message, qualifiedPath);
   }
 }
