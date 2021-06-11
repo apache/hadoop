@@ -906,7 +906,9 @@ public class TestShuffleHandler {
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
           ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
       conn.connect();
+      int rc = conn.getResponseCode();
       conn.getInputStream();
+      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
       Assert.assertTrue("socket should be set KEEP_ALIVE",
           shuffleHandler.isSocketKeepAlive());
     } finally {
@@ -915,6 +917,8 @@ public class TestShuffleHandler {
       }
       shuffleHandler.stop();
     }
+    //TODO snemeth Add back this assertion when bug is determined and fixed. 
+    // See detailed notes in: org.apache.hadoop.mapred.ShuffleHandler.Shuffle.channelRead
     Assert.assertEquals("Should have no caught exceptions", 
         new ArrayList<>(), shuffleHandler.failures);
   }

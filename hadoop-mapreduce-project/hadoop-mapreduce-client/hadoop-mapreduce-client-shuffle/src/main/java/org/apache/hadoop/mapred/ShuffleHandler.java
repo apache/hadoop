@@ -1054,7 +1054,15 @@ public class ShuffleHandler extends AuxiliaryService {
         populateHeaders(mapIds, jobId, user, reduceId, request,
           response, keepAliveParam, mapOutputInfoMap);
       } catch(IOException e) {
-        //TODO This seems like a bug. sendError also writes response.
+        //TODO snemeth This seems like a bug combined with bad expectations in the tests.
+        // This writes a HTTP 200 OK response here
+        // However, sendError writes a response later 
+        // with HTTP 500 Internal Server error. 
+        // Tests also expecting a successful connection.
+        // The successful HTTP connection is just a side-effect of the fact that the unsuccessful HTTP response can't be written to the channel because of: 
+        // an exception thrown from the HttpResponseEncoder.
+        // The exception: java.lang.IllegalStateException: unexpected message type: DefaultFullHttpResponse, state: 1
+        // With Netty 3.x, this was probably another side-effect, so the second unsuccessful HTTP response was not written to the channel, either.
         ch.writeAndFlush(response);
         LOG.error("Shuffle error in populating headers :", e);
         String errorMessage = getErrorMessage(e);
