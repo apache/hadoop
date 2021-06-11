@@ -3133,9 +3133,10 @@ public class BlockManager implements BlockStatsMXBean {
       final Collection<StatefulBlockInfo> toUC) {
 
     DatanodeDescriptor dn = storageInfo.getDatanodeDescriptor();
-
-    LOG.debug("Reported block {} on {} size {} replicaState = {}", block, dn,
-        block.getNumBytes(), reportedState);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Reported block {} on {} size {} replicaState = {}", block, dn,
+          block.getNumBytes(), reportedState);
+    }
 
     if (shouldPostponeBlocksFromFuture && isGenStampInFuture(block)) {
       queueReportedBlock(storageInfo, block, reportedState,
@@ -3172,7 +3173,7 @@ public class BlockManager implements BlockStatsMXBean {
         // comes from the IBR / FBR and hence what we should use to compare
         // against the memory state.
         // See HDFS-6289 and HDFS-15422 for more context.
-        queueReportedBlock(storageInfo, block, reportedState,
+        queueReportedBlock(storageInfo, storedBlock, reportedState,
             QUEUE_REASON_CORRUPT_STATE);
       } else {
         toCorrupt.add(c);
