@@ -795,10 +795,12 @@ public class ShuffleHandler extends AuxiliaryService {
   }
 
   static class TimeoutHandler extends IdleStateHandler {
+    private final int connectionKeepAliveTimeOut;
     private boolean enabledTimeout;
 
-    public TimeoutHandler() {
+    public TimeoutHandler(int connectionKeepAliveTimeOut) {
       super(1, 1, 1);
+      this.connectionKeepAliveTimeOut = connectionKeepAliveTimeOut;
     }
 
     void setEnabledTimeout(boolean enabledTimeout) {
@@ -808,7 +810,7 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
       if (e.state() == IdleState.WRITER_IDLE && enabledTimeout) {
-        LOG.debug("Closing channel as writer was idle");
+        LOG.debug("Closing channel as writer was idle for {} seconds", connectionKeepAliveTimeOut);
         ctx.channel().close();
       }
     }
@@ -860,7 +862,7 @@ public class ShuffleHandler extends AuxiliaryService {
       });
       pipeline.addLast("idle", new IdleStateHandler(
           0, connectionKeepAliveTimeOut, 0));
-      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler());
+      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler(connectionKeepAliveTimeOut));
       // TODO factor security manager into pipeline
       // TODO factor out encode/decode to permit binary shuffle
       // TODO factor out decode of index to permit alt. models
@@ -1052,6 +1054,7 @@ public class ShuffleHandler extends AuxiliaryService {
         populateHeaders(mapIds, jobId, user, reduceId, request,
           response, keepAliveParam, mapOutputInfoMap);
       } catch(IOException e) {
+        //TODO This seems like a bug. sendError also writes response.
         ch.writeAndFlush(response);
         LOG.error("Shuffle error in populating headers :", e);
         String errorMessage = getErrorMessage(e);

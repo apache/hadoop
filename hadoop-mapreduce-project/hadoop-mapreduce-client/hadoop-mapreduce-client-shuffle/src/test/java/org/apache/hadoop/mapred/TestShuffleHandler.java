@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -55,6 +56,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -511,7 +513,33 @@ public class TestShuffleHandler {
     return DEFAULT_KEEP_ALIVE_TIMEOUT;
   }
 
+  class ShuffleHandlerForTests extends ShuffleHandler {
+    final ArrayList<Throwable> failures = new ArrayList<>();
+
+    public ShuffleHandlerForTests() {
+    }
+
+    public ShuffleHandlerForTests(MetricsSystem ms) {
+      super(ms);
+    }
+
+    @Override
+    protected Shuffle getShuffle(final Configuration conf) {
+      return new Shuffle(conf) {
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx,
+            Throwable cause) throws Exception {
+          LOG.debug("ExceptionCaught");
+          failures.add(cause);
+          super.exceptionCaught(ctx, cause);
+        }
+      };
+    }
+  }
+
   class MockShuffleHandler extends org.apache.hadoop.mapred.ShuffleHandler {
+    final ArrayList<Throwable> failures = new ArrayList<>();
+    
     private AuxiliaryLocalPathHandler pathHandler =
         new TestAuxiliaryLocalPathHandler();
     @Override
@@ -551,6 +579,14 @@ public class TestShuffleHandler {
           }
           return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
         }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx,
+            Throwable cause) throws Exception {
+          LOG.debug("ExceptionCaught");
+          failures.add(cause);
+          super.exceptionCaught(ctx, cause);
+        }
       };
     }
 
@@ -589,6 +625,8 @@ public class TestShuffleHandler {
 
   private static class MockShuffleHandler2 extends
       org.apache.hadoop.mapred.ShuffleHandler {
+    final ArrayList<Throwable> failures = new ArrayList<>(1);
+    
     boolean socketKeepAlive = false;
     @Override
     protected Shuffle getShuffle(final Configuration conf) {
@@ -599,6 +637,14 @@ public class TestShuffleHandler {
             throws IOException {
           SocketChannel channel = (SocketChannel)(ctx.channel());
           socketKeepAlive = channel.config().isKeepAlive();
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx,
+            Throwable cause) throws Exception {
+          LOG.debug("ExceptionCaught");
+          failures.add(cause);
+          super.exceptionCaught(ctx, cause);
         }
       };
     }
@@ -632,7 +678,7 @@ public class TestShuffleHandler {
   @Test (timeout = 10000)
   public void testShuffleMetrics() throws Exception {
     MetricsSystem ms = new MetricsSystemImpl();
-    ShuffleHandler sh = new ShuffleHandler(ms);
+    ShuffleHandler sh = new ShuffleHandlerForTests(ms);
     ChannelFuture cf = mock(ChannelFuture.class);
     when(cf.isSuccess()).thenReturn(true).thenReturn(false);
 
@@ -669,7 +715,8 @@ public class TestShuffleHandler {
     final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
-    ShuffleHandler shuffleHandler = new ShuffleHandler() {
+    ShuffleHandler shuffleHandler = new ShuffleHandlerForTests() {
+      
       @Override
       protected Shuffle getShuffle(Configuration conf) {
         // replace the shuffle handler with one stubbed for testing
@@ -753,7 +800,11 @@ public class TestShuffleHandler {
     shuffleHandler.stop();
     Assert.assertTrue("sendError called when client closed connection",
         failures.size() == 0);
+
+    Assert.assertEquals("Should have no caught exceptions",
+        new ArrayList<>(), failures);
   }
+  
   static class LastSocketAddress {
     SocketAddress lastAddress;
     void setAddress(SocketAddress lastAddress) {
@@ -864,6 +915,8 @@ public class TestShuffleHandler {
       }
       shuffleHandler.stop();
     }
+    Assert.assertEquals("Should have no caught exceptions", 
+        new ArrayList<>(), shuffleHandler.failures);
   }
 
   /**
@@ -877,7 +930,7 @@ public class TestShuffleHandler {
     final int failureNum = 3;
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
-    ShuffleHandler shuffleHandler = new ShuffleHandler();
+    ShuffleHandler shuffleHandler = new ShuffleHandlerForTests();
     shuffleHandler.init(conf);
     shuffleHandler.start();
 
@@ -908,6 +961,7 @@ public class TestShuffleHandler {
    */
   @Test (timeout = 10000)
   public void testMaxConnections() throws Exception {
+    final ArrayList<Throwable> failures = new ArrayList<>();
     
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
@@ -953,6 +1007,14 @@ public class TestShuffleHandler {
               header.write(dob);
             }
             return ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+          }
+          
+          @Override
+          public void exceptionCaught(ChannelHandlerContext ctx,
+              Throwable cause) throws Exception {
+            LOG.debug("ExceptionCaught");
+            failures.add(cause);
+            super.exceptionCaught(ctx, cause);
           }
         };
       }
@@ -1028,6 +1090,13 @@ public class TestShuffleHandler {
     Assert.assertTrue("The backoff value cannot be negative.", backoff > 0);
 
     shuffleHandler.stop();
+
+    //It's okay to get a ClosedChannelException.
+    //All other kinds of exceptions means something went wrong
+    Assert.assertEquals("Should have no caught exceptions",
+        new ArrayList<>(), failures.stream()
+            .filter(f -> !(f instanceof ClosedChannelException))
+            .collect(toList()));
   }
 
   /**
@@ -1038,6 +1107,7 @@ public class TestShuffleHandler {
    */
   @Test(timeout = 100000)
   public void testMapFileAccess() throws IOException {
+    final ArrayList<Throwable> failures = new ArrayList<>();
     // This will run only in NativeIO is enabled as SecureIOUtils need it
     assumeTrue(NativeIO.isAvailable());
     Configuration conf = new Configuration();
@@ -1067,7 +1137,14 @@ public class TestShuffleHandler {
               throws IOException {
             // Do nothing.
           }
-
+          
+          @Override
+          public void exceptionCaught(ChannelHandlerContext ctx,
+              Throwable cause) throws Exception {
+            LOG.debug("ExceptionCaught");
+            failures.add(cause);
+            super.exceptionCaught(ctx, cause);
+          }
         };
       }
     };
@@ -1119,6 +1196,9 @@ public class TestShuffleHandler {
       shuffleHandler.stop();
       FileUtil.fullyDelete(ABS_LOG_DIR);
     }
+
+    Assert.assertEquals("Should have no caught exceptions",
+        new ArrayList<>(), failures);
   }
 
   private static void createShuffleHandlerFiles(File logDir, String user,
@@ -1178,7 +1258,7 @@ public class TestShuffleHandler {
     final File tmpDir = new File(System.getProperty("test.build.data",
         System.getProperty("java.io.tmpdir")),
         TestShuffleHandler.class.getName());
-    ShuffleHandler shuffle = new ShuffleHandler();
+    ShuffleHandler shuffle = new ShuffleHandlerForTests();
     AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
     shuffle.setAuxiliaryLocalPathHandler(pathHandler);
     Configuration conf = new Configuration();
@@ -1210,7 +1290,7 @@ public class TestShuffleHandler {
 
       // emulate shuffle handler restart
       shuffle.close();
-      shuffle = new ShuffleHandler();
+      shuffle = new ShuffleHandlerForTests();
       shuffle.setAuxiliaryLocalPathHandler(pathHandler);
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
@@ -1227,7 +1307,7 @@ public class TestShuffleHandler {
 
       // emulate shuffle handler restart
       shuffle.close();
-      shuffle = new ShuffleHandler();
+      shuffle = new ShuffleHandlerForTests();
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
       shuffle.start();
@@ -1253,7 +1333,7 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
-    ShuffleHandler shuffle = new ShuffleHandler();
+    ShuffleHandler shuffle = new ShuffleHandlerForTests();
     AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
     shuffle.setAuxiliaryLocalPathHandler(pathHandler);
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, ABS_LOG_DIR.getAbsolutePath());
@@ -1281,7 +1361,7 @@ public class TestShuffleHandler {
 
       // emulate shuffle handler restart
       shuffle.close();
-      shuffle = new ShuffleHandler();
+      shuffle = new ShuffleHandlerForTests();
       shuffle.setAuxiliaryLocalPathHandler(pathHandler);
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
@@ -1299,7 +1379,7 @@ public class TestShuffleHandler {
       shuffle.storeVersion(version11);
       Assert.assertEquals(version11, shuffle.loadVersion());
       shuffle.close();
-      shuffle = new ShuffleHandler();
+      shuffle = new ShuffleHandlerForTests();
       shuffle.setAuxiliaryLocalPathHandler(pathHandler);
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
@@ -1316,7 +1396,7 @@ public class TestShuffleHandler {
       shuffle.storeVersion(version21);
       Assert.assertEquals(version21, shuffle.loadVersion());
       shuffle.close();
-      shuffle = new ShuffleHandler();
+      shuffle = new ShuffleHandlerForTests();
       shuffle.setAuxiliaryLocalPathHandler(pathHandler);
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
@@ -1466,7 +1546,7 @@ public class TestShuffleHandler {
   public void testSendMapCount() throws Exception {
     final List<ShuffleHandler.ReduceMapFileCount> listenerList =
         new ArrayList<ShuffleHandler.ReduceMapFileCount>();
-
+    int connectionKeepAliveTimeOut = 5; //arbitrary value
     final ChannelHandlerContext mockCtx =
         mock(ChannelHandlerContext.class);
     final Channel mockCh = mock(AbstractChannel.class);
@@ -1477,7 +1557,7 @@ public class TestShuffleHandler {
     final ChannelFuture mockFuture = createMockChannelFuture(mockCh,
         listenerList);
     final ShuffleHandler.TimeoutHandler timerHandler =
-        new ShuffleHandler.TimeoutHandler();
+        new ShuffleHandler.TimeoutHandler(connectionKeepAliveTimeOut);
 
     // Mock Netty Channel Context and Channel behavior
     Mockito.doReturn(mockCh).when(mockCtx).channel();
@@ -1487,7 +1567,7 @@ public class TestShuffleHandler {
     when(mockCtx.channel()).thenReturn(mockCh);
     Mockito.doReturn(mockFuture).when(mockCh).writeAndFlush(Mockito.any(Object.class));
 
-    final ShuffleHandler sh = new MockShuffleHandler();
+    final MockShuffleHandler sh = new MockShuffleHandler();
     Configuration conf = new Configuration();
     sh.init(conf);
     sh.start();
@@ -1504,6 +1584,9 @@ public class TestShuffleHandler {
           listenerList.size() <= maxOpenFiles);
     }
     sh.close();
+
+    Assert.assertEquals("Should have no caught exceptions",
+        new ArrayList<>(), sh.failures);
   }
 
   public ChannelFuture createMockChannelFuture(Channel mockCh,
