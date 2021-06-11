@@ -137,6 +137,44 @@ public class TestBlockReportLease {
     }
   }
 
+  @Test
+  public void testCheckBlockReportLease2() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+            .numDataNodes(1).build()) {
+      cluster.waitActive();
+
+      FSNamesystem fsn = cluster.getNamesystem();
+      BlockManager blockManager = fsn.getBlockManager();
+      BlockManager spyBlockManager = spy(blockManager);
+      fsn.setBlockManagerForTesting(spyBlockManager);
+      String poolId = cluster.getNamesystem().getBlockPoolId();
+      NamenodeProtocols rpcServer = cluster.getNameNodeRpc();
+
+      // Test based on one DataNode report to Namenode
+      DataNode dn = cluster.getDataNodes().get(0);
+      DatanodeRegistration dnRegistration = dn.getDNRegistrationForBP(poolId);
+      StorageReport[] storages = dn.getFSDataset().getStorageReports(poolId);
+
+      HeartbeatResponse hbResponse = rpcServer.sendHeartbeat(
+              dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
+              SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
+      assertTrue(hbResponse.getFullBlockReportLeaseId() != 0);
+
+      spyBlockManager.addFBRDatanode(dnRegistration.getDatanodeUuid());
+      hbResponse = rpcServer.sendHeartbeat(
+              dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
+              SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
+      assertTrue(hbResponse.getFullBlockReportLeaseId() == 0);
+
+      spyBlockManager.removeFBRDatanode(dnRegistration.getDatanodeUuid());
+      hbResponse = rpcServer.sendHeartbeat(
+              dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
+              SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
+      assertTrue(hbResponse.getFullBlockReportLeaseId() != 0);
+    }
+  }
+
   private StorageBlockReport[] createReports(DatanodeStorage[] dnStorages,
       int numBlocks) {
     int longsPerBlock = 3;
