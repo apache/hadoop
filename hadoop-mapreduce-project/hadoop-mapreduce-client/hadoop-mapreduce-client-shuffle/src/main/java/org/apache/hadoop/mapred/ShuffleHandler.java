@@ -262,7 +262,7 @@ public class ShuffleHandler extends AuxiliaryService {
   public static final boolean DEFAULT_SHUFFLE_TRANSFERTO_ALLOWED = true;
   public static final boolean WINDOWS_DEFAULT_SHUFFLE_TRANSFERTO_ALLOWED = 
       false;
-  private static final String TIMEOUT_HANDLER = "timeout";
+  static final String TIMEOUT_HANDLER = "timeout";
 
   /* the maximum number of files a single GET request can
    open simultaneously during shuffle
@@ -799,8 +799,16 @@ public class ShuffleHandler extends AuxiliaryService {
     private boolean enabledTimeout;
 
     public TimeoutHandler(int connectionKeepAliveTimeOut) {
-      super(1, 1, 1);
+      //disable reader timeout
+      //set writer timeout to configured timeout value
+      //disable all idle timeout
+      super(0, connectionKeepAliveTimeOut, 0);
       this.connectionKeepAliveTimeOut = connectionKeepAliveTimeOut;
+    }
+
+    @VisibleForTesting
+    public int getConnectionKeepAliveTimeOut() {
+      return connectionKeepAliveTimeOut;
     }
 
     void setEnabledTimeout(boolean enabledTimeout) {
@@ -860,8 +868,6 @@ public class ShuffleHandler extends AuxiliaryService {
           super.write(ctx, msg, promise);
         }
       });
-      pipeline.addLast("idle", new IdleStateHandler(
-          0, connectionKeepAliveTimeOut, 0));
       pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler(connectionKeepAliveTimeOut));
       // TODO factor security manager into pipeline
       // TODO factor out encode/decode to permit binary shuffle

@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.timeout.IdleStateEvent;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
@@ -61,6 +62,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.zip.CheckedOutputStream;
@@ -132,6 +135,14 @@ public class TestShuffleHandler {
     final HeaderPopulator headerPopulator;
     final MapOutputSender mapOutputSender;
     private final int expectedResponseSize;
+    private Consumer<IdleStateEvent> channelIdleCallback;
+    private CustomTimeoutHandler customTimeoutHandler;
+    
+    public ShuffleHandlerForKeepAliveTests(int headerWriteCount, long attemptId, 
+        Consumer<IdleStateEvent> channelIdleCallback) throws IOException {
+      this(headerWriteCount, attemptId);
+      this.channelIdleCallback = channelIdleCallback;
+    }
 
     public ShuffleHandlerForKeepAliveTests(int headerWriteCount, long attemptId) throws IOException {
       this.headerWriteCount = headerWriteCount;
@@ -186,7 +197,17 @@ public class TestShuffleHandler {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
           ctx.pipeline().replace(HttpResponseEncoder.class, "loggingResponseEncoder", new LoggingHttpResponseEncoder(false));
+          replaceTimeoutHandlerWithCustom(ctx);
           super.channelActive(ctx);
+        }
+
+        private void replaceTimeoutHandlerWithCustom(ChannelHandlerContext ctx) {
+          TimeoutHandler oldTimeoutHandler =
+              (TimeoutHandler)ctx.pipeline().get(TIMEOUT_HANDLER);
+          int timeoutValue =
+              oldTimeoutHandler.getConnectionKeepAliveTimeOut();
+          customTimeoutHandler = new CustomTimeoutHandler(timeoutValue, channelIdleCallback);
+          ctx.pipeline().replace(TIMEOUT_HANDLER, TIMEOUT_HANDLER, customTimeoutHandler);
         }
 
         @Override
@@ -209,6 +230,28 @@ public class TestShuffleHandler {
           }
         }
       };
+    }
+    
+    private class CustomTimeoutHandler extends TimeoutHandler {
+      private boolean channelIdle = false;
+      private final Consumer<IdleStateEvent> channelIdleCallback;
+
+      public CustomTimeoutHandler(int connectionKeepAliveTimeOut,
+          Consumer<IdleStateEvent> channelIdleCallback) {
+        super(connectionKeepAliveTimeOut);
+        this.channelIdleCallback = channelIdleCallback;
+      }
+
+      @Override
+      public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
+        LOG.debug("Channel idle");
+        this.channelIdle = true;
+        if (channelIdleCallback != null) {
+          LOG.debug("Calling channel idle callback..");
+          channelIdleCallback.accept(e);
+        }
+        super.channelIdle(ctx, e);
+      }
     }
   }
 
@@ -1591,6 +1634,48 @@ public class TestShuffleHandler {
 
     Assert.assertEquals("Should have no caught exceptions",
         new ArrayList<>(), sh.failures);
+  }
+
+  @Test(timeout = 10000)
+  public void testIdleStateHandlingSpecifiedTimeout() throws Exception {
+    int timeoutSeconds = 4;
+    int expectedTimeoutSeconds = timeoutSeconds;
+    testHandlingIdleState(timeoutSeconds, expectedTimeoutSeconds);
+  }
+
+  @Test(timeout = 10000)
+  public void testIdleStateHandlingNegativeTimeoutDefaultsTo1Second() throws Exception {
+    int timeoutSeconds = -100;
+    int expectedTimeoutSeconds = 1;
+    testHandlingIdleState(timeoutSeconds, expectedTimeoutSeconds);
+  }
+
+  private void testHandlingIdleState(int configuredTimeoutSeconds, int expectedTimeoutSeconds) throws IOException,
+      InterruptedException {
+    Configuration conf = new Configuration();
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, configuredTimeoutSeconds);
+
+    final CountDownLatch countdownLatch = new CountDownLatch(1);
+    ShuffleHandlerForKeepAliveTests shuffleHandler = new ShuffleHandlerForKeepAliveTests(HEADER_WRITE_COUNT, ATTEMPT_ID, event -> {
+      countdownLatch.countDown();
+    });
+    shuffleHandler.init(conf);
+    shuffleHandler.start();
+
+    String shuffleUrl = getShuffleUrl(shuffleHandler, ATTEMPT_ID, ATTEMPT_ID);
+    String[] urls = new String[] {shuffleUrl};
+    HttpConnectionHelper httpConnectionHelper = new HttpConnectionHelper(shuffleHandler.lastSocketAddress);
+    long beforeConnectionTimestamp = System.currentTimeMillis();
+    httpConnectionHelper.connectToUrls(urls);
+    countdownLatch.await();
+    long channelClosedTimestamp = System.currentTimeMillis();
+    long secondsPassed =
+        TimeUnit.SECONDS.convert(channelClosedTimestamp - beforeConnectionTimestamp, TimeUnit.MILLISECONDS);
+    Assert.assertTrue(String.format("Expected at least %s seconds of timeout. " +
+            "Actual timeout seconds: %s", expectedTimeoutSeconds, secondsPassed),
+        secondsPassed >= expectedTimeoutSeconds);
   }
 
   public ChannelFuture createMockChannelFuture(Channel mockCh,
