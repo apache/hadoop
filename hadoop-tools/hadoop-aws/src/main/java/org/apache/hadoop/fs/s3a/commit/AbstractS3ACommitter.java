@@ -832,8 +832,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       try {
         pending = ops.listPendingUploadsUnderPath(dest);
       } catch (IOException e) {
-        // raised if the listPendingUploads call failed.
-        maybeIgnore(suppressExceptions, "aborting pending uploads", e);
+        // Swallow any errors given this is best effort
+        LOG.debug("Failed to list pending uploads under {}", dest, e);
         return;
       }
       if (!pending.isEmpty()) {
