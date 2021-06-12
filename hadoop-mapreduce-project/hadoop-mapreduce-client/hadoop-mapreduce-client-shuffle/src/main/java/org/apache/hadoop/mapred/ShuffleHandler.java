@@ -515,7 +515,7 @@ public class ShuffleHandler extends AuxiliaryService {
                                         DEFAULT_MAX_SHUFFLE_CONNECTIONS);
     int maxShuffleThreads = conf.getInt(MAX_SHUFFLE_THREADS,
                                         DEFAULT_MAX_SHUFFLE_THREADS);
-    // Since Netty 4.x, the value of 0 threads would default to: 
+    // Since Netty 4.x, the value of 0 threads would default to:
     // io.netty.channel.MultithreadEventLoopGroup.DEFAULT_EVENT_LOOP_THREADS
     // by simply passing 0 value to NioEventLoopGroup constructor below.
     // However, this logic to determinte thread count
@@ -1097,25 +1097,8 @@ public class ShuffleHandler extends AuxiliaryService {
           return;
         }
       }
-      //HADOOP-15327: After writing the DefaultHttpResponse to the channel, the HTTP body is constructed by 
-      //channel writes via calls to sendMap -> sendMapOutput.
-      //A significant difference between Netty 3.x and 4.x is the introduced HTTP response objects.
-      //These are: DefaultFullHttpResponse, DefaultHttpResponse.
-      //The DefaultFullHttpResponse is to construct a final response that encapsulated the HTTP header + body.
-      //The DefaultHttpResponse is to construct a HTTP header, 
-      //write it to the channel and push buffered data to the channel as the HTTP body later.
-      //In case of HTTP connection keep-alive is used, a LastHttpContent.EMPTY_LAST_CONTENT message should be written to the channel after the message body data sent through.
-      //Doing this will make the next HTTP response sending possible on the same channel.
-      //If we wouldn't add a LastHttpContent, the channel would fail to handle subsequent HTTP responses.
-      //The root cause of this is that all outbound messages go through HttpResponseEncoder 
-      //and it is stateful in a way that it prevents sending other HTTP responses if there was no clear boundary to detect the end of the previous HTTP response.
-      //This is main the purpose of LastHttpContent.
-      //When there's no LastHttpContent written to the channel, HttpObjectEncoder.encode will throw an IllegalStateException.
-      //By default, exceptions thrown while handling outbound messages are not printed in any way, so it's a delicate art to print those.
-      //All of the above is quite undocumented, unfortunately.
-      //I found some result in Github issues, these are the most related ones that led me to the final solution:
-      //- https://github.com/netty/netty/issues/1725#issuecomment-22624967
-      //- https://github.com/netty/netty/issues/11155#issue-857141001
+      //HADOOP-15327: Need to send an instance of LastHttpContent to define HTTP
+      //message boundaries. See details in jira.
       ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
     }
 
