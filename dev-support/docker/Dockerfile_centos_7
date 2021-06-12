@@ -40,9 +40,35 @@ RUN yum update -y \
         python3 \
     && yum install -y $(pkg-resolver/resolve.py centos:7)
 
-# Set GCC 9 as the default C/C++ compiler
-RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
-SHELL ["/bin/bash", "--login", "-c"]
+RUN dnf install -y \
+    gcc \
+    gcc-c++ \
+    gmp-devel \
+    mpfr-devel \
+    libmpc-devel
+
+####
+# Install GCC 9.3.0
+####
+# hadolint ignore=DL3003
+RUN mkdir -p /tmp/gcc /opt/gcc "${HOME}/.gcc" \
+    && curl -L -s -S https://ftp.gnu.org/gnu/gcc/gcc-9.3.0/gcc-9.3.0.tar.gz  -o /tmp/gcc/gcc-9.3.0.tar.gz \
+    && tar xzf /tmp/gcc/gcc-9.3.0.tar.gz --strip-components 1 -C /opt/gcc \
+    && cd /opt/gcc || exit \
+    && ./configure --enable-languages=c,c++ --disable-multilib --prefix=${HOME}/.gcc/9.3.0 \
+    && make -j1 \
+    && make install \
+    && cd /root || exit
+RUN echo "export CC=${HOME}/.gcc/9.3.0/bin/gcc" >> /etc/bashrc
+RUN echo "export CXX=${HOME}/.gcc/9.3.0/bin/g++" >> /etc/bashrc
+RUN echo "export PATH=${HOME}/.gcc/9.3.0/bin:${PATH}" >> /etc/bashrc
+RUN echo "export LD_LIBRARY_PATH=${HOME}/.gcc/9.3.0/lib64:${LD_LIRBARY_PATH}" >> /etc/bashrc
+ENV CC "${HOME}/.gcc/9.3.0/bin/gcc"
+ENV CXX "${HOME}/.gcc/9.3.0/bin/g++"
+ENV PATH "${HOME}/.gcc/9.3.0/bin:${PATH}"
+ENV LD_LIBRARY_PATH "${HOME}/.gcc/9.3.0/lib64:${LD_LIRBARY_PATH}"
+
+SHELL ["/bin/bash", "-l", "-c"]
 
 # TODO: Set locale
 
