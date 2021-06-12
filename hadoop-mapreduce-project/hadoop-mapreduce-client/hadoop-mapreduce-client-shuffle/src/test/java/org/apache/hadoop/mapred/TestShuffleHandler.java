@@ -905,21 +905,6 @@ public class TestShuffleHandler {
     Assert.assertEquals("Unexpected failure", new ArrayList<>(), shuffleHandler.failures);
   }
 
-  private String getShuffleUrlWithKeepAlive(ShuffleHandler shuffleHandler, long jobId, long attemptId) {
-    String url = getShuffleUrl(shuffleHandler, jobId, attemptId);
-    return url + "&keepAlive=true";
-  }
-
-  private String getShuffleUrl(ShuffleHandler shuffleHandler, long jobId, long attemptId) {
-    String port = shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
-    String shuffleBaseURL = "http://127.0.0.1:" + port;
-    String location = String.format("/mapOutput" +
-        "?job=job_%s_1" +
-        "&reduce=1" +
-        "&map=attempt_%s_1_m_1_0", jobId, attemptId);
-    return shuffleBaseURL + location;
-  }
-
   @Test(timeout = 10000)
   public void testSocketKeepAlive() throws Exception {
     Configuration conf = new Configuration();
@@ -961,8 +946,8 @@ public class TestShuffleHandler {
       }
       shuffleHandler.stop();
     }
-    //TODO snemeth Add back this assertion when bug is determined and fixed.
-    // See detailed notes in: org.apache.hadoop.mapred.ShuffleHandler.Shuffle.channelRead
+    //TODO snemeth HADOOP-15327: Add back this assertion when bug is determined and fixed.
+    // See detailed notes in jira
 //    Assert.assertEquals("Should have no caught exceptions",
 //        new ArrayList<>(), shuffleHandler.failures);
   }
@@ -1652,6 +1637,21 @@ public class TestShuffleHandler {
     int timeoutSeconds = -100;
     int expectedTimeoutSeconds = 1;
     testHandlingIdleState(timeoutSeconds, expectedTimeoutSeconds);
+  }
+
+  private String getShuffleUrlWithKeepAlive(ShuffleHandler shuffleHandler, long jobId, long attemptId) {
+    String url = getShuffleUrl(shuffleHandler, jobId, attemptId);
+    return url + "&keepAlive=true";
+  }
+
+  private String getShuffleUrl(ShuffleHandler shuffleHandler, long jobId, long attemptId) {
+    String port = shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
+    String shuffleBaseURL = "http://127.0.0.1:" + port;
+    String location = String.format("/mapOutput" +
+        "?job=job_%s_1" +
+        "&reduce=1" +
+        "&map=attempt_%s_1_m_1_0", jobId, attemptId);
+    return shuffleBaseURL + location;
   }
 
   private void testHandlingIdleState(int configuredTimeoutSeconds, int expectedTimeoutSeconds) throws IOException,

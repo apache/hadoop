@@ -198,6 +198,9 @@ public class ShuffleHandler extends AuxiliaryService {
   private final AtomicInteger acceptedConnections = new AtomicInteger();
   protected HttpPipelineFactory pipelineFact;
   private int sslFileBufferSize;
+
+  //TODO snemeth add a config option for this later, this is temporarily disabled for now.
+  private boolean useOutboundExceptionHandler = false;
   
   /**
    * Should the shuffle use posix_fadvise calls to manage the OS cache during
@@ -342,14 +345,14 @@ public class ShuffleHandler extends AuxiliaryService {
    */
   private static class ReduceContext {
 
-    private final List<String> mapIds;
-    private final AtomicInteger mapsToWait;
-    private final AtomicInteger mapsToSend;
-    private final int reduceId;
-    private final ChannelHandlerContext ctx;
-    private final String user;
-    private final Map<String, Shuffle.MapOutputInfo> infoMap;
-    private final String jobId;
+    private List<String> mapIds;
+    private AtomicInteger mapsToWait;
+    private AtomicInteger mapsToSend;
+    private int reduceId;
+    private ChannelHandlerContext ctx;
+    private String user;
+    private Map<String, Shuffle.MapOutputInfo> infoMap;
+    private String jobId;
     private final boolean keepAlive;
 
     public ReduceContext(List<String> mapIds, int rId,
@@ -859,15 +862,17 @@ public class ShuffleHandler extends AuxiliaryService {
       pipeline.addLast("encoder", new HttpResponseEncoder());
       pipeline.addLast("chunking", new ChunkedWriteHandler());
       pipeline.addLast("shuffle", SHUFFLE);
-      //TODO snemeth add a config option for this later
-      //https://stackoverflow.com/questions/50612403/catch-all-exception-handling-for-outbound-channelhandler
-      pipeline.addLast("outboundExcHandler", new ChannelOutboundHandlerAdapter() {
-        @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-          promise.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
-          super.write(ctx, msg, promise);
-        }
-      });
+      
+      if (useOutboundExceptionHandler) {
+        //https://stackoverflow.com/questions/50612403/catch-all-exception-handling-for-outbound-channelhandler
+        pipeline.addLast("outboundExcHandler", new ChannelOutboundHandlerAdapter() {
+          @Override
+          public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            promise.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
+            super.write(ctx, msg, promise);
+          }
+        });
+      }
       pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler(connectionKeepAliveTimeOut));
       // TODO factor security manager into pipeline
       // TODO factor out encode/decode to permit binary shuffle
@@ -1060,15 +1065,9 @@ public class ShuffleHandler extends AuxiliaryService {
         populateHeaders(mapIds, jobId, user, reduceId, request,
           response, keepAliveParam, mapOutputInfoMap);
       } catch(IOException e) {
-        //TODO snemeth This seems like a bug combined with bad expectations in the tests.
-        // This writes a HTTP 200 OK response here
-        // However, sendError writes a response later 
-        // with HTTP 500 Internal Server error. 
-        // Tests also expecting a successful connection.
-        // The successful HTTP connection is just a side-effect of the fact that the unsuccessful HTTP response can't be written to the channel because of: 
-        // an exception thrown from the HttpResponseEncoder.
-        // The exception: java.lang.IllegalStateException: unexpected message type: DefaultFullHttpResponse, state: 1
-        // With Netty 3.x, this was probably another side-effect, so the second unsuccessful HTTP response was not written to the channel, either.
+        //TODO snemeth HADOOP-15327
+        // This seems like a bug combined with bad expectations in the tests.
+        // See details in jira
         ch.writeAndFlush(response);
         LOG.error("Shuffle error in populating headers :", e);
         String errorMessage = getErrorMessage(e);
@@ -1127,7 +1126,6 @@ public class ShuffleHandler extends AuxiliaryService {
             info = getMapOutputInfo(mapId, reduceContext.getReduceId(),
                 reduceContext.getJobId(), reduceContext.getUser());
           }
-          LOG.debug("***before sendMapOutput");
           nextMap = sendMapOutput(
               reduceContext.getCtx(),
               reduceContext.getCtx().channel(),
@@ -1460,7 +1458,11 @@ public class ShuffleHandler extends AuxiliaryService {
       if (!attemptId.equals(that.attemptId)) {
         return false;
       }
-      return jobId.equals(that.jobId);
+      if (!jobId.equals(that.jobId)) {
+        return false;
+      }
+
+      return true;
     }
 
     @Override
