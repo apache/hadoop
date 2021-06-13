@@ -40,6 +40,11 @@ RUN yum update -y \
         python3 \
     && yum install -y $(pkg-resolver/resolve.py centos:7)
 
+RUN dnf install -y \
+    gmp-devel \
+    mpfr-devel \
+    libmpc-devel
+
 RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
 SHELL ["/bin/bash", "--login", "-c"]
 
