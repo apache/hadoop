@@ -76,7 +76,6 @@
     "centos:7": "doxygen"
   },
   "dnf": {
-    "centos:7": "dnf",
     "centos:8": "dnf"
   },
   "fuse": {
@@ -107,6 +106,10 @@
     "ubuntu:focal::arch64": [
       "gcc",
       "g++"
+    ],
+    "centos:7": [
+      "centos-release-scl",
+      "devtoolset-9"
     ]
   },
   "git": {
