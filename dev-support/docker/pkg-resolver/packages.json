@@ -76,7 +76,7 @@
     "centos:7": "doxygen"
   },
   "dnf": {
-    "centos:7": "dnf"
+    "centos:7": "dnf",
     "centos:8": "dnf"
   },
   "fuse": {
