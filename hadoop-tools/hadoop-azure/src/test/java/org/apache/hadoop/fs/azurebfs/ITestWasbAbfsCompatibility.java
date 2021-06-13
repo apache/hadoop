@@ -159,7 +159,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     String abfsUrl = "abfs://abcde-1111-1111-1111-1111@xxxx.dfs.xxx.xxx.xxxx.xxxx";
     String wabsUrl = "wasb://abcde-1111-1111-1111-1111@xxxx.blob.xxx.xxx.xxxx.xxxx";
     assertEquals(abfsUrl, wasbUrlToAbfsUrl(wabsUrl));
-    assertEquals(wabsUrl, abfsUrlToWasbUrl(abfsUrl));
+    assertEquals(wabsUrl, abfsUrlToWasbUrl(abfsUrl, false));
   }
 
   @Test
