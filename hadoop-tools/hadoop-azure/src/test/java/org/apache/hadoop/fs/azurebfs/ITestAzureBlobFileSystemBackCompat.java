@@ -74,6 +74,12 @@ public class ITestAzureBlobFileSystemBackCompat extends
               + ";AccountName=" + this.getAccountName().split("\\.")[0]
               + ";AccountKey=" + this.getAccountKey();
     }
+    else if (this.getConfiguration().isHttpsAlwaysUsed()) {
+      connectionString = "DefaultEndpointsProtocol=https;BlobEndpoint=https://"
+              + this.getAccountName().replaceFirst("\\.dfs\\.", ".blob.")
+              + ";AccountName=" + this.getAccountName().split("\\.")[0]
+              + ";AccountKey=" + this.getAccountKey();
+    }
     else {
       connectionString = "DefaultEndpointsProtocol=http;BlobEndpoint=http://"
               + this.getAccountName().replaceFirst("\\.dfs\\.", ".blob.")
