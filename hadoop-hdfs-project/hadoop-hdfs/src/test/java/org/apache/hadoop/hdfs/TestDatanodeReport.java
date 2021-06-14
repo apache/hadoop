@@ -179,7 +179,6 @@ public class TestDatanodeReport {
           retries++;
           if (retries > 7) {
             Assert.fail("getLocatedBlocks failed after 7 retries");
-            break;
           }
           Thread.sleep(2000);
         } else {
