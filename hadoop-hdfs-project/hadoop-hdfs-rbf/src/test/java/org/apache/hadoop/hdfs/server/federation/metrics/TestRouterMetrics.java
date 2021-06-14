@@ -22,8 +22,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -54,8 +57,11 @@ public class TestRouterMetrics {
   /** Federated HDFS cluster. */
   private static MiniRouterDFSCluster cluster;
 
-  /** Random Router for this federated cluster. */
-  private MiniRouterDFSCluster.RouterContext router;
+  /** The first Router Context for this federated cluster. */
+  private MiniRouterDFSCluster.RouterContext routerContext;
+
+  /** The first Router for this federated cluster. */
+  private Router router;
 
   /** Filesystem interface to the Router. */
   private FileSystem routerFS;
@@ -71,6 +77,7 @@ public class TestRouterMetrics {
     Configuration routerConf = new RouterConfigBuilder()
         .metrics()
         .rpc()
+        .quota()
         .build();
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
@@ -95,8 +102,16 @@ public class TestRouterMetrics {
     // Wait to ensure NN has fully created its test directories
     Thread.sleep(100);
 
-    router = cluster.getRouters().get(0);
-    this.routerFS = router.getFileSystem();
+    routerContext = cluster.getRouters().get(0);
+    this.routerFS = routerContext.getFileSystem();
+
+    // Add extra location to the root mount / such that the root mount points:
+    // /
+    //   ns0 -> /
+    //   ns1 -> /
+    router = routerContext.getRouter();
+    MockResolver resolver = (MockResolver) router.getSubclusterResolver();
+    resolver.addLocation("/", cluster.getNameservices().get(1), "/");
 
   }
 
@@ -108,14 +123,51 @@ public class TestRouterMetrics {
   @Test
   public void testGetListing() throws IOException {
     routerFS.listStatus(new Path("/"));
-    assertCounter("GetListingOps", 1L, getMetrics(ROUTER_METRICS));
+    assertCounter("GetListingOps", 2L, getMetrics(ROUTER_METRICS));
+    assertCounter("ConcurrentGetListingOps", 1L, getMetrics(ROUTER_METRICS));
+  }
+
+  @Test
+  public void testCreate() throws IOException {
+    Path testFile = new Path("/testCreate");
+    routerFS.create(testFile);
+    assertCounter("CreateOps", 1L, getMetrics(ROUTER_METRICS));
+  }
+
+  @Test
+  public void testGetServerDefaults() throws IOException {
+    router.getRpcServer().getServerDefaults();
+    assertCounter("GetServerDefaultsOps", 1L, getMetrics(ROUTER_METRICS));
+  }
+
+  @Test
+  public void testSetQuota() throws Exception {
+    router.getRpcServer().setQuota("/", 1L, 1L, null);
+    assertCounter("SetQuotaOps", 2L, getMetrics(ROUTER_METRICS));
+    assertCounter("ConcurrentSetQuotaOps", 1L, getMetrics(ROUTER_METRICS));
+  }
+
+  @Test
+  public void testGetQuota() throws Exception {
+    router.getRpcServer().getQuotaUsage("/");
+    assertCounter("GetQuotaUsageOps", 2L, getMetrics(ROUTER_METRICS));
+    assertCounter("ConcurrentGetQuotaUsageOps", 1L, getMetrics(ROUTER_METRICS));
   }
 
   @Test
   public void testRenewLease() throws Exception {
-    router.getRouter().getRpcServer().renewLease("test");
+    router.getRpcServer().renewLease("test");
     assertCounter("RenewLeaseOps", 2L, getMetrics(ROUTER_METRICS));
     assertCounter("ConcurrentRenewLeaseOps", 1L, getMetrics(ROUTER_METRICS));
   }
+
+  @Test
+  public void testGetDatanodeReport() throws Exception {
+    router.getRpcServer().
+        getDatanodeReport(HdfsConstants.DatanodeReportType.LIVE);
+    assertCounter("GetDatanodeReportOps", 2L, getMetrics(ROUTER_METRICS));
+    assertCounter("ConcurrentGetDatanodeReportOps", 1L, getMetrics(ROUTER_METRICS));
+  }
+
 }
 

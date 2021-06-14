@@ -223,21 +223,12 @@ public class RouterMetrics {
     safeModeTime.set((int) elapsed);
   }
 
-
+  /**
+   * Increase the metrics based on the method being invoked.
+   * @param method method being invoked
+   */
   public void incInvokedMethod(Method method) {
     switch (method.getName()) {
-      case "getDelegationToken":
-        getDelegationTokenOps.incr();
-        break;
-      case "getDelegationTokens":
-        getDelegationTokensOps.incr();
-        break;
-      case "renewDelegationToken":
-        renewDelegationTokenOps.incr();
-        break;
-      case "cancelDelegationToken":
-        cancelDelegationTokenOps.incr();
-        break;
       case "getBlockLocations":
         getBlockLocationsOps.incr();
         break;
@@ -561,6 +552,10 @@ public class RouterMetrics {
     }
   }
 
+  /**
+   * Increase the concurrent metrics based on the method being invoked.
+   * @param method concurrently invoked method
+   */
   public void incInvokedConcurrent(Method method){
     switch (method.getName()) {
       case "setReplication":
