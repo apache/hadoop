@@ -255,7 +255,7 @@ public class LeafQueue extends AbstractCSQueue {
           conf.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
 
       // Validate leaf queue's user's weights.
-      int queueUL = Math.min(100, conf.getUserLimit(getQueuePath()));
+      float queueUL = Math.min(100.0f, conf.getUserLimit(getQueuePath()));
       for (Entry<String, Float> e : getUserWeights().entrySet()) {
         float val = e.getValue().floatValue();
         if (val < 0.0f || val > (100.0f / queueUL)) {
@@ -367,17 +367,17 @@ public class LeafQueue extends AbstractCSQueue {
   }
   
   /**
-   * Set user limit - used only for testing.
+   * Set user limit.
    * @param userLimit new user limit
    */
   @VisibleForTesting
-  void setUserLimit(int userLimit) {
+  void setUserLimit(float userLimit) {
     usersManager.setUserLimit(userLimit);
     usersManager.userLimitNeedsRecompute();
   }
 
   /**
-   * Set user limit factor - used only for testing.
+   * Set user limit factor.
    * @param userLimitFactor new user limit factor
    */
   @VisibleForTesting
@@ -444,7 +444,7 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   @Private
-  public int getUserLimit() {
+  public float getUserLimit() {
     return usersManager.getUserLimit();
   }
 
