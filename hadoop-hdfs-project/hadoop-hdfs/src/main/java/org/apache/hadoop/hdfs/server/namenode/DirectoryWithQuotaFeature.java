@@ -176,6 +176,11 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
     usage.setTypeSpaces(c.getTypeSpaces());
   }
 
+  /** @return the namespace and storagespace and typespace allowed. */
+  public QuotaCounts getSpaceAllowed() {
+    return new QuotaCounts.Builder().quotaCount(quota).build();
+  }
+
   /** @return the namespace and storagespace and typespace consumed. */
   public QuotaCounts getSpaceConsumed() {
     return new QuotaCounts.Builder().quotaCount(usage).build();
