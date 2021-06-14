@@ -197,14 +197,21 @@ class CapacitySchedulerPage extends RmView {
 
     private void renderCommonLeafQueueInfo(ResponseInfo ri) {
       ri.
-          __("Num Schedulable Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
-          __("Num Non-Schedulable Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
-          __("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
-          __("Max Applications:", Integer.toString(lqinfo.getMaxApplications())).
-          __("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
-          __("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
+          __("Num Schedulable Applications:",
+              Integer.toString(lqinfo.getNumActiveApplications())).
+          __("Num Non-Schedulable Applications:",
+              Integer.toString(lqinfo.getNumPendingApplications())).
+          __("Num Containers:",
+              Integer.toString(lqinfo.getNumContainers())).
+          __("Max Applications:",
+              Integer.toString(lqinfo.getMaxApplications())).
+          __("Max Applications Per User:",
+              Integer.toString(lqinfo.getMaxApplicationsPerUser())).
+          __("Configured Minimum User Limit Percent:",
+              lqinfo.getUserLimit() + "%").
           __("Configured User Limit Factor:", lqinfo.getUserLimitFactor()).
-          __("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
+          __("Accessible Node Labels:",
+              StringUtils.join(",", lqinfo.getNodeLabels())).
           __("Ordering Policy: ", lqinfo.getOrderingPolicyDisplayName()).
           __("Preemption:",
               lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").

@@ -1732,6 +1732,111 @@ public class TestLeafQueue {
   }
 
   @Test
+  public void testDecimalUserLimits() throws Exception {
+    // Mock the queue
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    //unset maxCapacity
+    a.setMaxCapacity(1.0f);
+
+    when(csContext.getClusterResource())
+        .thenReturn(Resources.createResource(16 * GB, 32));
+
+    // Users
+    final String user0 = "user_0";
+    final String user1 = "user_1";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app0 =
+        new FiCaSchedulerApp(appAttemptId0, user0, a,
+            a.getAbstractUsersManager(), spyRMContext);
+    a.submitApplicationAttempt(app0, user0);
+
+    final ApplicationAttemptId appAttemptId1 =
+        TestUtils.getMockApplicationAttemptId(1, 0);
+    FiCaSchedulerApp app1 =
+        new FiCaSchedulerApp(appAttemptId1, user1, a,
+            a.getAbstractUsersManager(), spyRMContext);
+    a.submitApplicationAttempt(app1, user1); // different user
+
+    // Setup some nodes
+    String host0 = "127.0.0.1";
+    FiCaSchedulerNode node0 =
+        TestUtils.getMockNode(host0, DEFAULT_RACK, 0, 8*GB);
+    String host1 = "127.0.0.2";
+    FiCaSchedulerNode node1 =
+        TestUtils.getMockNode(host1, DEFAULT_RACK, 0, 8*GB);
+
+    final int numNodes = 2;
+    Resource clusterResource =
+        Resources.createResource(numNodes * (8*GB), numNodes * 16);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
+
+    // Setup resource-requests
+    Priority priority = TestUtils.createMockPriority(1);
+    app0.updateResourceRequests(Collections.singletonList(
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 3*GB, 2, true,
+            priority, recordFactory)));
+
+    app1.updateResourceRequests(Collections.singletonList(
+        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
+            priority, recordFactory)));
+
+    Map<ApplicationAttemptId, FiCaSchedulerApp> apps = ImmutableMap.of(
+        app0.getApplicationAttemptId(), app0, app1.getApplicationAttemptId(),
+        app1);
+    Map<NodeId, FiCaSchedulerNode> nodes = ImmutableMap.of(node0.getNodeID(),
+        node0, node1.getNodeID(), node1);
+
+    /**
+     * Start testing...
+     */
+
+    // Set user-limit
+    a.setUserLimit(50.1f);
+    a.setUserLimitFactor(2);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
+
+    // There're two active users
+    assertEquals(2, a.getAbstractUsersManager().getNumActiveUsers());
+
+    // 1 container to user_0
+    applyCSAssignment(clusterResource,
+        a.assignContainers(clusterResource, node0,
+            new ResourceLimits(clusterResource),
+            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
+    assertEquals(3*GB, a.getUsedResources().getMemorySize());
+    assertEquals(3*GB, app0.getCurrentConsumption().getMemorySize());
+    assertEquals(0, app1.getCurrentConsumption().getMemorySize());
+
+    // Allocate another container. Since the user limit is 50.1% it isn't
+    // reached, app_0 will get another container.
+    applyCSAssignment(clusterResource,
+        a.assignContainers(clusterResource, node0,
+            new ResourceLimits(clusterResource),
+            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
+    assertEquals(6*GB, a.getUsedResources().getMemorySize());
+    assertEquals(6*GB, app0.getCurrentConsumption().getMemorySize());
+    assertEquals(0, app1.getCurrentConsumption().getMemorySize());
+
+    applyCSAssignment(clusterResource,
+        a.assignContainers(clusterResource, node1,
+            new ResourceLimits(clusterResource),
+            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
+    assertEquals(7*GB, a.getUsedResources().getMemorySize());
+    assertEquals(6*GB, app0.getCurrentConsumption().getMemorySize());
+    assertEquals(GB, app1.getCurrentConsumption().getMemorySize());
+
+    // app_0 doesn't have outstanding resources, there's only one active user.
+    assertEquals("There should only be 1 active user!",
+        1, a.getAbstractUsersManager().getNumActiveUsers());
+  }
+
+  @Test
   public void testUserSpecificUserLimits() throws Exception {
     // Mock the queue
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));

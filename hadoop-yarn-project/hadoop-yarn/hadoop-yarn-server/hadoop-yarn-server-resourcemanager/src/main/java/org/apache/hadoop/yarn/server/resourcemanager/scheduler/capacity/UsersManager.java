@@ -77,7 +77,7 @@ public class UsersManager implements AbstractUsersManager {
   private Map<String, Map<SchedulingMode, Long>> localVersionOfAllUsersState =
       new HashMap<String, Map<SchedulingMode, Long>>();
 
-  private volatile int userLimit;
+  private volatile float userLimit;
   private volatile float userLimitFactor;
 
   private WriteLock writeLock;
@@ -320,7 +320,7 @@ public class UsersManager implements AbstractUsersManager {
    * Get configured user-limit.
    * @return user limit
    */
-  public int getUserLimit() {
+  public float getUserLimit() {
     return userLimit;
   }
 
@@ -328,7 +328,7 @@ public class UsersManager implements AbstractUsersManager {
    * Set configured user-limit.
    * @param userLimit user limit
    */
-  public void setUserLimit(int userLimit) {
+  public void setUserLimit(float userLimit) {
     this.userLimit = userLimit;
   }
 
