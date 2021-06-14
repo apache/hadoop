@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.junit.Assert;
@@ -171,6 +172,31 @@ public class TestInvoker extends Assert {
 
     verifyTranslated(EOFException.class, xmlParsing);
     verifyTranslated(EOFException.class, differentLength);
+  }
+
+
+  @Test
+  public void testSdkDifferentLengthExceptionIsTranslatable() throws Throwable {
+    final AtomicInteger counter = new AtomicInteger(0);
+    invoker.retry("test", null, false, () -> {
+      if (counter.incrementAndGet() < ACTIVE_RETRY_LIMIT) {
+        throw new SdkClientException(EOF_READ_DIFFERENT_LENGTH);
+      }
+    });
+
+    assertEquals(ACTIVE_RETRY_LIMIT, counter.get());
+  }
+
+  @Test
+  public void testSdkXmlParsingExceptionIsTranslatable() throws Throwable {
+    final AtomicInteger counter = new AtomicInteger(0);
+    invoker.retry("test", null, false, () -> {
+      if (counter.incrementAndGet() < ACTIVE_RETRY_LIMIT) {
+        throw new SdkClientException(EOF_MESSAGE_IN_XML_PARSER);
+      }
+    });
+
+    assertEquals(ACTIVE_RETRY_LIMIT, counter.get());
   }
 
   @Test(expected = org.apache.hadoop.net.ConnectTimeoutException.class)
