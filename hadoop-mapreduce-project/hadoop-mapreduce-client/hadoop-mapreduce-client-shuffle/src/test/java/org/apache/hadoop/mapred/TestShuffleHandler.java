@@ -55,6 +55,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.URL;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -104,6 +106,7 @@ import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -120,11 +123,48 @@ public class TestShuffleHandler {
       TestShuffleHandler.class.getSimpleName() + "LocDir");
   private static final long ATTEMPT_ID = 12345L;
   private static final int DEFAULT_PORT = 0;
-  private static final int DEFAULT_KEEP_ALIVE_TIMEOUT = -100;
-  private static final int DEBUG_FRIENDLY_KEEP_ALIVE = 1000;
-  private static final boolean DEBUG_FRIENDLY_MODE = true;
-  private static final int HEADER_WRITE_COUNT = 100000;
 
+  //TODO snemeth Disable debug mode when creating patch
+  //Control test execution properties with these flags
+  private static final boolean DEBUG_MODE = true;
+  //If this is set to true and proxy server is not running, tests will fail!
+  private static final boolean USE_PROXY = false; 
+  private static final int HEADER_WRITE_COUNT = 100000;
+  private static TestExecution TEST_EXECUTION;
+
+  private static class TestExecution {
+    private static final int DEFAULT_KEEP_ALIVE_TIMEOUT = -100;
+    private static final int DEBUG_FRIENDLY_KEEP_ALIVE = 1000;
+    private static final String PROXY_HOST = "127.0.0.1";
+    private static final int PROXY_PORT = 8888;
+    private boolean debugMode;
+    private boolean useProxy;
+
+    public TestExecution(boolean debugMode, boolean useProxy) {
+      this.debugMode = debugMode;
+      this.useProxy = useProxy;
+    }
+
+    int getKeepAliveTimeout() {
+      if (debugMode) {
+        return DEBUG_FRIENDLY_KEEP_ALIVE;
+      }
+      return DEFAULT_KEEP_ALIVE_TIMEOUT;
+    }
+    
+    HttpURLConnection openConnection(URL url) throws IOException {
+      HttpURLConnection conn;
+      if (useProxy) {
+        Proxy proxy
+            = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(PROXY_HOST, PROXY_PORT));
+        conn = (HttpURLConnection) url.openConnection(proxy);
+      } else {
+        conn = (HttpURLConnection) url.openConnection();
+      }
+      return conn;
+    }
+  }
+  
   private enum ShuffleUrlType {
     SIMPLE, WITH_KEEPALIVE
   }
@@ -527,7 +567,7 @@ public class TestShuffleHandler {
         String urlString = urls[reqIdx];
         LOG.debug("Connecting to URL: {}", urlString);
         URL url = new URL(urlString);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HttpURLConnection conn = TEST_EXECUTION.openConnection(url);
         conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
             ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
         conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
@@ -572,13 +612,6 @@ public class TestShuffleHandler {
       dataStream.flush();
       return new InputStreamReadResult(dataStream.toByteArray(), totalBytesRead);
     }
-  }
-
-  private int getKeepAliveTimeout() {
-    if (DEBUG_FRIENDLY_MODE) {
-      return DEBUG_FRIENDLY_KEEP_ALIVE;
-    }
-    return DEFAULT_KEEP_ALIVE_TIMEOUT;
   }
 
   class ShuffleHandlerForTests extends ShuffleHandler {
@@ -743,6 +776,11 @@ public class TestShuffleHandler {
     }
   }
 
+  @Before
+  public void setup() {
+    TEST_EXECUTION = new TestExecution(DEBUG_MODE, USE_PROXY);
+  }
+
   /**
    * Test the validation of ShuffleHandler's meta-data's serialization and
    * de-serialization.
@@ -872,7 +910,7 @@ public class TestShuffleHandler {
     URL url = new URL("http://127.0.0.1:"
       + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
       + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
-    HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+    HttpURLConnection conn = TEST_EXECUTION.openConnection(url);
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
         ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
@@ -909,7 +947,7 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, getKeepAliveTimeout());
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, TEST_EXECUTION.getKeepAliveTimeout());
     testKeepAliveInternal(conf, ShuffleUrlType.SIMPLE, ShuffleUrlType.WITH_KEEPALIVE);
   }
 
@@ -919,7 +957,7 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, false);
-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, getKeepAliveTimeout());
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, TEST_EXECUTION.getKeepAliveTimeout());
     testKeepAliveInternal(conf, ShuffleUrlType.WITH_KEEPALIVE, ShuffleUrlType.WITH_KEEPALIVE);
   }
   private void testKeepAliveInternal(Configuration conf, ShuffleUrlType... shuffleUrlTypes) throws IOException {
@@ -943,7 +981,7 @@ public class TestShuffleHandler {
 
     httpConnectionHelper.validate(connData -> {
       HttpConnectionAssert.create(connData)
-          .expectKeepAliveWithTimeout(getKeepAliveTimeout())
+          .expectKeepAliveWithTimeout(TEST_EXECUTION.getKeepAliveTimeout())
           .expectResponseSize(shuffleHandler.expectedResponseSize);
     });
     HttpConnectionAssert.assertKeepAliveConnectionsAreSame(httpConnectionHelper);
@@ -974,7 +1012,7 @@ public class TestShuffleHandler {
       URL url =
           new URL(shuffleBaseURL + "/mapOutput?job=job_12345_1&reduce=1&"
               + "map=attempt_12345_1_m_1_0");
-      conn = (HttpURLConnection) url.openConnection();
+      conn = TEST_EXECUTION.openConnection(url);
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
@@ -1018,7 +1056,7 @@ public class TestShuffleHandler {
       + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
       + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
     for (int i = 0; i < failureNum; ++i) {
-      HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+      HttpURLConnection conn = TEST_EXECUTION.openConnection(url);
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           i == 0 ? "mapreduce" : "other");
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
@@ -1111,7 +1149,7 @@ public class TestShuffleHandler {
            + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_"
            + i + "_0";
       URL url = new URL(URLstring);
-      conns[i] = (HttpURLConnection)url.openConnection();
+      conns[i] = TEST_EXECUTION.openConnection(url);
       conns[i].setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
       conns[i].setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
@@ -1250,7 +1288,7 @@ public class TestShuffleHandler {
                       ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
                   + "/mapOutput?job=job_12345_0001&reduce=" + reducerId
                   + "&map=attempt_12345_1_m_1_0");
-      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      HttpURLConnection conn = TEST_EXECUTION.openConnection(url);
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
@@ -1505,7 +1543,7 @@ public class TestShuffleHandler {
     URL url = new URL("http://127.0.0.1:"
         + shuffle.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
         + "/mapOutput?job=job_12345_0001&reduce=0&map=attempt_12345_1_m_1_0");
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    HttpURLConnection conn = TEST_EXECUTION.openConnection(url);
     String encHash = SecureShuffleUtils.hashFromString(
         SecureShuffleUtils.buildMsgFrom(url),
         JobTokenSecretManager.createSecretKey(jt.getPassword()));
@@ -1604,7 +1642,7 @@ public class TestShuffleHandler {
                       ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
                   + "/mapOutput?job=job_12345_0001&reduce=" + reducerId
                   + "&map=attempt_12345_1_m_1_0");
-      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      HttpURLConnection conn = TEST_EXECUTION.openConnection(url);
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
