@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
@@ -50,8 +51,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Unit tests for QueuePlacementConverter.

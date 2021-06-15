@@ -40,7 +40,6 @@ import java.util.regex.Pattern;
 import java.util.EnumSet;
 
 import java.util.function.Supplier;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.text.TextStringBuilder;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -76,6 +75,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Ignore;

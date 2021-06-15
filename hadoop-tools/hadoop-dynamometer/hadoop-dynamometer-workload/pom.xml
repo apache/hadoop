@@ -40,6 +40,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-minicluster</artifactId>
       <scope>test</scope>
@@ -82,6 +87,38 @@
             <exclude>src/test/resources/audit_trace_hive/audit0</exclude>
           </excludes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>de.skuzzle.enforcer</groupId>
+            <artifactId>restrict-imports-enforcer-rule</artifactId>
+            <version>${restrict-imports.enforcer.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>banned-illegal-imports</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <reason>Use hadoop-common provided Lists rather than Guava provided Lists</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Lists</bannedImport>
+                    <bannedImport>com.google.common.collect.Lists</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

@@ -1250,16 +1250,23 @@ public class ParentQueue extends AbstractCSQueue {
           float sumOfWeight = 0;
 
           for (CSQueue queue : childQueues) {
-            float weight = Math.max(0,
-                queue.getQueueCapacities().getWeight(nodeLabel));
-            sumOfWeight += weight;
+            if (queue.getQueueCapacities().getExistingNodeLabels()
+                .contains(nodeLabel)) {
+              float weight = Math.max(0,
+                  queue.getQueueCapacities().getWeight(nodeLabel));
+              sumOfWeight += weight;
+            }
           }
           // When sum of weight == 0, skip setting normalized_weight (so
           // normalized weight will be 0).
           if (Math.abs(sumOfWeight) > 1e-6) {
             for (CSQueue queue : childQueues) {
-              queue.getQueueCapacities().setNormalizedWeight(nodeLabel,
-                  queue.getQueueCapacities().getWeight(nodeLabel) / sumOfWeight);
+              if (queue.getQueueCapacities().getExistingNodeLabels()
+                  .contains(nodeLabel)) {
+                queue.getQueueCapacities().setNormalizedWeight(nodeLabel,
+                    queue.getQueueCapacities().getWeight(nodeLabel) /
+                        sumOfWeight);
+              }
             }
           }
         }

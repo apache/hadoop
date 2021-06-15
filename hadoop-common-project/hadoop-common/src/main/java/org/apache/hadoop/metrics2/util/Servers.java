@@ -22,11 +22,10 @@ package org.apache.hadoop.metrics2.util;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.Lists;
 
 /**
  * Helpers to handle server addresses
