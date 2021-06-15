@@ -2277,10 +2277,12 @@ public class WebHdfsFileSystem extends FileSystem
     @VisibleForTesting
     void closeInputStream(RunnerState rs) throws IOException {
       if (in != null) {
-        IOUtils.close(cachedConnection);
         in = null;
       }
-      cachedConnection = null;
+      if (cachedConnection != null) {
+        IOUtils.close(cachedConnection);
+        cachedConnection = null;
+      }
       runnerState = rs;
     }
 
