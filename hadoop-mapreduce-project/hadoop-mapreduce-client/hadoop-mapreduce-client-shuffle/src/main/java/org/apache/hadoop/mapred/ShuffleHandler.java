@@ -797,6 +797,11 @@ public class ShuffleHandler extends AuxiliaryService {
     }
   }
 
+  @VisibleForTesting
+  public void setUseOutboundExceptionHandler(boolean useHandler) {
+    this.useOutboundExceptionHandler = useHandler;
+  }
+
   static class TimeoutHandler extends IdleStateHandler {
     private final int connectionKeepAliveTimeOut;
     private boolean enabledTimeout;

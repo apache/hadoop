@@ -101,7 +101,6 @@ import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.records.Version;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -153,6 +152,7 @@ public class TestShuffleHandler {
       mapOutputSender = new MapOutputSender(this, headerWriteCount, lastSocketAddress, shuffleHeaderProvider);
       int headerSize = getShuffleHeaderSize(shuffleHeaderProvider);
       this.expectedResponseSize = headerWriteCount * headerSize;
+      setUseOutboundExceptionHandler(true);
     }
 
     private int getShuffleHeaderSize(ShuffleHeaderProvider shuffleHeaderProvider) throws IOException {
@@ -569,10 +569,12 @@ public class TestShuffleHandler {
     final ArrayList<Throwable> failures = new ArrayList<>();
 
     public ShuffleHandlerForTests() {
+      setUseOutboundExceptionHandler(true);
     }
 
     public ShuffleHandlerForTests(MetricsSystem ms) {
       super(ms);
+      setUseOutboundExceptionHandler(true);
     }
 
     @Override
@@ -594,6 +596,16 @@ public class TestShuffleHandler {
 
     private AuxiliaryLocalPathHandler pathHandler =
         new TestAuxiliaryLocalPathHandler();
+
+    public MockShuffleHandler() {
+      setUseOutboundExceptionHandler(true);
+    }
+
+    public MockShuffleHandler(MetricsSystem ms) {
+      super(ms);
+      setUseOutboundExceptionHandler(true);
+    }
+    
     @Override
     protected Shuffle getShuffle(final Configuration conf) {
       return new Shuffle(conf) {
@@ -678,6 +690,15 @@ public class TestShuffleHandler {
   private static class MockShuffleHandler2 extends
       org.apache.hadoop.mapred.ShuffleHandler {
     final ArrayList<Throwable> failures = new ArrayList<>(1);
+
+    public MockShuffleHandler2() {
+      setUseOutboundExceptionHandler(true);
+    }
+
+    public MockShuffleHandler2(MetricsSystem ms) {
+      super(ms);
+      setUseOutboundExceptionHandler(true);
+    }
 
     boolean socketKeepAlive = false;
     @Override
@@ -1060,6 +1081,7 @@ public class TestShuffleHandler {
         };
       }
     };
+    shuffleHandler.setUseOutboundExceptionHandler(true);
     shuffleHandler.init(conf);
     shuffleHandler.start();
 
@@ -1190,6 +1212,7 @@ public class TestShuffleHandler {
       }
     };
     AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
+    shuffleHandler.setUseOutboundExceptionHandler(true);
     shuffleHandler.setAuxiliaryLocalPathHandler(pathHandler);
     shuffleHandler.init(conf);
     try {
@@ -1543,6 +1566,7 @@ public class TestShuffleHandler {
         };
       }
     };
+    shuffleHandler.setUseOutboundExceptionHandler(true);
     shuffleHandler.setAuxiliaryLocalPathHandler(pathHandler);
     shuffleHandler.init(conf);
     try {
