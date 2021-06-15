@@ -47,6 +47,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.File;
@@ -58,6 +59,7 @@ import java.net.URL;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -125,6 +127,16 @@ public class TestShuffleHandler {
 
   private enum ShuffleUrlType {
     SIMPLE, WITH_KEEPALIVE
+  }
+
+  private static class InputStreamReadResult {
+    final String asString;
+    final int totalBytesRead;
+
+    public InputStreamReadResult(byte[] bytes, int totalBytesRead) {
+      this.asString = new String(bytes, StandardCharsets.UTF_8);
+      this.totalBytesRead = totalBytesRead;
+    }
   }
 
   private class ShuffleHandlerForKeepAliveTests extends ShuffleHandler {
@@ -525,9 +537,9 @@ public class TestShuffleHandler {
         LOG.debug("Opened DataInputStream for connection: {}/{}", (reqIdx + 1), requests);
         ShuffleHeader header = new ShuffleHeader();
         header.readFields(input);
-        int sumReadBytes = readDataFromInputStream(input);
+        InputStreamReadResult result = readDataFromInputStream(input);
         connectionData.add(HttpConnectionData
-            .create(conn, sumReadBytes, lastSocketAddress.getSocketAddres()));
+            .create(conn, result.totalBytesRead, lastSocketAddress.getSocketAddres()));
         input.close();
       }
 
@@ -546,15 +558,19 @@ public class TestShuffleHandler {
       return connectionData.get(i);
     }
 
-    private int readDataFromInputStream(DataInputStream input) throws IOException {
+    private static InputStreamReadResult readDataFromInputStream(
+        DataInputStream input) throws IOException {
+      ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
       byte[] buffer = new byte[1024];
-      int sumReadBytes = 0;
-      int read;
-      while ((read = input.read(buffer)) != -1) {
-        sumReadBytes += read;
+      int bytesRead;
+      int totalBytesRead = 0;
+      while ((bytesRead = input.read(buffer)) != -1) {
+        dataStream.write(buffer);
+        totalBytesRead += bytesRead;
       }
-      LOG.debug("***Read bytes: " + sumReadBytes);
-      return sumReadBytes;
+      LOG.debug("Read total bytes: " + totalBytesRead);
+      dataStream.flush();
+      return new InputStreamReadResult(dataStream.toByteArray(), totalBytesRead);
     }
   }
 
