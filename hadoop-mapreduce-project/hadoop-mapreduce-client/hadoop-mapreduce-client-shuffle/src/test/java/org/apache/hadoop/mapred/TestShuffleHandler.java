@@ -803,7 +803,7 @@ public class TestShuffleHandler {
   public void testClientClosesConnection() throws Exception {
     final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     ShuffleHandler shuffleHandler = new ShuffleHandlerForTests() {
 
       @Override
@@ -953,7 +953,7 @@ public class TestShuffleHandler {
   @Test(timeout = 10000)
   public void testSocketKeepAlive() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
     // try setting to -ve keep alive timeout.
     conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, -100);
@@ -1007,7 +1007,7 @@ public class TestShuffleHandler {
   public void testIncompatibleShuffleVersion() throws Exception {
     final int failureNum = 3;
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     ShuffleHandler shuffleHandler = new ShuffleHandlerForTests();
     shuffleHandler.init(conf);
     shuffleHandler.start();
@@ -1042,7 +1042,7 @@ public class TestShuffleHandler {
     final ArrayList<Throwable> failures = new ArrayList<>();
     
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     ShuffleHandler shuffleHandler = new ShuffleHandler() {
       @Override
@@ -1190,7 +1190,7 @@ public class TestShuffleHandler {
     // This will run only in NativeIO is enabled as SecureIOUtils need it
     assumeTrue(NativeIO.isAvailable());
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
@@ -1345,7 +1345,7 @@ public class TestShuffleHandler {
     AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
     shuffle.setAuxiliaryLocalPathHandler(pathHandler);
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     conf.set(YarnConfiguration.NM_LOCAL_DIRS,
         ABS_LOG_DIR.getAbsolutePath());
@@ -1414,7 +1414,7 @@ public class TestShuffleHandler {
         System.getProperty("java.io.tmpdir")),
         TestShuffleHandler.class.getName());
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     ShuffleHandler shuffle = new ShuffleHandlerForTests();
     AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
@@ -1525,7 +1525,7 @@ public class TestShuffleHandler {
   public void testGetMapOutputInfo() throws Exception {
     final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "simple");
