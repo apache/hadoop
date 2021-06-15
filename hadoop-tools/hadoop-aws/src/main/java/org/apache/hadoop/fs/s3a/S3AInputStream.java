@@ -396,6 +396,41 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     }
   }
 
+  @FunctionalInterface
+  interface CheckedIntSupplier {
+    int get() throws IOException;
+  }
+
+  /**
+   * Helper function that allows to retry an IntSupplier in case of `IOException`.
+   * This function is used by `read()` and `read(buf, off, len)` functions. It tries to run
+   * `readFn` and in case of `IOException`:
+   *   1. If it gets an EOFException, return -1
+   *   2. Else, run `onReadFailure` and retry running `readFn`. If it fails again,
+   *   we run `onReadFailure` and re-throw the error.
+   * @param readFn the function to read, it must return an integer
+   * @param length length of data being attempted to read
+   * @return -1 if `readFn` throws EOFException, else returns int value from the result of `readFn`
+   * @throws IOException if retry of `readFn` also fails with `IOException`
+   */
+  private int retryReadOnce(CheckedIntSupplier readFn, int length) throws IOException {
+    try {
+      return readFn.get();
+    } catch (EOFException e) {
+      return -1;
+    } catch (IOException e) {
+      onReadFailure(e, length, e instanceof SocketTimeoutException);
+      try {
+        return readFn.get();
+      } catch (EOFException eof) {
+        return -1;
+      } catch (IOException ioe) {
+        onReadFailure(e, length, e instanceof SocketTimeoutException);
+        throw ioe;
+      }
+    }
+  }
+
   @Override
   @Retries.RetryTranslated  // Some retries only happen w/ S3Guard, as intended.
   public synchronized int read() throws IOException {
@@ -416,21 +451,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     // certainly could.
     Invoker invoker = context.getReadInvoker();
     int byteRead = invoker.retry("read", pathStr, true,
-        () -> {
-          int b;
-          try {
-            b = wrappedStream.read();
-          } catch (EOFException e) {
-            return -1;
-          } catch (SocketTimeoutException e) {
-            onReadFailure(e, 1, true);
-            b = wrappedStream.read();
-          } catch (IOException e) {
-            onReadFailure(e, 1, false);
-            b = wrappedStream.read();
-          }
-          return b;
-        });
+      () -> retryReadOnce(() -> wrappedStream.read(), 1)
+    );
 
     if (byteRead >= 0) {
       pos++;
@@ -504,22 +526,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     streamStatistics.readOperationStarted(nextReadPos, len);
     int bytesRead = invoker.retry("read", pathStr, true,
-        () -> {
-          int bytes;
-          try {
-            bytes = wrappedStream.read(buf, off, len);
-          } catch (EOFException e) {
-            // the base implementation swallows EOFs.
-            return -1;
-          } catch (SocketTimeoutException e) {
-            onReadFailure(e, len, true);
-            bytes = wrappedStream.read(buf, off, len);
-          } catch (IOException e) {
-            onReadFailure(e, len, false);
-            bytes= wrappedStream.read(buf, off, len);
-          }
-          return bytes;
-        });
+      () -> retryReadOnce(() -> wrappedStream.read(buf, off, len), len)
+    );
 
     if (bytesRead > 0) {
       pos += bytesRead;
