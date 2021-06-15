@@ -122,7 +122,7 @@ public class TestShuffleHandler {
   private static final File ABS_LOG_DIR = GenericTestUtils.getTestDir(
       TestShuffleHandler.class.getSimpleName() + "LocDir");
   private static final long ATTEMPT_ID = 12345L;
-  private static final int DEFAULT_PORT = 0;
+  
 
   //TODO snemeth Disable debug mode when creating patch
   //Control test execution properties with these flags
@@ -135,6 +135,8 @@ public class TestShuffleHandler {
   private static class TestExecution {
     private static final int DEFAULT_KEEP_ALIVE_TIMEOUT = -100;
     private static final int DEBUG_FRIENDLY_KEEP_ALIVE = 1000;
+    private static final int DEFAULT_PORT = 0; //random port
+    private static final int FIXED_PORT = 8088;
     private static final String PROXY_HOST = "127.0.0.1";
     private static final int PROXY_PORT = 8888;
     private boolean debugMode;
@@ -162,6 +164,14 @@ public class TestShuffleHandler {
         conn = (HttpURLConnection) url.openConnection();
       }
       return conn;
+    }
+    
+    int shuffleHandlerPort() {
+      if (debugMode) {
+        return DEFAULT_PORT;
+      } else {
+        return FIXED_PORT;
+      }
     }
   }
   
@@ -841,7 +851,7 @@ public class TestShuffleHandler {
   public void testClientClosesConnection() throws Exception {
     final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     ShuffleHandler shuffleHandler = new ShuffleHandlerForTests() {
 
       @Override
@@ -945,7 +955,7 @@ public class TestShuffleHandler {
   @Test(timeout = 10000)
   public void testKeepAliveInitiallyEnabled() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
     conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, TEST_EXECUTION.getKeepAliveTimeout());
     testKeepAliveInternal(conf, ShuffleUrlType.SIMPLE, ShuffleUrlType.WITH_KEEPALIVE);
@@ -955,7 +965,7 @@ public class TestShuffleHandler {
   @Test(timeout = 10000)
   public void testKeepAliveInitiallyDisabled() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, false);
     conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, TEST_EXECUTION.getKeepAliveTimeout());
     testKeepAliveInternal(conf, ShuffleUrlType.WITH_KEEPALIVE, ShuffleUrlType.WITH_KEEPALIVE);
@@ -991,7 +1001,7 @@ public class TestShuffleHandler {
   @Test(timeout = 10000)
   public void testSocketKeepAlive() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
     // try setting to -ve keep alive timeout.
     conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, -100);
@@ -1045,7 +1055,7 @@ public class TestShuffleHandler {
   public void testIncompatibleShuffleVersion() throws Exception {
     final int failureNum = 3;
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     ShuffleHandler shuffleHandler = new ShuffleHandlerForTests();
     shuffleHandler.init(conf);
     shuffleHandler.start();
@@ -1080,7 +1090,7 @@ public class TestShuffleHandler {
     final ArrayList<Throwable> failures = new ArrayList<>();
     
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     ShuffleHandler shuffleHandler = new ShuffleHandler() {
       @Override
@@ -1228,7 +1238,7 @@ public class TestShuffleHandler {
     // This will run only in NativeIO is enabled as SecureIOUtils need it
     assumeTrue(NativeIO.isAvailable());
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
@@ -1383,7 +1393,7 @@ public class TestShuffleHandler {
     AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
     shuffle.setAuxiliaryLocalPathHandler(pathHandler);
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     conf.set(YarnConfiguration.NM_LOCAL_DIRS,
         ABS_LOG_DIR.getAbsolutePath());
@@ -1452,7 +1462,7 @@ public class TestShuffleHandler {
         System.getProperty("java.io.tmpdir")),
         TestShuffleHandler.class.getName());
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     ShuffleHandler shuffle = new ShuffleHandlerForTests();
     AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
@@ -1563,7 +1573,7 @@ public class TestShuffleHandler {
   public void testGetMapOutputInfo() throws Exception {
     final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "simple");
@@ -1743,7 +1753,7 @@ public class TestShuffleHandler {
   private void testHandlingIdleState(int configuredTimeoutSeconds, int expectedTimeoutSeconds) throws IOException,
       InterruptedException {
     Configuration conf = new Configuration();
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, DEFAULT_PORT);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
     conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, configuredTimeoutSeconds);
 
