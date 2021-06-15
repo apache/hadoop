@@ -1070,10 +1070,15 @@ public class ShuffleHandler extends AuxiliaryService {
         populateHeaders(mapIds, jobId, user, reduceId, request,
           response, keepAliveParam, mapOutputInfoMap);
       } catch(IOException e) {
-        //TODO snemeth HADOOP-15327
-        // This seems like a bug combined with bad expectations in the tests.
-        // See details in jira
+        //HADOOP-15327
+        // Need to send an instance of LastHttpContent to define HTTP
+        // message boundaries.
+        //Sending a HTTP 200 OK + HTTP 500 later (sendError)
+        // is quite a non-standard way of crafting HTTP responses,
+        // but we need to keep backward compatibility.
+        // See more details in jira.
         ch.writeAndFlush(response);
+        ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         LOG.error("Shuffle error in populating headers :", e);
         String errorMessage = getErrorMessage(e);
         sendError(ctx,errorMessage , INTERNAL_SERVER_ERROR);
