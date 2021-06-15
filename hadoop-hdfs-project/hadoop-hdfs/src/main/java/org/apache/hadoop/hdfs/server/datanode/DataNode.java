@@ -391,7 +391,8 @@ public class DataNode extends ReconfigurableBase
   private DiskBalancer diskBalancer;
 
   private final ExecutorService xferService;
-  Set<ExtendedBlock> transferringBlock = Sets.newConcurrentHashSet();
+  private final Set<ExtendedBlock> transferringBlock = Sets
+      .newConcurrentHashSet();
 
   @Nullable
   private final StorageLocationChecker storageLocationChecker;

@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.mockito.Mockito.atLeastOnce;
@@ -44,8 +62,8 @@ public class TestBusyIODataNode {
   private FSNamesystem fsn;
   private BlockManager bm;
 
-  static final long seed = 0xDEADBEEFL;
-  static final int blockSize = 8192;
+  static final long SEED = 0xDEADBEEFL;
+  static final int BLOCK_SIZE = 8192;
   private static final int HEARTBEAT_INTERVAL = 1;
 
   private final Path dir = new Path("/" + this.getClass().getSimpleName());
@@ -93,9 +111,9 @@ public class TestBusyIODataNode {
     // create and write a file that contains two blocks of data
     FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
             .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
-    byte[] buffer = new byte[blockSize * numOfBlocks];
-    Random rand = new Random(seed);
+        (short) repl, BLOCK_SIZE);
+    byte[] buffer = new byte[BLOCK_SIZE * numOfBlocks];
+    Random rand = new Random(SEED);
     rand.nextBytes(buffer);
     stm.write(buffer);
     LOG.info("Created file " + name + " with " + repl + " replicas.");
@@ -198,7 +216,6 @@ public class TestBusyIODataNode {
     verify(log, atLeastOnce())
         .warn("Thread for transfer {} was already running，ignore this block.",
             new ExtendedBlock(blockPoolId, firstBlock));
-
   }
 
 }
