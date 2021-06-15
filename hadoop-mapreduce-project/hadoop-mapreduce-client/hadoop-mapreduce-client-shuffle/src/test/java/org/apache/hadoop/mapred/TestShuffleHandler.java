@@ -124,9 +124,8 @@ public class TestShuffleHandler {
   private static final long ATTEMPT_ID = 12345L;
   
 
-  //TODO snemeth Disable debug mode when creating patch
   //Control test execution properties with these flags
-  private static final boolean DEBUG_MODE = true;
+  private static final boolean DEBUG_MODE = false;
   //If this is set to true and proxy server is not running, tests will fail!
   private static final boolean USE_PROXY = false; 
   private static final int HEADER_WRITE_COUNT = 100000;
@@ -139,8 +138,8 @@ public class TestShuffleHandler {
     private static final int FIXED_PORT = 8088;
     private static final String PROXY_HOST = "127.0.0.1";
     private static final int PROXY_PORT = 8888;
-    private boolean debugMode;
-    private boolean useProxy;
+    private final boolean debugMode;
+    private final boolean useProxy;
 
     public TestExecution(boolean debugMode, boolean useProxy) {
       this.debugMode = debugMode;
