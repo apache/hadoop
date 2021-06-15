@@ -57,6 +57,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.net.Socket;
 import java.net.URL;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -105,9 +106,12 @@ import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.Mockito;
@@ -167,9 +171,9 @@ public class TestShuffleHandler {
     
     int shuffleHandlerPort() {
       if (debugMode) {
-        return DEFAULT_PORT;
-      } else {
         return FIXED_PORT;
+      } else {
+        return DEFAULT_PORT;
       }
     }
   }
@@ -785,9 +789,32 @@ public class TestShuffleHandler {
     }
   }
 
+  @Rule
+  public TestName name = new TestName();
+  
   @Before
   public void setup() {
     TEST_EXECUTION = new TestExecution(DEBUG_MODE, USE_PROXY);
+  }
+  
+  @After
+  public void tearDown() {
+    int port = TEST_EXECUTION.shuffleHandlerPort();
+    if (isPortUsed(port)) {
+      String msg = String.format("Port is being used: %d. " +
+          "Current testcase name: %s",
+          port, name.getMethodName());
+      throw new IllegalStateException(msg);
+    }
+  }
+
+  private static boolean isPortUsed(int port) {
+    try (Socket ignored = new Socket("localhost", port)) {
+      return true;
+    } catch (IOException e) {
+      LOG.debug("Port test result: {}", e.getMessage());
+      return false;
+    }
   }
 
   /**
@@ -829,6 +856,8 @@ public class TestShuffleHandler {
     sh.metrics.operationComplete(cf);
 
     checkShuffleMetrics(ms, 3*MiB, 1, 1, 0);
+
+    sh.stop();
   }
 
   static void checkShuffleMetrics(MetricsSystem ms, long bytes, int failed,
@@ -933,12 +962,12 @@ public class TestShuffleHandler {
     header.readFields(input);
     input.close();
 
-    shuffleHandler.stop();
-    Assert.assertTrue("sendError called when client closed connection",
-        failures.size() == 0);
-
+    assertEquals("sendError called when client closed connection", 0,
+        failures.size());
     Assert.assertEquals("Should have no caught exceptions",
         new ArrayList<>(), failures);
+
+    shuffleHandler.stop();
   }
 
   static class LastSocketAddress {
@@ -988,13 +1017,18 @@ public class TestShuffleHandler {
     HttpConnectionHelper httpConnectionHelper = new HttpConnectionHelper(shuffleHandler.lastSocketAddress);
     httpConnectionHelper.connectToUrls(urls);
 
+    //Expectations
+    int configuredTimeout = TEST_EXECUTION.getKeepAliveTimeout();
+    int expectedTimeout = configuredTimeout < 0 ? 1 : configuredTimeout;
     httpConnectionHelper.validate(connData -> {
       HttpConnectionAssert.create(connData)
-          .expectKeepAliveWithTimeout(TEST_EXECUTION.getKeepAliveTimeout())
+          .expectKeepAliveWithTimeout(expectedTimeout)
           .expectResponseSize(shuffleHandler.expectedResponseSize);
     });
     HttpConnectionAssert.assertKeepAliveConnectionsAreSame(httpConnectionHelper);
     Assert.assertEquals("Unexpected failure", new ArrayList<>(), shuffleHandler.failures);
+
+    shuffleHandler.stop();
   }
 
   @Test(timeout = 10000)
@@ -1722,6 +1756,7 @@ public class TestShuffleHandler {
           listenerList.size() <= maxOpenFiles);
     }
     sh.close();
+    sh.stop();
 
     Assert.assertEquals("Should have no caught exceptions",
         new ArrayList<>(), sh.failures);
@@ -1782,6 +1817,8 @@ public class TestShuffleHandler {
     Assert.assertTrue(String.format("Expected at least %s seconds of timeout. " +
             "Actual timeout seconds: %s", expectedTimeoutSeconds, secondsPassed),
         secondsPassed >= expectedTimeoutSeconds);
+    
+    shuffleHandler.stop();
   }
 
   public ChannelFuture createMockChannelFuture(Channel mockCh,
