@@ -112,8 +112,16 @@ public class Tracer {
 
     //this method is added to set the environment variables for testing
     private static void setOTelEnvVariables(String metricsExporter, String tracesExporter) {
-      System.setProperty("otel.metrics.exporter", metricsExporter);
-      System.setProperty("otel.traces.exporter", tracesExporter);
+      if(System.getenv().get("OTEL_TRACES_EXPORTER") == null){
+        System.setProperty("otel.metrics.exporter", metricsExporter);
+      } else {
+        LOG.info("Tracing Span Exporter set to :" + System.getenv().get("OTEL_TRACES_EXPORTER"));
+      }
+      if(System.getenv().get("OTEL_METRICS_EXPORTER") == null){
+        System.setProperty("otel.traces.exporter", tracesExporter);
+      } else {
+        LOG.info("Tracing Span Exporter set to :" + System.getenv().get("OTEL_METRICS_EXPORTER"));
+      }
     }
 
     public synchronized Tracer build() {
