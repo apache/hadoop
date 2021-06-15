@@ -1072,10 +1072,8 @@ public class TestShuffleHandler {
       }
       shuffleHandler.stop();
     }
-    //TODO snemeth HADOOP-15327: Add back this assertion when bug is determined and fixed.
-    // See detailed notes in jira
-//    Assert.assertEquals("Should have no caught exceptions",
-//        new ArrayList<>(), shuffleHandler.failures);
+    Assert.assertEquals("Should have no caught exceptions",
+        new ArrayList<>(), shuffleHandler.failures);
   }
 
   /**
