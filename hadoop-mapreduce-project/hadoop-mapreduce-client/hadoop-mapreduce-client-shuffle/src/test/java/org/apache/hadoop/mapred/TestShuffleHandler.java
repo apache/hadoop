@@ -1272,6 +1272,14 @@ public class TestShuffleHandler {
             failures.add(cause);
             super.exceptionCaught(ctx, cause);
           }
+
+          @Override
+          public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            ctx.pipeline().replace(HttpResponseEncoder.class, 
+                "loggingResponseEncoder",
+                new LoggingHttpResponseEncoder(false));
+            super.channelActive(ctx);
+          }
         };
       }
     };
