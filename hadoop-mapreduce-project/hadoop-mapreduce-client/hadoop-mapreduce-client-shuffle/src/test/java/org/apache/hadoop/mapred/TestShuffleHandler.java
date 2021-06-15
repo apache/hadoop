@@ -1236,8 +1236,7 @@ public class TestShuffleHandler {
   public void testMapFileAccess() throws IOException {
     final ArrayList<Throwable> failures = new ArrayList<>();
     // This will run only in NativeIO is enabled as SecureIOUtils need it
-    //TODO snemeth put this back once issue is figured out
-//    assumeTrue(NativeIO.isAvailable());
+    assumeTrue(NativeIO.isAvailable());
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
@@ -1315,20 +1314,19 @@ public class TestShuffleHandler {
       conn.connect();
       DataInputStream is = new DataInputStream(conn.getInputStream());
       InputStreamReadResult result = HttpConnectionHelper.readDataFromInputStream(is);
-
-      //TODO snemeth put this back once issue is figured out
-      //Retrieve file owner name
-//      FileInputStream is = new FileInputStream(fileMap.get(0));
-//      String owner = NativeIO.POSIX.getFstat(is.getFD()).getOwner();
-//      is.close();
-//
-//      String message =
-//          "Owner '" + owner + "' for path " + fileMap.get(0).getAbsolutePath()
-//              + " did not match expected owner '" + user + "'";
-//      Assert.assertTrue(String.format("Received string '%s' should contain " +
-//          "message '%s'", receivedString, message),
-//          receivedString.contains(message));
       String receivedString = result.asString;
+      
+      //Retrieve file owner name
+      FileInputStream fis = new FileInputStream(fileMap.get(0));
+      String owner = NativeIO.POSIX.getFstat(fis.getFD()).getOwner();
+      fis.close();
+      
+      String message =
+          "Owner '" + owner + "' for path " + fileMap.get(0).getAbsolutePath()
+              + " did not match expected owner '" + user + "'";
+      Assert.assertTrue(String.format("Received string '%s' should contain " +
+          "message '%s'", receivedString, message),
+          receivedString.contains(message));
       Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
       LOG.info("received: " + receivedString);
       Assert.assertNotEquals("", receivedString);
