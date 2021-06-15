@@ -312,7 +312,15 @@ public class TestShuffleHandler {
     private String getExecutingMethodName() {
       StackTraceElement[] stackTrace = Thread.currentThread()
           .getStackTrace();
-      String methodName = stackTrace[1].getMethodName();
+      // Array items (indices):
+      // 0: java.lang.Thread.getStackTrace(...)
+      // 1: TestShuffleHandler$LoggingHttpResponseEncoder.getExecutingMethodName(...)
+      String methodName = stackTrace[2].getMethodName();
+      //If this method was called from printExecutingMethod, 
+      // we have yet another stack frame
+      if (methodName.endsWith("printExecutingMethod")) {
+        methodName = stackTrace[3].getMethodName();
+      }
       String className = this.getClass().getSimpleName();
       return className + "#" + methodName;
     }
