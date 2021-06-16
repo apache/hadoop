@@ -641,12 +641,14 @@ public class VolumeScanner extends Thread {
         LOG.error("{} exiting because of exception ", this, e);
       }
       LOG.info("{} exiting.", this);
+      VolumeScannerCBInjector.get().preSavingBlockIteratorTask(this);
       // Save the current position of all block iterators and close them.
       for (BlockIterator iter : blockIters) {
         saveBlockIterator(iter);
         IOUtils.cleanup(null, iter);
       }
     } finally {
+      VolumeScannerCBInjector.get().terminationCallBack(this);
       // When the VolumeScanner exits, release the reference we were holding
       // on the volume.  This will allow the volume to be removed later.
       IOUtils.cleanup(null, ref);
@@ -666,6 +668,7 @@ public class VolumeScanner extends Thread {
     stopping = true;
     notify();
     this.interrupt();
+    VolumeScannerCBInjector.get().shutdownCallBack(this);
   }
 
 
