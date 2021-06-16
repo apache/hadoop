@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -146,15 +147,23 @@ class RamDiskAsyncLazyPersistService {
    * Execute the task sometime in the future, using ThreadPools.
    */
   synchronized void execute(File root, Runnable task) {
-    if (executors == null) {
-      throw new RuntimeException("AsyncLazyPersistService is already shutdown");
-    }
-    ThreadPoolExecutor executor = executors.get(root);
-    if (executor == null) {
-      throw new RuntimeException("Cannot find root " + root
-          + " for execution of task " + task);
-    } else {
-      executor.execute(task);
+    try {
+      if (executors == null) {
+        throw new RuntimeException("AsyncLazyPersistService is already shutdown");
+      }
+      ThreadPoolExecutor executor = executors.get(root);
+      if (executor == null) {
+        throw new RuntimeException("Cannot find root " + root
+            + " for execution of task " + task);
+      } else {
+        executor.execute(task);
+      }
+    } catch (RuntimeException re) {
+      if (task instanceof ReplicaLazyPersistTask) {
+        IOUtils.cleanupWithLogger(null,
+            ((ReplicaLazyPersistTask) task).targetVolume);
+      }
+      throw re;
     }
   }
 

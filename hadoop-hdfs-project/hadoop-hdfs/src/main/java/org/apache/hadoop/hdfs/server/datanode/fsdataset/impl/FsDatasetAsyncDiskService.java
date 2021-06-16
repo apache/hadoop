@@ -161,15 +161,23 @@ class FsDatasetAsyncDiskService {
    * Execute the task sometime in the future, using ThreadPools.
    */
   synchronized void execute(File root, Runnable task) {
-    if (executors == null) {
-      throw new RuntimeException("AsyncDiskService is already shutdown");
-    }
-    ThreadPoolExecutor executor = executors.get(root);
-    if (executor == null) {
-      throw new RuntimeException("Cannot find root " + root
-          + " for execution of task " + task);
-    } else {
-      executor.execute(task);
+    try {
+      if (executors == null) {
+        throw new RuntimeException("AsyncDiskService is already shutdown");
+      }
+      ThreadPoolExecutor executor = executors.get(root);
+      if (executor == null) {
+        throw new RuntimeException("Cannot find root " + root
+            + " for execution of task " + task);
+      } else {
+        executor.execute(task);
+      }
+    } catch (RuntimeException re) {
+      if (task instanceof ReplicaFileDeleteTask) {
+        IOUtils.cleanupWithLogger(null,
+            ((ReplicaFileDeleteTask) task).volumeRef);
+      }
+      throw re;
     }
   }
   
@@ -301,28 +309,31 @@ class FsDatasetAsyncDiskService {
 
     @Override
     public void run() {
-      final long blockLength = blockFile.length();
-      final long metaLength = metaFile.length();
-      boolean result;
+      try {
+        final long blockLength = blockFile.length();
+        final long metaLength = metaFile.length();
+        boolean result;
 
-      result = (trashDirectory == null) ? deleteFiles() : moveFiles();
+        result = (trashDirectory == null) ? deleteFiles() : moveFiles();
 
-      if (!result) {
-        LOG.warn("Unexpected error trying to "
-            + (trashDirectory == null ? "delete" : "move")
-            + " block " + block.getBlockPoolId() + " " + block.getLocalBlock()
-            + " at file " + blockFile + ". Ignored.");
-      } else {
-        if(block.getLocalBlock().getNumBytes() != BlockCommand.NO_ACK){
-          datanode.notifyNamenodeDeletedBlock(block, volume.getStorageID());
-        }
-        volume.onBlockFileDeletion(block.getBlockPoolId(), blockLength);
-        volume.onMetaFileDeletion(block.getBlockPoolId(), metaLength);
-        LOG.info("Deleted " + block.getBlockPoolId() + " "
+        if (!result) {
+          LOG.warn("Unexpected error trying to "
+              + (trashDirectory == null ? "delete" : "move")
+              + " block " + block.getBlockPoolId() + " " + block.getLocalBlock()
+              + " at file " + blockFile + ". Ignored.");
+        } else {
+          if (block.getLocalBlock().getNumBytes() != BlockCommand.NO_ACK){
+            datanode.notifyNamenodeDeletedBlock(block, volume.getStorageID());
+          }
+          volume.onBlockFileDeletion(block.getBlockPoolId(), blockLength);
+          volume.onMetaFileDeletion(block.getBlockPoolId(), metaLength);
+          LOG.info("Deleted " + block.getBlockPoolId() + " "
             + block.getLocalBlock() + " file " + blockFile);
+        }
+        updateDeletedBlockId(block);
+      } finally {
+        IOUtils.cleanupWithLogger(null, this.volumeRef);
       }
-      updateDeletedBlockId(block);
-      IOUtils.cleanup(null, volumeRef);
     }
   }
   
