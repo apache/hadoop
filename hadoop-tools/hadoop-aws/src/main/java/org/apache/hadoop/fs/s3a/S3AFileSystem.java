@@ -1383,9 +1383,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Override point: create the callbacks for S3AInputStream.
+   * @param auditSpan audit span.
    * @return an implementation of the InputStreamCallbacks,
    */
-  private S3AInputStream.InputStreamCallbacks createInputStreamCallbacks(
+  @VisibleForTesting
+  protected S3AInputStream.InputStreamCallbacks createInputStreamCallbacks(
       final AuditSpan auditSpan) {
     return new InputStreamCallbacksImpl(auditSpan);
   }
@@ -1439,10 +1441,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * using FS state as well as the status.
    * @param fileStatus file status.
    * @param seekPolicy input policy for this operation
+   * @param changePolicy change policy for this operation.
    * @param readAheadRange readahead value.
+   * @param auditSpan audit span.
    * @return a context for read and select operations.
    */
-  private S3AReadOpContext createReadContext(
+  @VisibleForTesting
+  protected S3AReadOpContext createReadContext(
       final FileStatus fileStatus,
       final S3AInputPolicy seekPolicy,
       final ChangeDetectionPolicy changePolicy,
@@ -1489,7 +1494,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param fileStatus file status to build from.
    * @return attributes to use when building the query.
    */
-  private S3ObjectAttributes createObjectAttributes(
+  @VisibleForTesting
+  protected S3ObjectAttributes createObjectAttributes(
       final S3AFileStatus fileStatus) {
     return createObjectAttributes(
         fileStatus.getPath(),
