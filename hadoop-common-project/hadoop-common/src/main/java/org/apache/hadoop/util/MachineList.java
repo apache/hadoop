@@ -178,9 +178,6 @@ public class MachineList {
     if (ipAddress == null) {
       throw new IllegalArgumentException("ipAddress is null.");
     }
-    if (all) {
-      return true;
-    }
     // iterate through the ip ranges for inclusion
     if (node != null) {
       String binaryIp = ipToBinaryNumber(ipAddress);
@@ -250,10 +247,10 @@ public class MachineList {
     return entries;
   }
 
-  private class TrieTree {
+  final private static class TrieTree {
     private Node root;
 
-    final private class Node {
+    final private static class Node {
       private boolean netRange;
       private HashSet<String> userSet;
       private Node[] children;
@@ -317,7 +314,7 @@ public class MachineList {
    * @param ipAddress A ip.
    * @return A binary mask.
    */
-  public static String ipToBinaryNumber(String ipAddress) {
+  private static String ipToBinaryNumber(String ipAddress) {
     String[] octetArray = ipAddress.split("\\.");
     StringBuilder binaryNumber = new StringBuilder();
     for (String str : octetArray) {
@@ -335,7 +332,7 @@ public class MachineList {
     return binaryNumber.toString();
   }
 
-  public String subtractBinaryNumber(String s, int size) {
+  private String subtractBinaryNumber(String s, int size) {
     return s.substring(0, size);
   }
 
@@ -345,7 +342,7 @@ public class MachineList {
    * @param ip A ip
    * @return if the given string is a Ipv4 false otherwise.
    */
-  public static boolean isValidIPv4(String ip) {
+  private static boolean isValidIPv4(String ip) {
     if (ip.length() < 7) {
       return false;
     }
@@ -367,7 +364,7 @@ public class MachineList {
     return true;
   }
 
-  public static boolean isValidIPv4Segment(String token) {
+  private static boolean isValidIPv4Segment(String token) {
     if (token.startsWith("0") && token.length() > 1) {
       return false;
     }

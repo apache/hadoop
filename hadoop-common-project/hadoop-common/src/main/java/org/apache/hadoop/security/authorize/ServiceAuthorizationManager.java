@@ -126,7 +126,8 @@ public class ServiceAuthorizationManager {
     }
     if (addr != null) {
       String hostAddress = addr.getHostAddress();
-      if (hosts.length != 2 || !hosts[0].includes(hostAddress, user.getUserName()) ||
+      if (hosts.length != 2 ||
+          !hosts[0].includes(hostAddress, user.getUserName()) ||
           hosts[1].includes(hostAddress, user.getUserName())) {
         AUDITLOG.warn(AUTHZ_FAILED_FOR + " for protocol=" + protocol
             + " from host = " +  hostAddress);

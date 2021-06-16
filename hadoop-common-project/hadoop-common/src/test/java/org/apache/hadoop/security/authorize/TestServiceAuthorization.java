@@ -381,7 +381,7 @@ public class TestServiceAuthorization {
     // TestProtocol1 can be accessed from "1.2.3.4" because it uses default block list
     try {
       serviceAuthorizationManager.authorize(drwho,
-         TestProtocol1.class, conf, InetAddress.getByName("192.168.1.1"));
+          TestProtocol1.class, conf, InetAddress.getByName("192.168.1.1"));
     } catch (AuthorizationException e) {
       fail();
     }
