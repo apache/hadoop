@@ -21,10 +21,14 @@ package org.apache.hadoop.io;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertTrue;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestIOUtilsWrapExceptionSuite extends Assert {
+public class TestIOUtilsWrapExceptionSuite extends AbstractHadoopTestBase {
     @Test
     public void testWrapExceptionWithInterruptedException() throws Exception {
         InterruptedIOException inputException = new InterruptedIOException("message");
@@ -33,8 +37,8 @@ public class TestIOUtilsWrapExceptionSuite extends Assert {
         Exception outputException = IOUtils.wrapException("path", "methodName", inputException);
 
         // The new exception should retain the input message, cause, and type
-        assertTrue(outputException instanceof InterruptedIOException);
-        assertTrue(outputException.getCause() instanceof NullPointerException);
+        Assertions.assertThat(outputException).isInstanceOf(InterruptedIOException.class);
+        Assertions.assertThat(outputException.getCause()).isInstanceOf(NullPointerException.class);
         assertEquals(outputException.getMessage(), inputException.getMessage());
         assertEquals(outputException.getCause(), inputException.getCause());
     }
@@ -48,8 +52,8 @@ public class TestIOUtilsWrapExceptionSuite extends Assert {
 
         // The new exception should retain the input message and cause
         // but be an InterruptedIOException because the cause was an InterruptedException
-        assertTrue(outputException instanceof InterruptedIOException);
-        assertTrue(outputException.getCause() instanceof InterruptedException);
+        Assertions.assertThat(outputException).isInstanceOf(InterruptedIOException.class);
+        Assertions.assertThat(outputException.getCause()).isInstanceOf(InterruptedException.class);
         assertEquals(outputException.getMessage(), inputException.getMessage());
         assertEquals(outputException.getCause(), inputException.getCause());
     }

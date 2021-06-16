@@ -482,8 +482,7 @@ public class IOUtils {
     if (exception instanceof InterruptedIOException
         || exception instanceof PathIOException) {
       return exception;
-    } else if (exception.getCause() != null
-            && exception.getCause() instanceof InterruptedException) {
+    } else if (exception.getCause() instanceof InterruptedException) {
       InterruptedIOException interruptedIOException =
               new InterruptedIOException(exception.getMessage());
       interruptedIOException.initCause(exception.getCause());
