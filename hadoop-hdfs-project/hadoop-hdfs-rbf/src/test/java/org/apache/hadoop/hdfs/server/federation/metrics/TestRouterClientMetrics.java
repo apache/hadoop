@@ -38,11 +38,11 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 /**
- * Test case for FilesInGetListingOps metric in Namenode
+ * Test case for RouterClientMetrics
  */
-public class TestRouterMetrics {
+public class TestRouterClientMetrics {
   private static final Configuration CONF = new HdfsConfiguration();
-  private static final String ROUTER_METRICS = "RouterActivity";
+  private static final String ROUTER_METRICS = "RouterClientActivity";
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
@@ -166,7 +166,8 @@ public class TestRouterMetrics {
     router.getRpcServer().
         getDatanodeReport(HdfsConstants.DatanodeReportType.LIVE);
     assertCounter("GetDatanodeReportOps", 2L, getMetrics(ROUTER_METRICS));
-    assertCounter("ConcurrentGetDatanodeReportOps", 1L, getMetrics(ROUTER_METRICS));
+    assertCounter("ConcurrentGetDatanodeReportOps", 1L,
+        getMetrics(ROUTER_METRICS));
   }
 
 }
