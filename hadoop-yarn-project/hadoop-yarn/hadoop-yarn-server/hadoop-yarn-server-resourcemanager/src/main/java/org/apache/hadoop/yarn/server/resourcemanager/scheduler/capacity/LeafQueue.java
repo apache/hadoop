@@ -147,14 +147,21 @@ public class LeafQueue extends AbstractCSQueue {
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public LeafQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
-      this(cs, cs.getConfiguration(), queueName, parent, old);
+    this(cs, cs.getConfiguration(), queueName, parent, old, false);
   }
 
   public LeafQueue(CapacitySchedulerContext cs,
       CapacitySchedulerConfiguration configuration,
-      String queueName, CSQueue parent, CSQueue old) throws
+      String queueName, CSQueue parent, CSQueue old) throws IOException {
+    this(cs, configuration, queueName, parent, old, false);
+  }
+
+  public LeafQueue(CapacitySchedulerContext cs,
+      CapacitySchedulerConfiguration configuration,
+      String queueName, CSQueue parent, CSQueue old, boolean isDynamic) throws
       IOException {
     super(cs, configuration, queueName, parent, old);
+    setDynamicQueue(isDynamic);
     this.scheduler = cs;
 
     this.usersManager = new UsersManager(metrics, this, labelManager, scheduler,
@@ -1689,6 +1696,17 @@ public class LeafQueue extends AbstractCSQueue {
     } finally {
       readLock.unlock();
     }
+  }
+
+  @Override
+  protected void setDynamicQueueProperties(
+      CapacitySchedulerConfiguration configuration) {
+    super.setDynamicQueueProperties(configuration);
+    // set to -1, to disable it
+    configuration.setUserLimitFactor(getQueuePath(), -1);
+    // Set Max AM percentage to a higher value
+    configuration.setMaximumApplicationMasterResourcePerQueuePercent(
+        getQueuePath(), 1f);
   }
 
   private void updateSchedulerHealthForCompletedContainer(
