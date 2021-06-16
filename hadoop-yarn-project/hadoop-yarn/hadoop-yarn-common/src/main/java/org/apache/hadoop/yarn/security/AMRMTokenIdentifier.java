@@ -57,6 +57,8 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
   public static final Text KIND_NAME = new Text("YARN_AM_RM_TOKEN");
   private AMRMTokenIdentifierProto proto;
 
+  private boolean oldFormat = false;
+
   public AMRMTokenIdentifier() {
   }
   
@@ -82,7 +84,16 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    out.write(proto.toByteArray());
+    if (oldFormat) {
+      ApplicationAttemptId applicationAttemptId = getApplicationAttemptId();
+      ApplicationId appId = applicationAttemptId.getApplicationId();
+      out.writeLong(appId.getClusterTimestamp());
+      out.writeInt(appId.getId());
+      out.writeInt(applicationAttemptId.getAttemptId());
+      out.writeInt(getKeyId());
+    } else {
+      out.write(proto.toByteArray());
+    }
   }
 
   @Override
@@ -111,6 +122,7 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
         ((ApplicationAttemptIdPBImpl)appAttemptId).getProto());
     builder.setKeyId(in.readInt());
     proto = builder.build();
+    oldFormat = true;
   }
 
   @Override

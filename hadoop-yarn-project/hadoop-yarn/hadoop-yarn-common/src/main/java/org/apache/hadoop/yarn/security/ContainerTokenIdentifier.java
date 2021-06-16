@@ -75,6 +75,8 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   private ContainerTokenIdentifierProto proto;
 
+  private boolean oldFormat = false;
+
   public ContainerTokenIdentifier(ContainerId containerID,
       String hostName, String appSubmitter, Resource r, long expiryTimeStamp,
       int masterKeyId, long rmIdentifier, Priority priority, long creationTime) {
@@ -327,7 +329,28 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   @Override
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing ContainerTokenIdentifier to RPC layer: {}", this);
-    out.write(proto.toByteArray());
+    if (oldFormat) {
+      ContainerId containerId = getContainerID();
+      ApplicationAttemptId applicationAttemptId = containerId
+          .getApplicationAttemptId();
+      ApplicationId applicationId = applicationAttemptId.getApplicationId();
+      out.writeLong(applicationId.getClusterTimestamp());
+      out.writeInt(applicationId.getId());
+      out.writeInt(applicationAttemptId.getAttemptId());
+      out.writeLong(containerId.getContainerId());
+      out.writeUTF(getNmHostAddress());
+      out.writeUTF(getApplicationSubmitter());
+      Resource resource = getResource();
+      out.writeInt(resource.getMemory());
+      out.writeInt(resource.getVirtualCores());
+      out.writeLong(getExpiryTimeStamp());
+      out.writeInt(getMasterKeyId());
+      out.writeLong(getRMIdentifier());
+      out.writeInt(getPriority().getPriority());
+      out.writeLong(getCreationTime());
+    } else {
+      out.write(proto.toByteArray());
+    }
   }
 
   @Override
@@ -389,6 +412,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
           LogAggregationContextProto.parseFrom(bytes));
     }
     proto = builder.build();
+    oldFormat = true;
   }
 
   @Override

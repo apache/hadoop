@@ -53,6 +53,8 @@ public class NMTokenIdentifier extends TokenIdentifier {
   
   private NMTokenIdentifierProto proto;
 
+  private boolean oldFormat = false;
+
   public NMTokenIdentifier(ApplicationAttemptId appAttemptId, 
       NodeId nodeId, String applicationSubmitter, int masterKeyId) {
     NMTokenIdentifierProto.Builder builder = NMTokenIdentifierProto.newBuilder();
@@ -99,7 +101,18 @@ public class NMTokenIdentifier extends TokenIdentifier {
   @Override
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing NMTokenIdentifier to RPC layer: {}", this);
-    out.write(proto.toByteArray());
+    if (oldFormat) {
+      ApplicationAttemptId appAttemptId = getApplicationAttemptId();
+      ApplicationId applicationId = appAttemptId.getApplicationId();
+      out.writeLong(applicationId.getClusterTimestamp());
+      out.writeInt(applicationId.getId());
+      out.writeInt(appAttemptId.getAttemptId());
+      out.writeUTF(getNodeId().toString());
+      out.writeUTF(getApplicationSubmitter());
+      out.writeInt(getKeyId());
+    } else {
+      out.write(proto.toByteArray());
+    }
   }
 
   @Override
@@ -131,6 +144,7 @@ public class NMTokenIdentifier extends TokenIdentifier {
     builder.setAppSubmitter(in.readUTF());
     builder.setKeyId(in.readInt());
     proto = builder.build();
+    oldFormat = true;
   }
 
   @Override
