@@ -194,7 +194,6 @@ public class RouterClientMetrics {
     String sessionId = conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY);
     String processName = "Router";
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    JvmMetrics jm = JvmMetrics.create(processName, sessionId, ms);
 
     return ms.register(new RouterClientMetrics(processName, sessionId));
   }
