@@ -3097,14 +3097,6 @@
 </property>
 
 <property>
-  <name>hadoop.ssl.enabled</name>
-  <value>false</value>
-  <description>
-    Deprecated. Use dfs.http.policy and yarn.http.policy instead.
-  </description>
-</property>
-
-<property>
   <name>hadoop.ssl.enabled.protocols</name>
   <value>TLSv1.2</value>
   <description>
