@@ -70,3 +70,4 @@ int XPlatform::Syscall::CreateAndOpenTempFile(std::vector<char>& pattern) {
 bool XPlatform::Syscall::CloseFile(const int file_descriptor) {
   return close(file_descriptor) == 0;
 }
+
