@@ -81,6 +81,7 @@ import com.amazonaws.event.ProgressListener;
 
 import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -3784,10 +3785,61 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       Path dst) throws IOException {
     checkNotClosed();
     LOG.debug("Copying local file from {} to {}", src, dst);
-    trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst, () -> {
-      innerCopyFromLocalFile(delSrc, overwrite, src, dst);
-      return null;
-    });
+    trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst,
+            new CopyFromLocalOperation(
+                    createStoreContext(),
+                    delSrc,
+                    overwrite,
+                    src,
+                    dst,
+                    createCopyFromLocalCallbacks()));
+  }
+
+  protected CopyFromLocalOperation.CopyFromLocalOperationCallbacks
+      createCopyFromLocalCallbacks() {
+    return new CopyFromLocalCallbacksImpl();
+  }
+
+  protected class CopyFromLocalCallbacksImpl implements
+          CopyFromLocalOperation.CopyFromLocalOperationCallbacks {
+    @Override
+    public RemoteIterator<LocatedFileStatus> listStatusIterator(
+            final Path path,
+            final boolean recursive) throws IOException {
+      LocalFileSystem local = getLocal(getConf());
+      return local.listFiles(path, recursive);
+    }
+
+    @Override
+    public LocalFileSystem getLocalFS() throws IOException {
+      return getLocal(getConf());
+    }
+
+    @Override
+    public void copyFileFromTo(File file, Path from, Path to) throws IOException {
+      final String key = pathToKey(to);
+      final ObjectMetadata om = newObjectMetadata(file.length());
+      Progressable progress = null;
+      PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, file);
+      trackDurationOfInvocation(
+              getDurationTrackerFactory(),
+              OBJECT_PUT_REQUESTS.getSymbol(),
+              () -> S3AFileSystem.this.invoker.retry(
+                      "copyFromLocalFile(" + "" + ")", to.toString(),
+                      true,
+                      () -> executePut(putObjectRequest, progress)));
+    }
+
+    @Override
+    public S3AFileStatus getFileStatus(
+            Path f,
+            boolean needEmptyDirectoryFlag,
+            Set<StatusProbeEnum> probes) throws IOException {
+        return S3AFileSystem.this.innerGetFileStatus(
+                f,
+                needEmptyDirectoryFlag,
+                probes);
+    }
   }
 
   /**
