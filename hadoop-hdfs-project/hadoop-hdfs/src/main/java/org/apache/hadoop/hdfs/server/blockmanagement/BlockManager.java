@@ -25,27 +25,8 @@ import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 
 import java.util.concurrent.atomic.AtomicLong;
 import javax.management.ObjectName;
@@ -337,6 +318,9 @@ public class BlockManager implements BlockStatsMXBean {
   
   /** Block report thread for handling async reports. */
   private final BlockReportProcessingThread blockReportThread;
+
+  /** Used to prevent the occurrence of FBR datanodeid collection. */
+  private Set<String> fullBRDatanodeIds = new HashSet<String>();
 
   /**
    * Store blocks {@literal ->} datanodedescriptor(s) map of corrupt replicas.
@@ -773,6 +757,7 @@ public class BlockManager implements BlockStatsMXBean {
     datanodeManager.close();
     pendingReconstruction.stop();
     blocksMap.close();
+    fullBRDatanodeIds.clear();
   }
 
   /** @return the datanodeManager */
@@ -2605,6 +2590,12 @@ public class BlockManager implements BlockStatsMXBean {
       LOG.warn("Failed to find datanode {}", nodeReg);
       return 0;
     }
+
+    if (containFBRDatanode(nodeReg)) {
+      LOG.warn("The FBR data of {} already exists on the NameNode.", nodeReg);
+      return 0;
+    }
+
     // Request a new block report lease.  The BlockReportLeaseManager has
     // its own internal locking.
     long leaseId = blockReportLeaseManager.requestLease(node);
@@ -5283,6 +5274,31 @@ public class BlockManager implements BlockStatsMXBean {
       Thread.currentThread().interrupt();
       throw new IOException(ie);
     }
+  }
+
+  @VisibleForTesting
+  public void addFBRDatanode(String datanodeId) throws IOException {
+    synchronized (this) {
+      if (datanodeId == null || "".equals(datanodeId)) {
+        String msg = "Full BR cannot make DataNode empty.";
+        throw new IOException(msg);
+      }
+      fullBRDatanodeIds.add(datanodeId);
+    }
+  }
+
+  @VisibleForTesting
+  public void removeFBRDatanode(String datanodeId) {
+    synchronized (this) {
+      if (datanodeId != null && !"".equals(datanodeId)) {
+        fullBRDatanodeIds.remove(datanodeId);
+      }
+    }
+  }
+
+  @VisibleForTesting
+  public boolean containFBRDatanode(DatanodeRegistration nodeReg) {
+    return fullBRDatanodeIds.contains(nodeReg.getDatanodeUuid());
   }
 
   /**

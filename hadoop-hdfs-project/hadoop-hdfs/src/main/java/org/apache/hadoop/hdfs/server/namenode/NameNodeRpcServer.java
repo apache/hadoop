@@ -1617,17 +1617,22 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     boolean noStaleStorages = false;
     try {
       if (bm.checkBlockReportLease(context, nodeReg)) {
-        for (int r = 0; r < reports.length; r++) {
-          final BlockListAsLongs blocks = reports[r].getBlocks();
-          //
-          // BlockManager.processReport accumulates information of prior calls
-          // for the same node and storage, so the value returned by the last
-          // call of this loop is the final updated value for noStaleStorage.
-          //
-          final int index = r;
-          noStaleStorages = bm.runBlockOp(() ->
-            bm.processReport(nodeReg, reports[index].getStorage(),
-                blocks, context));
+        try {
+          bm.addFBRDatanode(nodeReg.getDatanodeUuid());
+          for (int r = 0; r < reports.length; r++) {
+            final BlockListAsLongs blocks = reports[r].getBlocks();
+            //
+            // BlockManager.processReport accumulates information of prior calls
+            // for the same node and storage, so the value returned by the last
+            // call of this loop is the final updated value for noStaleStorage.
+            //
+            final int index = r;
+            noStaleStorages = bm.runBlockOp(() ->
+                    bm.processReport(nodeReg, reports[index].getStorage(),
+                            blocks, context));
+          }
+        } finally {
+          bm.removeFBRDatanode(nodeReg.getDatanodeUuid());
         }
       }
     } catch (UnregisteredNodeException une) {
