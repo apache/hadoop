@@ -46,6 +46,7 @@ import org.slf4j.event.Level;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 public class TestReconstructStripedBlocksWithRackAwareness {
@@ -172,7 +173,9 @@ public class TestReconstructStripedBlocksWithRackAwareness {
 
     // we now should have 9 internal blocks distributed in 5 racks
     Set<String> rackSet = new HashSet<>();
-    for (DatanodeStorageInfo storage : blockInfo.storages) {
+    Iterator<DatanodeStorageInfo> it = blockInfo.getStorageInfos();
+    while (it.hasNext()){
+      DatanodeStorageInfo storage = it.next();
       rackSet.add(storage.getDatanodeDescriptor().getNetworkLocation());
     }
     Assert.assertEquals("rackSet size is wrong: " + rackSet, dataBlocks - 1,
@@ -203,7 +206,9 @@ public class TestReconstructStripedBlocksWithRackAwareness {
     // check if redundancy monitor correctly schedule the reconstruction work.
     boolean scheduled = false;
     for (int i = 0; i < 5; i++) { // retry 5 times
-      for (DatanodeStorageInfo storage : blockInfo.storages) {
+      it = blockInfo.getStorageInfos();
+      while (it.hasNext()){
+        DatanodeStorageInfo storage = it.next();
         if (storage != null) {
           DatanodeDescriptor dn = storage.getDatanodeDescriptor();
           Assert.assertEquals("Block to be erasure coded is wrong for datanode:"

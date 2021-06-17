@@ -568,7 +568,7 @@ public class TestReconstructStripedFile {
     writeFile(fs, "/ec-xmits-weight", fileLen);
 
     DataNode dn = cluster.getDataNodes().get(0);
-    int corruptBlocks = dn.getFSDataset().getSortedFinalizedBlocks(
+    int corruptBlocks = dn.getFSDataset().getFinalizedBlocks(
         cluster.getNameNode().getNamesystem().getBlockPoolId()).size();
     int expectedXmits = corruptBlocks * expectedWeight;
 
