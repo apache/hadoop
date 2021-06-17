@@ -318,6 +318,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean
       DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED_DEFAULT = true;
 
+  public static final String DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT_ENABLED =
+     "dfs.namenode.reconstruct.ecblock-groups.limit.enable";
+  public static final boolean DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT_ENABLED_DEFAULT = false;
+
+  public static final String DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT =
+      "dfs.namenode.reconstruct.ecblock-groups.limit";
+  public static final long DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT_DEFAULT = 1000;
+
   @Deprecated
   public static final String  DFS_WEBHDFS_USER_PATTERN_KEY =
       HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY;

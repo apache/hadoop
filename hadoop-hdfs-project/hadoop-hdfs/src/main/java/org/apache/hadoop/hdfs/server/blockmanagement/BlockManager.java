@@ -111,6 +111,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.hdfs.util.FoldedTreeSet;
+import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.namenode.CacheManager;
 
@@ -469,6 +470,12 @@ public class BlockManager implements BlockStatsMXBean {
   /** Storages accessible from multiple DNs. */
   private final ProvidedStorageMap providedStorageMap;
 
+  /** Whether to enable limit EC block reconstruct.*/
+  private volatile boolean reconstructECBlockGroupsLimitEnabled;
+  private volatile long reconstructECBlockGroupsLimit;
+  private final LightWeightHashSet<BlockInfo> reconstructECBlockGroups =
+      new LightWeightHashSet<>();
+
   public BlockManager(final Namesystem namesystem, boolean haEnabled,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
@@ -625,6 +632,13 @@ public class BlockManager implements BlockStatsMXBean {
         conf.getBoolean(DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED,
             DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED_DEFAULT);
 
+    this.reconstructECBlockGroupsLimitEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT_ENABLED,
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT_ENABLED_DEFAULT);
+    this.reconstructECBlockGroupsLimit = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT,
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCT_EC_BLOCK_GROUPS_LIMIT_DEFAULT);
+
     LOG.info("defaultReplication         = {}", defaultReplication);
     LOG.info("maxReplication             = {}", maxReplication);
     LOG.info("minReplication             = {}", minReplication);
@@ -632,6 +646,8 @@ public class BlockManager implements BlockStatsMXBean {
     LOG.info("redundancyRecheckInterval  = {}ms", redundancyRecheckIntervalMs);
     LOG.info("encryptDataTransfer        = {}", encryptDataTransfer);
     LOG.info("maxNumBlocksToLog          = {}", maxNumBlocksToLog);
+    LOG.info("reconstructECBlockGroupsLimit = {}", reconstructECBlockGroupsLimit);
+    LOG.info("reconstructECBlockGroupsLimitEnabled = {}", reconstructECBlockGroupsLimitEnabled);
   }
 
   private static BlockTokenSecretManager createBlockTokenSecretManager(
@@ -1295,6 +1311,8 @@ public class BlockManager implements BlockStatsMXBean {
           new DatanodeStorageInfo[locations.size()];
       locations.toArray(removedBlockTargets);
       DatanodeStorageInfo.decrementBlocksScheduled(removedBlockTargets);
+      //Remove block from reconstructECBlockGroups queue.
+      removeReconstructECBlockGroups(lastBlock);
     }
 
     // remove this block from the list of pending blocks to be deleted. 
@@ -2089,12 +2107,21 @@ public class BlockManager implements BlockStatsMXBean {
         final DatanodeStorageInfo[] targets = rw.getTargets();
         if (targets == null || targets.length == 0) {
           rw.resetTargets();
+          if (removeReconstructECBlockGroups(rw.getBlock())) {
+            LOG.debug("Removing block {} from reconstructECBlockGroups, " +
+                "now size {}", rw.getBlock(), getReconstructECBlockGroupCount());
+          }
           continue;
         }
 
         synchronized (neededReconstruction) {
           if (validateReconstructionWork(rw)) {
             scheduledWork++;
+          } else {
+            if (removeReconstructECBlockGroups(rw.getBlock())) {
+              LOG.debug("Removing block {} from reconstructECBlockGroups, " +
+                  "now size {}", rw.getBlock(), getReconstructECBlockGroupCount());
+            }
           }
         }
       }
@@ -2200,6 +2227,26 @@ public class BlockManager implements BlockStatsMXBean {
         additionalReplRequired = additionalReplRequired -
             numReplicas.decommissioning() -
             numReplicas.liveEnteringMaintenanceReplicas();
+        if (reconstructECBlockGroupsLimitEnabled &&
+            numReplicas.liveReplicas() < requiredRedundancy) {
+          LOG.debug("Prepare creating an ErasureCodingWork to {} reconstruct, " +
+              "currently there are {} EC BlockGroups to reconstruct and " +
+              "the limit is {}", block, getReconstructECBlockGroupCount(),
+              reconstructECBlockGroupsLimit);
+          if (checkReconstructECBlockGroups(block) ||
+              getReconstructECBlockGroupCount() >= this.reconstructECBlockGroupsLimit) {
+            LOG.warn("Currently there are {} EC BlockGroups to reconstruct and " +
+                "the limit is {} block {} cannot create",
+                getReconstructECBlockGroupCount(),
+                reconstructECBlockGroupsLimit, block);
+            return null;
+          }
+          addReconstructECBlockGroups(block);
+          LOG.debug("Complete creating an ErasureCodingWork to {} reconstruct, " +
+              "currently there are {} EC BlockGroups to reconstruct and " +
+              "the limit is {}", block, getReconstructECBlockGroupCount(),
+              reconstructECBlockGroupsLimit);
+        }
       }
       final DatanodeDescriptor[] newSrcNodes =
           new DatanodeDescriptor[srcNodes.length];
@@ -4225,6 +4272,7 @@ public class BlockManager implements BlockStatsMXBean {
     if (storedBlock != null &&
         block.getGenerationStamp() == storedBlock.getGenerationStamp()) {
       if (pendingReconstruction.decrement(storedBlock, storageInfo)) {
+        removeReconstructECBlockGroups(storedBlock);
         NameNode.getNameNodeMetrics().incSuccessfulReReplications();
       }
     }
@@ -4654,6 +4702,7 @@ public class BlockManager implements BlockStatsMXBean {
     }
     neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
     postponedMisreplicatedBlocks.remove(block);
+    removeReconstructECBlockGroups(block);
   }
 
   public BlockInfo getStoredBlock(Block block) {
@@ -5139,6 +5188,7 @@ public class BlockManager implements BlockStatsMXBean {
     invalidateBlocks.clear();
     datanodeManager.clearPendingQueues();
     postponedMisreplicatedBlocks.clear();
+    clearReconstructECBlockGroups();
   };
 
   public static LocatedBlock newLocatedBlock(
@@ -5502,5 +5552,48 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public StoragePolicySatisfyManager getSPSManager() {
     return spsManager;
+  }
+
+  boolean removeReconstructECBlockGroups(BlockInfo block) {
+    if (reconstructECBlockGroupsLimitEnabled && block.isStriped()) {
+      synchronized (reconstructECBlockGroups) {
+        if (reconstructECBlockGroups.remove(block)) {
+          LOG.debug("Removing block {} from reconstructECBlockGroups, " +
+              "now size {}", block, getReconstructECBlockGroupCount());
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  boolean checkReconstructECBlockGroups(BlockInfo block) {
+    synchronized (reconstructECBlockGroups) {
+      if (reconstructECBlockGroups.contains(block) &&
+          reconstructECBlockGroups.remove(block)) {
+        LOG.warn("Check Removing block {} from reconstructECBlockGroups, " +
+            "now size {}", block, getReconstructECBlockGroupCount());
+        return true;
+      }
+    }
+    return false;
+  }
+
+  boolean addReconstructECBlockGroups(BlockInfo block) {
+    synchronized (reconstructECBlockGroups) {
+      return reconstructECBlockGroups.add(block);
+    }
+  }
+
+  public long getReconstructECBlockGroupCount() {
+    synchronized (reconstructECBlockGroups) {
+      return reconstructECBlockGroups.size();
+    }
+  }
+
+  void clearReconstructECBlockGroups(){
+    synchronized (reconstructECBlockGroups) {
+      reconstructECBlockGroups.clear();
+    }
   }
 }
