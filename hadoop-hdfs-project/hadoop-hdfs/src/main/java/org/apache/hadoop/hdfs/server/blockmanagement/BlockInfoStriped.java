@@ -32,20 +32,21 @@ import java.util.NoSuchElementException;
 /**
  * Subclass of {@link BlockInfo}, presenting a block group in erasure coding.
  *
- * We still use a storage array to store DatanodeStorageInfo for each block in
- * the block group. For a (m+k) block group, the first (m+k) storage units
+ * We still use triplets to store DatanodeStorageInfo for each block in the
+ * block group, as well as the previous/next block in the corresponding
+ * DatanodeStorageInfo. For a (m+k) block group, the first (m+k) triplet units
  * are sorted and strictly mapped to the corresponding block.
  *
  * Normally each block belonging to group is stored in only one DataNode.
- * However, it is possible that some block is over-replicated. Thus the storage
+ * However, it is possible that some block is over-replicated. Thus the triplet
  * array's size can be larger than (m+k). Thus currently we use an extra byte
- * array to record the block index for each entry.
+ * array to record the block index for each triplet.
  */
 @InterfaceAudience.Private
 public class BlockInfoStriped extends BlockInfo {
   private final ErasureCodingPolicy ecPolicy;
   /**
-   * Always the same size with storage. Record the block index for each entry
+   * Always the same size with triplets. Record the block index for each triplet
    * TODO: actually this is only necessary for over-replicated block. Thus can
    * be further optimized to save memory usage.
    */
@@ -109,7 +110,7 @@ public class BlockInfoStriped extends BlockInfo {
         return i;
       }
     }
-    // need to expand the storage size
+    // need to expand the triplet size
     ensureCapacity(i + 1, true);
     return i;
   }
@@ -141,6 +142,8 @@ public class BlockInfoStriped extends BlockInfo {
   private void addStorage(DatanodeStorageInfo storage, int index,
       int blockIndex) {
     setStorageInfo(index, storage);
+    setNext(index, null);
+    setPrevious(index, null);
     indices[index] = (byte) blockIndex;
   }
 
@@ -183,22 +186,26 @@ public class BlockInfoStriped extends BlockInfo {
     if (dnIndex < 0) { // the node is not found
       return false;
     }
-    // set the entry to null
+    assert getPrevious(dnIndex) == null && getNext(dnIndex) == null :
+        "Block is still in the list and must be removed first.";
+    // set the triplet to null
     setStorageInfo(dnIndex, null);
+    setNext(dnIndex, null);
+    setPrevious(dnIndex, null);
     indices[dnIndex] = -1;
     return true;
   }
 
   private void ensureCapacity(int totalSize, boolean keepOld) {
     if (getCapacity() < totalSize) {
-      DatanodeStorageInfo[] old = storages;
+      Object[] old = triplets;
       byte[] oldIndices = indices;
-      storages = new DatanodeStorageInfo[totalSize];
+      triplets = new Object[totalSize * 3];
       indices = new byte[totalSize];
       initIndices();
 
       if (keepOld) {
-        System.arraycopy(old, 0, storages, 0, old.length);
+        System.arraycopy(old, 0, triplets, 0, old.length);
         System.arraycopy(oldIndices, 0, indices, 0, oldIndices.length);
       }
     }
@@ -225,7 +232,8 @@ public class BlockInfoStriped extends BlockInfo {
 
   @Override
   public int numNodes() {
-    assert this.storages != null : "BlockInfo is not initialized";
+    assert this.triplets != null : "BlockInfo is not initialized";
+    assert triplets.length % 3 == 0 : "Malformed BlockInfo";
     int num = 0;
     for (int idx = getCapacity()-1; idx >= 0; idx--) {
       if (getStorageInfo(idx) != null) {
@@ -304,7 +312,8 @@ public class BlockInfoStriped extends BlockInfo {
               throw new NoSuchElementException();
             }
             int i = index++;
-            return new StorageAndBlockIndex(storages[i], indices[i]);
+            return new StorageAndBlockIndex(
+                (DatanodeStorageInfo) triplets[i * 3], indices[i]);
           }
 
           @Override
