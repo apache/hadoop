@@ -52,16 +52,12 @@ public class BlockReportContext {
    */
   private final long leaseId;
 
-  private final boolean sorted;
-
   public BlockReportContext(int totalRpcs, int curRpc,
-                            long reportId, long leaseId,
-                            boolean sorted) {
+                            long reportId, long leaseId) {
     this.totalRpcs = totalRpcs;
     this.curRpc = curRpc;
     this.reportId = reportId;
     this.leaseId = leaseId;
-    this.sorted = sorted;
   }
 
   public int getTotalRpcs() {
@@ -78,9 +74,5 @@ public class BlockReportContext {
 
   public long getLeaseId() {
     return leaseId;
-  }
-
-  public boolean isSorted() {
-    return sorted;
   }
 }

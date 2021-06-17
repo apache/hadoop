@@ -21,7 +21,10 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -408,16 +411,15 @@ public class DirectoryScanner implements Runnable {
     for (Entry<String, ScanInfo[]> entry : diskReport.entrySet()) {
       String bpid = entry.getKey();
       ScanInfo[] blockpoolReport = entry.getValue();
-        
+
       Stats statsRecord = new Stats(bpid);
       stats.put(bpid, statsRecord);
       LinkedList<ScanInfo> diffRecord = new LinkedList<ScanInfo>();
-      synchronized(diffs) {
-        diffs.put(bpid, diffRecord);
-      }
-        
+      diffs.put(bpid, diffRecord);
+
       statsRecord.totalBlocks = blockpoolReport.length;
-      final List<ReplicaInfo> bl = dataset.getSortedFinalizedBlocks(bpid);
+      final List<ReplicaInfo> bl = dataset.getFinalizedBlocks(bpid);
+      Collections.sort(bl); // Sort based on blockId
 
       int d = 0; // index for blockpoolReport
       int m = 0; // index for memReprot

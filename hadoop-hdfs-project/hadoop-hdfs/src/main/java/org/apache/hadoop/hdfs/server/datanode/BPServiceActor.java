@@ -389,7 +389,7 @@ class BPServiceActor implements Runnable {
         // Below split threshold, send all reports in a single message.
         DatanodeCommand cmd = bpNamenode.blockReport(
             bpRegistration, bpos.getBlockPoolId(), reports,
-              new BlockReportContext(1, 0, reportId, fullBrLeaseId, true));
+            new BlockReportContext(1, 0, reportId, fullBrLeaseId));
         blockReportSizes.add(
             calculateBlockReportPBSize(useBlocksBuffer, reports));
         numRPCs = 1;
@@ -404,7 +404,7 @@ class BPServiceActor implements Runnable {
           DatanodeCommand cmd = bpNamenode.blockReport(
               bpRegistration, bpos.getBlockPoolId(), singleReport,
               new BlockReportContext(reports.length, r, reportId,
-                  fullBrLeaseId, true));
+                  fullBrLeaseId));
           blockReportSizes.add(
               calculateBlockReportPBSize(useBlocksBuffer, singleReport));
           numReportsSent++;
