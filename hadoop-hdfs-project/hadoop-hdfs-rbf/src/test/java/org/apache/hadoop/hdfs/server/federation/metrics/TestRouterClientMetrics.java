@@ -38,7 +38,7 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 /**
- * Test case for RouterClientMetrics
+ * Test case for RouterClientMetrics.
  */
 public class TestRouterClientMetrics {
   private static final Configuration CONF = new HdfsConfiguration();
