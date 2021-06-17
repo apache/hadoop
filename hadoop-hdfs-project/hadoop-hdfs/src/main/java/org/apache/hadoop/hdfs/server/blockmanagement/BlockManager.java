@@ -2605,6 +2605,24 @@ public class BlockManager implements BlockStatsMXBean {
       LOG.warn("Failed to find datanode {}", nodeReg);
       return 0;
     }
+
+    // During safemode, DataNodes are only allowed to report all data once.
+    if (namesystem.isInStartupSafeMode()) {
+      boolean allReported = true;
+      for (DatanodeStorageInfo storageInfo : node.getStorageInfos()) {
+        if (storageInfo.getBlockReportCount() < 1) {
+          allReported = false;
+          break;
+        }
+      }
+
+      if (allReported) {
+        LOG.info("The datanode {} has reported all blocks and does not need "
+            + "to be reported again during SafeMode.", nodeReg);
+        return 0;
+      }
+    }
+
     // Request a new block report lease.  The BlockReportLeaseManager has
     // its own internal locking.
     long leaseId = blockReportLeaseManager.requestLease(node);
