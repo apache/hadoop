@@ -29,7 +29,6 @@ Changing the policy from the default value, `"delete"` _is not backwards compati
 Versions of Hadoop which are incompatible with other marker retention policies,
 as of August 2020.
 
--------------------------------------------------------
 |  Branch    | Compatible Since | Supported           |
 |------------|------------------|---------------------|
 | Hadoop 2.x |       n/a        | WONTFIX             |
@@ -37,7 +36,7 @@ as of August 2020.
 | Hadoop 3.1 |      check       | Read-only           |
 | Hadoop 3.2 |      check       | Read-only           |
 | Hadoop 3.3 |      3.3.1       | Done                |
--------------------------------------------------------
+
 
 *WONTFIX*
 
