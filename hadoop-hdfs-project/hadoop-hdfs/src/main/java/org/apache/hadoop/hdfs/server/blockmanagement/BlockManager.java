@@ -4079,10 +4079,10 @@ public class BlockManager implements BlockStatsMXBean {
       throws IOException {
     // blockReceived reports a finalized block
     Collection<BlockInfoToAdd> toAdd = new LinkedList<>();
-    Collection<Block> toInvalidate = new LinkedList<Block>();
+    Collection<Block> toInvalidate = new LinkedList<>();
     Collection<BlockToMarkCorrupt> toCorrupt =
-        new LinkedList<BlockToMarkCorrupt>();
-    Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
+        new LinkedList<>();
+    Collection<StatefulBlockInfo> toUC = new LinkedList<>();
 
     final DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
 
