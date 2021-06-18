@@ -633,7 +633,11 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
 
     while (writeLoopCount > 0) {
       opStream.write(buffer, startOffset, writeSize);
-      MockFastpathConnection.registerAppend(totalSize, testFilePath.getName(), buffer, startOffset, writeSize);
+      if (isMockFastpathTest) {
+        MockFastpathConnection
+            .registerAppend(totalSize, testFilePath.getName(), buffer,
+                startOffset, writeSize);
+      }
       startOffset += writeSize;
       writeLoopCount--;
     }

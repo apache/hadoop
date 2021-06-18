@@ -102,8 +102,11 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       //Flushing output stream to see content to read
       outForOneOperation.hflush();
       byte[] buff = testReadWriteOps.getBytes();
-      MockFastpathConnection.registerAppend(buff.length,
-          smallOperationsFile.getName(), buff, 0, buff.length);
+      if (isMockFastpathTest) {
+        MockFastpathConnection
+            .registerAppend(buff.length, smallOperationsFile.getName(), buff, 0,
+                buff.length);
+      }
       inForOneOperation = isMockFastpathTest
           ? openMockAbfsInputStream(fs, smallOperationsFile)
           : fs.open(smallOperationsFile);
@@ -156,8 +159,11 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       int totalLen = largeValue*buff.length;
       for (int i = 0; i < largeValue; i++) {
         outForLargeOperations.write(testReadWriteOps.getBytes());
-        MockFastpathConnection.registerAppend(totalLen,
-            largeOperationsFile.getName(), buff, 0, buff.length);
+        if (isMockFastpathTest) {
+          MockFastpathConnection
+              .registerAppend(totalLen, largeOperationsFile.getName(), buff, 0,
+                  buff.length);
+        }
 
         //Creating the String for content Validation
         largeOperationsValidationString.append(testReadWriteOps);
@@ -203,8 +209,10 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
               largeOperationsValidationString.toString().getBytes()));
     }
 
-    MockFastpathConnection.unregisterAppend(smallOperationsFile.getName());
-    MockFastpathConnection.unregisterAppend(largeOperationsFile.getName());
+    if (isMockFastpathTest) {
+      MockFastpathConnection.unregisterAppend(smallOperationsFile.getName());
+      MockFastpathConnection.unregisterAppend(largeOperationsFile.getName());
+    }
   }
 
   /**
