@@ -512,6 +512,9 @@
                     <include>**/azurebfs/Test*.java</include>
                     <include>**/azurebfs/**/Test*.java</include>
                   </includes>
+                  <excludes>
+                    <exclude>**/azurebfs/ITestAbfsStreamStatistics*.java</exclude>
+                  </excludes>
                 </configuration>
               </execution>
             </executions>
@@ -561,6 +564,7 @@
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</exclude>
                     <exclude>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</exclude>
                     <exclude>**/azurebfs/ITestSmallWriteOptimization.java</exclude>
+                    <exclude>**/azurebfs/ITestAbfsStreamStatistics*.java</exclude>
                   </excludes>
 
                 </configuration>
@@ -602,6 +606,9 @@
                     <include>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</include>
                     <include>**/azurebfs/ITestSmallWriteOptimization.java</include>
                   </includes>
+                  <excludes>
+                    <exclude>**/azurebfs/ITestAbfsStreamStatistics*.java</exclude>
+                  </excludes>
                 </configuration>
               </execution>
             </executions>
