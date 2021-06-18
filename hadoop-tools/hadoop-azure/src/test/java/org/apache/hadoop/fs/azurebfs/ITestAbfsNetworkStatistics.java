@@ -224,9 +224,11 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       byte[] buff = testResponseString.getBytes();
       out.write(buff);
       out.hflush();
-      MockFastpathConnection.registerAppend(
-          buff.length, getResponsePath.getName(), buff, 0, buff.length);
-
+      if (isMockFastpathTest) {
+        MockFastpathConnection
+            .registerAppend(buff.length, getResponsePath.getName(), buff, 0,
+                buff.length);
+      }
       // Set metric baseline
       metricMap = fs.getInstrumentationMap();
       long bytesWrittenToFile = testResponseString.getBytes().length;
@@ -274,8 +276,9 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, expectedBytesReceived, metricMap);
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
-      MockFastpathConnection.unregisterAppend(
-          getResponsePath.getName());
+      if (isMockFastpathTest) {
+        MockFastpathConnection.unregisterAppend(getResponsePath.getName());
+      }
     }
 
     // --------------------------------------------------------------------
@@ -296,10 +299,10 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
         out.write(testResponseString.getBytes());
         out.hflush();
         largeBuffer.append(testResponseString);
-        MockFastpathConnection.registerAppend(
-            WRITE_OPERATION_LOOP_COUNT * (b.length),
-            getResponsePath.getName(), b,
-            0, b.length);
+        if (isMockFastpathTest) {
+          MockFastpathConnection.registerAppend(WRITE_OPERATION_LOOP_COUNT * (b.length),
+              getResponsePath.getName(), b, 0, b.length);
+        }
       }
 
       // sync back to metric baseline
@@ -348,7 +351,9 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, expectedBytesReceived, metricMap);
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
-      MockFastpathConnection.unregisterAppend(getResponsePath.getName());
+      if (isMockFastpathTest) {
+        MockFastpathConnection.unregisterAppend(getResponsePath.getName());
+      }
     }
   }
 
