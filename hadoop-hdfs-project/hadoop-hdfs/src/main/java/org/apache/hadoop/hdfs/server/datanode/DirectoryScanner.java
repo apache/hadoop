@@ -409,12 +409,14 @@ public class DirectoryScanner implements Runnable {
     for (Entry<String, ScanInfo[]> entry : diskReport.entrySet()) {
       String bpid = entry.getKey();
       ScanInfo[] blockpoolReport = entry.getValue();
-
+        
       Stats statsRecord = new Stats(bpid);
       stats.put(bpid, statsRecord);
       LinkedList<ScanInfo> diffRecord = new LinkedList<ScanInfo>();
-      diffs.put(bpid, diffRecord);
-
+      synchronized(diffs) {
+        diffs.put(bpid, diffRecord);
+      }
+        
       statsRecord.totalBlocks = blockpoolReport.length;
       final List<ReplicaInfo> bl = dataset.getFinalizedBlocks(bpid);
       Collections.sort(bl); // Sort based on blockId
