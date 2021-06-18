@@ -81,7 +81,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.HashSet;
 import java.util.List;
@@ -570,41 +569,6 @@ public class TestFsDatasetImpl {
     }
 
     FsDatasetTestUtil.assertFileLockReleased(badDir.toString());
-  }
-
-  @Test
-  /**
-   * This test is here primarily to catch any case where the datanode replica
-   * map structure is changed to a new structure which is not sorted and hence
-   * reading the blocks from it directly would not be sorted.
-   */
-  public void testSortedFinalizedBlocksAreSorted() throws IOException {
-    this.conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    try {
-      cluster.waitActive();
-      DataNode dn = cluster.getDataNodes().get(0);
-
-      FsDatasetSpi<?> ds = DataNodeTestUtils.getFSDataset(dn);
-      ds.addBlockPool(BLOCKPOOL, conf);
-
-      // Load 1000 blocks with random blockIDs
-      for (int i=0; i<=1000; i++) {
-        ExtendedBlock eb = new ExtendedBlock(
-            BLOCKPOOL, new Random().nextInt(), 1000, 1000 + i);
-        cluster.getFsDatasetTestUtils(0).createFinalizedReplica(eb);
-      }
-      // Get the sorted blocks and validate the arrayList is sorted
-      List<ReplicaInfo> replicaList = ds.getSortedFinalizedBlocks(BLOCKPOOL);
-      for (int i=0; i<replicaList.size() - 1; i++) {
-        if (replicaList.get(i).compareTo(replicaList.get(i+1)) > 0) {
-          // Not sorted so fail the test
-          fail("ArrayList is not sorted, and it should be");
-        }
-      }
-    } finally {
-      cluster.shutdown();
-    }
   }
   
   @Test
