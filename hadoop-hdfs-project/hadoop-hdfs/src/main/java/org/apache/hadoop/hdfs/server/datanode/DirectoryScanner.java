@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -417,7 +418,8 @@ public class DirectoryScanner implements Runnable {
       }
         
       statsRecord.totalBlocks = blockpoolReport.length;
-      final List<ReplicaInfo> bl = dataset.getSortedFinalizedBlocks(bpid);
+      final List<ReplicaInfo> bl = dataset.getFinalizedBlocks(bpid);
+      Collections.sort(bl); // Sort based on blockId
 
       int d = 0; // index for blockpoolReport
       int m = 0; // index for memReprot
