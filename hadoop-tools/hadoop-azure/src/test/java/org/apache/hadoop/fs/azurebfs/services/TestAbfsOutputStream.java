@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -89,7 +90,8 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+    String testPath = PATH + UUID.randomUUID();
+    AbfsOutputStream out = new AbfsOutputStream(client, null, testPath, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
@@ -110,12 +112,12 @@ public final class TestAbfsOutputStream {
         WRITE_SIZE, 0, 2 * WRITE_SIZE, APPEND_MODE, false, null);
 
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(secondReqParameters), any());
     // confirm there were only 2 invocations in all
     verify(client, times(2)).append(
-        eq(PATH), any(byte[].class), any(), any());
+        eq(testPath), any(byte[].class), any(), any());
   }
 
   /**
@@ -136,7 +138,8 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+    String testPath = PATH + UUID.randomUUID();
+    AbfsOutputStream out = new AbfsOutputStream(client, null, testPath, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
@@ -152,12 +155,12 @@ public final class TestAbfsOutputStream {
         BUFFER_SIZE, 0, 5*WRITE_SIZE-BUFFER_SIZE, APPEND_MODE, false, null);
 
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(secondReqParameters), any());
     // confirm there were only 2 invocations in all
     verify(client, times(2)).append(
-        eq(PATH), any(byte[].class), any(), any());
+        eq(testPath), any(byte[].class), any(), any());
 
     ArgumentCaptor<String> acFlushPath = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Long> acFlushPosition = ArgumentCaptor.forClass(Long.class);
@@ -167,7 +170,7 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(1)).flush(acFlushPath.capture(), acFlushPosition.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
         acFlushSASToken.capture(), isNull());
-    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushPath.getAllValues());
+    assertThat(Arrays.asList(testPath)).describedAs("path").isEqualTo(acFlushPath.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(5*WRITE_SIZE))).describedAs("position").isEqualTo(acFlushPosition.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
     assertThat(Arrays.asList(true)).describedAs("Close flag").isEqualTo(acFlushClose.getAllValues());
@@ -194,7 +197,8 @@ public final class TestAbfsOutputStream {
     when(op.getSasToken()).thenReturn("testToken");
     when(op.getResult()).thenReturn(httpOp);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+    String testPath = PATH + UUID.randomUUID();
+    AbfsOutputStream out = new AbfsOutputStream(client, null, testPath, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
@@ -210,12 +214,12 @@ public final class TestAbfsOutputStream {
         BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, false, null);
 
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(secondReqParameters), any());
     // confirm there were only 2 invocations in all
     verify(client, times(2)).append(
-        eq(PATH), any(byte[].class), any(), any());
+        eq(testPath), any(byte[].class), any(), any());
 
     ArgumentCaptor<String> acFlushPath = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Long> acFlushPosition = ArgumentCaptor.forClass(Long.class);
@@ -225,7 +229,7 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(1)).flush(acFlushPath.capture(), acFlushPosition.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
         acFlushSASToken.capture(), isNull());
-    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushPath.getAllValues());
+    assertThat(Arrays.asList(testPath)).describedAs("path").isEqualTo(acFlushPath.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushPosition.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
     assertThat(Arrays.asList(true)).describedAs("Close flag").isEqualTo(acFlushClose.getAllValues());
@@ -252,7 +256,8 @@ public final class TestAbfsOutputStream {
     when(op.getSasToken()).thenReturn("testToken");
     when(op.getResult()).thenReturn(httpOp);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+    String testPath = PATH + UUID.randomUUID();
+    AbfsOutputStream out = new AbfsOutputStream(client, null, testPath, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
@@ -268,12 +273,12 @@ public final class TestAbfsOutputStream {
         BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, false, null);
 
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(secondReqParameters), any());
     // confirm there were only 2 invocations in all
     verify(client, times(2)).append(
-        eq(PATH), any(byte[].class), any(), any());
+        eq(testPath), any(byte[].class), any(), any());
   }
 
   /**
@@ -294,7 +299,8 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+    String testPath = PATH + UUID.randomUUID();
+    AbfsOutputStream out = new AbfsOutputStream(client, null, testPath, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, true));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
@@ -310,12 +316,12 @@ public final class TestAbfsOutputStream {
         BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, true, null);
 
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(secondReqParameters), any());
     // confirm there were only 2 invocations in all
     verify(client, times(2)).append(
-        eq(PATH), any(byte[].class), any(), any());
+        eq(testPath), any(byte[].class), any(), any());
   }
 
   /**
@@ -337,7 +343,8 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+    String testPath = PATH + UUID.randomUUID();
+    AbfsOutputStream out = new AbfsOutputStream(client, null, testPath, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
@@ -353,12 +360,12 @@ public final class TestAbfsOutputStream {
         BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, false, null);
 
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(secondReqParameters), any());
     // confirm there were only 2 invocations in all
     verify(client, times(2)).append(
-        eq(PATH), any(byte[].class), any(), any());
+        eq(testPath), any(byte[].class), any(), any());
 
     ArgumentCaptor<String> acFlushPath = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Long> acFlushPosition = ArgumentCaptor.forClass(Long.class);
@@ -368,7 +375,7 @@ public final class TestAbfsOutputStream {
 
     verify(client, times(1)).flush(acFlushPath.capture(), acFlushPosition.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
         acFlushSASToken.capture(), isNull());
-    assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushPath.getAllValues());
+    assertThat(Arrays.asList(testPath)).describedAs("path").isEqualTo(acFlushPath.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushPosition.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("Close flag").isEqualTo(acFlushClose.getAllValues());
@@ -391,7 +398,8 @@ public final class TestAbfsOutputStream {
     when(client.append(anyString(), any(byte[].class), any(AppendRequestParameters.class), any())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull())).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+    String testPath = PATH + UUID.randomUUID();
+    AbfsOutputStream out = new AbfsOutputStream(client, null, testPath, 0,
         populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
@@ -409,11 +417,11 @@ public final class TestAbfsOutputStream {
         BUFFER_SIZE, 0, BUFFER_SIZE, APPEND_MODE, false, null);
 
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(firstReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(firstReqParameters), any());
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(secondReqParameters), any());
+        eq(testPath), any(byte[].class), refEq(secondReqParameters), any());
     // confirm there were only 2 invocations in all
     verify(client, times(2)).append(
-        eq(PATH), any(byte[].class), any(), any());
+        eq(testPath), any(byte[].class), any(), any());
   }
 }

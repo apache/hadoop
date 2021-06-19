@@ -392,6 +392,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   public Path getTestPath() {
     Path path = new Path(UriUtils.generateUniqueTestPath());
     return path;
+//    return new Path("/test" + UUID.randomUUID());
   }
 
   public AzureBlobFileSystemStore getAbfsStore(final AzureBlobFileSystem fs) {
@@ -411,7 +412,9 @@ public abstract class AbstractAbfsIntegrationTest extends
    */
   protected Path path(String filepath) throws IOException {
     return getFileSystem().makeQualified(
-        new Path(getTestPath(), filepath));
+        new Path(filepath + UUID.randomUUID()));
+//    return getFileSystem().makeQualified(
+//        new Path(getTestPath(), filepath));
   }
 
   /**

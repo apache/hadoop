@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.UUID;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,7 +42,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
  */
 @RunWith(Parameterized.class)
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
-  private static final Path TEST_PATH = new Path("/testfile");
+  private static final String TEST_PATH = "/testfile";
 
   @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
@@ -73,13 +74,14 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
 
-    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+    Path testPath = new Path(TEST_PATH + UUID.randomUUID());
+    try (FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(b);
     }
 
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result;
-    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+    try (FSDataInputStream inputStream = fs.open(testPath)) {
       inputStream.seek(bufferSize);
       result = inputStream.read(readBuffer, bufferSize, bufferSize);
       assertNotEquals(-1, result);

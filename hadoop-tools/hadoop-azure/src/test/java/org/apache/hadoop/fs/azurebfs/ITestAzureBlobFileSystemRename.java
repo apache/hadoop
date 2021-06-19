@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -95,13 +96,13 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameFileUnderDir() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path sourceDir = new Path("/testSrc");
+    Path sourceDir = path("/testSrc");
     assertMkdirs(fs, sourceDir);
     String filename = "file1";
     Path file1 = new Path(sourceDir, filename);
     touch(file1);
 
-    Path destDir = new Path("/testDst");
+    Path destDir = path("/testDst");
     assertRenameOutcome(fs, sourceDir, destDir, true);
     FileStatus[] fileStatus = fs.listStatus(destDir);
     assertNotNull("Null file status", fileStatus);
@@ -113,14 +114,15 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameDirectory() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(new Path("testDir"));
-    Path test1 = new Path("testDir/test1");
+    String testPath = path("testDir").toString();
+    fs.mkdirs(new Path(testPath));
+    Path test1 = new Path(testPath + "/test1");
     fs.mkdirs(test1);
-    fs.mkdirs(new Path("testDir/test1/test2"));
-    fs.mkdirs(new Path("testDir/test1/test2/test3"));
+    fs.mkdirs(new Path(testPath + "/test1/test2"));
+    fs.mkdirs(new Path(testPath + "/test1/test2/test3"));
 
     assertRenameOutcome(fs, test1,
-        new Path("testDir/test10"), true);
+        new Path(testPath + "/test10"), true);
     assertPathDoesNotExist(fs, "rename source dir", test1);
   }
 
@@ -129,9 +131,10 @@ public class ITestAzureBlobFileSystemRename extends
     final AzureBlobFileSystem fs = getFileSystem();
     final List<Future<Void>> tasks = new ArrayList<>();
 
+    String testPath = String.format("/test%s/", UUID.randomUUID());
     ExecutorService es = Executors.newFixedThreadPool(10);
     for (int i = 0; i < 1000; i++) {
-      final Path fileName = new Path("/test/" + i);
+      final Path fileName = new Path(testPath + i);
       Callable<Void> callable = new Callable<Void>() {
         @Override
         public Void call() throws Exception {
@@ -148,7 +151,7 @@ public class ITestAzureBlobFileSystemRename extends
     }
 
     es.shutdownNow();
-    Path source = new Path("/test");
+    Path source = new Path(testPath);
     Path dest = new Path("/renamedDir");
     assertRenameOutcome(fs, source, dest, true);
 
@@ -173,14 +176,16 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testPosixRenameDirectory() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.mkdirs(new Path("testDir2/test1/test2/test3"));
-    fs.mkdirs(new Path("testDir2/test4"));
-    Assert.assertTrue(fs.rename(new Path("testDir2/test1/test2/test3"), new Path("testDir2/test4")));
-    assertTrue(fs.exists(new Path("testDir2")));
-    assertTrue(fs.exists(new Path("testDir2/test1/test2")));
-    assertTrue(fs.exists(new Path("testDir2/test4")));
-    assertTrue(fs.exists(new Path("testDir2/test4/test3")));
-    assertFalse(fs.exists(new Path("testDir2/test1/test2/test3")));
+    Path testPath = path("testPath");
+    fs.mkdirs(new Path(testPath + "testDir2/test1/test2/test3"));
+    fs.mkdirs(new Path(testPath + "testDir2/test4"));
+    Assert.assertTrue(fs.rename(new Path(testPath + "testDir2/test1/test2"
+        + "/test3"), new Path(testPath + "testDir2/test4")));
+    assertTrue(fs.exists(new Path(testPath + "testDir2")));
+    assertTrue(fs.exists(new Path(testPath + "testDir2/test1/test2")));
+    assertTrue(fs.exists(new Path(testPath + "testDir2/test4")));
+    assertTrue(fs.exists(new Path(testPath + "testDir2/test4/test3")));
+    assertFalse(fs.exists(new Path(testPath + "testDir2/test1/test2/test3")));
   }
 
   @Test

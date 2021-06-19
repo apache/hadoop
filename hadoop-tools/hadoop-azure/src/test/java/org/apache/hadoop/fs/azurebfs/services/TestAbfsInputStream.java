@@ -576,7 +576,7 @@ public class TestAbfsInputStream extends
     Configuration config = getRawConfiguration();
     config.unset(FS_AZURE_READ_AHEAD_QUEUE_DEPTH);
     AzureBlobFileSystem fs = getFileSystem(config);
-    Path testFile = new Path("/testFile");
+    Path testFile = path("/testFile");
     fs.create(testFile);
     FSDataInputStream in = fs.open(testFile);
     Assertions.assertThat(
@@ -639,8 +639,7 @@ public class TestAbfsInputStream extends
       readAheadBlockSize = readRequestSize;
     }
 
-    Path testPath = new Path(
-        "/testReadAheadConfigs");
+    Path testPath = path("/testReadAheadConfigs");
     final AzureBlobFileSystem fs = createTestFile(testPath,
         ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE, config);
     byte[] byteBuffer = new byte[ONE_MB];

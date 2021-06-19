@@ -231,8 +231,8 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   @Test
   public void testHasNextForFile() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    String testFileName = "testFile";
-    Path testFile = new Path(testFileName);
+    Path testFile = path("testFile");
+    String testFileName = testFile.toString();
     getFileSystem().create(testFile);
     setPageSize(10);
     RemoteIterator<FileStatus> fsItr = fs.listStatusIterator(testFile);
@@ -265,7 +265,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
 
   @Test
   public void testNonExistingPath() throws Throwable {
-    Path nonExistingDir = new Path("nonExistingPath");
+    Path nonExistingDir = path("nonExistingPath");
     Assertions.assertThatThrownBy(
         () -> getFileSystem().listStatusIterator(nonExistingDir)).describedAs(
         "test the listStatusIterator call on a path which is not "
