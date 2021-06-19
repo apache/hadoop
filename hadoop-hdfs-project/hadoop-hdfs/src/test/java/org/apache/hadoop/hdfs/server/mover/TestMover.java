@@ -36,6 +36,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBER
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -86,12 +88,15 @@ import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Test;
@@ -1233,6 +1238,58 @@ public class TestMover {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test(timeout=100000)
+  public void testMoverMetrics() throws Exception {
+    long blockSize = 10*1024*1024;
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    conf.setInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY, 1);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setLong(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, blockSize);
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(2)
+        .storageTypes(
+            new StorageType[][] {{StorageType.DISK, StorageType.DISK},
+                {StorageType.ARCHIVE, StorageType.ARCHIVE}})
+        .build();
+
+    cluster.waitActive();
+    final DistributedFileSystem fs = cluster.getFileSystem();
+
+    final String file = "/testMaxIterationTime.dat";
+    final Path path = new Path(file);
+    short repFactor = 1;
+    int seed = 0xFAFAFA;
+    // write to DISK
+    DFSTestUtil.createFile(fs, path, 4L * blockSize, repFactor, seed);
+
+    // move to ARCHIVE
+    fs.setStoragePolicy(new Path(file), "COLD");
+
+    Map<URI, List<Path>> nnWithPath = new HashMap<>();
+    List<Path> paths = new ArrayList<>();
+    paths.add(path);
+    nnWithPath
+        .put(DFSUtil.getInternalNsRpcUris(conf).iterator().next(), paths);
+
+    Mover.run(nnWithPath, conf);
+
+    final String moverMetricsName = "Mover-"
+        + cluster.getNameNode(0).getNamesystem().getBlockPoolId();
+    MetricsSource moverMetrics =
+        DefaultMetricsSystem.instance().getSource(moverMetricsName);
+    assertNotNull(moverMetrics);
+
+    MetricsRecordBuilder rb = MetricsAsserts.getMetrics(moverMetricsName);
+    // Check metrics
+    assertEquals(4, MetricsAsserts.getLongCounter("BlocksScheduled", rb));
+    assertEquals(1, MetricsAsserts.getLongCounter("FilesProcessed", rb));
+    assertEquals(41943040, MetricsAsserts.getLongGauge("BytesMoved", rb));
+    assertEquals(4, MetricsAsserts.getLongGauge("BlocksMoved", rb));
+    assertEquals(0, MetricsAsserts.getLongGauge("BlocksFailed", rb));
   }
 
   private void createFileWithFavoredDatanodes(final Configuration conf,

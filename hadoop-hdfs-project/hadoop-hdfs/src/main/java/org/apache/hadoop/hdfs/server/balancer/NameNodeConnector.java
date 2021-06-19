@@ -163,6 +163,7 @@ public class NameNodeConnector implements Closeable {
   private final List<Path> targetPaths;
   private final AtomicLong bytesMoved = new AtomicLong();
   private final AtomicLong blocksMoved = new AtomicLong();
+  private final AtomicLong blocksFailed = new AtomicLong();
 
   private final int maxNotChangedIterations;
   private int notChangedIterations = 0;
@@ -230,12 +231,16 @@ public class NameNodeConnector implements Closeable {
     return blockpoolID;
   }
 
-  AtomicLong getBytesMoved() {
+  public AtomicLong getBytesMoved() {
     return bytesMoved;
   }
 
-  AtomicLong getBlocksMoved() {
+  public AtomicLong getBlocksMoved() {
     return blocksMoved;
+  }
+
+  public AtomicLong getBlocksFailed() {
+    return blocksFailed;
   }
 
   public void addBytesMoved(long numBytes) {
