@@ -838,6 +838,7 @@ public class Mover {
         System.out.println(e + ".  Exiting ...");
         return ExitStatus.ILLEGAL_ARGUMENTS.getExitCode();
       } finally {
+        DefaultMetricsSystem.shutdown();
         System.out.format("%-24s ", DateFormat.getDateTimeInstance().format(new Date()));
         System.out.println("Mover took " + StringUtils.formatTime(Time.monotonicNow()-startTime));
       }

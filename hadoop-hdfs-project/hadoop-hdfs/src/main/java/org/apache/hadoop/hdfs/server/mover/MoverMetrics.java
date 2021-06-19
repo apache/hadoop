@@ -46,7 +46,6 @@ final class MoverMetrics {
 
   public static MoverMetrics create(Mover mover) {
     MoverMetrics m = new MoverMetrics(mover);
-    DefaultMetricsSystem.instance().unregisterSource(m.getName());
     return DefaultMetricsSystem.instance().register(
         m.getName(), null, m);
   }
