@@ -81,15 +81,9 @@ public class TestJobMonitorAndPrint {
         1f, 1f, State.SUCCEEDED, JobPriority.HIGH, "tmp-user", "tmp-jobname",
         "tmp-queue", "tmp-jobfile", "tmp-url", true);
 
-    doAnswer(
-        new Answer<TaskCompletionEvent[]>() {
-          @Override
-          public TaskCompletionEvent[] answer(InvocationOnMock invocation)
-              throws Throwable {
-            return new TaskCompletionEvent[0];
-          }
-        }
-        ).when(job).getTaskCompletionEvents(anyInt(), anyInt());
+    doAnswer((Answer<TaskCompletionEvent[]>) invocation ->
+        TaskCompletionEvent.EMPTY_ARRAY).when(job)
+        .getTaskCompletionEvents(anyInt(), anyInt());
 
     doReturn(new TaskReport[5]).when(job).getTaskReports(isA(TaskType.class));
     when(clientProtocol.getJobStatus(any(JobID.class))).thenReturn(jobStatus_1, jobStatus_2);
