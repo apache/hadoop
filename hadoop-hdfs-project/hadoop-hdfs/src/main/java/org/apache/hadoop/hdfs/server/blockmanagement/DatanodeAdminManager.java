@@ -377,6 +377,8 @@ public class DatanodeAdminManager {
         + ", maintenance replicas: " + num.maintenanceReplicas()
         + ", live entering maintenance replicas: "
         + num.liveEnteringMaintenanceReplicas()
+        + ", replicas on stale nodes: " + num.replicasOnStaleNodes()
+        + ", readonly replicas: " + num.readOnlyReplicas()
         + ", excess replicas: " + num.excessReplicas()
         + ", Is Open File: " + bc.isUnderConstruction()
         + ", Datanodes having this block: " + nodeList + ", Current Datanode: "
