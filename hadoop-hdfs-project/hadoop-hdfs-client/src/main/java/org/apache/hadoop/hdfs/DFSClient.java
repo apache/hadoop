@@ -505,7 +505,15 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throws IOException {
     synchronized (filesBeingWritten) {
       putFileBeingWritten(inodeId, out);
-      getLeaseRenewer().put(this);
+      LeaseRenewer renewer = getLeaseRenewer();
+      boolean result = renewer.put(this);
+      if (!result) {
+        // Existing LeaseRenewer cannot add another Daemon, so remove existing
+        // and add new one.
+        LeaseRenewer.remove(renewer);
+        renewer = getLeaseRenewer();
+        renewer.put(this);
+      }
     }
   }
 
