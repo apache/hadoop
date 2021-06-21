@@ -165,7 +165,7 @@ public class TestDiskError {
         DataChecksum.Type.CRC32, 512);
     new Sender(out).writeBlock(block.getBlock(), StorageType.DEFAULT,
         BlockTokenSecretManager.DUMMY_TOKEN, "",
-        new DatanodeInfo[0], new StorageType[0], null,
+        DatanodeInfo.EMPTY_ARRAY, StorageType.EMPTY_ARRAY, null,
         BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L,
         checksum, CachingStrategy.newDefaultStrategy(), false, false,
         null, null, new String[0]);
