@@ -859,7 +859,7 @@ public class TestHASafeMode {
           pathString,
           client.getClientName(),
           new ExtendedBlock(previousBlock),
-          new DatanodeInfo[0],
+          DatanodeInfo.EMPTY_ARRAY,
           DFSClientAdapter.getFileId((DFSOutputStream) create
               .getWrappedStream()), null, null);
       cluster.restartNameNode(0, true);

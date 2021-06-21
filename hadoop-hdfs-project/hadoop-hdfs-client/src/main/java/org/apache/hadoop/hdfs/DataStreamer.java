@@ -1683,7 +1683,7 @@ class DataStreamer extends Daemon {
 
   DatanodeInfo[] getExcludedNodes() {
     return excludedNodes.getAllPresent(excludedNodes.asMap().keySet())
-            .keySet().toArray(new DatanodeInfo[0]);
+            .keySet().toArray(DatanodeInfo.EMPTY_ARRAY);
   }
 
   /**
