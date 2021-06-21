@@ -102,7 +102,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
 
       @Override
       public GetObjectRequest newGetRequest(String key) {
-        return fs.getRequestFactory().newGetObjectRequest(key);
+        return new GetObjectRequest(fs.getBucket(), key);
       }
 
       @Override
