@@ -16,6 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+## @description  Check if the given extension is related to C++
+## @param        seeking
+## @return       0 if yes
+## @return       1 if no
 is_cpp_extension() {
   local cpp_extensions=("cc" "cpp" "h" "hpp")
   local seeking=$1
@@ -28,6 +32,11 @@ is_cpp_extension() {
   return 1
 }
 
+## @description  Check if the given relative path corresponds to
+##               change in platform files
+## @param        in_path
+## @return       0 if yes
+## @return       1 if no
 is_platform_change() {
   declare in_path
   in_path="${SOURCEDIR}"/"${1}"
@@ -41,6 +50,11 @@ is_platform_change() {
   return 1
 }
 
+## @description  Checks if the given path corresponds to a change
+##               in C++ files or related to C++ build system
+## @param        path
+## @return       0 if yes
+## @return       1 if no
 is_cpp_change() {
   shopt -s nocasematch
 
@@ -61,8 +75,17 @@ is_cpp_change() {
   return 1
 }
 
+## @description  Check if the CI needs to be run - CI will always run if
+##               IS_OPTIONAL is 0, or if there's any change in
+##               C++/C++ build/platform
+## @return       0 if yes
+## @return       1 if no
 function check_ci_run() {
+  # Get the first commit of this PR relative to the trunk branch
   firstCommitOfThisPr=$(git --git-dir "${SOURCEDIR}/.git" rev-parse origin/trunk)
+
+  # Loop over the paths of all the changed files and check if the criteria
+  # to run the CI has been satisfied
   for path in $(git --git-dir "${SOURCEDIR}/.git" diff --name-only "${firstCommitOfThisPr}" HEAD); do
     if is_cpp_change "${path}"; then
       return 0
@@ -73,12 +96,14 @@ function check_ci_run() {
     fi
   done
 
+  # We must run the CI if it's not optional
   if [ "$IS_OPTIONAL" -eq 0 ]; then
     return 0
   fi
   return 1
 }
 
+## @description  Run the CI using YETUS
 function run_ci() {
   TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
 
@@ -174,6 +199,7 @@ function run_ci() {
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
 
+# Check if the CI needs to be run, if so, do so :)
 if check_ci_run; then
   run_ci
 fi
