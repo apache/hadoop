@@ -876,7 +876,8 @@ public class Balancer {
         }
         EXCEPTIONS_SINCE_LAST_BALANCE.set(0);
       } catch (Exception e) {
-        if (EXCEPTIONS_SINCE_LAST_BALANCE.incrementAndGet() > retryOnException) {
+        if (EXCEPTIONS_SINCE_LAST_BALANCE.incrementAndGet()
+            > retryOnException) {
           // The caller will process and log the exception
           throw e;
         }
