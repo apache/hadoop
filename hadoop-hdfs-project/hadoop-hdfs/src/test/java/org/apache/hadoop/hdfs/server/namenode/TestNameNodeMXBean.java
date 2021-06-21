@@ -1032,7 +1032,7 @@ public class TestNameNodeMXBean {
   public void testTotalBlocksMetrics() throws Exception {
     MiniDFSCluster cluster = null;
     FSNamesystem activeNn = null;
-    FSNamesystem backUpNn = null;
+    FSNamesystem standbyNn = null;
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
@@ -1052,7 +1052,7 @@ public class TestNameNodeMXBean {
       cluster.waitActive();
       cluster.transitionToActive(0);
       activeNn = cluster.getNamesystem(0);
-      backUpNn = cluster.getNamesystem(1);
+      standbyNn = cluster.getNamesystem(1);
       fs = cluster.getFileSystem(0);
       fs.enableErasureCodingPolicy(
           StripedFileTestUtil.getDefaultECPolicy().getName());
@@ -1097,7 +1097,7 @@ public class TestNameNodeMXBean {
       BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
           cluster.getNamesystem(0).getBlockManager());
       verifyTotalBlocksMetrics(0L, 0L, activeNn.getTotalBlocks());
-      verifyTotalBlocksMetrics(0L, 0L, backUpNn.getTotalBlocks());
+      verifyTotalBlocksMetrics(0L, 0L, standbyNn.getTotalBlocks());
     } finally {
       if (fs != null) {
         try {
@@ -1113,9 +1113,9 @@ public class TestNameNodeMXBean {
           throw e;
         }
       }
-      if (backUpNn != null) {
+      if (standbyNn != null) {
         try {
-          backUpNn.close();
+          standbyNn.close();
         } catch (Exception e) {
           throw e;
         }

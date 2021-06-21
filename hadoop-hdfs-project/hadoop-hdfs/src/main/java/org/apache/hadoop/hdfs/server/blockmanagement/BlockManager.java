@@ -192,8 +192,8 @@ public class BlockManager implements BlockStatsMXBean {
   private volatile long lowRedundancyBlocksCount = 0L;
   private volatile long scheduledReplicationBlocksCount = 0L;
 
-  private final long deleteBlockLockTimeMs;
-  private final long deleteBlockUnlockIntervalTimeMs;
+  private final long deleteBlockLockTimeMs = 500;
+  private final long deleteBlockUnlockIntervalTimeMs = 100;
 
   /** flag indicating whether replication queues have been initialized */
   private boolean initializedReplQueues;
@@ -493,12 +493,6 @@ public class BlockManager implements BlockStatsMXBean {
         blockIdManager);
 
     markedDeleteQueue = new ConcurrentLinkedQueue<>();
-    deleteBlockLockTimeMs = conf.getLong(
-        DFS_NAMENODE_DELETE_BLOCK_LOCK_TIME_MS_KEY,
-        DFS_NAMENODE_DELETE_BLOCK_LOCK_TIME_MS_DEFAULT);
-    deleteBlockUnlockIntervalTimeMs = conf.getLong(
-        DFS_NAMENODE_DELETE_BLOCK_UNLOCK_SLEEP_INTERVAL_MS_KEY,
-        DFS_NAMENODE_DELETE_BLOCK_UNLOCK_SLEEP_INTERVAL_MS_DEFAULT);
 
     // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(
@@ -4954,8 +4948,6 @@ public class BlockManager implements BlockStatsMXBean {
           while (toDeleteIterator.hasNext()) {
             removeBlock(toDeleteIterator.next());
             if (Time.now() - time > deleteBlockLockTimeMs) {
-              LOG.info("Clear markedDeleteQueue over " + deleteBlockLockTimeMs
-                  + " millisecond to release the write lock");
               isSleep = true;
               break;
             }
@@ -4982,24 +4974,26 @@ public class BlockManager implements BlockStatsMXBean {
             isSleep = false;
             long startTime = Time.now();
             toRemove(startTime);
-            while (!markedDeleteQueue.isEmpty()) {
+            while (!isSleep && !markedDeleteQueue.isEmpty()) {
               List<BlockInfo> markedDeleteList = markedDeleteQueue.poll();
               if (markedDeleteList != null) {
                 toDeleteIterator = markedDeleteList.listIterator();
               }
               toRemove(startTime);
-              if (isSleep) {
-                break;
-              }
             }
           } finally {
             namesystem.writeUnlock();
           }
         }
+        if (isSleep) {
+          LOG.info("Clear markedDeleteQueue over " + deleteBlockLockTimeMs
+              + " millisecond to release the write lock");
+        }
         try {
-          TimeUnit.MILLISECONDS.sleep(deleteBlockUnlockIntervalTimeMs);
+          Thread.sleep(deleteBlockUnlockIntervalTimeMs);
         } catch (InterruptedException e) {
           LOG.info("Stopping MarkedDeleteBlockScrubber.");
+          Thread.currentThread().interrupt();
         }
       }
     }
