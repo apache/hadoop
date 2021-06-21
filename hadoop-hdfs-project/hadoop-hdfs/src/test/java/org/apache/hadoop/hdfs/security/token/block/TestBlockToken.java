@@ -391,7 +391,7 @@ public class TestBlockToken {
     DatanodeID fakeDnId = DFSTestUtil.getLocalDatanodeID(addr.getPort());
 
     ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
-    LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[0]);
+    LocatedBlock fakeBlock = new LocatedBlock(b, DatanodeInfo.EMPTY_ARRAY);
     fakeBlock.setBlockToken(token);
 
     // Create another RPC proxy with the same configuration - this will never

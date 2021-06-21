@@ -27,7 +27,7 @@ public class TestBlockLocation {
 
   private static final String[] EMPTY_STR_ARRAY = new String[0];
   private static final StorageType[] EMPTY_STORAGE_TYPE_ARRAY =
-      new StorageType[0];
+      StorageType.EMPTY_ARRAY;
 
   private static void checkBlockLocation(final BlockLocation loc)
       throws Exception {

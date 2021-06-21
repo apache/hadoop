@@ -119,7 +119,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
         LocatedBlock additionalLocatedBlock =
             nameNodeRpc.getAdditionalDatanode(src, fileStatus.getFileId(),
                 locatedBlock.getBlock(), locatedBlock.getLocations(),
-                locatedBlock.getStorageIDs(), new DatanodeInfo[0],
+                locatedBlock.getStorageIDs(), DatanodeInfo.EMPTY_ARRAY,
                 additionalReplication, clientMachine);
         doTestLocatedBlock(replication + additionalReplication, additionalLocatedBlock);
       }
@@ -159,7 +159,7 @@ public class TestBlockPlacementPolicyRackFaultTolerant {
           LocatedBlock additionalLocatedBlock =
               nameNodeRpc.getAdditionalDatanode(src, fileStatus.getFileId(),
                   locatedBlock.getBlock(), partLocs,
-                  partStorageIDs, new DatanodeInfo[0],
+                  partStorageIDs, DatanodeInfo.EMPTY_ARRAY,
                   j, clientMachine);
           doTestLocatedBlock(i + j, additionalLocatedBlock);
         }
