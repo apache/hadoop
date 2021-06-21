@@ -140,7 +140,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     };
   }
 
-  // Get mocked S3ObjectInputStream where we can trigger IOException to sumulate the read failure
+  // Get mocked S3ObjectInputStream where we can trigger IOException to simulate the read failure
   private S3ObjectInputStream getMockedInputStream(boolean triggerFailure) {
     return new S3ObjectInputStream(IOUtils.toInputStream(input, Charset.defaultCharset()), null) {
       final IOException exception = new SSLException(new SocketException("Connection reset"));
