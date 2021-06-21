@@ -140,11 +140,11 @@ function run_ci() {
   YETUS_ARGS+=("--html-report-file=${WORKSPACE}/${PATCHDIR}/report.html")
 
   # enable writing back to Github
-  YETUS_ARGS+=(--github-token="${GITHUB_TOKEN}")
+  YETUS_ARGS+=("--github-token=${GITHUB_TOKEN}")
 
   # enable writing back to ASF JIRA
-  YETUS_ARGS+=(--jira-password="${JIRA_PASSWORD}")
-  YETUS_ARGS+=(--jira-user="${JIRA_USER}")
+  YETUS_ARGS+=("--jira-password=${JIRA_PASSWORD}")
+  YETUS_ARGS+=("--jira-user=${JIRA_USER}")
 
   # auto-kill any surefire stragglers during unit test runs
   YETUS_ARGS+=("--reapermode=kill")
