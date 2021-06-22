@@ -31,7 +31,7 @@ public class TestLocatedBlock {
 
   @Test(timeout = 10000)
   public void testAddCachedLocWhenEmpty() {
-    DatanodeInfo[] ds = new DatanodeInfo[0];
+    DatanodeInfo[] ds = DatanodeInfo.EMPTY_ARRAY;
     ExtendedBlock b1 = new ExtendedBlock("bpid", 1, 1, 1);
     LocatedBlock l1 = new LocatedBlock(b1, ds);
     DatanodeDescriptor dn = new DatanodeDescriptor(

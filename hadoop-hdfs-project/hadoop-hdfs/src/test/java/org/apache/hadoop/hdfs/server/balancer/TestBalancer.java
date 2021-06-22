@@ -655,9 +655,11 @@ public class TestBalancer {
     int numOfDatanodes = capacities.length;
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf)
-                                  .numDataNodes(0)
-                                  .build();
+      cluster = new MiniDFSCluster
+          .Builder(conf)
+          .numDataNodes(0)
+          .setNNRedundancyConsiderLoad(false)
+          .build();
       cluster.getConfiguration(0).setInt(DFSConfigKeys.DFS_REPLICATION_KEY,
           DFSConfigKeys.DFS_REPLICATION_DEFAULT);
       conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY,

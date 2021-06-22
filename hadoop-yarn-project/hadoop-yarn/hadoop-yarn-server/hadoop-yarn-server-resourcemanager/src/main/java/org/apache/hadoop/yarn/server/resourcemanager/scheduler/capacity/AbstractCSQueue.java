@@ -360,9 +360,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     writeLock.lock();
     try {
-      if (isDynamicQueue() && getParent() instanceof ParentQueue) {
-        ((ParentQueue) getParent()).getAutoCreatedQueueTemplate()
-            .setTemplateEntriesForChild(configuration, getQueuePath());
+      if (isDynamicQueue()) {
+        setDynamicQueueProperties(configuration);
       }
       // get labels
       this.accessibleLabels =
@@ -475,6 +474,19 @@ public abstract class AbstractCSQueue implements CSQueue {
           ? defaultApplicationLifetime : maxApplicationLifetime;
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  /**
+   * Set properties specific to dynamic queues.
+   * @param configuration configuration on which the properties are set
+   */
+  protected void setDynamicQueueProperties(
+      CapacitySchedulerConfiguration configuration) {
+    // Set properties from parent template
+    if (getParent() instanceof ParentQueue) {
+      ((ParentQueue) getParent()).getAutoCreatedQueueTemplate()
+          .setTemplateEntriesForChild(configuration, getQueuePath());
     }
   }
 
