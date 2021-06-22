@@ -279,7 +279,7 @@ abstract class SocketIOWithTimeout {
    * This maintains a pool of selectors. These selectors are closed
    * once they are idle (unused) for a few seconds.
    */
-  private static class SelectorPool {
+  private static final class SelectorPool {
     
     private static class SelectorInfo {
       private SelectorProvider provider;
@@ -303,7 +303,7 @@ abstract class SocketIOWithTimeout {
     }
     
     private static ConcurrentHashMap<SelectorProvider, ConcurrentLinkedDeque<SelectorInfo>>
-    providerMap = new ConcurrentHashMap<>();
+        providerMap = new ConcurrentHashMap<>();
     
     private static final long IDLE_TIMEOUT = 10 * 1000; // 10 seconds.
     
@@ -384,7 +384,8 @@ abstract class SocketIOWithTimeout {
      * @return 
      * @throws IOException
      */
-    private static SelectorInfo get(SelectableChannel channel) throws IOException {
+    private static SelectorInfo get(SelectableChannel channel)
+        throws IOException {
       SelectorProvider provider = channel.provider();
       // pick the list : rarely there is more than one provider in use.
       ConcurrentLinkedDeque<SelectorInfo> selectorQ = providerMap.computeIfAbsent(
