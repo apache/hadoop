@@ -43,6 +43,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
 
@@ -141,6 +142,10 @@ public class DefaultS3ClientFactory extends Configured
       // no idea what the endpoint is, so tell the SDK
       // to work it out at the cost of an extra HEAD request
       b.withForceGlobalBucketAccessEnabled(true);
+      // HADOOP-17771 force set the region so the build process doesn't halt.
+      String region = getConf().getTrimmed(AWS_REGION, AWS_S3_CENTRAL_REGION);
+      LOG.debug("Using default endpoint; setting region to {}", region);
+      b.setRegion(region);
     }
     final AmazonS3 client = b.build();
     return client;

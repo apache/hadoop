@@ -1087,4 +1087,11 @@ public final class Constants {
    */
   public static final String AWS_REGION = "fs.s3a.endpoint.region";
 
+  /**
+   * The special S3 region which can be used to talk to any bucket if
+   * the global bucket resolution is enabled (which it is...)
+   * {@value}.
+   */
+  public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
+
 }
