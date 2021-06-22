@@ -1610,13 +1610,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String
       DFS_NAMESERVICES_RESOLUTION_ENABLED =
-      "dfs.nameservices.resolution-enabled";
+      "dfs.datanode.nameservices.resolution-enabled";
   public static final boolean
       DFS_NAMESERVICES_RESOLUTION_ENABLED_DEFAULT = false;
 
   public static final String
       DFS_NAMESERVICES_RESOLVER_IMPL =
-      "dfs.nameservices.resolver.impl";
+      "dfs.datanode.nameservices.resolver.impl";
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated

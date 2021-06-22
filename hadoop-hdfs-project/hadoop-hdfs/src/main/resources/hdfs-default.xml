@@ -6214,30 +6214,20 @@
   </property>
 
   <property>
-    <name>dfs.resolve.nameservice.needed</name>
+    <name>dfs.datanode.nameservices.resolution-enabled</name>
     <value>false</value>
     <description>
       Determines if the given nameservice address is a domain name which needs to
       be resolved (using the resolver configured by dfs.nameservices.resolver.impl).
-      This is used in HDFS components like datanode.
+      This is used by datanode to resolve namenodes.
     </description>
   </property>
 
   <property>
-    <name>dfs.nameservices.resolution-enabled</name>
-    <value>false</value>
-    <description>
-      Determines if the given nameservice address is a domain name which needs to
-      be resolved (using the resolver configured by dfs.nameservices.resolver.impl).
-      This is used in HDFS components like datanode.
-    </description>
-  </property>
-
-  <property>
-    <name>dfs.nameservices.resolver.impl</name>
+    <name>dfs.datanode.nameservices.resolver.impl</name>
     <value></value>
     <description>
-      Nameservice resolver implementation used by HDFS components.
+      Nameservice resolver implementation used by datanode.
       Effective with dfs.nameservices.resolution-enabled on.
     </description>
   </property>
