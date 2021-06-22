@@ -16,6 +16,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This script is called from the Jenkinsfile, which ultimately runs
+# the CI through Yetus.
+# We use Ubuntu Focal as the main platform for building Hadoop, thus
+# it runs for all the PRs. Additionally, we also ensure that
+# Hadoop builds across the supported platforms whenever there's a change
+# in any of the C++ files, C++ build files or platform changes.
+
 ## @description  Check if the given extension is related to C++
 ## @param        seeking
 ## @return       0 if yes
