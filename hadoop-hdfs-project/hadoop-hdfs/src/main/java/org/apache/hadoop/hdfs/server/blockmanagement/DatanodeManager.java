@@ -506,9 +506,8 @@ public class DatanodeManager {
   }
 
   private boolean isInactive(DatanodeInfo datanode) {
-    return datanode.isDecommissioned() ||
+    return datanode.isDecommissioned() || datanode.isEnteringMaintenance() ||
         (avoidStaleDataNodesForRead && datanode.isStale(staleInterval));
-
   }
   
   /**
@@ -572,8 +571,8 @@ public class DatanodeManager {
   }
 
   /**
-   * Move decommissioned/stale datanodes to the bottom. Also, sort nodes by
-   * network distance.
+   * Move decommissioned/entering_maintenance/stale datanodes to the bottom.
+   * Also, sort nodes by network distance.
    *
    * @param lb located block
    * @param targetHost target host
@@ -603,7 +602,7 @@ public class DatanodeManager {
     }
 
     DatanodeInfoWithStorage[] di = lb.getLocations();
-    // Move decommissioned/stale datanodes to the bottom
+    // Move decommissioned/entering_maintenance/stale datanodes to the bottom
     Arrays.sort(di, comparator);
 
     // Sort nodes by network distance only for located blocks
@@ -1877,18 +1876,16 @@ public class DatanodeManager {
    *
    * @param nodeReg registration info for DataNode sending the lifeline
    * @param reports storage reports from DataNode
-   * @param blockPoolId block pool ID
    * @param cacheCapacity cache capacity at DataNode
    * @param cacheUsed cache used at DataNode
    * @param xceiverCount estimated count of transfer threads running at DataNode
-   * @param maxTransfers count of transfers running at DataNode
    * @param failedVolumes count of failed volumes at DataNode
    * @param volumeFailureSummary info on failed volumes at DataNode
    * @throws IOException if there is an error
    */
   public void handleLifeline(DatanodeRegistration nodeReg,
-      StorageReport[] reports, String blockPoolId, long cacheCapacity,
-      long cacheUsed, int xceiverCount, int maxTransfers, int failedVolumes,
+      StorageReport[] reports, long cacheCapacity,
+      long cacheUsed, int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Received handleLifeline from nodeReg = " + nodeReg);

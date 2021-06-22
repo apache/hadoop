@@ -636,8 +636,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         absoluteResourceCapacity);
   }
 
-  public int getUserLimit(String queue) {
-    int userLimit = getInt(getQueuePrefix(queue) + USER_LIMIT,
+  public float getUserLimit(String queue) {
+    float userLimit = getFloat(getQueuePrefix(queue) + USER_LIMIT,
         DEFAULT_USER_LIMIT);
     return userLimit;
   }
@@ -686,8 +686,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return orderingPolicy;
   }
 
-  public void setUserLimit(String queue, int userLimit) {
-    setInt(getQueuePrefix(queue) + USER_LIMIT, userLimit);
+    public void setUserLimit(String queue, float userLimit) {
+    setFloat(getQueuePrefix(queue) + USER_LIMIT, userLimit);
     LOG.debug("here setUserLimit: queuePrefix={}, userLimit={}",
         getQueuePrefix(queue), getUserLimit(queue));
   }
@@ -800,10 +800,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       // root.From AbstractCSQueue, absolute resource, and weight will be parsed
       // and updated separately. Once nodes are added/removed in cluster,
       // capacity is percentage will also be re-calculated.
-      return defaultValue;
+      return queue.equals("root") ? 100.0f : defaultValue;
     }
 
-    float capacity = getFloat(capacityPropertyName, defaultValue);
+    float capacity = queue.equals("root") ? 100.0f
+        : getFloat(capacityPropertyName, defaultValue);
     if (capacity < MINIMUM_CAPACITY_VALUE
         || capacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException(

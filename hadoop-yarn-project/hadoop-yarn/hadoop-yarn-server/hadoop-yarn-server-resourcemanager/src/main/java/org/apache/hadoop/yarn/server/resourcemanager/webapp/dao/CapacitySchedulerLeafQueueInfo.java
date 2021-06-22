@@ -43,7 +43,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected int numContainers;
   protected int maxApplications;
   protected int maxApplicationsPerUser;
-  protected int userLimit;
+  protected float userLimit;
   protected UsersInfo users; // To add another level in the XML
   protected float userLimitFactor;
   protected float configuredMaxAMResourceLimit;
@@ -130,7 +130,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     return maxApplicationsPerUser;
   }
 
-  public int getUserLimit() {
+  public float getUserLimit() {
     return userLimit;
   }
 

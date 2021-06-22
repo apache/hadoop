@@ -65,7 +65,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.TestINodeFile;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
-import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -97,7 +96,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -1037,8 +1035,7 @@ public class TestBlockManager {
     // Make sure it's the first full report
     assertEquals(0, ds.getBlockReportCount());
     bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
-        builder.build(),
-        new BlockReportContext(1, 0, System.nanoTime(), 0, true));
+        builder.build(), null);
     assertEquals(1, ds.getBlockReportCount());
 
     // verify the storage info is correct
@@ -1102,67 +1099,6 @@ public class TestBlockManager {
     assertEquals(2, dsPs.getBlockReportCount());
     assertEquals(1, ds0.getBlockReportCount());
     assertEquals(1, ds1.getBlockReportCount());
-  }
-
-  @Test
-  public void testFullBR() throws Exception {
-    doReturn(true).when(fsn).isRunning();
-
-    DatanodeDescriptor node = nodes.get(0);
-    DatanodeStorageInfo ds = node.getStorageInfos()[0];
-    node.setAlive(true);
-    DatanodeRegistration nodeReg =  new DatanodeRegistration(node, null, null, "");
-
-    // register new node
-    bm.getDatanodeManager().registerDatanode(nodeReg);
-    bm.getDatanodeManager().addDatanode(node);
-    assertEquals(node, bm.getDatanodeManager().getDatanode(node));
-    assertEquals(0, ds.getBlockReportCount());
-
-    ArrayList<BlockInfo> blocks = new ArrayList<>();
-    for (int id = 24; id > 0; id--) {
-      blocks.add(addBlockToBM(id));
-    }
-
-    // Make sure it's the first full report
-    assertEquals(0, ds.getBlockReportCount());
-    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
-                     generateReport(blocks),
-                     new BlockReportContext(1, 0, System.nanoTime(), 0, false));
-    assertEquals(1, ds.getBlockReportCount());
-    // verify the storage info is correct
-    for (BlockInfo block : blocks) {
-      assertTrue(bm.getStoredBlock(block).findStorageInfo(ds) >= 0);
-    }
-
-    // Send unsorted report
-    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
-                     generateReport(blocks),
-                     new BlockReportContext(1, 0, System.nanoTime(), 0, false));
-    assertEquals(2, ds.getBlockReportCount());
-    // verify the storage info is correct
-    for (BlockInfo block : blocks) {
-      assertTrue(bm.getStoredBlock(block).findStorageInfo(ds) >= 0);
-    }
-
-    // Sort list and send a sorted report
-    Collections.sort(blocks);
-    bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
-                     generateReport(blocks),
-                     new BlockReportContext(1, 0, System.nanoTime(), 0, true));
-    assertEquals(3, ds.getBlockReportCount());
-    // verify the storage info is correct
-    for (BlockInfo block : blocks) {
-      assertTrue(bm.getStoredBlock(block).findStorageInfo(ds) >= 0);
-    }
-  }
-
-  private BlockListAsLongs generateReport(List<BlockInfo> blocks) {
-    BlockListAsLongs.Builder builder = BlockListAsLongs.builder();
-    for (BlockInfo block : blocks) {
-      builder.add(new FinalizedReplica(block, null, null));
-    }
-    return builder.build();
   }
 
   @Test
@@ -1695,8 +1631,8 @@ public class TestBlockManager {
     LocatedBlock lb = DFSTestUtil.getAllBlocks(dfs, file).get(0);
     BlockInfo blockInfo =
         blockManager.getStoredBlock(lb.getBlock().getLocalBlock());
-    Iterator<DatanodeStorageInfo> itr = blockInfo.getStorageInfos();
     LOG.info("Block " + blockInfo + " storages: ");
+    Iterator<DatanodeStorageInfo> itr = blockInfo.getStorageInfos();
     while (itr.hasNext()) {
       DatanodeStorageInfo dn = itr.next();
       LOG.info(" Rack: " + dn.getDatanodeDescriptor().getNetworkLocation()

@@ -149,7 +149,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     if (!isIPAddress
         && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
         && !abfs.getIsNamespaceEnabled()) {
-      final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl()));
+      final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl(), abfsConfig.isHttpsAlwaysUsed()));
       final AzureNativeFileSystemStore azureNativeFileSystemStore =
           new AzureNativeFileSystemStore();
 
@@ -355,13 +355,13 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected static String wasbUrlToAbfsUrl(final String wasbUrl) {
     return convertTestUrls(
         wasbUrl, FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX,
-        FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME, FileSystemUriSchemes.ABFS_DNS_PREFIX);
+        FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME, FileSystemUriSchemes.ABFS_DNS_PREFIX, false);
   }
 
-  protected static String abfsUrlToWasbUrl(final String abfsUrl) {
+  protected static String abfsUrlToWasbUrl(final String abfsUrl, final boolean isAlwaysHttpsUsed) {
     return convertTestUrls(
         abfsUrl, FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME, FileSystemUriSchemes.ABFS_DNS_PREFIX,
-        FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX);
+        FileSystemUriSchemes.WASB_SCHEME, FileSystemUriSchemes.WASB_SECURE_SCHEME, FileSystemUriSchemes.WASB_DNS_PREFIX, isAlwaysHttpsUsed);
   }
 
   private static String convertTestUrls(
@@ -371,14 +371,16 @@ public abstract class AbstractAbfsIntegrationTest extends
       final String fromDnsPrefix,
       final String toNonSecureScheme,
       final String toSecureScheme,
-      final String toDnsPrefix) {
+      final String toDnsPrefix,
+      final boolean isAlwaysHttpsUsed) {
     String data = null;
-    if (url.startsWith(fromNonSecureScheme + "://")) {
+    if (url.startsWith(fromNonSecureScheme + "://") && isAlwaysHttpsUsed) {
+      data = url.replace(fromNonSecureScheme + "://", toSecureScheme + "://");
+    } else if (url.startsWith(fromNonSecureScheme + "://")) {
       data = url.replace(fromNonSecureScheme + "://", toNonSecureScheme + "://");
     } else if (url.startsWith(fromSecureScheme + "://")) {
       data = url.replace(fromSecureScheme + "://", toSecureScheme + "://");
     }
-
 
     if (data != null) {
       data = data.replace("." + fromDnsPrefix + ".",
