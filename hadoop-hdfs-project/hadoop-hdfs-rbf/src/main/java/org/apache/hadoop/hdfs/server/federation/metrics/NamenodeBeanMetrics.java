@@ -44,8 +44,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
-import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
-import org.apache.hadoop.hdfs.server.federation.router.SubClusterTimeoutException;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoRequest;
@@ -53,7 +51,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoR
 import org.apache.hadoop.hdfs.server.namenode.NameNodeMXBean;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeStatusMXBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.VersionInfo;
@@ -468,7 +465,8 @@ public class NamenodeBeanMetrics
   private String getNodesImpl(final DatanodeReportType type) {
     final Map<String, Map<String, Object>> info = new HashMap<>();
     try {
-      DatanodeInfo[] datanodes = getRBFMetrics().getDnCache().get(type);
+      DatanodeInfo[] datanodes = this.router.getRpcServer()
+          .getDnCache().get(type);
       for (DatanodeInfo node : datanodes) {
         Map<String, Object> innerinfo = new HashMap<>();
         innerinfo.put("infoAddr", node.getInfoAddr());
@@ -492,12 +490,6 @@ public class NamenodeBeanMetrics
         info.put(node.getHostName() + ":" + node.getXferPort(),
             Collections.unmodifiableMap(innerinfo));
       }
-    } catch (StandbyException e) {
-      LOG.error("Cannot get {} nodes, Router in safe mode", type);
-    } catch (SubClusterTimeoutException e) {
-      LOG.error("Cannot get {} nodes, subclusters timed out responding", type);
-    } catch (IOException e) {
-      LOG.error("Cannot get " + type + " nodes", e);
     } catch (ExecutionException e) {
       LOG.error("Cannot get {} nodes {}", type, e.getMessage());
     }

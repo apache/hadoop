@@ -1757,7 +1757,7 @@ public class TestRouterRpc {
     // These methods relays on
     // {@link RBFMetrics#getActiveNamenodeRegistration()}
     assertEquals("{}", metrics.getNameservices());
-    assertEquals(0, metrics.getNumLiveNodes());
+    assertEquals(NUM_DNS * 2, metrics.getNumLiveNodes());
   }
 
   @Test

@@ -85,6 +85,7 @@ public class TestMetricsBase {
           .stateStore()
           .metrics()
           .http()
+          .rpc()
           .build();
       router = new Router();
       router.init(routerConfig);

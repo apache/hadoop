@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
@@ -60,9 +59,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
-import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
-import org.apache.hadoop.hdfs.server.federation.router.SubClusterTimeoutException;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
@@ -82,12 +79,9 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
@@ -130,8 +124,6 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   private RouterStore routerStore;
   /** The number of top token owners reported in metrics. */
   private int topTokenRealOwners;
-  /** Timeout to get the DN report. */
-  private final long dnReportTimeOut;
   /** DN type -> full DN report in DatanodeInfo. */
   private final LoadingCache<DatanodeReportType, DatanodeInfo[]> dnCache;
 
@@ -171,48 +163,13 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
           RouterStore.class);
     }
 
-    // Initialize the cache for the DN reports
     Configuration conf = router.getConfig();
     this.topTokenRealOwners = conf.getInt(
         RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY,
         RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT);
-    // Initialize the cache for the DN reports
-    this.dnReportTimeOut = conf.getTimeDuration(
-        RBFConfigKeys.DN_REPORT_TIME_OUT,
-        RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
-    long dnCacheExpire = conf.getTimeDuration(
-        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE,
-        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE_MS_DEFAULT, TimeUnit.MILLISECONDS);
-    this.dnCache = CacheBuilder.newBuilder()
-        .expireAfterWrite(dnCacheExpire, TimeUnit.MILLISECONDS)
-        .build(
-            new CacheLoader<DatanodeReportType, DatanodeInfo[]>() {
-              @Override
-              public DatanodeInfo[] load(DatanodeReportType type) {
-                return getNodesImpl(type);
-              }
-            });
-  }
 
-  /**
-   * Get all the nodes in the federation from a particular type.
-   * @param type Type of the datanodes to check.
-   * @return DatanodeInfo[] with the nodes.
-   */
-  private DatanodeInfo[] getNodesImpl(DatanodeReportType type) {
-    DatanodeInfo[] datanodes = DatanodeInfo.EMPTY_ARRAY;
-    try {
-      RouterRpcServer rpcServer = this.router.getRpcServer();
-      datanodes = rpcServer.getDatanodeReport(type, false,
-              dnReportTimeOut);
-    } catch (StandbyException e) {
-      LOG.error("Cannot get {} nodes, Router in safe mode", type);
-    } catch (SubClusterTimeoutException e) {
-      LOG.error("Cannot get {} nodes, subclusters timed out responding", type);
-    } catch (IOException e) {
-      LOG.error("Cannot get " + type + " nodes", e);
-    }
-    return datanodes;
+    // Use RpcServer dnCache
+    this.dnCache = this.router.getRpcServer().getDnCache();
   }
 
   /**
@@ -420,13 +377,6 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   /**
-   * Get the cache information of cluster nodes.
-   */
-  public LoadingCache<DatanodeReportType, DatanodeInfo[]> getDnCache() {
-    return dnCache;
-  }
-
-  /**
    * Get the aggregated value for a DatanodeReportType and
    * a method for all nameservices.
    * @param type a DatanodeReportType
@@ -605,7 +555,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   @Override
   public int getNumEnteringMaintenanceDataNodes() {
     return getNameserviceAggregatedInt(DatanodeReportType.LIVE,
-        DatanodeInfo::isEnteringMaintenance);
+        DatanodeInfo::isEnteringMaintenance) +
+        getNameserviceAggregatedInt(DatanodeReportType.DEAD,
+            DatanodeInfo::isEnteringMaintenance);
   }
 
   @Override // NameNodeMXBean

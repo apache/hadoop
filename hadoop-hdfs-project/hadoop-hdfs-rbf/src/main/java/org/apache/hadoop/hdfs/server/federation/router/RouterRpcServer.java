@@ -632,6 +632,13 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   /**
+   * Get the cache information of cluster nodes.
+   */
+  public LoadingCache<DatanodeReportType, DatanodeInfo[]> getDnCache() {
+    return dnCache;
+  }
+
+  /**
    * Check if the Router is in safe mode.
    * @throws StandbyException If the Router is in safe mode and cannot serve
    *                          client requests.
