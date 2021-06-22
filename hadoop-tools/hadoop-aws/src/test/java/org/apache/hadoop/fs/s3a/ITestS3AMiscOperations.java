@@ -48,10 +48,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
-import static org.apache.hadoop.fs.s3a.S3AFileSystem.isCSEEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_ETAG;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
 /**
@@ -189,9 +187,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    */
   private void assumeNoDefaultEncryption() throws IOException {
     try {
+      ifCSEThenSkip();
       Assume.assumeThat(getDefaultEncryption(), nullValue());
-      Assume.assumeThat("Skipping test if CSE is enabled",
-          isCSEEnabled, is(false));
     } catch (AccessDeniedException e) {
       // if the user can't check the default encryption, assume that it is
       // null and keep going

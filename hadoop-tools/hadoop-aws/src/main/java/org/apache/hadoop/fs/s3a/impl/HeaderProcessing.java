@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 
 import static org.apache.hadoop.fs.s3a.Constants.XA_HEADER_PREFIX;
-import static org.apache.hadoop.fs.s3a.S3AFileSystem.isCSEEnabled;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_OP_XATTR_LIST;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_MAP;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_NAMED;
@@ -303,7 +302,7 @@ public class HeaderProcessing extends AbstractStoreOperation {
     maybeSetHeader(headers, XA_CONTENT_LANGUAGE,
         md.getContentLanguage());
     // If CSE is enabled, use the unencrypted content length.
-    if (isCSEEnabled
+    if (md.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
         && md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH) != null) {
       maybeSetHeader(headers, XA_CONTENT_LENGTH,
           md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH));

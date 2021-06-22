@@ -48,8 +48,6 @@ public class ITestS3AClientSideEncryptionKms
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
-    conf.set(Constants.CLIENT_SIDE_ENCRYPTION_METHOD,
-        S3AEncryptionMethods.CSE_KMS.getMethod());
     return conf;
   }
 

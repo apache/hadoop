@@ -70,8 +70,7 @@ public class ITestS3AInconsistency extends AbstractS3ATestBase {
    */
   @Before
   public void setUp() {
-    assume("Client side encryption requires Consistent s3",
-        getConfiguration().get(CLIENT_SIDE_ENCRYPTION_METHOD).isEmpty());
+    ifCSEThenSkip();
   }
 
   @Override

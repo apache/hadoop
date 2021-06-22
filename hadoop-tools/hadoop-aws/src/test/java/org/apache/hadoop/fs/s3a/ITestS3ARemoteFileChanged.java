@@ -61,7 +61,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readUTF8;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3AFileSystem.isCSEEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.S3_SELECT_CAPABILITY;
@@ -69,7 +68,6 @@ import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_SQL;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
-import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
@@ -1464,8 +1462,6 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private void requireS3Select() {
     Assume.assumeTrue("S3 Select is not enabled",
         getFileSystem().hasCapability(S3_SELECT_CAPABILITY));
-    Assume.assumeThat("Skipping test if CSE is enabled",
-        isCSEEnabled, is(false));
   }
 
   /**

@@ -185,7 +185,7 @@ public class DefaultS3ClientFactory extends Configured
 
     // Setting the endpoint and KMS region in cryptoConfig
     AmazonS3EncryptionClientV2Builder.EndpointConfiguration epr
-        = createEndpointConfiguration(parameters.getEndpoint(), awsConf);
+        = createEndpointConfiguration(parameters.getEndpoint(), awsConf, getConf().getTrimmed(AWS_REGION));
     if (epr != null) {
       LOG.debug(
           "Building the AmazonS3 Encryption client with endpoint configs");

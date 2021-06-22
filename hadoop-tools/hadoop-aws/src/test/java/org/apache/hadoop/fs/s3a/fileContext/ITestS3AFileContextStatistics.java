@@ -15,6 +15,8 @@ package org.apache.hadoop.fs.s3a.fileContext;
 
 import java.net.URI;
 
+import com.amazonaws.services.s3.model.CryptoStorageMode;
+import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +32,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
+import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_METHOD;
+
 /**
  * S3a implementation of FCStatisticsBaseTest.
  */
@@ -39,10 +43,11 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
       LoggerFactory.getLogger(STSClientFactory.class);
 
   private Path testRootPath;
+  private Configuration conf;
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     fc = S3ATestUtils.createTestFileContext(conf);
     testRootPath = fileContextTestHelper.getTestRootPath(fc, "test");
     fc.mkdir(testRootPath,
@@ -62,10 +67,25 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
     Assert.assertEquals(2 * blockSize, stats.getBytesRead());
   }
 
+  /**
+   * A method to verify the bytes written.
+   *
+   * NOTE: if Client side encryption is enabled, expected bytes written
+   * should increase by 16(padding of data) + 130(KMS key generation) in case
+   * of storage type{@link CryptoStorageMode} as ObjectMetadata(Default). If
+   * Crypto Storage mode is instruction file then add additional bytes as
+   * that file is stored separately and would account for bytes written.
+   *
+   * @param stats Filesystem statistics.
+   */
   @Override
   protected void verifyWrittenBytes(FileSystem.Statistics stats) {
     //No extra bytes are written
-    Assert.assertEquals(blockSize, stats.getBytesWritten());
+    long expectedBlockSize = blockSize;
+    if(conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) != null) {
+      expectedBlockSize += 16 + 130;
+    }
+    Assert.assertEquals(expectedBlockSize, stats.getBytesWritten());
   }
 
   @Override

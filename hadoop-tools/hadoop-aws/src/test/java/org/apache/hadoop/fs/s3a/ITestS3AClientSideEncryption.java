@@ -26,15 +26,20 @@ import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
 
 /**
  * Tests to verify S3 Client-Side Encryption (CSE).
@@ -43,6 +48,8 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
 
   private static final List<Integer> SIZES =
       new ArrayList<>(Arrays.asList(0, 1, 255, 4095));
+
+  private static final int BIG_FILE_SIZE = 15 * 1024 * 1024;
 
   /**
    * Testing S3 CSE on different file sizes.
@@ -84,6 +91,7 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
   public void testDirectoryListingFileLengths() throws IOException {
     describe("Test to verify directory listing calls gives correct content "
         + "lengths");
+    skipTest();
     S3AFileSystem fs = getFileSystem();
     Path parentDir = path(getMethodName());
 
@@ -121,6 +129,40 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
             + "as expected from LocatedFileStatus dir. listing")
         .containsExactlyInAnyOrderElementsOf(SIZES);
 
+  }
+
+  /**
+   * Test to verify multipart upload through S3ABlockOutputStream and
+   * verifying the contents of the uploaded file.
+   */
+  @Test
+  public void testBigFilePutAndGet() throws IOException {
+    skipTest();
+    S3AFileSystem fs = getFileSystem();
+    Path filePath = path(getMethodName());
+    byte[] fileContent = new byte[BIG_FILE_SIZE];
+    // PUT a 15MB file using CSE to simulate multipart in CSE.
+    createFile(fs, filePath, true, fileContent);
+    LOG.info("Multi-part upload successful...");
+
+    try(FSDataInputStream in = fs.open(filePath)) {
+      in.seek(BIG_FILE_SIZE);
+      in.seek(0);
+      in.readFully(0, fileContent);
+
+      verifyFileContents(fs, filePath, fileContent);
+    }
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+
+    // To simulate multi part put and get in small files, we'll set the
+    // threshold and part size to 5MB.
+    conf.set(Constants.MULTIPART_SIZE, String.valueOf(MULTIPART_MIN_SIZE));
+    conf.set(Constants.MIN_MULTIPART_THRESHOLD, String.valueOf(MULTIPART_MIN_SIZE));
+    return conf;
   }
 
   /**
