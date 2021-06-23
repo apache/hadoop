@@ -199,7 +199,7 @@ abstract class SocketIOWithTimeout {
         // we might have to call finishConnect() more than once
         // for some channels (with user level protocols)
         
-        int ret = SelectorPool.select((SelectableChannel)channel,
+        int ret = SelectorPool.select(channel,
                                   SelectionKey.OP_CONNECT, timeoutLeft);
         
         if (ret > 0 && channel.finishConnect()) {
@@ -281,9 +281,9 @@ abstract class SocketIOWithTimeout {
    */
   private static final class SelectorPool {
     
-    private static class SelectorInfo {
-      private SelectorProvider provider;
-      private Selector selector;
+    private static final class SelectorInfo {
+      private final SelectorProvider provider;
+      private final Selector selector;
       private long lastActivityTime;
 
       private SelectorInfo(SelectorProvider provider, Selector selector) {
@@ -302,8 +302,8 @@ abstract class SocketIOWithTimeout {
       }    
     }
     
-    private static ConcurrentHashMap<SelectorProvider, ConcurrentLinkedDeque<SelectorInfo>>
-        providerMap = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<SelectorProvider, ConcurrentLinkedDeque
+        <SelectorInfo>> providerMap = new ConcurrentHashMap<>();
     
     private static final long IDLE_TIMEOUT = 10 * 1000; // 10 seconds.
     
@@ -385,16 +385,16 @@ abstract class SocketIOWithTimeout {
      * @throws IOException
      */
     private static SelectorInfo get(SelectableChannel channel)
-        throws IOException {
+                                                         throws IOException {
       SelectorProvider provider = channel.provider();
       // pick the list : rarely there is more than one provider in use.
-      ConcurrentLinkedDeque<SelectorInfo> selectorQ = providerMap.computeIfAbsent(
+      ConcurrentLinkedDeque<SelectorInfo> infoQ = providerMap.computeIfAbsent(
           provider, k -> new ConcurrentLinkedDeque<>());
 
-      SelectorInfo selInfo = selectorQ.pollLast(); // last in first out
+      SelectorInfo selInfo = infoQ.pollLast(); // last in first out
       if (selInfo == null) {
         Selector selector = provider.openSelector();
-        // selInfo will be put into selectorQ after `#release()`
+        // selInfo will be put into infoQ after `#release()`
         selInfo = new SelectorInfo(provider, selector);
       }
       
@@ -428,22 +428,19 @@ abstract class SocketIOWithTimeout {
       if (!trimming.compareAndSet(false, true)) {
         return;
       }
-      if (now - lastTrimTime < IDLE_TIMEOUT / 2) {
-        trimming.set(false);
-        return;
-      }
 
       long cutoff = now - IDLE_TIMEOUT;
-      for (ConcurrentLinkedDeque<SelectorInfo> selectorQ: providerMap.values()) {
+      for (ConcurrentLinkedDeque<SelectorInfo> infoQ : providerMap.values()) {
         SelectorInfo oldest;
-        while ((oldest = selectorQ.peekFirst()) != null) {
-          if (oldest.lastActivityTime <= cutoff && selectorQ.remove(oldest)) {
+        while ((oldest = infoQ.peekFirst()) != null) {
+          if (oldest.lastActivityTime <= cutoff && infoQ.remove(oldest)) {
             oldest.close();
           } else {
             break;
           }
         }
       }
+
       lastTrimTime = now;
       trimming.set(false);
     }
