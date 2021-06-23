@@ -128,7 +128,7 @@ public class TestSortLocatedBlock {
    * entering_maintenance -> decommissioned.
    *
    * avoidStaleDataNodesForRead=true && avoidSlowDataNodesForRead=true
-   * (d5 -> d4 -> d3 -> d2 -> d1 -> d0)
+   * d5 -> d4 -> d3 -> d2 -> d1 -> d0
    */
   @Test(timeout = 30000)
   public void testAviodStaleAndSlowDatanodes() throws IOException {
@@ -218,7 +218,7 @@ public class TestSortLocatedBlock {
    * entering_maintenance -> decommissioned.
    *
    * avoidStaleDataNodesForRead=false && avoidSlowDataNodesForRead=true
-   * (d5 -> d3) -> ( d4 <-> d2) -> d1 -> d0)
+   * (d5 -> d3) -> (d4 <-> d2) -> d1 -> d0
    */
   @Test(timeout = 30000)
   public void testAviodSlowDatanodes() throws IOException {
@@ -264,8 +264,7 @@ public class TestSortLocatedBlock {
    * d4 - slow
    * d5 - live(in-service)
    */
-  private static DatanodeInfo[] mockDatanodes(DatanodeManager dm)
-      throws IOException {
+  private static DatanodeInfo[] mockDatanodes(DatanodeManager dm) {
     int totalDns = 6;
     DatanodeInfo[] locs = new DatanodeInfo[totalDns];
 
