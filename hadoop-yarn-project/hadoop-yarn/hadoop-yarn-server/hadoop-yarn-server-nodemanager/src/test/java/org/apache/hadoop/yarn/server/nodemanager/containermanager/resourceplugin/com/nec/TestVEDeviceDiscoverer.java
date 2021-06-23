@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.junit.After;
@@ -46,8 +47,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Unit tests for VEDeviceDiscoverer class.

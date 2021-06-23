@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import com.google.inject.servlet.RequestScoped;
 
 import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.Lists;
 
 /**
  * A class to help passing around request scoped info

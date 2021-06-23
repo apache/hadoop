@@ -87,9 +87,9 @@ public class TestRMFailoverProxyProvider {
     Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
 
     Class protocol = ApplicationClientProtocol.class;
-    RMProxy mockRMProxy = mock(RMProxy.class);
-    ConfiguredRMFailoverProxyProvider<RMProxy> fpp =
-        new ConfiguredRMFailoverProxyProvider<RMProxy>();
+    RMProxy<Proxy> mockRMProxy = mock(RMProxy.class);
+    ConfiguredRMFailoverProxyProvider<Proxy> fpp =
+        new ConfiguredRMFailoverProxyProvider<>();
 
     // generate two address with different ports.
     // Default port of yarn RM
@@ -104,7 +104,7 @@ public class TestRMFailoverProxyProvider {
 
     // Initialize failover proxy provider and get proxy from it.
     fpp.init(conf, mockRMProxy, protocol);
-    FailoverProxyProvider.ProxyInfo<RMProxy> actualProxy1 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy1 = fpp.getProxy();
     assertEquals(
         "ConfiguredRMFailoverProxyProvider doesn't generate " +
         "expected proxy",
@@ -139,7 +139,7 @@ public class TestRMFailoverProxyProvider {
 
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy1.proxy);
-    FailoverProxyProvider.ProxyInfo <RMProxy> actualProxy2 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy2 = fpp.getProxy();
     assertEquals("ConfiguredRMFailoverProxyProvider " +
         "doesn't generate expected proxy after failover",
         mockProxy2, actualProxy2.proxy);
@@ -167,7 +167,7 @@ public class TestRMFailoverProxyProvider {
 
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy2.proxy);
-    FailoverProxyProvider.ProxyInfo <RMProxy> actualProxy3 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy3 = fpp.getProxy();
 
     // check the proxy is the same as the one we created before.
     assertEquals("ConfiguredRMFailoverProxyProvider " +
@@ -202,11 +202,10 @@ public class TestRMFailoverProxyProvider {
     // Create three proxies and mock a RMProxy
     Proxy mockProxy1 = new TestProxy((proxy, method, args) -> null);
     Proxy mockProxy2 = new TestProxy((proxy, method, args) -> null);
-    Proxy mockProxy3 = new TestProxy((proxy, method, args) -> null);
     Class protocol = ApplicationClientProtocol.class;
-    RMProxy mockRMProxy = mock(RMProxy.class);
-    AutoRefreshRMFailoverProxyProvider<RMProxy> fpp =
-        new AutoRefreshRMFailoverProxyProvider<RMProxy>();
+    RMProxy<Proxy> mockRMProxy = mock(RMProxy.class);
+    AutoRefreshRMFailoverProxyProvider<Proxy> fpp =
+        new AutoRefreshRMFailoverProxyProvider<>();
 
     // generate three address with different ports.
     InetSocketAddress mockAdd1 = new InetSocketAddress(RM1_PORT);
@@ -222,7 +221,7 @@ public class TestRMFailoverProxyProvider {
 
     // Initialize failover proxy provider and get proxy from it.
     fpp.init(conf, mockRMProxy, protocol);
-    FailoverProxyProvider.ProxyInfo <RMProxy> actualProxy1 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy1 = fpp.getProxy();
     assertEquals(
         "AutoRefreshRMFailoverProxyProvider doesn't generate " +
         "expected proxy",
@@ -257,7 +256,7 @@ public class TestRMFailoverProxyProvider {
 
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy1.proxy);
-    FailoverProxyProvider.ProxyInfo <RMProxy> actualProxy2 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy2 = fpp.getProxy();
     assertEquals("AutoRefreshRMFailoverProxyProvider " +
         "doesn't generate expected proxy after failover",
         mockProxy2, actualProxy2.proxy);
@@ -285,7 +284,7 @@ public class TestRMFailoverProxyProvider {
 
     // Perform Failover and get proxy again from failover proxy provider
     fpp.performFailover(actualProxy2.proxy);
-    FailoverProxyProvider.ProxyInfo <RMProxy> actualProxy3 = fpp.getProxy();
+    FailoverProxyProvider.ProxyInfo<Proxy> actualProxy3 = fpp.getProxy();
 
     // check the proxy is the same as the one we created before.
     assertEquals("ConfiguredRMFailoverProxyProvider " +

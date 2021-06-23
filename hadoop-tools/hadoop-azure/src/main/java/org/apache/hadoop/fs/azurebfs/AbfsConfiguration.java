@@ -417,6 +417,24 @@ public class AbfsConfiguration{
   }
 
   /**
+   * Returns a value for the key if the value exists and is not null.
+   * Otherwise, throws {@link ConfigurationPropertyNotFoundException} with
+   * key name.
+   *
+   * @param key Account-agnostic configuration key
+   * @return value if exists
+   * @throws IOException if error in fetching password or
+   *     ConfigurationPropertyNotFoundException for missing key
+   */
+  private String getMandatoryPasswordString(String key) throws IOException {
+    String value = getPasswordString(key);
+    if (value == null) {
+      throw new ConfigurationPropertyNotFoundException(key);
+    }
+    return value;
+  }
+
+  /**
    * Returns account-specific token provider class if it exists, else checks if
    * an account-agnostic setting is present for token provider class if AuthType
    * matches with authType passed.
@@ -764,25 +782,33 @@ public class AbfsConfiguration{
             FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, null,
             AccessTokenProvider.class);
 
-        AccessTokenProvider tokenProvider = null;
+        AccessTokenProvider tokenProvider;
         if (tokenProviderClass == ClientCredsTokenProvider.class) {
-          String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
-          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-          String clientSecret = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
+          String authEndpoint =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+          String clientId =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String clientSecret =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
           tokenProvider = new ClientCredsTokenProvider(authEndpoint, clientId, clientSecret);
           LOG.trace("ClientCredsTokenProvider initialized");
         } else if (tokenProviderClass == UserPasswordTokenProvider.class) {
-          String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
-          String username = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_NAME);
-          String password = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
+          String authEndpoint =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+          String username =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_NAME);
+          String password =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD);
           tokenProvider = new UserPasswordTokenProvider(authEndpoint, username, password);
           LOG.trace("UserPasswordTokenProvider initialized");
         } else if (tokenProviderClass == MsiTokenProvider.class) {
           String authEndpoint = getTrimmedPasswordString(
               FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
-          String tenantGuid = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
-          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String tenantGuid =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+          String clientId =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           String authority = getTrimmedPasswordString(
               FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
@@ -794,8 +820,10 @@ public class AbfsConfiguration{
           String authEndpoint = getTrimmedPasswordString(
               FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT);
-          String refreshToken = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
-          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String refreshToken =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
+          String clientId =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
               clientId, refreshToken);
           LOG.trace("RefreshTokenBasedTokenProvider initialized");

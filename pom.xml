@@ -192,6 +192,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                       <bannedImport>com.google.common.collect.Sets</bannedImport>
                     </bannedImports>
                   </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use hadoop-common provided Lists rather than Guava provided Lists</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Lists</bannedImport>
+                      <bannedImport>com.google.common.collect.Lists</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
                 </rules>
               </configuration>
             </execution>
@@ -456,6 +464,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>**/*.js</exclude>
             <exclude>licenses/**</exclude>
             <exclude>licenses-binary/**</exclude>
+            <exclude>dev-support/docker/pkg-resolver/packages.json</exclude>
+            <exclude>dev-support/docker/pkg-resolver/platforms.json</exclude>
          </excludes>
        </configuration>
       </plugin>

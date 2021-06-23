@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,36 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.web.resources;
 
 /**
- * SkipTrash param to be used by DELETE query.
+ * Mover is a data migration tool for tiered storage.
+ * It scans provided paths in HDFS to check
+ * if the block placement satisfies the storage policy.
+ * For the blocks violating the storage policy,
+ * it moves the replicas to a different storage type
+ * in order to fulfill the storage policy requirement.
  */
-public class DeleteSkipTrashParam extends BooleanParam {
-
-  public static final String NAME = "skiptrash";
-  public static final String DEFAULT = FALSE;
-
-  private static final Domain DOMAIN = new Domain(NAME);
-
-  /**
-   * Constructor.
-   * @param value the parameter value.
-   */
-  public DeleteSkipTrashParam(final Boolean value) {
-    super(DOMAIN, value);
-  }
-
-  /**
-   * Constructor.
-   * @param str a string representation of the parameter value.
-   */
-  public DeleteSkipTrashParam(final String str) {
-    this(DOMAIN.parse(str));
-  }
-
-  @Override
-  public String getName() {
-    return NAME;
-  }
-}
+package org.apache.hadoop.hdfs.server.mover;

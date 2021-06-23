@@ -22,12 +22,11 @@ import java.util.List;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.MetricsVisitor;
+import org.apache.hadoop.util.Lists;
 
 /**
  * Helper class to build MBeanInfo from metrics records

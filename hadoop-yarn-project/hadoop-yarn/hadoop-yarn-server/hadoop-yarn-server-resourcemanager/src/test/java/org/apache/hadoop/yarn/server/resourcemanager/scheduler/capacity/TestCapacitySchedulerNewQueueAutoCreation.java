@@ -147,6 +147,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
     Assert.assertEquals(400 * GB,
         c.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
+    Assert.assertEquals(((LeafQueue)c).getUserLimitFactor(), -1, 1e-6);
+    Assert.assertEquals(((LeafQueue)c).getMaxAMResourcePerQueuePercent(), 1, 1e-6);
 
     // Now add another queue-d, in the same hierarchy
     createQueue("root.d-auto");
@@ -696,6 +698,14 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals("weight is not explicitly set", 4f,
         a2.getQueueCapacities().getWeight(), 1e-6);
+
+    csConf.setBoolean(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
+        "root.a") + CapacitySchedulerConfiguration
+        .AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE, false);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    LeafQueue a3 = createQueue("root.a.a3");
+    Assert.assertFalse("auto queue deletion should be turned off on a3",
+        a3.isEligibleForAutoDeletion());
   }
 
   @Test
