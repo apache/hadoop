@@ -32,7 +32,6 @@
 #include <boost/asio/error.hpp>
 
 
-
 using hadoop::common::TokenProto;
 using hadoop::hdfs::DatanodeInfoProto;
 using hadoop::hdfs::DatanodeIDProto;
