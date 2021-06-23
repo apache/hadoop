@@ -633,7 +633,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
             interceptor.getApplications(
                     GetApplicationsRequest.
                             newInstance(applicationStates));
-    
     Assert.assertNotNull(responseGet);
     Assert.assertEquals(0, responseGet.getApplicationList().size());
   }

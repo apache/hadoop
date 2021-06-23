@@ -109,7 +109,6 @@ public final class RouterYarnClientUtils {
         }
       }
     }
-    
     // Check the remaining UAMs are depending or not from federation
     for (ApplicationReport appReport : federationUAMSum.values()) {
       if (returnPartialResult || appReport.getName() != null
