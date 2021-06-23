@@ -42,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
@@ -66,6 +67,19 @@ public class DefaultS3ClientFactory extends Configured
    */
   protected static final Logger LOG =
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
+
+  /**
+   * A one-off warning of default region chains in use.
+   */
+  private static final LogExactlyOnce WARN_OF_DEFAULT_REGION_CHAIN =
+      new LogExactlyOnce(LOG);
+
+  /**
+   * Warning message printed when the SDK Region chain is in use.
+   */
+  private static final String SDK_REGION_CHAIN_IN_USE =
+      "S3A filesystem client is using"
+          + " the SDK region resolution chain.";
 
   /**
    * Create the client by preparing the AwsConf configuration
@@ -103,7 +117,7 @@ public class DefaultS3ClientFactory extends Configured
           parameters);
     } catch (SdkClientException e) {
       // SDK refused to build.
-      throw translateException("create SDK client", uri.toString(), e);
+      throw translateException("creating AWS S3 client", uri.toString(), e);
     }
   }
 
@@ -152,6 +166,7 @@ public class DefaultS3ClientFactory extends Configured
       b.withForceGlobalBucketAccessEnabled(true);
       // HADOOP-17771 force set the region so the build process doesn't halt.
       String region = getConf().getTrimmed(AWS_REGION, AWS_S3_CENTRAL_REGION);
+      LOG.debug("fs.s3a.endpoint.region=\"{}\"", region);
       if (!region.isEmpty()) {
         // there's either an explicit region or we have fallen back
         // to the central one.
@@ -161,8 +176,8 @@ public class DefaultS3ClientFactory extends Configured
         // no region.
         // allow this if people really want it; it is OK to rely on this
         // when deployed in EC2.
-        LOG.debug("Using default endpoint;" +
-            " region will be determined by SDK region provider chain");
+        WARN_OF_DEFAULT_REGION_CHAIN.warn(SDK_REGION_CHAIN_IN_USE);
+        LOG.debug(SDK_REGION_CHAIN_IN_USE);
       }
     }
     final AmazonS3 client = b.build();
@@ -229,7 +244,7 @@ public class DefaultS3ClientFactory extends Configured
       createEndpointConfiguration(
       final String endpoint, final ClientConfiguration awsConf,
       String awsRegion) {
-    LOG.debug("Creating endpoint configuration for {}", endpoint);
+    LOG.debug("Creating endpoint configuration for \"{}\"", endpoint);
     if (endpoint == null || endpoint.isEmpty()) {
       // the default endpoint...we should be using null at this point.
       LOG.debug("Using default endpoint -no need to generate a configuration");

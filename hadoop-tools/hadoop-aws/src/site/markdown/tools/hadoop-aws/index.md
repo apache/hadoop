@@ -441,7 +441,7 @@ you'll need to remove the `profile` prefix from the AWS configuration section he
 Note:
 
 1. The `region` setting is only used if `fs.s3a.endpoint.region` is set to the empty string.
-1. For the credentials to be available to applications running in a Hadoop cluster, the 
+1. For the credentials to be available to applications running in a Hadoop cluster, the
    configuration files MUST be in the `~/.aws/` directory on the local filesystem in
    all hosts in the cluster.
 
