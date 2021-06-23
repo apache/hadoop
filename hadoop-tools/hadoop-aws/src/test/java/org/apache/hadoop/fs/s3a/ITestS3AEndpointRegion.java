@@ -107,8 +107,10 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   public void testInvalidRegionDefaultEndpoint() throws Throwable {
     describe("Create a client with an invalid region and the default endpoint");
     Configuration conf = getConfiguration();
-    // we are making a big assumption about the timetable for AWS region rollout.
-    // if this test ever fails because this region now exists -congratulations!
+    // we are making a big assumption about the timetable for AWS
+    // region rollout.
+    // if this test ever fails because this region now exists
+    // -congratulations!
     conf.set(AWS_REGION, MARS_NORTH_2);
     createMarsNorth2Client(conf);
   }
@@ -129,8 +131,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    */
   @Test
   public void testBlankRegionTriggersSDKResolution() throws Throwable {
-    describe("Create a client with a blank region and the default endpoint." +
-        " This will trigger the SDK Resolution chain");
+    describe("Create a client with a blank region and the default endpoint."
+        + " This will trigger the SDK Resolution chain");
     Configuration conf = getConfiguration();
     conf.set(AWS_REGION, "");
     System.setProperty(AWS_REGION_SYSPROP, MARS_NORTH_2);
@@ -149,8 +151,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    */
   private void createMarsNorth2Client(Configuration conf) throws Exception {
     AmazonS3 client = createS3Client(conf, DEFAULT_ENDPOINT, MARS_NORTH_2);
-    intercept(IllegalArgumentException.class, MARS_NORTH_2, () ->
-        client.getRegion());
+    intercept(IllegalArgumentException.class, MARS_NORTH_2, client::getRegion);
   }
 
   /**

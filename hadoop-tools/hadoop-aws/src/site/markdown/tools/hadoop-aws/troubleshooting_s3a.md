@@ -274,55 +274,6 @@ S3 region as `ca-central-1`.
 </property>
 ```
 
-### <a name="NoRegion"></a>  `Unable to find a region via the region provider chain`
-
-S3A client creation fails, possibly after a pause of some seconds.
-
-This happens if all the following conditions are met:
-1. Deployment outside EC2.
-1. `fs.s3a.endpoint` is unset.
-1. `fs.s3a.endpoint.region` is set to `""`.
-1. Without the file `~/.aws/config` existing or without a region set in it.
-1. Without the system property `aws.region` declaring a region.
-1. Without the environment variable `AWS_REGION` declaring a region.
-
-```
-Caused by: com.amazonaws.SdkClientException: Unable to find a region via the region provider chain.
-        Must provide an explicit region in the builder or setup environment to supply a region.
-    at com.amazonaws.client.builder.AwsClientBuilder.setRegion(AwsClientBuilder.java:462)
-    at com.amazonaws.client.builder.AwsClientBuilder.configureMutableProperties(AwsClientBuilder.java:424)
-    at com.amazonaws.client.builder.AwsSyncClientBuilder.build(AwsSyncClientBuilder.java:46)
-    at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.buildAmazonS3Client(DefaultS3ClientFactory.java:145)
-    at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:97)
-    at org.apache.hadoop.fs.s3a.S3AFileSystem.bindAWSClient(S3AFileSystem.java:788)
-    at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:478)
-```
-
-
-#### Set `fs.s3a.endpoint` to `s3.amazonaws.com`
-
-Due to changes in S3 client construction in Hadoop 3.3.1 this option
-surfaces in non-EC2 deployments where no AWS endpoint was declared:
-
-[HADOOP-17771](https://issues.apache.org/jira/browse/HADOOP-17771). 
-
-To fix this, set `fs.s3a.endpoint` to the endpoint where the
-data is stored (best), or to `s3.amazonaws.com` (second-best).
-
-```xml
-<property>
-  <name>fs.s3a.endpoint</name>
-  <value>s3.amazonaws.com</value>
-</property>
-```
-
-Tip: set logging of `org.apache.hadoop.fs.s3a.DefaultS3ClientFactory`
-to `DEBUG` to see how the endpoint and region configuration is determined.
-
-```
-log4j.logger.org.apache.hadoop.fs.s3a.DefaultS3ClientFactory=DEBUG
-```
-
 ### `Class does not implement AWSCredentialsProvider`
 
 A credential provider listed in `fs.s3a.aws.credentials.provider` does not implement
@@ -660,6 +611,66 @@ can be used:
 Using the explicit endpoint for the region is recommended for speed and
 to use the V4 signing API.
 
+### <a name="NoRegion"></a>  `Unable to find a region via the region provider chain`
+
+S3A client creation fails, possibly after a pause of some seconds.
+
+This failure surfaces when _all_ the following conditions are met:
+
+1. Deployment outside EC2.
+1. `fs.s3a.endpoint` is unset.
+1. `fs.s3a.endpoint.region` is set to `""`.   (Hadoop 3.3.2+ only)
+1. Without the file `~/.aws/config` existing or without a region set in it.
+1. Without the JVM system property `aws.region` declaring a region.
+1. Without the environment variable `AWS_REGION` declaring a region.
+
+```
+Caused by: com.amazonaws.SdkClientException: Unable to find a region via the region provider chain.
+        Must provide an explicit region in the builder or setup environment to supply a region.
+    at com.amazonaws.client.builder.AwsClientBuilder.setRegion(AwsClientBuilder.java:462)
+    at com.amazonaws.client.builder.AwsClientBuilder.configureMutableProperties(AwsClientBuilder.java:424)
+    at com.amazonaws.client.builder.AwsSyncClientBuilder.build(AwsSyncClientBuilder.java:46)
+    at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.buildAmazonS3Client(DefaultS3ClientFactory.java:145)
+    at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:97)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.bindAWSClient(S3AFileSystem.java:788)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:478)
+```
+
+Due to changes in S3 client construction in Hadoop 3.3.1 this option surfaces in
+non-EC2 deployments where no AWS endpoint was declared:
+[HADOOP-17771](https://issues.apache.org/jira/browse/HADOOP-17771). On Hadoop
+3.3.2 and later it takes active effort to create this stack trace.
+
+**Fix: set `fs.s3a.endpoint` to `s3.amazonaws.com`**
+
+Set `fs.s3a.endpoint` to the endpoint where the data is stored
+(best), or to `s3.amazonaws.com` (second-best).
+
+```xml
+<property>
+  <name>fs.s3a.endpoint</name>
+  <value>s3.amazonaws.com</value>
+</property>
+```
+
+For Apache Spark, this can be done in `spark-defaults.conf`
+
+```
+spark.hadoop.fs.s3a.endpoint s3.amazonaws.com
+```
+
+Or in Scala by editing the spark configuration during setup.
+
+```scala
+sc.hadoopConfiguration.set("fs.s3a.endpoint", "s3.amazonaws.com")
+```
+
+Tip: set the logging of `org.apache.hadoop.fs.s3a.DefaultS3ClientFactory`
+to `DEBUG` to see how the endpoint and region configuration is determined.
+
+```
+log4j.logger.org.apache.hadoop.fs.s3a.DefaultS3ClientFactory=DEBUG
+```
 
 ### <a name="timeout_from_pool"></a> "Timeout waiting for connection from pool" when writing data
 
@@ -1234,7 +1245,7 @@ We also recommend using applications/application
 options which do  not rename files when committing work or when copying data
 to S3, but instead write directly to the final destination.
 
-## Rename not behaving as "expected"
+### Rename not behaving as "expected"
 
 S3 is not a filesystem. The S3A connector mimics file and directory rename by
 
