@@ -802,8 +802,10 @@ options are covered in [Testing](./testing.md).
 <property>
   <name>fs.s3a.endpoint.region</name>
   <description>AWS S3 region for a bucket, which bypasses the parsing of
- fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
- while using privateLink URL and explicitly set the bucket region.
+    fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
+    while using privateLink URL and explicitly set the bucket region.
+    If set to a blank string (or 1+ space), falls back to the 
+    (potentially brittle) SDK region resolution process.
   </description>
 </property>
 

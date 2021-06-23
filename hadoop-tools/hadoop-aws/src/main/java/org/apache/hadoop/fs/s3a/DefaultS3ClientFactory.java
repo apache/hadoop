@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.s3.AmazonS3;
@@ -46,6 +47,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
+import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 
 /**
  * The default {@link S3ClientFactory} implementation.
@@ -95,9 +97,14 @@ public class DefaultS3ClientFactory extends Configured
       awsConf.setUserAgentSuffix(parameters.getUserAgentSuffix());
     }
 
-    return buildAmazonS3Client(
-        awsConf,
-        parameters);
+    try {
+      return buildAmazonS3Client(
+          awsConf,
+          parameters);
+    } catch (SdkClientException e) {
+      // SDK refused to build.
+      throw translateException("create SDK client", uri.toString(), e);
+    }
   }
 
   /**
@@ -110,6 +117,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param awsConf  AWS configuration
    * @param parameters parameters
    * @return new AmazonS3 client
+   * @throws SdkClientException if the configuration is invalid.
    */
   protected AmazonS3 buildAmazonS3Client(
       final ClientConfiguration awsConf,
@@ -144,8 +152,18 @@ public class DefaultS3ClientFactory extends Configured
       b.withForceGlobalBucketAccessEnabled(true);
       // HADOOP-17771 force set the region so the build process doesn't halt.
       String region = getConf().getTrimmed(AWS_REGION, AWS_S3_CENTRAL_REGION);
-      LOG.debug("Using default endpoint; setting region to {}", region);
-      b.setRegion(region);
+      if (!region.isEmpty()) {
+        // there's either an explicit region or we have fallen back
+        // to the central one.
+        LOG.debug("Using default endpoint; setting region to {}", region);
+        b.setRegion(region);
+      } else {
+        // no region.
+        // allow this if people really want it; it is OK to rely on this
+        // when deployed in EC2.
+        LOG.debug("Using default endpoint;" +
+            " region will be determined by SDK region provider chain");
+      }
     }
     final AmazonS3 client = b.build();
     return client;
