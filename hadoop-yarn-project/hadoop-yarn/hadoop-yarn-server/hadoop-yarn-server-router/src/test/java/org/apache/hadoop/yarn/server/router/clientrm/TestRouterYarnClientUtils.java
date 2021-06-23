@@ -19,7 +19,17 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,5 +63,53 @@ public class TestRouterYarnClientUtils {
     metrics.setNumActiveNodeManagers(value);
     metrics.setNumNodeManagers(value);
     return GetClusterMetricsResponse.newInstance(metrics);
+  }
+
+  /**
+   * This test validates the correctness of
+   * RouterYarnClientUtils#mergeApplications.
+   */
+  @Test
+  public void testMergeApplications() {
+    ArrayList<GetApplicationsResponse> responses = new ArrayList<>();
+    responses.add(getApplicationsResponse(1));
+    responses.add(getApplicationsResponse(2));
+    GetApplicationsResponse result = RouterYarnClientUtils.mergeApplications(responses, false);
+    Assert.assertNotNull(result);
+    Assert.assertEquals(2,result.getApplicationList().size() );
+  }
+
+  private GetApplicationsResponse getApplicationsResponse(int value) {
+    List<ApplicationReport> applications = new ArrayList<>();
+
+    //Add managed application to list
+    ApplicationId applicationId = ApplicationId.newInstance(1234, value);
+    Resource resource = Resource.newInstance(1024, 1);
+    ApplicationResourceUsageReport appResourceUsageReport =
+            ApplicationResourceUsageReport.newInstance(
+                    1,2,resource, resource,
+                    resource, null, 0.1f,0.1f,
+                    null);
+
+    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
+            applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+            "user", "queue", "appname", "host", 124, null,
+            YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,0,
+            FinalApplicationStatus.SUCCEEDED, appResourceUsageReport, "N/A", 0.53789f, "YARN",
+            null);
+
+    //Add unmanaged application to list
+    ApplicationId applicationId2 = ApplicationId.newInstance(1234, value);
+    ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
+            applicationId2, ApplicationAttemptId.newInstance(applicationId, 1),
+            "user", "queue", "appname", null, 124, null,
+            YarnApplicationState.RUNNING, "diagnostics", "url", 0,0, 0,
+            FinalApplicationStatus.SUCCEEDED, appResourceUsageReport, "N/A", 0.53789f, "YARN",
+            null);
+
+    applications.add(newApplicationReport);
+    applications.add(newApplicationReport2);
+
+    return GetApplicationsResponse.newInstance(applications);
   }
 }
