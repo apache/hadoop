@@ -587,7 +587,7 @@ class DataXceiver extends Receiver implements Runnable {
     final String clientTraceFmt =
       clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
         ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
-            "%d", "HDFS_READ", clientName, "%d",
+            "", "%d", "HDFS_READ", clientName, "%d",
             dnR.getDatanodeUuid(), block, "%d")
         : dnR + " Served block " + block + " to " +
             remoteAddress;
@@ -929,7 +929,7 @@ class DataXceiver extends Receiver implements Runnable {
       if (isDatanode ||
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         datanode.closeBlock(block, null, storageUuid, isOnTransientStorage);
-        LOG.info("Received {} src: {} dest: {} of size {}",
+        LOG.info("Received {} src: {} dest: {} volume: {} of size {}",
             block, remoteAddress, localAddress, block.getNumBytes());
       }
 
