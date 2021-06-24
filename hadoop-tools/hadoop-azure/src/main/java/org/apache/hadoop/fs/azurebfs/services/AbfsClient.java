@@ -34,7 +34,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import com.microsoft.fastpath.exceptions.FastpathRequestException;
+import com.azure.storage.fastpath.exceptions.FastpathRequestException;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;

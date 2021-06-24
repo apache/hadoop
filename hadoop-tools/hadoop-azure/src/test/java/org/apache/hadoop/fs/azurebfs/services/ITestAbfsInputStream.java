@@ -20,10 +20,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 
-import com.microsoft.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -37,6 +39,8 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_SMALL_FILES_COMPLETELY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -144,18 +148,22 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       final int seekPos, final int length, final byte[] fileContent, boolean isMockFastpathTest)
       throws IOException {
 
-    FSDataInputStream iStream = isMockFastpathTest
-        ? openMockAbfsInputStream((AzureBlobFileSystem) fs, testFilePath)
-        : fs.open(testFilePath);
+    FSDataInputStream iStream = fs.open(testFilePath);
+    AbfsInputStream abfsInputStream = (AbfsInputStream) iStream.getWrappedStream();
+
+    if (isMockFastpathTest) {
+      getRawConfiguration().setBoolean(AZURE_READ_OPTIMIZE_FOOTER_READ, true);
+      getRawConfiguration().setBoolean(AZURE_READ_SMALL_FILES_COMPLETELY, true);
+      abfsInputStream = getMockAbfsInputStream((AzureBlobFileSystem) fs,
+          testFilePath, Optional.empty());
+    }
+
     try {
-      AbfsInputStream abfsInputStream;
-      if (isMockFastpathTest) {
-        abfsInputStream = (MockAbfsInputStream) iStream
-            .getWrappedStream();
-      } else {
-        abfsInputStream = (AbfsInputStream) iStream
-            .getWrappedStream();
-      }
+      abfsInputStream = spy(abfsInputStream);
+      doThrow(new IOException())
+          .doCallRealMethod()
+          .when(abfsInputStream)
+          .readRemote(anyLong(), any(), anyInt(), anyInt());
 
       iStream = new FSDataInputStream(abfsInputStream);
       verifyBeforeSeek(abfsInputStream);
@@ -167,7 +175,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
         long delta = seekPos + length - fileContent.length;
         actualLength = length - delta;
       }
-      assertEquals(bytesRead, actualLength);
+      assertEquals(actualLength, bytesRead);
       assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer);
       assertEquals(fileContent.length, abfsInputStream.getFCursor());
       assertEquals(fileContent.length, abfsInputStream.getFCursorAfterLastRead());

@@ -35,7 +35,7 @@ import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.microsoft.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -472,6 +472,10 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   protected boolean getDefaultFastpathFeatureStatus() throws IOException {
+    assumeTrue("Fastpath supported only for HNS account",
+        getFileSystem().getIsNamespaceEnabled());
+    assumeTrue("Fastpath supported only for OAuth auth type",
+        authType == AuthType.OAuth);
     return getFileSystem().getAbfsStore().getAbfsConfiguration().isFastpathEnabled();
   }
 
@@ -488,7 +492,8 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public FSDataInputStream openMockAbfsInputStream(AzureBlobFileSystem fs,
       Path testFilePath, Optional<Configuration> opt) throws IOException {
-    return new FSDataInputStream(getMockAbfsInputStream(fs, testFilePath, opt));
+    return new FSDataInputStream(
+        getMockAbfsInputStream(fs, testFilePath, opt));
   }
 
   public AbfsInputStream getMockAbfsInputStream(AzureBlobFileSystem fs,

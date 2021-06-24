@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.microsoft.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -31,6 +32,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
 
 /**
  * Test Abfs Stream.
@@ -55,21 +58,27 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
   public void testMockFastpathAbfsStreamOps() throws Exception {
     // Run mock test only if feature is set to off
     Assume.assumeFalse(getDefaultFastpathFeatureStatus());
-    testAbfsStreamOps(true);
+    Path smallOperationsFile = new Path("testOneReadWriteOps_mock");
+    Path largeOperationsFile = new Path("testLargeReadWriteOps_mock");
+    testAbfsStreamOps(smallOperationsFile, largeOperationsFile, true);
   }
 
   @Test
   public void testAbfsStreamOps() throws Exception {
-    testAbfsStreamOps(false);
+    Path smallOperationsFile = new Path("testOneReadWriteOps");
+    Path largeOperationsFile = new Path("testLargeReadWriteOps");
+    testAbfsStreamOps(smallOperationsFile, largeOperationsFile, false);
   }
 
-  public void testAbfsStreamOps(boolean isMockFastpathTest) throws Exception {
+  public void testAbfsStreamOps(Path smallOperationsFile,
+      Path largeOperationsFile, boolean isMockFastpathTest) throws Exception {
     describe("Test to see correct population of read and write operations in "
         + "Abfs");
 
-    final AzureBlobFileSystem fs = getFileSystem();
-    Path smallOperationsFile = new Path("testOneReadWriteOps");
-    Path largeOperationsFile = new Path("testLargeReadWriteOps");
+    Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_READ_AHEAD_QUEUE_DEPTH, "0");
+    final AzureBlobFileSystem fs =
+        (AzureBlobFileSystem) FileSystem.newInstance(configuration);//getFileSystem();
     FileSystem.Statistics statistics = fs.getFsStatistics();
     String testReadWriteOps = "test this";
     statistics.reset();
@@ -93,8 +102,11 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       //Flushing output stream to see content to read
       outForOneOperation.hflush();
       byte[] buff = testReadWriteOps.getBytes();
-      MockFastpathConnection.registerAppend(buff.length,
-          smallOperationsFile.getName(), buff, 0, buff.length);
+      if (isMockFastpathTest) {
+        MockFastpathConnection
+            .registerAppend(buff.length, smallOperationsFile.getName(), buff, 0,
+                buff.length);
+      }
       inForOneOperation = isMockFastpathTest
           ? openMockAbfsInputStream(fs, smallOperationsFile)
           : fs.open(smallOperationsFile);
@@ -147,8 +159,11 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
       int totalLen = largeValue*buff.length;
       for (int i = 0; i < largeValue; i++) {
         outForLargeOperations.write(testReadWriteOps.getBytes());
-        MockFastpathConnection.registerAppend(totalLen,
-            largeOperationsFile.getName(), buff, 0, buff.length);
+        if (isMockFastpathTest) {
+          MockFastpathConnection
+              .registerAppend(totalLen, largeOperationsFile.getName(), buff, 0,
+                  buff.length);
+        }
 
         //Creating the String for content Validation
         largeOperationsValidationString.append(testReadWriteOps);
@@ -194,8 +209,10 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
               largeOperationsValidationString.toString().getBytes()));
     }
 
-    MockFastpathConnection.unregisterAppend(smallOperationsFile.getName());
-    MockFastpathConnection.unregisterAppend(largeOperationsFile.getName());
+    if (isMockFastpathTest) {
+      MockFastpathConnection.unregisterAppend(smallOperationsFile.getName());
+      MockFastpathConnection.unregisterAppend(largeOperationsFile.getName());
+    }
   }
 
   /**

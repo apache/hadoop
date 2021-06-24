@@ -22,14 +22,14 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
-import com.microsoft.fastpath.exceptions.FastpathException;
-import com.microsoft.fastpath.MockFastpathConnection;
-import com.microsoft.fastpath.requestParameters.FastpathCloseRequestParams;
-import com.microsoft.fastpath.requestParameters.FastpathOpenRequestParams;
-import com.microsoft.fastpath.requestParameters.FastpathReadRequestParams;
-import com.microsoft.fastpath.responseProviders.FastpathCloseResponse;
-import com.microsoft.fastpath.responseProviders.FastpathOpenResponse;
-import com.microsoft.fastpath.responseProviders.FastpathReadResponse;
+import com.azure.storage.fastpath.exceptions.FastpathException;
+import com.azure.storage.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.requestParameters.FastpathCloseRequestParams;
+import com.azure.storage.fastpath.requestParameters.FastpathOpenRequestParams;
+import com.azure.storage.fastpath.requestParameters.FastpathReadRequestParams;
+import com.azure.storage.fastpath.responseProviders.FastpathCloseResponse;
+import com.azure.storage.fastpath.responseProviders.FastpathOpenResponse;
+import com.azure.storage.fastpath.responseProviders.FastpathReadResponse;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 

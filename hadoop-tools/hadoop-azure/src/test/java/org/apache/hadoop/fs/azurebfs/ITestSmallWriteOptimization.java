@@ -31,7 +31,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runner.RunWith;
 import org.junit.Test;
 
-import com.microsoft.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -633,7 +633,11 @@ public class ITestSmallWriteOptimization extends AbstractAbfsScaleTest {
 
     while (writeLoopCount > 0) {
       opStream.write(buffer, startOffset, writeSize);
-      MockFastpathConnection.registerAppend(totalSize, testFilePath.getName(), buffer, startOffset, writeSize);
+      if (isMockFastpathTest) {
+        MockFastpathConnection
+            .registerAppend(totalSize, testFilePath.getName(), buffer,
+                startOffset, writeSize);
+      }
       startOffset += writeSize;
       writeLoopCount--;
     }

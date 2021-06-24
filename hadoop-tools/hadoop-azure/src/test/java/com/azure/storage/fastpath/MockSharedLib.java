@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-package com.microsoft.fastpath;
+package com.azure.storage.fastpath;
 
 import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.microsoft.fastpath.driver.FastpathDriver;
-import com.microsoft.fastpath.exceptions.FastpathException;
-import com.microsoft.fastpath.exceptions.FastpathRequestException;
+import com.azure.storage.fastpath.driver.FastpathDriver;
+import com.azure.storage.fastpath.exceptions.FastpathException;
+import com.azure.storage.fastpath.exceptions.FastpathRequestException;
 
 public class MockSharedLib extends FastpathDriver {
   protected static final Logger LOG = LoggerFactory.getLogger(

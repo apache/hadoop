@@ -29,7 +29,7 @@ import java.util.concurrent.Future;
 import org.junit.Assume;
 import org.junit.Test;
 
-import com.microsoft.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -116,8 +116,11 @@ public class ITestAzureBlobFileSystemE2EScale extends
       stream.write(sourceData);
     }
 
-    MockFastpathConnection.registerAppend(sourceData.length, testFile.getName(),
-        sourceData, 0, sourceData.length);
+    if (isMockFastpathTest) {
+      MockFastpathConnection
+          .registerAppend(sourceData.length, testFile.getName(), sourceData, 0,
+              sourceData.length);
+    }
     final byte[] remoteData = new byte[testBufferSize];
     int bytesRead;
     try (FSDataInputStream inputStream = isMockFastpathTest
@@ -133,7 +136,9 @@ public class ITestAzureBlobFileSystemE2EScale extends
         sourceData.length, abfsStatistics.getBytesWritten());
     assertEquals("bytesRead from read() call", testBufferSize, bytesRead);
     assertArrayEquals("round tripped data", sourceData, remoteData);
-    MockFastpathConnection.unregisterAppend(testFile.getName());
+    if (isMockFastpathTest) {
+      MockFastpathConnection.unregisterAppend(testFile.getName());
+    }
 
   }
 }
