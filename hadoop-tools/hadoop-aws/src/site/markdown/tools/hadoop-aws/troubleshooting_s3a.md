@@ -578,7 +578,7 @@ S3 sts endpoint and region like the following:
 
 ## <a name="connectivity"></a> Connectivity Problems
 
-### <a name="bad_endpoint"></a> Error message "The bucket you are attempting to access must be addressed using the specified endpoint"
+### <a name="bad_endpoint"></a> Error "The bucket you are attempting to access must be addressed using the specified endpoint"
 
 This surfaces when `fs.s3a.endpoint` is configured to use an S3 service endpoint
 which is neither the original AWS one, `s3.amazonaws.com` , nor the one where
@@ -645,10 +645,10 @@ Caused by: com.amazonaws.SdkClientException: Unable to find a region via the reg
 
 Log and stack trace on later releases, with
 "S3A filesystem client is using the SDK region resolution chain."
-warning that the SDK resolution chain is in use.
+warning that the SDK resolution chain is in use:
 
 ```
-2021-06-23 19:56:55,971 [main] WARN  s3a.DefaultS3ClientFactory (LogExactlyOnce.java:warn(39)) - 
+2021-06-23 19:56:55,971 [main] WARN  s3a.DefaultS3ClientFactory (LogExactlyOnce.java:warn(39)) -
     S3A filesystem client is using the SDK region resolution chain.
 
 2021-06-23 19:56:56,073 [main] WARN  fs.FileSystem (FileSystem.java:createFileSystem(3464)) -
@@ -674,7 +674,7 @@ Caused by: com.amazonaws.SdkClientException: Unable to find a region via the reg
     at com.amazonaws.client.builder.AwsSyncClientBuilder.build(AwsSyncClientBuilder.java:46)
     at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.buildAmazonS3Client(DefaultS3ClientFactory.java:185)
     at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:117)
-    ... 21 more   
+    ... 21 more
 ```
 
 Due to changes in S3 client construction in Hadoop 3.3.1 this option surfaces in
