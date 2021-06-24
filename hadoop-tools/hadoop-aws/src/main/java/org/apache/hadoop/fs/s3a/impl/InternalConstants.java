@@ -121,4 +121,9 @@ public final class InternalConstants {
    */
   public static final int DEFAULT_UPLOAD_PART_COUNT_LIMIT = 10000;
 
+  /**
+   * The system property used by the AWS SDK to identify the region.
+   */
+  public static final String AWS_REGION_SYSPROP = "aws.region";
+
 }
