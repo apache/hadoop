@@ -375,7 +375,8 @@ public class TestRouterClientRejectOverload {
     Map<String, Integer> result = objectMapper
         .readValue(metrics.getAsyncCallerPool(), Map.class);
     assertEquals(0, result.get("active").intValue());
-    assertEquals(0, result.get("total").intValue());
+    // There are some connections about RouterRpcServer#getCachedDatanodeReport
+    assertEquals(4, result.get("total").intValue());
     assertEquals(4, result.get("max").intValue());
 
     ExecutorService exec = Executors.newSingleThreadExecutor();

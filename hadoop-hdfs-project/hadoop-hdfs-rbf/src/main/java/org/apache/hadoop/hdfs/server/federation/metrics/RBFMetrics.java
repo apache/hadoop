@@ -39,7 +39,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
@@ -82,7 +81,6 @@ import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.codehaus.jettison.json.JSONObject;
@@ -124,8 +122,6 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   private RouterStore routerStore;
   /** The number of top token owners reported in metrics. */
   private int topTokenRealOwners;
-  /** DN type -> full DN report in DatanodeInfo. */
-  private final LoadingCache<DatanodeReportType, DatanodeInfo[]> dnCache;
 
   public RBFMetrics(Router router) throws IOException {
     this.router = router;
@@ -167,9 +163,6 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     this.topTokenRealOwners = conf.getInt(
         RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY,
         RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT);
-
-    // Use RpcServer dnCache
-    this.dnCache = this.router.getRpcServer().getDnCache();
   }
 
   /**
@@ -397,9 +390,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   public DatanodeInfo[] getDataNodeInfo(DatanodeReportType type) {
     DatanodeInfo[] datanodeInfo = DatanodeInfo.EMPTY_ARRAY;
     try {
-      datanodeInfo = dnCache.get(type);
-    } catch (ExecutionException e) {
-      LOG.debug("Cannot get {} nodes {}", type, e.getMessage());
+      datanodeInfo = router.getRpcServer().getCachedDatanodeReport(type);
+    } catch (IOException e) {
+      LOG.error("Cannot get {} nodes {}", type, e.getMessage());
     }
     return datanodeInfo;
   }
@@ -568,29 +561,25 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     float dev = 0;
 
     final Map<String, Map<String, Object>> info = new HashMap<>();
-    try {
-      DatanodeInfo[] live = dnCache.get(DatanodeReportType.LIVE);
-      if (live.length > 0) {
-        float totalDfsUsed = 0;
-        float[] usages = new float[live.length];
-        int i = 0;
-        for (DatanodeInfo dn : live) {
-          usages[i++] = dn.getDfsUsedPercent();
-          totalDfsUsed += dn.getDfsUsedPercent();
-        }
-        totalDfsUsed /= live.length;
-        Arrays.sort(usages);
-        median = usages[usages.length / 2];
-        max = usages[usages.length - 1];
-        min = usages[0];
-
-        for (i = 0; i < usages.length; i++) {
-          dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
-        }
-        dev = (float) Math.sqrt(dev / usages.length);
+    DatanodeInfo[] live = getDataNodeInfo(DatanodeReportType.LIVE);
+    if (live.length > 0) {
+      float totalDfsUsed = 0;
+      float[] usages = new float[live.length];
+      int i = 0;
+      for (DatanodeInfo dn : live) {
+        usages[i++] = dn.getDfsUsedPercent();
+        totalDfsUsed += dn.getDfsUsedPercent();
       }
-    } catch (ExecutionException e) {
-      LOG.error("Cannot get the live nodes: {}", e.getMessage());
+      totalDfsUsed /= live.length;
+      Arrays.sort(usages);
+      median = usages[usages.length / 2];
+      max = usages[usages.length - 1];
+      min = usages[0];
+
+      for (i = 0; i < usages.length; i++) {
+        dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
+      }
+      dev = (float) Math.sqrt(dev / usages.length);
     }
 
     final Map<String, Object> innerInfo = new HashMap<>();

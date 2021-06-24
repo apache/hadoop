@@ -634,6 +634,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /**
    * Get the cache information of cluster nodes.
    */
+  @VisibleForTesting
   public LoadingCache<DatanodeReportType, DatanodeInfo[]> getDnCache() {
     return dnCache;
   }
@@ -1046,7 +1047,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return List of datanodes.
    * @throws IOException If it cannot get the report.
    */
-  DatanodeInfo[] getCachedDatanodeReport(DatanodeReportType type)
+  public DatanodeInfo[] getCachedDatanodeReport(DatanodeReportType type)
       throws IOException {
     try {
       DatanodeInfo[] dns = this.dnCache.get(type);

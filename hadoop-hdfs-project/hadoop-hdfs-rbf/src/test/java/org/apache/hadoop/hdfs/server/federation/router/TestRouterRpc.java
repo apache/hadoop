@@ -1730,7 +1730,8 @@ public class TestRouterRpc {
           return !jsonString2.equals(metrics.getLiveNodes());
         }
       }, 500, 5 * 1000);
-      assertEquals("{}", metrics.getLiveNodes());
+      // Failed to get new data, use old data.
+      assertNotEquals("{}", metrics.getLiveNodes());
     } finally {
       // Reset the registrations again
       resolver.setDisableRegistration(false);
@@ -1757,7 +1758,6 @@ public class TestRouterRpc {
     // These methods relays on
     // {@link RBFMetrics#getActiveNamenodeRegistration()}
     assertEquals("{}", metrics.getNameservices());
-    assertEquals(NUM_DNS * 2, metrics.getNumLiveNodes());
   }
 
   @Test
