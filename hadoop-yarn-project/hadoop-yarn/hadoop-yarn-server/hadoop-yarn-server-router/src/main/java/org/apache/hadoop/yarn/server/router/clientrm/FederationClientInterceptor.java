@@ -199,8 +199,11 @@ public class FederationClientInterceptor
     routerMetrics = RouterMetrics.getMetrics();
 
     returnPartialReport =
-            conf.getBoolean(YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
-                    YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
+            conf.getBoolean(
+                    YarnConfiguration
+                            .ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
+                    YarnConfiguration
+                            .DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
   }
 
   @Override
@@ -641,7 +644,8 @@ public class FederationClientInterceptor
                     GetApplicationsResponse.class);
 
     //Merge the Application Reports
-    return RouterYarnClientUtils.mergeApplications(applications.values(), returnPartialReport);
+    return RouterYarnClientUtils.mergeApplications(applications.values(),
+            returnPartialReport);
   }
 
   @Override

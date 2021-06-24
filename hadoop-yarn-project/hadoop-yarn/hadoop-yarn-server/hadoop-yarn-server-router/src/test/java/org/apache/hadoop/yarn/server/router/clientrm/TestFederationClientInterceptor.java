@@ -576,7 +576,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     LOG.info("Test FederationClientInterceptor : Get Applications request");
     LambdaTestUtils.intercept(YarnException.class,
             "Missing getApplications request.",
-            () -> interceptor.getApplications(null));
+        () -> interceptor.getApplications(null));
   }
 
   /**
@@ -586,7 +586,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testGetApplicationsApplicationTypeNotExists() throws Exception{
-    LOG.info("Test FederationClientInterceptor : Application with type does not exist");
+    LOG.info("Test FederationClientInterceptor :" +
+            " Application with type does not exist");
 
     ApplicationId appId =
             ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -615,7 +616,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testGetApplicationsApplicationStateNotExists() throws Exception{
-    LOG.info("Test FederationClientInterceptor : Application with state does not exist");
+    LOG.info("Test FederationClientInterceptor :" +
+            " Application with state does not exist");
 
     ApplicationId appId =
             ApplicationId.newInstance(System.currentTimeMillis(), 1);
@@ -626,7 +628,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(response);
     Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
 
-    EnumSet<YarnApplicationState> applicationStates = EnumSet.noneOf(YarnApplicationState.class);
+    EnumSet<YarnApplicationState> applicationStates = EnumSet.noneOf(
+            YarnApplicationState.class);
     applicationStates.add(YarnApplicationState.KILLED);
 
     GetApplicationsResponse responseGet =

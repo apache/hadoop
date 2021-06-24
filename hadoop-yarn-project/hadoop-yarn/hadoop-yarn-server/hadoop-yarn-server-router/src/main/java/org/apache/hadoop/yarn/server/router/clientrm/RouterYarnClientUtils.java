@@ -67,15 +67,17 @@ public final class RouterYarnClientUtils {
   }
 
   /**
-   * Merges a list of ApplicationReports grouping by ApplicationId. Our current policy is
-   * to merge the application reports from the reachable SubClusters.
+   * Merges a list of ApplicationReports grouping by ApplicationId.
+   * Our current policy is to merge the application reports from the reachable
+   * SubClusters.
    * @param responses a list of ApplicationResponse to merge
-   * @param returnPartialResult if the merge ApplicationReports should contain partial
-   * result or not
+   * @param returnPartialResult if the merge ApplicationReports should contain
+   * partial result or not
    * @return the merged ApplicationsResponse
    */
   public static GetApplicationsResponse mergeApplications(
-          Collection<GetApplicationsResponse> responses, boolean returnPartialResult){
+          Collection<GetApplicationsResponse> responses,
+          boolean returnPartialResult){
     Map<ApplicationId, ApplicationReport> federationAM = new HashMap<>();
     Map<ApplicationId, ApplicationReport> federationUAMSum = new HashMap<>();
 
@@ -112,8 +114,10 @@ public final class RouterYarnClientUtils {
     // Check the remaining UAMs are depending or not from federation
     for (ApplicationReport appReport : federationUAMSum.values()) {
       if (returnPartialResult || appReport.getName() != null
-              && !(appReport.getName().startsWith(UnmanagedApplicationManager.APP_NAME)
-              || appReport.getName().startsWith(PARTIAL_REPORT))) {
+              && !(appReport.getName()
+              .startsWith(UnmanagedApplicationManager.APP_NAME)
+              || appReport.getName()
+              .startsWith(PARTIAL_REPORT))) {
         federationAM.put(appReport.getApplicationId(), appReport);
       }
     }
@@ -122,33 +126,49 @@ public final class RouterYarnClientUtils {
     return GetApplicationsResponse.newInstance(appList);
   }
 
-  private static ApplicationReport mergeUAMWithUAM(ApplicationReport uam1, ApplicationReport uam2){
+  private static ApplicationReport mergeUAMWithUAM(ApplicationReport uam1,
+                                                   ApplicationReport uam2){
     uam1.setName(PARTIAL_REPORT + uam1.getApplicationId());
     mergeAMWithUAM(uam1, uam1);
     mergeAMWithUAM(uam1, uam2);
     return uam1;
   }
 
-  private static void mergeAMWithUAM(ApplicationReport am, ApplicationReport uam){
-    ApplicationResourceUsageReport resourceUsageReport = am.getApplicationResourceUsageReport();
+  private static void mergeAMWithUAM(ApplicationReport am,
+                                     ApplicationReport uam){
+    ApplicationResourceUsageReport resourceUsageReport =
+            am.getApplicationResourceUsageReport();
     resourceUsageReport.setNumUsedContainers(
-            resourceUsageReport.getNumUsedContainers() + uam.getApplicationResourceUsageReport().getNumUsedContainers());
+            resourceUsageReport.getNumUsedContainers() +
+                    uam.getApplicationResourceUsageReport()
+                            .getNumUsedContainers());
     resourceUsageReport.setNumReservedContainers(
-            resourceUsageReport.getNumReservedContainers() + uam.getApplicationResourceUsageReport().getNumReservedContainers());
-    resourceUsageReport.setUsedResources(Resources.add(resourceUsageReport.getUsedResources(),
+            resourceUsageReport.getNumReservedContainers() +
+                    uam.getApplicationResourceUsageReport()
+                            .getNumReservedContainers());
+    resourceUsageReport.setUsedResources(Resources.add(
+            resourceUsageReport.getUsedResources(),
             uam.getApplicationResourceUsageReport().getUsedResources()));
-    resourceUsageReport.setReservedResources(Resources.add(resourceUsageReport.getReservedResources(),
+    resourceUsageReport.setReservedResources(Resources.add(
+            resourceUsageReport.getReservedResources(),
             uam.getApplicationResourceUsageReport().getReservedResources()));
-    resourceUsageReport.setNeededResources(Resources.add(resourceUsageReport.getNeededResources(),
+    resourceUsageReport.setNeededResources(Resources.add(
+            resourceUsageReport.getNeededResources(),
             uam.getApplicationResourceUsageReport().getNeededResources()));
     resourceUsageReport.setMemorySeconds(
-            resourceUsageReport.getMemorySeconds() + uam.getApplicationResourceUsageReport().getMemorySeconds());
+            resourceUsageReport.getMemorySeconds() +
+                    uam.getApplicationResourceUsageReport().getMemorySeconds());
     resourceUsageReport.setVcoreSeconds(
-            resourceUsageReport.getVcoreSeconds() + uam.getApplicationResourceUsageReport().getVcoreSeconds());
+            resourceUsageReport.getVcoreSeconds() +
+                    uam.getApplicationResourceUsageReport().getVcoreSeconds());
     resourceUsageReport.setQueueUsagePercentage(
-            resourceUsageReport.getQueueUsagePercentage() + uam.getApplicationResourceUsageReport().getQueueUsagePercentage());
+            resourceUsageReport.getQueueUsagePercentage() +
+                    uam.getApplicationResourceUsageReport()
+                            .getQueueUsagePercentage());
     resourceUsageReport.setClusterUsagePercentage(
-            resourceUsageReport.getClusterUsagePercentage() + uam.getApplicationResourceUsageReport().getClusterUsagePercentage());
+            resourceUsageReport.getClusterUsagePercentage() +
+                    uam.getApplicationResourceUsageReport()
+                            .getClusterUsagePercentage());
     am.getApplicationTags().addAll(uam.getApplicationTags());
   }
 }
