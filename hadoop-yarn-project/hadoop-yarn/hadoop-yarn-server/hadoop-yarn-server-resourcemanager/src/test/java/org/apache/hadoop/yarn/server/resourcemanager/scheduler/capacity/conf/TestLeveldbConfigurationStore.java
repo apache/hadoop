@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.iq80.leveldb.DB;
+import org.iq80.leveldb.DBIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileUtil;
@@ -36,6 +41,7 @@ import org.junit.Test;
 import java.io.File;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 
 /**
@@ -117,6 +123,29 @@ public class TestLeveldbConfigurationStore extends
     assertEquals("val", ((MutableConfScheduler) rm2.getResourceScheduler())
         .getConfiguration().get("key"));
     rm2.close();
+  }
+
+  @Test
+  public void testDisableAuditLogs() throws Exception {
+    conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 0);
+    confStore.initialize(conf, schedConf, rmContext);
+
+    prepareLogMutation("key1", "val1");
+
+    boolean logKeyPresent = false;
+    DB db = ((LeveldbConfigurationStore) confStore).getDB();
+    DBIterator itr = db.iterator();
+    itr.seekToFirst();
+    while (itr.hasNext()) {
+      Map.Entry<byte[], byte[]> entry = itr.next();
+      String key = new String(entry.getKey(), StandardCharsets.UTF_8);
+      if (key.equals("log")) {
+        logKeyPresent = true;
+        break;
+      }
+    }
+    assertFalse("Audit Log is not disabled", logKeyPresent);
+    confStore.close();
   }
 
   @Override

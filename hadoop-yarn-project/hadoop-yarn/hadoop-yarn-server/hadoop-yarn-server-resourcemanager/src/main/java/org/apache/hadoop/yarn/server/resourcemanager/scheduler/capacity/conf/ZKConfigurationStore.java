@@ -156,16 +156,18 @@ public class ZKConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public void logMutation(LogMutation logMutation) throws Exception {
-    byte[] storedLogs = getZkData(logsPath);
-    LinkedList<LogMutation> logs = new LinkedList<>();
-    if (storedLogs != null) {
-      logs = unsafeCast(deserializeObject(storedLogs));
+    if(maxLogs > 0) {
+      byte[] storedLogs = getZkData(logsPath);
+      LinkedList<LogMutation> logs = new LinkedList<>();
+      if (storedLogs != null) {
+        logs = unsafeCast(deserializeObject(storedLogs));
+      }
+      logs.add(logMutation);
+      if (logs.size() > maxLogs) {
+        logs.remove(logs.removeFirst());
+      }
+      safeSetZkData(logsPath, logs);
     }
-    logs.add(logMutation);
-    if (logs.size() > maxLogs) {
-      logs.remove(logs.removeFirst());
-    }
-    safeSetZkData(logsPath, logs);
     pendingMutation = logMutation;
   }
 
