@@ -2089,6 +2089,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.avoid.read.slow.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid reading from &quot;slow&quot; datanodes.
+    Slow datanodes will be moved to the end of the node list returned
+    for reading.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.avoid.write.stale.datanode</name>
   <value>false</value>
   <description>
