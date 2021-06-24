@@ -624,6 +624,7 @@ This failure surfaces when _all_ the following conditions are met:
 1. Without the JVM system property `aws.region` declaring a region.
 1. Without the environment variable `AWS_REGION` declaring a region.
 
+Stack trace (Hadoop 3.3.1):
 ```
 Caused by: com.amazonaws.SdkClientException: Unable to find a region via the region provider chain.
         Must provide an explicit region in the builder or setup environment to supply a region.
@@ -634,6 +635,40 @@ Caused by: com.amazonaws.SdkClientException: Unable to find a region via the reg
     at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:97)
     at org.apache.hadoop.fs.s3a.S3AFileSystem.bindAWSClient(S3AFileSystem.java:788)
     at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:478)
+```
+
+Log and stack trace on later releases, with
+"S3A filesystem client is using the SDK region resolution chain."
+warning that the SDK resolution chain is in use.
+
+```
+2021-06-23 19:56:55,971 [main] WARN  s3a.DefaultS3ClientFactory (LogExactlyOnce.java:warn(39)) - 
+    S3A filesystem client is using the SDK region resolution chain.
+
+2021-06-23 19:56:56,073 [main] WARN  fs.FileSystem (FileSystem.java:createFileSystem(3464)) -
+    Failed to initialize fileystem s3a://osm-pds/planet:
+ org.apache.hadoop.fs.s3a.AWSClientIOException: creating AWS S3 client on s3a://osm-pds:
+  com.amazonaws.SdkClientException: Unable to find a region via the region provider chain.
+  Must provide an explicit region in the builder or setup environment to supply a region.:
+   Unable to find a region via the region provider chain.
+    Must provide an explicit region in the builder or setup environment to supply a region.
+    at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:208)
+    at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:122)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.bindAWSClient(S3AFileSystem.java:788)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:478)
+    at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3460)
+    at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:172)
+    at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3565)
+    at org.apache.hadoop.fs.FileSystem$Cache.getUnique(FileSystem.java:3518)
+    at org.apache.hadoop.fs.FileSystem.newInstance(FileSystem.java:592)
+Caused by: com.amazonaws.SdkClientException: Unable to find a region via the region provider chain.
+ Must provide an explicit region in the builder or setup environment to supply a region.
+    at com.amazonaws.client.builder.AwsClientBuilder.setRegion(AwsClientBuilder.java:462)
+    at com.amazonaws.client.builder.AwsClientBuilder.configureMutableProperties(AwsClientBuilder.java:424)
+    at com.amazonaws.client.builder.AwsSyncClientBuilder.build(AwsSyncClientBuilder.java:46)
+    at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.buildAmazonS3Client(DefaultS3ClientFactory.java:185)
+    at org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.createS3Client(DefaultS3ClientFactory.java:117)
+    ... 21 more   
 ```
 
 Due to changes in S3 client construction in Hadoop 3.3.1 this option surfaces in
