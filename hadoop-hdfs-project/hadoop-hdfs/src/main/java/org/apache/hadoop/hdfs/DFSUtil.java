@@ -156,23 +156,36 @@ public class DFSUtil {
 
   /**
    * Comparator for sorting DataNodeInfo[] based on
-   * stale, decommissioned and entering_maintenance states.
-   * Order: live {@literal ->} stale {@literal ->} entering_maintenance
-   * {@literal ->} decommissioned
+   * slow, stale, entering_maintenance and decommissioned states.
+   * Order: live {@literal ->} slow {@literal ->} stale {@literal ->}
+   * entering_maintenance {@literal ->} decommissioned
    */
   @InterfaceAudience.Private 
-  public static class ServiceAndStaleComparator extends ServiceComparator {
+  public static class StaleAndSlowComparator extends ServiceComparator {
+    private final boolean avoidStaleDataNodesForRead;
     private final long staleInterval;
+    private final boolean avoidSlowDataNodesForRead;
+    private final Set<String> slowNodesUuidSet;
 
     /**
      * Constructor of ServiceAndStaleComparator
-     * 
+     * @param avoidStaleDataNodesForRead
+     *          Whether or not to avoid using stale DataNodes for reading.
      * @param interval
      *          The time interval for marking datanodes as stale is passed from
-     *          outside, since the interval may be changed dynamically
+     *          outside, since the interval may be changed dynamically.
+     * @param avoidSlowDataNodesForRead
+     *          Whether or not to avoid using slow DataNodes for reading.
+     * @param slowNodesUuidSet
+     *          Slow DataNodes UUID set.
      */
-    public ServiceAndStaleComparator(long interval) {
+    public StaleAndSlowComparator(
+        boolean avoidStaleDataNodesForRead, long interval,
+        boolean avoidSlowDataNodesForRead, Set<String> slowNodesUuidSet) {
+      this.avoidStaleDataNodesForRead = avoidStaleDataNodesForRead;
       this.staleInterval = interval;
+      this.avoidSlowDataNodesForRead = avoidSlowDataNodesForRead;
+      this.slowNodesUuidSet = slowNodesUuidSet;
     }
 
     @Override
@@ -183,9 +196,22 @@ public class DFSUtil {
       }
 
       // Stale nodes will be moved behind the normal nodes
-      boolean aStale = a.isStale(staleInterval);
-      boolean bStale = b.isStale(staleInterval);
-      return aStale == bStale ? 0 : (aStale ? 1 : -1);
+      if (avoidStaleDataNodesForRead) {
+        boolean aStale = a.isStale(staleInterval);
+        boolean bStale = b.isStale(staleInterval);
+        ret = aStale == bStale ? 0 : (aStale ? 1 : -1);
+        if (ret != 0) {
+          return ret;
+        }
+      }
+
+      // Slow nodes will be moved behind the normal nodes
+      if (avoidSlowDataNodesForRead) {
+        boolean aSlow = slowNodesUuidSet.contains(a.getDatanodeUuid());
+        boolean bSlow = slowNodesUuidSet.contains(b.getDatanodeUuid());
+        ret = aSlow == bSlow ? 0 : (aSlow ? 1 : -1);
+      }
+      return ret;
     }
   }    
     
