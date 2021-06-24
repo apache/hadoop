@@ -544,11 +544,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
    */
   @Test
   public void testGetApplicationsResponse()
-          throws YarnException, IOException, InterruptedException {
+      throws YarnException, IOException, InterruptedException {
     LOG.info("Test FederationClientInterceptor: " +
-            "Get Applications Response");
+        "Get Applications Response");
     ApplicationId appId =
-            ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
     SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
     SubmitApplicationResponse response = interceptor.submitApplication(request);
@@ -558,10 +558,10 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     Set<String> appTypes = Collections.singleton("MockApp");
     GetApplicationsRequest requestGet =
-            GetApplicationsRequest.newInstance(appTypes);
+        GetApplicationsRequest.newInstance(appTypes);
 
     GetApplicationsResponse responseGet =
-            interceptor.getApplications(requestGet);
+        interceptor.getApplications(requestGet);
 
     Assert.assertNotNull(responseGet);
   }
@@ -575,7 +575,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   public void testGetApplicationsNullRequest() throws Exception {
     LOG.info("Test FederationClientInterceptor : Get Applications request");
     LambdaTestUtils.intercept(YarnException.class,
-            "Missing getApplications request.",
+        "Missing getApplications request.",
         () -> interceptor.getApplications(null));
   }
 
@@ -600,13 +600,14 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     Set<String> appTypes = Collections.singleton("SPARK");
 
+    GetApplicationsRequest requestGet =
+        GetApplicationsRequest.newInstance(appTypes);
+
     GetApplicationsResponse responseGet =
-            interceptor.getApplications(
-                    GetApplicationsRequest.
-                            newInstance(appTypes));
+            interceptor.getApplications(requestGet);
 
     Assert.assertNotNull(responseGet);
-    Assert.assertEquals(0, responseGet.getApplicationList().size());
+    Assert.assertTrue(responseGet.getApplicationList().isEmpty());
   }
 
   /**
@@ -632,10 +633,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
             YarnApplicationState.class);
     applicationStates.add(YarnApplicationState.KILLED);
 
+    GetApplicationsRequest requestGet =
+        GetApplicationsRequest.newInstance(applicationStates);
+
     GetApplicationsResponse responseGet =
-            interceptor.getApplications(
-                    GetApplicationsRequest.
-                            newInstance(applicationStates));
+            interceptor.getApplications(requestGet);
+
     Assert.assertNotNull(responseGet);
     Assert.assertEquals(0, responseGet.getApplicationList().size());
   }

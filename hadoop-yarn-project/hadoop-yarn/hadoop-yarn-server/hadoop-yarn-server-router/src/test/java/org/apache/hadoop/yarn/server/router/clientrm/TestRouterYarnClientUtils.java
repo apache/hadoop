@@ -75,50 +75,57 @@ public class TestRouterYarnClientUtils {
     responses.add(getApplicationsResponse(1));
     responses.add(getApplicationsResponse(2));
     GetApplicationsResponse result = RouterYarnClientUtils.
-            mergeApplications(responses, false);
+        mergeApplications(responses, false);
     Assert.assertNotNull(result);
     Assert.assertEquals(2, result.getApplicationList().size());
   }
 
+  /**
+   * This generates a GetApplicationsResponse with 2 applications with
+   * same ApplicationId. One of them is added with host value equal to
+   * null to validate unmanaged application merge with managed application.
+   * @param value Used as Id in ApplicationId
+   * @return GetApplicationsResponse
+   */
   private GetApplicationsResponse getApplicationsResponse(int value) {
     List<ApplicationReport> applications = new ArrayList<>();
 
     //Add managed application to list
-    ApplicationId applicationId = ApplicationId.newInstance(1234,
-            value);
+    ApplicationId appId = ApplicationId.newInstance(1234,
+        value);
     Resource resource = Resource.newInstance(1024, 1);
     ApplicationResourceUsageReport appResourceUsageReport =
-            ApplicationResourceUsageReport.newInstance(
-                    1, 2, resource, resource,
-                    resource, null, 0.1f,
-                    0.1f, null);
+        ApplicationResourceUsageReport.newInstance(
+            1, 2, resource, resource,
+            resource, null, 0.1f,
+            0.1f, null);
 
-    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
-            applicationId, ApplicationAttemptId.newInstance(applicationId,
-                    1),
-            "user", "queue", "appname", "host",
-            124, null, YarnApplicationState.RUNNING,
-            "diagnostics", "url", 0, 0,
-            0, FinalApplicationStatus.SUCCEEDED,
-            appResourceUsageReport,
-            "N/A", 0.53789f, "YARN",
-            null);
+    ApplicationReport appReport = ApplicationReport.newInstance(
+        appId, ApplicationAttemptId.newInstance(appId,
+            1),
+        "user", "queue", "appname", "host",
+        124, null, YarnApplicationState.RUNNING,
+        "diagnostics", "url", 0, 0,
+        0, FinalApplicationStatus.SUCCEEDED,
+        appResourceUsageReport,
+        "N/A", 0.53789f, "YARN",
+        null);
 
     //Add unmanaged application to list
-    ApplicationId applicationId2 = ApplicationId.newInstance(1234,
-            value);
-    ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
-            applicationId2, ApplicationAttemptId.newInstance(applicationId,
-                    1),
-            "user", "queue", "appname", null, 124,
-            null, YarnApplicationState.RUNNING,
-            "diagnostics", "url", 0, 0,
-            0, FinalApplicationStatus.SUCCEEDED,
-            appResourceUsageReport, "N/A", 0.53789f,
-            "YARN", null);
+    ApplicationId appId2 = ApplicationId.newInstance(1234,
+        value);
+    ApplicationReport appReport2 = ApplicationReport.newInstance(
+        appId2, ApplicationAttemptId.newInstance(appId2,
+            1),
+        "user", "queue", "appname", null, 124,
+        null, YarnApplicationState.RUNNING,
+        "diagnostics", "url", 0, 0,
+        0, FinalApplicationStatus.SUCCEEDED,
+        appResourceUsageReport, "N/A", 0.53789f,
+        "YARN", null);
 
-    applications.add(newApplicationReport);
-    applications.add(newApplicationReport2);
+    applications.add(appReport);
+    applications.add(appReport2);
 
     return GetApplicationsResponse.newInstance(applications);
   }

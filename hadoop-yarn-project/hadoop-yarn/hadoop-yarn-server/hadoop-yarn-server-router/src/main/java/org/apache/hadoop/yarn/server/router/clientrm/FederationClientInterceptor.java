@@ -198,12 +198,9 @@ public class FederationClientInterceptor
         new ConcurrentHashMap<SubClusterId, ApplicationClientProtocol>();
     routerMetrics = RouterMetrics.getMetrics();
 
-    returnPartialReport =
-            conf.getBoolean(
-                    YarnConfiguration
-                            .ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
-                    YarnConfiguration
-                            .DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
+    returnPartialReport  = conf.getBoolean(
+        YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
   }
 
   @Override
@@ -631,21 +628,21 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null) {
       RouterServerUtil.logAndThrowException(
-              "Missing getApplications request.",
-              null);
+          "Missing getApplications request.",
+          null);
     }
     Map<SubClusterId, SubClusterInfo> subclusters =
-            federationFacade.getSubClusters(true);
+        federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getApplications",
-            new Class[] {GetApplicationsRequest.class}, new Object[] {request});
+        new Class[] {GetApplicationsRequest.class}, new Object[] {request});
     ArrayList<SubClusterId> clusterIds = new ArrayList<>(subclusters.keySet());
     Map<SubClusterId, GetApplicationsResponse> applications =
-            invokeConcurrent(clusterIds, remoteMethod,
-                    GetApplicationsResponse.class);
+        invokeConcurrent(clusterIds, remoteMethod,
+            GetApplicationsResponse.class);
 
-    //Merge the Application Reports
+    // Merge the Application Reports
     return RouterYarnClientUtils.mergeApplications(applications.values(),
-            returnPartialReport);
+        returnPartialReport);
   }
 
   @Override
