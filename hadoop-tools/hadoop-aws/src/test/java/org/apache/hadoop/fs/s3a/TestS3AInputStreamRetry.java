@@ -47,26 +47,36 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
 
-  String input = "ab";
+  private static final String INPUT = "ab";
 
   @Test
   public void testInputStreamReadRetryForException() throws IOException {
     S3AInputStream s3AInputStream = getMockedS3AInputStream();
 
-    assertEquals("'a' from the test input stream 'ab' should be the first character being read",
-        input.charAt(0), s3AInputStream.read());
-    assertEquals("'b' from the test input stream 'ab' should be the second character being read",
-        input.charAt(1), s3AInputStream.read());
+    assertEquals("'a' from the test input stream 'ab' should be the first " +
+        "character being read", INPUT.charAt(0), s3AInputStream.read());
+    assertEquals("'b' from the test input stream 'ab' should be the second " +
+        "character being read", INPUT.charAt(1), s3AInputStream.read());
   }
 
   @Test
-  public void testInputStreamReadRetryLengthForException() throws IOException {
-    byte[] result = new byte[input.length()];
+  public void testInputStreamReadLengthRetryForException() throws IOException {
+    byte[] result = new byte[INPUT.length()];
     S3AInputStream s3AInputStream = getMockedS3AInputStream();
-    s3AInputStream.read(result, 0, input.length());
+    s3AInputStream.read(result, 0, INPUT.length());
 
     assertArrayEquals("The read result should equals to the test input stream content",
-        input.getBytes(), result);
+        INPUT.getBytes(), result);
+  }
+
+  @Test
+  public void testInputStreamReadFullyRetryForException() throws IOException {
+    byte[] result = new byte[INPUT.length()];
+    S3AInputStream s3AInputStream = getMockedS3AInputStream();
+    s3AInputStream.readFully(0, result);
+
+    assertArrayEquals("The read result should equals to the test input stream content",
+        INPUT.getBytes(), result);
   }
 
   private S3AInputStream getMockedS3AInputStream() {
@@ -76,27 +86,41 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     String owner = "test-owner";
 
     S3AFileStatus s3AFileStatus = new S3AFileStatus(
-        input.length(), 0, path, input.length(), owner, eTag, versionId);
+        INPUT.length(), 0, path, INPUT.length(), owner, eTag, versionId);
 
     S3ObjectAttributes s3ObjectAttributes = new S3ObjectAttributes(
-        fs.getBucket(), path, fs.pathToKey(path), fs.getServerSideEncryptionAlgorithm(),
-        new EncryptionSecrets().getEncryptionKey(), eTag, versionId, input.length());
+        fs.getBucket(),
+        path,
+        fs.pathToKey(path),
+        fs.getServerSideEncryptionAlgorithm(),
+        new EncryptionSecrets().getEncryptionKey(),
+        eTag,
+        versionId,
+        INPUT.length());
 
-    S3AReadOpContext s3AReadOpContext = fs.createReadContext(s3AFileStatus, S3AInputPolicy.Normal,
+    S3AReadOpContext s3AReadOpContext = fs.createReadContext(
+        s3AFileStatus, S3AInputPolicy.Normal,
         ChangeDetectionPolicy.getPolicy(fs.getConf()), 100, NoopSpan.INSTANCE);
 
-    return new S3AInputStream(s3AReadOpContext, s3ObjectAttributes, getMockedInputStreamCallback());
+    return new S3AInputStream(
+        s3AReadOpContext,
+        s3ObjectAttributes,
+        getMockedInputStreamCallback());
   }
 
-  // Get mocked InputStreamCallbacks where we return mocked S3Object
+  /**
+   * Get mocked InputStreamCallbacks where we return mocked S3Object.
+   *
+   * @return mocked object.
+   */
   private S3AInputStream.InputStreamCallbacks getMockedInputStreamCallback() {
     return new S3AInputStream.InputStreamCallbacks() {
 
-      final S3Object mockedS3Object = getMockedS3Object();
+      private final S3Object mockedS3Object = getMockedS3Object();
 
       @Override
       public S3Object getObject(GetObjectRequest request) {
-        // Set s3 client to return mocked s3object with already defined read behavior
+        // Set s3 client to return mocked s3object with defined read behavior.
         return mockedS3Object;
       }
 
@@ -111,21 +135,27 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     };
   }
 
-  // Get mocked S3Object where return bad input stream on the first couple of getObjectContent calls
+  /**
+   * Get mocked S3Object that returns bad input stream on the initial of
+   * getObjectContent calls.
+   *
+   * @return mocked object.
+   */
   private S3Object getMockedS3Object() {
     S3ObjectInputStream objectInputStreamBad1 = getMockedInputStream(true);
     S3ObjectInputStream objectInputStreamBad2 = getMockedInputStream(true);
     S3ObjectInputStream objectInputStreamGood = getMockedInputStream(false);
 
     return new S3Object() {
-      final S3ObjectInputStream[] inputStreams =
+      private final S3ObjectInputStream[] inputStreams =
           {objectInputStreamBad1, objectInputStreamBad2, objectInputStreamGood};
 
-      Integer inputStreamIndex = 0;
+      private Integer inputStreamIndex = 0;
 
       @Override
       public S3ObjectInputStream getObjectContent() {
-        // Set getObjectContent behavior: returns bad stream twice, and good stream afterwards
+        // Set getObjectContent behavior:
+        // Returns bad stream twice, and good stream afterwards.
         inputStreamIndex++;
         return inputStreams[min(inputStreamIndex, inputStreams.length) - 1];
       }
@@ -140,10 +170,19 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     };
   }
 
-  // Get mocked S3ObjectInputStream where we can trigger IOException to simulate the read failure
+  /**
+   * Get mocked S3ObjectInputStream where we can trigger IOException to
+   * simulate the read failure.
+   *
+   * @param triggerFailure true when a failure injection is enabled.
+   * @return mocked object.
+   */
   private S3ObjectInputStream getMockedInputStream(boolean triggerFailure) {
-    return new S3ObjectInputStream(IOUtils.toInputStream(input, Charset.defaultCharset()), null) {
-      final IOException exception = new SSLException(new SocketException("Connection reset"));
+    return new S3ObjectInputStream(
+        IOUtils.toInputStream(INPUT, Charset.defaultCharset()), null) {
+
+      private final IOException exception =
+          new SSLException(new SocketException("Connection reset"));
 
       @Override
       public int read() throws IOException {
