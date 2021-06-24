@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.s3.AmazonS3;
@@ -41,10 +42,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
+import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 
 /**
  * The default {@link S3ClientFactory} implementation.
@@ -63,6 +67,19 @@ public class DefaultS3ClientFactory extends Configured
    */
   protected static final Logger LOG =
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
+
+  /**
+   * A one-off warning of default region chains in use.
+   */
+  private static final LogExactlyOnce WARN_OF_DEFAULT_REGION_CHAIN =
+      new LogExactlyOnce(LOG);
+
+  /**
+   * Warning message printed when the SDK Region chain is in use.
+   */
+  private static final String SDK_REGION_CHAIN_IN_USE =
+      "S3A filesystem client is using"
+          + " the SDK region resolution chain.";
 
   /**
    * Create the client by preparing the AwsConf configuration
@@ -94,9 +111,14 @@ public class DefaultS3ClientFactory extends Configured
       awsConf.setUserAgentSuffix(parameters.getUserAgentSuffix());
     }
 
-    return buildAmazonS3Client(
-        awsConf,
-        parameters);
+    try {
+      return buildAmazonS3Client(
+          awsConf,
+          parameters);
+    } catch (SdkClientException e) {
+      // SDK refused to build.
+      throw translateException("creating AWS S3 client", uri.toString(), e);
+    }
   }
 
   /**
@@ -109,6 +131,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param awsConf  AWS configuration
    * @param parameters parameters
    * @return new AmazonS3 client
+   * @throws SdkClientException if the configuration is invalid.
    */
   protected AmazonS3 buildAmazonS3Client(
       final ClientConfiguration awsConf,
@@ -141,6 +164,21 @@ public class DefaultS3ClientFactory extends Configured
       // no idea what the endpoint is, so tell the SDK
       // to work it out at the cost of an extra HEAD request
       b.withForceGlobalBucketAccessEnabled(true);
+      // HADOOP-17771 force set the region so the build process doesn't halt.
+      String region = getConf().getTrimmed(AWS_REGION, AWS_S3_CENTRAL_REGION);
+      LOG.debug("fs.s3a.endpoint.region=\"{}\"", region);
+      if (!region.isEmpty()) {
+        // there's either an explicit region or we have fallen back
+        // to the central one.
+        LOG.debug("Using default endpoint; setting region to {}", region);
+        b.setRegion(region);
+      } else {
+        // no region.
+        // allow this if people really want it; it is OK to rely on this
+        // when deployed in EC2.
+        WARN_OF_DEFAULT_REGION_CHAIN.warn(SDK_REGION_CHAIN_IN_USE);
+        LOG.debug(SDK_REGION_CHAIN_IN_USE);
+      }
     }
     final AmazonS3 client = b.build();
     return client;
@@ -206,7 +244,7 @@ public class DefaultS3ClientFactory extends Configured
       createEndpointConfiguration(
       final String endpoint, final ClientConfiguration awsConf,
       String awsRegion) {
-    LOG.debug("Creating endpoint configuration for {}", endpoint);
+    LOG.debug("Creating endpoint configuration for \"{}\"", endpoint);
     if (endpoint == null || endpoint.isEmpty()) {
       // the default endpoint...we should be using null at this point.
       LOG.debug("Using default endpoint -no need to generate a configuration");

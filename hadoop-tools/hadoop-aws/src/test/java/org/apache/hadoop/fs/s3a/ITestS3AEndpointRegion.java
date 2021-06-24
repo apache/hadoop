@@ -18,13 +18,25 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.util.AwsHostNameUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_REGION_SYSPROP;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test to check correctness of S3A endpoint regions in
@@ -36,6 +48,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   private static final String AWS_ENDPOINT_TEST = "test-endpoint";
   private static final String AWS_ENDPOINT_TEST_WITH_REGION =
       "test-endpoint.some-region.amazonaws.com";
+  public static final String MARS_NORTH_2 = "mars-north-2";
 
   /**
    * Test to verify that setting a region with the config would bypass the
@@ -87,5 +100,91 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
       String awsRegion) {
     return DefaultS3ClientFactory.createEndpointConfiguration(endpoint,
         new ClientConfiguration(), awsRegion);
+  }
+
+
+  @Test
+  public void testInvalidRegionDefaultEndpoint() throws Throwable {
+    describe("Create a client with an invalid region and the default endpoint");
+    Configuration conf = getConfiguration();
+    // we are making a big assumption about the timetable for AWS
+    // region rollout.
+    // if this test ever fails because this region now exists
+    // -congratulations!
+    conf.set(AWS_REGION, MARS_NORTH_2);
+    createMarsNorth2Client(conf);
+  }
+
+  @Test
+  public void testUnsetRegionDefaultEndpoint() throws Throwable {
+    describe("Create a client with no region and the default endpoint");
+    Configuration conf = getConfiguration();
+    conf.unset(AWS_REGION);
+    createS3Client(conf, DEFAULT_ENDPOINT, AWS_S3_CENTRAL_REGION);
+  }
+
+  /**
+   * By setting the system property {@code "aws.region"} we can
+   * guarantee that the SDK region resolution chain will always succeed
+   * (and fast).
+   * Clearly there is no validation of the region during the build process.
+   */
+  @Test
+  public void testBlankRegionTriggersSDKResolution() throws Throwable {
+    describe("Create a client with a blank region and the default endpoint."
+        + " This will trigger the SDK Resolution chain");
+    Configuration conf = getConfiguration();
+    conf.set(AWS_REGION, "");
+    System.setProperty(AWS_REGION_SYSPROP, MARS_NORTH_2);
+    try {
+      createMarsNorth2Client(conf);
+    } finally {
+      System.clearProperty(AWS_REGION_SYSPROP);
+    }
+  }
+
+  /**
+   * Create an S3 client bonded to an invalid region;
+   * verify that calling {@code getRegion()} triggers
+   * a failure.
+   * @param conf configuration to use in the building.
+   */
+  private void createMarsNorth2Client(Configuration conf) throws Exception {
+    AmazonS3 client = createS3Client(conf, DEFAULT_ENDPOINT, MARS_NORTH_2);
+    intercept(IllegalArgumentException.class, MARS_NORTH_2, client::getRegion);
+  }
+
+  /**
+   * Create an S3 client with the given conf and endpoint.
+   * The region name must then match that of the expected
+   * value.
+   * @param conf configuration to use.
+   * @param endpoint endpoint.
+   * @param expectedRegion expected region
+   * @return the client.
+   * @throws URISyntaxException parse problems.
+   * @throws IOException IO problems
+   */
+  private AmazonS3 createS3Client(Configuration conf,
+      String endpoint,
+      String expectedRegion)
+      throws URISyntaxException, IOException {
+
+    DefaultS3ClientFactory factory
+        = new DefaultS3ClientFactory();
+    factory.setConf(conf);
+    S3ClientFactory.S3ClientCreationParameters parameters
+        = new S3ClientFactory.S3ClientCreationParameters()
+        .withCredentialSet(new AnonymousAWSCredentialsProvider())
+        .withEndpoint(endpoint)
+        .withMetrics(new EmptyS3AStatisticsContext()
+            .newStatisticsFromAwsSdk());
+    AmazonS3 client = factory.createS3Client(
+        new URI("s3a://localhost/"),
+        parameters);
+    Assertions.assertThat(client.getRegionName())
+        .describedAs("Client region name")
+        .isEqualTo(expectedRegion);
+    return client;
   }
 }
