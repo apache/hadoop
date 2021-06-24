@@ -23,6 +23,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -49,12 +50,12 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_ST
 public class TracingContext {
   private final String clientCorrelationID;
   private final String fileSystemID;
-  private String clientRequestID = EMPTY_STRING;
+  private String clientRequestId = EMPTY_STRING;
   private String primaryRequestID;
   private String streamID;
   private int retryCount;
-  private String hadoopOpName;
-  private final TracingContextFormat format;
+  private FSOperationType hadoopOpName;
+  private final TracingHeaderFormat format;
   private Listener listener = null;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
@@ -67,12 +68,12 @@ public class TracingContext {
    * @param fileSystemID Unique guid for AzureBlobFileSystem instance
    * @param hadoopOpName Code indicating the high-level Hadoop operation that
    *                    triggered the current Store request
-   * @param tracingContextFormat Format of IDs to be printed in header and logs
+   * @param tracingHeaderFormat Format of IDs to be printed in header and logs
    * @param listener Holds instance of TracingHeaderValidator during testing,
    *                null otherwise
    */
   public TracingContext(String clientCorrelationID, String fileSystemID,
-      String hadoopOpName, TracingContextFormat tracingContextFormat,
+      FSOperationType hadoopOpName, TracingHeaderFormat tracingHeaderFormat,
       Listener listener) {
     this.fileSystemID = fileSystemID;
     this.hadoopOpName = hadoopOpName;
@@ -80,14 +81,14 @@ public class TracingContext {
     streamID = EMPTY_STRING;
     retryCount = 0;
     primaryRequestID = EMPTY_STRING;
-    format = tracingContextFormat;
+    format = tracingHeaderFormat;
     this.listener = listener;
   }
 
   public TracingContext(String clientCorrelationID, String fileSystemID,
-      String hadoopOpName, boolean needsPrimaryReqId,
-      TracingContextFormat tracingContextFormat, Listener listener) {
-    this(clientCorrelationID, fileSystemID, hadoopOpName, tracingContextFormat,
+      FSOperationType hadoopOpName, boolean needsPrimaryReqId,
+      TracingHeaderFormat tracingHeaderFormat, Listener listener) {
+    this(clientCorrelationID, fileSystemID, hadoopOpName, tracingHeaderFormat,
         listener);
     primaryRequestID = needsPrimaryReqId ? UUID.randomUUID().toString() : "";
     if (listener != null) {
@@ -118,8 +119,8 @@ public class TracingContext {
     return clientCorrelationID;
   }
 
-  public void generateClientRequestID() {
-    clientRequestID = UUID.randomUUID().toString();
+  public void generateClientRequestId() {
+    clientRequestId = UUID.randomUUID().toString();
   }
 
   public void setPrimaryRequestID() {
@@ -133,7 +134,7 @@ public class TracingContext {
     streamID = stream;
   }
 
-  public void setOperation(String operation) {
+  public void setOperation(FSOperationType operation) {
     this.hadoopOpName = operation;
   }
 
@@ -145,22 +146,22 @@ public class TracingContext {
     this.listener = listener;
   }
 
-  public String toString() {
+  public String constructHeader() {
     String header;
     switch (format) {
     case ALL_ID_FORMAT:
       header =
-          clientCorrelationID + ":" + clientRequestID + ":" + fileSystemID + ":"
+          clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + primaryRequestID + ":" + streamID + ":" + hadoopOpName + ":"
               + retryCount;
       break;
     case TWO_ID_FORMAT:
-      header = clientCorrelationID + ":" + clientRequestID;
+      header = clientCorrelationID + ":" + clientRequestId;
       break;
     default:
-      header = clientRequestID; //case SINGLE_ID_FORMAT
+      header = clientRequestId; //case SINGLE_ID_FORMAT
     }
-    if (listener != null) { //testing
+    if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
     }
     return header;

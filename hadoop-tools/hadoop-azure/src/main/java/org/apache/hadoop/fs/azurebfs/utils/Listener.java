@@ -18,14 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+
 /**
  * Interface for testing identifiers tracked via TracingContext
  * Implemented in TracingHeaderValidator
  */
 
 public interface Listener {
-  void callTracingHeaderValidator(String header, TracingContextFormat format);
+  void callTracingHeaderValidator(String header, TracingHeaderFormat format);
   void updatePrimaryRequestID(String primaryRequestID);
   Listener getClone();
-  void setOperation(String operation);
+  void setOperation(FSOperationType operation);
 }

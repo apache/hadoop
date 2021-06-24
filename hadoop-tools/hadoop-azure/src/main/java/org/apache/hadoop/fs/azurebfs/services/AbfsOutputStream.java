@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
@@ -96,7 +96,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
-  private final String outputStreamID;
+  private final String outputStreamId;
   private final TracingContext tracingContext;
   private Listener listener;
 
@@ -170,13 +170,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     if (outputStreamStatistics != null) {
       this.ioStatistics = outputStreamStatistics.getIOStatistics();
     }
-    this.outputStreamID = getOutputStreamID();
+    this.outputStreamId = getOutputStreamId();
     this.tracingContext = new TracingContext(tracingContext);
-    this.tracingContext.setStreamID(outputStreamID);
-    this.tracingContext.setOperation(HdfsOperationConstants.WRITE);
+    this.tracingContext.setStreamID(outputStreamId);
+    this.tracingContext.setOperation(FSOperationType.WRITE);
   }
 
-  private String getOutputStreamID() {
+  private String getOutputStreamId() {
     return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
   }
 
@@ -311,7 +311,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   }
 
   public String getStreamID() {
-    return outputStreamID;
+    return outputStreamId;
   }
 
   public void registerListener(Listener listener1) {

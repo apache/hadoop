@@ -31,7 +31,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -319,8 +319,8 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     FSDataOutputStream out = fs.create(new Path("/testFile"));
     ((AbfsOutputStream) out.getWrappedStream()).registerListener(
         new TracingHeaderValidator(
-            fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
-            fs.getFileSystemID(), HdfsOperationConstants.WRITE, false, 0,
+            fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
             ((AbfsOutputStream) out.getWrappedStream()).getStreamID()));
     out.write(buf);
     out.hsync();

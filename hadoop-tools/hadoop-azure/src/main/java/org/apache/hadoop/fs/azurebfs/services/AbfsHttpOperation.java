@@ -166,11 +166,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return connection.getHeaderField(httpHeader);
   }
 
-  @VisibleForTesting
-  public String getRequestHeader(String httpHeader) {
-    return connection.getRequestProperties().get(httpHeader).toString();
-  }
-
   // Returns a trace message for the request
   @Override
   public String toString() {

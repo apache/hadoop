@@ -61,7 +61,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContextFormat;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -268,7 +268,7 @@ public class AbfsConfiguration{
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
           DefaultValue = EMPTY_STRING)
-  private String clientCorrelationID;
+  private String clientCorrelationId;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
@@ -342,8 +342,8 @@ public class AbfsConfiguration{
    * Gets client correlation ID provided in config.
    * @return Client Correlation ID config
    */
-  public String getClientCorrelationID() {
-    return clientCorrelationID;
+  public String getClientCorrelationId() {
+    return clientCorrelationId;
   }
 
   /**
@@ -740,8 +740,8 @@ public class AbfsConfiguration{
    * Enum config to allow user to pick format of x-ms-client-request-id header
    * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
    */
-  public TracingContextFormat getTracingContextFormat() {
-    return getEnum(FS_AZURE_TRACINGCONTEXT_FORMAT, TracingContextFormat.ALL_ID_FORMAT);
+  public TracingHeaderFormat getTracingHeaderFormat() {
+    return getEnum(FS_AZURE_TRACINGHEADER_FORMAT, TracingHeaderFormat.ALL_ID_FORMAT);
   }
 
   public AuthType getAuthType(String accountName) {

@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
@@ -67,7 +67,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     final List<Future<Void>> tasks = new ArrayList<>();
 
     ExecutorService es = Executors.newFixedThreadPool(10);
-    for (int i = 0; i < TEST_FILES_NUMBER; i++) {
+    for (int i = 0; i < TEST_FILES_NUMBER/100; i++) {
       final Path fileName = new Path("/test" + i);
       Callable<Void> callable = new Callable<Void>() {
         @Override
@@ -86,8 +86,8 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     es.shutdownNow();
     fs.registerListener(
-        new TracingHeaderValidator(getConfiguration().getClientCorrelationID(),
-            fs.getFileSystemID(), HdfsOperationConstants.LISTSTATUS, true, 0));
+        new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
     FileStatus[] files = fs.listStatus(new Path("/"));
     assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
   }

@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
@@ -72,7 +72,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
-  private final String inputStreamID;
+  private final String inputStreamId;
   private final boolean alwaysReadBufferSize;
   /*
    * By default the pread API will do a seek + read as in FSInputStream.
@@ -137,10 +137,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
-    this.inputStreamID = getInputStreamID();
+    this.inputStreamId = getInputStreamId();
     this.tracingContext = new TracingContext(tracingContext);
-    this.tracingContext.setOperation(HdfsOperationConstants.READ);
-    this.tracingContext.setStreamID(inputStreamID);
+    this.tracingContext.setOperation(FSOperationType.READ);
+    this.tracingContext.setStreamID(inputStreamId);
     this.context = abfsInputStreamContext;
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
 
@@ -156,7 +156,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return path;
   }
 
-  private String getInputStreamID() {
+  private String getInputStreamId() {
     return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
   }
 
@@ -728,7 +728,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @VisibleForTesting
   public String getStreamID() {
-    return inputStreamID;
+    return inputStreamId;
   }
 
   /**

@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -1220,8 +1220,8 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     Path renamedFilePath = new Path(dirPath, "file1");
 
     fs.registerListener(new TracingHeaderValidator(
-        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.RENAME, true, 0));
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.RENAME, true, 0));
     fs.rename(filePath, renamedFilePath);
     fs.registerListener(null);
     AclEntry[] expected = new AclEntry[] { };
@@ -1264,28 +1264,28 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
         aclEntry(ACCESS, GROUP, BAR, ALL));
 
     fs.registerListener(new TracingHeaderValidator(
-        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.SET_ACL, true, 0));
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.SET_ACL, true, 0));
     fs.setAcl(rootPath, aclSpec1);
 
-    fs.setListenerOperation(HdfsOperationConstants.GET_ACL_STATUS);
+    fs.setListenerOperation(FSOperationType.GET_ACL_STATUS);
     fs.getAclStatus(rootPath);
 
-    fs.setListenerOperation(HdfsOperationConstants.SET_OWNER);
+    fs.setListenerOperation(FSOperationType.SET_OWNER);
     fs.setOwner(rootPath, TEST_OWNER, TEST_GROUP);
-    fs.setListenerOperation(HdfsOperationConstants.SET_PERMISSION);
+    fs.setListenerOperation(FSOperationType.SET_PERMISSION);
     fs.setPermission(rootPath, new FsPermission("777"));
 
     List<AclEntry> aclSpec2 = Lists.newArrayList(
         aclEntry(DEFAULT, USER, FOO, ALL),
         aclEntry(ACCESS, USER, BAR, ALL));
-    fs.setListenerOperation(HdfsOperationConstants.MODIFY_ACL);
+    fs.setListenerOperation(FSOperationType.MODIFY_ACL);
     fs.modifyAclEntries(rootPath, aclSpec2);
-    fs.setListenerOperation(HdfsOperationConstants.REMOVE_ACL_ENTRIES);
+    fs.setListenerOperation(FSOperationType.REMOVE_ACL_ENTRIES);
     fs.removeAclEntries(rootPath, aclSpec2);
-    fs.setListenerOperation(HdfsOperationConstants.REMOVE_DEFAULT_ACL);
+    fs.setListenerOperation(FSOperationType.REMOVE_DEFAULT_ACL);
     fs.removeDefaultAcl(rootPath);
-    fs.setListenerOperation(HdfsOperationConstants.REMOVE_ACL);
+    fs.setListenerOperation(FSOperationType.REMOVE_ACL);
     fs.removeAcl(rootPath);
   }
 
@@ -1300,11 +1300,11 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     assertTrue(fs.exists(filePath));
 
     TracingHeaderValidator tracingHeaderValidator = new TracingHeaderValidator(
-        conf.getClientCorrelationID(), fs.getFileSystemID(),
-        HdfsOperationConstants.GET_FILESTATUS, false, 0);
+        conf.getClientCorrelationId(), fs.getFileSystemId(),
+        FSOperationType.GET_FILESTATUS, false, 0);
     fs.registerListener(tracingHeaderValidator);
     FileStatus oldFileStatus = fs.getFileStatus(filePath);
-    tracingHeaderValidator.setOperation(HdfsOperationConstants.SET_OWNER);
+    tracingHeaderValidator.setOperation(FSOperationType.SET_OWNER);
     fs.setOwner(filePath, TEST_OWNER, TEST_GROUP);
     fs.registerListener(null);
     FileStatus newFileStatus = fs.getFileStatus(filePath);

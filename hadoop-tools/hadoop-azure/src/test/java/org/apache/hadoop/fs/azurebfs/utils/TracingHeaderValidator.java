@@ -18,29 +18,28 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.assertj.core.api.Assertions;
-
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 
 /**
  * Used to validate correlation identifiers provided during testing against
  * values that get associated with a request through its TracingContext instance
  */
 public class TracingHeaderValidator implements Listener {
-  private String clientCorrelationID;
-  private String fileSystemID;
-  private String primaryRequestID = "";
-  private boolean needsPrimaryRequestID;
+  private String clientCorrelationId;
+  private String fileSystemId;
+  private String primaryRequestId = "";
+  private boolean needsPrimaryRequestId;
   private String streamID = "";
-  private String operation;
+  private FSOperationType operation;
   private int retryNum;
-  private TracingContextFormat format;
+  private TracingHeaderFormat format;
 
   private static final String GUID_PATTERN = "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$";
 
   @Override
   public void callTracingHeaderValidator(String tracingContextHeader,
-      TracingContextFormat format) {
+      TracingHeaderFormat format) {
     this.format = format;
     validateTracingHeader(tracingContextHeader);
   }
@@ -48,25 +47,25 @@ public class TracingHeaderValidator implements Listener {
   @Override
   public TracingHeaderValidator getClone() {
     TracingHeaderValidator tracingHeaderValidator = new TracingHeaderValidator(
-        clientCorrelationID, fileSystemID, operation, needsPrimaryRequestID,
+        clientCorrelationId, fileSystemId, operation, needsPrimaryRequestId,
         retryNum, streamID);
-    tracingHeaderValidator.primaryRequestID = primaryRequestID;
+    tracingHeaderValidator.primaryRequestId = primaryRequestId;
     return tracingHeaderValidator;
   }
 
-  public TracingHeaderValidator(String clientCorrelationID, String fileSystemID,
-      String operation, boolean needsPrimaryRequestID, int retryNum) {
-    this.clientCorrelationID = clientCorrelationID;
-    this.fileSystemID = fileSystemID;
+  public TracingHeaderValidator(String clientCorrelationId, String fileSystemId,
+      FSOperationType operation, boolean needsPrimaryRequestId, int retryNum) {
+    this.clientCorrelationId = clientCorrelationId;
+    this.fileSystemId = fileSystemId;
     this.operation = operation;
     this.retryNum = retryNum;
-    this.needsPrimaryRequestID = needsPrimaryRequestID;
+    this.needsPrimaryRequestId = needsPrimaryRequestId;
   }
 
-  public TracingHeaderValidator(String clientCorrelationID, String fileSystemID,
-      String operation, boolean needsPrimaryRequestID, int retryNum,
+  public TracingHeaderValidator(String clientCorrelationId, String fileSystemId,
+      FSOperationType operation, boolean needsPrimaryRequestId, int retryNum,
       String streamID) {
-    this(clientCorrelationID, fileSystemID, operation, needsPrimaryRequestID,
+    this(clientCorrelationId, fileSystemId, operation, needsPrimaryRequestId,
         retryNum);
     this.streamID = streamID;
   }
@@ -74,13 +73,13 @@ public class TracingHeaderValidator implements Listener {
   private void validateTracingHeader(String tracingContextHeader) {
     String[] idList = tracingContextHeader.split(":");
     validateBasicFormat(idList);
-    if (format != TracingContextFormat.ALL_ID_FORMAT) {
+    if (format != TracingHeaderFormat.ALL_ID_FORMAT) {
       return;
     }
-    if (!primaryRequestID.isEmpty() && !idList[3].isEmpty()) {
+    if (!primaryRequestId.isEmpty() && !idList[3].isEmpty()) {
       Assertions.assertThat(idList[3])
           .describedAs("PrimaryReqID should be common for these requests")
-          .isEqualTo(primaryRequestID);
+          .isEqualTo(primaryRequestId);
     }
     if (!streamID.isEmpty()) {
       Assertions.assertThat(idList[4])
@@ -90,10 +89,10 @@ public class TracingHeaderValidator implements Listener {
   }
 
   private void validateBasicFormat(String[] idList) {
-    if (format == TracingContextFormat.ALL_ID_FORMAT) {
+    if (format == TracingHeaderFormat.ALL_ID_FORMAT) {
       Assertions.assertThat(idList)
           .describedAs("header should have 7 elements").hasSize(7);
-    } else if (format == TracingContextFormat.TWO_ID_FORMAT) {
+    } else if (format == TracingHeaderFormat.TWO_ID_FORMAT) {
       Assertions.assertThat(idList)
           .describedAs("header should have 2 elements").hasSize(2);
     } else {
@@ -104,10 +103,10 @@ public class TracingHeaderValidator implements Listener {
       return;
     }
 
-    if (clientCorrelationID.matches("[a-zA-Z0-9-]*")) {
+    if (clientCorrelationId.matches("[a-zA-Z0-9-]*")) {
       Assertions.assertThat(idList[0])
           .describedAs("Correlation ID should match config")
-          .isEqualTo(clientCorrelationID);
+          .isEqualTo(clientCorrelationId);
     } else {
       Assertions.assertThat(idList[0])
           .describedAs("Invalid config should be replaced with empty string")
@@ -116,19 +115,19 @@ public class TracingHeaderValidator implements Listener {
     Assertions.assertThat(idList[1]).describedAs("Client request ID is a guid")
         .matches(GUID_PATTERN);
 
-    if (format != TracingContextFormat.ALL_ID_FORMAT) {
+    if (format != TracingHeaderFormat.ALL_ID_FORMAT) {
       return;
     }
 
     Assertions.assertThat(idList[2]).describedAs("Filesystem ID incorrect")
-        .isEqualTo(fileSystemID);
-    if (needsPrimaryRequestID && !operation
-        .equals(HdfsOperationConstants.READ)) {
+        .isEqualTo(fileSystemId);
+    if (needsPrimaryRequestId && !operation
+        .equals(FSOperationType.READ)) {
       Assertions.assertThat(idList[3]).describedAs("should have primaryReqId")
           .isNotEmpty();
     }
     Assertions.assertThat(idList[5]).describedAs("Operation name incorrect")
-        .isEqualTo(operation);
+        .isEqualTo(operation.toString());
     int retryCount = Integer.parseInt(idList[6]);
     Assertions.assertThat(retryCount)
         .describedAs("Retry was required due to issue on server side")
@@ -140,12 +139,12 @@ public class TracingHeaderValidator implements Listener {
    * @param operation Hadoop operation code (String of two characters)
    */
   @Override
-  public void setOperation(String operation) {
+  public void setOperation(FSOperationType operation) {
     this.operation = operation;
   }
 
   @Override
   public void updatePrimaryRequestID(String primaryRequestID) {
-    this.primaryRequestID = primaryRequestID;
+    this.primaryRequestId = primaryRequestID;
   }
 }

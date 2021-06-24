@@ -114,7 +114,7 @@ public final class ConfigurationKeys {
    * x-ms-client-request-Id header. Defaults to empty string if the length and
    * character constraints are not satisfied. **/
   public static final String FS_AZURE_CLIENT_CORRELATIONID = "fs.azure.client.correlationid";
-  public static final String FS_AZURE_TRACINGCONTEXT_FORMAT = "fs.azure.tracingcontext.format";
+  public static final String FS_AZURE_TRACINGHEADER_FORMAT = "fs.azure.tracingheader.format";
   public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";
   public static final String FS_AZURE_CLUSTER_TYPE = "fs.azure.cluster.type";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";

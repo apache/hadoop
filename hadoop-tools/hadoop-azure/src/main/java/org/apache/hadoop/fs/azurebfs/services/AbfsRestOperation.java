@@ -228,10 +228,10 @@ public class AbfsRestOperation {
 
   private void updateClientRequestHeader(AbfsHttpOperation httpOperation,
       TracingContext tracingContext) {
-    tracingContext.generateClientRequestID();
+    tracingContext.generateClientRequestId();
     httpOperation.getConnection()
         .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
-            tracingContext.toString());
+            tracingContext.constructHeader());
   }
 
   /**

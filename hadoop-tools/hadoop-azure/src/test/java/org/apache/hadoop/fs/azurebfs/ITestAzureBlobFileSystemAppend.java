@@ -26,7 +26,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
@@ -85,8 +85,8 @@ public class ITestAzureBlobFileSystemAppend extends
     AzureBlobFileSystem fs = getFileSystem();
     fs.create(TEST_FILE_PATH);
     fs.registerListener(new TracingHeaderValidator(
-        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.APPEND, false, 0));
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.APPEND, false, 0));
     fs.append(TEST_FILE_PATH, 10);
   }
 }

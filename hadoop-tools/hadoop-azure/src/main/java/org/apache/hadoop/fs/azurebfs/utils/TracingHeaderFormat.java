@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-public enum TracingContextFormat {
+public enum TracingHeaderFormat {
   SINGLE_ID_FORMAT,  // <client-req-id>
 
   ALL_ID_FORMAT,  // <client-correlation-id>:<client-req-id>:<filesystem-id>

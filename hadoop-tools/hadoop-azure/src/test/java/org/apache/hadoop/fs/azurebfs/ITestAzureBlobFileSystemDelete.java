@@ -30,7 +30,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
@@ -153,8 +153,8 @@ public class ITestAzureBlobFileSystemDelete extends
     es.shutdownNow();
     Path dir = new Path("/test");
     fs.registerListener(new TracingHeaderValidator(
-        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.DELETE, false, 0));
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.DELETE, false, 0));
     // first try a non-recursive delete, expect failure
     intercept(FileAlreadyExistsException.class,
         () -> fs.delete(dir, false));

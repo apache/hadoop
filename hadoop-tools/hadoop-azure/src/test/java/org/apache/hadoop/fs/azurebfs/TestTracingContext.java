@@ -33,13 +33,12 @@ import org.junit.Test;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContextFormat;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -58,7 +57,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testClientCorrelationID() throws IOException {
+  public void testClientCorrelationId() throws IOException {
     checkCorrelationConfigValidation(CLIENT_CORRELATIONID_LIST[0], true);
     checkCorrelationConfigValidation(CLIENT_CORRELATIONID_LIST[1], false);
     checkCorrelationConfigValidation(CLIENT_CORRELATIONID_LIST[2], false);
@@ -79,9 +78,9 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
       boolean includeInHeader) throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
-        fs.getFileSystemID(), HdfsOperationConstants.TEST_OP,
-        TracingContextFormat.ALL_ID_FORMAT, null);
-    String correlationID = tracingContext.toString().split(":")[0];
+        fs.getFileSystemId(), FSOperationType.TEST_OP,
+        TracingHeaderFormat.ALL_ID_FORMAT, null);
+    String correlationID = tracingContext.constructHeader().split(":")[0];
     if (includeInHeader) {
       Assertions.assertThat(correlationID)
           .describedAs("Correlation ID should match config when valid")
@@ -110,12 +109,11 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(statusCode).describedAs("Request should not fail")
         .isEqualTo(HTTP_CREATED);
 
-    String requestHeader = op.getResult()
-        .getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID)
-        .replace("[", "").replace("]", "");
+    String requestHeader = op.getResult().getClientRequestId().replace("[", "")
+        .replace("]", "");
     Assertions.assertThat(requestHeader)
         .describedAs("Client Request Header should match TracingContext")
-        .isEqualTo(tracingContext.toString());
+        .isEqualTo(tracingContext.constructHeader());
   }
 
   @Ignore
@@ -123,11 +121,10 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   //call test methods from the respective test classes
   //can be ignored when running all tests as these get covered
   public void runCorrelationTestForAllMethods() throws Exception {
-    //map to group together creating new instance and calling setup() for tests
     Map<AbstractAbfsIntegrationTest, Method> testClasses = new HashMap<>();
 
-    testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
-        ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
+//    testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
+//        ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
     testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE), //open,
         // read, write
         ITestAbfsReadWriteAndSeek.class.getMethod("testReadAheadRequestID"));
@@ -172,7 +169,6 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         }
       }
     }
-    testExternalOps();
   }
 
   @Test
@@ -181,8 +177,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
 
     fs.registerListener(new TracingHeaderValidator(
-        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
-        fs.getFileSystemID(), HdfsOperationConstants.HAS_PATH_CAPABILITY, false,
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.HAS_PATH_CAPABILITY, false,
         0));
 
     // unset namespaceEnabled to call getAcl -> trigger tracing header validator
@@ -193,7 +189,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
     Assume.assumeTrue(getConfiguration().isCheckAccessEnabled());
     Assume.assumeTrue(getAuthType() == AuthType.OAuth);
 
-    fs.setListenerOperation(HdfsOperationConstants.ACCESS);
+    fs.setListenerOperation(FSOperationType.ACCESS);
     fs.getAbfsStore().setNamespaceEnabled(Trilean.TRUE);
     fs.access(new Path("/"), FsAction.READ);
   }

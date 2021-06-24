@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
@@ -44,10 +45,9 @@ import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContextFormat;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -150,19 +150,19 @@ public abstract class AbstractAbfsIntegrationTest extends
   public TracingContext getTestTracingContext(AzureBlobFileSystem fs,
       boolean needsPrimaryReqId) {
     String correlationId, fsId;
-    TracingContextFormat format;
+    TracingHeaderFormat format;
     if (fs == null) {
       correlationId = "test-corr-id";
       fsId = "test-filesystem-id";
-      format = TracingContextFormat.ALL_ID_FORMAT;
+      format = TracingHeaderFormat.ALL_ID_FORMAT;
     } else {
       AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
-      correlationId = abfsConf.getClientCorrelationID();
-      fsId = fs.getFileSystemID();
-      format = abfsConf.getTracingContextFormat();
+      correlationId = abfsConf.getClientCorrelationId();
+      fsId = fs.getFileSystemId();
+      format = abfsConf.getTracingHeaderFormat();
     }
     return new TracingContext(correlationId, fsId,
-        HdfsOperationConstants.TEST_OP, needsPrimaryReqId, format, null);
+        FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
   }
 
 

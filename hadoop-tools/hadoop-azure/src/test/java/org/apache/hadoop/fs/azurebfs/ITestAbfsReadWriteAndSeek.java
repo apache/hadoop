@@ -28,7 +28,7 @@ import org.junit.runners.Parameterized;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -83,8 +83,8 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     int result;
     try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
-          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-              fs.getFileSystemID(), HdfsOperationConstants.READ, true, 0,
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+              fs.getFileSystemId(), FSOperationType.READ, true, 0,
               ((AbfsInputStream) inputStream.getWrappedStream())
                   .getStreamID()));
       inputStream.seek(bufferSize);
@@ -114,8 +114,8 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     new Random().nextBytes(b);
     try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
       ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
-          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-              fs.getFileSystemID(), HdfsOperationConstants.WRITE, false, 0,
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+              fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
               ((AbfsOutputStream) stream.getWrappedStream())
                   .getStreamID()));
       stream.write(b);
@@ -124,12 +124,12 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] readBuffer = new byte[4 * bufferSize];
     int result;
     fs.registerListener(
-        new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-            fs.getFileSystemID(), HdfsOperationConstants.OPEN, false, 0));
+        new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.OPEN, false, 0));
     try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
-          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationID(),
-              fs.getFileSystemID(), HdfsOperationConstants.READ, false, 0,
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+              fs.getFileSystemId(), FSOperationType.READ, false, 0,
               ((AbfsInputStream) inputStream.getWrappedStream())
                   .getStreamID()));
       result = inputStream.read(readBuffer, 0, bufferSize*4);

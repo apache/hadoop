@@ -29,8 +29,8 @@ import org.apache.hadoop.thirdparty.org.checkerframework.checker.nullness.qual.N
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.azurebfs.constants.HdfsOperationConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.retry.RetryPolicies;
@@ -169,7 +169,7 @@ public final class AbfsLease {
         future.cancel(true);
       }
       TracingContext tracingContext = new TracingContext(this.tracingContext);
-      tracingContext.setOperation(HdfsOperationConstants.RELEASE_LEASE);
+      tracingContext.setOperation(FSOperationType.RELEASE_LEASE);
       client.releaseLease(path, leaseID, tracingContext);
     } catch (IOException e) {
       LOG.warn("Exception when trying to release lease {} on {}. Lease will need to be broken: {}",
