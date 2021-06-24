@@ -121,6 +121,19 @@
   </property>
 
   <property>
+    <description>
+      Resource manager dispatcher thread cpu monitor sampling rate.
+      Units are samples per minute.  This controls how often to sample
+      the cpu utilization of the resource manager dispatcher thread.
+      The cpu utilization is displayed on the RM UI as scheduler busy %.
+      Set this to zero to disable the dispatcher thread monitor.  Defaults
+      to 60 samples per minute.
+    </description>
+    <name>yarn.dispatcher.cpu-monitor.samples-per-min</name>
+    <value>60</value>
+  </property>
+
+  <property>
     <description>The expiry interval for application master reporting.</description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
@@ -2574,6 +2587,18 @@
     <value/>
   </property>
 
+  <property>
+    <description>Enable the web proxy connection timeout, default is enabled.</description>
+    <name>yarn.resourcemanager.proxy.timeout.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>The web proxy connection timeout.</description>
+    <name>yarn.resourcemanager.proxy.connection.timeout</name>
+    <value>60000</value>
+  </property>
+
   <!-- Applications' Configuration -->
 
   <property>
@@ -4747,5 +4772,11 @@
       while submitting application.</description>
     <name>yarn.resourcemanager.application.max-tag.length</name>
     <value>100</value>
+  </property>
+
+  <property>
+    <description>Specifies whether application tags should be converted to lowercase or not.</description>
+    <name>yarn.resourcemanager.application-tag-based-placement.force-lowercase</name>
+    <value>true</value>
   </property>
 </configuration>

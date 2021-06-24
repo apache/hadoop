@@ -48,10 +48,11 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
-import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.WriteOperations;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
@@ -65,11 +66,13 @@ import org.apache.hadoop.util.Progressable;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MATERIALIZE_FILE;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_STAGE_FILE_UPLOAD;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
+import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIterator;
 
 /**
  * The implementation of the various actions a committer needs.
@@ -81,7 +84,8 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
  * duplicate that work.
  *
  */
-public class CommitOperations implements IOStatisticsSource {
+public class CommitOperations extends AbstractStoreOperation
+    implements IOStatisticsSource {
   private static final Logger LOG = LoggerFactory.getLogger(
       CommitOperations.class);
 
@@ -96,7 +100,7 @@ public class CommitOperations implements IOStatisticsSource {
   /**
    * Write operations for the destination fs.
    */
-  private final WriteOperationHelper writeOperations;
+  private final WriteOperations writeOperations;
 
   /**
    * Filter to find all {code .pendingset} files.
@@ -113,21 +117,29 @@ public class CommitOperations implements IOStatisticsSource {
   /**
    * Instantiate.
    * @param fs FS to bind to
+   * @throws IOException failure to bind.
    */
-  public CommitOperations(S3AFileSystem fs) {
+  public CommitOperations(S3AFileSystem fs) throws IOException {
     this(requireNonNull(fs), fs.newCommitterStatistics());
   }
 
   /**
-   * Instantiate.
+   * Instantiate. This creates a new audit span for
+   * the commit operations.
    * @param fs FS to bind to
    * @param committerStatistics committer statistics
+   * @throws IOException failure to bind.
    */
   public CommitOperations(S3AFileSystem fs,
-      CommitterStatistics committerStatistics) {
-    this.fs = requireNonNull(fs);
+      CommitterStatistics committerStatistics) throws IOException {
+    super(requireNonNull(fs).createStoreContext());
+    this.fs = fs;
     statistics = requireNonNull(committerStatistics);
-    writeOperations = fs.getWriteOperationHelper();
+    // create a span
+    writeOperations = fs.createWriteOperationHelper(
+        fs.getAuditSpanSource().createSpan(
+            COMMITTER_COMMIT_JOB.getSymbol(),
+            "/", null));
   }
 
   /**
@@ -365,6 +377,7 @@ public class CommitOperations implements IOStatisticsSource {
         }
       }
     }
+    cleanupRemoteIterator(pendingFiles);
     return outcome;
   }
 
@@ -388,7 +401,7 @@ public class CommitOperations implements IOStatisticsSource {
    */
   public List<MultipartUpload> listPendingUploadsUnderPath(Path dest)
       throws IOException {
-    return fs.listMultipartUploads(fs.pathToKey(dest));
+    return writeOperations.listMultipartUploads(fs.pathToKey(dest));
   }
 
   /**
@@ -485,7 +498,7 @@ public class CommitOperations implements IOStatisticsSource {
     if (!localFile.isFile()) {
       throw new FileNotFoundException("Not a file: " + localFile);
     }
-    String destURI = destPath.toString();
+    String destURI = destPath.toUri().toString();
     String destKey = fs.pathToKey(destPath);
     String uploadId = null;
 

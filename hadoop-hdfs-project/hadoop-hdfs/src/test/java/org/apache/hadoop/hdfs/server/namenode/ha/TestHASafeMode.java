@@ -67,13 +67,14 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.slf4j.event.Level;
+import org.apache.hadoop.util.Lists;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import java.util.function.Supplier;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests that exercise safemode in an HA cluster.
@@ -98,6 +99,7 @@ public class TestHASafeMode {
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", false);
 
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -857,7 +859,7 @@ public class TestHASafeMode {
           pathString,
           client.getClientName(),
           new ExtendedBlock(previousBlock),
-          new DatanodeInfo[0],
+          DatanodeInfo.EMPTY_ARRAY,
           DFSClientAdapter.getFileId((DFSOutputStream) create
               .getWrappedStream()), null, null);
       cluster.restartNameNode(0, true);
@@ -907,6 +909,42 @@ public class TestHASafeMode {
     banner(nn1.getNamesystem().getSafemode());
     cluster.transitionToActive(1);
     assertSafeMode(nn1, 3, 3, 3, 0);
+  }
+
+  @Test
+  public void testNameNodeCreateSnapshotTrashRootOnHASetup() throws Exception {
+    DistributedFileSystem dfs = cluster.getFileSystem(0);
+    final Path testDir = new Path("/disallowss/test2/");
+    final Path file0path = new Path(testDir, "file-0");
+    dfs.create(file0path).close();
+    dfs.allowSnapshot(testDir);
+    // .Trash won't be created right now since snapshot trash is disabled
+    final Path trashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
+    assertFalse(dfs.exists(trashRoot));
+    // Set dfs.namenode.snapshot.trashroot.enabled=true
+    cluster.getNameNode(0).getConf()
+        .setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
+    cluster.getNameNode(1).getConf()
+        .setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
+    restartActive();
+    cluster.transitionToActive(1);
+    dfs = cluster.getFileSystem(1);
+    // Make sure .Trash path does not exist yet as on NN1 trash root is not
+    // enabled
+    assertFalse(dfs.exists(trashRoot));
+    cluster.transitionToStandby(1);
+    cluster.transitionToActive(0);
+    dfs = cluster.getFileSystem(0);
+    // Check .Trash existence, should be created now
+    assertTrue(dfs.exists(trashRoot));
+    assertFalse(cluster.getNameNode(0).isInSafeMode());
+    restartStandby();
+    // Ensure Standby namenode is up and running
+    assertTrue(cluster.getNameNode(1).isStandbyState());
+    // Cleanup
+    dfs.delete(trashRoot, true);
+    dfs.disallowSnapshot(testDir);
+    dfs.delete(testDir, true);
   }
 
   /**

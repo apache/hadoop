@@ -19,10 +19,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -91,6 +89,9 @@ public class CapacitySchedulerQueueInfo {
   protected String queueType;
   protected String creationMethod;
   protected String autoCreationEligibility;
+  protected String defaultNodeLabelExpression;
+  protected AutoQueueTemplatePropertiesInfo autoQueueTemplateProperties =
+      new AutoQueueTemplatePropertiesInfo();
 
   CapacitySchedulerQueueInfo() {
   };
@@ -120,6 +121,7 @@ public class CapacitySchedulerQueueInfo {
     reservedContainers = q.getMetrics().getReservedContainers();
     queueName = q.getQueueName();
     state = q.getState();
+    defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
     resourcesUsed = new ResourceInfo(q.getUsedResources());
     if (q instanceof PlanQueue && !((PlanQueue) q).showReservationsAsQueues()) {
       hideReservationQueues = true;
@@ -172,6 +174,8 @@ public class CapacitySchedulerQueueInfo {
     if (q instanceof ParentQueue) {
       orderingPolicyInfo = ((ParentQueue) q).getQueueOrderingPolicy()
           .getConfigName();
+      autoQueueTemplateProperties = CapacitySchedulerInfoHelper
+            .getAutoCreatedTemplate((ParentQueue) q);
     }
 
     String configuredCapacity = conf.get(
@@ -271,7 +275,7 @@ public class CapacitySchedulerQueueInfo {
   static float cap(float val, float low, float hi) {
     return Math.min(Math.max(val, low), hi);
   }
-  
+
   public ArrayList<String> getNodeLabels() {
     return this.nodeLabels;
   }
@@ -334,5 +338,9 @@ public class CapacitySchedulerQueueInfo {
 
   public float getNormalizedWeight() {
     return normalizedWeight;
+  }
+
+  public String getDefaultNodeLabelExpression() {
+    return defaultNodeLabelExpression;
   }
 }

@@ -154,4 +154,15 @@ public class EventDispatcher<T extends Event> extends
     this.metrics = metrics;
   }
 
+  protected long getEventProcessorId() {
+    return this.eventProcessor.getId();
+  }
+
+  protected boolean isStopped() {
+    return this.stopped;
+  }
+
+  public int getEventQueueSize() {
+    return eventQueue.size();
+  }
 }

@@ -16,9 +16,22 @@
  * limitations under the License.
  */
 
+#include <Shlwapi.h>
+#include <WinBase.h>
 #include <Windows.h>
+#include <fcntl.h>
+#include <io.h>
+#include <share.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
 
 #include "syscall.h"
+
+#pragma comment(lib, "Shlwapi.lib")
 
 bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
   return WriteToStdoutImpl(message.c_str());
@@ -26,6 +39,12 @@ bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
 
 int XPlatform::Syscall::WriteToStdout(const char* message) {
   return WriteToStdoutImpl(message) ? 1 : 0;
+}
+
+bool XPlatform::Syscall::FnMatch(const std::string& pattern,
+                                 const std::string& str) {
+  return PathMatchSpecA(static_cast<LPCSTR>(str.c_str()),
+                        static_cast<LPCSTR>(pattern.c_str())) == TRUE;
 }
 
 bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
@@ -39,4 +58,39 @@ bool XPlatform::Syscall::WriteToStdoutImpl(const char* message) {
   const auto result =
       WriteFile(stdout_handle, message, message_len, &bytes_written, nullptr);
   return result && static_cast<unsigned long>(message_len) == bytes_written;
+}
+
+void XPlatform::Syscall::ClearBufferSafely(void* buffer,
+                                           const size_t sz_bytes) {
+  if (buffer != nullptr) {
+    SecureZeroMemory(buffer, sz_bytes);
+  }
+}
+
+bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
+                                                 const std::string& b) {
+  return _stricmp(a.c_str(), b.c_str()) == 0;
+}
+
+int XPlatform::Syscall::CreateAndOpenTempFile(std::vector<char>& pattern) {
+  if (_set_errno(0) != 0) {
+    return -1;
+  }
+
+  // Make space for _mktemp_s to add NULL character at the end
+  pattern.resize(pattern.size() + 1);
+  if (_mktemp_s(pattern.data(), pattern.size()) != 0) {
+    return -1;
+  }
+
+  auto fd{-1};
+  if (_sopen_s(&fd, pattern.data(), _O_RDWR | _O_CREAT | _O_EXCL, _SH_DENYNO,
+               _S_IREAD | _S_IWRITE) != 0) {
+    return -1;
+  }
+  return fd;
+}
+
+bool XPlatform::Syscall::CloseFile(const int file_descriptor) {
+  return _close(file_descriptor) == 0;
 }

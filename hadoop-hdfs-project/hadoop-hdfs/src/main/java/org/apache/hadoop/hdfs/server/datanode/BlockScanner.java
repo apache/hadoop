@@ -252,7 +252,7 @@ public class BlockScanner {
       if (!success) {
         // If we didn't create a new VolumeScanner object, we don't
         // need this reference to the volume.
-        IOUtils.cleanup(null, ref);
+        IOUtils.cleanupWithLogger(null, ref);
       }
     }
   }

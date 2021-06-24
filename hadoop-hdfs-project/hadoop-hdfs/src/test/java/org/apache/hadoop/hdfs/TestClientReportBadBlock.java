@@ -316,7 +316,7 @@ public class TestClientReportBadBlock {
     String outStr = runFsck(conf, errorCode, true, filePath.toString(), "-list-corruptfileblocks");
     LOG.info("fsck -list-corruptfileblocks out: " + outStr);
     if (errorCode != 0) {
-      Assert.assertTrue(outStr.contains("CORRUPT files"));
+      Assert.assertTrue(outStr.contains("CORRUPT blocks"));
     }
   }
 

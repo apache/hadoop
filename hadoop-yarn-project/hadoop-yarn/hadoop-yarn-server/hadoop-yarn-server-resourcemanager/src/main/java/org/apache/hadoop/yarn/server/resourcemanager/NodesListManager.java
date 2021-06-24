@@ -509,12 +509,8 @@ public class NodesListManager extends CompositeService implements
       RMNode eventNode, RMAppNodeUpdateType appNodeUpdateType) {
     for(RMApp app : rmContext.getRMApps().values()) {
       if (!app.isAppFinalStateStored()) {
-        this.rmContext
-            .getDispatcher()
-            .getEventHandler()
-            .handle(
-                new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                    appNodeUpdateType));
+        app.handle(new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
+            appNodeUpdateType));
       }
     }
   }

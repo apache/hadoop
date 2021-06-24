@@ -194,9 +194,11 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
       throw new ServiceException(FileSystemAccessException.ERROR.H11, ex.toString(), ex);
     }
 
-    LOG.debug("FileSystemAccess FileSystem configuration:");
-    for (Map.Entry entry : serviceHadoopConf) {
-      LOG.debug("  {} = {}", entry.getKey(), entry.getValue());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("FileSystemAccess FileSystem configuration:");
+      for (Map.Entry entry : serviceHadoopConf) {
+        LOG.debug("  {} = {}", entry.getKey(), entry.getValue());
+      }
     }
     setRequiredServiceHadoopConf(serviceHadoopConf);
 
@@ -262,7 +264,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
           LOG.warn("Error while purging filesystem, " + ex.toString(), ex);
         }
       }
-      LOG.debug("Purged [{}} filesystem instances", count);
+      LOG.debug("Purged [{}] filesystem instances", count);
     }
   }
 

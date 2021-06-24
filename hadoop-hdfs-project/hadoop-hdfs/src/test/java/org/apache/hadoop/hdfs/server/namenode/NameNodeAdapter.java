@@ -21,6 +21,8 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
+
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
 import java.io.File;
@@ -55,7 +57,12 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.Whitebox;
+import org.mockito.ArgumentMatcher;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer.FSIMAGE_ATTRIBUTE_KEY;
 
 /**
@@ -318,7 +325,34 @@ public class NameNodeAdapter {
     }
     return spyEditLog;
   }
-  
+
+  /**
+   * Spy on EditLog to delay execution of doEditTransaction() for MkdirOp.
+   */
+  public static FSEditLog spyDelayMkDirTransaction(
+      final NameNode nn, final long delay) {
+    FSEditLog realEditLog = nn.getFSImage().getEditLog();
+    FSEditLogAsync spyEditLog = (FSEditLogAsync) spy(realEditLog);
+    DFSTestUtil.setEditLogForTesting(nn.getNamesystem(), spyEditLog);
+    Answer<Boolean> ans = new Answer<Boolean>() {
+      @Override
+      public Boolean answer(InvocationOnMock invocation) throws Throwable {
+        Thread.sleep(delay);
+        return (Boolean) invocation.callRealMethod();
+      }
+    };
+    ArgumentMatcher<FSEditLogOp> am = new ArgumentMatcher<FSEditLogOp>() {
+      @Override
+      public boolean matches(FSEditLogOp argument) {
+        FSEditLogOp op = (FSEditLogOp) argument;
+        return op.opCode == FSEditLogOpCodes.OP_MKDIR;
+      }
+    };
+    doAnswer(ans).when(spyEditLog).doEditTransaction(
+        ArgumentMatchers.argThat(am));
+    return spyEditLog;
+  }
+
   public static JournalSet spyOnJournalSet(NameNode nn) {
     FSEditLog editLog = nn.getFSImage().getEditLog();
     JournalSet js = Mockito.spy(editLog.getJournalSet());

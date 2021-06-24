@@ -45,7 +45,7 @@ TEST(HdfsBuilderTest, TestRead)
   {
     TempDir tempDir1;
     TempFile tempFile1(tempDir1.path + "/core-site.xml");
-    writeSimpleConfig(tempFile1.filename, "key1", "value1");
+    writeSimpleConfig(tempFile1.GetFileName(), "key1", "value1");
 
     hdfsBuilder * builder = hdfsNewBuilderFromDirectory(tempDir1.path.c_str());
 
@@ -68,7 +68,7 @@ TEST(HdfsBuilderTest, TestRead)
   {
     TempDir tempDir1;
     TempFile tempFile1(tempDir1.path + "/core-site.xml");
-    writeSimpleConfig(tempFile1.filename, "key1", "100");
+    writeSimpleConfig(tempFile1.GetFileName(), "key1", "100");
 
     hdfsBuilder * builder = hdfsNewBuilderFromDirectory(tempDir1.path.c_str());
 

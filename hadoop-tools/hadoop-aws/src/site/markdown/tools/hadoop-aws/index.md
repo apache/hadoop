@@ -44,6 +44,8 @@ full details.
 * [Working with IAM Assumed Roles](./assumed_roles.html)
 * [S3A Delegation Token Support](./delegation_tokens.html)
 * [S3A Delegation Token Architecture](delegation_token_architecture.html).
+* [Auditing](./auditing.html).
+* [Auditing Architecture](./auditing_architecture.html).
 * [Testing](./testing.html)
 
 ## <a name="overview"></a> Overview
@@ -794,6 +796,14 @@ options are covered in [Testing](./testing.md).
   <description>AWS S3 endpoint to connect to. An up-to-date list is
     provided in the AWS Documentation: regions and endpoints. Without this
     property, the standard region (s3.amazonaws.com) is assumed.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.endpoint.region</name>
+  <description>AWS S3 region for a bucket, which bypasses the parsing of
+ fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
+ while using privateLink URL and explicitly set the bucket region.
   </description>
 </property>
 

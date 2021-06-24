@@ -238,8 +238,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     // - org.apache.hadoop.net.NetUtils
     xmlPropsToSkipCompare
         .add("hadoop.rpc.socket.factory.class.ClientProtocol");
-    // - Where is this used?
-    xmlPropsToSkipCompare.add("hadoop.ssl.enabled");
 
     // Keys with no corresponding variable
     // - org.apache.hadoop.io.compress.bzip2.Bzip2Factory

@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -35,7 +34,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 public class AclFeature implements INode.Feature, ReferenceCounter {
   public static final ImmutableList<AclEntry> EMPTY_ENTRY_LIST =
     ImmutableList.of();
-  private AtomicInteger value = new AtomicInteger();
+  private int refCount = 0;
 
   private final int [] entries;
 
@@ -84,17 +83,17 @@ public class AclFeature implements INode.Feature, ReferenceCounter {
   }
 
   @Override
-  public int getRefCount() {
-    return value.get();
+  public synchronized int getRefCount() {
+    return refCount;
   }
 
   @Override
-  public int incrementAndGetRefCount() {
-    return value.incrementAndGet();
+  public synchronized int incrementAndGetRefCount() {
+    return ++refCount;
   }
 
   @Override
-  public int decrementAndGetRefCount() {
-    return value.updateAndGet(i -> i > 0 ? i - 1 : i);
+  public synchronized int decrementAndGetRefCount() {
+    return (refCount > 0) ? --refCount : 0;
   }
 }

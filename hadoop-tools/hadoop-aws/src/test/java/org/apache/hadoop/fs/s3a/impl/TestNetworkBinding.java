@@ -85,7 +85,7 @@ public class TestNetworkBinding extends AbstractHadoopTestBase {
       final boolean expectNull,
       final String expectRegion) {
     AwsClientBuilder.EndpointConfiguration epr =
-        createEndpointConfiguration(src, new ClientConfiguration());
+        createEndpointConfiguration(src, new ClientConfiguration(), src);
     String eprStr = epr == null
         ? "(empty)"
         : ("(" + epr.getServiceEndpoint() + " " + epr.getSigningRegion());

@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
  * An abstraction for various container runtime implementations. Examples
  * include Process Tree, Docker, Appc runtimes etc. These implementations
  * are meant for low-level OS container support - dependencies on
- * higher-level node mananger constructs should be avoided.
+ * higher-level node manager constructs should be avoided.
  */
 
 @InterfaceAudience.Private

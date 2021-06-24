@@ -432,7 +432,7 @@ class DataXceiver extends Receiver implements Runnable {
             blk.getBlockId(), dnR.getDatanodeUuid(), success));
       }
       if (fis != null) {
-        IOUtils.cleanup(null, fis);
+        IOUtils.cleanupWithLogger(null, fis);
       }
     }
   }
@@ -555,7 +555,7 @@ class DataXceiver extends Receiver implements Runnable {
           LOG.warn("Failed to shut down socket in error handler", e);
         }
       }
-      IOUtils.cleanup(null, shmInfo);
+      IOUtils.cleanupWithLogger(null, shmInfo);
     }
   }
 
@@ -878,11 +878,11 @@ class DataXceiver extends Receiver implements Runnable {
           IOUtils.closeSocket(mirrorSock);
           mirrorSock = null;
           if (isClient) {
-            LOG.error("{}:Exception transfering block {} to mirror {}",
+            LOG.error("{}:Exception transferring block {} to mirror {}",
                 datanode, block, mirrorNode, e);
             throw e;
           } else {
-            LOG.info("{}:Exception transfering {} to mirror {}- continuing " +
+            LOG.info("{}:Exception transferring {} to mirror {}- continuing " +
                 "without the mirror", datanode, block, mirrorNode, e);
             incrDatanodeNetworkErrors();
           }

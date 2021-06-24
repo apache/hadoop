@@ -22,7 +22,7 @@ Common problems working with S3 are
 
 1. Classpath setup
 1. Authentication
-1. S3 Inconsistency side-effects
+1. Incorrect configuration
 
 
 Troubleshooting IAM Assumed Roles is covered in its
@@ -245,6 +245,32 @@ As an example, the endpoint for S3 Frankfurt is `s3.eu-central-1.amazonaws.com`:
 <property>
   <name>fs.s3a.endpoint</name>
   <value>s3.eu-central-1.amazonaws.com</value>
+</property>
+```
+### <a name="AuthorizationHeaderMalformed"></a> "Authorization Header is Malformed"(400) exception when PrivateLink URL is used in "fs.s3a.endpoint"
+
+When [PrivateLink](https://docs.aws.amazon.com/AmazonS3/latest/userguide/privatelink-interface-endpoints.html) URL
+is used instead of standard s3a endpoint, it returns "authorization
+header is malformed" exception. So, if we set fs.s3a.endpoint=bucket.vpce
+-<some_string>.s3.ca-central-1.vpce.amazonaws.com and make s3 calls we get:
+```
+com.amazonaws.services.s3.model.AmazonS3Exception: The authorization header is malformed; the region 'vpce' is wrong; expecting 'ca-central-1'
+(Service: Amazon S3; Status Code: 400; Error Code: AuthorizationHeaderMalformed; Request ID: req-id; S3 Extended Request ID: req-id-2), S3 Extended Request ID: req-id-2:AuthorizationHeaderMalformed: The authorization
+header is malformed; the region 'vpce' is wrong; expecting 'ca-central-1' (Service: Amazon S3; Status Code: 400; Error Code: AuthorizationHeaderMalformed; Request ID: req-id;
+```
+Cause:
+
+Since, endpoint parsing is done in a way that it assumes the AWS S3 region
+would be the 2nd component of the `fs.s3a.endpoint` URL delimited by ".", in
+case of PrivateLink URL, it can't figure out the region and throws an
+authorization exception. Thus, to add support to using PrivateLink URLs we use `fs.s3a.endpoint.region`
+to set the region and bypass this parsing of `fs.s3a.endpoint`, in the case shown above to make it work we'll set the AWS
+S3 region as `ca-central-1`.
+
+```xml
+<property>
+  <name>fs.s3a.endpoint.region</name>
+  <value>ca-central-1</value>
 </property>
 ```
 
@@ -1027,7 +1053,7 @@ at the end of a write operation. If a process terminated unexpectedly, or failed
 to call the `close()` method on an output stream, the pending data will have
 been lost.
 
-### File `flush()`, `hsync` and `hflush()` calls do not save data to S3
+### File `flush()` calls do not save data to S3
 
 Again, this is due to the fact that the data is cached locally until the
 `close()` operation. The S3A filesystem cannot be used as a store of data
@@ -1035,6 +1061,39 @@ if it is required that the data is persisted durably after every
 `Syncable.hflush()` or `Syncable.hsync()` call.
 This includes resilient logging, HBase-style journaling
 and the like. The standard strategy here is to save to HDFS and then copy to S3.
+
+### <a name="syncable"></a> `UnsupportedOperationException` "S3A streams are not Syncable. See HADOOP-17597."
+
+The application has tried to call either the `Syncable.hsync()` or `Syncable.hflush()`
+methods on an S3A output stream. This has been rejected because the
+connector isn't saving any data at all. The `Syncable` API, especially the
+`hsync()` call, are critical for applications such as HBase to safely
+persist data.
+
+The S3A connector throws an `UnsupportedOperationException` when these API calls
+are made, because the guarantees absolutely cannot be met: nothing is being flushed
+or saved.
+
+* Applications which intend to invoke the Syncable APIs call `hasCapability("hsync")` on
+  the stream to see if they are supported.
+* Or catch and downgrade `UnsupportedOperationException`.
+
+These recommendations _apply to all filesystems_. 
+
+To downgrade the S3A connector to simply warning of the use of
+`hsync()` or `hflush()` calls, set the option
+`fs.s3a.downgrade.syncable.exceptions` to true.
+
+```xml
+<property>
+  <name>fs.s3a.downgrade.syncable.exceptions</name>
+  <value>true</value>
+</property>
+```
+
+The count of invocations of the two APIs are collected
+in the S3A filesystem Statistics/IOStatistics and so
+their use can be monitored.
 
 ### `RemoteFileChangedException` and read-during-overwrite
 

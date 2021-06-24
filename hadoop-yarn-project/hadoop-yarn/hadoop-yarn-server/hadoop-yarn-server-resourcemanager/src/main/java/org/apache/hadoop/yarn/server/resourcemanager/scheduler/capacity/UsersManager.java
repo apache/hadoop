@@ -77,7 +77,7 @@ public class UsersManager implements AbstractUsersManager {
   private Map<String, Map<SchedulingMode, Long>> localVersionOfAllUsersState =
       new HashMap<String, Map<SchedulingMode, Long>>();
 
-  private volatile int userLimit;
+  private volatile float userLimit;
   private volatile float userLimitFactor;
 
   private WriteLock writeLock;
@@ -320,7 +320,7 @@ public class UsersManager implements AbstractUsersManager {
    * Get configured user-limit.
    * @return user limit
    */
-  public int getUserLimit() {
+  public float getUserLimit() {
     return userLimit;
   }
 
@@ -328,7 +328,7 @@ public class UsersManager implements AbstractUsersManager {
    * Set configured user-limit.
    * @param userLimit user limit
    */
-  public void setUserLimit(int userLimit) {
+  public void setUserLimit(float userLimit) {
     this.userLimit = userLimit;
   }
 
@@ -702,7 +702,8 @@ public class UsersManager implements AbstractUsersManager {
     activeUsersWithOnlyPendingApps = new AtomicInteger(numPendingUsers);
   }
 
-  private Resource computeUserLimit(String userName, Resource clusterResource,
+  @VisibleForTesting
+  Resource computeUserLimit(String userName, Resource clusterResource,
       String nodePartition, SchedulingMode schedulingMode, boolean activeUser) {
     Resource partitionResource = labelManager.getResourceByLabel(nodePartition,
         clusterResource);
@@ -716,6 +717,7 @@ public class UsersManager implements AbstractUsersManager {
      * (which extra resources we are allocating)
      */
     Resource queueCapacity = lQueue.getEffectiveCapacity(nodePartition);
+    Resource originalCapacity = queueCapacity;
 
     /*
      * Assume we have required resource equals to minimumAllocation, this can
@@ -791,16 +793,19 @@ public class UsersManager implements AbstractUsersManager {
     // IGNORE_PARTITION_EXCLUSIVITY allocation.
     Resource maxUserLimit = Resources.none();
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
-      // If user-limit-factor set to -1, we should disabled user limit.
-      if (getUserLimitFactor() != -1) {
-        maxUserLimit = Resources.multiplyAndRoundDown(queueCapacity,
-            getUserLimitFactor());
-      } else {
+      if (getUserLimitFactor() == -1 ||
+          originalCapacity.equals(Resources.none())) {
+        // If user-limit-factor set to -1, we should disable user limit.
+        //
+        // Also prevent incorrect maxUserLimit due to low queueCapacity
+        // Can happen if dynamic queue has capacity = 0%
         maxUserLimit = lQueue.
             getEffectiveMaxCapacityDown(
                 nodePartition, lQueue.getMinimumAllocation());
+      } else {
+        maxUserLimit = Resources.multiplyAndRoundDown(queueCapacity,
+            getUserLimitFactor());
       }
-
     } else if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
       maxUserLimit = partitionResource;
     }
@@ -1130,5 +1135,10 @@ public class UsersManager implements AbstractUsersManager {
   @VisibleForTesting
   public int getNumActiveUsersWithOnlyPendingApps() {
     return activeUsersWithOnlyPendingApps.get();
+  }
+
+  @VisibleForTesting
+  void setUsageRatio(String label, float usage) {
+    qUsageRatios.usageRatios.put(label, usage);
   }
 }

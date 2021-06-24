@@ -34,7 +34,6 @@ import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
@@ -42,7 +41,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -56,7 +54,7 @@ import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.VersionInfo;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +89,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
 /**
  * Utility methods for S3A code.
@@ -201,7 +200,8 @@ public final class S3AUtils {
       }
       if (exception instanceof CredentialInitializationException) {
         // the exception raised by AWSCredentialProvider list if the
-        // credentials were not accepted.
+        // credentials were not accepted,
+        // or auditing blocked the operation.
         return (AccessDeniedException)new AccessDeniedException(path, null,
             exception.toString()).initCause(exception);
       }
@@ -1423,23 +1423,19 @@ public final class S3AUtils {
    * an array. Given tombstones are filtered out. If the iterator
    * does return any item, an empty array is returned.
    * @param iterator a non-null iterator
-   * @param tombstones
+   * @param tombstones possibly empty set of tombstones
    * @return a possibly-empty array of file status entries
-   * @throws IOException
+   * @throws IOException failure
    */
   public static S3AFileStatus[] iteratorToStatuses(
       RemoteIterator<S3AFileStatus> iterator, Set<Path> tombstones)
       throws IOException {
-    List<FileStatus> statuses = new ArrayList<>();
-
-    while (iterator.hasNext()) {
-      S3AFileStatus status = iterator.next();
-      if (!tombstones.contains(status.getPath())) {
-        statuses.add(status);
-      }
-    }
-
-    return statuses.toArray(new S3AFileStatus[0]);
+    // this will close the span afterwards
+    RemoteIterator<S3AFileStatus> source = filteringRemoteIterator(iterator,
+        st -> !tombstones.contains(st.getPath()));
+    S3AFileStatus[] statuses = RemoteIterators
+        .toArray(source, new S3AFileStatus[0]);
+    return statuses;
   }
 
   /**

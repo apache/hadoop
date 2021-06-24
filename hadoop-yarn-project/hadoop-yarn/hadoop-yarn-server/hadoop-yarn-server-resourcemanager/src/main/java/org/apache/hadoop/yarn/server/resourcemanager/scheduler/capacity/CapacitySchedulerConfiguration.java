@@ -636,8 +636,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         absoluteResourceCapacity);
   }
 
-  public int getUserLimit(String queue) {
-    int userLimit = getInt(getQueuePrefix(queue) + USER_LIMIT,
+  public float getUserLimit(String queue) {
+    float userLimit = getFloat(getQueuePrefix(queue) + USER_LIMIT,
         DEFAULT_USER_LIMIT);
     return userLimit;
   }
@@ -686,8 +686,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return orderingPolicy;
   }
 
-  public void setUserLimit(String queue, int userLimit) {
-    setInt(getQueuePrefix(queue) + USER_LIMIT, userLimit);
+    public void setUserLimit(String queue, float userLimit) {
+    setFloat(getQueuePrefix(queue) + USER_LIMIT, userLimit);
     LOG.debug("here setUserLimit: queuePrefix={}, userLimit={}",
         getQueuePrefix(queue), getUserLimit(queue));
   }
@@ -800,10 +800,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       // root.From AbstractCSQueue, absolute resource, and weight will be parsed
       // and updated separately. Once nodes are added/removed in cluster,
       // capacity is percentage will also be re-calculated.
-      return defaultValue;
+      return queue.equals("root") ? 100.0f : defaultValue;
     }
 
-    float capacity = getFloat(capacityPropertyName, defaultValue);
+    float capacity = queue.equals("root") ? 100.0f
+        : getFloat(capacityPropertyName, defaultValue);
     if (capacity < MINIMUM_CAPACITY_VALUE
         || capacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException(
@@ -2029,7 +2030,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       AUTO_CREATE_CHILD_QUEUE_PREFIX + "enabled";
 
   @Private
-  private static final String AUTO_QUEUE_CREATION_V2_PREFIX =
+  protected static final String AUTO_QUEUE_CREATION_V2_PREFIX =
       "auto-queue-creation-v2.";
 
   @Private
@@ -2350,11 +2351,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getAutoCreatedQueueTemplateConfPrefix(queuePath);
 
     StringBuilder resourceString = new StringBuilder();
+
     resourceString
         .append("[" + AbsoluteResourceType.MEMORY.toString().toLowerCase() + "="
             + resource.getMemorySize() + ","
             + AbsoluteResourceType.VCORES.toString().toLowerCase() + "="
-            + resource.getVirtualCores() + "]");
+            + resource.getVirtualCores()
+            + ResourceUtils.
+            getCustomResourcesStrings(resource) + "]");
 
     setCapacityByLabel(leafQueueConfPrefix, label, resourceString.toString());
   }
@@ -2385,11 +2389,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         queuePath);
 
     StringBuilder resourceString = new StringBuilder();
+
     resourceString
         .append("[" + AbsoluteResourceType.MEMORY.toString().toLowerCase() + "="
             + resource.getMemorySize() + ","
             + AbsoluteResourceType.VCORES.toString().toLowerCase() + "="
-            + resource.getVirtualCores() + "]");
+            + resource.getVirtualCores()
+            + ResourceUtils.
+            getCustomResourcesStrings(resource) + "]");
 
     setMaximumCapacityByLabel(leafQueueConfPrefix, label, resourceString.toString());
   }
@@ -2489,11 +2496,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     StringBuilder resourceString = new StringBuilder();
+
     resourceString
         .append("[" + AbsoluteResourceType.MEMORY.toString().toLowerCase() + "="
             + resource.getMemorySize() + ","
             + AbsoluteResourceType.VCORES.toString().toLowerCase() + "="
-            + resource.getVirtualCores() + "]");
+            + resource.getVirtualCores()
+            + ResourceUtils.
+            getCustomResourcesStrings(resource) + "]");
 
     String prefix = getQueuePrefix(queue) + type;
     if (!label.isEmpty()) {
@@ -2567,8 +2577,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   private void updateResourceValuesFromConfig(Set<String> resourceTypes,
       Resource resource, String[] splits) {
 
+    String resourceName = splits[0].trim();
+
     // If key is not a valid type, skip it.
-    if (!resourceTypes.contains(splits[0])) {
+    if (!resourceTypes.contains(resourceName)
+        && !ResourceUtils.getResourceTypes().containsKey(resourceName)) {
+      LOG.error(resourceName + " not supported.");
       return;
     }
 
@@ -2581,9 +2595,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       resourceValue = UnitsConversionUtil.convert(units, "Mi", resourceValue);
     }
 
+    // Custom resource type defined by user.
+    // Such as GPU FPGA etc.
+    if (!resourceTypes.contains(resourceName)) {
+      resource.setResourceInformation(resourceName, ResourceInformation
+          .newInstance(resourceName, units, resourceValue));
+      return;
+    }
+
     // map it based on key.
     AbsoluteResourceType resType = AbsoluteResourceType
-        .valueOf(StringUtils.toUpperCase(splits[0].trim()));
+        .valueOf(StringUtils.toUpperCase(resourceName));
     switch (resType) {
     case MEMORY :
       resource.setMemorySize(resourceValue);
@@ -2592,8 +2614,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       resource.setVirtualCores(resourceValue.intValue());
       break;
     default :
-      resource.setResourceInformation(splits[0].trim(), ResourceInformation
-          .newInstance(splits[0].trim(), units, resourceValue));
+      resource.setResourceInformation(resourceName, ResourceInformation
+          .newInstance(resourceName, units, resourceValue));
       break;
     }
   }

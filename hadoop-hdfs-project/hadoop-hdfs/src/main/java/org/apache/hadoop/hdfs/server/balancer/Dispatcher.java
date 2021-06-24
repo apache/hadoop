@@ -398,6 +398,7 @@ public class Dispatcher {
         LOG.info("Successfully moved " + this);
       } catch (IOException e) {
         LOG.warn("Failed to move " + this, e);
+        nnc.getBlocksFailed().incrementAndGet();
         target.getDDatanode().setHasFailure();
         // Check that the failure is due to block pinning errors.
         if (e instanceof BlockPinningException) {
@@ -622,7 +623,7 @@ public class Dispatcher {
       public boolean equals(Object obj) {
         if (this == obj) {
           return true;
-        } else if (obj == null || !(obj instanceof StorageGroup)) {
+        } else if (!(obj instanceof StorageGroup)) {
           return false;
         } else {
           final StorageGroup that = (StorageGroup) obj;

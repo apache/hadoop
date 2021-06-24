@@ -218,7 +218,6 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 import org.slf4j.Logger;
@@ -1129,7 +1128,7 @@ public class DataNode extends ReconfigurableBase
       directoryScanner = new DirectoryScanner(data, conf);
       directoryScanner.start();
     } else {
-      LOG.info("Periodic Directory Tree Verification scan " +
+      LOG.warn("Periodic Directory Tree Verification scan " +
               "is disabled because {}",
           reason);
     }
@@ -1329,21 +1328,6 @@ public class DataNode extends ReconfigurableBase
         }
       }
     }
-  }
-
-  /**
-   * Try to send an error report to the NNs associated with the given
-   * block pool.
-   * @param bpid the block pool ID
-   * @param errCode error code to send
-   * @param errMsg textual message to send
-   */
-  void trySendErrorReport(String bpid, int errCode, String errMsg) {
-    BPOfferService bpos = blockPoolManager.get(bpid);
-    if (bpos == null) {
-      throw new IllegalArgumentException("Bad block pool: " + bpid);
-    }
-    bpos.trySendErrorReport(errCode, errMsg);
   }
 
   /**
@@ -2033,7 +2017,7 @@ public class DataNode extends ReconfigurableBase
       ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
       DataInputStream in = new DataInputStream(buf);
       id.readFields(in);
-      LOG.debug("Got: {}", id);
+      LOG.debug("BlockTokenIdentifier id: {}", id);
       blockPoolTokenSecretManager.checkAccess(id, null, block, accessMode,
           null, null);
     }
@@ -2256,8 +2240,8 @@ public class DataNode extends ReconfigurableBase
       return; // do not shutdown
     }
     
-    LOG.warn("DataNode is shutting down due to failed volumes: ["
-        + failedVolumes + "]");
+    LOG.warn("DataNode is shutting down due to failed volumes: [{}]",
+        failedVolumes);
     shouldRun = false;
   }
     
@@ -2299,7 +2283,7 @@ public class DataNode extends ReconfigurableBase
         curCount.put("networkErrors", curCount.get("networkErrors") + 1L);
         datanodeNetworkCounts.put(host, curCount);
       } catch (ExecutionException e) {
-        LOG.warn("failed to increment network error counts for " + host);
+        LOG.warn("failed to increment network error counts for host: {}", host);
       }
     }
   }
@@ -2349,7 +2333,7 @@ public class DataNode extends ReconfigurableBase
       final ExtendedBlock block, final String msg) {
     FsVolumeSpi volume = getFSDataset().getVolume(block);
     if (volume == null) {
-      LOG.warn("Cannot find FsVolumeSpi to report bad block: " + block);
+      LOG.warn("Cannot find FsVolumeSpi to report bad block: {}", block);
       return;
     }
     bpos.reportBadBlocks(
@@ -2430,7 +2414,7 @@ public class DataNode extends ReconfigurableBase
         transferBlock(new ExtendedBlock(poolId, blocks[i]), xferTargets[i],
             xferTargetStorageTypes[i], xferTargetStorageIDs[i]);
       } catch (IOException ie) {
-        LOG.warn("Failed to transfer block " + blocks[i], ie);
+        LOG.warn("Failed to transfer block {}", blocks[i], ie);
       }
     }
   }
@@ -2549,15 +2533,13 @@ public class DataNode extends ReconfigurableBase
     DataTransfer(DatanodeInfo targets[], StorageType[] targetStorageTypes,
         String[] targetStorageIds, ExtendedBlock b,
         BlockConstructionStage stage, final String clientname) {
-      if (DataTransferProtocol.LOG.isDebugEnabled()) {
-        DataTransferProtocol.LOG.debug("{}: {} (numBytes={}), stage={}, " +
-                "clientname={}, targets={}, target storage types={}, " +
-                "target storage IDs={}", getClass().getSimpleName(), b,
-            b.getNumBytes(), stage, clientname, Arrays.asList(targets),
-            targetStorageTypes == null ? "[]" :
-                Arrays.asList(targetStorageTypes),
-            targetStorageIds == null ? "[]" : Arrays.asList(targetStorageIds));
-      }
+      DataTransferProtocol.LOG.debug("{}: {} (numBytes={}), stage={}, " +
+              "clientname={}, targets={}, target storage types={}, " +
+              "target storage IDs={}", getClass().getSimpleName(), b,
+          b.getNumBytes(), stage, clientname, Arrays.asList(targets),
+          targetStorageTypes == null ? "[]" :
+              Arrays.asList(targetStorageTypes),
+          targetStorageIds == null ? "[]" : Arrays.asList(targetStorageIds));
       this.targets = targets;
       this.targetStorageTypes = targetStorageTypes;
       this.targetStorageIds = targetStorageIds;
@@ -2661,7 +2643,7 @@ public class DataNode extends ReconfigurableBase
         LOG.warn("{}:Failed to transfer {} to {} got",
             bpReg, b, targets[0], ie);
       } catch (Throwable t) {
-        LOG.error("Failed to transfer block " + b, t);
+        LOG.error("Failed to transfer block {}", b, t);
       } finally {
         decrementXmitsInProgress();
         IOUtils.closeStream(blockSender);
@@ -3103,7 +3085,7 @@ public class DataNode extends ReconfigurableBase
       }
       for (TokenIdentifier tokenId : tokenIds) {
         BlockTokenIdentifier id = (BlockTokenIdentifier) tokenId;
-        LOG.debug("Got: {}", id);
+        LOG.debug("BlockTokenIdentifier: {}", id);
         blockPoolTokenSecretManager.checkAccess(id, null, block,
             BlockTokenIdentifier.AccessMode.READ, null, null);
       }
@@ -3143,8 +3125,10 @@ public class DataNode extends ReconfigurableBase
       b.setGenerationStamp(storedGS);
       if (data.isValidRbw(b)) {
         stage = BlockConstructionStage.TRANSFER_RBW;
+        LOG.debug("Replica is being written!");
       } else if (data.isValidBlock(b)) {
         stage = BlockConstructionStage.TRANSFER_FINALIZED;
+        LOG.debug("Replica is finalized!");
       } else {
         final String r = data.getReplicaString(b.getBlockPoolId(), b.getBlockId());
         throw new IOException(b + " is neither a RBW nor a Finalized, r=" + r);

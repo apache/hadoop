@@ -74,7 +74,9 @@ public abstract class AppAdminClient extends CompositeService {
     }
     if (!clientClassMap.containsKey(appType)) {
       throw new IllegalArgumentException("App admin client class name not " +
-          "specified for type " + appType);
+          "specified for type " + appType + ". Please ensure " + appType +
+          " framework has provided a client implementation to handle" +
+          " this functionality.");
     }
     String clientClassName = clientClassMap.get(appType);
     Class<? extends AppAdminClient> clientClass;

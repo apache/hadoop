@@ -23,10 +23,14 @@
 #include "fs/bad_datanode_tracker.h"
 #include "reader/block_reader.h"
 
+#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gmock/gmock-spec-builders.h>
+#include <gmock/gmock-generated-actions.h>
 
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/error.hpp>
+
 
 using hadoop::common::TokenProto;
 using hadoop::hdfs::DatanodeInfoProto;
@@ -139,7 +143,10 @@ TEST(BadDataNodeTest, TestNoNodes) {
   auto monitors = std::make_shared<LibhdfsEvents>();
   bad_node_tracker->AddBadNode("foo");
 
-  PartialMockFileHandle is("cluster", "file", io_service, GetRandomClientName(), file_info, bad_node_tracker, monitors);
+  const auto client_name = GetRandomClientName();
+  ASSERT_NE(client_name, nullptr);
+
+  PartialMockFileHandle is("cluster", "file", io_service, client_name, file_info, bad_node_tracker, monitors);
   Status stat;
   size_t read = 0;
 
@@ -195,7 +202,11 @@ TEST(BadDataNodeTest, NNEventCallback) {
 
     return event_response::make_ok();
   });
-  PartialMockFileHandle is("cluster", "file", io_service, GetRandomClientName(),  file_info, tracker, monitors);
+
+  const auto client_name = GetRandomClientName();
+  ASSERT_NE(client_name, nullptr);
+
+  PartialMockFileHandle is("cluster", "file", io_service, client_name,  file_info, tracker, monitors);
   Status stat;
   size_t read = 0;
 
@@ -241,7 +252,11 @@ TEST(BadDataNodeTest, RecoverableError) {
   std::shared_ptr<IoService> io_service = IoService::MakeShared();
   auto tracker = std::make_shared<BadDataNodeTracker>();
   auto monitors = std::make_shared<LibhdfsEvents>();
-  PartialMockFileHandle is("cluster", "file", io_service, GetRandomClientName(),  file_info, tracker, monitors);
+
+  const auto client_name = GetRandomClientName();
+  ASSERT_NE(client_name, nullptr);
+
+  PartialMockFileHandle is("cluster", "file", io_service, client_name,  file_info, tracker, monitors);
   Status stat;
   size_t read = 0;
   EXPECT_CALL(*is.mock_reader_, AsyncReadBlock(_,_,_,_,_))
@@ -292,7 +307,11 @@ TEST(BadDataNodeTest, InternalError) {
   std::shared_ptr<IoService> io_service = IoService::MakeShared();
   auto tracker = std::make_shared<BadDataNodeTracker>();
   auto monitors = std::make_shared<LibhdfsEvents>();
-  PartialMockFileHandle is("cluster", "file", io_service, GetRandomClientName(),  file_info, tracker, monitors);
+
+  const auto client_name = GetRandomClientName();
+  ASSERT_NE(client_name, nullptr);
+
+  PartialMockFileHandle is("cluster", "file", io_service, client_name,  file_info, tracker, monitors);
   Status stat;
   size_t read = 0;
   EXPECT_CALL(*is.mock_reader_, AsyncReadBlock(_,_,_,_,_))

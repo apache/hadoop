@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-list(APPEND rpc_object_items rpc_connection_impl.cc rpc_engine.cc namenode_tracker.cc request.cc sasl_protocol.cc sasl_engine.cc)
+list(APPEND rpc_object_items $<TARGET_OBJECTS:x_platform_obj> rpc_connection_impl.cc rpc_engine.cc namenode_tracker.cc request.cc sasl_protocol.cc sasl_engine.cc)
 if (CMAKE_USING_CYRUS_SASL)
   list(APPEND rpc_object_items cyrus_sasl_engine.cc)
 endif (CMAKE_USING_CYRUS_SASL)
@@ -25,7 +25,8 @@ if (CMAKE_USING_GSASL)
 endif (CMAKE_USING_GSASL)
 
 add_library(rpc_obj OBJECT ${rpc_object_items})
-
+target_include_directories(rpc_obj PRIVATE ../../lib)
 
 add_dependencies(rpc_obj proto)
 add_library(rpc $<TARGET_OBJECTS:rpc_obj>)
+target_include_directories(rpc PRIVATE ../../lib)

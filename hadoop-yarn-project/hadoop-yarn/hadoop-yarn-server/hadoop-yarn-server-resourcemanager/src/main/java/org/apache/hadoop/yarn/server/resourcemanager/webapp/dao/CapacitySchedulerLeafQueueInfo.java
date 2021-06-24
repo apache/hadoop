@@ -43,7 +43,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected int numContainers;
   protected int maxApplications;
   protected int maxApplicationsPerUser;
-  protected int userLimit;
+  protected float userLimit;
   protected UsersInfo users; // To add another level in the XML
   protected float userLimitFactor;
   protected float configuredMaxAMResourceLimit;
@@ -52,7 +52,6 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected ResourceInfo userAMResourceLimit;
   protected boolean preemptionDisabled;
   protected boolean intraQueuePreemptionDisabled;
-  protected String defaultNodeLabelExpression;
   protected int defaultPriority;
   protected boolean isAutoCreatedLeafQueue;
   protected long maxApplicationLifetime;
@@ -81,7 +80,6 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     intraQueuePreemptionDisabled = q.getIntraQueuePreemptionDisabled();
     orderingPolicyDisplayName = q.getOrderingPolicy().getInfo();
     orderingPolicyInfo = q.getOrderingPolicy().getConfigName();
-    defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
     defaultPriority = q.getDefaultApplicationPriority().getPriority();
     ArrayList<UserInfo> usersList = users.getUsersList();
     if (usersList.isEmpty()) {
@@ -132,7 +130,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     return maxApplicationsPerUser;
   }
 
-  public int getUserLimit() {
+  public float getUserLimit() {
     return userLimit;
   }
 
@@ -148,17 +146,17 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   public float getConfiguredMaxAMResourceLimit() {
     return configuredMaxAMResourceLimit;
   }
-  
+
   public ResourceInfo getAMResourceLimit() {
     return AMResourceLimit;
   }
-  
+
   public ResourceInfo getUsedAMResource() {
     return usedAMResource;
   }
 
   public ResourceInfo getUserAMResourceLimit() {
-    return userAMResourceLimit; 
+    return userAMResourceLimit;
   }
 
   public boolean getPreemptionDisabled() {
@@ -171,10 +169,6 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public String getOrderingPolicyDisplayName() {
     return orderingPolicyDisplayName;
-  }
-  
-  public String getDefaultNodeLabelExpression() {
-    return defaultNodeLabelExpression;
   }
 
   public int getDefaultApplicationPriority() {

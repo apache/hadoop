@@ -29,7 +29,7 @@
 
 #include "hdfspp/hdfs_ext.h"
 #include "common/util_c.h"
-#include "x-platform/c_api.h"
+#include "x-platform/c-api/syscall.h"
 
 #define ERROR_BUFFER_SIZE 1024
 

@@ -897,6 +897,8 @@ class DataStreamer extends Daemon {
     try (TraceScope ignored = dfsClient.getTracer().
         newScope("waitForAckedSeqno")) {
       LOG.debug("{} waiting for ack for: {}", this, seqno);
+      int dnodes = nodes != null ? nodes.length : 3;
+      int writeTimeout = dfsClient.getDatanodeWriteTimeout(dnodes);
       long begin = Time.monotonicNow();
       try {
         synchronized (dataQueue) {
@@ -907,6 +909,16 @@ class DataStreamer extends Daemon {
             }
             try {
               dataQueue.wait(1000); // when we receive an ack, we notify on
+              long duration = Time.monotonicNow() - begin;
+              if (duration > writeTimeout) {
+                LOG.error("No ack received, took {}ms (threshold={}ms). "
+                    + "File being written: {}, block: {}, "
+                    + "Write pipeline datanodes: {}.",
+                    duration, writeTimeout, src, block, nodes);
+                throw new InterruptedIOException("No ack received after " +
+                    duration / 1000 + "s and a timeout of " +
+                    writeTimeout / 1000 + "s");
+              }
               // dataQueue
             } catch (InterruptedException ie) {
               throw new InterruptedIOException(
@@ -1671,7 +1683,7 @@ class DataStreamer extends Daemon {
 
   DatanodeInfo[] getExcludedNodes() {
     return excludedNodes.getAllPresent(excludedNodes.asMap().keySet())
-            .keySet().toArray(new DatanodeInfo[0]);
+            .keySet().toArray(DatanodeInfo.EMPTY_ARRAY);
   }
 
   /**

@@ -132,6 +132,7 @@ import org.apache.hadoop.ipc.ClientId;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -141,7 +142,6 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Helper classes for reading the ops from an InputStream.
@@ -3477,17 +3477,30 @@ public abstract class FSEditLogOp {
     void readFields(DataInputStream in, int logVersion) throws IOException {
       snapshotRoot = FSImageSerialization.readString(in);
       snapshotName = FSImageSerialization.readString(in);
-      mtime = FSImageSerialization.readLong(in);
-      
+      if (NameNodeLayoutVersion
+          .supports(NameNodeLayoutVersion.Feature.SNAPSHOT_MODIFICATION_TIME,
+              logVersion)) {
+        mtime = FSImageSerialization.readLong(in);
+      }
       // read RPC ids if necessary
       readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
+      throw new IOException("Unsupported without logversion");
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out, int logVersion)
+        throws IOException {
       FSImageSerialization.writeString(snapshotRoot, out);
       FSImageSerialization.writeString(snapshotName, out);
-      FSImageSerialization.writeLong(mtime, out);
+      if (NameNodeLayoutVersion
+          .supports(NameNodeLayoutVersion.Feature.SNAPSHOT_MODIFICATION_TIME,
+              logVersion)) {
+        FSImageSerialization.writeLong(mtime, out);
+      }
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
@@ -3569,17 +3582,30 @@ public abstract class FSEditLogOp {
     void readFields(DataInputStream in, int logVersion) throws IOException {
       snapshotRoot = FSImageSerialization.readString(in);
       snapshotName = FSImageSerialization.readString(in);
-      mtime = FSImageSerialization.readLong(in);
-      
+      if (NameNodeLayoutVersion
+          .supports(NameNodeLayoutVersion.Feature.SNAPSHOT_MODIFICATION_TIME,
+              logVersion)) {
+        mtime = FSImageSerialization.readLong(in);
+      }
       // read RPC ids if necessary
       readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
+      throw new IOException("Unsupported without logversion");
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out, int logVersion)
+        throws IOException {
       FSImageSerialization.writeString(snapshotRoot, out);
       FSImageSerialization.writeString(snapshotName, out);
-      FSImageSerialization.writeLong(mtime, out);
+      if (NameNodeLayoutVersion
+          .supports(NameNodeLayoutVersion.Feature.SNAPSHOT_MODIFICATION_TIME,
+              logVersion)) {
+        FSImageSerialization.writeLong(mtime, out);
+      }
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
@@ -3670,19 +3696,31 @@ public abstract class FSEditLogOp {
       snapshotRoot = FSImageSerialization.readString(in);
       snapshotOldName = FSImageSerialization.readString(in);
       snapshotNewName = FSImageSerialization.readString(in);
-      mtime = FSImageSerialization.readLong(in);
-      
+      if (NameNodeLayoutVersion
+          .supports(NameNodeLayoutVersion.Feature.SNAPSHOT_MODIFICATION_TIME,
+              logVersion)) {
+        mtime = FSImageSerialization.readLong(in);
+      }
       // read RPC ids if necessary
       readRpcIds(in, logVersion);
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
+      throw new IOException("Unsupported without logversion");
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out, int logVersion)
+        throws IOException {
       FSImageSerialization.writeString(snapshotRoot, out);
       FSImageSerialization.writeString(snapshotOldName, out);
       FSImageSerialization.writeString(snapshotNewName, out);
-      FSImageSerialization.writeLong(mtime, out);
-      
+      if (NameNodeLayoutVersion
+          .supports(NameNodeLayoutVersion.Feature.SNAPSHOT_MODIFICATION_TIME,
+              logVersion)) {
+        FSImageSerialization.writeLong(mtime, out);
+      }
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
 

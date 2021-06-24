@@ -21,11 +21,16 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Map;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 
 /**
  * Tests AzureBlobFileSystem Statistics.
@@ -37,6 +42,14 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
   public ITestAbfsStatistics() throws Exception {
   }
 
+  @Before
+  public void setUp() throws Exception {
+    super.setup();
+    // Setting IOStats to INFO level, to see the IOStats after close().
+    getFileSystem().getConf().set(IOSTATISTICS_LOGGING_LEVEL,
+        IOSTATISTICS_LOGGING_LEVEL_INFO);
+  }
+
   /**
    * Testing the initial value of statistics.
    */
@@ -46,14 +59,21 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
 
     AbfsCounters abfsCounters =
         new AbfsCountersImpl(getFileSystem().getUri());
-    Map<String, Long> metricMap = abfsCounters.toMap();
+    IOStatistics ioStatistics = abfsCounters.getIOStatistics();
 
-    for (Map.Entry<String, Long> entry : metricMap.entrySet()) {
-      String key = entry.getKey();
-      Long value = entry.getValue();
+    //Initial value verification for counters
+    for (Map.Entry<String, Long> entry : ioStatistics.counters().entrySet()) {
+      checkInitialValue(entry.getKey(), entry.getValue(), 0);
+    }
 
-      //Verify if initial value of statistic is 0.
-      checkInitialValue(key, value);
+    //Initial value verification for gauges
+    for (Map.Entry<String, Long> entry : ioStatistics.gauges().entrySet()) {
+      checkInitialValue(entry.getKey(), entry.getValue(), 0);
+    }
+
+    //Initial value verifications for DurationTrackers
+    for (Map.Entry<String, Long> entry : ioStatistics.maximums().entrySet()) {
+      checkInitialValue(entry.getKey(), entry.getValue(), -1);
     }
   }
 
@@ -251,8 +271,10 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
    *
    * @param statName  name of the statistic to be checked.
    * @param statValue value of the statistic.
+   * @param expectedInitialValue initial value expected from this statistic.
    */
-  private void checkInitialValue(String statName, long statValue) {
-    assertEquals("Mismatch in " + statName, 0, statValue);
+  private void checkInitialValue(String statName, long statValue,
+      long expectedInitialValue) {
+    assertEquals("Mismatch in " + statName, expectedInitialValue, statValue);
   }
 }
