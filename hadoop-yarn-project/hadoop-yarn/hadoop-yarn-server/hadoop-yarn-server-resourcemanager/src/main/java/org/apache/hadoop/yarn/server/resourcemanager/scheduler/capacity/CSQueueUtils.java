@@ -66,13 +66,12 @@ public class CSQueueUtils {
     return (parentAbsMaxCapacity * maximumCapacity);
   }
 
-  public static void loadCapacitiesByLabelsFromConf(String queuePath,
-      QueueCapacities queueCapacities, CapacitySchedulerConfiguration csConf) {
+  public static void loadCapacitiesByLabelsFromConf(
+      String queuePath, QueueCapacities queueCapacities,
+      CapacitySchedulerConfiguration csConf, Set<String> nodeLabels) {
     queueCapacities.clearConfigurableFields();
-    Set<String> configuredNodelabels =
-        csConf.getConfiguredNodeLabels(queuePath);
 
-    for (String label : configuredNodelabels) {
+    for (String label : nodeLabels) {
       if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
         queueCapacities.setCapacity(label,
             csConf.getNonLabeledQueueCapacity(queuePath) / 100);

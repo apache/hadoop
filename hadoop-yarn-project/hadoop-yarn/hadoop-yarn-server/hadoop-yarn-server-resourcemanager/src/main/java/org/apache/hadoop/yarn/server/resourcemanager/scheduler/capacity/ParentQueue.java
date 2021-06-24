@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -1258,9 +1257,7 @@ public class ParentQueue extends AbstractCSQueue {
       }
 
       // Update effective capacity in all parent queue.
-      Set<String> configuredNodelabels = csContext.getConfiguration()
-          .getConfiguredNodeLabels(getQueuePath());
-      for (String label : configuredNodelabels) {
+      for (String label : configuredNodeLabels) {
         calculateEffectiveResourcesAndCapacity(label, clusterResource);
       }
 

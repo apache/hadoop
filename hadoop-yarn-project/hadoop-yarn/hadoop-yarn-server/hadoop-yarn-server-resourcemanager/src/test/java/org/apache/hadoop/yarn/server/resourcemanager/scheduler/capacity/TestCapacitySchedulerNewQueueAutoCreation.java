@@ -706,6 +706,21 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     LeafQueue a3 = createQueue("root.a.a3");
     Assert.assertFalse("auto queue deletion should be turned off on a3",
         a3.isEligibleForAutoDeletion());
+
+    // Set the capacity of label TEST
+    csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
+        "root.c") + "accessible-node-labels.TEST.capacity", "6w");
+    csConf.setQueues("root", new String[]{"a", "b", "c"});
+    csConf.setAutoQueueCreationV2Enabled("root.c", true);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    LeafQueue c1 = createQueue("root.c.c1");
+    Assert.assertEquals("weight is not set for label TEST", 6f,
+        c1.getQueueCapacities().getWeight("TEST"), 1e-6);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    c1 = (LeafQueue) cs.getQueue("root.c.c1");
+    Assert.assertEquals("weight is not set for label TEST", 6f,
+        c1.getQueueCapacities().getWeight("TEST"), 1e-6);
+
   }
 
   @Test
