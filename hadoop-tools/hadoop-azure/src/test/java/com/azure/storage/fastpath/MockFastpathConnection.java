@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.microsoft.fastpath;
+package com.azure.storage.fastpath;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -25,17 +25,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.microsoft.fastpath.driver.FastpathDriver;
-import com.microsoft.fastpath.MockSharedLib;
-import com.microsoft.fastpath.exceptions.FastpathException;
-import com.microsoft.fastpath.exceptions.FastpathConnectionException;
-import com.microsoft.fastpath.exceptions.FastpathRequestException;
-import com.microsoft.fastpath.requestParameters.FastpathCloseRequestParams;
-import com.microsoft.fastpath.requestParameters.FastpathOpenRequestParams;
-import com.microsoft.fastpath.requestParameters.FastpathReadRequestParams;
-import com.microsoft.fastpath.responseProviders.FastpathCloseResponse;
-import com.microsoft.fastpath.responseProviders.FastpathOpenResponse;
-import com.microsoft.fastpath.responseProviders.FastpathReadResponse;
+import com.azure.storage.fastpath.driver.FastpathDriver;
+import com.azure.storage.fastpath.MockSharedLib;
+import com.azure.storage.fastpath.exceptions.FastpathException;
+import com.azure.storage.fastpath.exceptions.FastpathConnectionException;
+import com.azure.storage.fastpath.exceptions.FastpathRequestException;
+import com.azure.storage.fastpath.requestParameters.FastpathCloseRequestParams;
+import com.azure.storage.fastpath.requestParameters.FastpathOpenRequestParams;
+import com.azure.storage.fastpath.requestParameters.FastpathReadRequestParams;
+import com.azure.storage.fastpath.responseProviders.FastpathCloseResponse;
+import com.azure.storage.fastpath.responseProviders.FastpathOpenResponse;
+import com.azure.storage.fastpath.responseProviders.FastpathReadResponse;
 
 public class MockFastpathConnection
     extends FastpathConnection {

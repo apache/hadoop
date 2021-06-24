@@ -29,7 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.io.IOException;
 
-import com.microsoft.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;

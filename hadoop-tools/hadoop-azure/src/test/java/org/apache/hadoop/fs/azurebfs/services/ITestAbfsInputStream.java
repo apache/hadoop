@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
-import com.microsoft.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;

@@ -149,10 +149,10 @@
     </dependency>
 
     <dependency>
-      <groupId>com.microsoft.fastpath</groupId>
-      <artifactId>fastpath-java</artifactId>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-storage-fastpath</artifactId>
       <scope>compile</scope>
-      <version>1.0-SNAPSHOT</version>
+      <version>1.0.0-beta.1</version>
     </dependency>
     
     <dependency>

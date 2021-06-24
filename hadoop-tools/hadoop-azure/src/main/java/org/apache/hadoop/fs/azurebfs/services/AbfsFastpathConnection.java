@@ -27,18 +27,18 @@ import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
-import com.microsoft.fastpath.FastpathConnection;
-import com.microsoft.fastpath.exceptions.FastpathException;
-import com.microsoft.fastpath.exceptions.FastpathRequestException;
-import com.microsoft.fastpath.exceptions.FastpathConnectionException;
-import com.microsoft.fastpath.requestParameters.AccessTokenType;
-import com.microsoft.fastpath.requestParameters.FastpathCloseRequestParams;
-import com.microsoft.fastpath.requestParameters.FastpathOpenRequestParams;
-import com.microsoft.fastpath.requestParameters.FastpathReadRequestParams;
-import com.microsoft.fastpath.responseProviders.FastpathCloseResponse;
-import com.microsoft.fastpath.responseProviders.FastpathOpenResponse;
-import com.microsoft.fastpath.responseProviders.FastpathReadResponse;
-import com.microsoft.fastpath.responseProviders.FastpathResponse;
+import com.azure.storage.fastpath.FastpathConnection;
+import com.azure.storage.fastpath.exceptions.FastpathException;
+import com.azure.storage.fastpath.exceptions.FastpathRequestException;
+import com.azure.storage.fastpath.exceptions.FastpathConnectionException;
+import com.azure.storage.fastpath.requestParameters.AccessTokenType;
+import com.azure.storage.fastpath.requestParameters.FastpathCloseRequestParams;
+import com.azure.storage.fastpath.requestParameters.FastpathOpenRequestParams;
+import com.azure.storage.fastpath.requestParameters.FastpathReadRequestParams;
+import com.azure.storage.fastpath.responseProviders.FastpathCloseResponse;
+import com.azure.storage.fastpath.responseProviders.FastpathOpenResponse;
+import com.azure.storage.fastpath.responseProviders.FastpathReadResponse;
+import com.azure.storage.fastpath.responseProviders.FastpathResponse;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsFastpathException;
 

@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.junit.Assume;
 import org.junit.Test;
 
-import com.microsoft.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;

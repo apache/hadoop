@@ -28,7 +28,7 @@ import java.util.Arrays;
 
 import org.assertj.core.api.Assertions;
 
-import com.microsoft.fastpath.MockFastpathConnection;
+import com.azure.storage.fastpath.MockFastpathConnection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;

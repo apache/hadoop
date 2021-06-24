@@ -103,7 +103,7 @@ public class MockAbfsClient extends AbfsClient {
         forceFastpathReadAlways = false;
         // execute original abfsclient behaviour
         reqParams.setMode(Mode.HTTP_CONNECTION_MODE);
-        if (ex.getCause() instanceof com.microsoft.fastpath.exceptions.FastpathRequestException) {
+        if (ex.getCause() instanceof com.azure.storage.fastpath.exceptions.FastpathRequestException) {
           reqParams.setFastpathStatus(FastpathStatus.REQ_FAIL_REST_FALLBACK);
         } else {
           reqParams.setFastpathStatus(FastpathStatus.CONN_FAIL_REST_FALLBACK);
