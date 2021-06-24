@@ -472,6 +472,10 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   protected boolean getDefaultFastpathFeatureStatus() throws IOException {
+    assumeTrue("Fastpath supported only for HNS account",
+        getFileSystem().getIsNamespaceEnabled());
+    assumeTrue("Fastpath supported only for OAuth auth type",
+        authType == AuthType.OAuth);
     return getFileSystem().getAbfsStore().getAbfsConfiguration().isFastpathEnabled();
   }
 
