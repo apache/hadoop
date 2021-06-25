@@ -424,10 +424,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
             return -1;
           } catch (SocketTimeoutException e) {
             onReadFailure(e, 1, true);
-            b = wrappedStream.read();
+            throw e;
           } catch (IOException e) {
             onReadFailure(e, 1, false);
-            b = wrappedStream.read();
+            throw e;
           }
           return b;
         });
@@ -513,10 +513,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
             return -1;
           } catch (SocketTimeoutException e) {
             onReadFailure(e, len, true);
-            bytes = wrappedStream.read(buf, off, len);
+            throw e;
           } catch (IOException e) {
             onReadFailure(e, len, false);
-            bytes= wrappedStream.read(buf, off, len);
+            throw e;
           }
           return bytes;
         });
