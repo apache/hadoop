@@ -74,11 +74,14 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
   /**
    * Test verifies if the data is read correctly
    * when {@code ConfigurationKeys#AZURE_READ_AHEAD_RANGE} is set.
+   * Reason for not breaking this test into smaller parts is we
+   * really want to simulate lot of forward and backward seeks
+   * similar to real production use case.
    */
   @Test
   public void testSeekAndReadWithReadAhead() throws IOException {
-    describe(" Testing seek and read with read ahead " +
-            "enabled for random reads");
+    describe(" Testing seek and read with read ahead "
+            + "enabled for random reads");
 
     Path testSeekFile = path(getMethodName() + "bigseekfile.txt");
     createDataSet(testSeekFile);
@@ -90,12 +93,15 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
               MIN_BUFFER_SIZE, inStream.getReadAheadRange());
 
       long remoteReadOperationsOldVal = streamStatistics.getRemoteReadOperations();
-      assertEquals("Number of remote read ops should be 0 " +
-              "before any read call is made", 0, remoteReadOperationsOldVal);
+      Assertions.assertThat(remoteReadOperationsOldVal)
+              .describedAs("Number of remote read ops should be 0 "
+                      + "before any read call is made")
+              .isEqualTo(0);
 
       // Test read at first position. Remote read.
-      assertEquals("First call to getPos() should return 0",
-              0, inStream.getPos());
+      Assertions.assertThat(inStream.getPos())
+              .describedAs("First call to getPos() should return 0")
+              .isEqualTo(0);
       assertDataAtPos(0,  (byte) in.read());
       assertSeekBufferStats(0, streamStatistics.getSeekInBuffer());
       long remoteReadOperationsNewVal = streamStatistics.getRemoteReadOperations();
@@ -148,7 +154,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
       remoteReadOperationsOldVal = remoteReadOperationsNewVal;
 
       // Seek backward such that data is read from remote.
-      newSeek -= 100;
+      newSeek -= 101;
       in.seek(newSeek);
       assertGetPosition(newSeek, in.getPos());
       assertDataAtPos(newSeek, (byte) in.read());
@@ -194,8 +200,8 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
    */
   @Test
   public void testSeekAfterUnbuffer() throws IOException {
-    describe("Test to make sure that seeking in AbfsInputStream after " +
-            "unbuffer() call is not doing anyIO.");
+    describe("Test to make sure that seeking in AbfsInputStream after "
+            + "unbuffer() call is not doing anyIO.");
     Path testFile = path(getMethodName() + ".txt");
     createDataSet(testFile);
     final CompletableFuture<FSDataInputStream> future =
@@ -226,22 +232,30 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
 
   private void assertGetPosition(long expected, long actual) {
     final String seekPosErrorMsg = "getPos() should return %s";
-    assertEquals(String.format(seekPosErrorMsg, expected), expected, actual);
+    Assertions.assertThat(actual)
+            .describedAs(seekPosErrorMsg, expected)
+            .isEqualTo(actual);
   }
 
   private void assertDataAtPos(int pos, byte actualData) {
     final String dataErrorMsg = "Mismatch in data@%s";
-    assertEquals(String.format(dataErrorMsg, pos), BLOCK[pos], actualData);
+    Assertions.assertThat(actualData)
+            .describedAs(dataErrorMsg, pos)
+            .isEqualTo(BLOCK[pos]);
   }
 
   private void assertSeekBufferStats(long expected, long actual) {
     final String statsErrorMsg = "Mismatch in seekInBuffer counts";
-    assertEquals(statsErrorMsg, expected, actual);
+    Assertions.assertThat(actual)
+            .describedAs(statsErrorMsg)
+            .isEqualTo(expected);
   }
 
   private void assertNoIncrementInRemoteReadOps(long oldVal, long newVal) {
     final String incrementErrorMsg = "Number of remote read ops shouldn't increase";
-    assertEquals(incrementErrorMsg, oldVal, newVal);
+    Assertions.assertThat(newVal)
+            .describedAs(incrementErrorMsg)
+            .isEqualTo(oldVal);
   }
 
   private void assertIncrementInRemoteReadOps(long oldVal, long newVal) {
@@ -267,9 +281,10 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
           int length) {
     for (int i = 0; i < length; i++) {
       int o = readOffset + i;
-      assertEquals(operation + "with read offset " + readOffset
-                      + ": data[" + i + "] != actualData[" + o + "]",
-              BLOCK[o], data[i]);
+      Assertions.assertThat(data[i])
+              .describedAs(operation + "with read offset " + readOffset
+                      + ": data[" + i + "] != actualData[" + o + "]")
+              .isEqualTo(BLOCK[o]);
     }
   }
 }

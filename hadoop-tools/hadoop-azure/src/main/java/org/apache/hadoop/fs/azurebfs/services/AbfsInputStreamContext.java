@@ -38,7 +38,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   private boolean alwaysReadBufferSize;
 
   private int readAheadBlockSize;
-  
+
   private int readAheadRange;
 
   private AbfsInputStreamStatistics streamStatistics;

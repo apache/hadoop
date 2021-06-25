@@ -71,9 +71,9 @@ public final class ConfigurationKeys {
 
   /**
    * Read ahead range parameter which can be set by user.
-   * Default value is {@code FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
+   * Default value is {@link FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
    * This might reduce number of calls to remote as next requested
-   * data could already be present in buffer.
+   * data could already be present in buffer {@value}.
    */
   public static final String AZURE_READ_AHEAD_RANGE = "fs.azure.readahead.range";
   public static final String AZURE_BLOCK_SIZE_PROPERTY_NAME = "fs.azure.block.size";
