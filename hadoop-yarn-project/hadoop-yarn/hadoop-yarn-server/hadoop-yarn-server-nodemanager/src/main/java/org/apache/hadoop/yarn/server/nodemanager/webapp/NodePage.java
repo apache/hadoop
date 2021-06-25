@@ -41,7 +41,7 @@ public class NodePage extends NMView {
   @Override
   protected void commonPreHead(HTML<__> html) {
     super.commonPreHead(html);
-
+    setTitle("NodeManager information");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:1}");
   }
 
