@@ -72,7 +72,7 @@ public class DistCpProcedure extends BalanceProcedure {
       LoggerFactory.getLogger(DistCpProcedure.class);
 
   /* Stages of this procedure. */
-  enum Stage {
+  protected enum Stage {
     PRE_CHECK, INIT_DISTCP, DIFF_DISTCP, DISABLE_WRITE, FINAL_DISTCP, FINISH
   }
 
@@ -325,7 +325,7 @@ public class DistCpProcedure extends BalanceProcedure {
   }
 
   @VisibleForTesting
-  void updateStage(Stage value) {
+  protected void updateStage(Stage value) {
     String oldStage = stage == null ? "null" : stage.name();
     String newStage = value == null ? "null" : value.name();
     LOG.info("Stage updated from {} to {}.", oldStage, newStage);
