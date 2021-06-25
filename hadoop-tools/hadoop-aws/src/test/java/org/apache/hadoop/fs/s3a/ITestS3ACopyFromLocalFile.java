@@ -24,7 +24,13 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Set;
 
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
+import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -118,6 +124,29 @@ public class ITestS3ACopyFromLocalFile extends AbstractS3ATestBase {
     // first upload to create
     intercept(FileNotFoundException.class, "",
         () -> upload(file, true));
+  }
+
+  @Test
+  public void testImplementationTemporary() throws Throwable {
+    java.nio.file.Path srcDir = Files.createTempDirectory("parent");
+    java.nio.file.Path childDir = Files.createTempDirectory(srcDir, "child");
+    java.nio.file.Path secondChild = Files.createTempDirectory(srcDir, "secondChild");
+    java.nio.file.Path parentFile = Files.createTempFile(srcDir, "test1", ".txt");
+    java.nio.file.Path childFile = Files.createTempFile(childDir, "test2", ".txt");
+
+    Path src = new Path(srcDir.toUri());
+    Path dst = path(srcDir.getFileName().toString());
+
+    S3AFileSystem fileSystem = getFileSystem();
+    fileSystem.copyFromLocalFile(true, true, src, dst);
+
+    java.nio.file.Path parent = srcDir.getParent();
+
+    assertPathExists("Parent directory", srcDir, parent);
+    assertPathExists("Child directory", childDir, parent);
+    assertPathExists("Parent file", parentFile, parent);
+    assertPathExists("Child file", childFile, parent);
+
   }
 
   /*

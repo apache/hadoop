@@ -1,14 +1,12 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import org.apache.commons.collections.comparators.ReverseComparator;
-import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Retries;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,9 +14,11 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -32,67 +32,76 @@ import java.util.Set;
  * - Remove remaining TODO s
  * - Clean old `innerCopyFromLocalFile` code up
  */
-public class CopyFromLocalOperation extends ExecutingStoreOperation<Void>
-        implements IOStatisticsSource {
+public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
 
     private static final Logger LOG = LoggerFactory.getLogger(
             CopyFromLocalOperation.class);
 
     private final CopyFromLocalOperationCallbacks callbacks;
-    private final boolean delSrc;
+    private final boolean deleteSource;
     private final boolean overwrite;
-    private final Path src;
-    private final Path dst;
+    private final Path source;
+    private final Path destination;
 
     public CopyFromLocalOperation(
             final StoreContext storeContext,
-            boolean delSrc,
+            Path source,
+            Path destination,
+            boolean deleteSource,
             boolean overwrite,
-            Path src,
-            Path dst,
             CopyFromLocalOperationCallbacks callbacks) {
         super(storeContext);
         this.callbacks = callbacks;
-        this.delSrc = delSrc;
+        this.deleteSource = deleteSource;
         this.overwrite = overwrite;
-        this.src = src;
-        this.dst = dst;
+        this.source = source;
+        this.destination = destination;
     }
 
     @Override
     @Retries.RetryTranslated
     public Void execute()
             throws IOException, PathExistsException {
-        LOG.debug("Copying local file from {} to {}", src, dst);
-        LocalFileSystem local = callbacks.getLocalFS();
-        File sourceFile = local.pathToFile(src);
+        LOG.debug("Copying local file from {} to {}", source, destination);
+        File sourceFile = callbacks.pathToFile(source);
 
         checkSource(sourceFile);
-        prepareDestination(dst, sourceFile.isFile(), overwrite);
-        uploadSourceFromFS(local);
+        prepareDestination(destination, sourceFile, overwrite);
+        uploadSourceFromFS();
 
-        if (delSrc) {
-            local.delete(src, true);
+        if (deleteSource) {
+            callbacks.delete(source, true);
         }
 
         return null;
     }
 
-    private void uploadSourceFromFS(LocalFileSystem local)
+    private void uploadSourceFromFS()
             throws IOException, PathExistsException {
         RemoteIterator<LocatedFileStatus> localFiles = callbacks
-                .listStatusIterator(src, true);
+                .listStatusIterator(source, true);
 
-        // Go through all files and create UploadEntries
+        // After all files are traversed, this set will contain only emptyDirs
+        Set<Path> emptyDirs = new HashSet<>();
         List<UploadEntry> entries = new ArrayList<>();
         while (localFiles.hasNext()) {
-            LocatedFileStatus status = localFiles.next();
-            Path destPath = getFinalPath(status.getPath());
+            LocatedFileStatus sourceFile = localFiles.next();
+            Path sourceFilePath = sourceFile.getPath();
+
+            // Directory containing this file / directory isn't empty
+            emptyDirs.remove(sourceFilePath.getParent());
+
+            if (sourceFile.isDirectory()) {
+                emptyDirs.add(sourceFilePath);
+                continue;
+            }
+
+            Path destPath = getFinalPath(sourceFilePath);
             // UploadEntries: have a destination path, a file size
             entries.add(new UploadEntry(
-                    status.getPath(),
+                    sourceFilePath,
                     destPath,
-                    status.getLen()));
+                    sourceFile.getLen()));
         }
 
         if (localFiles instanceof Closeable) {
@@ -109,7 +118,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void>
         // Take only top most X entries and upload
         for (int uploadNo = 0; uploadNo < sortedUploadsCount; uploadNo++) {
             UploadEntry uploadEntry = entries.get(uploadNo);
-            File file = local.pathToFile(uploadEntry.source);
+            File file = callbacks.pathToFile(uploadEntry.source);
             callbacks.copyFileFromTo(
                     file,
                     uploadEntry.source,
@@ -119,38 +128,39 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void>
         }
 
         // Shuffle all remaining entries and upload them
-        // TODO: Should directories be handled differently?
         entries.removeAll(uploaded);
         Collections.shuffle(entries);
         for (UploadEntry uploadEntry : entries) {
-            File file = local.pathToFile(uploadEntry.source);
+            File file = callbacks.pathToFile(uploadEntry.source);
             callbacks.copyFileFromTo(
                     file,
                     uploadEntry.source,
                     uploadEntry.destination);
         }
-    }
 
-    private void checkSource(File sourceFile)
-            throws FileNotFoundException {
-        if (!sourceFile.exists()) {
-            throw new FileNotFoundException("No file: " + src);
+        for (Path emptyDir : emptyDirs) {
+            callbacks.createEmptyDir(getFinalPath(emptyDir));
         }
     }
 
+    private void checkSource(File src)
+            throws FileNotFoundException {
+        if (!src.exists()) {
+            throw new FileNotFoundException("No file: " + src.getPath());
+        }
+    }
 
     private void prepareDestination(
             Path dst,
-            boolean isSrcFile,
+            File src,
             boolean overwrite) throws PathExistsException, IOException {
         try {
-            S3AFileStatus dstStatus = callbacks.getFileStatus(
-                    dst,
-                    false,
-                    StatusProbeEnum.ALL);
+            FileStatus dstStatus = callbacks.getFileStatus(dst);
 
-            if (isSrcFile && dstStatus.isDirectory()) {
-                throw new PathExistsException("Source is file and destination '" + dst + "' is directory");
+            if (src.isFile() && dstStatus.isDirectory()) {
+                throw new PathExistsException(
+                        "Source '" + src.getPath() +"' is file and " +
+                                "destination '" + dst + "' is directory");
             }
 
             if (!overwrite) {
@@ -161,9 +171,18 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void>
         }
     }
 
-    private Path getFinalPath(Path srcFile) throws IOException {
-        // TODO: Implement this bad boy
-        return null;
+    private Path getFinalPath(Path src) throws IOException {
+        URI currentSrcUri = src.toUri();
+        URI relativeSrcUri = source.toUri().relativize(currentSrcUri);
+        if (currentSrcUri == relativeSrcUri) {
+            throw new IOException("Cannot get relative path");
+        }
+
+        if (!relativeSrcUri.getPath().isEmpty()) {
+            return new Path(destination, relativeSrcUri.getPath());
+        } else {
+            return new Path(destination, src.getName());
+        }
     }
 
     private static final class UploadEntry {
@@ -190,16 +209,17 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void>
                 Path f,
                 boolean recursive) throws IOException;
 
-        S3AFileStatus getFileStatus(
-                final Path f,
-                final boolean needEmptyDirectoryFlag,
-                final Set<StatusProbeEnum> probes) throws IOException;
+        FileStatus getFileStatus( final Path f) throws IOException;
 
-        LocalFileSystem getLocalFS() throws IOException;
+        File pathToFile(Path path);
+
+        boolean delete(Path path, boolean recursive) throws IOException;
 
         void copyFileFromTo(
                 File file,
                 Path source,
                 Path destination) throws IOException;
+
+        boolean createEmptyDir(Path path) throws IOException;
     }
 }

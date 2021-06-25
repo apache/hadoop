@@ -224,6 +224,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_PUT_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
@@ -3786,59 +3787,74 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     checkNotClosed();
     LOG.debug("Copying local file from {} to {}", src, dst);
     trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst,
-            new CopyFromLocalOperation(
+            () -> new CopyFromLocalOperation(
                     createStoreContext(),
-                    delSrc,
-                    overwrite,
                     src,
                     dst,
-                    createCopyFromLocalCallbacks()));
+                    delSrc,
+                    overwrite,
+                    createCopyFromLocalCallbacks()).execute());
   }
 
   protected CopyFromLocalOperation.CopyFromLocalOperationCallbacks
-      createCopyFromLocalCallbacks() {
-    return new CopyFromLocalCallbacksImpl();
+      createCopyFromLocalCallbacks() throws IOException {
+    LocalFileSystem local = getLocal(getConf());
+    return new CopyFromLocalCallbacksImpl(local);
   }
 
   protected class CopyFromLocalCallbacksImpl implements
           CopyFromLocalOperation.CopyFromLocalOperationCallbacks {
+    private final LocalFileSystem local;
+
+    private CopyFromLocalCallbacksImpl(LocalFileSystem local) {
+        this.local = local;
+    }
+
     @Override
     public RemoteIterator<LocatedFileStatus> listStatusIterator(
             final Path path,
             final boolean recursive) throws IOException {
-      LocalFileSystem local = getLocal(getConf());
-      return local.listFiles(path, recursive);
+      return local.listFilesAndDirs(path, true);
     }
 
     @Override
-    public LocalFileSystem getLocalFS() throws IOException {
-      return getLocal(getConf());
+    public File pathToFile(Path path) {
+      return local.pathToFile(path);
+    }
+
+    @Override
+    public boolean delete(Path path, boolean recursive) throws IOException {
+      return local.delete(path, recursive);
     }
 
     @Override
     public void copyFileFromTo(File file, Path from, Path to) throws IOException {
-      final String key = pathToKey(to);
-      final ObjectMetadata om = newObjectMetadata(file.length());
-      Progressable progress = null;
-      PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, file);
-      trackDurationOfInvocation(
-              getDurationTrackerFactory(),
-              OBJECT_PUT_REQUESTS.getSymbol(),
-              () -> S3AFileSystem.this.invoker.retry(
-                      "copyFromLocalFile(" + "" + ")", to.toString(),
-                      true,
-                      () -> executePut(putObjectRequest, progress)));
+      trackDurationAndSpan(
+              OBJECT_PUT_REQUESTS,
+              to,
+              () -> {
+
+                final String key = pathToKey(to);
+                final ObjectMetadata om = newObjectMetadata(file.length());
+                Progressable progress = null;
+                PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, file);
+                S3AFileSystem.this.invoker.retry(
+                        "putObject(" + "" + ")", to.toString(),
+                        true,
+                        () -> executePut(putObjectRequest, progress));
+
+                return null;
+              });
     }
 
     @Override
-    public S3AFileStatus getFileStatus(
-            Path f,
-            boolean needEmptyDirectoryFlag,
-            Set<StatusProbeEnum> probes) throws IOException {
-        return S3AFileSystem.this.innerGetFileStatus(
-                f,
-                needEmptyDirectoryFlag,
-                probes);
+    public FileStatus getFileStatus(Path f) throws IOException {
+      return S3AFileSystem.this.getFileStatus(f);
+    }
+
+    @Override
+    public boolean createEmptyDir(Path path) throws IOException {
+        return S3AFileSystem.this.mkdirs(path);
     }
   }
 
