@@ -99,8 +99,9 @@ public final class RouterYarnClientUtils {
           mergeAMWithUAM(federationAM.get(appId), appReport);
         } else if (federationUAMSum.containsKey(appId)) {
           // Merge the current UAM with its own UAM and update the list of UAM
-          federationUAMSum.put(appId,
-              mergeUAMWithUAM(federationUAMSum.get(appId), appReport));
+          ApplicationReport mergedUAMReport =
+              mergeUAMWithUAM(federationUAMSum.get(appId), appReport);
+          federationUAMSum.put(appId, mergedUAMReport);
         } else {
           // Insert in the list of UAM
           federationUAMSum.put(appId, appReport);
@@ -180,9 +181,13 @@ public final class RouterYarnClientUtils {
    */
   private static boolean mergeUamToReport(String appName,
       boolean returnPartialResult){
-
-    return returnPartialResult || (appName != null &&
-        !(appName.startsWith(UnmanagedApplicationManager.APP_NAME) ||
-            appName.startsWith(PARTIAL_REPORT)));
+    if (returnPartialResult) {
+      return true;
+    }
+    if (appName == null) {
+      return false;
+    }
+    return !(appName.startsWith(UnmanagedApplicationManager.APP_NAME) ||
+        appName.startsWith(PARTIAL_REPORT));
   }
 }

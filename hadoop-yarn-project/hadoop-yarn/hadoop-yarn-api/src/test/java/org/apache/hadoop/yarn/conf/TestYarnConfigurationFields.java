@@ -185,7 +185,7 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY);
     configurationPrefixToSkipCompare
-            .add(YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
+        .add(YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED);
     configurationPrefixToSkipCompare

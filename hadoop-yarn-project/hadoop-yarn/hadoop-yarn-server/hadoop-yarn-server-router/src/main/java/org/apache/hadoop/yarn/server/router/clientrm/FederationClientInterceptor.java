@@ -22,6 +22,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -635,9 +636,8 @@ public class FederationClientInterceptor
         federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getApplications",
         new Class[] {GetApplicationsRequest.class}, new Object[] {request});
-    ArrayList<SubClusterId> clusterIds = new ArrayList<>(subclusters.keySet());
     Map<SubClusterId, GetApplicationsResponse> applications =
-        invokeConcurrent(clusterIds, remoteMethod,
+        invokeConcurrent(subclusters.keySet(), remoteMethod,
             GetApplicationsResponse.class);
 
     // Merge the Application Reports
@@ -714,6 +714,11 @@ public class FederationClientInterceptor
       throw new YarnException(e);
     }
     return results;
+  }
+  <R> Map<SubClusterId, R> invokeConcurrent(Collection<SubClusterId> clusterIds,
+      ClientMethod request, Class<R> clazz) throws YarnException, IOException {
+    ArrayList<SubClusterId> clusterIdList = new ArrayList<>(clusterIds);
+    return invokeConcurrent(clusterIdList, request, clazz);
   }
 
   @Override

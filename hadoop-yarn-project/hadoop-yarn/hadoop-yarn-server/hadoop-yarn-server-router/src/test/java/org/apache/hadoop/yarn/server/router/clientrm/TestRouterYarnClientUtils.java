@@ -39,6 +39,8 @@ import org.junit.Test;
  */
 public class TestRouterYarnClientUtils {
 
+  private final static String PARTIAL_REPORT = "Partial Report ";
+
   @Test
   public void testClusterMetricsMerge() {
     ArrayList<GetClusterMetricsResponse> responses = new ArrayList<>();
@@ -72,8 +74,8 @@ public class TestRouterYarnClientUtils {
   @Test
   public void testMergeApplications() {
     ArrayList<GetApplicationsResponse> responses = new ArrayList<>();
-    responses.add(getApplicationsResponse(1));
-    responses.add(getApplicationsResponse(2));
+    responses.add(getApplicationsResponse(1, false));
+    responses.add(getApplicationsResponse(2, false));
     GetApplicationsResponse result = RouterYarnClientUtils.
         mergeApplications(responses, false);
     Assert.assertNotNull(result);
@@ -81,18 +83,45 @@ public class TestRouterYarnClientUtils {
   }
 
   /**
+   * This test validates the correctness of
+   * RouterYarnClientUtils#mergeApplications.
+   */
+  @Test
+  public void testMergeUnmanagedApplications() {
+    ArrayList<GetApplicationsResponse> responses = new ArrayList<>();
+    responses.add(getApplicationsResponse(1, true));
+
+    // Check response if partial results are disabled
+    GetApplicationsResponse result = RouterYarnClientUtils.
+        mergeApplications(responses, false);
+    Assert.assertNotNull(result);
+    Assert.assertTrue(result.getApplicationList().isEmpty());
+
+    // Check response if partial results are enabled
+    result = RouterYarnClientUtils.
+        mergeApplications(responses, true);
+    Assert.assertNotNull(result);
+    Assert.assertEquals(1, result.getApplicationList().size());
+    String appName = result.getApplicationList().iterator().next().getName();
+    Assert.assertTrue(appName.startsWith(PARTIAL_REPORT));
+  }
+
+  /**
    * This generates a GetApplicationsResponse with 2 applications with
-   * same ApplicationId. One of them is added with host value equal to
-   * null to validate unmanaged application merge with managed application.
+   * same ApplicationId.
    * @param value Used as Id in ApplicationId
+   * @param uamOnly If set to true, only unmanaged applications are added in
+   *                response, else one managed and one unmanaged applications
+   *                are added with same ApplicationId.
    * @return GetApplicationsResponse
    */
-  private GetApplicationsResponse getApplicationsResponse(int value) {
+  private GetApplicationsResponse getApplicationsResponse(int value,
+      boolean uamOnly) {
+    String host = uamOnly? null: "host";
     List<ApplicationReport> applications = new ArrayList<>();
 
     //Add managed application to list
-    ApplicationId appId = ApplicationId.newInstance(1234,
-        value);
+    ApplicationId appId = ApplicationId.newInstance(1234, value);
     Resource resource = Resource.newInstance(1024, 1);
     ApplicationResourceUsageReport appResourceUsageReport =
         ApplicationResourceUsageReport.newInstance(
@@ -101,9 +130,8 @@ public class TestRouterYarnClientUtils {
             0.1f, null);
 
     ApplicationReport appReport = ApplicationReport.newInstance(
-        appId, ApplicationAttemptId.newInstance(appId,
-            1),
-        "user", "queue", "appname", "host",
+        appId, ApplicationAttemptId.newInstance(appId, 1),
+        "user", "queue", "appname", host,
         124, null, YarnApplicationState.RUNNING,
         "diagnostics", "url", 0, 0,
         0, FinalApplicationStatus.SUCCEEDED,
@@ -111,17 +139,15 @@ public class TestRouterYarnClientUtils {
         "N/A", 0.53789f, "YARN",
         null);
 
-    //Add unmanaged application to list
-    ApplicationId appId2 = ApplicationId.newInstance(1234,
-        value);
+    // Add unmanaged application to list
+    ApplicationId appId2 = ApplicationId.newInstance(1234, value);
     ApplicationReport appReport2 = ApplicationReport.newInstance(
-        appId2, ApplicationAttemptId.newInstance(appId2,
-            1),
+        appId2, ApplicationAttemptId.newInstance(appId2, 1),
         "user", "queue", "appname", null, 124,
         null, YarnApplicationState.RUNNING,
         "diagnostics", "url", 0, 0,
-        0, FinalApplicationStatus.SUCCEEDED,
-        appResourceUsageReport, "N/A", 0.53789f,
+        0, FinalApplicationStatus.SUCCEEDED, appResourceUsageReport,
+        "N/A", 0.53789f,
         "YARN", null);
 
     applications.add(appReport);
