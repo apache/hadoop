@@ -274,7 +274,7 @@ public interface HdfsFileStatus
      * @return An {@link HdfsFileStatus} instance from these parameters.
      */
     public HdfsFileStatus build() {
-      if (null == locations && isdir && null == symlink) {
+      if (null == locations && !isdir && null == symlink) {
         return new HdfsNamedFileStatus(length, isdir, replication, blocksize,
             mtime, atime, permission, flags, owner, group, symlink, path,
             fileId, childrenNum, feInfo, storagePolicy, ecPolicy);
