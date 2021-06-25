@@ -259,7 +259,7 @@ public class NameNodeConnector implements Closeable {
       getBlocksRateLimiter.acquire();
     }
     boolean isRequestStandby = false;
-    NamenodeProtocol nnproxy = null;
+    NamenodeProtocol nnProxy = null;
     try {
       if (requestToStandby && nsId != null
           && HAUtil.isHAEnabled(config, nsId)) {
@@ -272,7 +272,7 @@ public class NameNodeConnector implements Closeable {
               NamenodeProtocol sbn = NameNodeProxies.createNonHAProxy(
                   config, RPC.getServerAddress(proxy), NamenodeProtocol.class,
                   UserGroupInformation.getCurrentUser(), false).getProxy();
-              nnproxy = sbn;
+              nnProxy = sbn;
               isRequestStandby = true;
               break;
             }
@@ -281,15 +281,15 @@ public class NameNodeConnector implements Closeable {
             LOG.debug("Error while connecting to namenode", e);
           }
         }
-        if (nnproxy == null) {
+        if (nnProxy == null) {
           LOG.warn("Request #getBlocks to Standby NameNode but meet exception,"
               + " will fallback to normal way.");
-          nnproxy = namenode;
+          nnProxy = namenode;
         }
       } else {
-        nnproxy = namenode;
+        nnProxy = namenode;
       }
-      return nnproxy.getBlocks(datanode, size, minBlockSize, timeInterval);
+      return nnProxy.getBlocks(datanode, size, minBlockSize, timeInterval);
     } finally {
       if (isRequestStandby) {
         LOG.info("Request #getBlocks to Standby NameNode success.");
@@ -314,7 +314,41 @@ public class NameNodeConnector implements Closeable {
   /** @return live datanode storage reports. */
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
-    return namenode.getDatanodeStorageReport(DatanodeReportType.LIVE);
+    boolean isRequestStandby = false;
+    ClientProtocol clProxy = null;
+    try {
+      if (requestToStandby && nsId != null
+          && HAUtil.isHAEnabled(config, nsId)) {
+        List<ClientProtocol> namenodes =
+            HAUtil.getProxiesForAllNameNodesInNameservice(config, nsId);
+        for (ClientProtocol proxy : namenodes) {
+          try {
+            if (proxy.getHAServiceState().equals(
+                HAServiceProtocol.HAServiceState.STANDBY)) {
+              clProxy = proxy;
+              isRequestStandby = true;
+              break;
+            }
+          } catch (Exception e) {
+            // Ignore the exception while connecting to a namenode.
+            LOG.debug("Error while connecting to namenode", e);
+          }
+        }
+        if (clProxy == null) {
+          LOG.warn("Request #getLiveDatanodeStorageReport to Standby" +
+              " NameNode but meet exception, will fallback to normal way.");
+          clProxy = namenode;
+        }
+      } else {
+        clProxy = namenode;
+      }
+      return clProxy.getDatanodeStorageReport(DatanodeReportType.LIVE);
+    } finally {
+      if (isRequestStandby) {
+        LOG.info("Request #getLiveDatanodeStorageReport to Standby " +
+            "NameNode success.");
+      }
+    }
   }
 
   /** @return the key manager */
