@@ -199,7 +199,7 @@ public class FederationClientInterceptor
         new ConcurrentHashMap<SubClusterId, ApplicationClientProtocol>();
     routerMetrics = RouterMetrics.getMetrics();
 
-    returnPartialReport  = conf.getBoolean(
+    returnPartialReport = conf.getBoolean(
         YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
   }
@@ -715,6 +715,7 @@ public class FederationClientInterceptor
     }
     return results;
   }
+
   <R> Map<SubClusterId, R> invokeConcurrent(Collection<SubClusterId> clusterIds,
       ClientMethod request, Class<R> clazz) throws YarnException, IOException {
     ArrayList<SubClusterId> clusterIdList = new ArrayList<>(clusterIds);
