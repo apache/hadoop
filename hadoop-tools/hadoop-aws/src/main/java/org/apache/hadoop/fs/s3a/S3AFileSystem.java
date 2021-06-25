@@ -224,7 +224,6 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_PUT_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
@@ -3855,82 +3854,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public boolean createEmptyDir(Path path) throws IOException {
         return S3AFileSystem.this.mkdirs(path);
-    }
-  }
-
-  /**
-   * The src file is on the local disk.  Add it to FS at
-   * the given dst name.
-   *
-   * This version doesn't need to create a temporary file to calculate the md5.
-   * Sadly this doesn't seem to be used by the shell cp :(
-   *
-   * <i>HADOOP-15932:</i> this method has been unwired from
-   * {@link #copyFromLocalFile(boolean, boolean, Path, Path)} until
-   * it is extended to list and copy whole directories.
-   * delSrc indicates if the source should be removed
-   * @param delSrc whether to delete the src
-   * @param overwrite whether to overwrite an existing file
-   * @param src Source path: must be on local filesystem
-   * @param dst path
-   * @throws IOException IO problem
-   * @throws FileAlreadyExistsException the destination file exists and
-   * overwrite==false, or if the destination is a directory.
-   * @throws FileNotFoundException if the source file does not exit
-   * @throws AmazonClientException failure in the AWS SDK
-   * @throws IllegalArgumentException if the source path is not on the local FS
-   */
-  @Retries.RetryTranslated
-  private void innerCopyFromLocalFile(boolean delSrc, boolean overwrite,
-      Path src, Path dst)
-      throws IOException, PathExistsException, AmazonClientException {
-    LOG.debug("Copying local file from {} to {}", src, dst);
-
-    // Since we have a local file, we don't need to stream into a temporary file
-    LocalFileSystem local = getLocal(getConf());
-    File srcFile = local.pathToFile(src);
-    if (!srcFile.exists()) {
-      throw new FileNotFoundException("No file: " + src);
-    }
-
-    try {
-      S3AFileStatus dstStatus = innerGetFileStatus(dst, false, StatusProbeEnum.ALL);
-      if (srcFile.isFile() && dstStatus.isDirectory()) {
-        throw new PathExistsException("Source is file and destination '" + dst + "' is directory");
-      }
-
-      if (!overwrite) {
-        throw new PathExistsException(dst + " already exists");
-      }
-    } catch (FileNotFoundException e) {
-      // no destination, all is well
-    }
-
-    if (srcFile.isDirectory()) {
-      // make the directory in the destination
-      String key = pathToKey(dst);
-      createFakeDirectory(key);
-      FileStatus[] contents = local.listStatus(src);
-
-      // copy all directory contents from dst to src: DFS
-      for (FileStatus status: contents) {
-        Path childDst = new Path(dst, status.getPath().getName());
-        innerCopyFromLocalFile(delSrc, overwrite, status.getPath(), childDst);
-      }
-    } else {
-      final String key = pathToKey(dst);
-      final ObjectMetadata om = newObjectMetadata(srcFile.length());
-      Progressable progress = null;
-      PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcFile);
-      trackDurationOfInvocation(getDurationTrackerFactory(), OBJECT_PUT_REQUESTS.getSymbol(),
-              () -> invoker.retry(
-                      "copyFromLocalFile(" + src + ")", dst.toString(),
-                      true,
-                      () -> executePut(putObjectRequest, progress)));
-    }
-
-    if (delSrc) {
-      local.delete(src, false);
     }
   }
 
