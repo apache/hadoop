@@ -530,7 +530,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   }
 
   private void doAppLogAggregationPostCleanUp() {
-    // Remove  the local app-log-dirs
+    // Remove the local app-log-dirs
     List<Path> localAppLogDirs = new ArrayList<Path>();
     for (String rootLogDir : dirsHandler.getLogDirsForCleanup()) {
       Path logPath = new Path(rootLogDir, applicationId);
