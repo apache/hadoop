@@ -41,9 +41,10 @@ import static org.junit.Assert.assertEquals;
 
 /**
  * Tests S3AInputStream retry behavior on read failure.
- * These tests are for validating expected behavior of retrying the S3AInputStream
- * read() and read(b, off, len), it tests that the read should reopen the input stream and retry
- * the read when IOException is thrown during the read process.
+ * These tests are for validating expected behavior of retrying the
+ * S3AInputStream read() and read(b, off, len), it tests that the read should
+ * reopen the input stream and retry the read when IOException is thrown
+ * during the read process.
  */
 public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
 
@@ -65,7 +66,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     S3AInputStream s3AInputStream = getMockedS3AInputStream();
     s3AInputStream.read(result, 0, INPUT.length());
 
-    assertArrayEquals("The read result should equals to the test input stream content",
+    assertArrayEquals(
+        "The read result should equals to the test input stream content",
         INPUT.getBytes(), result);
   }
 
@@ -75,7 +77,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     S3AInputStream s3AInputStream = getMockedS3AInputStream();
     s3AInputStream.readFully(0, result);
 
-    assertArrayEquals("The read result should equals to the test input stream content",
+    assertArrayEquals(
+        "The read result should equals to the test input stream content",
         INPUT.getBytes(), result);
   }
 
