@@ -117,29 +117,6 @@ public class ITestS3ACopyFromLocalFile extends AbstractS3ATestBase {
         () -> upload(file, true));
   }
 
-  @Test
-  public void testImplementationTemporary() throws Throwable {
-    java.nio.file.Path srcDir = Files.createTempDirectory("parent");
-    java.nio.file.Path childDir = Files.createTempDirectory(srcDir, "child");
-    java.nio.file.Path secondChild = Files.createTempDirectory(srcDir, "secondChild");
-    java.nio.file.Path parentFile = Files.createTempFile(srcDir, "test1", ".txt");
-    java.nio.file.Path childFile = Files.createTempFile(childDir, "test2", ".txt");
-
-    Path src = new Path(srcDir.toUri());
-    Path dst = path(srcDir.getFileName().toString());
-
-    S3AFileSystem fileSystem = getFileSystem();
-    fileSystem.copyFromLocalFile(true, true, src, dst);
-
-    java.nio.file.Path parent = srcDir.getParent();
-
-    assertPathExists("Parent directory", srcDir, parent);
-    assertPathExists("Child directory", childDir, parent);
-    assertPathExists("Parent file", parentFile, parent);
-    assertPathExists("Child file", childFile, parent);
-
-  }
-
   /*
    * The following path is being created on disk and copied over
    * /parent/ (trailing slash to make it clear it's  a directory
