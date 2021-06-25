@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -71,9 +70,7 @@ public final class UriUtils {
    */
   public static String generateUniqueTestPath() {
     String testUniqueForkId = System.getProperty("test.unique.fork.id");
-//    return testUniqueForkId == null ? "/test" : "/" + testUniqueForkId + "/test";
-//    return testUniqueForkId == null ? UUID.randomUUID().toString() : "/" + testUniqueForkId + "/test";
-    return "/test" + UUID.randomUUID();
+    return testUniqueForkId == null ? "/test" : "/" + testUniqueForkId + "/test";
   }
 
   private UriUtils() {

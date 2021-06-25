@@ -392,7 +392,6 @@ public abstract class AbstractAbfsIntegrationTest extends
   public Path getTestPath() {
     Path path = new Path(UriUtils.generateUniqueTestPath());
     return path;
-//    return new Path("/test" + UUID.randomUUID());
   }
 
   public AzureBlobFileSystemStore getAbfsStore(final AzureBlobFileSystem fs) {
@@ -410,11 +409,20 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @return a path qualified by the test filesystem
    * @throws IOException IO problems
    */
+  protected Path pathUnderTestFolder(String filepath) throws IOException {
+    return getFileSystem().makeQualified(
+        new Path(getTestPath(), filepath));
+  }
+
+  /**
+   * Create a unique path by appending a GUID to given filepath
+   * @param filepath path string
+   * @return a path qualified by the test filesystem
+   * @throws IOException IO errors
+   */
   protected Path path(String filepath) throws IOException {
     return getFileSystem().makeQualified(
         new Path(filepath + UUID.randomUUID()));
-//    return getFileSystem().makeQualified(
-//        new Path(getTestPath(), filepath));
   }
 
   /**

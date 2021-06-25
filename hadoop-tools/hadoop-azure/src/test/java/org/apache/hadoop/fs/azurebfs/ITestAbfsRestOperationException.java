@@ -52,8 +52,8 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
   @Test
   public void testAbfsRestOperationExceptionFormat() throws IOException {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path nonExistedFilePath1 = path("nonExistedPath1");
-    Path nonExistedFilePath2 = path("nonExistedPath2");
+    Path nonExistedFilePath1 = new Path("nonExistedPath1");
+    Path nonExistedFilePath2 = new Path("nonExistedPath2");
     try {
       FileStatus fileStatus = fs.getFileStatus(nonExistedFilePath1);
     } catch (Exception ex) {

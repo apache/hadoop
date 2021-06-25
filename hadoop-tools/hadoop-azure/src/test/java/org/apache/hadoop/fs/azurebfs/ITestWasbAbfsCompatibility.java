@@ -172,11 +172,12 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    Path d1d4 = path("/d1/d2/d3/d4");
+    Path testPath = path("testpath");
+    Path d1d4 = new Path(testPath + "/d1/d2/d3/d4");
     assertMkdirs(abfs, d1d4);
 
     //set working directory to path1
-    Path path1 = path("/d1/d2");
+    Path path1 = new Path(testPath + "/d1/d2");
     wasb.setWorkingDirectory(path1);
     abfs.setWorkingDirectory(path1);
     assertEquals(path1, wasb.getWorkingDirectory());

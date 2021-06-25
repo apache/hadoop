@@ -174,7 +174,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testSeekToNewSource() throws Exception {
-//    Path testPath = new Path(TEST_FILE_PREFIX + "_testSeekToNewSource");
     Path testPath = path(TEST_FILE_PREFIX + "_testSeekToNewSource");
     assumeHugeFileExists(testPath);
 
@@ -190,7 +189,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testSkipBounds() throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testSkipBounds");
+    Path testPath = path(TEST_FILE_PREFIX + "_testSkipBounds");
     long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
@@ -231,7 +230,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testValidateSeekBounds() throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testValidateSeekBounds");
+    Path testPath = path(TEST_FILE_PREFIX + "_testValidateSeekBounds");
     long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
@@ -414,8 +413,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   public void testSequentialReadAfterReverseSeekPerformance()
           throws Exception {
-    Path testPath = path(TEST_FILE_PREFIX +
-        "_testSequentialReadAfterReverseSeekPerformance");
+    Path testPath = path(
+        TEST_FILE_PREFIX + "_testSequentialReadAfterReverseSeekPerformance");
     assumeHugeFileExists(testPath);
     final int maxAttempts = 10;
     final double maxAcceptableRatio = 1.01;

@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Arrays;
 import java.util.Random;
-import java.util.UUID;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -74,7 +73,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
 
-    Path testPath = new Path(TEST_PATH + UUID.randomUUID());
+    Path testPath = path(TEST_PATH);
     try (FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(b);
     }

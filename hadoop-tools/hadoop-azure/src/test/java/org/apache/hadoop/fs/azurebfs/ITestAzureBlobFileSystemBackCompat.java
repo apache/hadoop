@@ -29,8 +29,6 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
-import java.util.UUID;
-
 /**
  * Test AzureBlobFileSystem back compatibility with WASB.
  */
@@ -52,7 +50,7 @@ public class ITestAzureBlobFileSystemBackCompat extends
     CloudBlobContainer container = blobClient.getContainerReference(this.getFileSystemName());
     container.createIfNotExists();
 
-    String testPath = "test" + UUID.randomUUID();
+    Path testPath = path("test");
     CloudBlockBlob blockBlob = container
         .getBlockBlobReference(testPath + "/10/10/10");
     blockBlob.uploadText("");
@@ -60,7 +58,6 @@ public class ITestAzureBlobFileSystemBackCompat extends
     blockBlob = container.getBlockBlobReference(testPath + "/10/123/3/2/1/3");
     blockBlob.uploadText("");
 
-    System.out.println(new Path(String.format("%s/10/", testPath)));
     FileStatus[] fileStatuses = fs
         .listStatus(new Path(String.format("/%s/10/", testPath)));
     assertEquals(2, fileStatuses.length);

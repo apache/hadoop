@@ -177,15 +177,16 @@ public class ITestAzureBlobFileSystemRename extends
   public void testPosixRenameDirectory() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Path testPath = path("testPath");
-    fs.mkdirs(new Path(testPath + "testDir2/test1/test2/test3"));
-    fs.mkdirs(new Path(testPath + "testDir2/test4"));
-    Assert.assertTrue(fs.rename(new Path(testPath + "testDir2/test1/test2"
-        + "/test3"), new Path(testPath + "testDir2/test4")));
-    assertTrue(fs.exists(new Path(testPath + "testDir2")));
-    assertTrue(fs.exists(new Path(testPath + "testDir2/test1/test2")));
-    assertTrue(fs.exists(new Path(testPath + "testDir2/test4")));
-    assertTrue(fs.exists(new Path(testPath + "testDir2/test4/test3")));
-    assertFalse(fs.exists(new Path(testPath + "testDir2/test1/test2/test3")));
+    fs.mkdirs(new Path(testPath + "/testDir2/test1/test2/test3"));
+    fs.mkdirs(new Path(testPath + "/testDir2/test4"));
+    Assert.assertTrue(
+        fs.rename(new Path(testPath + "/testDir2/test1/test2/test3"),
+            new Path(testPath + "/testDir2/test4")));
+    assertTrue(fs.exists(new Path(testPath + "/testDir2")));
+    assertTrue(fs.exists(new Path(testPath + "/testDir2/test1/test2")));
+    assertTrue(fs.exists(new Path(testPath + "/testDir2/test4")));
+    assertTrue(fs.exists(new Path(testPath + "/testDir2/test4/test3")));
+    assertFalse(fs.exists(new Path(testPath + "/testDir2/test1/test2/test3")));
   }
 
   @Test
