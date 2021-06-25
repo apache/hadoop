@@ -140,8 +140,6 @@ public class TestReconstructStripedFile {
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
         cellSize - 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
