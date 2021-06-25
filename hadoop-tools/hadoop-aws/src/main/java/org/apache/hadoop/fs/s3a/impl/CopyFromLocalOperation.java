@@ -20,16 +20,18 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
  * TODO list:
+ * - Improve implementation to use Completable Futures
+ *  - Better error handling
  * - Add abstract class + tests for LocalFS
  * - Add tests for this class
  * - Add documentation
  *  - This class
  *  - `filesystem.md`
- * - Remove remaining TODO s
  * - Clean old `innerCopyFromLocalFile` code up
  */
 public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
@@ -42,6 +44,8 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     private final boolean overwrite;
     private final Path source;
     private final Path destination;
+
+    private FileStatus dstStatus;
 
     public CopyFromLocalOperation(
             final StoreContext storeContext,
@@ -64,6 +68,11 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
             throws IOException, PathExistsException {
         LOG.debug("Copying local file from {} to {}", source, destination);
         File sourceFile = callbacks.pathToFile(source);
+        try {
+            dstStatus = callbacks.getFileStatus(destination);
+        } catch (FileNotFoundException e) {
+            dstStatus = null;
+        }
 
         checkSource(sourceFile);
         prepareDestination(destination, sourceFile, overwrite);
@@ -154,20 +163,18 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
             Path dst,
             File src,
             boolean overwrite) throws PathExistsException, IOException {
-        try {
-            FileStatus dstStatus = callbacks.getFileStatus(dst);
+        if (!getDstStatus().isPresent()) {
+            return;
+        }
 
-            if (src.isFile() && dstStatus.isDirectory()) {
-                throw new PathExistsException(
-                        "Source '" + src.getPath() +"' is file and " +
-                                "destination '" + dst + "' is directory");
-            }
+        if (src.isFile() && getDstStatus().get().isDirectory()) {
+            throw new PathExistsException(
+                    "Source '" + src.getPath() +"' is file and " +
+                            "destination '" + dst + "' is directory");
+        }
 
-            if (!overwrite) {
-                throw new PathExistsException(dst + " already exists");
-            }
-        } catch (FileNotFoundException e) {
-            // no destination, all is well
+        if (!overwrite) {
+            throw new PathExistsException(dst + " already exists");
         }
     }
 
@@ -178,11 +185,20 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
             throw new IOException("Cannot get relative path");
         }
 
+        Optional<FileStatus> status = getDstStatus();
         if (!relativeSrcUri.getPath().isEmpty()) {
             return new Path(destination, relativeSrcUri.getPath());
-        } else {
+        } else if (status.isPresent() && status.get().isDirectory()) {
+            // file to dir
             return new Path(destination, src.getName());
+        } else {
+            // file to file
+            return destination;
         }
+    }
+
+    private Optional<FileStatus> getDstStatus() {
+        return Optional.ofNullable(dstStatus);
     }
 
     private static final class UploadEntry {
