@@ -223,7 +223,7 @@
         <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
         <reuseForks>false</reuseForks>
         <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
-        <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
+        <argLine>@{argLine} -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError</argLine>
         <environmentVariables>
           <!-- HADOOP_HOME required for tests on Windows to find winutils -->
           <HADOOP_HOME>${hadoop.common.build.dir}</HADOOP_HOME>
