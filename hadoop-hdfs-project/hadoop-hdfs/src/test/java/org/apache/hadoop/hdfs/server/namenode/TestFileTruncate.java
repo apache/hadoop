@@ -320,7 +320,8 @@ public class TestFileTruncate {
   }
 
   @Test
-  public void testSnapshotWithAppendTruncate() throws IOException {
+  public void testSnapshotWithAppendTruncate()
+      throws IOException, InterruptedException {
     testSnapshotWithAppendTruncate(0, 1, 2);
     testSnapshotWithAppendTruncate(0, 2, 1);
     testSnapshotWithAppendTruncate(1, 0, 2);
@@ -334,7 +335,8 @@ public class TestFileTruncate {
    * Delete snapshots in the specified order and verify that
    * remaining snapshots are still readable.
    */
-  void testSnapshotWithAppendTruncate(int ... deleteOrder) throws IOException {
+  void testSnapshotWithAppendTruncate(int ... deleteOrder)
+      throws IOException, InterruptedException {
     FSDirectory fsDir = cluster.getNamesystem().getFSDirectory();
     fs.mkdirs(parent);
     fs.setQuota(parent, 100, 1000);
@@ -382,6 +384,8 @@ public class TestFileTruncate {
     // Truncate to block boundary
     int newLength = length[0] + BLOCK_SIZE / 2;
     boolean isReady = fs.truncate(src, newLength);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertTrue("Recovery is not expected.", isReady);
     assertFileLength(snapshotFiles[2], length[2]);
     assertFileLength(snapshotFiles[1], length[1]);
@@ -435,7 +439,8 @@ public class TestFileTruncate {
         numINodes, fsDir.getInodeMapSize());
 
     fs.deleteSnapshot(parent, ss[3]);
-
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertBlockExists(firstBlk);
     assertBlockExists(lastBlk);
     assertBlockNotPresent(replacedBlk);
@@ -458,6 +463,8 @@ public class TestFileTruncate {
     assertThat(contentSummary.getSpaceConsumed(), is(48L));
 
     fs.deleteSnapshot(parent, ss[deleteOrder[1]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertFileLength(snapshotFiles[deleteOrder[2]], length[deleteOrder[2]]);
     assertBlockExists(firstBlk);
     contentSummary = fs.getContentSummary(parent);
@@ -473,6 +480,8 @@ public class TestFileTruncate {
         numINodes, fsDir .getInodeMapSize());
 
     fs.deleteSnapshot(parent, ss[deleteOrder[2]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertBlockNotPresent(firstBlk);
     assertBlockNotPresent(lastBlk);
 
@@ -547,6 +556,8 @@ public class TestFileTruncate {
     assertThat(contentSummary.getSpaceConsumed(), is(42L));
 
     fs.deleteSnapshot(parent, ss[deleteOrder[0]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertFileLength(snapshotFiles[deleteOrder[1]], length[deleteOrder[1]]);
     assertFileLength(snapshotFiles[deleteOrder[2]], length[deleteOrder[2]]);
     assertFileLength(src, length[2]);
@@ -564,6 +575,8 @@ public class TestFileTruncate {
     }
 
     fs.deleteSnapshot(parent, ss[deleteOrder[1]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertFileLength(snapshotFiles[deleteOrder[2]], length[deleteOrder[2]]);
     assertFileLength(src, length[2]);
     assertBlockExists(firstBlk);
@@ -584,6 +597,8 @@ public class TestFileTruncate {
     }
 
     fs.deleteSnapshot(parent, ss[deleteOrder[2]]);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem(0).getBlockManager());
     assertFileLength(src, length[2]);
     assertBlockExists(firstBlk);
 

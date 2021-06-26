@@ -4939,7 +4939,7 @@ public class BlockManager implements BlockStatsMXBean {
     private Iterator<BlockInfo> toDeleteIterator = null;
     private boolean isSleep;
 
-    private void toRemove(long time) {
+    private void remove(long time) {
       // Reentrant write lock, Release the lock when the remove is
       // complete
       if (checkToDeleteIterator()) {
@@ -4947,7 +4947,7 @@ public class BlockManager implements BlockStatsMXBean {
         try {
           while (toDeleteIterator.hasNext()) {
             removeBlock(toDeleteIterator.next());
-            if (Time.now() - time > deleteBlockLockTimeMs) {
+            if (Time.monotonicNow() - time > deleteBlockLockTimeMs) {
               isSleep = true;
               break;
             }
@@ -4972,14 +4972,14 @@ public class BlockManager implements BlockStatsMXBean {
             NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
             metrics.setDeleteBlocksQueued(markedDeleteQueue.size());
             isSleep = false;
-            long startTime = Time.now();
-            toRemove(startTime);
+            long startTime = Time.monotonicNow();
+            remove(startTime);
             while (!isSleep && !markedDeleteQueue.isEmpty()) {
               List<BlockInfo> markedDeleteList = markedDeleteQueue.poll();
               if (markedDeleteList != null) {
                 toDeleteIterator = markedDeleteList.listIterator();
               }
-              toRemove(startTime);
+              remove(startTime);
             }
           } finally {
             namesystem.writeUnlock();
