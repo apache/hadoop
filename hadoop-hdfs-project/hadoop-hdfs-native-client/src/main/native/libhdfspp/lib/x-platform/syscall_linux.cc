@@ -25,6 +25,7 @@
 
 #include "syscall.h"
 
+
 bool XPlatform::Syscall::WriteToStdout(const std::string& message) {
   return WriteToStdoutImpl(message.c_str());
 }
