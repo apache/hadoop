@@ -55,7 +55,7 @@ public class ITestAbfsOutputStreamStatistics
   public void testAbfsOutputStreamUploadingBytes() throws IOException {
     describe("Testing bytes uploaded successfully by AbfsOutputSteam");
     final AzureBlobFileSystem fs = getFileSystem();
-    Path uploadBytesFilePath = path(getMethodName());
+    Path uploadBytesFilePath = getUniquePath(getMethodName());
     String testBytesToUpload = "bytes";
 
     try (
@@ -123,7 +123,7 @@ public class ITestAbfsOutputStreamStatistics
   public void testAbfsOutputStreamQueueShrink() throws IOException {
     describe("Testing queue shrink operations by AbfsOutputStream");
     final AzureBlobFileSystem fs = getFileSystem();
-    Path queueShrinkFilePath = path(getMethodName());
+    Path queueShrinkFilePath = getUniquePath(getMethodName());
     String testQueueShrink = "testQueue";
     if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(queueShrinkFilePath).toString())) {
       // writeOperationsQueue is not used for appendBlob, hence queueShrink is 0
@@ -186,7 +186,7 @@ public class ITestAbfsOutputStreamStatistics
   public void testAbfsOutputStreamWriteBuffer() throws IOException {
     describe("Testing write current buffer operations by AbfsOutputStream");
     final AzureBlobFileSystem fs = getFileSystem();
-    Path writeBufferFilePath = path(getMethodName());
+    Path writeBufferFilePath = getUniquePath(getMethodName());
     String testWriteBuffer = "Buffer";
 
     try (AbfsOutputStream outForOneOp = createAbfsOutputStreamWithFlushEnabled(
@@ -240,7 +240,7 @@ public class ITestAbfsOutputStreamStatistics
     describe("Testing to check if DurationTracker for PUT request is working "
         + "correctly.");
     AzureBlobFileSystem fs = getFileSystem();
-    Path pathForPutRequest = path(getMethodName());
+    Path pathForPutRequest = getUniquePath(getMethodName());
 
     try(AbfsOutputStream outputStream =
         createAbfsOutputStreamWithFlushEnabled(fs, pathForPutRequest)) {

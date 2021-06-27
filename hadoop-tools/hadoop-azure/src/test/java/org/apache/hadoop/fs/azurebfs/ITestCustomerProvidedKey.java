@@ -154,7 +154,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   @Test
   public void testReadWithoutCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(false);
-    String fileName = path("/" + methodName.getMethodName()).toString();
+    String fileName = getUniquePath("/" + methodName.getMethodName()).toString();
     createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     AbfsClient abfsClient = fs.getAbfsClient();

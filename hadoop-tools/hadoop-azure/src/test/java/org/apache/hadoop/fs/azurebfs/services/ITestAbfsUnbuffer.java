@@ -42,7 +42,7 @@ public class ITestAbfsUnbuffer extends AbstractAbfsIntegrationTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    dest = path("ITestAbfsUnbuffer");
+    dest = getUniquePath("ITestAbfsUnbuffer");
 
     byte[] data = ContractTestUtils.dataset(16, 'a', 26);
     ContractTestUtils.writeDataset(getFileSystem(), dest, data, data.length,

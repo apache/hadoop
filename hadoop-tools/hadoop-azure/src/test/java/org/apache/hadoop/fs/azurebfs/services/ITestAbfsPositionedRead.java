@@ -48,7 +48,7 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
   @Test
   public void testPositionedRead() throws IOException {
     describe("Testing positioned reads in AbfsInputStream");
-    Path dest = path(methodName.getMethodName());
+    Path dest = getUniquePath(methodName.getMethodName());
 
     byte[] data = ContractTestUtils.dataset(TEST_FILE_DATA_SIZE, 'a', 'z');
     ContractTestUtils.writeDataset(getFileSystem(), dest, data, data.length,
@@ -133,7 +133,7 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
   @Test
   public void testPositionedReadWithBufferedReadDisabled() throws IOException {
     describe("Testing positioned reads in AbfsInputStream with BufferedReadDisabled");
-    Path dest = path(methodName.getMethodName());
+    Path dest = getUniquePath(methodName.getMethodName());
     byte[] data = ContractTestUtils.dataset(TEST_FILE_DATA_SIZE, 'a', 'z');
     ContractTestUtils.writeDataset(getFileSystem(), dest, data, data.length,
         TEST_FILE_DATA_SIZE, true);

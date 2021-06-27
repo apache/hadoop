@@ -42,7 +42,7 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test(expected = FileNotFoundException.class)
   public void testAppendDirShouldFail() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path filePath = path(TEST_FILE_PATH);
+    final Path filePath = getUniquePath(TEST_FILE_PATH);
     fs.mkdirs(filePath);
     fs.append(filePath, 0);
   }
@@ -50,7 +50,7 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test
   public void testAppendWithLength0() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    try(FSDataOutputStream stream = fs.create(path(TEST_FILE_PATH))) {
+    try(FSDataOutputStream stream = fs.create(getUniquePath(TEST_FILE_PATH))) {
       final byte[] b = new byte[1024];
       new Random().nextBytes(b);
       stream.write(b, 1000, 0);
@@ -62,7 +62,7 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test(expected = FileNotFoundException.class)
   public void testAppendFileAfterDelete() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path filePath = path(TEST_FILE_PATH);
+    final Path filePath = getUniquePath(TEST_FILE_PATH);
     ContractTestUtils.touch(fs, filePath);
     fs.delete(filePath, false);
 
@@ -72,7 +72,7 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test(expected = FileNotFoundException.class)
   public void testAppendDirectory() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path folderPath = path(TEST_FOLDER_PATH);
+    final Path folderPath = getUniquePath(TEST_FOLDER_PATH);
     fs.mkdirs(folderPath);
     fs.append(folderPath);
   }

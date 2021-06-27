@@ -86,8 +86,8 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
         + " Abfs");
 
     AzureBlobFileSystem fs = getFileSystem();
-    Path createFilePath = path(getMethodName());
-    Path createDirectoryPath = path(getMethodName() + "Dir");
+    Path createFilePath = pathUnderTestFolder(getMethodName());
+    Path createDirectoryPath = pathUnderTestFolder(getMethodName() + "Dir");
 
     fs.mkdirs(createDirectoryPath);
     fs.createNonRecursive(createFilePath, FsPermission
@@ -114,8 +114,8 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     with same name, hence <Name> + i to give unique names.
      */
     for (int i = 0; i < NUMBER_OF_OPS; i++) {
-      fs.mkdirs(path(getMethodName() + "Dir" + i));
-      fs.createNonRecursive(path(getMethodName() + i),
+      fs.mkdirs(getUniquePath(getMethodName() + "Dir" + i));
+      fs.createNonRecursive(getUniquePath(getMethodName() + i),
           FsPermission.getDefault(), false, 1024, (short) 1,
           1024, null);
     }
@@ -150,8 +150,8 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     This directory path needs to be root for triggering the
     directories_deleted counter.
      */
-    Path createDirectoryPath = path("/");
-    Path createFilePath = path(getMethodName());
+    Path createDirectoryPath = pathUnderTestFolder("/");
+    Path createFilePath = pathUnderTestFolder(getMethodName());
 
     /*
     creating a directory and a file inside that directory.
@@ -160,7 +160,7 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     files_deleted counters.
      */
     fs.mkdirs(createDirectoryPath);
-    fs.create(path(createDirectoryPath + getMethodName()));
+    fs.create(getUniquePath(createDirectoryPath + getMethodName()));
     fs.delete(createDirectoryPath, true);
 
     Map<String, Long> metricMap = fs.getInstrumentationMap();
@@ -196,8 +196,8 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
         + "exists methods on Abfs");
 
     AzureBlobFileSystem fs = getFileSystem();
-    Path createFilePath = path(getMethodName());
-    Path destCreateFilePath = path(getMethodName() + "New");
+    Path createFilePath = pathUnderTestFolder(getMethodName());
+    Path destCreateFilePath = pathUnderTestFolder(getMethodName() + "New");
 
     fs.create(createFilePath);
     fs.open(createFilePath);

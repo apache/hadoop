@@ -58,7 +58,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
 
     AzureBlobFileSystem fs = getFileSystem();
     Map<String, Long> metricMap;
-    Path sendRequestPath = path(getMethodName());
+    Path sendRequestPath = getUniquePath(getMethodName());
     String testNetworkStatsString = "http_send";
 
     metricMap = fs.getInstrumentationMap();
@@ -193,7 +193,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
         + "Response is processed.");
 
     AzureBlobFileSystem fs = getFileSystem();
-    Path getResponsePath = path(getMethodName());
+    Path getResponsePath = getUniquePath(getMethodName());
     Map<String, Long> metricMap;
     String testResponseString = "some response";
 
@@ -304,7 +304,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
         + "response is failed");
 
     AzureBlobFileSystem fs = getFileSystem();
-    Path responseFailurePath = path(getMethodName());
+    Path responseFailurePath = getUniquePath(getMethodName());
     Map<String, Long> metricMap;
     FSDataOutputStream out = null;
 

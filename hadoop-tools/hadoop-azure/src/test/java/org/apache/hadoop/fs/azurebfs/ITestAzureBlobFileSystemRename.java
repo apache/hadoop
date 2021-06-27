@@ -73,9 +73,9 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testEnsureFileIsRenamed() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path src = path("testEnsureFileIsRenamed-src");
+    Path src = getUniquePath("testEnsureFileIsRenamed-src");
     touch(src);
-    Path dest = path("testEnsureFileIsRenamed-dest");
+    Path dest = getUniquePath("testEnsureFileIsRenamed-dest");
     fs.delete(dest, true);
     assertRenameOutcome(fs, src, dest, true);
 
@@ -86,9 +86,9 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameWithPreExistingDestination() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path src = path("renameSrc");
+    Path src = getUniquePath("renameSrc");
     touch(src);
-    Path dest = path("renameDest");
+    Path dest = getUniquePath("renameDest");
     touch(dest);
     assertRenameOutcome(fs, src, dest, false);
   }
@@ -96,13 +96,13 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameFileUnderDir() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path sourceDir = path("/testSrc");
+    Path sourceDir = getUniquePath("/testSrc");
     assertMkdirs(fs, sourceDir);
     String filename = "file1";
     Path file1 = new Path(sourceDir, filename);
     touch(file1);
 
-    Path destDir = path("/testDst");
+    Path destDir = getUniquePath("/testDst");
     assertRenameOutcome(fs, sourceDir, destDir, true);
     FileStatus[] fileStatus = fs.listStatus(destDir);
     assertNotNull("Null file status", fileStatus);
@@ -114,7 +114,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameDirectory() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    String testPath = path("testDir").toString();
+    String testPath = getUniquePath("testDir").toString();
     fs.mkdirs(new Path(testPath));
     Path test1 = new Path(testPath + "/test1");
     fs.mkdirs(test1);
@@ -176,7 +176,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testPosixRenameDirectory() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    Path testPath = path("testPath");
+    Path testPath = getUniquePath("testPath");
     fs.mkdirs(new Path(testPath + "/testDir2/test1/test2/test3"));
     fs.mkdirs(new Path(testPath + "/testDir2/test4"));
     Assert.assertTrue(

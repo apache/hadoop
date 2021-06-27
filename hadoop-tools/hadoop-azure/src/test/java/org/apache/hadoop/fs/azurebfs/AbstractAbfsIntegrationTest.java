@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -417,12 +418,12 @@ public abstract class AbstractAbfsIntegrationTest extends
   /**
    * Create a unique path by appending a GUID to given filepath
    * @param filepath path string
-   * @return a path qualified by the test filesystem
+   * @return unique filepath created using given filepath and GUID
    * @throws IOException IO errors
    */
-  protected Path path(String filepath) throws IOException {
-    return getFileSystem().makeQualified(
-        new Path(filepath + UUID.randomUUID()));
+  protected Path getUniquePath(String filepath) throws IOException {
+    return new Path(
+        filepath + StringUtils.right(UUID.randomUUID().toString(), 12));
   }
 
   /**

@@ -187,8 +187,9 @@ public class ITestAzureBlobFileSystemListStatus extends
     boolean exceptionThrown = false;
     final AzureBlobFileSystem fs = getFileSystem();
 
-    Path nontrailingPeriodDir = path("testTrailingDir/dir");
-    Path trailingPeriodDir = path("testTrailingDir/dir.");
+    Path testPath = getUniquePath("testTrailingDir");
+    Path nontrailingPeriodDir = new Path(testPath + "/dir");
+    Path trailingPeriodDir = new Path(testPath + "/dir.");
 
     assertMkdirs(fs, nontrailingPeriodDir);
 
@@ -207,8 +208,9 @@ public class ITestAzureBlobFileSystemListStatus extends
     boolean exceptionThrown = false;
     final AzureBlobFileSystem fs = getFileSystem();
 
-    Path trailingPeriodFile = path("testTrailingDir/file.");
-    Path nontrailingPeriodFile = path("testTrailingDir/file");
+    Path testPath = getUniquePath("testTrailingDir");
+    Path trailingPeriodFile = new Path(testPath + "/file.");
+    Path nontrailingPeriodFile = new Path(testPath + "/file");
 
     createFile(fs, nontrailingPeriodFile, false, new byte[0]);
     assertPathExists(fs, "Trailing period file does not exist",
@@ -229,8 +231,9 @@ public class ITestAzureBlobFileSystemListStatus extends
     boolean exceptionThrown = false;
     final AzureBlobFileSystem fs = getFileSystem();
 
-    Path nonTrailingPeriodFile = path("testTrailingDir/file");
-    Path trailingPeriodFile = path("testTrailingDir/file.");
+    Path testPath = getUniquePath("testTrailingDir");
+    Path nonTrailingPeriodFile = new Path(testPath + "/file");
+    Path trailingPeriodFile = new Path(testPath + "/file.");
 
     createFile(fs, nonTrailingPeriodFile, false, new byte[0]);
     try {

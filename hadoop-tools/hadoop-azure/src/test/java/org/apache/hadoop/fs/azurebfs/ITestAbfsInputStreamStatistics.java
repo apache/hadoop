@@ -61,7 +61,7 @@ public class ITestAbfsInputStreamStatistics
 
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfss = fs.getAbfsStore();
-    Path initValuesPath = path(getMethodName());
+    Path initValuesPath = getUniquePath(getMethodName());
     AbfsOutputStream outputStream = null;
     AbfsInputStream inputStream = null;
 
@@ -101,7 +101,7 @@ public class ITestAbfsInputStreamStatistics
 
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfss = fs.getAbfsStore();
-    Path seekStatPath = path(getMethodName());
+    Path seekStatPath = getUniquePath(getMethodName());
 
     AbfsOutputStream out = null;
     AbfsInputStream in = null;
@@ -189,7 +189,7 @@ public class ITestAbfsInputStreamStatistics
 
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfss = fs.getAbfsStore();
-    Path readStatPath = path(getMethodName());
+    Path readStatPath = getUniquePath(getMethodName());
 
     AbfsOutputStream out = null;
     AbfsInputStream in = null;
@@ -250,7 +250,7 @@ public class ITestAbfsInputStreamStatistics
     describe("Testing AbfsInputStream operations with statistics as null");
 
     AzureBlobFileSystem fs = getFileSystem();
-    Path nullStatFilePath = path(getMethodName());
+    Path nullStatFilePath = getUniquePath(getMethodName());
     byte[] oneKbBuff = new byte[ONE_KB];
 
     // Creating an AbfsInputStreamContext instance with null StreamStatistics.
@@ -304,7 +304,7 @@ public class ITestAbfsInputStreamStatistics
 
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfss = fs.getAbfsStore();
-    Path readAheadCountersPath = path(getMethodName());
+    Path readAheadCountersPath = getUniquePath(getMethodName());
 
     /*
      * Setting the block size for readAhead as 4KB.
@@ -380,7 +380,7 @@ public class ITestAbfsInputStreamStatistics
         + "request in AbfsInputStream");
     AzureBlobFileSystem fs = getFileSystem();
     AzureBlobFileSystemStore abfss = fs.getAbfsStore();
-    Path actionHttpGetRequestPath = path(getMethodName());
+    Path actionHttpGetRequestPath = getUniquePath(getMethodName());
     AbfsInputStream abfsInputStream = null;
     AbfsOutputStream abfsOutputStream = null;
     try {

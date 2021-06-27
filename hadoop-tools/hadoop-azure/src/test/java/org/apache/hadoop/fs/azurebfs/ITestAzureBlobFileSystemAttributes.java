@@ -48,7 +48,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     byte[] attributeValue2 = fs.getAbfsStore().encodeAttribute("你好");
     String attributeName1 = "user.asciiAttribute";
     String attributeName2 = "user.unicodeAttribute";
-    Path testFile = path("setGetXAttr");
+    Path testFile = getUniquePath("setGetXAttr");
 
     // after creating a file, the xAttr should not be present
     touch(testFile);
@@ -70,7 +70,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
     byte[] attributeValue = fs.getAbfsStore().encodeAttribute("one");
     String attributeName = "user.someAttribute";
-    Path testFile = path("createReplaceXAttr");
+    Path testFile = getUniquePath("createReplaceXAttr");
 
     // after creating a file, it must be possible to create a new xAttr
     touch(testFile);
@@ -88,7 +88,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     byte[] attributeValue1 = fs.getAbfsStore().encodeAttribute("one");
     byte[] attributeValue2 = fs.getAbfsStore().encodeAttribute("two");
     String attributeName = "user.someAttribute";
-    Path testFile = path("replaceXAttr");
+    Path testFile = getUniquePath("replaceXAttr");
 
     // after creating a file, it must not be possible to replace an xAttr
     intercept(IOException.class, () -> {

@@ -1274,7 +1274,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   public void testSetOwnerForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
-    final Path filePath = path(methodName.getMethodName());
+    final Path filePath = getUniquePath(methodName.getMethodName());
     fs.create(filePath);
 
     assertTrue(fs.exists(filePath));
@@ -1291,7 +1291,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   public void testSetPermissionForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
-    final Path filePath = path(methodName.getMethodName());
+    final Path filePath = getUniquePath(methodName.getMethodName());
     fs.create(filePath);
 
     assertTrue(fs.exists(filePath));
@@ -1310,7 +1310,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   public void testModifyAclEntriesForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
-    final Path filePath = path(methodName.getMethodName());
+    final Path filePath = getUniquePath(methodName.getMethodName());
     fs.create(filePath);
     try {
       List<AclEntry> aclSpec = Lists.newArrayList(
@@ -1327,7 +1327,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   public void testRemoveAclEntriesEntriesForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
-    final Path filePath = path(methodName.getMethodName());
+    final Path filePath = getUniquePath(methodName.getMethodName());
     fs.create(filePath);
     try {
       List<AclEntry> aclSpec = Lists.newArrayList(
@@ -1344,7 +1344,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   public void testRemoveDefaultAclForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
-    final Path filePath = path(methodName.getMethodName());
+    final Path filePath = getUniquePath(methodName.getMethodName());
     fs.create(filePath);
     try {
       fs.removeDefaultAcl(filePath);
@@ -1358,7 +1358,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   public void testRemoveAclForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
-    final Path filePath = path(methodName.getMethodName());
+    final Path filePath = getUniquePath(methodName.getMethodName());
     fs.create(filePath);
     try {
       fs.removeAcl(filePath);
@@ -1372,7 +1372,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   public void testSetAclForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
-    final Path filePath = path(methodName.getMethodName());
+    final Path filePath = getUniquePath(methodName.getMethodName());
     fs.create(filePath);
     try {
       List<AclEntry> aclSpec = Lists.newArrayList(
@@ -1389,7 +1389,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   public void testGetAclStatusForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
-    final Path filePath = path(methodName.getMethodName());
+    final Path filePath = getUniquePath(methodName.getMethodName());
     fs.create(filePath);
     try {
       AclStatus aclSpec = fs.getAclStatus(filePath);

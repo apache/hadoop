@@ -51,7 +51,7 @@ public class ITestAzureBlobFileSystemE2EScale extends
   @Test
   public void testWriteHeavyBytesToFileAcrossThreads() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path testFile = path(methodName.getMethodName());
+    final Path testFile = getUniquePath(methodName.getMethodName());
     final FSDataOutputStream stream = fs.create(testFile);
     ExecutorService es = Executors.newFixedThreadPool(TEN);
 
@@ -89,7 +89,7 @@ public class ITestAzureBlobFileSystemE2EScale extends
   public void testReadWriteHeavyBytesToFileWithStatistics() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final FileSystem.Statistics abfsStatistics;
-    final Path testFile = path(methodName.getMethodName());
+    final Path testFile = getUniquePath(methodName.getMethodName());
     int testBufferSize;
     final byte[] sourceData;
     try (FSDataOutputStream stream = fs.create(testFile)) {

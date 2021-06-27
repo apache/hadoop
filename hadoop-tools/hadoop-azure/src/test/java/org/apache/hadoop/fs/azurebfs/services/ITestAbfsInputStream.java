@@ -170,7 +170,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
 
   protected Path createFileWithContent(FileSystem fs, String fileName,
       byte[] fileContent) throws IOException {
-    Path testFilePath = path(fileName);
+    Path testFilePath = getUniquePath(fileName);
     try (FSDataOutputStream oStream = fs.create(testFilePath)) {
       oStream.write(fileContent);
       oStream.flush();

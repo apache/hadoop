@@ -64,7 +64,7 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
         + "work as expected.");
 
     AzureBlobFileSystem fs = getFileSystem();
-    Path testFilePath = path(getMethodName());
+    Path testFilePath = getUniquePath(getMethodName());
 
     // Declaring output and input stream.
     AbfsOutputStream out = null;
