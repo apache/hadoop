@@ -76,12 +76,13 @@ public class ITestAzureBlobFileSystemDelete extends
   public void testDeleteRoot() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
 
-    fs.mkdirs(new Path("/testFolder0"));
-    fs.mkdirs(new Path("/testFolder1"));
-    fs.mkdirs(new Path("/testFolder2"));
-    touch(new Path("/testFolder1/testfile"));
-    touch(new Path("/testFolder1/testfile2"));
-    touch(new Path("/testFolder1/testfile3"));
+    Path testPath = getUniquePath("/testFolder");
+    fs.mkdirs(new Path(testPath + "_0"));
+    fs.mkdirs(new Path(testPath + "_1"));
+    fs.mkdirs(new Path(testPath + "_2"));
+    touch(new Path(testPath + "_1/testfile"));
+    touch(new Path(testPath + "_1/testfile2"));
+    touch(new Path(testPath + "_1/testfile3"));
 
     Path root = new Path("/");
     FileStatus[] ls = fs.listStatus(root);
@@ -95,7 +96,7 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test()
   public void testOpenFileAfterDelete() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testfile = new Path("/testFile");
+    Path testfile = getUniquePath("/testFile");
     touch(testfile);
     assertDeleted(fs, testfile, false);
 
@@ -106,7 +107,7 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testEnsureFileIsDeleted() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testfile = new Path("testfile");
+    Path testfile = getUniquePath("testfile");
     touch(testfile);
     assertDeleted(fs, testfile, false);
     assertPathDoesNotExist(fs, "deleted", testfile);
@@ -115,10 +116,10 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testDeleteDirectory() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path dir = new Path("testfile");
+    Path dir = getUniquePath("testfile");
     fs.mkdirs(dir);
-    fs.mkdirs(new Path("testfile/test1"));
-    fs.mkdirs(new Path("testfile/test1/test2"));
+    fs.mkdirs(new Path(dir + "/test1"));
+    fs.mkdirs(new Path(dir + "/test1/test2"));
 
     assertDeleted(fs, dir, true);
     assertPathDoesNotExist(fs, "deleted", dir);
@@ -130,8 +131,9 @@ public class ITestAzureBlobFileSystemDelete extends
     final List<Future<Void>> tasks = new ArrayList<>();
 
     ExecutorService es = Executors.newFixedThreadPool(10);
+    Path dir = getUniquePath("/test");
     for (int i = 0; i < 1000; i++) {
-      final Path fileName = new Path("/test/" + i);
+      final Path fileName = new Path(dir + "/" + i);
       Callable<Void> callable = new Callable<Void>() {
         @Override
         public Void call() throws Exception {
@@ -148,7 +150,6 @@ public class ITestAzureBlobFileSystemDelete extends
     }
 
     es.shutdownNow();
-    Path dir = new Path("/test");
     // first try a non-recursive delete, expect failure
     intercept(FileAlreadyExistsException.class,
         () -> fs.delete(dir, false));
