@@ -60,6 +60,26 @@ RUN dnf install -y \
 RUN echo "source /opt/rh/gcc-toolset-9/enable" >> /etc/bashrc
 SHELL ["/bin/bash", "--login", "-c"]
 
+######
+# Set the environment variables needed for CMake
+# to find and use GCC 9 for compilation
+######
+ENV GCC_HOME "/opt/rh/gcc-toolset-9"
+ENV CC "${GCC_HOME}/root/usr/bin/gcc"
+ENV CXX "${GCC_HOME}/root/usr/bin/g++"
+ENV MODULES_RUN_QUARANTINE "LD_LIBRARY_PATH LD_PRELOAD"
+ENV MODULES_CMD "/usr/share/Modules/libexec/modulecmd.tcl"
+ENV SHLVL 1
+ENV MODULEPATH "/etc/scl/modulefiles:/usr/share/Modules/modulefiles:/etc/modulefiles:/usr/share/modulefiles"
+ENV MODULEPATH_modshare "/usr/share/modulefiles:1:/usr/share/Modules/modulefiles:1:/etc/modulefiles:1"
+ENV MODULESHOME "/usr/share/Modules"
+ENV LD_LIBRARY_PATH "${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:${GCC_HOME}/root/usr/lib64/dyninst:${GCC_HOME}/root/usr/lib/dyninst:${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:/usr/lib:/usr/lib64"
+ENV PCP_DIR "${GCC_HOME}/root"
+ENV MANPATH "${GCC_HOME}/root/usr/share/man::"
+ENV PATH "${GCC_HOME}/root/usr/bin:/usr/share/Modules/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ENV PKG_CONFIG_PATH "${GCC_HOME}/root/usr/lib64/pkgconfig"
+ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
+
 # TODO: Set locale
 
 ######
