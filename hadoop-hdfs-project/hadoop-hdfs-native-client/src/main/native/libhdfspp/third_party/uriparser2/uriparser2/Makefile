@@ -1,3 +1,4 @@
+
 AR	=ar
 CC	=gcc
 CFLAGS	=-ansi -Wall -O2 -fPIC

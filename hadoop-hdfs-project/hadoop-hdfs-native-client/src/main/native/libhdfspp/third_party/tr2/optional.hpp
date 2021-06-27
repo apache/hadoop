@@ -1,3 +1,4 @@
+
 // Copyright (C) 2011 - 2012 Andrzej Krzemienski.
 //
 // Use, modification, and distribution is subject to the Boost Software
