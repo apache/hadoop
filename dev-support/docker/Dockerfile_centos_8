@@ -106,3 +106,5 @@ RUN pkg-resolver/install-spotbugs.sh centos:8
 RUN pkg-resolver/install-protobuf.sh centos:8
 RUN pkg-resolver/install-zstandard.sh centos:8
 RUN pkg-resolver/install-common-pkgs.sh
+
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/lib:/usr/lib64"
