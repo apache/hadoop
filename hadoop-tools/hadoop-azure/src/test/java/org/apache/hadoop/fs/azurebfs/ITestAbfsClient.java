@@ -91,7 +91,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public void testListPathWithValidListMaxResultsValues()
       throws IOException, ExecutionException, InterruptedException {
     final int fileCount = 10;
-    final String directory = "testWithValidListMaxResultsValues";
+    final Path directory = getUniquePath("testWithValidListMaxResultsValues");
     createDirectoryWithNFiles(directory, fileCount);
     final int[] testData = {fileCount + 100, fileCount + 1, fileCount,
         fileCount - 1, 1};
@@ -100,7 +100,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       setListMaxResults(listMaxResults);
       int expectedListResultsSize =
           listMaxResults > fileCount ? fileCount : listMaxResults;
-      Assertions.assertThat(listPath(directory)).describedAs(
+      Assertions.assertThat(listPath(directory.toString())).describedAs(
           "AbfsClient.listPath result should contain %d items when "
               + "listMaxResults is %d and directory contains %d items",
           expectedListResultsSize, listMaxResults, fileCount)
@@ -112,9 +112,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public void testListPathWithValueGreaterThanServerMaximum()
       throws IOException, ExecutionException, InterruptedException {
     setListMaxResults(LIST_MAX_RESULTS_SERVER + 100);
-    final String directory = "testWithValueGreaterThanServerMaximum";
+    final Path directory = getUniquePath(
+        "testWithValueGreaterThanServerMaximum");
     createDirectoryWithNFiles(directory, LIST_MAX_RESULTS_SERVER + 200);
-    Assertions.assertThat(listPath(directory)).describedAs(
+    Assertions.assertThat(listPath(directory.toString())).describedAs(
         "AbfsClient.listPath result will contain a maximum of %d items "
             + "even if listMaxResults >= %d or directory "
             + "contains more than %d items", LIST_MAX_RESULTS_SERVER,
@@ -149,7 +150,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .setListMaxResults(listMaxResults);
   }
 
-  private void createDirectoryWithNFiles(String directory, int n)
+  private void createDirectoryWithNFiles(Path directory, int n)
       throws ExecutionException, InterruptedException {
     final List<Future<Void>> tasks = new ArrayList<>();
     ExecutorService es = Executors.newFixedThreadPool(10);
