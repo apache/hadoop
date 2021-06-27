@@ -58,7 +58,7 @@ public class GetClusterNodesRequestPBImpl extends GetClusterNodesRequest {
     viaProto = true;
     return proto;
   }
-  
+   
   @Override
   public synchronized EnumSet<NodeState> getNodeStates() {
     initNodeStates();
