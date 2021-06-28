@@ -2276,7 +2276,7 @@ public class DataNode extends ReconfigurableBase
 
     try {
       datanodeNetworkCounts.get(host).compute(NETWORK_ERRORS,
-          (key, errors) -> errors == null ? null : errors + 1L);
+          (key, errors) -> errors == null ? 1L : errors + 1L);
     } catch (ExecutionException e) {
       LOG.warn("Failed to increment network error counts for host: {}", host);
     }
