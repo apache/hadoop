@@ -29,7 +29,7 @@ import java.util.concurrent.Future;
 import org.junit.Assume;
 import org.junit.Test;
 
-import com.azure.storage.fastpath.MockFastpathConnection;
+import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
