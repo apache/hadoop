@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import com.azure.storage.fastpath.driver.FastpathDriver;
 import com.azure.storage.fastpath.FastpathConnection;
-import org.apache.hadoop.fs.azurebfs.utils.MockSharedLib;
 import com.azure.storage.fastpath.exceptions.FastpathException;
 import com.azure.storage.fastpath.exceptions.FastpathConnectionException;
 import com.azure.storage.fastpath.exceptions.FastpathRequestException;
@@ -48,8 +47,8 @@ public class MockFastpathConnection
   protected static final Logger LOG = LoggerFactory.getLogger(
       MockFastpathConnection.class);
 
-  private final static MockSharedLib
-      nativeApiCaller = new MockSharedLib();
+  private final static MockFastpathDriver
+      nativeApiCaller = new MockFastpathDriver();
 
   static AtomicInteger readCount = new AtomicInteger(0);
 
