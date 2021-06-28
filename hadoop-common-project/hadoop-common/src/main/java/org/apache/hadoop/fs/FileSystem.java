@@ -2281,22 +2281,10 @@ public abstract class FileSystem extends Configured
   public RemoteIterator<LocatedFileStatus> listFiles(
       final Path f, final boolean recursive)
   throws FileNotFoundException, IOException {
-    return createRemoteIterator(f, recursive, false);
-  }
-
-  public RemoteIterator<LocatedFileStatus> listFilesAndDirs(
-          final Path f, final boolean recursive)
-          throws FileNotFoundException, IOException {
-    return createRemoteIterator(f, recursive, true);
-  }
-
-  private RemoteIterator<LocatedFileStatus> createRemoteIterator(
-          final Path f, final boolean recursive, boolean includeDir
-  ) throws FileNotFoundException, IOException {
     return new RemoteIterator<LocatedFileStatus>() {
       private Stack<RemoteIterator<LocatedFileStatus>> itors = new Stack<>();
       private RemoteIterator<LocatedFileStatus> curItor =
-              listLocatedStatus(f);
+        listLocatedStatus(f);
       private LocatedFileStatus curFile;
 
       @Override
@@ -2325,10 +2313,6 @@ public abstract class FileSystem extends Configured
         if (stat.isFile()) { // file
           curFile = stat;
         } else if (recursive) { // directory
-          if (includeDir) {
-            curFile = stat;
-          }
-
           itors.push(curItor);
           curItor = listLocatedStatus(stat.getPath());
         }
