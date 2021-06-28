@@ -38,6 +38,7 @@ class LoggingHttpResponseEncoder extends HttpResponseEncoder {
   @Override
   public boolean acceptOutboundMessage(Object msg) throws Exception {
     printExecutingMethod();
+    LOG.info("OUTBOUND MESSAGE: " + msg);
     return super.acceptOutboundMessage(msg);
   }
 
@@ -52,6 +53,7 @@ class LoggingHttpResponseEncoder extends HttpResponseEncoder {
   @Override
   protected void encode(ChannelHandlerContext ctx, Object msg,
       List<Object> out) throws Exception {
+    LOG.debug("Encoding to channel {}: {}", ctx.channel(), msg);
     printExecutingMethod();
     logStacktraceIfRequired();
     super.encode(ctx, msg, out);
@@ -66,6 +68,7 @@ class LoggingHttpResponseEncoder extends HttpResponseEncoder {
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise
       promise) throws Exception {
+    LOG.debug("Writing to channel {}: {}", ctx.channel(), msg);
     printExecutingMethod();
     super.write(ctx, msg, promise);
   }
@@ -82,19 +85,24 @@ class LoggingHttpResponseEncoder extends HttpResponseEncoder {
   }
 
   private String getExecutingMethodName() {
-    StackTraceElement[] stackTrace = Thread.currentThread()
-        .getStackTrace();
-    // Array items (indices):
-    // 0: java.lang.Thread.getStackTrace(...)
-    // 1: TestShuffleHandler$LoggingHttpResponseEncoder
-    // .getExecutingMethodName(...)
-    String methodName = stackTrace[2].getMethodName();
-    //If this method was called from printExecutingMethod, 
-    // we have yet another stack frame
-    if (methodName.endsWith("printExecutingMethod")) {
-      methodName = stackTrace[3].getMethodName();
+    try {
+      StackTraceElement[] stackTrace = Thread.currentThread()
+          .getStackTrace();
+      // Array items (indices):
+      // 0: java.lang.Thread.getStackTrace(...)
+      // 1: TestShuffleHandler$LoggingHttpResponseEncoder
+      // .getExecutingMethodName(...)
+      String methodName = stackTrace[2].getMethodName();
+      //If this method was called from printExecutingMethod, 
+      // we have yet another stack frame
+      if (methodName.endsWith("printExecutingMethod")) {
+        methodName = stackTrace[3].getMethodName();
+      }
+      String className = this.getClass().getSimpleName();
+      return className + "#" + methodName;
+    } catch (Throwable t) {
+      LOG.error("Error while getting execution method name", t);
+      return null;
     }
-    String className = this.getClass().getSimpleName();
-    return className + "#" + methodName;
   }
 }
