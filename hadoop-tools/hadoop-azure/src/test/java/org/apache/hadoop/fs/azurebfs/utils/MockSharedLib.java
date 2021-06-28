@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.azure.storage.fastpath;
+package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.nio.ByteBuffer;
 import org.slf4j.Logger;

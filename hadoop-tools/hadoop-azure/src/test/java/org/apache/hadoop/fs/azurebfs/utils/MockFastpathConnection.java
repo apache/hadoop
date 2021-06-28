@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.azure.storage.fastpath;
+package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -26,7 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.azure.storage.fastpath.driver.FastpathDriver;
-import com.azure.storage.fastpath.MockSharedLib;
+import com.azure.storage.fastpath.FastpathConnection;
+import org.apache.hadoop.fs.azurebfs.utils.MockSharedLib;
 import com.azure.storage.fastpath.exceptions.FastpathException;
 import com.azure.storage.fastpath.exceptions.FastpathConnectionException;
 import com.azure.storage.fastpath.exceptions.FastpathRequestException;

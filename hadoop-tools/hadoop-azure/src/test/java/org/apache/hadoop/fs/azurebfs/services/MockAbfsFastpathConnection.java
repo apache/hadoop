@@ -23,7 +23,7 @@ import java.net.URL;
 import java.util.List;
 
 import com.azure.storage.fastpath.exceptions.FastpathException;
-import com.azure.storage.fastpath.MockFastpathConnection;
+import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
 import com.azure.storage.fastpath.requestParameters.FastpathCloseRequestParams;
 import com.azure.storage.fastpath.requestParameters.FastpathOpenRequestParams;
 import com.azure.storage.fastpath.requestParameters.FastpathReadRequestParams;
