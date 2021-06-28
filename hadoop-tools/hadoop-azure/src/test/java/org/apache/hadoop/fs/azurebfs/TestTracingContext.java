@@ -24,6 +24,8 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
@@ -45,6 +47,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 
 public class TestTracingContext extends AbstractAbfsIntegrationTest {
@@ -57,7 +60,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testClientCorrelationId() throws IOException {
+  public void testClientCorrelationId() throws Exception {
     checkCorrelationConfigValidation(CLIENT_CORRELATIONID_LIST[0], true);
     checkCorrelationConfigValidation(CLIENT_CORRELATIONID_LIST[1], false);
     checkCorrelationConfigValidation(CLIENT_CORRELATIONID_LIST[2], false);
@@ -75,12 +78,12 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   }
 
   public void checkCorrelationConfigValidation(String clientCorrelationId,
-      boolean includeInHeader) throws IOException {
-    AzureBlobFileSystem fs = getFileSystem();
-    TracingContext tracingContext = new TracingContext(clientCorrelationId,
-        fs.getFileSystemId(), FSOperationType.TEST_OP,
-        TracingHeaderFormat.ALL_ID_FORMAT, null);
-    String correlationID = tracingContext.constructHeader().split(":")[0];
+      boolean includeInHeader) throws Exception {
+    Configuration conf = getRawConfiguration();
+    conf.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+
+    String correlationID = fs.getClientCorrelationId();
     if (includeInHeader) {
       Assertions.assertThat(correlationID)
           .describedAs("Correlation ID should match config when valid")
@@ -90,7 +93,9 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
           .describedAs("Invalid ID should be replaced with empty string")
           .isEqualTo(EMPTY_STRING);
     }
-
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+        fs.getFileSystemId(), FSOperationType.TEST_OP,
+        TracingHeaderFormat.ALL_ID_FORMAT, null);
     boolean isNamespaceEnabled = fs.getIsNamespaceEnabled(tracingContext);
     String path = getRelativePath(new Path("/testDir"));
     String permission = isNamespaceEnabled
@@ -123,8 +128,8 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
   public void runCorrelationTestForAllMethods() throws Exception {
     Map<AbstractAbfsIntegrationTest, Method> testClasses = new HashMap<>();
 
-//    testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
-//        ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
+    testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
+        ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
     testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE), //open,
         // read, write
         ITestAbfsReadWriteAndSeek.class.getMethod("testReadAheadRequestID"));

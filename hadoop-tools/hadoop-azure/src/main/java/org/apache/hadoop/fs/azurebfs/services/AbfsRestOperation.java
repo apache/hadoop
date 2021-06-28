@@ -226,7 +226,7 @@ public class AbfsRestOperation {
     LOG.trace("{} REST operation complete", operationType);
   }
 
-  private void updateClientRequestHeader(AbfsHttpOperation httpOperation,
+  private void setClientRequestHeader(AbfsHttpOperation httpOperation,
       TracingContext tracingContext) {
     tracingContext.generateClientRequestId();
     httpOperation.getConnection()
@@ -246,7 +246,7 @@ public class AbfsRestOperation {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      updateClientRequestHeader(httpOperation, tracingContext);
+      setClientRequestHeader(httpOperation, tracingContext);
 
       switch(client.getAuthType()) {
         case Custom:

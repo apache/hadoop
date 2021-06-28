@@ -67,7 +67,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     final List<Future<Void>> tasks = new ArrayList<>();
 
     ExecutorService es = Executors.newFixedThreadPool(10);
-    for (int i = 0; i < TEST_FILES_NUMBER/100; i++) {
+    for (int i = 0; i < TEST_FILES_NUMBER; i++) {
       final Path fileName = new Path("/test" + i);
       Callable<Void> callable = new Callable<Void>() {
         @Override

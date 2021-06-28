@@ -137,7 +137,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
-    this.inputStreamId = getInputStreamId();
+    this.inputStreamId = createInputStreamId();
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setOperation(FSOperationType.READ);
     this.tracingContext.setStreamID(inputStreamId);
@@ -156,7 +156,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return path;
   }
 
-  private String getInputStreamId() {
+  private String createInputStreamId() {
     return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
   }
 

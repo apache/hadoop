@@ -140,8 +140,10 @@ public class AzureBlobFileSystem extends FileSystem
         configuration, abfsCounters);
     LOG.trace("AzureBlobFileSystemStore init complete");
 
-    final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
-    clientCorrelationId = abfsConfiguration.getClientCorrelationId();
+    final AbfsConfiguration abfsConfiguration = abfsStore
+        .getAbfsConfiguration();
+    clientCorrelationId = TracingContext.validateClientCorrelationID(
+        abfsConfiguration.getClientCorrelationId());
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
@@ -1435,6 +1437,11 @@ public class AzureBlobFileSystem extends FileSystem
   @VisibleForTesting
   String getFileSystemId() {
     return fileSystemId;
+  }
+
+  @VisibleForTesting
+  String getClientCorrelationId() {
+    return clientCorrelationId;
   }
 
   @Override

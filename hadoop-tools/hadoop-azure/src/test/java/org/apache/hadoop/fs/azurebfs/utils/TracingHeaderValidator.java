@@ -144,7 +144,7 @@ public class TracingHeaderValidator implements Listener {
   }
 
   @Override
-  public void updatePrimaryRequestID(String primaryRequestID) {
-    this.primaryRequestId = primaryRequestID;
+  public void updatePrimaryRequestID(String primaryRequestId) {
+    this.primaryRequestId = primaryRequestId;
   }
 }

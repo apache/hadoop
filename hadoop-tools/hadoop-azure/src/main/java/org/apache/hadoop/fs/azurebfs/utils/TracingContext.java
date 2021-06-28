@@ -39,7 +39,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_ST
  *
  * Add new operations to HdfsOperationConstants file.
  *
- * PrimaryRequestId can be enabled for individual HDFS API that invoke
+ * PrimaryRequestId can be enabled for individual Hadoop API that invoke
  * multiple Store calls.
  *
  * Testing:
@@ -48,15 +48,16 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_ST
  */
 
 public class TracingContext {
-  private final String clientCorrelationID;
-  private final String fileSystemID;
-  private String clientRequestId = EMPTY_STRING;
-  private String primaryRequestID;
-  private String streamID;
-  private int retryCount;
-  private FSOperationType hadoopOpName;
-  private final TracingHeaderFormat format;
-  private Listener listener = null;
+  private final String clientCorrelationID;  // passed over config by client
+  private final String fileSystemID;  // GUID for fileSystem instance
+  private String clientRequestId = EMPTY_STRING;  // GUID per http request
+  //Optional, non-empty for methods that trigger two or more Store calls
+  private String primaryRequestId;
+  private String streamID;  // appears per stream instance (read/write ops)
+  private int retryCount;  // retry number as recorded by AbfsRestOperation
+  private FSOperationType opType;  // two-lettered code representing Hadoop op
+  private final TracingHeaderFormat format;  // header ID display options
+  private Listener listener = null;  // null except when testing
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
@@ -66,33 +67,33 @@ public class TracingContext {
    * Initialize TracingContext
    * @param clientCorrelationID Provided over config by client
    * @param fileSystemID Unique guid for AzureBlobFileSystem instance
-   * @param hadoopOpName Code indicating the high-level Hadoop operation that
+   * @param opType Code indicating the high-level Hadoop operation that
    *                    triggered the current Store request
    * @param tracingHeaderFormat Format of IDs to be printed in header and logs
    * @param listener Holds instance of TracingHeaderValidator during testing,
    *                null otherwise
    */
   public TracingContext(String clientCorrelationID, String fileSystemID,
-      FSOperationType hadoopOpName, TracingHeaderFormat tracingHeaderFormat,
+      FSOperationType opType, TracingHeaderFormat tracingHeaderFormat,
       Listener listener) {
     this.fileSystemID = fileSystemID;
-    this.hadoopOpName = hadoopOpName;
-    this.clientCorrelationID = validateClientCorrelationID(clientCorrelationID);
+    this.opType = opType;
+    this.clientCorrelationID = clientCorrelationID;
     streamID = EMPTY_STRING;
     retryCount = 0;
-    primaryRequestID = EMPTY_STRING;
+    primaryRequestId = EMPTY_STRING;
     format = tracingHeaderFormat;
     this.listener = listener;
   }
 
   public TracingContext(String clientCorrelationID, String fileSystemID,
-      FSOperationType hadoopOpName, boolean needsPrimaryReqId,
+      FSOperationType opType, boolean needsPrimaryReqId,
       TracingHeaderFormat tracingHeaderFormat, Listener listener) {
-    this(clientCorrelationID, fileSystemID, hadoopOpName, tracingHeaderFormat,
+    this(clientCorrelationID, fileSystemID, opType, tracingHeaderFormat,
         listener);
-    primaryRequestID = needsPrimaryReqId ? UUID.randomUUID().toString() : "";
+    primaryRequestId = needsPrimaryReqId ? UUID.randomUUID().toString() : "";
     if (listener != null) {
-      listener.updatePrimaryRequestID(primaryRequestID);
+      listener.updatePrimaryRequestID(primaryRequestId);
     }
   }
 
@@ -100,16 +101,16 @@ public class TracingContext {
     this.fileSystemID = originalTracingContext.fileSystemID;
     this.streamID = originalTracingContext.streamID;
     this.clientCorrelationID = originalTracingContext.clientCorrelationID;
-    this.hadoopOpName = originalTracingContext.hadoopOpName;
+    this.opType = originalTracingContext.opType;
     this.retryCount = 0;
-    this.primaryRequestID = originalTracingContext.primaryRequestID;
+    this.primaryRequestId = originalTracingContext.primaryRequestId;
     this.format = originalTracingContext.format;
     if (originalTracingContext.listener != null) {
       this.listener = originalTracingContext.listener.getClone();
     }
   }
 
-  public String validateClientCorrelationID(String clientCorrelationID) {
+  public static String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
         || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
       LOG.debug(
@@ -124,9 +125,9 @@ public class TracingContext {
   }
 
   public void setPrimaryRequestID() {
-    primaryRequestID = UUID.randomUUID().toString();
+    primaryRequestId = UUID.randomUUID().toString();
     if (listener != null) {
-      listener.updatePrimaryRequestID(primaryRequestID);
+      listener.updatePrimaryRequestID(primaryRequestId);
     }
   }
 
@@ -135,7 +136,7 @@ public class TracingContext {
   }
 
   public void setOperation(FSOperationType operation) {
-    this.hadoopOpName = operation;
+    this.opType = operation;
   }
 
   public void setRetryCount(int retryCount) {
@@ -149,10 +150,10 @@ public class TracingContext {
   public String constructHeader() {
     String header;
     switch (format) {
-    case ALL_ID_FORMAT:
+    case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
       header =
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
-              + primaryRequestID + ":" + streamID + ":" + hadoopOpName + ":"
+              + primaryRequestId + ":" + streamID + ":" + opType + ":"
               + retryCount;
       break;
     case TWO_ID_FORMAT:

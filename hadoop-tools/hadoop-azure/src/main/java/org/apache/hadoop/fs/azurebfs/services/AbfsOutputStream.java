@@ -170,13 +170,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     if (outputStreamStatistics != null) {
       this.ioStatistics = outputStreamStatistics.getIOStatistics();
     }
-    this.outputStreamId = getOutputStreamId();
+    this.outputStreamId = createOutputStreamId();
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setStreamID(outputStreamId);
     this.tracingContext.setOperation(FSOperationType.WRITE);
   }
 
-  private String getOutputStreamId() {
+  private String createOutputStreamId() {
     return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
   }
 

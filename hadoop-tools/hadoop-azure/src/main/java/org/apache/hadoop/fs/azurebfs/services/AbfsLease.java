@@ -101,7 +101,8 @@ public final class AbfsLease {
     // Try to get the lease a specified number of times, else throw an error
     RetryPolicy retryPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
         acquireMaxRetries, acquireRetryInterval, TimeUnit.SECONDS);
-    acquireLease(retryPolicy, 0, acquireRetryInterval, 0);
+    acquireLease(retryPolicy, 0, acquireRetryInterval, 0,
+        new TracingContext(tracingContext));
 
     while (leaseID == null && exception == null) {
       try {
@@ -120,14 +121,14 @@ public final class AbfsLease {
   }
 
   private void acquireLease(RetryPolicy retryPolicy, int numRetries,
-      int retryInterval, long delay)
+      int retryInterval, long delay, TracingContext tracingContext)
       throws LeaseException {
     LOG.debug("Attempting to acquire lease on {}, retry {}", path, numRetries);
     if (future != null && !future.isDone()) {
       throw new LeaseException(ERR_LEASE_FUTURE_EXISTS);
     }
     future = client.schedule(() -> client.acquireLease(path,
-        INFINITE_LEASE_DURATION, new TracingContext(tracingContext)),
+        INFINITE_LEASE_DURATION, tracingContext),
         delay, TimeUnit.SECONDS);
     client.addCallback(future, new FutureCallback<AbfsRestOperation>() {
       @Override
@@ -143,7 +144,8 @@ public final class AbfsLease {
               == retryPolicy.shouldRetry(null, numRetries, 0, true).action) {
             LOG.debug("Failed to acquire lease on {}, retrying: {}", path, throwable);
             acquireRetryCount++;
-            acquireLease(retryPolicy, numRetries + 1, retryInterval, retryInterval);
+            acquireLease(retryPolicy, numRetries + 1, retryInterval,
+                retryInterval, tracingContext);
           } else {
             exception = throwable;
           }
