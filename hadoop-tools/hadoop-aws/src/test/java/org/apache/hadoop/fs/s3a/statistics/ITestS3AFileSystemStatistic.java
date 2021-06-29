@@ -28,11 +28,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 public class ITestS3AFileSystemStatistic extends AbstractS3ATestBase {
 
-  private static final int ONE_MB = 1024 * 1024;
-  private static final int TWO_MB = 2 * 1024 * 1024;
+  private static final int ONE_KB = 1024;
+  private static final int TWO_KB = 2 * ONE_KB;
 
   /**
    * Verify the fs statistic bytesRead after reading from 2 different
@@ -42,25 +44,32 @@ public class ITestS3AFileSystemStatistic extends AbstractS3ATestBase {
   public void testBytesReadWithStream() throws IOException {
     S3AFileSystem fs = getFileSystem();
     Path filePath = path(getMethodName());
-    byte[] oneMbBuf = new byte[ONE_MB];
+    byte[] oneMbBuf = new byte[ONE_KB];
 
     // Writing 1MB in a file.
-    FSDataOutputStream out = fs.create(filePath);
-    out.write(oneMbBuf);
-    out.close();
+    try (FSDataOutputStream out = fs.create(filePath)) {
+      out.write(oneMbBuf);
+      // Verify if correct number of bytes were written.
+      IOStatisticAssertions.assertThatStatisticCounter(out.getIOStatistics(),
+          StreamStatisticNames.STREAM_WRITE_BYTES)
+          .describedAs("Bytes written by OutputStream "
+              + "should match the actual bytes")
+          .isEqualTo(ONE_KB);
+    }
 
-    // Reading 1MB from first InputStream.
-    FSDataInputStream in = fs.open(filePath, ONE_MB);
-    in.readFully(0, oneMbBuf);
-    in.close();
+    // Reading 1KB from first InputStream.
+    try (FSDataInputStream in = fs.open(filePath, ONE_KB)) {
+      in.readFully(0, oneMbBuf);
+    }
 
-    // Reading 1MB from second InputStream.
-    FSDataInputStream in2 = fs.open(filePath, ONE_MB);
-    in2.readFully(0, oneMbBuf);
-    in2.close();
+    // Reading 1KB from second InputStream.
+    try (FSDataInputStream in2 = fs.open(filePath, ONE_KB)) {
+      in2.readFully(0, oneMbBuf);
+    }
 
     FileSystem.Statistics fsStats = fs.getFsStatistics();
-    // Verifying that total bytes read by FS is equal to 2MB.
-    assertEquals(TWO_MB, fsStats.getBytesRead());
+    // Verifying that total bytes read by FS is equal to 2KB.
+    assertEquals("Mismatch in number of FS bytes read by InputStreams", TWO_KB,
+        fsStats.getBytesRead());
   }
 }
