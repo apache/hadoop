@@ -35,13 +35,6 @@ pipeline {
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
         YETUS_VERSION='f9ba0170a5787a5f4662d3769804fef0226a182f'
-        
-        GITHUB_CREDS = credentials('apache-hadoop-at-github.com')
-        GITHUB_USER = "${GITHUB_CREDS_USR}"
-        GITHUB_TOKEN = "${GITHUB_CREDS_PWD}"
-        JIRA_CREDS = credentials('hadoopqa-at-asf-jira')
-        JIRA_USER = "${JIRA_CREDS_USR}"
-        JIRA_PASSWORD = "${JIRA_CREDS_PWD}"
     }
 
     parameters {
@@ -50,73 +43,81 @@ pipeline {
                description: 'The JIRA issue that has a patch needing pre-commit testing. Example: HADOOP-1234')
     }
 
-    stages {        
-        stage ('install yetus') {
-            steps {
-                dir("${WORKSPACE}/${YETUS}") {
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: "${env.YETUS_VERSION}"]],
-                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
-                    )
+    withCredentials(
+            [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                                passwordVariable: 'GITHUB_TOKEN',
+                                usernameVariable: 'GITHUB_USER'),
+            usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
+                                passwordVariable: 'JIRA_PASSWORD',
+                                usernameVariable: 'JIRA_USER')]) {
+         stages {
+            stage ('install yetus') {
+                steps {
+                    dir("${WORKSPACE}/${YETUS}") {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "${env.YETUS_VERSION}"]],
+                            userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
+                        )
+                    }
                 }
             }
-        }
-      
-        // This is an optional stage which runs only when there's a change in
-        // C++/C++ build/platform.
-        // This stage serves as a means of cross platform validation, which is
-        // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Centos 8.
-        stage ('precommit-run Centos 8') {
-            environment {
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
-                IS_OPTIONAL = 1
+
+            // This is an optional stage which runs only when there's a change in
+            // C++/C++ build/platform.
+            // This stage serves as a means of cross platform validation, which is
+            // really needed to ensure that any C++ related/platform change doesn't
+            // break the Hadoop build on Centos 8.
+            stage ('precommit-run Centos 8') {
+                environment {
+                    DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
+                    IS_OPTIONAL = 1
+                }
+
+                steps {
+                    sh '''#!/usr/bin/env bash
+
+                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                    "${SOURCEDIR}/dev-support/jenkins.sh"
+                    '''
+                }
             }
 
-            steps {
-                sh '''#!/usr/bin/env bash
+            // This is an optional stage which runs only when there's a change in
+            // C++/C++ build/platform.
+            // This stage serves as a means of cross platform validation, which is
+            // really needed to ensure that any C++ related/platform change doesn't
+            // break the Hadoop build on Debian 10.
+            stage ('precommit-run Debian 10') {
+                environment {
+                    DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
+                    IS_OPTIONAL = 1
+                }
 
-                chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-                "${SOURCEDIR}/dev-support/jenkins.sh"
-                '''
-            }
-        }
+                steps {
+                    sh '''#!/usr/bin/env bash
 
-        // This is an optional stage which runs only when there's a change in
-        // C++/C++ build/platform.
-        // This stage serves as a means of cross platform validation, which is
-        // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Debian 10.
-        stage ('precommit-run Debian 10') {
-            environment {
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
-                IS_OPTIONAL = 1
-            }
-
-            steps {
-                sh '''#!/usr/bin/env bash
-
-                chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-                "${SOURCEDIR}/dev-support/jenkins.sh"
-                '''
-            }
-        }
-
-        // We want to use Ubuntu Focal as our main CI and thus, this stage
-        // isn't optional (runs for all the PRs).
-        stage ('precommit-run Ubuntu focal') {
-            environment {
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
-                IS_OPTIONAL = 0
+                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                    "${SOURCEDIR}/dev-support/jenkins.sh"
+                    '''
+                }
             }
 
-            steps {
-                sh '''#!/usr/bin/env bash
+            // We want to use Ubuntu Focal as our main CI and thus, this stage
+            // isn't optional (runs for all the PRs).
+            stage ('precommit-run Ubuntu focal') {
+                environment {
+                    DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
+                    IS_OPTIONAL = 0
+                }
 
-                chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-                "${SOURCEDIR}/dev-support/jenkins.sh"
-                '''
+                steps {
+                    sh '''#!/usr/bin/env bash
+
+                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                    "${SOURCEDIR}/dev-support/jenkins.sh"
+                    '''
+                }
             }
         }
     }
