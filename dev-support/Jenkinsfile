@@ -57,7 +57,8 @@ pipeline {
         }
         
         parallel {
-            withCredentials(
+            stage ('platform validation') {
+                withCredentials(
                 [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
                                     passwordVariable: 'GITHUB_TOKEN',
                                     usernameVariable: 'GITHUB_USER'),
@@ -122,6 +123,7 @@ pipeline {
                                 }
                             }
                 }
+            }
         }
     }
 
