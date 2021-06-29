@@ -37,6 +37,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -982,6 +983,16 @@ public class TestDistCpSync {
     Path webHdfsTarget = new Path(webfs.getUri().toString(), target);
 
     snapshotDiffWithPaths(webHdfsSource, webHdfsTarget);
+  }
+
+  @Test
+  public void testSyncSnapshotDiffWithLocalFileSystem() throws Exception {
+    String[] args = new String[]{"-update","-diff", "s1", "s2",
+        "file:///source", "file:///target"};
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "The source file system does not support snapshot",
+        () -> new DistCp(conf, OptionsParser.parse(args)).execute());
   }
 
   private void snapshotDiffWithPaths(Path sourceFSPath,
