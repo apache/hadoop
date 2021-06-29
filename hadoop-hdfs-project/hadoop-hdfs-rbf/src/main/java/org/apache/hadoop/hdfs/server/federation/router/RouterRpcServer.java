@@ -1452,6 +1452,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   @Override // ClientProtocol
+  public QuotaUsage[] getQuotaListing(String path) throws IOException {
+    return clientProto.getQuotaListing(path);
+  }
+
+  @Override // ClientProtocol
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     clientProto.reportBadBlocks(blocks);
   }
