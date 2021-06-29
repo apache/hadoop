@@ -27,48 +27,48 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 @InterfaceAudience.Private
 public interface Replica {
   /** Get the block ID  */
-  long getBlockId();
+  public long getBlockId();
 
   /** Get the generation stamp */
-  long getGenerationStamp();
+  public long getGenerationStamp();
 
   /**
    * Get the replica state
    * @return the replica state
    */
-  ReplicaState getState();
+  public ReplicaState getState();
 
   /**
    * Get the number of bytes received
    * @return the number of bytes that have been received
    */
-  long getNumBytes();
+  public long getNumBytes();
   
   /**
    * Get the number of bytes that have written to disk
    * @return the number of bytes that have written to disk
    */
-  long getBytesOnDisk();
+  public long getBytesOnDisk();
 
   /**
    * Get the number of bytes that are visible to readers
    * @return the number of bytes that are visible to readers
    */
-  long getVisibleLength();
+  public long getVisibleLength();
 
   /**
    * Return the storageUuid of the volume that stores this replica.
    */
-  String getStorageUuid();
+  public String getStorageUuid();
 
   /**
    * Return true if the target volume is backed by RAM.
    */
-  boolean isOnTransientStorage();
+  public boolean isOnTransientStorage();
 
   /**
    * Get the volume of replica.
    * @return the volume of replica
    */
-  FsVolumeSpi getVolume();
+  public FsVolumeSpi getVolume();
 }

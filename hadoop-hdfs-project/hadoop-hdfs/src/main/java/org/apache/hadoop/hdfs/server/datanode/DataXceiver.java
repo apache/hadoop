@@ -930,7 +930,8 @@ class DataXceiver extends Receiver implements Runnable {
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         datanode.closeBlock(block, null, storageUuid, isOnTransientStorage);
         LOG.info("Received {} src: {} dest: {} volume: {} of size {}",
-            block, remoteAddress, localAddress, block.getNumBytes());
+            block, remoteAddress, localAddress, replica.getVolume(),
+            block.getNumBytes());
       }
 
       if(isClient) {
