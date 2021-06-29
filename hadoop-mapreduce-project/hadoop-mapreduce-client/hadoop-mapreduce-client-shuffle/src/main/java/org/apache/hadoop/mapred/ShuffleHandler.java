@@ -29,6 +29,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static org.apache.hadoop.mapred.ShuffleHandler.NettyChannelHelper.*;
 import static org.fusesource.leveldbjni.JniDBFactory.asString;
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 
@@ -186,6 +187,7 @@ public class ShuffleHandler extends AuxiliaryService {
   // This should kept in sync with Fetcher.FETCH_RETRY_DELAY_DEFAULT
   public static final long FETCH_RETRY_DELAY = 1000L;
   public static final String RETRY_AFTER_HEADER = "Retry-After";
+  static final String ENCODER_HANDLER_NAME = "encoder";
 
   private int port;
   private EventLoopGroup bossGroup;
@@ -199,8 +201,9 @@ public class ShuffleHandler extends AuxiliaryService {
   protected HttpPipelineFactory pipelineFact;
   private int sslFileBufferSize;
 
-  //TODO snemeth add a config option for this later, this is temporarily disabled for now.
+  //TODO snemeth add a config option for these later, this is temporarily disabled for now.
   private boolean useOutboundExceptionHandler = false;
+  private boolean useOutboundLogger = false;
   
   /**
    * Should the shuffle use posix_fadvise calls to manage the OS cache during
@@ -299,6 +302,36 @@ public class ShuffleHandler extends AuxiliaryService {
       shuffleConnections.decr();
     }
   }
+  
+  static class NettyChannelHelper {
+    static ChannelFuture writeToChannel(Channel ch, Object obj) {
+      LOG.debug("Writing {} to channel: {}", obj.getClass().getSimpleName(), ch.id());
+      return ch.writeAndFlush(obj);
+    }
+
+    static void writeToChannelAndClose(Channel ch, Object obj) {
+      writeToChannel(ch, obj).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    static ChannelFuture writeToChannelAndAddLastHttpContent(Channel ch, HttpResponse obj) {
+      writeToChannel(ch, obj);
+      return writeLastHttpContentToChannel(ch);
+    }
+
+    static ChannelFuture writeLastHttpContentToChannel(Channel ch) {
+      LOG.debug("Writing LastHttpContent, channel id: {}", ch.id());
+      return ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+    }
+
+    static void closeChannel(Channel ch) {
+      LOG.debug("Closing channel, channel id: {}", ch.id());
+      ch.close();
+    }
+
+    static void closeChannels(ChannelGroup channelGroup) {
+      channelGroup.close().awaitUninterruptibly(10, TimeUnit.SECONDS);
+    }
+  }
 
   private final MetricsSystem ms;
   final ShuffleMetrics metrics;
@@ -316,12 +349,15 @@ public class ShuffleHandler extends AuxiliaryService {
       LOG.trace("operationComplete");
       if (!future.isSuccess()) {
         LOG.error("Future is unsuccessful. Cause: ", future.cause());
-        LOG.debug("Closing channel");
-        future.channel().close();
+        closeChannel(future.channel());
         return;
       }
       int waitCount = this.reduceContext.getMapsToWait().decrementAndGet();
       if (waitCount == 0) {
+        LOG.trace("Finished with all map outputs");
+        //HADOOP-15327: Need to send an instance of LastHttpContent to define HTTP
+        //message boundaries. See details in jira.
+        writeLastHttpContentToChannel(future.channel());
         metrics.operationComplete(future);
         // Let the idle timer handler close keep-alive connections
         if (reduceContext.getKeepAlive()) {
@@ -330,10 +366,10 @@ public class ShuffleHandler extends AuxiliaryService {
               (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
           timeoutHandler.setEnabledTimeout(true);
         } else {
-          LOG.debug("Closing channel");
-          future.channel().close();
+          closeChannel(future.channel());
         }
       } else {
+        LOG.trace("operationComplete, waitCount > 0, invoking sendMap with reduceContext");
         pipelineFact.getSHUFFLE().sendMap(reduceContext);
       }
     }
@@ -594,7 +630,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
   @Override
   protected void serviceStop() throws Exception {
-    accepted.close().awaitUninterruptibly(10, TimeUnit.SECONDS);
+    closeChannels(accepted);
 
     if (pipelineFact != null) {
       pipelineFact.destroy();
@@ -827,7 +863,7 @@ public class ShuffleHandler extends AuxiliaryService {
     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
       if (e.state() == IdleState.WRITER_IDLE && enabledTimeout) {
         LOG.debug("Closing channel as writer was idle for {} seconds", connectionKeepAliveTimeOut);
-        ctx.channel().close();
+        closeChannel(ctx.channel());
       }
     }
   }
@@ -864,13 +900,20 @@ public class ShuffleHandler extends AuxiliaryService {
       }
       pipeline.addLast("decoder", new HttpRequestDecoder());
       pipeline.addLast("aggregator", new HttpObjectAggregator(1 << 16));
-      pipeline.addLast("encoder", new HttpResponseEncoder());
+      pipeline.addLast(ENCODER_HANDLER_NAME, new HttpResponseEncoder());
       pipeline.addLast("chunking", new ChunkedWriteHandler());
       pipeline.addLast("shuffle", SHUFFLE);
-      
+      addOutboundHandlersIfRequired(pipeline);
+      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler(connectionKeepAliveTimeOut));
+      // TODO factor security manager into pipeline
+      // TODO factor out encode/decode to permit binary shuffle
+      // TODO factor out decode of index to permit alt. models
+    }
+
+    private void addOutboundHandlersIfRequired(ChannelPipeline pipeline) {
       if (useOutboundExceptionHandler) {
         //https://stackoverflow.com/questions/50612403/catch-all-exception-handling-for-outbound-channelhandler
-        pipeline.addLast("outboundExcHandler", new ChannelOutboundHandlerAdapter() {
+        pipeline.addLast("outboundExceptionHandler", new ChannelOutboundHandlerAdapter() {
           @Override
           public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             promise.addListener(ChannelFutureListener.FIRE_EXCEPTION_ON_FAILURE);
@@ -878,10 +921,11 @@ public class ShuffleHandler extends AuxiliaryService {
           }
         });
       }
-      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler(connectionKeepAliveTimeOut));
-      // TODO factor security manager into pipeline
-      // TODO factor out encode/decode to permit binary shuffle
-      // TODO factor out decode of index to permit alt. models
+      if (useOutboundLogger) {
+        //Replace HttpResponseEncoder with LoggingHttpResponseEncoder
+        //Need to use the same name as before, otherwise we would have 2 encoders 
+        pipeline.replace(ENCODER_HANDLER_NAME, ENCODER_HANDLER_NAME, new LoggingHttpResponseEncoder(false));
+      }
     }
   }
 
@@ -968,6 +1012,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+      LOG.trace("Executing channelInactive");
       super.channelInactive(ctx);
       acceptedConnections.decrementAndGet();
       LOG.debug("New value of Accepted number of connections={}",
@@ -977,8 +1022,9 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg)
         throws Exception {
-      LOG.debug("channelRead");
+      LOG.trace("Executing channelRead");
       HttpRequest request = (HttpRequest) msg;
+      LOG.debug("Received HTTP request: {}", request);
       if (request.method() != GET) {
           sendError(ctx, METHOD_NOT_ALLOWED);
           return;
@@ -1077,38 +1123,29 @@ public class ShuffleHandler extends AuxiliaryService {
         // is quite a non-standard way of crafting HTTP responses,
         // but we need to keep backward compatibility.
         // See more details in jira.
-        ch.writeAndFlush(response);
-        ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-        LOG.error("Shuffle error in populating headers :", e);
-        String errorMessage = getErrorMessage(e);
-        sendError(ctx,errorMessage , INTERNAL_SERVER_ERROR);
+        writeToChannelAndAddLastHttpContent(ch, response);
+        LOG.error("Shuffle error while populating headers", e);
+        sendError(ctx, getErrorMessage(e) , INTERNAL_SERVER_ERROR);
         return;
       }
-      LOG.debug("Writing response: " + response);
-      ch.writeAndFlush(response).addListener(new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-          if (future.isSuccess()) {
-            LOG.debug("Written HTTP response object successfully");
-          } else {
-            LOG.error("Error while writing HTTP response object: {}", response);
-          }
+      writeToChannel(ch, response).addListener((ChannelFutureListener) future -> {
+        if (future.isSuccess()) {
+          LOG.debug("Written HTTP response object successfully");
+        } else {
+          LOG.error("Error while writing HTTP response object: {}. " +
+              "Cause: {}", response, future.cause());
         }
       });
       //Initialize one ReduceContext object per channelRead call
       boolean keepAlive = keepAliveParam || connectionKeepAliveEnabled;
       ReduceContext reduceContext = new ReduceContext(mapIds, reduceId, ctx,
           user, mapOutputInfoMap, jobId, keepAlive);
-      LOG.debug("After response");
       for (int i = 0; i < Math.min(maxSessionOpenFiles, mapIds.size()); i++) {
         ChannelFuture nextMap = sendMap(reduceContext);
         if(nextMap == null) {
           return;
         }
       }
-      //HADOOP-15327: Need to send an instance of LastHttpContent to define HTTP
-      //message boundaries. See details in jira.
-      ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
     }
 
     /**
@@ -1123,7 +1160,7 @@ public class ShuffleHandler extends AuxiliaryService {
      */
     public ChannelFuture sendMap(ReduceContext reduceContext)
         throws Exception {
-
+      LOG.trace("Executing sendMap");
       ChannelFuture nextMap = null;
       if (reduceContext.getMapsToSend().get() <
           reduceContext.getMapIds().size()) {
@@ -1136,12 +1173,14 @@ public class ShuffleHandler extends AuxiliaryService {
             info = getMapOutputInfo(mapId, reduceContext.getReduceId(),
                 reduceContext.getJobId(), reduceContext.getUser());
           }
+          LOG.trace("Calling sendMapOutput");
           nextMap = sendMapOutput(
               reduceContext.getCtx(),
               reduceContext.getCtx().channel(),
               reduceContext.getUser(), mapId,
               reduceContext.getReduceId(), info);
           if (null == nextMap) {
+            //This can only happen if spill file was not found
             sendError(reduceContext.getCtx(), NOT_FOUND);
             return null;
           }
@@ -1157,6 +1196,9 @@ public class ShuffleHandler extends AuxiliaryService {
               INTERNAL_SERVER_ERROR);
           return null;
         }
+      }
+      if (nextMap == null) {
+        LOG.trace("Returning nextMap: null");
       }
       return nextMap;
     }
@@ -1232,7 +1274,6 @@ public class ShuffleHandler extends AuxiliaryService {
             outputInfo.indexRecord.rawLength, reduce);
         DataOutputBuffer dob = new DataOutputBuffer();
         header.write(dob);
-
         contentLength += outputInfo.indexRecord.partLength;
         contentLength += dob.getLength();
       }
@@ -1336,7 +1377,7 @@ public class ShuffleHandler extends AuxiliaryService {
         new ShuffleHeader(mapId, info.partLength, info.rawLength, reduce);
       final DataOutputBuffer dob = new DataOutputBuffer();
       header.write(dob);
-      ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
+      writeToChannel(ch, wrappedBuffer(dob.getData(), 0, dob.getLength()));
       final File spillfile =
           new File(mapOutputInfo.mapOutputFileName.toString());
       RandomAccessFile spill;
@@ -1352,7 +1393,7 @@ public class ShuffleHandler extends AuxiliaryService {
             info.startOffset, info.partLength, manageOsCache, readaheadLength,
             readaheadPool, spillfile.getAbsolutePath(), 
             shuffleBufferSize, shuffleTransferToAllowed);
-        writeFuture = ch.writeAndFlush(partition);
+        writeFuture = writeToChannel(ch, partition);
         writeFuture.addListener(new ChannelFutureListener() {
             // TODO error handling; distinguish IO/connection failures,
             //      attribute to appropriate spill output
@@ -1370,7 +1411,7 @@ public class ShuffleHandler extends AuxiliaryService {
             info.startOffset, info.partLength, sslFileBufferSize,
             manageOsCache, readaheadLength, readaheadPool,
             spillfile.getAbsolutePath());
-        writeFuture = ch.writeAndFlush(chunk);
+        writeFuture = writeToChannel(ch, chunk);
       }
       metrics.shuffleConnections.incr();
       metrics.shuffleOutputBytes.incr(info.partLength); // optimistic
@@ -1402,12 +1443,13 @@ public class ShuffleHandler extends AuxiliaryService {
       }
 
       // Close the connection as soon as the error message is sent.
-      ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+      writeToChannelAndClose(ctx.channel(), response);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
         throws Exception {
+      LOG.debug("Executing exceptionCaught");
       Channel ch = ctx.channel();
       if (cause instanceof TooLongFrameException) {
         sendError(ctx, BAD_REQUEST);
@@ -1430,7 +1472,7 @@ public class ShuffleHandler extends AuxiliaryService {
       }
     }
   }
-  
+
   static class AttemptPathInfo {
     // TODO Change this over to just store local dir indices, instead of the
     // entire path. Far more efficient.
