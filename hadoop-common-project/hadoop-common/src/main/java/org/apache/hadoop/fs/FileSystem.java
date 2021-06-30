@@ -3544,12 +3544,9 @@ public abstract class FileSystem extends Configured
       // to construct an instance.
       try (DurationInfo d = new DurationInfo(LOGGER, false,
           "Acquiring creator semaphore for %s", uri)) {
-        creatorPermits.acquire();
-      } catch (InterruptedException e) {
-        // acquisition was interrupted; convert to an IOE.
-        throw (IOException)new InterruptedIOException(e.toString())
-            .initCause(e);
+        creatorPermits.acquireUninterruptibly();
       }
+
       FileSystem fsToClose = null;
       try {
         // See if FS was instantiated by another thread while waiting
