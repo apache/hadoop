@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.net;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -58,7 +59,7 @@ public class DNS {
    * The cached hostname -initially null.
    */
 
-  private static final String cachedHostname = resolveLocalHostname();
+  private static String cachedHostname = resolveLocalHostname();
   private static final String cachedHostAddress = resolveLocalHostIPAddress();
   private static final String LOCALHOST = "localhost";
 
@@ -447,5 +448,15 @@ public class DNS {
       allAddrs.removeAll(getSubinterfaceInetAddrs(netIf));
     }
     return new Vector<InetAddress>(allAddrs);
+  }
+
+  @VisibleForTesting
+  static String getCachedHostname() {
+    return cachedHostname;
+  }
+
+  @VisibleForTesting
+  static void setCachedHostname(String hostname) {
+    cachedHostname = hostname;
   }
 }
