@@ -83,21 +83,6 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
     return new QuotaCounts.Builder().quotaCount(this.quota).build();
   }
 
-  /** Set this directory's quota
-   * 
-   * @param nsQuota Namespace quota to be set
-   * @param ssQuota Storagespace quota to be set
-   * @param type Storage type of the storage space quota to be set.
-   *             To set storagespace/namespace quota, type must be null.
-   */
-  void setQuota(long nsQuota, long ssQuota, StorageType type) {
-    if (type != null) {
-      this.quota.setTypeSpace(type, ssQuota);
-    } else {
-      setQuota(nsQuota, ssQuota);
-    }
-  }
-
   void setQuota(long nsQuota, long ssQuota) {
     this.quota.setNameSpace(nsQuota);
     this.quota.setStorageSpace(ssQuota);
