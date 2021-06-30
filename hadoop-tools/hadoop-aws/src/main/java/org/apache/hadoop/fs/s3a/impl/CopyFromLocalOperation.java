@@ -49,12 +49,6 @@ import java.util.Stack;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * TODO list:
- * - Add abstract class + tests for LocalFS
- * - Add tests for this class
- * - Add documentation
- *  - `filesystem.md`
- *
  * <p>Implementation of CopyFromLocalOperation</p>
  * <p>
  *     This operation copies a file or directory (recursively) from a local
@@ -221,6 +215,11 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
             markedForUpload.add(uploadEntry);
         }
 
+        // No files found, it's empty source directory
+        if (entries.isEmpty()) {
+            emptyDirs.add(source);
+        }
+
         // Shuffle all remaining entries and upload them
         entries.removeAll(markedForUpload);
         Collections.shuffle(entries);
@@ -229,7 +228,6 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
             activeOps.add(submitUpload(file, uploadEntry));
         }
 
-        // TODO: Add test that checks the number of calls for empty dirs has been made
         for (Path emptyDir : emptyDirs) {
             Path emptyDirPath = getFinalPath(emptyDir);
             activeOps.add(submitCreateEmptyDir(emptyDirPath));
@@ -305,7 +303,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
             return;
         }
 
-        if (src.isFile() && getDestStatus().get().isDirectory()) {
+        if (src.isDirectory() && getDestStatus().get().isFile()) {
             throw new PathExistsException(
                     "Source '" + src.getPath() +"' is file and " +
                             "destination '" + dest + "' is directory");
