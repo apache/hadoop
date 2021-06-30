@@ -1074,7 +1074,7 @@ public class DFSAdmin extends FsShell {
       throw ioe;
     }
     for (QuotaUsage info : quotaInfo) {
-      System.out.printf("%12s %15s %15s %15s %18s\n",
+      System.out.printf("%12s %15s %15s %15s %18s%n",
           info.getQuota(),
           info.getFileAndDirectoryCount(),
           info.getSpaceQuota(),
