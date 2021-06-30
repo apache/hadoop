@@ -143,7 +143,7 @@ Maven build goals:
  * Run checkstyle            : mvn compile checkstyle:checkstyle
  * Install JAR in M2 cache   : mvn install
  * Deploy JAR to Maven repo  : mvn deploy
- * Run clover                : mvn test -Pclover [-DcloverLicenseLocation=${user.name}/.clover.license]
+ * Run clover                : mvn test -Pclover
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
  * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs][-Pyarn-ui]
