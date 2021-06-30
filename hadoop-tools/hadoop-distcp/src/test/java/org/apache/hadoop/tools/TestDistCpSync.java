@@ -987,7 +987,7 @@ public class TestDistCpSync {
 
   @Test
   public void testSyncSnapshotDiffWithLocalFileSystem() throws Exception {
-    String[] args = new String[]{"-update","-diff", "s1", "s2",
+    String[] args = new String[]{"-update", "-diff", "s1", "s2",
         "file:///source", "file:///target"};
     LambdaTestUtils.intercept(
         IllegalArgumentException.class,
