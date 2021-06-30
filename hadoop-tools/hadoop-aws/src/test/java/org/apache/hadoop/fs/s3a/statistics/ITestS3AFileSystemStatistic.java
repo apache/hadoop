@@ -44,11 +44,11 @@ public class ITestS3AFileSystemStatistic extends AbstractS3ATestBase {
   public void testBytesReadWithStream() throws IOException {
     S3AFileSystem fs = getFileSystem();
     Path filePath = path(getMethodName());
-    byte[] oneMbBuf = new byte[ONE_KB];
+    byte[] oneKbBuf = new byte[ONE_KB];
 
-    // Writing 1MB in a file.
+    // Writing 1KB in a file.
     try (FSDataOutputStream out = fs.create(filePath)) {
-      out.write(oneMbBuf);
+      out.write(oneKbBuf);
       // Verify if correct number of bytes were written.
       IOStatisticAssertions.assertThatStatisticCounter(out.getIOStatistics(),
           StreamStatisticNames.STREAM_WRITE_BYTES)
@@ -59,12 +59,12 @@ public class ITestS3AFileSystemStatistic extends AbstractS3ATestBase {
 
     // Reading 1KB from first InputStream.
     try (FSDataInputStream in = fs.open(filePath, ONE_KB)) {
-      in.readFully(0, oneMbBuf);
+      in.readFully(0, oneKbBuf);
     }
 
     // Reading 1KB from second InputStream.
     try (FSDataInputStream in2 = fs.open(filePath, ONE_KB)) {
-      in2.readFully(0, oneMbBuf);
+      in2.readFully(0, oneKbBuf);
     }
 
     FileSystem.Statistics fsStats = fs.getFsStatistics();
