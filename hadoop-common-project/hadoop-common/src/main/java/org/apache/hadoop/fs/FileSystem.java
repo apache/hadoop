@@ -3546,7 +3546,6 @@ public abstract class FileSystem extends Configured
           "Acquiring creator semaphore for %s", uri)) {
         creatorPermits.acquireUninterruptibly();
       }
-
       FileSystem fsToClose = null;
       try {
         // See if FS was instantiated by another thread while waiting
