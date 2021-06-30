@@ -104,16 +104,6 @@ public final class TestAbfsOutputStream {
     new Random().nextBytes(b);
     out.write(b);
     out.hsync();
-    ArgumentCaptor<String> acString = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Long> acLong = ArgumentCaptor.forClass(Long.class);
-    ArgumentCaptor<Integer> acBufferOffset = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<Integer> acBufferLength = ArgumentCaptor.forClass(Integer.class);
-    ArgumentCaptor<byte[]> acByteArray = ArgumentCaptor.forClass(byte[].class);
-    ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
-    ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<TracingContext> acTracingContext = ArgumentCaptor
-        .forClass(TracingContext.class);
-
 
     final byte[] b1 = new byte[2*WRITE_SIZE];
     new Random().nextBytes(b1);
@@ -129,12 +119,13 @@ public final class TestAbfsOutputStream {
         WRITE_SIZE, 0, 2 * WRITE_SIZE, APPEND_MODE, false, null);
 
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(firstReqParameters), any(), acTracingContext.capture());
+        eq(PATH), any(byte[].class), refEq(firstReqParameters), any(),
+        any(TracingContext.class));
     verify(client, times(1)).append(
-        eq(PATH), any(byte[].class), refEq(secondReqParameters), any(), acTracingContext.capture());
+        eq(PATH), any(byte[].class), refEq(secondReqParameters), any(), any(TracingContext.class));
     // confirm there were only 2 invocations in all
     verify(client, times(2)).append(
-        eq(PATH), any(byte[].class), any(), any(), acTracingContext.capture());
+        eq(PATH), any(byte[].class), any(), any(), any(TracingContext.class));
   }
 
   /**
