@@ -3811,9 +3811,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     @Override
     public RemoteIterator<LocatedFileStatus> listStatusIterator(
-            final Path path,
-            final boolean recursive) throws IOException {
-      return local.listFilesAndDirs(path, true);
+            final Path path) throws IOException {
+      return local.listLocatedStatus(path);
     }
 
     @Override
