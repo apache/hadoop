@@ -21,12 +21,12 @@ package org.apache.hadoop.io;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertTrue;
-import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
+
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+
+import static junit.framework.TestCase.assertEquals;
 
 public class TestIOUtilsWrapExceptionSuite extends AbstractHadoopTestBase {
     @Test
@@ -38,7 +38,8 @@ public class TestIOUtilsWrapExceptionSuite extends AbstractHadoopTestBase {
 
         // The new exception should retain the input message, cause, and type
         Assertions.assertThat(outputException).isInstanceOf(InterruptedIOException.class);
-        Assertions.assertThat(outputException.getCause()).isInstanceOf(NullPointerException.class);
+        Assertions.assertThat(outputException.getCause()).isInstanceOf(NullPointerException.class)
+                .describedAs("inner cause");
         assertEquals(outputException.getMessage(), inputException.getMessage());
         assertEquals(outputException.getCause(), inputException.getCause());
     }
@@ -54,7 +55,9 @@ public class TestIOUtilsWrapExceptionSuite extends AbstractHadoopTestBase {
         // but be an InterruptedIOException because the cause was an InterruptedException
         Assertions.assertThat(outputException).isInstanceOf(InterruptedIOException.class);
         Assertions.assertThat(outputException.getCause()).isInstanceOf(InterruptedException.class);
-        assertEquals(outputException.getMessage(), inputException.getMessage());
-        assertEquals(outputException.getCause(), inputException.getCause());
+        assertEquals("getMessage()",
+                outputException.getMessage(), inputException.getMessage());
+        assertEquals("getCause()",
+                outputException.getCause(), inputException.getCause());
     }
 }
