@@ -15,6 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
+def getCreds() {
+    return [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                              passwordVariable: 'GITHUB_TOKEN',
+                              usernameVariable: 'GITHUB_USER'),
+                usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
+                                    passwordVariable: 'JIRA_PASSWORD',
+                                    usernameVariable: 'JIRA_USER')]
+}
+
 pipeline {
 
     agent {
@@ -26,16 +35,7 @@ pipeline {
         timeout (time: 24, unit: 'HOURS')
         timestamps()
         checkoutToSubdirectory('src')
-    }
-
-    def getCreds() {
-        return [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
-                                  passwordVariable: 'GITHUB_TOKEN',
-                                  usernameVariable: 'GITHUB_USER'),
-                    usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
-                                        passwordVariable: 'JIRA_PASSWORD',
-                                        usernameVariable: 'JIRA_USER')]
-    }
+    }    
     
     environment {
         SOURCEDIR = 'src'
