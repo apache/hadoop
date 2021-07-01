@@ -34,7 +34,9 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '5'))
         timeout (time: 24, unit: 'HOURS')
         timestamps()
-        checkoutToSubdirectory('src')
+        checkoutToSubdirectory('src-centos-8')
+        checkoutToSubdirectory('src-debian-10')
+        checkoutToSubdirectory('src-ubuntu-focal')
         parallelsAlwaysFailFast()
     }
 
