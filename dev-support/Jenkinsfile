@@ -65,7 +65,9 @@ pipeline {
             }
         }
 
-        // This is an optional stage which runs only when there's a change in
+        stage ('platform validations') {
+            parallel {
+            // This is an optional stage which runs only when there's a change in
         // C++/C++ build/platform.
         // This stage serves as a means of cross platform validation, which is
         // really needed to ensure that any C++ related/platform change doesn't
@@ -127,7 +129,8 @@ pipeline {
                 }
             }
         }
-
+            }
+        }
     }
 
     post {
