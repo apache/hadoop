@@ -43,8 +43,7 @@ pipeline {
         PATCHDIR = 'out'
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='f9ba0170a5787a5f4662d3769804fef0226a182f'
-        CREDS = getCreds()
+        YETUS_VERSION='f9ba0170a5787a5f4662d3769804fef0226a182f'        
     }
 
     parameters {
@@ -78,7 +77,7 @@ pipeline {
             }
 
             steps {
-                withCredentials(CREDS) {
+                withCredentials(getCreds()) {
                         sh '''#!/usr/bin/env bash
 
                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
@@ -100,7 +99,7 @@ pipeline {
             }
 
             steps {
-                withCredentials(CREDS) {
+                withCredentials(getCreds()) {
                         sh '''#!/usr/bin/env bash
 
                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
@@ -119,7 +118,7 @@ pipeline {
             }
 
             steps {
-                withCredentials(CREDS) {
+                withCredentials(getCreds()) {
                         sh '''#!/usr/bin/env bash
 
                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
