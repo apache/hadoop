@@ -268,6 +268,7 @@ public class DataNode extends ReconfigurableBase
   public static final String DN_CLIENTTRACE_FORMAT =
         "src: %s" +      // src IP
         ", dest: %s" +   // dst IP
+        ", volume: %s" + // volume
         ", bytes: %s" +  // byte count
         ", op: %s" +     // operation
         ", cliID: %s" +  // DFSClient id
