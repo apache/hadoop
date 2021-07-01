@@ -765,7 +765,8 @@ public class FSDirectory implements Closeable {
 
   INodesInPath resolvePath(FSPermissionChecker pc, String src, long fileId)
       throws UnresolvedLinkException, FileNotFoundException,
-      AccessControlException, ParentNotDirectoryException {
+      AccessControlException, ParentNotDirectoryException,
+      IllegalResolvePathException {
     // Older clients may not have given us an inode ID to work with.
     // In this case, we have to try to resolve the path and hope it
     // hasn't changed or been deleted since the file was opened for write.
@@ -778,9 +779,23 @@ public class FSDirectory implements Closeable {
         iip = INodesInPath.fromComponents(INode.getPathComponents(src));
       } else {
         iip = INodesInPath.fromINode(inode);
+        checkResolvePath(iip, src);
       }
     }
     return iip;
+  }
+
+  /**
+   * Check whether src path and fileId match.
+   */
+  void checkResolvePath(INodesInPath iip, String src)
+      throws IllegalResolvePathException {
+    if (!iip.getPath().equals(src)) {
+      throw new IllegalResolvePathException(
+          "Arguments don't match, fileId = " + iip.getLastINode().getId()
+          + " and its iip = " + iip.getPath()
+          + ", src = " + src);
+    }
   }
 
   // this method can be removed after IIP is used more extensively

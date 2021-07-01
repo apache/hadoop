@@ -53,6 +53,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
@@ -1433,5 +1434,39 @@ public class TestFileCreation {
       out.write(buffer, 0, n);
     }
     return out.toByteArray();
+  }
+
+  /**
+   * 1. Create Outputstream and write data.
+   * 2. Rename the file has been created.
+   * 3. Continue to write data.
+   */
+  @Test(timeout = 120000)
+  public void testIllegalCreateWithRename() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(DFSConfigKeys.DFS_REPLICATION_DEFAULT)
+        .build();
+    cluster.waitActive();
+    try {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      FSDataOutputStream out = fs.create(new Path("/testIllegalCreateFile1"),
+          true, 1024, (short) 3, 1024);
+      Random rb = new Random(0);
+      byte[] toWrite = new byte[1024];
+      rb.nextBytes(toWrite);
+      out.write(toWrite);
+      out.hsync();
+      fs.rename(new Path("/testIllegalCreateFile1"),
+          new Path("/testIllegalCreateFile2"));
+      out.write(toWrite);
+      out.hsync();
+      out.close();
+      fail();
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Arguments don't match", e);
+    }finally {
+      cluster.shutdown();
+    }
   }
 }
