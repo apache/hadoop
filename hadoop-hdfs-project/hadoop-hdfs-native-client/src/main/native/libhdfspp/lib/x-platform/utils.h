@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_UTILS
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_UTILS
 
