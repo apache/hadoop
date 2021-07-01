@@ -113,6 +113,7 @@ public class DFSOutputStream extends FSOutputSummer
 
   protected final String src;
   protected final long fileId;
+  protected final String nsId;
   protected final long blockSize;
   protected final int bytesPerChecksum;
 
@@ -195,6 +196,7 @@ public class DFSOutputStream extends FSOutputSummer
     this.dfsClient = dfsClient;
     this.src = src;
     this.fileId = stat.getFileId();
+    this.nsId = stat.getNsId();
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
     this.fileEncryptionInfo = stat.getFileEncryptionInfo();
@@ -818,7 +820,7 @@ public class DFSOutputStream extends FSOutputSummer
 
   void setClosed() {
     closed = true;
-    dfsClient.endFileLease(fileId);
+    dfsClient.endFileLease(fileId, nsId);
     getStreamer().release();
   }
 
@@ -921,7 +923,7 @@ public class DFSOutputStream extends FSOutputSummer
   protected void recoverLease(boolean recoverLeaseOnCloseException) {
     if (recoverLeaseOnCloseException) {
       try {
-        dfsClient.endFileLease(fileId);
+        dfsClient.endFileLease(fileId, nsId);
         dfsClient.recoverLease(src);
         leaseRecovered = true;
       } catch (Exception e) {
@@ -1082,6 +1084,11 @@ public class DFSOutputStream extends FSOutputSummer
   @VisibleForTesting
   public long getFileId() {
     return fileId;
+  }
+
+  @VisibleForTesting
+  public String getNsId() {
+    return nsId;
   }
 
   /**

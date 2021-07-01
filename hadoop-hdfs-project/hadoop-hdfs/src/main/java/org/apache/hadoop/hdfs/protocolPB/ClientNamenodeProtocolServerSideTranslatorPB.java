@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.ProtocolStringList;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -816,7 +817,11 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public RenewLeaseResponseProto renewLease(RpcController controller,
       RenewLeaseRequestProto req) throws ServiceException {
     try {
-      server.renewLease(req.getClientName());
+      if (Strings.isNullOrEmpty(req.getNsId())) {
+        server.renewLease(req.getClientName());
+      } else {
+        server.renewLease(req.getClientName(), req.getNsId());
+      }
       return VOID_RENEWLEASE_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);

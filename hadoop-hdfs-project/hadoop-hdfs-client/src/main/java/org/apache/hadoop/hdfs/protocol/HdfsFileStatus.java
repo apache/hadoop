@@ -75,6 +75,7 @@ public interface HdfsFileStatus
     private byte[] symlink                 = null;
     private byte[] path                    = EMPTY_NAME;
     private long fileId                    = -1L;
+    private String nsId                    = null;
     private int childrenNum                = 0;
     private FileEncryptionInfo feInfo      = null;
     private byte storagePolicy             =
@@ -219,6 +220,16 @@ public interface HdfsFileStatus
     }
 
     /**
+     * Set the nsId for this entity (default = null).
+     * @param nsId nsId
+     * @return This Builder instance
+     */
+    public Builder nsId(String nsId) {
+      this.nsId = nsId;
+      return this;
+    }
+
+    /**
      * Set the number of children for this entity (default = 0).
      * @param childrenNum Number of children
      * @return This Builder instance
@@ -277,11 +288,11 @@ public interface HdfsFileStatus
       if (null == locations && !isdir && null == symlink) {
         return new HdfsNamedFileStatus(length, isdir, replication, blocksize,
             mtime, atime, permission, flags, owner, group, symlink, path,
-            fileId, childrenNum, feInfo, storagePolicy, ecPolicy);
+            fileId, nsId, childrenNum, feInfo, storagePolicy, ecPolicy);
       }
       return new HdfsLocatedFileStatus(length, isdir, replication, blocksize,
           mtime, atime, permission, flags, owner, group, symlink, path,
-          fileId, childrenNum, feInfo, storagePolicy, ecPolicy, locations);
+          fileId, nsId, childrenNum, feInfo, storagePolicy, ecPolicy, locations);
     }
 
   }
@@ -295,6 +306,20 @@ public interface HdfsFileStatus
    * @return inode ID.
    */
   long getFileId();
+
+  /**
+   * Name service the file is located on. The target name service if the file is
+   * created through router.
+   * @return name service ID.
+   */
+  String getNsId();
+
+  /**
+   * Set target name service Id where the file is located on. It's used for
+   * router FileSystem to identify which actual target name service the file
+   * is stored on.
+   */
+  void setNsId(String nsId);
 
   /**
    * Get metadata for encryption, if present.

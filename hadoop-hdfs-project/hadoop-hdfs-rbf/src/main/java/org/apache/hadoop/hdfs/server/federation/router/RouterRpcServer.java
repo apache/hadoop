@@ -58,6 +58,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -985,6 +986,20 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override // ClientProtocol
   public void renewLease(String clientName) throws IOException {
     clientProto.renewLease(clientName);
+  }
+
+  @Override // ClientProtocol
+  public void renewLease(String clientName, String nsId) throws IOException {
+    if (Strings.isNullOrEmpty(nsId)) {
+      renewLease(clientName);
+      return;
+    }
+
+    checkOperation(OperationCategory.WRITE);
+
+    RemoteMethod method = new RemoteMethod("renewLease",
+            new Class<?>[] {String.class, String.class}, clientName, nsId);
+    rpcClient.invokeSingle(nsId, method);
   }
 
   @Override // ClientProtocol

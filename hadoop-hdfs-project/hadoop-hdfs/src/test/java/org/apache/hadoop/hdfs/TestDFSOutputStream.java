@@ -69,6 +69,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import org.mockito.Mockito;
+
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -352,7 +354,7 @@ public class TestDFSOutputStream {
         EnumSet.of(CreateFlag.CREATE), (short) 3, 1024, null , 1024, null);
     DFSOutputStream spyDFSOutputStream = Mockito.spy(dfsOutputStream);
     spyDFSOutputStream.closeThreads(anyBoolean());
-    verify(spyClient, times(1)).endFileLease(anyLong());
+    verify(spyClient, times(1)).endFileLease(anyLong(), anyString());
   }
 
   @Test

@@ -766,6 +766,14 @@ public interface ClientProtocol {
   void renewLease(String clientName) throws IOException;
 
   /**
+   * The functionality is the same as renewLease(clientName). This is to support
+   * router based FileSystem to newLease against a specific target FileSystem instead
+   * of all the target FileSystems in each call.
+   */
+  @Idempotent
+  void renewLease(String clientName, String nsId) throws IOException;
+
+  /**
    * Start lease recovery.
    * Lightweight NameNode operation to trigger lease recovery
    *
