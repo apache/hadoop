@@ -34,6 +34,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.sshd.server.ServerFactoryManager;
 import org.apache.zookeeper.TestableZooKeeper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -41,7 +42,6 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ServerCnxnFactory;
-import org.apache.zookeeper.server.ServerCnxnFactoryAccessor;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
@@ -437,7 +437,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
 
     protected static ZooKeeperServer getServer(ServerCnxnFactory fac) {
-        ZooKeeperServer zs = ServerCnxnFactoryAccessor.getZkServer(fac);
+        ZooKeeperServer zs =  fac.getZooKeeperServer();
 
         return zs;
     }
