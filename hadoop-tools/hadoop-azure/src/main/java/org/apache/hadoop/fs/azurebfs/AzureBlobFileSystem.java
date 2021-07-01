@@ -442,8 +442,8 @@ public class AzureBlobFileSystem extends FileSystem
 
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.LISTSTATUS, true, tracingHeaderFormat
-          , listener);
+          fileSystemId, FSOperationType.LISTSTATUS, true, tracingHeaderFormat,
+          listener);
       FileStatus[] result = abfsStore.listStatus(qualifiedPath, tracingContext);
       return result;
     } catch (AzureBlobFileSystemException ex) {
