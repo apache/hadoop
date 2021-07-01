@@ -15,6 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
+def getGithubAndJiraCreds() {
+    return [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                                passwordVariable: 'GITHUB_TOKEN',
+                                usernameVariable: 'GITHUB_USER'),
+            usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
+                                passwordVariable: 'JIRA_PASSWORD',
+                                usernameVariable: 'JIRA_USER')]
+}
+
 pipeline {
 
     agent {
