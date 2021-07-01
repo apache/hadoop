@@ -232,7 +232,8 @@ class FsDatasetAsyncDiskService {
   void deleteAsync(FsVolumeReference volumeRef, ReplicaInfo replicaToDelete,
       ExtendedBlock block, String trashDirectory) {
     LOG.info("Scheduling " + block.getLocalBlock()
-        + " replica " + replicaToDelete + " for deletion");
+        + " replica " + replicaToDelete + " on volume " +
+        replicaToDelete.getVolume() + " for deletion");
     ReplicaFileDeleteTask deletionTask = new ReplicaFileDeleteTask(
         volumeRef, replicaToDelete, block, trashDirectory);
     execute(((FsVolumeImpl) volumeRef.getVolume()), deletionTask);
