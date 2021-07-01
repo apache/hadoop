@@ -420,7 +420,10 @@ public class DancingLinks<ColumnName> {
     }
     int result = search(choices, output);
     for(int i=prefix.length-1; i >=0; --i) {
-      rollback(choices.get(i));
+      Node<ColumnName> choice = choices.get(i);
+      if (choice != null) {
+        rollback(choice);
+      }
     }
     return result;
   }
