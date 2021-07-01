@@ -35,6 +35,7 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
 ######
 # hadolint ignore=DL3008,SC2046
 RUN yum update -y \
+    && yum groupinstall "Development Tools" \
     && yum install -y \
         centos-release-scl \
         python3 \
