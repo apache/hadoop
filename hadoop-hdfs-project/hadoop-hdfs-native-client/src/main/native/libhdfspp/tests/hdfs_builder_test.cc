@@ -25,6 +25,7 @@ using ::testing::_;
 
 using namespace hdfs;
 
+
 TEST(HdfsBuilderTest, TestStubBuilder) {
   {
     TempDir tempDir1;
