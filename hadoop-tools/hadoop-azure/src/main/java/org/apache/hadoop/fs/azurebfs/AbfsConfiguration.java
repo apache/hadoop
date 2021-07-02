@@ -61,6 +61,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -68,6 +69,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
 
@@ -270,6 +272,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_VALUE_UNKNOWN)
   private String clusterType;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
+          DefaultValue = EMPTY_STRING)
+  private String clientCorrelationId;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
   private boolean enableDelegationToken;
@@ -336,6 +342,14 @@ public class AbfsConfiguration{
    */
   public String getAccountName() {
     return accountName;
+  }
+
+  /**
+   * Gets client correlation ID provided in config.
+   * @return Client Correlation ID config
+   */
+  public String getClientCorrelationId() {
+    return clientCorrelationId;
   }
 
   /**
@@ -726,6 +740,14 @@ public class AbfsConfiguration{
 
   public DelegatingSSLSocketFactory.SSLChannelMode getPreferredSSLFactoryOption() {
     return getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
+  }
+
+  /**
+   * Enum config to allow user to pick format of x-ms-client-request-id header
+   * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
+   */
+  public TracingHeaderFormat getTracingHeaderFormat() {
+    return getEnum(FS_AZURE_TRACINGHEADER_FORMAT, TracingHeaderFormat.ALL_ID_FORMAT);
   }
 
   public AuthType getAuthType(String accountName) {

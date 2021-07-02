@@ -26,7 +26,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.List;
-import java.util.UUID;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
@@ -71,7 +70,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private String statusDescription;
   private String storageErrorCode = "";
   private String storageErrorMessage  = "";
-  private String clientRequestId = "";
   private String requestId  = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
@@ -139,7 +137,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   public String getClientRequestId() {
-    return clientRequestId;
+    return this.connection
+        .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
   }
 
   public String getExpectedAppendPos() {
@@ -176,7 +175,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(",");
     sb.append(expectedAppendPos);
     sb.append(",cid=");
-    sb.append(clientRequestId);
+    sb.append(getClientRequestId());
     sb.append(",rid=");
     sb.append(requestId);
     if (isTraceEnabled) {
@@ -207,7 +206,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       .append(" e=")
       .append(storageErrorCode)
       .append(" ci=")
-      .append(clientRequestId)
+      .append(getClientRequestId())
       .append(" ri=")
       .append(requestId);
 
@@ -246,7 +245,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
-    this.clientRequestId = UUID.randomUUID().toString();
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -265,8 +263,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     for (AbfsHttpHeader header : requestHeaders) {
       this.connection.setRequestProperty(header.getName(), header.getValue());
     }
-
-    this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, clientRequestId);
   }
 
    /**
@@ -404,6 +400,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
+  public void setRequestProperty(String key, String value) {
+    this.connection.setRequestProperty(key, value);
+  }
 
   /**
    * Open the HTTP connection.
