@@ -37,12 +37,15 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -95,7 +98,12 @@ public class ITestAzureBlobFileSystemCreate extends
       fail("Should've thrown");
     } catch (FileNotFoundException expected) {
     }
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.MKDIR, false, 0));
     fs.mkdirs(TEST_FOLDER_PATH);
+    fs.registerListener(null);
+
     fs.createNonRecursive(testFile, true, 1024, (short) 1, 1024, null)
         .close();
     assertIsFile(fs, testFile);
@@ -262,8 +270,12 @@ public class ITestAzureBlobFileSystemCreate extends
         fs.getInstrumentationMap());
 
     // Case 2: Not Overwrite - File pre-exists
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.CREATE, false, 0));
     intercept(FileAlreadyExistsException.class,
         () -> fs.create(nonOverwriteFile, false));
+    fs.registerListener(null);
 
     // One request to server to create path should be issued
     createRequestCount++;
@@ -289,7 +301,11 @@ public class ITestAzureBlobFileSystemCreate extends
         fs.getInstrumentationMap());
 
     // Case 4: Overwrite - File pre-exists
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.CREATE, true, 0));
     fs.create(overwriteFilePath, true);
+    fs.registerListener(null);
 
     if (enableConditionalCreateOverwrite) {
       // Three requests will be sent to server to create path,
@@ -346,7 +362,8 @@ public class ITestAzureBlobFileSystemCreate extends
 
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);
-    boolean isNamespaceEnabled = abfsStore.getIsNamespaceEnabled();
+    boolean isNamespaceEnabled = abfsStore
+        .getIsNamespaceEnabled(getTestTracingContext(fs, false));
 
     AbfsRestOperation successOp = mock(
         AbfsRestOperation.class);
@@ -377,14 +394,14 @@ public class ITestAzureBlobFileSystemCreate extends
         .createPath(any(String.class), eq(true), eq(false),
             isNamespaceEnabled ? any(String.class) : eq(null),
             isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null));
+            any(boolean.class), eq(null), any(TracingContext.class));
 
     doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
         .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
         .doReturn(successOp) // Scn3: create overwrite=true fails with Http412
         .doReturn(successOp) // Scn4: create overwrite=true fails with Http500
         .when(mockClient)
-        .getPathStatus(any(String.class), eq(false));
+        .getPathStatus(any(String.class), eq(false), any(TracingContext.class));
 
     // mock for overwrite=true
     doThrow(
@@ -395,7 +412,7 @@ public class ITestAzureBlobFileSystemCreate extends
         .createPath(any(String.class), eq(true), eq(true),
             isNamespaceEnabled ? any(String.class) : eq(null),
             isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null));
+            any(boolean.class), eq(null), any(TracingContext.class));
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:
@@ -461,7 +478,8 @@ public class ITestAzureBlobFileSystemCreate extends
     Path testPath = new Path("testFile");
     intercept(
         exceptionClass,
-        () -> abfsStore.createFile(testPath, null, true, permission, umask));
+        () -> abfsStore.createFile(testPath, null, true, permission, umask,
+            getTestTracingContext(getFileSystem(), true)));
   }
 
   private AbfsRestOperationException getMockAbfsRestOperationException(int status) {

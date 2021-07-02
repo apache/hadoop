@@ -22,9 +22,11 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.UUID;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,9 +36,12 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
+import org.apache.hadoop.fs.azurebfs.utils.Listener;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
@@ -44,6 +49,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -66,6 +72,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
+  private final String inputStreamId;
   private final boolean alwaysReadBufferSize;
   /*
    * By default the pread API will do a seek + read as in FSInputStream.
@@ -87,6 +94,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
+  private TracingContext tracingContext;
 
   //  Optimisations modify the pointer fields.
   //  For better resilience the following fields are used to save the
@@ -100,6 +108,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final AbfsInputStreamStatistics streamStatistics;
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
+  private Listener listener;
 
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
@@ -110,7 +119,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           final String path,
           final long contentLength,
           final AbfsInputStreamContext abfsInputStreamContext,
-          final String eTag) {
+          final String eTag,
+          TracingContext tracingContext) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
@@ -127,6 +137,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
+    this.inputStreamId = createInputStreamId();
+    this.tracingContext = new TracingContext(tracingContext);
+    this.tracingContext.setOperation(FSOperationType.READ);
+    this.tracingContext.setStreamID(inputStreamId);
     this.context = abfsInputStreamContext;
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
 
@@ -140,6 +154,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   public String getPath() {
     return path;
+  }
+
+  private String createInputStreamId() {
+    return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
   }
 
   @Override
@@ -167,7 +185,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (streamStatistics != null) {
       streamStatistics.readOperationStarted();
     }
-    int bytesRead = readRemote(position, buffer, offset, length);
+    int bytesRead = readRemote(position, buffer, offset, length, tracingContext);
     if (statistics != null) {
       statistics.incrementBytesRead(bytesRead);
     }
@@ -428,10 +446,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // of readAhead Block size
       long nextSize = min((long) bufferSize, contentLength - nextOffset);
       LOG.debug("read ahead enabled issuing readheads num = {}", numReadAheads);
+      TracingContext readAheadTracingContext = new TracingContext(tracingContext);
+      readAheadTracingContext.setPrimaryRequestID();
       while (numReadAheads > 0 && nextOffset < contentLength) {
         LOG.debug("issuing read ahead requestedOffset = {} requested size {}",
             nextOffset, nextSize);
-        ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize);
+        ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize,
+                new TracingContext(readAheadTracingContext));
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
         // From next round onwards should be of readahead block size.
@@ -451,15 +472,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
 
       // got nothing from read-ahead, do our own read now
-      receivedBytes = readRemote(position, b, offset, length);
+      receivedBytes = readRemote(position, b, offset, length, new TracingContext(tracingContext));
       return receivedBytes;
     } else {
       LOG.debug("read ahead disabled, reading remote");
-      return readRemote(position, b, offset, length);
+      return readRemote(position, b, offset, length, new TracingContext(tracingContext));
     }
   }
 
-  int readRemote(long position, byte[] b, int offset, int length) throws IOException {
+  int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
@@ -483,7 +504,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       op = client.read(path, position, b, offset, length,
-          tolerateOobAppends ? "*" : eTag, cachedSasToken.get());
+          tolerateOobAppends ? "*" : eTag, cachedSasToken.get(), tracingContext);
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();
@@ -633,6 +654,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return fCursor - limit + bCursor;
   }
 
+  public TracingContext getTracingContext() {
+    return tracingContext;
+  }
+
   /**
    * Seeks a different copy of the data.  Returns true if
    * found a new source, false otherwise.
@@ -701,6 +726,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = cachedSasToken;
   }
 
+  @VisibleForTesting
+  public String getStreamID() {
+    return inputStreamId;
+  }
+
   /**
    * Getter for AbfsInputStreamStatistics.
    *
@@ -709,6 +739,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
+  }
+
+  @VisibleForTesting
+  public void registerListener(Listener listener1) {
+    listener = listener1;
+    tracingContext.setListener(listener);
   }
 
   /**

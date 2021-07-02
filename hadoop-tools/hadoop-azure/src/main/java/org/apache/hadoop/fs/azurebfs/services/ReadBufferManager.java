@@ -30,6 +30,7 @@ import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -115,7 +116,8 @@ final class ReadBufferManager {
    * @param requestedOffset The offset in the file which shoukd be read
    * @param requestedLength The length to read
    */
-  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength) {
+  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength,
+                      TracingContext tracingContext) {
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Start Queueing readAhead for {} offset {} length {}",
           stream.getPath(), requestedOffset, requestedLength);
@@ -136,6 +138,7 @@ final class ReadBufferManager {
       buffer.setRequestedLength(requestedLength);
       buffer.setStatus(ReadBufferStatus.NOT_AVAILABLE);
       buffer.setLatch(new CountDownLatch(1));
+      buffer.setTracingContext(tracingContext);
 
       Integer bufferIndex = freeList.pop();  // will return a value, since we have checked size > 0 already
 
@@ -304,6 +307,7 @@ final class ReadBufferManager {
     }
 
     completedReadList.remove(buf);
+    buf.setTracingContext(null);
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Evicting buffer idx {}; was used for file {} offset {} length {}",
           buf.getBufferindex(), buf.getStream().getPath(), buf.getOffset(), buf.getLength());
