@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -210,12 +209,10 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
           continue;
         }
         byte[] cbuf = new byte[bufferSize];
-        InputStream in = null;
-        try {
-          in = compressName.createDecompressionStream(
-              new BoundedRangeFileInputStream(fsin, candidate.getStartIndex(),
-                  candidate.getFileCompressedSize()), decompressor,
-              LogAggregationIndexedFileController.getFSInputBufferSize(conf));
+        try (InputStream in = compressName.createDecompressionStream(
+            new BoundedRangeFileInputStream(fsin, candidate.getStartIndex(),
+                candidate.getFileCompressedSize()), decompressor,
+            LogAggregationIndexedFileController.getFSInputBufferSize(conf))) {
           long logLength = candidate.getFileSize();
           html.pre().__("\n\n").__();
           html.p().__("Log Type: " + candidate.getFileName()).__();
@@ -231,8 +228,6 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
         } catch (Exception ex) {
           LOG.error("Error getting logs for " + logEntity, ex);
           continue;
-        } finally {
-          IOUtils.closeQuietly(in);
         }
       }
     }
