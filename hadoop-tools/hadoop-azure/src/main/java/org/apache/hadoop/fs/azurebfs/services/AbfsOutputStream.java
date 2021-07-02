@@ -384,8 +384,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "writeCurrentBufferToService", "append")) {
       AppendRequestParameters reqParams = new AppendRequestParameters(offset, 0,
-          bytesLength, APPEND_MODE, true, leaseId);
-      AbfsRestOperation op = client.append(path, bytes, reqParams, cachedSasToken.get());
+          bytesLength, APPEND_MODE, true);
+      AbfsRestOperation op = client.append(path, bytes, reqParams, cachedSasToken.get(), lease);
       cachedSasToken.update(op.getSasToken());
       if (outputStreamStatistics != null) {
         outputStreamStatistics.uploadSuccessful(bytesLength);
@@ -458,9 +458,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
               mode = FLUSH_MODE;
             }
             AppendRequestParameters reqParams = new AppendRequestParameters(
-                offset, 0, bytesLength, mode, false, leaseId);
+                offset, 0, bytesLength, mode, false);
             AbfsRestOperation op = client.append(path, bytes, reqParams,
-                cachedSasToken.get());
+                cachedSasToken.get(), lease);
             cachedSasToken.update(op.getSasToken());
             perfInfo.registerResult(op.getResult());
             byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
@@ -527,7 +527,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
       AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose,
-          cachedSasToken.get(), leaseId);
+          cachedSasToken.get(), lease);
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {

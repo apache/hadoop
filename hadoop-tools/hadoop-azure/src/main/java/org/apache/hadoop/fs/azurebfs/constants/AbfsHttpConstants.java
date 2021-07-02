@@ -43,6 +43,8 @@ public final class AbfsHttpConstants {
   public static final String BREAK_LEASE_ACTION = "break";
   public static final String RELEASE_LEASE_ACTION = "release";
   public static final String RENEW_LEASE_ACTION = "renew";
+  public static final String ACQUIRE_RELEASE_LEASE_ACTION = "acquire-release";
+  public static final String AUTO_RENEW_LEASE_ACTION = "auto-renew";
   public static final String DEFAULT_LEASE_BREAK_PERIOD = "0";
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";

@@ -506,13 +506,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         triggerConditionalCreateOverwrite = true;
       }
 
+      AbfsLease lease = maybeCreateFiniteLease(relativePath, isNamespaceEnabled);
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
             statistics,
             isNamespaceEnabled ? getOctalNotation(permission) : null,
             isNamespaceEnabled ? getOctalNotation(umask) : null,
-            isAppendBlob
+            isAppendBlob,
+            lease
         );
 
       } else {
@@ -521,12 +523,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             isNamespaceEnabled ? getOctalNotation(permission) : null,
             isNamespaceEnabled ? getOctalNotation(umask) : null,
             isAppendBlob,
-            null);
+            null,
+            lease);
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
-      AbfsLease lease = maybeCreateLease(relativePath);
-
+      if (lease == null) {
+        lease = maybeCreateLease(relativePath, isNamespaceEnabled);
+      }
       return new AbfsOutputStream(
           client,
           statistics,
@@ -551,7 +555,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final FileSystem.Statistics statistics,
       final String permission,
       final String umask,
-      final boolean isAppendBlob) throws AzureBlobFileSystemException {
+      final boolean isAppendBlob,
+      AbfsLease lease) throws AzureBlobFileSystemException {
     AbfsRestOperation op;
 
     try {
@@ -559,7 +564,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
       op = client.createPath(relativePath, true,
-          false, permission, umask, isAppendBlob, null);
+          false, permission, umask, isAppendBlob, null, lease);
     } catch (AbfsRestOperationException e) {
       if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
@@ -583,7 +588,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         try {
           // overwrite only if eTag matches with the file properties fetched befpre
           op = client.createPath(relativePath, true,
-              true, permission, umask, isAppendBlob, eTag);
+              true, permission, umask, isAppendBlob, eTag, lease);
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
@@ -639,7 +644,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client.createPath(getRelativePath(path),
           false, overwrite,
               isNamespaceEnabled ? getOctalNotation(permission) : null,
-              isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
+              isNamespaceEnabled ? getOctalNotation(umask) : null, false, null, null);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
@@ -738,7 +743,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         isAppendBlob = true;
       }
 
-      AbfsLease lease = maybeCreateLease(relativePath);
+      AbfsLease lease = maybeCreateLease(relativePath, getIsNamespaceEnabled());
 
       return new AbfsOutputStream(
           client,
@@ -1698,14 +1703,29 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.azureInfiniteLeaseDirSet.remove("");
   }
 
-  private AbfsLease maybeCreateLease(String relativePath)
+  private AbfsLease maybeCreateFiniteLease(String relativePath, boolean isNamespaceEnabled)
       throws AzureBlobFileSystemException {
     boolean enableInfiniteLease = isInfiniteLeaseKey(relativePath);
-    if (!enableInfiniteLease) {
-      return null;
+    AbfsLease lease = null;
+    if (!enableInfiniteLease && abfsConfiguration.isLeaseEnforced() && isNamespaceEnabled) {
+      lease = new AbfsLease(client, relativePath, false);
     }
-    AbfsLease lease = new AbfsLease(client, relativePath);
-    leaseRefs.put(lease, null);
+
+    return lease;
+  }
+
+  private AbfsLease maybeCreateLease(String relativePath, boolean isNamespaceEnabled)
+      throws AzureBlobFileSystemException {
+    boolean enableInfiniteLease = isInfiniteLeaseKey(relativePath);
+    AbfsLease lease = null;
+    if (enableInfiniteLease) {
+      lease = new AbfsLease(client, relativePath, true);
+      leaseRefs.put(lease, null);
+    }
+    else if (abfsConfiguration.isLeaseEnforced() && isNamespaceEnabled) {
+      lease = new AbfsLease(client, relativePath, false);
+    }
+
     return lease;
   }
 

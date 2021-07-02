@@ -67,6 +67,10 @@ public class AbfsRestOperation {
   private int bufferLength;
   private int retryCount = 0;
 
+  private int leaseDuration = 0;
+  private boolean acquireLease = false;
+  private boolean requestHeaderUpdated = false;
+
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
 
@@ -230,6 +234,10 @@ public class AbfsRestOperation {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
+      if (acquireLease && !requestHeaderUpdated) {
+        updateRequestHeaders();
+      }
+
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
 
@@ -310,6 +318,17 @@ public class AbfsRestOperation {
       return false;
     }
 
+    if (client.getRetryPolicy().isRetriableDueToLease(retryCount, httpOperation.getStatusCode(), operationType)
+          && isBundleLeaseOperation()) {
+      // first try simple retrial of the request
+      // if that doesn't work then acquire lease
+      if (retryCount >= 2) {
+        acquireLease = true;
+      }
+
+      return false;
+    }
+
     result = httpOperation;
 
     return true;
@@ -325,5 +344,38 @@ public class AbfsRestOperation {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
     }
+  }
+
+  private void updateRequestHeaders() {
+    requestHeaderUpdated = true;
+    boolean containsAutoRenew = requestHeaders.contains(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION,
+        AbfsHttpConstants.AUTO_RENEW_LEASE_ACTION));
+
+    if (!containsAutoRenew
+          && !requestHeaders.contains(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, AbfsHttpConstants.RELEASE_LEASE_ACTION))) {
+      return;
+    }
+
+    String leaseId;
+    for (int i = 0; i < requestHeaders.size(); i++) {
+      if (requestHeaders.get(i).getName() == HttpHeaderConfigurations.X_MS_LEASE_ID) {
+        leaseId = requestHeaders.get(i).getValue();
+        requestHeaders.remove(i);
+        requestHeaders.remove(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION,
+            containsAutoRenew ? AbfsHttpConstants.AUTO_RENEW_LEASE_ACTION : AbfsHttpConstants.RELEASE_LEASE_ACTION));
+        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION,
+            containsAutoRenew ? AbfsHttpConstants.ACQUIRE_LEASE_ACTION : AbfsHttpConstants.ACQUIRE_RELEASE_LEASE_ACTION));
+        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_PROPOSED_LEASE_ID, leaseId));
+        requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_DURATION, String.valueOf(leaseDuration)));
+        break;
+      }
+    }
+  }
+
+  private boolean isBundleLeaseOperation() {
+    return (requestHeaders.contains(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, AbfsHttpConstants.ACQUIRE_RELEASE_LEASE_ACTION))
+        || requestHeaders.contains(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, AbfsHttpConstants.ACQUIRE_LEASE_ACTION))
+        || requestHeaders.contains(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, AbfsHttpConstants.RELEASE_LEASE_ACTION))
+        || requestHeaders.contains(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_LEASE_ACTION, AbfsHttpConstants.AUTO_RENEW_LEASE_ACTION)));
   }
 }

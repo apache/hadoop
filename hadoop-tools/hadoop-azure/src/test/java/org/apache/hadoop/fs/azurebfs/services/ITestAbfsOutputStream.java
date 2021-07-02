@@ -84,6 +84,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(stream.getMaxRequestsThatCanBeQueued())
         .describedAs("maxRequestsToQueue should be " + maxRequestsToQueue)
         .isEqualTo(maxRequestsToQueue);
+    stream.close();
   }
 
 }

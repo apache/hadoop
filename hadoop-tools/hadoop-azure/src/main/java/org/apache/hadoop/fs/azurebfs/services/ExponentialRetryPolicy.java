@@ -123,6 +123,24 @@ public class ExponentialRetryPolicy {
   }
 
   /**
+   * Returns if a request should be retried based on the retry count, current response,
+   * and the current strategy.
+   *
+   * @param retryCount The current retry attempt count.
+   * @param statusCode The status code of the response, or -1 for socket error.
+   * @param abfsRestOperationType The current operation type.
+   * @return true if the request should be retried; false otherwise.
+   */
+  public boolean isRetriableDueToLease(final int retryCount, final int statusCode,
+                                       final AbfsRestOperationType abfsRestOperationType) {
+    return ((abfsRestOperationType == AbfsRestOperationType.Append
+        || abfsRestOperationType == AbfsRestOperationType.Flush)
+        && (retryCount < this.retryCount
+            && (statusCode == HttpURLConnection.HTTP_CONFLICT
+            || statusCode == HttpURLConnection.HTTP_PRECON_FAILED)));
+  }
+
+  /**
    * Returns backoff interval between 80% and 120% of the desired backoff,
    * multiply by 2^n-1 for exponential.
    *

@@ -81,6 +81,8 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE = true;
   public static final String DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES = "";
   public static final String DEFAULT_FS_AZURE_INFINITE_LEASE_DIRECTORIES = "";
+  public static final boolean DEFAULT_FS_AZURE_WRITE_ENFORCE_LEASE = false;
+  public static final int DEFAULT_FS_AZURE_WRITE_LEASE_DURATION = 60;
   public static final int DEFAULT_LEASE_THREADS = 0;
   public static final int MIN_LEASE_THREADS = 0;
   public static final int DEFAULT_LEASE_DURATION = -1;
