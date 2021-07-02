@@ -118,7 +118,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         .replace("]", "");
     Assertions.assertThat(requestHeader)
         .describedAs("Client Request Header should match TracingContext")
-        .isEqualTo(tracingContext.constructHeader());
+        .isEqualTo(tracingContext.getHeader());
   }
 
   @Ignore

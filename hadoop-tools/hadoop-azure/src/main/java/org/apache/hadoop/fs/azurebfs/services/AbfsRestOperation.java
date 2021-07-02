@@ -226,14 +226,6 @@ public class AbfsRestOperation {
     LOG.trace("{} REST operation complete", operationType);
   }
 
-  private void setClientRequestHeader(AbfsHttpOperation httpOperation,
-      TracingContext tracingContext) {
-    tracingContext.generateClientRequestId();
-    httpOperation.getConnection()
-        .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
-            tracingContext.constructHeader());
-  }
-
   /**
    * Executes a single HTTP operation to complete the REST operation.  If it
    * fails, there may be a retry.  The retryCount is incremented with each
@@ -246,7 +238,7 @@ public class AbfsRestOperation {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      setClientRequestHeader(httpOperation, tracingContext);
+      tracingContext.constructHeader(httpOperation);
 
       switch(client.getAuthType()) {
         case Custom:

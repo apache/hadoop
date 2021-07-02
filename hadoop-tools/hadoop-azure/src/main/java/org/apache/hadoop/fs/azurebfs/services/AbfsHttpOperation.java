@@ -400,6 +400,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
+  public void setRequestProperty(String key, String value) {
+    this.connection.setRequestProperty(key, value);
+  }
 
   /**
    * Open the HTTP connection.

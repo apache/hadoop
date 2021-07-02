@@ -24,7 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 
@@ -58,6 +60,8 @@ public class TracingContext {
   private FSOperationType opType;  // two-lettered code representing Hadoop op
   private final TracingHeaderFormat format;  // header ID display options
   private Listener listener = null;  // null except when testing
+  //final concatenated ID list set into x-ms-client-request-id header
+  private String header = EMPTY_STRING;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
@@ -120,10 +124,6 @@ public class TracingContext {
     return clientCorrelationID;
   }
 
-  public void generateClientRequestId() {
-    clientRequestId = UUID.randomUUID().toString();
-  }
-
   public void setPrimaryRequestID() {
     primaryRequestId = UUID.randomUUID().toString();
     if (listener != null) {
@@ -147,8 +147,14 @@ public class TracingContext {
     this.listener = listener;
   }
 
-  public String constructHeader() {
-    String header;
+  /**
+   * Concatenate all identifiers separated by (:) into a string and set into
+   * X_MS_CLIENT_REQUEST_ID header of the http operation
+   * @param httpOperation AbfsHttpOperation instance to set header into
+   *                      connection
+   */
+  public void constructHeader(AbfsHttpOperation httpOperation) {
+    clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
       header =
@@ -165,6 +171,14 @@ public class TracingContext {
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
     }
+    httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
+  }
+
+  /**
+   * Return header representing the request associated with the tracingContext
+   * @return Header string set into X_MS_CLIENT_REQUEST_ID
+   */
+  public String getHeader() {
     return header;
   }
 

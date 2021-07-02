@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs.utils;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.assertj.core.api.Assertions;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+
 /**
  * Used to validate correlation identifiers provided during testing against
  * values that get associated with a request through its TracingContext instance
@@ -28,7 +30,7 @@ import org.assertj.core.api.Assertions;
 public class TracingHeaderValidator implements Listener {
   private String clientCorrelationId;
   private String fileSystemId;
-  private String primaryRequestId = "";
+  private String primaryRequestId = EMPTY_STRING;
   private boolean needsPrimaryRequestId;
   private String streamID = "";
   private FSOperationType operation;
