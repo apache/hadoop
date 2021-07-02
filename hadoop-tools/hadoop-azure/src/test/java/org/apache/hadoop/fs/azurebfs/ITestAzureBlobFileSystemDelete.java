@@ -30,6 +30,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
@@ -37,6 +38,8 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.utils.TestMockHelpers;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -149,9 +152,13 @@ public class ITestAzureBlobFileSystemDelete extends
 
     es.shutdownNow();
     Path dir = new Path("/test");
+    fs.registerListener(new TracingHeaderValidator(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+        fs.getFileSystemId(), FSOperationType.DELETE, false, 0));
     // first try a non-recursive delete, expect failure
     intercept(FileAlreadyExistsException.class,
         () -> fs.delete(dir, false));
+    fs.registerListener(null);
     assertDeleted(fs, dir, true);
     assertPathDoesNotExist(fs, "deleted", dir);
 
@@ -222,13 +229,14 @@ public class ITestAzureBlobFileSystemDelete extends
     intercept(AbfsRestOperationException.class,
         () -> fs.getAbfsStore().delete(
             new Path("/NonExistingPath"),
-            false));
+            false, getTestTracingContext(fs, false)));
 
     intercept(AbfsRestOperationException.class,
         () -> client.deletePath(
         "/NonExistingPath",
         false,
-        null));
+        null,
+        getTestTracingContext(fs, true)));
 
     // mock idempotency check to mimic retried case
     AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(
@@ -241,7 +249,8 @@ public class ITestAzureBlobFileSystemDelete extends
         mockStore,
         "abfsPerfTracker",
         TestAbfsPerfTracker.getAPerfTrackerInstance(this.getConfiguration()));
-    doCallRealMethod().when(mockStore).delete(new Path("/NonExistingPath"), false);
+    doCallRealMethod().when(mockStore).delete(new Path("/NonExistingPath"),
+        false, getTestTracingContext(fs, false));
 
     // Case 2: Mimic retried case
     // Idempotency check on Delete always returns success
@@ -252,13 +261,15 @@ public class ITestAzureBlobFileSystemDelete extends
     idempotencyRetOp.hardSetResult(HTTP_OK);
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
-    when(mockClient.deletePath("/NonExistingPath", false,
-        null)).thenCallRealMethod();
+    TracingContext tracingContext = getTestTracingContext(fs, false);
+    when(mockClient.deletePath("/NonExistingPath", false, null, tracingContext))
+        .thenCallRealMethod();
 
     Assertions.assertThat(mockClient.deletePath(
         "/NonExistingPath",
         false,
-        null)
+        null,
+        tracingContext)
         .getResult()
         .getStatusCode())
         .describedAs("Idempotency check reports successful "
@@ -266,7 +277,7 @@ public class ITestAzureBlobFileSystemDelete extends
         .isEqualTo(idempotencyRetOp.getResult().getStatusCode());
 
     // Call from AzureBlobFileSystemStore should not fail either
-    mockStore.delete(new Path("/NonExistingPath"), false);
+    mockStore.delete(new Path("/NonExistingPath"), false, getTestTracingContext(fs, false));
   }
 
 }

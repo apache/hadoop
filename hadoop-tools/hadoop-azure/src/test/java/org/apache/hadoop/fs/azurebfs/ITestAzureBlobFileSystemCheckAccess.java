@@ -188,7 +188,9 @@ public class ITestAzureBlobFileSystemCheckAccess
     //  acts as noop
     AzureBlobFileSystemStore mockAbfsStore =
         Mockito.mock(AzureBlobFileSystemStore.class);
-    Mockito.when(mockAbfsStore.getIsNamespaceEnabled()).thenReturn(true);
+    Mockito.when(mockAbfsStore
+        .getIsNamespaceEnabled(getTestTracingContext(getFileSystem(), false)))
+        .thenReturn(true);
     Field abfsStoreField = AzureBlobFileSystem.class.getDeclaredField(
         "abfsStore");
     abfsStoreField.setAccessible(true);

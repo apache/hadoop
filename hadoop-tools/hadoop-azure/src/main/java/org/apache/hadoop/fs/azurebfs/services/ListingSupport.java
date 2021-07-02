@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -32,10 +33,11 @@ public interface ListingSupport {
 
   /**
    * @param path The list path.
+   * @param tracingContext TracingContext instance to track identifiers
    * @return the entries in the path.
    * @throws IOException in case of error
    */
-  FileStatus[] listStatus(Path path) throws IOException;
+  FileStatus[] listStatus(Path path, TracingContext tracingContext) throws IOException;
 
   /**
    * @param path      Path the list path.
@@ -49,10 +51,11 @@ public interface ListingSupport {
    *                  non-existent entry in lexical order: listStatus
    *                  (Path("/folder"), "cfile") will return
    *                  "/folder/hfile" and "/folder/ifile".
+   * @param tracingContext TracingContext instance to track identifiers
    * @return the entries in the path start from  "startFrom" in lexical order.
    * @throws IOException in case of error
    */
-  FileStatus[] listStatus(Path path, String startFrom) throws IOException;
+  FileStatus[] listStatus(Path path, String startFrom, TracingContext tracingContext) throws IOException;
 
   /**
    * @param path         The list path
@@ -71,9 +74,10 @@ public interface ListingSupport {
    *                     filled with just one page os results or the entire
    *                     result.
    * @param continuation Contiuation token. null means start rom the begining.
+   * @param tracingContext TracingContext instance to track identifiers
    * @return Continuation tokem
    * @throws IOException in case of error
    */
   String listStatus(Path path, String startFrom, List<FileStatus> fileStatuses,
-      boolean fetchAll, String continuation) throws IOException;
+      boolean fetchAll, String continuation, TracingContext tracingContext) throws IOException;
 }

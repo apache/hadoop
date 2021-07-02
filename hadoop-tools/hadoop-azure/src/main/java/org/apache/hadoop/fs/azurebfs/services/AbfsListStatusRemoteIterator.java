@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class AbfsListStatusRemoteIterator
     implements RemoteIterator<FileStatus> {
@@ -48,6 +49,7 @@ public class AbfsListStatusRemoteIterator
   private final FileStatus fileStatus;
   private final ListingSupport listingSupport;
   private final ArrayBlockingQueue<Object> iteratorsQueue;
+  private final TracingContext tracingContext;
 
   private volatile boolean isAsyncInProgress = false;
   private boolean isIterationComplete = false;
@@ -55,9 +57,10 @@ public class AbfsListStatusRemoteIterator
   private Iterator<FileStatus> currIterator;
 
   public AbfsListStatusRemoteIterator(final FileStatus fileStatus,
-      final ListingSupport listingSupport) {
+      final ListingSupport listingSupport, TracingContext tracingContext) {
     this.fileStatus = fileStatus;
     this.listingSupport = listingSupport;
+    this.tracingContext = tracingContext;
     iteratorsQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
     currIterator = Collections.emptyIterator();
     fetchBatchesAsync();
@@ -145,7 +148,7 @@ public class AbfsListStatusRemoteIterator
     List<FileStatus> fileStatuses = new ArrayList<>();
     continuation = listingSupport
         .listStatus(fileStatus.getPath(), null, fileStatuses, FETCH_ALL_FALSE,
-            continuation);
+            continuation, tracingContext);
     if (!fileStatuses.isEmpty()) {
       iteratorsQueue.put(fileStatuses.iterator());
     }

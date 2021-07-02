@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
@@ -83,6 +85,9 @@ public class ITestAzureBlobFileSystemListStatus extends
     }
 
     es.shutdownNow();
+    fs.registerListener(
+        new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
     FileStatus[] files = fs.listStatus(new Path("/"));
     assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
   }
