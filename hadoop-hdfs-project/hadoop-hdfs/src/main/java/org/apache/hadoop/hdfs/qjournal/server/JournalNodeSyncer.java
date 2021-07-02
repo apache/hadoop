@@ -174,8 +174,8 @@ public class JournalNodeSyncer {
         }
       }
       if (!createEditsSyncDir()) {
-        LOG.error("Failed to create directory for downloading log "
-                + "segments: {}. Stopping Journal Node Sync.",
+        LOG.error("Failed to create directory for downloading log " +
+                "segments: {}. Stopping Journal Node Sync.",
             journal.getStorage().getEditsSyncDir());
         return;
       }
