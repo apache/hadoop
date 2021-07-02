@@ -174,6 +174,8 @@ public class TestBalancerWithHANameNodes {
       // Check getBlocks request to Standby NameNode.
       assertTrue(log.getOutput().contains(
           "Request #getBlocks to Standby NameNode success."));
+      assertTrue(log.getOutput().contains(
+          "Request #getLiveDatanodeStorageReport to Standby NameNode success"));
     } finally {
       cluster.shutdown();
     }
@@ -292,7 +294,6 @@ public class TestBalancerWithHANameNodes {
           null, conf, NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
       DatanodeStorageReport[] ldspFromSnn =
           nncStandby.getLiveDatanodeStorageReport();
-      //
       assertTrue(log.getOutput().contains(
           "Request #getLiveDatanodeStorageReport to Standby NameNode success"));
       nncStandby.close();
