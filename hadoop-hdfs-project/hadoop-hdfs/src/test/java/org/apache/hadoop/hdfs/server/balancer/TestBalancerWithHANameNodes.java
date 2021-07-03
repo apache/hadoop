@@ -258,7 +258,9 @@ public class TestBalancerWithHANameNodes {
     // Try capture NameNodeConnector log.
     LogCapturer log =LogCapturer.captureLogs(
         LoggerFactory.getLogger(NameNodeConnector.class));
-
+    // We needs to assert datanode info from ANN and SNN, so the
+    // heartbeat should disabled for the duration of method execution
+    copiedConf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 60000);
     cluster = new MiniDFSCluster.Builder(copiedConf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(TEST_CAPACITIES.length)
