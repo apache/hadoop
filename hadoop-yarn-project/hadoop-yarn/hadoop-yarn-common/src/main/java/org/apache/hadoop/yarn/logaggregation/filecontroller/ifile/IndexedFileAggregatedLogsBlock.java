@@ -28,11 +28,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.file.tfile.BoundedRangeFileInputStream;
 import org.apache.hadoop.io.file.tfile.Compression;
@@ -209,10 +211,12 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
           continue;
         }
         byte[] cbuf = new byte[bufferSize];
-        try (InputStream in = compressName.createDecompressionStream(
-            new BoundedRangeFileInputStream(fsin, candidate.getStartIndex(),
-                candidate.getFileCompressedSize()), decompressor,
-            LogAggregationIndexedFileController.getFSInputBufferSize(conf))) {
+        InputStream in = null;
+        try {
+          in = compressName.createDecompressionStream(
+              new BoundedRangeFileInputStream(fsin, candidate.getStartIndex(),
+                  candidate.getFileCompressedSize()), decompressor,
+              LogAggregationIndexedFileController.getFSInputBufferSize(conf));
           long logLength = candidate.getFileSize();
           html.pre().__("\n\n").__();
           html.p().__("Log Type: " + candidate.getFileName()).__();
@@ -228,6 +232,8 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
         } catch (Exception ex) {
           LOG.error("Error getting logs for " + logEntity, ex);
           continue;
+        } finally {
+          IOUtils.closeStream(in);
         }
       }
     }

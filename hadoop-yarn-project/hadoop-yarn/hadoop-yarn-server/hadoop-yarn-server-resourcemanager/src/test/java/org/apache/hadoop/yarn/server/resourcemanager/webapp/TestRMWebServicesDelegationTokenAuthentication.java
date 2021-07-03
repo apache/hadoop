@@ -367,8 +367,8 @@ public class TestRMWebServicesDelegationTokenAuthentication {
             }
           }
         } finally {
-          IOUtils.cleanupWithLogger(null, reader);
-          IOUtils.cleanupWithLogger(null, response);
+          IOUtils.closeStream(reader);
+          IOUtils.closeStream(response);
         }
         Assert.assertEquals("client2", owner);
         Token<RMDelegationTokenIdentifier> realToken = new Token<RMDelegationTokenIdentifier>();
