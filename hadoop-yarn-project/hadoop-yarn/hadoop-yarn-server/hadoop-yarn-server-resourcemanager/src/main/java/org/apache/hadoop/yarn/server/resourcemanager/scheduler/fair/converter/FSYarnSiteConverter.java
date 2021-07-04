@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.Proportion
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueDeletionPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueConfigurationAutoRefreshPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 
@@ -110,6 +111,11 @@ public class FSYarnSiteConverter {
       yarnSiteConfig.setBoolean(
           CapacitySchedulerConfiguration.ASSIGN_MULTIPLE_ENABLED, false);
     }
+
+    // Make auto cs conf refresh enabled.
+    yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
+        addMonitorPolicy(QueueConfigurationAutoRefreshPolicy
+            .class.getCanonicalName(), yarnSiteConfig));
 
     int maxAssign = conf.getInt(FairSchedulerConfiguration.MAX_ASSIGN,
         FairSchedulerConfiguration.DEFAULT_MAX_ASSIGN);

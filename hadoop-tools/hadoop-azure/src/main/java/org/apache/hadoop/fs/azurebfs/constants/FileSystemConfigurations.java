@@ -69,6 +69,8 @@ public final class FileSystemConfigurations {
   public static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT = "localhost";
   public static final int DEFAULT_AZURE_LIST_MAX_RESULTS = 5000;
 
+  public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM = "AES256";
+
   public static final int MAX_CONCURRENT_READ_THREADS = 12;
   public static final int MAX_CONCURRENT_WRITE_THREADS = 8;
   public static final boolean DEFAULT_READ_TOLERATE_CONCURRENT_APPEND = false;
@@ -87,7 +89,7 @@ public final class FileSystemConfigurations {
   public static final int MIN_LEASE_DURATION = 15;
   public static final int MAX_LEASE_DURATION = 60;
 
-  public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = -1;
+  public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = 2;
 
   public static final boolean DEFAULT_ENABLE_FLUSH = true;
   public static final boolean DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH = true;
@@ -110,6 +112,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_DELETE_CONSIDERED_IDEMPOTENT = true;
   public static final int DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS = 5 * 60 * 1000; // 5 mins
 
+  public static final int STREAM_ID_LEN = 12;
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
   public static final boolean DEFAULT_FASTPATH_ENABLE = false;
 

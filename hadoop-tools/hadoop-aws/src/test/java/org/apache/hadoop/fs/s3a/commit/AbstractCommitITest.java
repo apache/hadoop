@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.FailureInjectionPolicy;
 import org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -289,10 +290,13 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     if (fs != null && path != null) {
       String key = fs.pathToKey(path);
-      WriteOperationHelper writeOps = fs.getWriteOperationHelper();
-      int count = writeOps.abortMultipartUploadsUnderPath(key);
-      if (count > 0) {
-        log().info("Multipart uploads deleted: {}", count);
+      int count = 0;
+      try (AuditSpan span = span()) {
+        WriteOperationHelper writeOps = fs.getWriteOperationHelper();
+        count = writeOps.abortMultipartUploadsUnderPath(key);
+        if (count > 0) {
+          log().info("Multipart uploads deleted: {}", count);
+        }
       }
       return count;
     } else {

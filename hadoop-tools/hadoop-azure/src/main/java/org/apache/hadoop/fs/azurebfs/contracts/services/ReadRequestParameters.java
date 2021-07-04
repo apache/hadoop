@@ -35,22 +35,21 @@ public class ReadRequestParameters {
   private ReadRequestParameters.Mode mode;
   private final String eTag;
   private final String fastpathFileHandle;
-  private FastpathStatus fastpathStatus = FastpathStatus.FASTPATH_DISABLED;
+  //private FastpathStatus fastpathStatus = FastpathStatus.FASTPATH_DISABLED;
 
   public ReadRequestParameters(final ReadRequestParameters.Mode mode,
       final long storeFilePosition,
       final int bufferOffset,
       final int readLength,
       final String eTag,
-      final String fastpathFileHandle,
-      final FastpathStatus fastpathStatus) {
+      final String fastpathFileHandle) {
     this.mode = mode;
     this.storeFilePosition = storeFilePosition;
     this.bufferOffset = bufferOffset;
     this.readLength = readLength;
     this.eTag = eTag;
     this.fastpathFileHandle = fastpathFileHandle;
-    this.fastpathStatus = fastpathStatus;
+    //this.fastpathStatus = fastpathStatus;
   }
 
   public long getStoreFilePosition() {
@@ -77,13 +76,6 @@ public class ReadRequestParameters {
     return this.fastpathFileHandle;
   }
 
-  public FastpathStatus getFastpathStatus() {
-    return this.fastpathStatus;
-  }
-
-  public void setFastpathStatus(final FastpathStatus fastpathStatus) {
-    this.fastpathStatus = fastpathStatus;
-  }
   public void setMode(final Mode mode) {
     this.mode = mode;
   }

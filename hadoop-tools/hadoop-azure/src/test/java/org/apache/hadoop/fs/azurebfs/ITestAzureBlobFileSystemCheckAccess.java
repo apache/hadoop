@@ -22,8 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -189,7 +188,9 @@ public class ITestAzureBlobFileSystemCheckAccess
     //  acts as noop
     AzureBlobFileSystemStore mockAbfsStore =
         Mockito.mock(AzureBlobFileSystemStore.class);
-    Mockito.when(mockAbfsStore.getIsNamespaceEnabled()).thenReturn(true);
+    Mockito.when(mockAbfsStore
+        .getIsNamespaceEnabled(getTestTracingContext(getFileSystem(), false)))
+        .thenReturn(true);
     Field abfsStoreField = AzureBlobFileSystem.class.getDeclaredField(
         "abfsStore");
     abfsStoreField.setAccessible(true);
@@ -316,8 +317,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   private void checkIfConfigIsSet(String configKey){
     AbfsConfiguration conf = getConfiguration();
     String value = conf.get(configKey);
-    Preconditions.checkArgument((value != null && value.trim().length() > 1),
-        configKey + " config is mandatory for the test to run");
+    Assume.assumeTrue(configKey + " config is mandatory for the test to run",
+        value != null && value.trim().length() > 1);
   }
 
   private void assertAccessible(Path testFilePath, FsAction fsAction)

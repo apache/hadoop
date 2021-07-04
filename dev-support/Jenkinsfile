@@ -23,7 +23,7 @@ pipeline {
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
-        timeout (time: 20, unit: 'HOURS')
+        timeout (time: 24, unit: 'HOURS')
         timestamps()
         checkoutToSubdirectory('src')
     }
@@ -32,7 +32,6 @@ pipeline {
         SOURCEDIR = 'src'
         // will also need to change notification section below
         PATCHDIR = 'out'
-        DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
         YETUS_VERSION='f9ba0170a5787a5f4662d3769804fef0226a182f'
@@ -57,7 +56,17 @@ pipeline {
             }
         }
 
-        stage ('precommit-run') {
+        // This is an optional stage which runs only when there's a change in
+        // C++/C++ build/platform.
+        // This stage serves as a means of cross platform validation, which is
+        // really needed to ensure that any C++ related/platform change doesn't
+        // break the Hadoop build on Centos 8.
+        stage ('precommit-run Centos 8') {
+            environment {
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
+                IS_OPTIONAL = 1
+            }
+
             steps {
                 withCredentials(
                     [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
@@ -68,100 +77,61 @@ pipeline {
                                         usernameVariable: 'JIRA_USER')]) {
                         sh '''#!/usr/bin/env bash
 
-                        set -e
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh"
+                        '''
+                }
+            }
+        }
 
-                        TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
+        // This is an optional stage which runs only when there's a change in
+        // C++/C++ build/platform.
+        // This stage serves as a means of cross platform validation, which is
+        // really needed to ensure that any C++ related/platform change doesn't
+        // break the Hadoop build on Debian 10.
+        stage ('precommit-run Debian 10') {
+            environment {
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
+                IS_OPTIONAL = 1
+            }
 
-                        # this must be clean for every run
-                        if [[ -d "${WORKSPACE}/${PATCHDIR}" ]]; then
-                          rm -rf "${WORKSPACE}/${PATCHDIR}"
-                        fi
-                        mkdir -p "${WORKSPACE}/${PATCHDIR}"
+            steps {
+                withCredentials(
+                    [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                                  passwordVariable: 'GITHUB_TOKEN',
+                                  usernameVariable: 'GITHUB_USER'),
+                    usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
+                                        passwordVariable: 'JIRA_PASSWORD',
+                                        usernameVariable: 'JIRA_USER')]) {
+                        sh '''#!/usr/bin/env bash
 
-                        # if given a JIRA issue, process it. If CHANGE_URL is set
-                        # (e.g., Github Branch Source plugin), process it.
-                        # otherwise exit, because we don't want Hadoop to do a
-                        # full build.  We wouldn't normally do this check for smaller
-                        # projects. :)
-                        if [[ -n "${JIRA_ISSUE_KEY}" ]]; then
-                            YETUS_ARGS+=("${JIRA_ISSUE_KEY}")
-                        elif [[ -z "${CHANGE_URL}" ]]; then
-                            echo "Full build skipped" > "${WORKSPACE}/${PATCHDIR}/report.html"
-                            exit 0
-                        fi
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh"
+                        '''
+                }
+            }
+        }
 
-                        YETUS_ARGS+=("--patch-dir=${WORKSPACE}/${PATCHDIR}")
+        // We want to use Ubuntu Focal as our main CI and thus, this stage
+        // isn't optional (runs for all the PRs).
+        stage ('precommit-run Ubuntu focal') {
+            environment {
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
+                IS_OPTIONAL = 0
+            }
 
-                        # where the source is located
-                        YETUS_ARGS+=("--basedir=${WORKSPACE}/${SOURCEDIR}")
+            steps {
+                withCredentials(
+                    [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                                  passwordVariable: 'GITHUB_TOKEN',
+                                  usernameVariable: 'GITHUB_USER'),
+                    usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
+                                        passwordVariable: 'JIRA_PASSWORD',
+                                        usernameVariable: 'JIRA_USER')]) {
+                        sh '''#!/usr/bin/env bash
 
-                        # our project defaults come from a personality file
-                        YETUS_ARGS+=("--project=hadoop")
-                        YETUS_ARGS+=("--personality=${WORKSPACE}/${SOURCEDIR}/dev-support/bin/hadoop.sh")
-
-                        # lots of different output formats
-                        YETUS_ARGS+=("--brief-report-file=${WORKSPACE}/${PATCHDIR}/brief.txt")
-                        YETUS_ARGS+=("--console-report-file=${WORKSPACE}/${PATCHDIR}/console.txt")
-                        YETUS_ARGS+=("--html-report-file=${WORKSPACE}/${PATCHDIR}/report.html")
-
-                        # enable writing back to Github
-                        YETUS_ARGS+=(--github-token="${GITHUB_TOKEN}")
-
-                        # enable writing back to ASF JIRA
-                        YETUS_ARGS+=(--jira-password="${JIRA_PASSWORD}")
-                        YETUS_ARGS+=(--jira-user="${JIRA_USER}")
-
-                        # auto-kill any surefire stragglers during unit test runs
-                        YETUS_ARGS+=("--reapermode=kill")
-
-                        # set relatively high limits for ASF machines
-                        # changing these to higher values may cause problems
-                        # with other jobs on systemd-enabled machines
-                        YETUS_ARGS+=("--proclimit=5500")
-                        YETUS_ARGS+=("--dockermemlimit=22g")
-
-                        # -1 spotbugs issues that show up prior to the patch being applied
-                        YETUS_ARGS+=("--spotbugs-strict-precheck")
-
-                        # rsync these files back into the archive dir
-                        YETUS_ARGS+=("--archive-list=checkstyle-errors.xml,spotbugsXml.xml")
-
-                        # URL for user-side presentation in reports and such to our artifacts
-                        # (needs to match the archive bits below)
-                        YETUS_ARGS+=("--build-url-artifacts=artifact/out")
-
-                        # plugins to enable
-                        YETUS_ARGS+=("--plugins=all")
-
-                        # don't let these tests cause -1s because we aren't really paying that
-                        # much attention to them
-                        YETUS_ARGS+=("--tests-filter=checkstyle")
-
-                        # run in docker mode and specifically point to our
-                        # Dockerfile since we don't want to use the auto-pulled version.
-                        YETUS_ARGS+=("--docker")
-                        YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
-                        YETUS_ARGS+=("--mvn-custom-repos")
-
-                        # effectively treat dev-suport as a custom maven module
-                        YETUS_ARGS+=("--skip-dirs=dev-support")
-
-                        # help keep the ASF boxes clean
-                        YETUS_ARGS+=("--sentinel")
-
-                        # test with Java 8 and 11
-                        YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
-                        YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
-                        YETUS_ARGS+=("--multijdktests=compile")
-
-                        # custom javadoc goals
-                        YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
-
-                        # write Yetus report as GitHub comment (YETUS-1102)
-                        YETUS_ARGS+=("--github-write-comment")
-                        YETUS_ARGS+=("--github-use-emoji-vote")
-
-                        "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh"
                         '''
                 }
             }

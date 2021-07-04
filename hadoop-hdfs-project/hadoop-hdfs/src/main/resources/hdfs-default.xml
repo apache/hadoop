@@ -874,6 +874,18 @@
 </property>
 
 <property>
+  <name>dfs.datanode.reconcile.blocks.batch.size</name>
+  <value>1000</value>
+  <description>Setting this to define reconcile batch size.</description>
+</property>
+
+<property>
+  <name>dfs.datanode.reconcile.blocks.batch.interval</name>
+  <value>2000</value>
+  <description>Setting this to define interval between batches.</description>
+</property>
+
+<property>
   <name>dfs.heartbeat.interval</name>
   <value>3s</value>
   <description>
@@ -2095,6 +2107,16 @@
     for more than a specified time interval. Stale datanodes will be
     moved to the end of the node list returned for reading. See
     dfs.namenode.avoid.write.stale.datanode for a similar setting for writes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.avoid.read.slow.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid reading from &quot;slow&quot; datanodes.
+    Slow datanodes will be moved to the end of the node list returned
+    for reading.
   </description>
 </property>
 
@@ -5180,32 +5202,6 @@
     in seconds.  If this value is greater than the property
     dfs.namenode.stale.datanode.interval, then the calculated value above
     is used.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.timeout.ms</name>
-  <value>4</value>
-  <description>
-    Timeout value in ms for the StorageInfo compaction run.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.interval.ms</name>
-  <value>600000</value>
-  <description>
-    The thread for checking the StorageInfo for defragmentation will
-    run periodically.  The time between runs is determined by this
-    property.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.ratio</name>
-  <value>0.75</value>
-  <description>
-    The defragmentation threshold for the StorageInfo.
   </description>
 </property>
 

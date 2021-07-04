@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
-import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
-
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,6 +33,9 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Test;
@@ -163,7 +164,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       doThrow(new IOException())
           .doCallRealMethod()
           .when(abfsInputStream)
-          .readRemote(anyLong(), any(), anyInt(), anyInt());
+          .readRemote(anyLong(), any(), anyInt(), anyInt(),
+              any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
       verifyBeforeSeek(abfsInputStream);

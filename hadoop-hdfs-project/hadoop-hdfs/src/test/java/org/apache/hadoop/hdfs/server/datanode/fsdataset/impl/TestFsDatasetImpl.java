@@ -18,6 +18,9 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
@@ -25,11 +28,7 @@ import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -75,6 +74,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -88,7 +88,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.HashSet;
 import java.util.List;
@@ -773,41 +772,6 @@ public class TestFsDatasetImpl {
     }
 
     FsDatasetTestUtil.assertFileLockReleased(badDir.toString());
-  }
-
-  @Test
-  /**
-   * This test is here primarily to catch any case where the datanode replica
-   * map structure is changed to a new structure which is not sorted and hence
-   * reading the blocks from it directly would not be sorted.
-   */
-  public void testSortedFinalizedBlocksAreSorted() throws IOException {
-    this.conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    try {
-      cluster.waitActive();
-      DataNode dn = cluster.getDataNodes().get(0);
-
-      FsDatasetSpi<?> ds = DataNodeTestUtils.getFSDataset(dn);
-      ds.addBlockPool(BLOCKPOOL, conf);
-
-      // Load 1000 blocks with random blockIDs
-      for (int i=0; i<=1000; i++) {
-        ExtendedBlock eb = new ExtendedBlock(
-            BLOCKPOOL, new Random().nextInt(), 1000, 1000 + i);
-        cluster.getFsDatasetTestUtils(0).createFinalizedReplica(eb);
-      }
-      // Get the sorted blocks and validate the arrayList is sorted
-      List<ReplicaInfo> replicaList = ds.getSortedFinalizedBlocks(BLOCKPOOL);
-      for (int i=0; i<replicaList.size() - 1; i++) {
-        if (replicaList.get(i).compareTo(replicaList.get(i+1)) > 0) {
-          // Not sorted so fail the test
-          fail("ArrayList is not sorted, and it should be");
-        }
-      }
-    } finally {
-      cluster.shutdown();
-    }
   }
   
   @Test
@@ -1766,7 +1730,7 @@ public class TestFsDatasetImpl {
       DataNode dn = cluster.getDataNodes().get(0);
       FsDatasetSpi fsdataset = dn.getFSDataset();
       List<ReplicaInfo> replicaInfos =
-          fsdataset.getSortedFinalizedBlocks(bpid);
+          fsdataset.getFinalizedBlocks(bpid);
       assertEquals(1, replicaInfos.size());
 
       ReplicaInfo replicaInfo = replicaInfos.get(0);
@@ -1786,8 +1750,8 @@ public class TestFsDatasetImpl {
       assertFalse(metaFile.exists());
 
       FsVolumeSpi.ScanInfo info = new FsVolumeSpi.ScanInfo(
-          replicaInfo.getBlockId(), blockFile.getAbsoluteFile(),
-          metaFile.getAbsoluteFile(), replicaInfo.getVolume());
+          replicaInfo.getBlockId(), blockFile.getParentFile().getAbsoluteFile(),
+          blockFile.getName(), metaFile.getName(), replicaInfo.getVolume());
       fsdataset.checkAndUpdate(bpid, info);
 
       BlockManager blockManager = cluster.getNameNode().

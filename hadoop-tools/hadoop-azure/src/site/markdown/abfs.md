@@ -729,6 +729,28 @@ Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationK
 `org.apache.hadoop.fs.azurebfs.AbfsConfiguration` for the full list
 of configuration options and their default values.
 
+### <a name="clientcorrelationoptions"></a> Client Correlation Options
+
+#### <a name="clientcorrelationid"></a> 1. Client CorrelationId Option
+
+Config `fs.azure.client.correlationid` provides an option to correlate client
+requests using this client-provided identifier. This Id will be visible in Azure
+Storage Analytics logs in the `request-id-header` field.
+Reference: [Storage Analytics log format](https://docs.microsoft.com/en-us/rest/api/storageservices/storage-analytics-log-format)
+
+This config accepts a string which can be maximum of 72 characters and should
+contain alphanumeric characters and/or hyphens only. Defaults to empty string if
+input is invalid.
+
+#### <a name="tracingcontextformat"></a> 1. Correlation IDs Display Options
+
+Config `fs.azure.tracingcontext.format` provides an option to select the format
+of IDs included in the `request-id-header`. This config accepts a String value
+corresponding to the following enum options.
+  `SINGLE_ID_FORMAT` : clientRequestId
+  `ALL_ID_FORMAT` : all IDs (default)
+  `TWO_ID_FORMAT` : clientCorrelationId:clientRequestId
+
 ### <a name="flushconfigoptions"></a> Flush Options
 
 #### <a name="abfsflushconfigoptions"></a> 1. Azure Blob File System Flush Options
@@ -803,7 +825,7 @@ pattern is detected.
 `fs.azure.readaheadqueue.depth`: Sets the readahead queue depth in
 AbfsInputStream. In case the set value is negative the read ahead queue depth
 will be set as Runtime.getRuntime().availableProcessors(). By default the value
-will be -1. To disable readaheads, set this value to 0. If your workload is
+will be 2. To disable readaheads, set this value to 0. If your workload is
  doing only random reads (non-sequential) or you are seeing throttling, you
   may try setting this value to 0.
 

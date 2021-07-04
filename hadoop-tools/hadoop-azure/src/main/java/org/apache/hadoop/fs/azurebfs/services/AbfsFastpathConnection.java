@@ -104,6 +104,14 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
     return value;
   }
 
+  public String getClientRequestId() {
+    return getRequestHeader(X_MS_CLIENT_REQUEST_ID);
+  }
+
+  public void setHeader(String header, String value) {
+    this.requestHeaders.add(new AbfsHttpHeader(header, value));
+  }
+
   /**
    * Gets and processes the HTTP response.
    *

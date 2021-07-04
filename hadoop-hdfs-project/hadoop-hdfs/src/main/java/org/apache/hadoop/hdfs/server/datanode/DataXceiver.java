@@ -587,7 +587,7 @@ class DataXceiver extends Receiver implements Runnable {
     final String clientTraceFmt =
       clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
         ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
-            "%d", "HDFS_READ", clientName, "%d",
+            "", "%d", "HDFS_READ", clientName, "%d",
             dnR.getDatanodeUuid(), block, "%d")
         : dnR + " Served block " + block + " to " +
             remoteAddress;
@@ -878,11 +878,11 @@ class DataXceiver extends Receiver implements Runnable {
           IOUtils.closeSocket(mirrorSock);
           mirrorSock = null;
           if (isClient) {
-            LOG.error("{}:Exception transfering block {} to mirror {}",
+            LOG.error("{}:Exception transferring block {} to mirror {}",
                 datanode, block, mirrorNode, e);
             throw e;
           } else {
-            LOG.info("{}:Exception transfering {} to mirror {}- continuing " +
+            LOG.info("{}:Exception transferring {} to mirror {}- continuing " +
                 "without the mirror", datanode, block, mirrorNode, e);
             incrDatanodeNetworkErrors();
           }
@@ -929,8 +929,9 @@ class DataXceiver extends Receiver implements Runnable {
       if (isDatanode ||
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         datanode.closeBlock(block, null, storageUuid, isOnTransientStorage);
-        LOG.info("Received {} src: {} dest: {} of size {}",
-            block, remoteAddress, localAddress, block.getNumBytes());
+        LOG.info("Received {} src: {} dest: {} volume: {} of size {}",
+            block, remoteAddress, localAddress, replica.getVolume(),
+            block.getNumBytes());
       }
 
       if(isClient) {

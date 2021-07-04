@@ -28,12 +28,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.slf4j.Logger;
 
 /**
@@ -177,8 +177,8 @@ class BlockPoolManager {
       throws IOException {
     assert Thread.holdsLock(refreshNamenodesLock);
 
-    Set<String> toRefresh = Sets.newLinkedHashSet();
-    Set<String> toAdd = Sets.newLinkedHashSet();
+    Set<String> toRefresh = new LinkedHashSet<>();
+    Set<String> toAdd = new LinkedHashSet<>();
     Set<String> toRemove;
     
     synchronized (this) {

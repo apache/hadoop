@@ -52,8 +52,8 @@ public class TestNodesPage {
 
   // Number of Actual Table Headers for NodesPage.NodesBlock might change in
   // future. In that case this value should be adjusted to the new value.
-  private final int numberOfThInMetricsTable = 23;
-  private final int numberOfActualTableHeaders = 18;
+  private final int numberOfThInMetricsTable = 25;
+  private final int numberOfActualTableHeaders = 16;
   private final int numberOfThForOpportunisticContainers = 4;
 
   private Injector injector;
@@ -119,10 +119,32 @@ public class TestNodesPage {
         initResourceTypes(ResourceInformation.GPU_URI);
     this.setUpInternal(true);
     try {
-      this.testNodesBlockRenderForLostNodes();
+      // Test gpu as a custom resource.
+      //<th class="yarn io/gpu">
+      //  yarn.io/gpu Used
+      //</th>
+      //<th class="yarn io/gpu">
+      //   yarn.io/gpu Avail
+      //</th>
+      this.testNodesBlockRenderForLostNodesWithGPU();
     } finally {
       ResourceUtils.initializeResourcesFromResourceInformationMap(oldRtMap);
     }
+  }
+
+  public void testNodesBlockRenderForLostNodesWithGPU() {
+    NodesBlock nodesBlock = injector.getInstance(NodesBlock.class);
+    nodesBlock.set("node.state", "lost");
+    nodesBlock.render();
+    PrintWriter writer = injector.getInstance(PrintWriter.class);
+    WebAppTests.flushOutput(injector);
+
+    Mockito.verify(writer,
+        Mockito.times(numberOfActualTableHeaders
+            + numberOfThInMetricsTable + 2))
+        .print("<th");
+    Mockito.verify(writer, Mockito.times(numberOfThInMetricsTable))
+        .print("<td");
   }
 
   @Test

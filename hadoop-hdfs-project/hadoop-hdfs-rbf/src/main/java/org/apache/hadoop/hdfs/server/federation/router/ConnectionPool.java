@@ -252,19 +252,23 @@ public class ConnectionPool {
    */
   public synchronized List<ConnectionContext> removeConnections(int num) {
     List<ConnectionContext> removed = new LinkedList<>();
-
-    // Remove and close the last connection
-    List<ConnectionContext> tmpConnections = new ArrayList<>();
-    for (int i=0; i<this.connections.size(); i++) {
-      ConnectionContext conn = this.connections.get(i);
-      if (i < this.minSize || i < this.connections.size() - num) {
-        tmpConnections.add(conn);
-      } else {
-        removed.add(conn);
+    if (this.connections.size() > this.minSize) {
+      int targetCount = Math.min(num, this.connections.size() - this.minSize);
+      // Remove and close targetCount of connections
+      List<ConnectionContext> tmpConnections = new ArrayList<>();
+      for (int i = 0; i < this.connections.size(); i++) {
+        ConnectionContext conn = this.connections.get(i);
+        // Only pick idle connections to close
+        if (removed.size() < targetCount && conn.isUsable()) {
+          removed.add(conn);
+        } else {
+          tmpConnections.add(conn);
+        }
       }
+      this.connections = tmpConnections;
     }
-    this.connections = tmpConnections;
-
+    LOG.debug("Expected to remove {} connection " +
+        "and actually removed {} connections", num, removed.size());
     return removed;
   }
 
@@ -278,7 +282,7 @@ public class ConnectionPool {
         this.connectionPoolId, timeSinceLastActive);
 
     for (ConnectionContext connection : this.connections) {
-      connection.close();
+      connection.close(true);
     }
     this.connections.clear();
   }
@@ -310,6 +314,39 @@ public class ConnectionPool {
   }
 
   /**
+   * Number of usable i.e. no active thread connections.
+   *
+   * @return Number of idle connections
+   */
+  protected int getNumIdleConnections() {
+    int ret = 0;
+
+    List<ConnectionContext> tmpConnections = this.connections;
+    for (ConnectionContext conn : tmpConnections) {
+      if (conn.isUsable()) {
+        ret++;
+      }
+    }
+    return ret;
+  }
+
+  /**
+   * Number of active connections recently in the pool.
+   *
+   * @return Number of active connections recently.
+   */
+  protected int getNumActiveConnectionsRecently() {
+    int ret = 0;
+    List<ConnectionContext> tmpConnections = this.connections;
+    for (ConnectionContext conn : tmpConnections) {
+      if (conn.isActiveRecently()) {
+        ret++;
+      }
+    }
+    return ret;
+  }
+
+  /**
    * Get the last time the connection pool was used.
    *
    * @return Last time the connection pool was used.
@@ -331,12 +368,18 @@ public class ConnectionPool {
   public String getJSON() {
     final Map<String, String> info = new LinkedHashMap<>();
     info.put("active", Integer.toString(getNumActiveConnections()));
+    info.put("recent_active",
+        Integer.toString(getNumActiveConnectionsRecently()));
+    info.put("idle", Integer.toString(getNumIdleConnections()));
     info.put("total", Integer.toString(getNumConnections()));
     if (LOG.isDebugEnabled()) {
       List<ConnectionContext> tmpConnections = this.connections;
       for (int i=0; i<tmpConnections.size(); i++) {
         ConnectionContext connection = tmpConnections.get(i);
         info.put(i + " active", Boolean.toString(connection.isActive()));
+        info.put(i + " recent_active",
+            Integer.toString(getNumActiveConnectionsRecently()));
+        info.put(i + " idle", Boolean.toString(connection.isUsable()));
         info.put(i + " closed", Boolean.toString(connection.isClosed()));
       }
     }

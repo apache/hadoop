@@ -29,7 +29,6 @@ import org.apache.zookeeper.data.Id;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 /**

@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.ArrayList;
@@ -56,7 +57,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -81,6 +81,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
 import org.apache.hadoop.security.ssl.FileMonitoringTimerTask;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -587,7 +588,8 @@ public final class HttpServer2 implements FilterContainer {
           conf.getLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
               FileBasedKeyStoresFactory.DEFAULT_SSL_STORES_RELOAD_INTERVAL);
 
-      if (storesReloadInterval > 0) {
+      if (storesReloadInterval > 0 &&
+          (keyStore != null || trustStore != null)) {
         this.configurationChangeMonitor = Optional.of(
             this.makeConfigurationChangeMonitor(storesReloadInterval, sslContextFactory));
       }
@@ -601,22 +603,30 @@ public final class HttpServer2 implements FilterContainer {
     private Timer makeConfigurationChangeMonitor(long reloadInterval,
         SslContextFactory.Server sslContextFactory) {
       java.util.Timer timer = new java.util.Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
+      ArrayList<Path> locations = new ArrayList<Path>();
+      if (keyStore != null) {
+        locations.add(Paths.get(keyStore));
+      }
+      if (trustStore != null) {
+        locations.add(Paths.get(trustStore));
+      }
       //
       // The Jetty SSLContextFactory provides a 'reload' method which will reload both
       // truststore and keystore certificates.
       //
       timer.schedule(new FileMonitoringTimerTask(
-              Paths.get(keyStore),
-              path -> {
-                LOG.info("Reloading certificates from store keystore " + keyStore);
-                try {
-                  sslContextFactory.reload(factory -> { });
-                } catch (Exception ex) {
-                  LOG.error("Failed to reload SSL keystore certificates", ex);
-                }
-              },null),
-          reloadInterval,
-          reloadInterval
+            locations,
+            path -> {
+              LOG.info("Reloading keystore and truststore certificates.");
+              try {
+                sslContextFactory.reload(factory -> { });
+              } catch (Exception ex) {
+                LOG.error("Failed to reload SSL keystore " +
+                    "and truststore certificates", ex);
+              }
+            },null),
+        reloadInterval,
+        reloadInterval
       );
       return timer;
     }

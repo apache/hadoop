@@ -19,15 +19,16 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsFastpathException;
@@ -36,10 +37,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
-
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CORR_INDICATOR;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -76,8 +75,6 @@ public class AbfsRestOperation {
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
   protected String fastpathFileHandle;
-  private String fastpathCorrIndicator = "";
-  private FastpathStatus fastpathReqStatus;
 
   public AbfsHttpOperation getResult() {
     return result;
@@ -202,30 +199,6 @@ public class AbfsRestOperation {
     this.abfsCounters = client.getAbfsCounters();
   }
 
-  public void setFastpathRequestStatus(FastpathStatus status) {
-    this.fastpathReqStatus = status;
-    updateCorrelationIdIndicator();
-  }
-
-  // TODO  once clientCorrId change is ready, pass this through tracing context
-  private void updateCorrelationIdIndicator() {
-    switch(this.fastpathReqStatus) {
-    case FASTPATH:
-      fastpathCorrIndicator = FASTPATH_CORR_INDICATOR;
-        break;
-    case REQ_FAIL_REST_FALLBACK:
-      fastpathCorrIndicator = FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR;
-      break;
-    case CONN_FAIL_REST_FALLBACK:
-      fastpathCorrIndicator = FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;
-      break;
-    }
-  }
-
-  public FastpathStatus getFastpathRequestStatus() {
-    return fastpathReqStatus;
-  }
-
   public boolean isAFastpathRequest() {
     switch (operationType) {
     case FastpathOpen:
@@ -238,11 +211,32 @@ public class AbfsRestOperation {
   }
 
   /**
+   * Execute a AbfsRestOperation. Track the Duration of a request if
+   * abfsCounters isn't null.
+   * @param tracingContext TracingContext instance to track correlation IDs
+   */
+  public void execute(TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
+
+    try {
+      IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
+          AbfsStatistic.getStatNameFromHttpCall(method),
+          () -> completeExecute(tracingContext));
+    } catch (AzureBlobFileSystemException aze) {
+      throw aze;
+    } catch (IOException e) {
+      throw new UncheckedIOException("Error while tracking Duration of an "
+          + "AbfsRestOperation call", e);
+    }
+  }
+
+  /**
    * Executes the REST operation with retry, by issuing one or more
    * HTTP operations.
+   * @param tracingContext TracingContext instance to track correlation IDs
    */
-   @VisibleForTesting
-   public void execute() throws AzureBlobFileSystemException {
+  private void completeExecute(TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
     String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
     if (latencyHeader != null && !latencyHeader.isEmpty()) {
@@ -253,9 +247,10 @@ public class AbfsRestOperation {
 
     retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
-    while (!executeHttpOperation(retryCount)) {
+    while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
+        tracingContext.setRetryCount(retryCount);
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
@@ -277,20 +272,20 @@ public class AbfsRestOperation {
    * fails, there may be a retry.  The retryCount is incremented with each
    * attempt.
    */
-  private boolean executeHttpOperation(final int retryCount) throws AzureBlobFileSystemException {
+  private boolean executeHttpOperation(final int retryCount,
+    TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
     try {
-      // initialize the HTTP request, add auth info  and open the connection
       switch(client.getAuthType()) {
         case Custom:
         case OAuth:
           LOG.debug("Authenticating request with OAuth2 access token");
           if (isAFastpathRequest()) {
             httpOperation = getFastpathConnection();
-            this.fastpathCorrIndicator = FASTPATH_CORR_INDICATOR;
+            //this.fastpathCorrIndicator = FASTPATH_CORR_INDICATOR;
           } else {
             httpOperation = new AbfsHttpConnection(url, method, requestHeaders);
-            ((AbfsHttpConnection) httpOperation).setHeader(
+            httpOperation.setHeader(
                 HttpHeaderConfigurations.AUTHORIZATION,
                 client.getAccessToken());
           }
@@ -311,7 +306,8 @@ public class AbfsRestOperation {
           break;
       }
 
-      httpOperation.updateClientReqIdWithConnStatusIndicator(fastpathCorrIndicator);
+      //httpOperation.updateClientReqIdWithConnStatusIndicator(fastpathCorrIndicator);
+      tracingContext.constructHeader(httpOperation);
 
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
     } catch (IOException e) {
@@ -326,7 +322,7 @@ public class AbfsRestOperation {
           httpOperation.getRequestHeaders());
       AbfsClientThrottlingIntercept.sendingRequest(operationType, abfsCounters);
 
-      if (hasRequestBody) {
+      if (hasRequestBody && !isAFastpathRequest()) {
         // HttpUrlConnection requires
         ((AbfsHttpConnection)httpOperation).sendRequest(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
@@ -341,6 +337,8 @@ public class AbfsRestOperation {
           && httpOperation.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
         incrementCounter(AbfsStatistic.BYTES_RECEIVED,
             httpOperation.getBytesReceived());
+      } else if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+        incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
     } catch (UnknownHostException ex) {
       String hostname = null;

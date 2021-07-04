@@ -125,6 +125,9 @@ public class RouterHttpServer extends AbstractService {
         RouterFsckServlet.PATH_SPEC,
         RouterFsckServlet.class,
         true);
+    httpServer.addInternalServlet(RouterNetworkTopologyServlet.SERVLET_NAME,
+        RouterNetworkTopologyServlet.PATH_SPEC,
+        RouterNetworkTopologyServlet.class);
   }
 
   public InetSocketAddress getHttpAddress() {

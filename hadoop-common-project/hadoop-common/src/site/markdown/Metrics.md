@@ -527,9 +527,12 @@ RBFMetrics shows the metrics which are the aggregated values of sub-clusters' in
 | `NumInMaintenanceLiveDataNodes` | Number of live Datanodes which are in maintenance state |
 | `NumInMaintenanceDeadDataNodes` | Number of dead Datanodes which are in maintenance state |
 | `NumEnteringMaintenanceDataNodes` | Number of Datanodes that are entering the maintenance state |
-| `TotalCapacity` | Current raw capacity of DataNodes in bytes |
-| `UsedCapacity` | Current used capacity across all DataNodes in bytes |
-| `RemainingCapacity` | Current remaining capacity in bytes |
+| `TotalCapacity` | Current raw capacity of DataNodes in bytes (long primitive, may overflow) |
+| `UsedCapacity` | Current used capacity across all DataNodes in bytes (long primitive, may overflow) |
+| `RemainingCapacity` | Current remaining capacity in bytes (long primitive, may overflow) |
+| `TotalCapacityBigInt` | Current raw capacity of DataNodes in bytes (using BigInteger) |
+| `UsedCapacityBigInt` | Current used capacity across all DataNodes in bytes (using BigInteger) |
+| `RemainingCapacityBigInt` | Current remaining capacity in bytes (using BigInteger) |
 | `NumOfMissingBlocks` | Current number of missing blocks |
 | `NumLiveNodes` | Number of datanodes which are currently live |
 | `NumDeadNodes` | Number of datanodes which are currently dead |

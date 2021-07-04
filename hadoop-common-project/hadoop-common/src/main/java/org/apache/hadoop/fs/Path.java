@@ -24,6 +24,7 @@ import java.io.ObjectInputValidation;
 import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.apache.avro.reflect.Stringable;
@@ -420,22 +421,39 @@ public class Path
   }
 
   /**
-   * Returns the parent of a path or null if at root.
+   * Returns the parent of a path or null if at root. Better alternative is
+   * {@link #getOptionalParentPath()} to handle nullable value for root path.
+   *
    * @return the parent of a path or null if at root
    */
   public Path getParent() {
+    return getParentUtil();
+  }
+
+  /**
+   * Returns the parent of a path as {@link Optional} or
+   * {@link Optional#empty()} i.e an empty Optional if at root.
+   *
+   * @return Parent of path wrappen in {@link Optional}.
+   * {@link Optional#empty()} i.e an empty Optional if at root.
+   */
+  public Optional<Path> getOptionalParentPath() {
+    return Optional.ofNullable(getParentUtil());
+  }
+
+  private Path getParentUtil() {
     String path = uri.getPath();
     int lastSlash = path.lastIndexOf('/');
     int start = startPositionWithoutWindowsDrive(path);
     if ((path.length() == start) ||               // empty path
-        (lastSlash == start && path.length() == start+1)) { // at root
+        (lastSlash == start && path.length() == start + 1)) { // at root
       return null;
     }
     String parent;
-    if (lastSlash==-1) {
+    if (lastSlash == -1) {
       parent = CUR_DIR;
     } else {
-      parent = path.substring(0, lastSlash==start?start+1:lastSlash);
+      parent = path.substring(0, lastSlash == start ? start + 1 : lastSlash);
     }
     return new Path(uri.getScheme(), uri.getAuthority(), parent);
   }

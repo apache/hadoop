@@ -52,6 +52,7 @@
         <li><a href="jmx">Metrics</a></li>
         <li><a href="conf">Configuration</a></li>
         <li><a href="stacks">Process Thread Dump</a></li>
+        <li><a href="topology">Network Topology</a></li>
       </ul>
     </li>
   </ul>
@@ -113,9 +114,9 @@
 <p>Non Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Commited Non Heap Memory. Max Non Heap Memory is {@eq key=max value="-1" type="number"}&ltunbounded&gt{:else}{max|fmt_bytes}{/eq}.</p>
 {/mem.NonHeapMemoryUsage}
 <table class="table table-bordered table-striped">
-  <tr><th>Total capacity</th><td>{TotalCapacity|fmt_bytes}</td></tr>
-  <tr><th>Used capacity</th><td>{UsedCapacity|fmt_bytes}</td></tr>
-  <tr><th>Remaining capacity</th><td>{RemainingCapacity|fmt_bytes}</td></tr>
+  <tr><th>Total capacity</th><td>{TotalCapacityBigInt|fmt_bytes}</td></tr>
+  <tr><th>Used capacity</th><td>{UsedCapacityBigInt|fmt_bytes}</td></tr>
+  <tr><th>Remaining capacity</th><td>{RemainingCapacityBigInt|fmt_bytes}</td></tr>
   <tr><th>Nameservices</th><td>{NumNameservices}</td></tr>
   <tr><th>Namenodes</th><td>{NumNamenodes}</td></tr>
   <tr>
@@ -406,7 +407,7 @@
     </thead>
     {#EnteringMaintenanceNodes}
     <tr>
-      <td>{name} ({xferaddr})</td>
+      <td>{location}/{name} ({xferaddr})</td>
       <td>{underReplicatedBlocks}</td>
       <td>{maintenanceOnlyReplicas}</td>
       <td>{underReplicateInOpenFiles}</td>

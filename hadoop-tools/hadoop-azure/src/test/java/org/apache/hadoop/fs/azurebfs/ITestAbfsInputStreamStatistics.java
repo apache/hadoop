@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
 import org.junit.After;
@@ -27,14 +28,25 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
+import org.apache.hadoop.conf.Configuration;
+
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.io.IOUtils;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_FASTPATH_ENABLE;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 
 public class ITestAbfsInputStreamStatistics
     extends AbstractAbfsIntegrationTest {
@@ -71,7 +83,8 @@ public class ITestAbfsInputStreamStatistics
     try {
 
       outputStream = createAbfsOutputStreamWithFlushEnabled(fs, initValuesPath);
-      inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics());
+      inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics(),
+          getTestTracingContext(fs, false));
 
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) inputStream.getStreamStatistics();
@@ -132,7 +145,7 @@ public class ITestAbfsInputStreamStatistics
         addToTestTearDownCleanupList(seekStatPath);
         in = getMockAbfsInputStream(fs, seekStatPath);
       } else {
-        in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
+        in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics(), getTestTracingContext(fs, false));
       }
 
       /*
@@ -240,7 +253,8 @@ public class ITestAbfsInputStreamStatistics
         addToTestTearDownCleanupList(readStatPath);
         in = getMockAbfsInputStream(fs, readStatPath);
       } else {
-        in = abfss.openFileForRead(readStatPath, fs.getFsStatistics());
+        in = abfss.openFileForRead(readStatPath, fs.getFsStatistics(),
+            getTestTracingContext(fs, false));
       }
 
       /*
@@ -323,14 +337,15 @@ public class ITestAbfsInputStreamStatistics
       out.hflush();
 
       // AbfsRestOperation Instance required for eTag.
-      AbfsRestOperation abfsRestOperation =
-          fs.getAbfsClient().getPathStatus(nullStatFilePath.toUri().getPath(), false);
+      AbfsRestOperation abfsRestOperation = fs.getAbfsClient()
+          .getPathStatus(nullStatFilePath.toUri().getPath(), false,
+              getTestTracingContext(fs, false));
 
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,
-          nullStatFilePath.toUri().getPath(), ONE_KB,
-          abfsInputStreamContext,
-          abfsRestOperation.getResult().getResponseHeader("ETag"));
+          nullStatFilePath.toUri().getPath(), ONE_KB, abfsInputStreamContext,
+          abfsRestOperation.getResult().getResponseHeader("ETag"),
+          getTestTracingContext(fs, false));
 
       if (isMockFastpathTest) {
         MockFastpathConnection.registerAppend(oneKbBuff.length,
@@ -397,7 +412,8 @@ public class ITestAbfsInputStreamStatistics
         addToTestTearDownCleanupList(readAheadCountersPath);
         in = getMockAbfsInputStream(fs, readAheadCountersPath);
       } else {
-        in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics());
+        in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics(),
+            getTestTracingContext(fs, false));
       }
 
       /*
@@ -461,6 +477,18 @@ public class ITestAbfsInputStreamStatistics
     testActionHttpGetRequest(false);
   }
 
+  private AbfsInputStream getMockInputStream(AzureBlobFileSystem fs,
+      Path testFilePath) throws IOException {
+    Path qualifiedPath = makeQualified(testFilePath);
+    AzureBlobFileSystemStore store = fs.getAbfsStore();
+    MockAzureBlobFileSystemStore mockStore = new MockAzureBlobFileSystemStore(
+        fs.getUri(), fs.isSecureScheme(), fs.getConf(),
+        store.getAbfsCounters());
+    MockAbfsInputStream inputStream = (MockAbfsInputStream) mockStore.openFileForRead(qualifiedPath,
+        Optional.empty(), fs.getFsStatistics(), getTestTracingContext(fs, false));
+    return inputStream;
+  }
+
   public void testActionHttpGetRequest(boolean isMockFastpathTest) throws IOException {
     describe("Test to check the correct value of Time taken by http get "
         + "request in AbfsInputStream");
@@ -481,19 +509,24 @@ public class ITestAbfsInputStreamStatistics
         MockFastpathConnection.registerAppend(1024,
             actionHttpGetRequestPath.getName(), b, 0, b.length);
         addToTestTearDownCleanupList(actionHttpGetRequestPath);
-        abfsInputStream = getMockAbfsInputStream(fs, actionHttpGetRequestPath);
+        Configuration conf = fs.getConf();
+        conf.setBoolean(FS_AZURE_FASTPATH_ENABLE, true);
+        fs = (AzureBlobFileSystem) FileSystem.get(fs.getUri(), conf);
+        abfsInputStream = getMockInputStream(fs, actionHttpGetRequestPath);
       } else {
         abfsInputStream =
-            abfss.openFileForRead(actionHttpGetRequestPath, fs.getFsStatistics());
+            abfss.openFileForRead(actionHttpGetRequestPath, fs.getFsStatistics(),
+                getTestTracingContext(fs, false));
       }
 
       abfsInputStream.read();
-      AbfsInputStreamStatisticsImpl abfsInputStreamStatistics =
-          (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
-
-      LOG.info("AbfsInputStreamStats info: {}", abfsInputStreamStatistics.toString());
+      IOStatistics ioStatistics = extractStatistics(fs);
+      LOG.info("AbfsInputStreamStats info: {}",
+          ioStatisticsToPrettyString(ioStatistics));
       Assertions.assertThat(
-          abfsInputStreamStatistics.getActionHttpGetRequest())
+          lookupMeanStatistic(ioStatistics,
+              AbfsStatistic.HTTP_GET_REQUEST.getStatName()
+                  + StoreStatisticNames.SUFFIX_MEAN).mean())
           .describedAs("Mismatch in time taken by a GET request")
           .isGreaterThan(0.0);
     } finally {

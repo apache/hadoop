@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,10 +102,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return storageErrorMessage;
   }
 
-  public String getClientRequestId() {
-    return clientRequestId;
-  }
-
   public String getExpectedAppendPos() {
     return expectedAppendPos;
   }
@@ -126,6 +123,10 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   public abstract Map<String, List<String>> getRequestHeaders();
 
   public abstract String getRequestHeader(String header);
+
+  public abstract String getClientRequestId();
+
+  public abstract void setHeader(String header, String value);
 
   /**
    * Gets and processes the HTTP response.
@@ -169,7 +170,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(",");
     sb.append(expectedAppendPos);
     sb.append(",cid=");
-    sb.append(clientRequestId);
+    sb.append(getClientRequestId());
     sb.append(",rid=");
     sb.append(requestId);
     if (isTraceEnabled) {
@@ -200,7 +201,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       .append(" e=")
       .append(storageErrorCode)
       .append(" ci=")
-      .append(clientRequestId)
+      .append(getClientRequestId())
       .append(" ri=")
       .append(requestId);
 
@@ -335,6 +336,12 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     public String getRequestHeader(final String header) {
       return null;
     }
+
+    @Override
+    public String getClientRequestId() { return ""; }
+
+    @Override
+    public void setHeader(final String header, final String value) { }
 
     @Override
     public void processResponse(final byte[] buffer,

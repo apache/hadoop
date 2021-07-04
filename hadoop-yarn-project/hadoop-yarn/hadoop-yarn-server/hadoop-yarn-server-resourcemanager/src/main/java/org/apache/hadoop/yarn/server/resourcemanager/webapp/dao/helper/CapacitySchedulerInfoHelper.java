@@ -23,6 +23,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AutoQueueTemplatePropertiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LeafQueueTemplateInfo.ConfItem;
+
+import java.util.Map;
 
 /**
  * Helper class to describe a queue's type, its creation method and its
@@ -105,5 +109,18 @@ public class CapacitySchedulerInfoHelper {
     } else {
       return AUTO_CREATION_OFF;
     }
+  }
+
+  public static AutoQueueTemplatePropertiesInfo getAutoCreatedTemplate(
+      ParentQueue parent) {
+    AutoQueueTemplatePropertiesInfo propertiesInfo =
+        new AutoQueueTemplatePropertiesInfo();
+    for (Map.Entry<String, String> e :
+        parent.getAutoCreatedQueueTemplate().getTemplateProperties()
+            .entrySet()) {
+      propertiesInfo.add(new ConfItem(e.getKey(), e.getValue()));
+    }
+
+    return propertiesInfo;
   }
 }

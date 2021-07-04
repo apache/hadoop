@@ -291,18 +291,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT = 2;
   public static final String  DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY = "dfs.namenode.replication.max-streams-hard-limit";
   public static final int     DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT = 4;
-  public static final String DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_INTERVAL_MS_KEY
-      = "dfs.namenode.storageinfo.defragment.interval.ms";
-  public static final int
-      DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_INTERVAL_MS_DEFAULT = 10 * 60 * 1000;
-  public static final String DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_TIMEOUT_MS_KEY
-      = "dfs.namenode.storageinfo.defragment.timeout.ms";
-  public static final int
-      DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_TIMEOUT_MS_DEFAULT = 4;
-  public static final String DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_RATIO_KEY
-      = "dfs.namenode.storageinfo.defragment.ratio";
-  public static final double
-      DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_RATIO_DEFAULT = 0.75;
   public static final String DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_KEY
       = "dfs.namenode.blockreport.queue.size";
   public static final int    DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_DEFAULT
@@ -528,6 +516,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // Whether to enable datanode's stale state detection and usage for reads
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY = "dfs.namenode.avoid.read.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT = false;
+  public static final String DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY =
+      "dfs.namenode.avoid.read.slow.datanode";
+  public static final boolean
+      DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_DEFAULT = false;
   // Whether to enable datanode's stale state detection and usage for writes
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY = "dfs.namenode.avoid.write.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT = false;
@@ -836,6 +828,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT = 21600;
   public static final String  DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY = "dfs.datanode.directoryscan.threads";
   public static final int     DFS_DATANODE_DIRECTORYSCAN_THREADS_DEFAULT = 1;
+  public static final String  DFS_DATANODE_RECONCILE_BLOCKS_BATCH_SIZE =
+      "dfs.datanode.reconcile.blocks.batch.size";
+  public static final int
+      DFS_DATANODE_RECONCILE_BLOCKS_BATCH_SIZE_DEFAULT = 1000;
+  public static final String DFS_DATANODE_RECONCILE_BLOCKS_BATCH_INTERVAL
+      = "dfs.datanode.reconcile.blocks.batch.interval";
+  public static final long
+      DFS_DATANODE_RECONCILE_BLOCKS_BATCH_INTERVAL_DEFAULT = 2000;
 
   public static final String DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY =
       "dfs.datanode.disk.check.min.gap";

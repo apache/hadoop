@@ -329,7 +329,6 @@ public final class Constants {
    * Default is {@link #FAST_UPLOAD_BUFFER_DISK}
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_BUFFER =
       "fs.s3a.fast.upload.buffer";
 
@@ -338,26 +337,22 @@ public final class Constants {
    * Capacity is limited to available disk space.
    */
 
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_BUFFER_DISK = "disk";
 
   /**
    * Use an in-memory array. Fast but will run of heap rapidly: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_BUFFER_ARRAY = "array";
 
   /**
    * Use a byte buffer. May be more memory efficient than the
    * {@link #FAST_UPLOAD_BUFFER_ARRAY}: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_BYTEBUFFER = "bytebuffer";
 
   /**
    * Default buffer option: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String DEFAULT_FAST_UPLOAD_BUFFER =
       FAST_UPLOAD_BUFFER_DISK;
 
@@ -370,7 +365,6 @@ public final class Constants {
    * <p>
    * Default is {@link #DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS}
    */
-  @InterfaceStability.Unstable
   public static final String FAST_UPLOAD_ACTIVE_BLOCKS =
       "fs.s3a.fast.upload.active.blocks";
 
@@ -378,8 +372,22 @@ public final class Constants {
    * Limit of queued block upload operations before writes
    * block. Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final int DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS = 4;
+
+  /**
+   * Rather than raise an exception when an attempt is
+   * made to call the Syncable APIs, warn and downgrade.
+   * Value: {@value}.
+   */
+  public static final String DOWNGRADE_SYNCABLE_EXCEPTIONS =
+      "fs.s3a.downgrade.syncable.exceptions";
+
+  /**
+   * Default value for syncable invocation.
+   * Value: {@value}.
+   */
+  public static final boolean DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT =
+      false;
 
   /**
    * The capacity of executor queues for operations other than block
@@ -1072,5 +1080,17 @@ public final class Constants {
    * through the getXAttr APIs have the prefix: {@value}.
    */
   public static final String XA_HEADER_PREFIX = "header.";
+
+  /**
+   * AWS S3 region for the bucket. When set bypasses the construction of
+   * region through endpoint url.
+   */
+  public static final String AWS_REGION = "fs.s3a.endpoint.region";
+
+  /**
+   * The special S3 region which can be used to talk to any bucket.
+   * Value {@value}.
+   */
+  public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -38,14 +39,13 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerAutoQueueHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -85,7 +85,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   private static final int GB = 1024;
   protected static MockRM RM;
 
-  private CapacitySchedulerAutoQueueHandler autoQueueHandler;
+  private CapacitySchedulerQueueManager autoQueueHandler;
   private CapacitySchedulerConfiguration csConf;
 
   private static class ExpectedQueueWithProperties {
@@ -95,6 +95,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     private String queueType;
     private String creationMethod;
     private String autoCreationEligibility;
+    private List<String[]> autoQueueTemplateProperties;
 
     public ExpectedQueueWithProperties(String path, float weight,
         float normalizedWeight, String queueType, String creationMethod,
@@ -105,6 +106,20 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       this.queueType = queueType;
       this.creationMethod = creationMethod;
       this.autoCreationEligibility = autoCreationEligibility;
+      this.autoQueueTemplateProperties = new ArrayList<>();
+    }
+
+    ExpectedQueueWithProperties(
+        String path, float weight, float normalizedWeight, String queueType,
+        String creationMethod, String autoCreationEligibility,
+        List<String[]> autoQueueTemplateProperties) {
+      this.path = path;
+      this.weight = weight;
+      this.normalizedWeight = normalizedWeight;
+      this.queueType = queueType;
+      this.creationMethod = creationMethod;
+      this.autoCreationEligibility = autoCreationEligibility;
+      this.autoQueueTemplateProperties = autoQueueTemplateProperties;
     }
   }
 
@@ -262,6 +277,10 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         .createWeightConfigWithAutoQueueCreationEnabled();
     config.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+    config.setInt(CapacitySchedulerConfiguration
+        .getQueuePrefix("root.autoParent1") +
+        AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX +
+        "maximum-applications", 300);
 
     initResourceManager(config);
     initAutoQueueHandler();
@@ -292,6 +311,9 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         new ExpectedQueueWithProperties("root",
             EXP_ROOT_WEIGHT_IN_WEIGHT_MODE, EXP_ROOT_WEIGHT_IN_WEIGHT_MODE,
             PARENT_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF);
+    List<String[]> templateProperties = new ArrayList<>();
+    templateProperties.add(new String[] {"maximum-applications", "300"});
+
     validateSchedulerInfo(json, "weight",
         expectedRootQ,
         new ExpectedQueueWithProperties("root.auto1",
@@ -309,7 +331,8 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
         new ExpectedQueueWithProperties("root.autoParent1",
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE,
             EXP_DEFAULT_WEIGHT_IN_WEIGHT_MODE / sumOfWeights,
-            PARENT_QUEUE, FLEXIBLE_DYNAMIC_QUEUE, AUTO_CREATION_FLEXIBLE),
+            PARENT_QUEUE, FLEXIBLE_DYNAMIC_QUEUE, AUTO_CREATION_FLEXIBLE,
+            templateProperties),
         new ExpectedQueueWithProperties("root.default", 10.0f,
             10.0f / sumOfWeights,
             LEAF_QUEUE, STATIC_QUEUE, AUTO_CREATION_OFF),
@@ -330,13 +353,13 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
 
   private void initAutoQueueHandler() throws Exception {
     CapacityScheduler cs = (CapacityScheduler) RM.getResourceScheduler();
-    autoQueueHandler = new CapacitySchedulerAutoQueueHandler(
-        cs.getCapacitySchedulerQueueManager());
+    autoQueueHandler = cs.getCapacitySchedulerQueueManager();
     MockNM nm1 = RM.registerNode("h1:1234", 1200 * GB); // label = x
   }
 
-  private LeafQueue createQueue(String queuePath) throws YarnException {
-    return autoQueueHandler.autoCreateQueue(
+  private LeafQueue createQueue(String queuePath) throws YarnException,
+      IOException {
+    return autoQueueHandler.createQueue(
         CSQueueUtils.extractQueuePath(queuePath));
   }
 
@@ -475,6 +498,22 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       Assert.assertEquals("Queue creation type does not match for queue " +
               queuePath,
           expectedQueue.creationMethod, obj.getString("creationMethod"));
+
+      if (!expectedQueue.autoQueueTemplateProperties.isEmpty()) {
+        JSONArray templates = obj.getJSONObject("autoQueueTemplateProperties")
+            .getJSONArray("property");
+        for (int j = 0; j < templates.length(); j++) {
+          JSONObject prop = templates.getJSONObject(j);
+          Assert.assertEquals("Auto creation eligible queue " +
+                  "template key do not match for queue" + queuePath,
+              expectedQueue.autoQueueTemplateProperties.get(j)[0],
+              prop.getString("name"));
+          Assert.assertEquals("Auto creation eligible queue " +
+                  "template value do not match for queue" + queuePath,
+              expectedQueue.autoQueueTemplateProperties.get(j)[1],
+              prop.getString("value"));
+        }
+      }
 
       Assert.assertEquals("Queue auto creation eligibility does not " +
               "match for queue " + queuePath,

@@ -21,8 +21,12 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 import java.util.Map;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -66,6 +70,12 @@ public class ClusterMetrics {
     rmEventProcCPUAvg;
   @Metric("RM Event Processor CPU Usage 60 second Max") MutableGaugeLong
     rmEventProcCPUMax;
+  @Metric("# of Containers assigned in the last second") MutableGaugeInt
+    containerAssignedPerSecond;
+  @Metric("# of rm dispatcher event queue size")
+    MutableGaugeInt rmDispatcherEventQueueSize;
+  @Metric("# of scheduler dispatcher event queue size")
+    MutableGaugeInt schedulerDispatcherEventQueueSize;
 
   private boolean rmEventProcMonitorEnable = false;
 
@@ -84,6 +94,22 @@ public class ClusterMetrics {
   
   private static volatile ClusterMetrics INSTANCE = null;
   private static MetricsRegistry registry;
+
+  private AtomicInteger numContainersAssigned =  new AtomicInteger(0);
+  private ScheduledThreadPoolExecutor assignCounterExecutor;
+
+  ClusterMetrics() {
+    assignCounterExecutor  = new ScheduledThreadPoolExecutor(1,
+            new ThreadFactoryBuilder().
+            setDaemon(true).setNameFormat("ContainerAssignmentCounterThread").
+            build());
+    assignCounterExecutor.scheduleAtFixedRate(new Runnable() {
+      @Override
+      public void run() {
+        containerAssignedPerSecond.set(numContainersAssigned.getAndSet(0));
+      }
+    }, 1, 1, TimeUnit.SECONDS);
+  }
 
   public static ClusterMetrics getMetrics() {
     if(!isInitialized.get()){
@@ -120,6 +146,9 @@ public class ClusterMetrics {
 
   @VisibleForTesting
   public synchronized static void destroy() {
+    if (INSTANCE != null && INSTANCE.getAssignCounterExecutor() != null) {
+      INSTANCE.getAssignCounterExecutor().shutdownNow();
+    }
     isInitialized.set(false);
     INSTANCE = null;
   }
@@ -318,5 +347,33 @@ public class ClusterMetrics {
 
   public void incrUtilizedVirtualCores(long delta) {
     utilizedVirtualCores.incr(delta);
+  }
+
+  public int getContainerAssignedPerSecond() {
+    return containerAssignedPerSecond.value();
+  }
+
+  public void incrNumContainerAssigned() {
+    numContainersAssigned.incrementAndGet();
+  }
+
+  private ScheduledThreadPoolExecutor getAssignCounterExecutor(){
+    return assignCounterExecutor;
+  }
+
+  public int getRmEventQueueSize() {
+    return rmDispatcherEventQueueSize.value();
+  }
+
+  public void setRmEventQueueSize(int rmEventQueueSize) {
+    this.rmDispatcherEventQueueSize.set(rmEventQueueSize);
+  }
+
+  public int getSchedulerEventQueueSize() {
+    return schedulerDispatcherEventQueueSize.value();
+  }
+
+  public void setSchedulerEventQueueSize(int schedulerEventQueueSize) {
+    this.schedulerDispatcherEventQueueSize.set(schedulerEventQueueSize);
   }
 }

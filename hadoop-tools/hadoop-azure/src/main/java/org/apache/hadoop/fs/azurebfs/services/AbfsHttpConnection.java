@@ -105,6 +105,10 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
     return getConnection().getRequestProperty(header);
   }
 
+  public String getClientRequestId() {
+    return this.connection
+        .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+  }
   /**
    * Sends the HTTP request.  Note that HttpUrlConnection requires that an
    * empty buffer be sent in order to set the "Content-Length: 0" header, which

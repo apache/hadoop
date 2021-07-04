@@ -32,8 +32,11 @@ import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
@@ -82,10 +85,8 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     Path testPath = new Path(TEST_PATH + UUID.randomUUID().toString());
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
-
     abfsConfiguration.setWriteBufferSize(bufferSize);
     abfsConfiguration.setReadBufferSize(bufferSize);
-
 
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
@@ -105,6 +106,11 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     try (FSDataInputStream inputStream = isMockFastpathTest
         ? openMockAbfsInputStream(fs, fs.open(testPath))
         : fs.open(testPath)) {
+      ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+              fs.getFileSystemId(), FSOperationType.READ, true, 0,
+              ((AbfsInputStream) inputStream.getWrappedStream())
+                  .getStreamID()));
       inputStream.seek(bufferSize);
       if (errCaseForUnsuppFastpathBuffSize) {
         intercept(UnsupportedOperationException.class,
@@ -125,5 +131,40 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     }
     if (isMockFastpathTest) {
     MockFastpathConnection.unregisterAppend(testPath.getName());}
+  }
+
+  @Test
+  public void testReadAheadRequestID() throws java.io.IOException {
+    Path testPath = new Path(TEST_PATH + UUID.randomUUID().toString());
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
+    int bufferSize = MIN_BUFFER_SIZE;
+    abfsConfiguration.setReadBufferSize(bufferSize);
+
+    final byte[] b = new byte[bufferSize * 10];
+    new Random().nextBytes(b);
+    try (FSDataOutputStream stream = fs.create(testPath)) {
+      ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+              fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
+              ((AbfsOutputStream) stream.getWrappedStream())
+                  .getStreamID()));
+      stream.write(b);
+    }
+
+    final byte[] readBuffer = new byte[4 * bufferSize];
+    int result;
+    fs.registerListener(
+        new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.OPEN, false, 0));
+    try (FSDataInputStream inputStream = fs.open(testPath)) {
+      ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+              fs.getFileSystemId(), FSOperationType.READ, false, 0,
+              ((AbfsInputStream) inputStream.getWrappedStream())
+                  .getStreamID()));
+      result = inputStream.read(readBuffer, 0, bufferSize*4);
+    }
+    fs.registerListener(null);
   }
 }

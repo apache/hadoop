@@ -20,12 +20,17 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.net.URI;
+import org.junit.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
+import org.apache.hadoop.fs.azurebfs.services.MockAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class MockAzureBlobFileSystemStore extends AzureBlobFileSystemStore {
 
@@ -42,8 +47,16 @@ public class MockAzureBlobFileSystemStore extends AzureBlobFileSystemStore {
       final String path,
       final long contentLength,
       final AbfsInputStreamContext abfsInputStreamContext,
-      final String eTag) {
-    return new MockAbfsInputStream(client, statistics, path, contentLength,
-        abfsInputStreamContext.withFastpathEnabledState(true), eTag);
+      final String eTag,
+      TracingContext tracingContext) {
+    try {
+      MockAbfsClient mockClient = new MockAbfsClient(client);
+      return new MockAbfsInputStream(mockClient, statistics, path, contentLength,
+          abfsInputStreamContext.withFastpathEnabledState(true), eTag, null);
+    } catch (IOException e) {
+      Assert.fail("Failure in creating MockAbfsInputStream");
+    }
+
+    return null;
   }
 }

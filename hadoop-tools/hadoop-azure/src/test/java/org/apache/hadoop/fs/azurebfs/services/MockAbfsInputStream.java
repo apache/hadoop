@@ -18,9 +18,15 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
+import java.util.UUID;
+
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 public class MockAbfsInputStream extends AbfsInputStream {
 
@@ -28,54 +34,61 @@ public class MockAbfsInputStream extends AbfsInputStream {
   boolean mockRequestException = false;
   boolean mockConnectionException = false;
 
-  public MockAbfsInputStream(final AbfsClient client,
+  public MockAbfsInputStream(final AbfsClient mockClient,
       final org.apache.hadoop.fs.FileSystem.Statistics statistics,
       final String path,
       final long contentLength,
-      final org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext abfsInputStreamContext,
-      final String eTag) {
-    super(new MockAbfsClient(client), statistics, path, contentLength, abfsInputStreamContext,
-        eTag);
+      final AbfsInputStreamContext abfsInputStreamContext,
+      final String eTag,
+      TracingContext tracingContext) {
+    super(mockClient, statistics, path, contentLength, abfsInputStreamContext,
+        eTag,
+        new TracingContext("MockFastpathTest",
+            UUID.randomUUID().toString(), FSOperationType.OPEN, TracingHeaderFormat.ALL_ID_FORMAT,
+            null));
   }
 
-  public MockAbfsInputStream(final AbfsClient client, final AbfsInputStream in) {
+  public MockAbfsInputStream(final AbfsClient client, final AbfsInputStream in)
+      throws IOException {
     super(new MockAbfsClient(client), in.getFSStatistics(), in.getPath(),
         in.getContentLength(), in.getContext().withFastpathEnabledState(true),
-        in.getETag());
+        in.getETag(),
+        in.getTracingContext());
 
   }
 
   protected boolean checkFastpathStatus() {
     try {
       AbfsRestOperation op;
+      this.tracingContext.setFastpathStatus(FastpathStatus.FASTPATH);
       op = executeFastpathOpen(path, eTag);
-
       this.fastpathFileHandle = op.getFastpathFileHandle();
       LOG.debug("Fastpath handled opened {}", this.fastpathFileHandle);
     } catch (AzureBlobFileSystemException e) {
       LOG.debug("Fastpath status check (Fastpath open) failed with {}", e);
+      this.tracingContext.setFastpathStatus(FastpathStatus.CONN_FAIL_REST_FALLBACK);
       return false;
     }
 
     return true;
   }
 
-  protected AbfsRestOperation executeFastpathOpen(String path, String eTag)
+  protected AbfsRestOperation executeFastpathOpen(String path, String eTag, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
-    return ((MockAbfsClient)client).fastPathOpen(path, eTag);
+    return ((MockAbfsClient)client).fastPathOpen(path, eTag, tracingContext);
   }
 
-  protected AbfsRestOperation executeFastpathClose(String path, String eTag, String fastpathFileHandle)
+  protected AbfsRestOperation executeFastpathClose(String path, String eTag, String fastpathFileHandle, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
-    return ((MockAbfsClient)client).fastPathClose(path, eTag, fastpathFileHandle);
+    return ((MockAbfsClient)client).fastPathClose(path, eTag, fastpathFileHandle, tracingContext);
   }
 
-  protected AbfsRestOperation executeRead(String path, byte[] b, String sasToken, ReadRequestParameters reqParam)
+  protected AbfsRestOperation executeRead(String path, byte[] b, String sasToken, ReadRequestParameters reqParam, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
-    return ((MockAbfsClient)client).read(path, b, sasToken, reqParam);
+    return ((MockAbfsClient)client).read(path, b, sasToken, reqParam, tracingContext);
   }
 
   private void signalErrorConditionToMockClient() {
