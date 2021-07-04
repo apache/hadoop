@@ -2658,6 +2658,17 @@
 </property>
 
 <property>
+  <name>dfs.datanode.round-robin-volume-choosing-policy.additional-available-space</name>
+  <value>1073741824</value> <!-- 1 GB -->
+  <description>
+    Only used when the dfs.datanode.fsdataset.volume.choosing.policy is set to
+    org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy.
+    This setting controls how much additional available space (unit is byte) is needed
+    when choosing a volume.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.edits.noeditlogchannelflush</name>
   <value>false</value>
   <description>
