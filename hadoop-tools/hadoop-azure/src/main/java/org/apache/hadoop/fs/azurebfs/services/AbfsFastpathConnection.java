@@ -27,10 +27,9 @@ import java.util.Map;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
-import com.azure.storage.fastpath.FastpathConnection;
 import com.azure.storage.fastpath.exceptions.FastpathException;
 import com.azure.storage.fastpath.exceptions.FastpathRequestException;
-import com.azure.storage.fastpath.exceptions.FastpathConnectionException;
+import com.azure.storage.fastpath.FastpathConnection;
 import com.azure.storage.fastpath.requestParameters.AccessTokenType;
 import com.azure.storage.fastpath.requestParameters.FastpathCloseRequestParams;
 import com.azure.storage.fastpath.requestParameters.FastpathOpenRequestParams;
@@ -43,6 +42,7 @@ import com.azure.storage.fastpath.responseProviders.FastpathResponse;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsFastpathException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
 
@@ -78,7 +78,7 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   }
 
   public Map<String, List<String>> getRequestHeaders() {
-    Map<String, List<String>> headers
+    final Map<String, List<String>> headers
         = new HashMap<String, java.util.List<String>>();
     for (AbfsHttpHeader abfsHeader : this.requestHeaders) {
       headers.put(abfsHeader.getName(),
@@ -93,7 +93,7 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   }
 
   public String getRequestHeader(String header) {
-    String value ="";
+    String value = EMPTY_STRING;
     for (AbfsHttpHeader abfsHeader : this.requestHeaders) {
       if (abfsHeader.getName().equals(header)) {
         value = abfsHeader.getValue();
@@ -138,7 +138,7 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   private void setStatusFromFastpathResponse(FastpathResponse response) {
     this.response = response;
     this.statusCode = response.getHttpStatus();
-    this.statusDescription = String.valueOf(response.getHttpStatus());
+    this.statusDescription = String.valueOf(response.getStoreErrorDescription());
     this.storageErrorCode = String.valueOf(response.getStoreErrorCode());
     this.storageErrorMessage = response.getStoreErrorDescription();
   }

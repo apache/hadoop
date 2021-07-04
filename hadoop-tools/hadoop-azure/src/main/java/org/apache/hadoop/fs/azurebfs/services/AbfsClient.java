@@ -64,6 +64,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters.Mode;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestIODataParameters;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -543,16 +544,17 @@ public class AbfsClient implements Closeable {
         abfsUriQueryBuilder, cachedSasToken);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
+    final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(buffer,
+        reqParams.getoffset(),
+        reqParams.getLength());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.Append,
         this,
         HTTP_METHOD_PUT,
         url,
         requestHeaders,
+        ioDataParams,
         sasTokenForReuse);
-    op.updateIOReqParams(buffer,
-        reqParams.getoffset(),
-        reqParams.getLength());
     try {
       op.execute();
     } catch (AzureBlobFileSystemException e) {
@@ -565,10 +567,8 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders,
+            ioDataParams,
             sasTokenForReuse);
-        op.updateIOReqParams(buffer,
-            reqParams.getoffset(),
-            reqParams.getLength());
         successOp.hardSetResult(HttpURLConnection.HTTP_OK);
         return successOp;
       }
@@ -738,16 +738,17 @@ public class AbfsClient implements Closeable {
       op = executeFastpathRead(path, reqParams, url, requestHeaders, buffer,
           sasTokenForReuse);
     } else {
+      final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(buffer,
+          reqParams.getBufferOffset(),
+          reqParams.getReadLength());
       op = new AbfsRestOperation(
           AbfsRestOperationType.ReadFile,
           this,
           HTTP_METHOD_GET,
           url,
           requestHeaders,
+          ioDataParams,
           sasTokenForReuse);
-      op.updateIOReqParams(buffer,
-          reqParams.getBufferOffset(),
-          reqParams.getReadLength());
       if (reqParams.getFastpathStatus() != FastpathStatus.FASTPATH_DISABLED) {
         op.setFastpathRequestStatus(reqParams.getFastpathStatus());
       }
@@ -1187,17 +1188,19 @@ public class AbfsClient implements Closeable {
       List<AbfsHttpHeader> requestHeaders,
       byte[] buffer,
       String sasTokenForReuse) throws AzureBlobFileSystemException {
+    final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(buffer,
+        reqParams.getBufferOffset(),
+        reqParams.getReadLength(),
+        reqParams.getFastpathFileHandle());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.FastpathRead,
         this,
         HTTP_METHOD_GET,
         url,
         requestHeaders,
+        ioDataParams,
         sasTokenForReuse);
-    op.updateIOReqParams(buffer,
-        reqParams.getBufferOffset(),
-        reqParams.getReadLength(),
-        reqParams.getFastpathFileHandle());
+    op.setFastpathRequestStatus(reqParams.getFastpathStatus());
     try {
       op.execute();
       return op;

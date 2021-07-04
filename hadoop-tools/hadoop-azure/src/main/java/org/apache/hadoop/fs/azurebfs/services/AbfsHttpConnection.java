@@ -44,22 +44,6 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
   private HttpURLConnection connection;
   protected ListResultSchema listResultSchema = null;
 
-  public HttpURLConnection getConnection() {
-    return connection;
-  }
-
-  public ListResultSchema getListResultSchema() {
-    return listResultSchema;
-  }
-
-  public String getResponseHeader(String httpHeader) {
-    return connection.getHeaderField(httpHeader);
-  }
-
-  public void setHeader(String header, String value) {
-    this.getConnection().setRequestProperty(header, value);
-  }
-
   public AbfsHttpConnection(final URL url, final String method, List<AbfsHttpHeader> requestHeaders) throws IOException {
     super(url, method, requestHeaders);
     init(url, method, requestHeaders);
@@ -95,6 +79,22 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
     }
 
     this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, clientRequestId);
+  }
+
+  public HttpURLConnection getConnection() {
+    return connection;
+  }
+
+  public ListResultSchema getListResultSchema() {
+    return listResultSchema;
+  }
+
+  public String getResponseHeader(String httpHeader) {
+    return connection.getHeaderField(httpHeader);
+  }
+
+  public void setHeader(String header, String value) {
+    this.getConnection().setRequestProperty(header, value);
   }
 
   public Map<String, List<String>> getRequestHeaders() {

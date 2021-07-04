@@ -46,6 +46,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH
  */
 public class AbfsRestOperation {
   // The type of the REST operation (Append, ReadFile, etc)
+  // The type of the REST operation (Append, ReadFile, etc)
   protected final AbfsRestOperationType operationType;
   // Blob FS client, which has the credentials, retry policy, and logs.
   protected final AbfsClient client;
@@ -122,7 +123,7 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders) {
-    this(operationType, client, method, url, requestHeaders, null, null);
+    this(operationType, client, method, url, requestHeaders, null);
   }
 
   /**
@@ -135,11 +136,11 @@ public class AbfsRestOperation {
    * @param sasToken A sasToken for optional re-use by AbfsInputStream/AbfsOutputStream.
    */
   AbfsRestOperation(final AbfsRestOperationType operationType,
-      final AbfsClient client,
-      final String method,
-      final URL url,
-      final List<AbfsHttpHeader> requestHeaders,
-      final String sasToken) {
+                    final AbfsClient client,
+                    final String method,
+                    final URL url,
+                    final List<AbfsHttpHeader> requestHeaders,
+                    final String sasToken) {
     this(operationType, client, method, url, requestHeaders, sasToken, null);
   }
 
@@ -154,39 +155,50 @@ public class AbfsRestOperation {
    * @param fastpathFileHandle Fastpath File handle
    */
   AbfsRestOperation(final AbfsRestOperationType operationType,
-                    final AbfsClient client,
-                    final String method,
-                    final URL url,
-                    final List<AbfsHttpHeader> requestHeaders,
-                    final String sasToken,
-                    final String fastpathFileHandle) {
+      final AbfsClient client,
+      final String method,
+      final URL url,
+      final List<AbfsHttpHeader> requestHeaders,
+      final String sasToken,
+      final String fastpathFileHandle) {
     this.operationType = operationType;
     this.client = client;
     this.method = method;
     this.url = url;
     this.requestHeaders = requestHeaders;
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
-            || AbfsHttpConstants.HTTP_METHOD_POST.equals(method)
-            || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
+        || AbfsHttpConstants.HTTP_METHOD_POST.equals(method)
+        || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.fastpathFileHandle = fastpathFileHandle;
     this.abfsCounters = client.getAbfsCounters();
   }
 
   /**
-   * Updates instance with IO request parameters
+   * Initializes a new REST operation.
    *
-   * @param buffer For uploads, this is the request entity body.  For downloads,
-   *               this will hold the response entity body.
-   * @param bufferOffset An offset into the buffer where the data beings.
-   * @param bufferLength The length of the data in the buffer.
+   * @param operationType The type of the REST operation (Append, ReadFile, etc).
+   * @param client The Blob FS client.
+   * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
+   * @param url The full URL including query string parameters.
+   * @param requestHeaders The HTTP request headers.
+   * @param ioDataParams For uploads, this holds details of buffer which holds
+   *               request entity body. For downloads, this holds details of
+   *               buffer which hold the response entity body.
+   * @param sasToken A sasToken for optional re-use by AbfsInputStream/AbfsOutputStream.
    */
-  public void updateIOReqParams(byte[] buffer,
-      int bufferOffset,
-      int bufferLength) {
-    this.buffer = buffer;
-    this.bufferOffset = bufferOffset;
-    this.bufferLength = bufferLength;
+  AbfsRestOperation(AbfsRestOperationType operationType,
+                    AbfsClient client,
+                    String method,
+                    URL url,
+                    List<AbfsHttpHeader> requestHeaders,
+                    AbfsRestIODataParameters ioDataParams,
+                    String sasToken) {
+    this(operationType, client, method, url, requestHeaders, sasToken);
+    this.buffer = ioDataParams.getBuffer();
+    this.bufferOffset = ioDataParams.getBufferOffset();
+    this.bufferLength = ioDataParams.getBufferLength();
+    this.fastpathFileHandle = ioDataParams.getFastpathFileHandle();
     this.abfsCounters = client.getAbfsCounters();
   }
 
@@ -212,23 +224,6 @@ public class AbfsRestOperation {
 
   public FastpathStatus getFastpathRequestStatus() {
     return fastpathReqStatus;
-  }
-
-  /**
-   * Updates instance with IO request parameters
-   *
-   * @param buffer For uploads, this is the request entity body.  For downloads,
-   *               this will hold the response entity body.
-   * @param bufferOffset An offset into the buffer where the data beings.
-   * @param bufferLength The length of the data in the buffer.
-   * @param fastpathFileHandle handle to Fastpath File
-   */
-  public void updateIOReqParams(byte[] buffer,
-      int bufferOffset,
-      int bufferLength,
-      String fastpathFileHandle) {
-    updateIOReqParams(buffer, bufferOffset, bufferLength);
-    this.fastpathFileHandle = fastpathFileHandle;
   }
 
   public boolean isAFastpathRequest() {
@@ -362,7 +357,7 @@ public class AbfsRestOperation {
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
         if (httpOperation == null) {
-          LOG.debug("HttpRequestFailure: " + method + "," + url, ex);
+          LOG.debug("HttpRequestFailure: {} - {}: {}", method, url, ex);
         } else {
           LOG.debug("HttpRequestFailure: {}, {}", httpOperation.toString(), ex);
         }

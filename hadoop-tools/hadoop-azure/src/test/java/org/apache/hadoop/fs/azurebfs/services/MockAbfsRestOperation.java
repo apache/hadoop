@@ -55,6 +55,16 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
     super(operationType, client, method, url, requestHeaders, sasToken, fastpathFileHandle);
   }
 
+  MockAbfsRestOperation(final AbfsRestOperationType operationType,
+      final AbfsClient client,
+      final String method,
+      final URL url,
+      final List<AbfsHttpHeader> requestHeaders,
+      final AbfsRestIODataParameters ioDataParams,
+      final String sasToken) {
+    super(operationType, client, method, url, requestHeaders, ioDataParams, sasToken);
+  }
+
   protected AbfsFastpathConnection getFastpathConnection() throws IOException {
     return new MockAbfsFastpathConnection(operationType, url, method,
         client.getAuthType(), client.getAccessToken(), requestHeaders,

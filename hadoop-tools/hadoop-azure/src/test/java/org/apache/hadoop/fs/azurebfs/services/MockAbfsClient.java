@@ -83,17 +83,18 @@ public class MockAbfsClient extends AbfsClient {
       List<AbfsHttpHeader> requestHeaders,
       byte[] buffer,
       String sasTokenForReuse) throws AzureBlobFileSystemException {
+    final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(buffer,
+        reqParams.getBufferOffset(),
+        reqParams.getReadLength(),
+        reqParams.getFastpathFileHandle());
     final MockAbfsRestOperation op = new MockAbfsRestOperation(
         AbfsRestOperationType.FastpathRead,
         this,
         HTTP_METHOD_GET,
         url,
         requestHeaders,
+        ioDataParams,
         sasTokenForReuse);
-    op.updateIOReqParams(buffer,
-        reqParams.getBufferOffset(),
-        reqParams.getReadLength(),
-        reqParams.getFastpathFileHandle());
     try {
       signalErrorConditionToMockRestOp(op);
       op.execute();
