@@ -754,21 +754,24 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation fastPathOpen(final String path, final String eTag, final TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
+  public AbfsRestOperation fastPathOpen(final String path, final String eTag,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION,
+    String sasTokenForReuse = appendSASTokenToQuery(path,
+        SASTokenProvider.READ_OPERATION,
         abfsUriQueryBuilder, null);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
-    return executeFastpathOpen(url, requestHeaders, sasTokenForReuse, tracingContext);
+    return executeFastpathOpen(url, requestHeaders, sasTokenForReuse,
+        tracingContext);
   }
 
-  public AbfsRestOperation fastPathClose(final String path, final String eTag, final String fastpathFileHandle, final TracingContext tracingContext)
+  public AbfsRestOperation fastPathClose(final String path, final String eTag,
+      final String fastpathFileHandle, final TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
@@ -779,7 +782,8 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
-    return executeFastpathClose(url, requestHeaders, sasTokenForReuse, fastpathFileHandle, tracingContext);
+    return executeFastpathClose(url, requestHeaders, sasTokenForReuse,
+        fastpathFileHandle, tracingContext);
 
   }
 
@@ -798,7 +802,8 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION,
+    String sasTokenForReuse = appendSASTokenToQuery(path,
+        SASTokenProvider.READ_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
@@ -809,7 +814,8 @@ public class AbfsClient implements Closeable {
       op = executeFastpathRead(path, reqParams, url, requestHeaders, buffer,
           sasTokenForReuse, tracingContext);
     } else {
-      final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(buffer,
+      final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(
+          buffer,
           reqParams.getBufferOffset(),
           reqParams.getReadLength());
       op = new AbfsRestOperation(
@@ -820,9 +826,6 @@ public class AbfsClient implements Closeable {
           requestHeaders,
           ioDataParams,
           sasTokenForReuse);
-//      if (reqParams.getFastpathStatus() != FastpathStatus.FASTPATH_DISABLED) {
-//        tracingContext.setFastpathStatus(reqParams.getFastpathStatus());
-//      }
 
       op.execute(tracingContext);
     }
@@ -1268,7 +1271,8 @@ public class AbfsClient implements Closeable {
       byte[] buffer,
       String sasTokenForReuse,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(buffer,
+    final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(
+        buffer,
         reqParams.getBufferOffset(),
         reqParams.getReadLength(),
         reqParams.getFastpathFileHandle());
@@ -1280,7 +1284,7 @@ public class AbfsClient implements Closeable {
         requestHeaders,
         ioDataParams,
         sasTokenForReuse);
-    //tracingContext.setFastpathStatus(reqParams.getFastpathStatus());
+
     try {
       op.execute(tracingContext);
       return op;

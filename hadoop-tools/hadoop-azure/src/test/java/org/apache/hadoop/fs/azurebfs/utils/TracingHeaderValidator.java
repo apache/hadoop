@@ -73,7 +73,7 @@ public class TracingHeaderValidator implements Listener {
   }
 
   private void validateTracingHeader(String tracingContextHeader) {
-    String[] idList = tracingContextHeader.split(":");
+    String[] idList = tracingContextHeader.split(":", -1);
     validateBasicFormat(idList);
     if (format != TracingHeaderFormat.ALL_ID_FORMAT) {
       return;

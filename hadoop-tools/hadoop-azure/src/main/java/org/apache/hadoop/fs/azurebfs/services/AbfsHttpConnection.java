@@ -158,7 +158,8 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
    *
    * @throws IOException if an error occurs.
    */
-  public void processResponse(byte[] buffer, final int offset, final int length) throws IOException {
+  public void processResponse(byte[] buffer, final int offset,
+      final int length) throws IOException {
     // get the response
     long startTime = 0;
     if (this.isTraceEnabled) {
@@ -173,7 +174,8 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
 
     this.statusDescription = this.connection.getResponseMessage();
 
-    this.requestId = this.connection.getHeaderField(HttpHeaderConfigurations.X_MS_REQUEST_ID);
+    this.requestId = this.connection.getHeaderField(
+        HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
     }
@@ -195,7 +197,8 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
       if (this.isTraceEnabled) {
         this.recvResponseTimeMs += elapsedTimeMs(startTime);
       }
-      this.bytesReceived = this.connection.getHeaderFieldLong(HttpHeaderConfigurations.CONTENT_LENGTH, 0);
+      this.bytesReceived = this.connection.getHeaderFieldLong(
+          HttpHeaderConfigurations.CONTENT_LENGTH, 0);
     } else {
       // consume the input stream to release resources
       int totalBytesRead = 0;
@@ -208,12 +211,14 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
 
         // this is a list operation and need to retrieve the data
         // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
+            && buffer == null) {
           parseListFilesResponse(stream);
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead, length - totalBytesRead);
+              int bytesRead = stream.read(buffer, offset + totalBytesRead,
+                  length - totalBytesRead);
               if (bytesRead == -1) {
                 endOfStream = true;
                 break;
@@ -260,7 +265,7 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
   }
 
   /**
-   * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
+   * When the request fails, this function is used to parse the response
    * and extract the storageErrorCode and storageErrorMessage.  Any errors
    * encountered while attempting to process the error response are logged,
    * but otherwise ignored.

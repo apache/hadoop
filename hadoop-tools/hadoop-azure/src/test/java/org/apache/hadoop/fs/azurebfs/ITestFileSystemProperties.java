@@ -19,17 +19,15 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
-
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Test;
-
-import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 /**
@@ -48,7 +46,8 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testMockFastpathReadWriteBytesToFileAndEnsureThreadPoolCleanup() throws Exception {
+  public void testMockFastpathReadWriteBytesToFileAndEnsureThreadPoolCleanup()
+      throws Exception {
     // Run mock test only if feature is set to off
     Assume.assumeFalse(getDefaultFastpathFeatureStatus());
     final AzureBlobFileSystem fs = getFileSystem();
@@ -74,7 +73,8 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     testReadWriteBytesToFileAndEnsureThreadPoolCleanup(false);
   }
 
-  public void testReadWriteBytesToFileAndEnsureThreadPoolCleanup(boolean isMockFastpathTest) throws Exception {
+  public void testReadWriteBytesToFileAndEnsureThreadPoolCleanup(boolean isMockFastpathTest)
+      throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     testWriteOneByteToFileAndEnsureThreadPoolCleanup();
 

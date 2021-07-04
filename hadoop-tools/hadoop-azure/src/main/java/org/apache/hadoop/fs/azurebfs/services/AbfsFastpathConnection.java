@@ -121,7 +121,8 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
    *
    * @throws IOException if an error occurs.
    */
-  public void processResponse(byte[] buffer, final int offset, final int length) throws IOException {
+  public void processResponse(byte[] buffer, final int offset,
+      final int length) throws IOException {
     switch (this.opType) {
     case FastpathOpen:
       long startTime = System.nanoTime();
@@ -212,8 +213,9 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   }
 
   @VisibleForTesting
-  protected FastpathReadResponse triggerRead(FastpathReadRequestParams readRequestParams, byte[] buffer)
-      throws FastpathException {
+  protected FastpathReadResponse triggerRead(
+      FastpathReadRequestParams readRequestParams,
+      byte[] buffer) throws FastpathException {
     FastpathConnection conn = new FastpathConnection();
     return conn.read(readRequestParams, buffer);
   }
@@ -247,8 +249,8 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
 
 
   @VisibleForTesting
-  protected FastpathCloseResponse triggerClose(FastpathCloseRequestParams closeRequestParams)
-      throws FastpathException {
+  protected FastpathCloseResponse triggerClose(
+      FastpathCloseRequestParams closeRequestParams) throws FastpathException {
     FastpathConnection conn = new FastpathConnection();
     return conn.close(closeRequestParams);
   }

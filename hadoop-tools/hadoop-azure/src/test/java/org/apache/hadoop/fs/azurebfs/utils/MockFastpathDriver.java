@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +38,7 @@ public class MockFastpathDriver extends FastpathDriver {
     byte[] mockStoreBuffer;
   }
 
-  static java.util.HashMap<String, ResponseRegisterFields> responseRegistry = new java.util.HashMap<String, ResponseRegisterFields>();
+  static HashMap<String, ResponseRegisterFields> responseRegistry = new HashMap<String, ResponseRegisterFields>();
 
   public void RegisterOpenResponse(String clientRequestID,
       String jsonResponseString) {
@@ -53,7 +54,8 @@ public class MockFastpathDriver extends FastpathDriver {
       int rdLength,
       long remoteFileOffset,
       ByteBuffer rdBuffer) {
-    registerResponse(clientRequestID, jsonResponseString, rdLength, remoteFileOffset, rdBuffer);
+    registerResponse(clientRequestID, jsonResponseString, rdLength,
+        remoteFileOffset, rdBuffer);
   }
 
   public void UnregisterReadResponse(String clientRequestID,
@@ -82,7 +84,11 @@ public class MockFastpathDriver extends FastpathDriver {
     }
   }
 
-  public void registerResponse(String clientId, String response, int bytesToRead, long remoteFileOffset, java.nio.ByteBuffer readBuffer) {
+  public void registerResponse(String clientId,
+      String response,
+      int bytesToRead,
+      long remoteFileOffset,
+      ByteBuffer readBuffer) {
     if (!responseRegistry.containsKey(clientId)) {
       ResponseRegisterFields fields = new ResponseRegisterFields();
       fields.bytesToRead = bytesToRead;
@@ -94,6 +100,7 @@ public class MockFastpathDriver extends FastpathDriver {
       responseRegistry.put(clientId, fields);
     }
   }
+
   public void unregisterResponse(String clientId) {
     if (responseRegistry.containsKey(clientId)) {
       responseRegistry.remove(clientId);
@@ -129,7 +136,9 @@ public class MockFastpathDriver extends FastpathDriver {
       final byte[] rdBuffer) throws FastpathException {
     ResponseRegisterFields mockResponseRegister = responseRegistry.get(clientRequestId);
     org.junit.Assert.assertTrue(mockResponseRegister != null);
-    int len = Math.min((responseRegistry.get(clientRequestId).mockStoreBuffer.length - (int) responseRegistry.get(clientRequestId).remotePosition),
+    int len = Math.min(
+        (responseRegistry.get(clientRequestId).mockStoreBuffer.length
+            - (int) responseRegistry.get(clientRequestId).remotePosition),
         readLength);
     if (len < 0) {
       throw new FastpathRequestException("invalid offset/read length ");
@@ -140,8 +149,10 @@ public class MockFastpathDriver extends FastpathDriver {
 
     String mockResponseFormat  = responseRegistry.get(clientRequestId).mockResponse;
     System.arraycopy(responseRegistry.get(clientRequestId).mockStoreBuffer,
-        (int) responseRegistry.get(clientRequestId).remotePosition, rdBuffer, rdBufOffset, len);
-    responseRegistry.get(clientRequestId).mockResponse = String.format(mockResponseFormat, len);
+        (int) responseRegistry.get(clientRequestId).remotePosition, rdBuffer,
+        rdBufOffset, len);
+    responseRegistry.get(clientRequestId).mockResponse = String.format(
+        mockResponseFormat, len);
     return responseRegistry.get(clientRequestId).mockResponse;
   }
 

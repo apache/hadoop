@@ -43,10 +43,10 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_FASTPATH_ENABLE;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_FASTPATH_ENABLE;
 
 public class ITestAbfsInputStreamStatistics
     extends AbstractAbfsIntegrationTest {
@@ -145,7 +145,8 @@ public class ITestAbfsInputStreamStatistics
         addToTestTearDownCleanupList(seekStatPath);
         in = getMockAbfsInputStream(fs, seekStatPath);
       } else {
-        in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics(), getTestTracingContext(fs, false));
+        in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics(),
+            getTestTracingContext(fs, false));
       }
 
       /*
@@ -484,8 +485,10 @@ public class ITestAbfsInputStreamStatistics
     MockAzureBlobFileSystemStore mockStore = new MockAzureBlobFileSystemStore(
         fs.getUri(), fs.isSecureScheme(), fs.getConf(),
         store.getAbfsCounters());
-    MockAbfsInputStream inputStream = (MockAbfsInputStream) mockStore.openFileForRead(qualifiedPath,
-        Optional.empty(), fs.getFsStatistics(), getTestTracingContext(fs, false));
+    MockAbfsInputStream inputStream
+        = (MockAbfsInputStream) mockStore.openFileForRead(qualifiedPath,
+        Optional.empty(), fs.getFsStatistics(),
+        getTestTracingContext(fs, false));
     return inputStream;
   }
 

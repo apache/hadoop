@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
-import org.apache.hadoop.fs.azurebfs.services.FastpathStatus;
-
 /**
  * Saves the different request parameters for read
  */
@@ -35,7 +33,6 @@ public class ReadRequestParameters {
   private ReadRequestParameters.Mode mode;
   private final String eTag;
   private final String fastpathFileHandle;
-  //private FastpathStatus fastpathStatus = FastpathStatus.FASTPATH_DISABLED;
 
   public ReadRequestParameters(final ReadRequestParameters.Mode mode,
       final long storeFilePosition,
@@ -49,7 +46,6 @@ public class ReadRequestParameters {
     this.readLength = readLength;
     this.eTag = eTag;
     this.fastpathFileHandle = fastpathFileHandle;
-    //this.fastpathStatus = fastpathStatus;
   }
 
   public long getStoreFilePosition() {

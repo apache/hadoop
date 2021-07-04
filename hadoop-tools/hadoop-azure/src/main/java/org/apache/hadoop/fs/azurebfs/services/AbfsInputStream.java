@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters.Mode;
-import org.apache.hadoop.fs.azurebfs.services.FastpathStatus;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -53,6 +52,7 @@ import static java.lang.Math.min;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
+
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -153,7 +153,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
     ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
-    isFastPathEnabled = abfsInputStreamContext.isFastpathEnabled() ?  checkFastpathStatus() : false;
+    isFastPathEnabled = abfsInputStreamContext.isFastpathEnabled()
+        ? checkFastpathStatus()
+        : false;
     if (streamStatistics != null) {
       ioStatistics = streamStatistics.getIOStatistics();
     }
@@ -577,25 +579,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @VisibleForTesting
-  protected AbfsRestOperation executeRead(String path, byte[] b, String sasToken, ReadRequestParameters reqParam, TracingContext context)
+  protected AbfsRestOperation executeRead(String path, byte[] b, String sasToken,
+      ReadRequestParameters reqParam, TracingContext context)
       throws AzureBlobFileSystemException {
     return client.read(path, b, sasToken, reqParam, context);
-  }
-
-  private FastpathStatus getFastpathStatusAtRead() {
-    // First check fastpathFileHandle to check Fastpath Open status
-    // then check if isFastpathEnabled was toggled as part of REST fallback
-    if (fastpathFileHandle != null) {
-      // a non null fastpathFileHandle means Fastpath open was successful
-      // but if flag isFastpathEnabled false, it means REST fallback was triggered
-      if (isFastPathEnabled) {
-        return FastpathStatus.FASTPATH;
-      } else {
-        return FastpathStatus.CONN_FAIL_REST_FALLBACK;
-      }
-    }
-
-    return FastpathStatus.FASTPATH_DISABLED;
   }
 
   /**
@@ -749,8 +736,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @VisibleForTesting
-  protected AbfsRestOperation executeFastpathClose(String path, String eTag, String fastpathFileHandle)
-      throws AzureBlobFileSystemException {
+  protected AbfsRestOperation executeFastpathClose(String path, String eTag,
+      String fastpathFileHandle) throws AzureBlobFileSystemException {
     return client.fastPathClose(path, eTag, fastpathFileHandle, tracingContext);
   }
 

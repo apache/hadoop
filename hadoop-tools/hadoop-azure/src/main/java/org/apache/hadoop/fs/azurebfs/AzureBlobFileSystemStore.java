@@ -718,7 +718,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsInputStreamContext abfsInputStreamContext,
       final String eTag,
       TracingContext tracingContext) {
-    return new AbfsInputStream(client, statistics, path, contentLength, abfsInputStreamContext, eTag, tracingContext);
+    return new AbfsInputStream(client, statistics, path, contentLength,
+        abfsInputStreamContext, eTag, tracingContext);
   }
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(

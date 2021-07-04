@@ -668,7 +668,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
     } else {
       inputStream.read(byteBuffer5, 0, FIVE_BYTES);
     }
-    //(isMockFastpathTest ? ((MockAbfsInputStream)inputStream) : inputStream).read(byteBuffer5, 0, FIVE_BYTES);
+
     newReqCount++;
     newDataSizeRead += FOUR_MB;
 

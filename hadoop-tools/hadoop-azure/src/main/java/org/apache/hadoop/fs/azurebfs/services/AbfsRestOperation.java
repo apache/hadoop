@@ -101,7 +101,9 @@ public class AbfsRestOperation {
     return sasToken;
   }
 
-  public ListResultSchema getListResultSchema() { return ((AbfsHttpConnection)this.result).getListResultSchema(); }
+  public ListResultSchema getListResultSchema() {
+    return ((AbfsHttpConnection)this.result).getListResultSchema();
+  }
 
   String getFastpathFileHandle() {
     return ((AbfsFastpathConnection) this.result).getFastpathFileHandle();
@@ -282,7 +284,6 @@ public class AbfsRestOperation {
           LOG.debug("Authenticating request with OAuth2 access token");
           if (isAFastpathRequest()) {
             httpOperation = getFastpathConnection();
-            //this.fastpathCorrIndicator = FASTPATH_CORR_INDICATOR;
           } else {
             httpOperation = new AbfsHttpConnection(url, method, requestHeaders);
             httpOperation.setHeader(
@@ -306,7 +307,6 @@ public class AbfsRestOperation {
           break;
       }
 
-      //httpOperation.updateClientReqIdWithConnStatusIndicator(fastpathCorrIndicator);
       tracingContext.constructHeader(httpOperation);
 
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
