@@ -462,7 +462,7 @@ public class NameNodeConnector implements Closeable {
         + ", bpid=" + blockpoolID + "]";
   }
 
-  private class ProxyPair {
+  private static class ProxyPair {
     private final ClientProtocol clientProtocol;
     private final boolean isRequestStandby;
 
