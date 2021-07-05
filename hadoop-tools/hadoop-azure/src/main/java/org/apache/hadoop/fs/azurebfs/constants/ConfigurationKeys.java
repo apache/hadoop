@@ -68,6 +68,14 @@ public final class ConfigurationKeys {
   public static final String AZURE_READ_BUFFER_SIZE = "fs.azure.read.request.size";
   public static final String AZURE_READ_SMALL_FILES_COMPLETELY = "fs.azure.read.smallfilescompletely";
   public static final String AZURE_READ_OPTIMIZE_FOOTER_READ = "fs.azure.read.optimizefooterread";
+
+  /**
+   * Read ahead range parameter which can be set by user.
+   * Default value is {@link FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
+   * This might reduce number of calls to remote as next requested
+   * data could already be present in buffer {@value}.
+   */
+  public static final String AZURE_READ_AHEAD_RANGE = "fs.azure.readahead.range";
   public static final String AZURE_BLOCK_SIZE_PROPERTY_NAME = "fs.azure.block.size";
   public static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME = "fs.azure.block.location.impersonatedhost";
   public static final String AZURE_CONCURRENT_CONNECTION_VALUE_OUT = "fs.azure.concurrentRequestCount.out";

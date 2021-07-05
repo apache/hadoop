@@ -62,6 +62,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_OPTIMIZE_FOOTER_READ = false;
   public static final boolean DEFAULT_ALWAYS_READ_BUFFER_SIZE = false;
   public static final int DEFAULT_READ_AHEAD_BLOCK_SIZE = 4 * ONE_MB;
+  public static final int DEFAULT_READ_AHEAD_RANGE = 64 * ONE_KB; // 64 KB
   public static final int MIN_BUFFER_SIZE = 16 * ONE_KB;  // 16 KB
   public static final int MAX_BUFFER_SIZE = 100 * ONE_MB;  // 100 MB
   public static final long MAX_AZURE_BLOCK_SIZE = 256 * 1024 * 1024L; // changing default abfs blocksize to 256MB
