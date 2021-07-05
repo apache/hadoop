@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
@@ -58,7 +59,7 @@ public class TestKDiagNoKDC extends Assert {
   public TestName methodName = new TestName();
 
   @Rule
-  public Timeout testTimeout = new Timeout(30000);
+  public Timeout testTimeout = new Timeout(30000, TimeUnit.MILLISECONDS);
 
   @BeforeClass
   public static void nameThread() {

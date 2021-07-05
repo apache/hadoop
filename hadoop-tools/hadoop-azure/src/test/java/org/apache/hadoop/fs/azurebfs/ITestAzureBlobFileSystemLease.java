@@ -26,13 +26,18 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsLease;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.utils.Listener;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -210,7 +215,11 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     out.write(0);
     out.hsync();
 
+    fs.registerListener(new TracingHeaderValidator(
+        getConfiguration().getClientCorrelationId(), fs.getFileSystemId(),
+        FSOperationType.BREAK_LEASE, false, 0));
     fs.breakLease(testFilePath);
+    fs.registerListener(null);
 
     LambdaTestUtils.intercept(IOException.class, ERR_LEASE_EXPIRED, () -> {
       out.write(1);
@@ -308,29 +317,38 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
     fs.createNewFile(testFilePath);
+    TracingContext tracingContext = getTestTracingContext(fs, true);
+    Listener listener = new TracingHeaderValidator(
+        getConfiguration().getClientCorrelationId(), fs.getFileSystemId(),
+        FSOperationType.TEST_OP, true, 0);
+    tracingContext.setListener(listener);
 
-    AbfsLease lease = new AbfsLease(fs.getAbfsClient(), testFilePath.toUri().getPath());
+    AbfsLease lease = new AbfsLease(fs.getAbfsClient(),
+        testFilePath.toUri().getPath(), tracingContext);
     Assert.assertNotNull("Did not successfully lease file", lease.getLeaseID());
+    listener.setOperation(FSOperationType.RELEASE_LEASE);
     lease.free();
+    lease.getTracingContext().setListener(null);
     Assert.assertEquals("Unexpected acquire retry count", 0, lease.getAcquireRetryCount());
 
     AbfsClient mockClient = spy(fs.getAbfsClient());
 
     doThrow(new AbfsLease.LeaseException("failed to acquire 1"))
         .doThrow(new AbfsLease.LeaseException("failed to acquire 2"))
-        .doCallRealMethod()
-        .when(mockClient).acquireLease(anyString(), anyInt());
+        .doCallRealMethod().when(mockClient)
+        .acquireLease(anyString(), anyInt(), any(TracingContext.class));
 
-    lease = new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1);
+    lease = new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1, tracingContext);
     Assert.assertNotNull("Acquire lease should have retried", lease.getLeaseID());
     lease.free();
     Assert.assertEquals("Unexpected acquire retry count", 2, lease.getAcquireRetryCount());
 
-    doThrow(new AbfsLease.LeaseException("failed to acquire"))
-        .when(mockClient).acquireLease(anyString(), anyInt());
+    doThrow(new AbfsLease.LeaseException("failed to acquire")).when(mockClient)
+        .acquireLease(anyString(), anyInt(), any(TracingContext.class));
 
     LambdaTestUtils.intercept(AzureBlobFileSystemException.class, () -> {
-      new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1);
+      new AbfsLease(mockClient, testFilePath.toUri().getPath(), 5, 1,
+          tracingContext);
     });
   }
 }

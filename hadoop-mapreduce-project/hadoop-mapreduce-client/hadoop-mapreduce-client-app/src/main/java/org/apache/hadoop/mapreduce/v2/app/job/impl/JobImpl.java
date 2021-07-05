@@ -146,7 +146,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     EMPTY_TASK_ATTEMPT_COMPLETION_EVENTS = new TaskAttemptCompletionEvent[0];
 
   private static final TaskCompletionEvent[]
-    EMPTY_TASK_COMPLETION_EVENTS = new TaskCompletionEvent[0];
+    EMPTY_TASK_COMPLETION_EVENTS = TaskCompletionEvent.EMPTY_ARRAY;
 
   private static final Logger LOG = LoggerFactory.getLogger(JobImpl.class);
 

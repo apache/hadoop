@@ -21,7 +21,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.fedbalance.DistCpProcedure;
 import org.apache.hadoop.tools.fedbalance.FedBalanceConfigs;
@@ -55,7 +59,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Rename across router based federation namespaces.
+ * Rename across router federation namespaces based on federation balance. Both
+ * the src and the dst coming from different namespaces need to have only one
+ * destination. Snapshot paths are not allowed.
+ * Users need write privilege of both src parent and dst parent to do router
+ * federation rename.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -99,6 +107,8 @@ public class RouterFederationRename {
     }
     RemoteLocation srcLoc = srcLocations.get(0);
     RemoteLocation dstLoc = dstLocations.get(0);
+    checkSnapshotPath(srcLoc, dstLoc);
+    checkPermission(srcLoc, dstLoc);
 
     UserGroupInformation routerUser = UserGroupInformation.getLoginUser();
 
@@ -128,6 +138,66 @@ public class RouterFederationRename {
     } catch (InterruptedException e) {
       LOG.warn("Fed balance job is interrupted.", e);
       throw new InterruptedIOException(e.getMessage());
+    }
+  }
+
+  /**
+   * Check router federation rename permission.
+   */
+  private void checkPermission(RemoteLocation src, RemoteLocation dst)
+      throws IOException {
+    try {
+      if (UserGroupInformation.isSecurityEnabled()) {
+        // In security mode, check permission as remote user proxy by router
+        // user.
+        String remoteUserName = NameNode.getRemoteUser().getShortUserName();
+        UserGroupInformation proxyUser = UserGroupInformation
+            .createProxyUser(remoteUserName,
+                UserGroupInformation.getLoginUser());
+        proxyUser.doAs((PrivilegedExceptionAction<Object>) () -> {
+          checkRenamePermission(src, dst);
+          return null;
+        });
+      } else {
+        // In simple mode, check permission as remote user directly.
+        checkRenamePermission(src, dst);
+      }
+    } catch (AccessControlException e) {
+      throw new AccessControlException(
+          "Permission denied rename " + src.getSrc() + "(" + src + ") to " + dst
+              .getSrc() + "(" + dst + ") Reason=" + e.getMessage());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new InterruptedIOException(
+          "Router Federation Rename is interrupted while checking permission.");
+    }
+  }
+
+  private void checkRenamePermission(RemoteLocation srcLoc,
+      RemoteLocation dstLoc) throws IOException {
+    // check src path permission.
+    Path srcPath =
+        new Path("hdfs://" + srcLoc.getNameserviceId() + srcLoc.getDest());
+    srcPath.getFileSystem(conf).access(srcPath.getParent(), FsAction.WRITE);
+    // check dst path permission.
+    Path dstPath =
+        new Path("hdfs://" + dstLoc.getNameserviceId() + dstLoc.getDest());
+    dstPath.getFileSystem(conf).access(dstPath.getParent(), FsAction.WRITE);
+  }
+
+  static void checkSnapshotPath(RemoteLocation src, RemoteLocation dst)
+      throws AccessControlException {
+    if (src.getDest()
+        .contains(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR + Path.SEPARATOR)) {
+      throw new AccessControlException(
+          "Router federation rename can't rename snapshot path. src=" + src
+              .getSrc() + "(" + src + ")");
+    }
+    if (dst.getDest()
+        .contains(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR + Path.SEPARATOR)) {
+      throw new AccessControlException(
+          "Router federation rename can't rename snapshot path. dst=" + dst
+              .getSrc() + "(" + dst + ")");
     }
   }
 

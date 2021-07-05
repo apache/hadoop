@@ -128,8 +128,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
   @Test
   public void test_010_CreateHugeFile() throws IOException {
-    assertFalse("Please run this test sequentially to avoid timeouts" +
-        " and bandwidth problems", isParallelExecution());
+
     long filesizeMB = filesize / _1MB;
 
     // clean up from any previous attempts

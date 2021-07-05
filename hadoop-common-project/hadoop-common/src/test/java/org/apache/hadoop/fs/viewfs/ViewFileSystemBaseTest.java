@@ -60,6 +60,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -74,8 +75,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
 
 /**
@@ -486,11 +485,13 @@ abstract public class ViewFileSystemBaseTest {
     Assert.assertEquals(targetBL.length, viewBL.length);
     int i = 0;
     for (BlockLocation vbl : viewBL) {
-      assertThat(vbl.toString(), equalTo(targetBL[i].toString()));
-      assertThat(vbl.getOffset(), equalTo(targetBL[i].getOffset()));
-      assertThat(vbl.getLength(), equalTo(targetBL[i].getLength()));
+      Assertions.assertThat(vbl.toString()).isEqualTo(targetBL[i].toString());
+      Assertions.assertThat(vbl.getOffset())
+          .isEqualTo(targetBL[i].getOffset());
+      Assertions.assertThat(vbl.getLength())
+          .isEqualTo(targetBL[i].getLength());
       i++;
-    } 
+    }
   }
 
   @Test
@@ -1025,7 +1026,7 @@ abstract public class ViewFileSystemBaseTest {
       if (e instanceof UnsupportedFileSystemException) {
         String msg = " Use " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
             " instead";
-        assertThat(e.getMessage(), containsString(msg));
+        GenericTestUtils.assertExceptionContains(msg, e);
       } else {
         fail("Unexpected exception: " + e.getMessage());
       }
@@ -1262,8 +1263,7 @@ abstract public class ViewFileSystemBaseTest {
       fail("Resolving link target for a ViewFs mount link should fail!");
     } catch (Exception e) {
       LOG.info("Expected exception: " + e);
-      assertThat(e.getMessage(),
-          containsString("not a symbolic link"));
+      GenericTestUtils.assertExceptionContains("not a symbolic link", e);
     }
 
     try {
@@ -1272,8 +1272,7 @@ abstract public class ViewFileSystemBaseTest {
       fail("Resolving link target for a non sym link should fail!");
     } catch (Exception e) {
       LOG.info("Expected exception: " + e);
-      assertThat(e.getMessage(),
-          containsString("not a symbolic link"));
+      GenericTestUtils.assertExceptionContains("not a symbolic link", e);
     }
 
     try {
@@ -1281,8 +1280,7 @@ abstract public class ViewFileSystemBaseTest {
       fail("Resolving link target for a non existing link should fail!");
     } catch (Exception e) {
       LOG.info("Expected exception: " + e);
-      assertThat(e.getMessage(),
-          containsString("File does not exist:"));
+      GenericTestUtils.assertExceptionContains("File does not exist:", e);
     }
   }
 

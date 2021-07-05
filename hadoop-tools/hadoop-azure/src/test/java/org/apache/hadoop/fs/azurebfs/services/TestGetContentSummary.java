@@ -32,6 +32,8 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -128,6 +130,10 @@ private static final int NUM_CONCURRENT_CALLS = 8;
     fs.mkdirs(intermediateDir);
     populateDirWithFiles(intermediateDir, FILES_PER_DIRECTORY);
     fs.mkdirs(new Path("/testFolder/testFolder1/testFolder3"));
+    fs.registerListener(
+        new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.GET_CONTENT_SUMMARY, true,
+            0));
     ContentSummary contentSummary =
         fs.getContentSummary(intermediateDir);
     verifyContentSummary(contentSummary, 1, FILES_PER_DIRECTORY,

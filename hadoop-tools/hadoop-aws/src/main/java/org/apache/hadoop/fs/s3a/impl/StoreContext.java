@@ -32,6 +32,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
@@ -40,6 +42,9 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
@@ -59,7 +64,7 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
  */
 @InterfaceAudience.LimitedPrivate("S3A Filesystem and extensions")
 @InterfaceStability.Unstable
-public class StoreContext {
+public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
 
   /** Filesystem URI. */
   private final URI fsURI;
@@ -117,13 +122,17 @@ public class StoreContext {
   /**
    * Source of time.
    */
-  private ITtlTimeProvider timeProvider;
+
+  /** Time source for S3Guard TTLs. */
+  private final ITtlTimeProvider timeProvider;
+
+  /** Operation Auditor. */
+  private final AuditSpanSource<AuditSpanS3A> auditor;
 
   /**
    * Instantiate.
-   * @deprecated as public method: use {@link StoreContextBuilder}.
    */
-  public StoreContext(
+  StoreContext(
       final URI fsURI,
       final String bucket,
       final Configuration configuration,
@@ -140,13 +149,17 @@ public class StoreContext {
       final MetadataStore metadataStore,
       final boolean useListV1,
       final ContextAccessors contextAccessors,
-      final ITtlTimeProvider timeProvider) {
+      final ITtlTimeProvider timeProvider,
+      final AuditSpanSource<AuditSpanS3A> auditor) {
     this.fsURI = fsURI;
     this.bucket = bucket;
     this.configuration = configuration;
     this.username = username;
     this.owner = owner;
-    this.executor = MoreExecutors.listeningDecorator(executor);
+    // some mock tests have a null executor pool
+    this.executor = executor !=null
+        ? MoreExecutors.listeningDecorator(executor)
+        : null;
     this.executorCapacity = executorCapacity;
     this.invoker = invoker;
     this.instrumentation = instrumentation;
@@ -158,11 +171,7 @@ public class StoreContext {
     this.useListV1 = useListV1;
     this.contextAccessors = contextAccessors;
     this.timeProvider = timeProvider;
-  }
-
-  @Override
-  protected Object clone() throws CloneNotSupportedException {
-    return super.clone();
+    this.auditor = auditor;
   }
 
   public URI getFsURI() {
@@ -390,5 +399,34 @@ public class StoreContext {
     getExecutor().submit(() ->
         LambdaUtils.eval(future, call));
     return future;
+  }
+
+  /**
+   * Get the auditor.
+   * @return auditor.
+   */
+  public AuditSpanSource<AuditSpanS3A> getAuditor() {
+    return auditor;
+  }
+
+  /**
+   * Return the active audit span.
+   * This is thread local -it MUST be passed into workers.
+   * To ensure the correct span is used, it SHOULD be
+   * collected as early as possible, ideally during construction/
+   * or service init/start.
+   * @return active audit span.
+   */
+  @Override
+  public AuditSpan getActiveAuditSpan() {
+    return contextAccessors.getActiveAuditSpan();
+  }
+
+  /**
+   * Get the request factory.
+   * @return the factory for requests.
+   */
+  public RequestFactory getRequestFactory() {
+    return contextAccessors.getRequestFactory();
   }
 }

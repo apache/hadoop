@@ -26,13 +26,12 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -77,7 +76,8 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
@@ -147,14 +147,21 @@ public class LeafQueue extends AbstractCSQueue {
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public LeafQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
-      this(cs, cs.getConfiguration(), queueName, parent, old);
+    this(cs, cs.getConfiguration(), queueName, parent, old, false);
   }
 
   public LeafQueue(CapacitySchedulerContext cs,
       CapacitySchedulerConfiguration configuration,
-      String queueName, CSQueue parent, CSQueue old) throws
+      String queueName, CSQueue parent, CSQueue old) throws IOException {
+    this(cs, configuration, queueName, parent, old, false);
+  }
+
+  public LeafQueue(CapacitySchedulerContext cs,
+      CapacitySchedulerConfiguration configuration,
+      String queueName, CSQueue parent, CSQueue old, boolean isDynamic) throws
       IOException {
     super(cs, configuration, queueName, parent, old);
+    setDynamicQueue(isDynamic);
     this.scheduler = cs;
 
     this.usersManager = new UsersManager(metrics, this, labelManager, scheduler,
@@ -255,7 +262,7 @@ public class LeafQueue extends AbstractCSQueue {
           conf.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
 
       // Validate leaf queue's user's weights.
-      int queueUL = Math.min(100, conf.getUserLimit(getQueuePath()));
+      float queueUL = Math.min(100.0f, conf.getUserLimit(getQueuePath()));
       for (Entry<String, Float> e : getUserWeights().entrySet()) {
         float val = e.getValue().floatValue();
         if (val < 0.0f || val > (100.0f / queueUL)) {
@@ -367,17 +374,17 @@ public class LeafQueue extends AbstractCSQueue {
   }
   
   /**
-   * Set user limit - used only for testing.
+   * Set user limit.
    * @param userLimit new user limit
    */
   @VisibleForTesting
-  void setUserLimit(int userLimit) {
+  void setUserLimit(float userLimit) {
     usersManager.setUserLimit(userLimit);
     usersManager.userLimitNeedsRecompute();
   }
 
   /**
-   * Set user limit factor - used only for testing.
+   * Set user limit factor.
    * @param userLimitFactor new user limit factor
    */
   @VisibleForTesting
@@ -444,7 +451,7 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   @Private
-  public int getUserLimit() {
+  public float getUserLimit() {
     return usersManager.getUserLimit();
   }
 
@@ -1689,6 +1696,17 @@ public class LeafQueue extends AbstractCSQueue {
     } finally {
       readLock.unlock();
     }
+  }
+
+  @Override
+  protected void setDynamicQueueProperties(
+      CapacitySchedulerConfiguration configuration) {
+    super.setDynamicQueueProperties(configuration);
+    // set to -1, to disable it
+    configuration.setUserLimitFactor(getQueuePath(), -1);
+    // Set Max AM percentage to a higher value
+    configuration.setMaximumApplicationMasterResourcePerQueuePercent(
+        getQueuePath(), 1f);
   }
 
   private void updateSchedulerHealthForCompletedContainer(

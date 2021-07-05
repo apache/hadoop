@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -68,8 +69,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.FieldSetter;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * The administrator interface of the {@link Router} implemented by

@@ -58,7 +58,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getFileSystem();
     // test only valid for non-namespace enabled account
     Assume.assumeFalse("Namespace enabled account does not support this test,",
-            fs.getIsNamespaceEnabled());
+        getIsNamespaceEnabled(fs));
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -93,7 +93,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem abfs = getFileSystem();
     // test only valid for non-namespace enabled account
     Assume.assumeFalse("Namespace enabled account does not support this test",
-            abfs.getIsNamespaceEnabled());
+        getIsNamespaceEnabled(abfs));
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -133,7 +133,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem abfs = getFileSystem();
     // test only valid for non-namespace enabled account
     Assume.assumeFalse("Namespace enabled account does not support this test",
-            abfs.getIsNamespaceEnabled());
+        getIsNamespaceEnabled(abfs));
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
@@ -159,7 +159,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     String abfsUrl = "abfs://abcde-1111-1111-1111-1111@xxxx.dfs.xxx.xxx.xxxx.xxxx";
     String wabsUrl = "wasb://abcde-1111-1111-1111-1111@xxxx.blob.xxx.xxx.xxxx.xxxx";
     assertEquals(abfsUrl, wasbUrlToAbfsUrl(wabsUrl));
-    assertEquals(wabsUrl, abfsUrlToWasbUrl(abfsUrl));
+    assertEquals(wabsUrl, abfsUrlToWasbUrl(abfsUrl, false));
   }
 
   @Test
@@ -168,7 +168,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem abfs = getFileSystem();
     // test only valid for non-namespace enabled account
     Assume.assumeFalse("Namespace enabled account does not support this test",
-            abfs.getIsNamespaceEnabled());
+        getIsNamespaceEnabled(abfs));
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 

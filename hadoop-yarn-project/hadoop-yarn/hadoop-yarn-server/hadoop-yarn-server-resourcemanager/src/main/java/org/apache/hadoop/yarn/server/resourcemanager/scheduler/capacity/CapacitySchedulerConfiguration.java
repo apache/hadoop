@@ -636,8 +636,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         absoluteResourceCapacity);
   }
 
-  public int getUserLimit(String queue) {
-    int userLimit = getInt(getQueuePrefix(queue) + USER_LIMIT,
+  public float getUserLimit(String queue) {
+    float userLimit = getFloat(getQueuePrefix(queue) + USER_LIMIT,
         DEFAULT_USER_LIMIT);
     return userLimit;
   }
@@ -686,8 +686,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return orderingPolicy;
   }
 
-  public void setUserLimit(String queue, int userLimit) {
-    setInt(getQueuePrefix(queue) + USER_LIMIT, userLimit);
+    public void setUserLimit(String queue, float userLimit) {
+    setFloat(getQueuePrefix(queue) + USER_LIMIT, userLimit);
     LOG.debug("here setUserLimit: queuePrefix={}, userLimit={}",
         getQueuePrefix(queue), getUserLimit(queue));
   }
@@ -800,10 +800,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       // root.From AbstractCSQueue, absolute resource, and weight will be parsed
       // and updated separately. Once nodes are added/removed in cluster,
       // capacity is percentage will also be re-calculated.
-      return defaultValue;
+      return queue.equals("root") ? 100.0f : defaultValue;
     }
 
-    float capacity = getFloat(capacityPropertyName, defaultValue);
+    float capacity = queue.equals("root") ? 100.0f
+        : getFloat(capacityPropertyName, defaultValue);
     if (capacity < MINIMUM_CAPACITY_VALUE
         || capacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException(
@@ -1561,6 +1562,42 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     configuredNodeLabels.add(RMNodeLabelsManager.NO_LABEL);
 
     return configuredNodeLabels;
+  }
+
+  /**
+   * Get configured node labels for all queues that have accessible-node-labels
+   * prefixed properties set.
+   * @return configured node labels
+   */
+  public Map<String, Set<String>> getConfiguredNodeLabelsByQueue() {
+    Map<String, Set<String>> labelsByQueue = new HashMap<>();
+    Map<String, String> schedulerEntries = getPropsWithPrefix(
+        CapacitySchedulerConfiguration.PREFIX);
+
+    for (Map.Entry<String, String> propertyEntry
+        : schedulerEntries.entrySet()) {
+      String key = propertyEntry.getKey();
+      // Consider all keys that has accessible-node-labels prefix, excluding
+      // <queue-path>.accessible-node-labels itself
+      if (key.contains(ACCESSIBLE_NODE_LABELS + DOT)) {
+        // Find <label-name> in
+        // <queue-path>.accessible-node-labels.<label-name>.property
+        int labelStartIdx =
+            key.indexOf(ACCESSIBLE_NODE_LABELS)
+                + ACCESSIBLE_NODE_LABELS.length() + 1;
+        int labelEndIndx = key.indexOf('.', labelStartIdx);
+        String labelName = key.substring(labelStartIdx, labelEndIndx);
+        // Find queuePath and exclude "." at the end
+        String queuePath = key.substring(0, key.indexOf(
+            ACCESSIBLE_NODE_LABELS) - 1);
+        if (!labelsByQueue.containsKey(queuePath)) {
+          labelsByQueue.put(queuePath, new HashSet<>());
+          labelsByQueue.get(queuePath).add(RMNodeLabelsManager.NO_LABEL);
+        }
+        labelsByQueue.get(queuePath).add(labelName);
+      }
+    }
+    return labelsByQueue;
   }
 
   public Integer getDefaultApplicationPriorityConfPerQueue(String queue) {

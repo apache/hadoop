@@ -67,13 +67,14 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.slf4j.event.Level;
+import org.apache.hadoop.util.Lists;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import java.util.function.Supplier;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests that exercise safemode in an HA cluster.
@@ -858,7 +859,7 @@ public class TestHASafeMode {
           pathString,
           client.getClientName(),
           new ExtendedBlock(previousBlock),
-          new DatanodeInfo[0],
+          DatanodeInfo.EMPTY_ARRAY,
           DFSClientAdapter.getFileId((DFSOutputStream) create
               .getWrappedStream()), null, null);
       cluster.restartNameNode(0, true);

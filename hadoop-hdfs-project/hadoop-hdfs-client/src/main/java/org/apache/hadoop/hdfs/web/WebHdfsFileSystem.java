@@ -130,6 +130,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelect
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.KMSUtil;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -138,7 +139,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
@@ -2502,10 +2502,12 @@ public class WebHdfsFileSystem extends FileSystem
     @VisibleForTesting
     void closeInputStream(RunnerState rs) throws IOException {
       if (in != null) {
-        IOUtils.close(cachedConnection);
         in = null;
       }
-      cachedConnection = null;
+      if (cachedConnection != null) {
+        IOUtils.close(cachedConnection);
+        cachedConnection = null;
+      }
       runnerState = rs;
     }
 

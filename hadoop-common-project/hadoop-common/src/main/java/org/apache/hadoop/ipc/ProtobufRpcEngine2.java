@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.ipc;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.protobuf.*;
-import org.apache.hadoop.thirdparty.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -33,6 +30,12 @@ import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngine2Protos.RequestHeaderProt
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.Descriptors.MethodDescriptor;
+import org.apache.hadoop.thirdparty.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
 import org.apache.hadoop.tracing.Tracer;
@@ -61,9 +64,16 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       ASYNC_RETURN_MESSAGE = new ThreadLocal<>();
 
   static { // Register the rpcRequest deserializer for ProtobufRpcEngine
-    org.apache.hadoop.ipc.Server.registerProtocolEngine(
-        RPC.RpcKind.RPC_PROTOCOL_BUFFER, RpcProtobufRequest.class,
-        new Server.ProtoBufRpcInvoker());
+    registerProtocolEngine();
+  }
+
+  static void registerProtocolEngine() {
+    if (Server.getRpcInvoker(RPC.RpcKind.RPC_PROTOCOL_BUFFER) == null) {
+      org.apache.hadoop.ipc.Server
+          .registerProtocolEngine(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+              ProtobufRpcEngine2.RpcProtobufRequest.class,
+              new Server.ProtoBufRpcInvoker());
+    }
   }
 
   private static final ClientCache CLIENTS = new ClientCache();
@@ -383,6 +393,14 @@ public class ProtobufRpcEngine2 implements RpcEngine {
         this.server = server;
         this.methodName = methodName;
       }
+
+      public RPC.Server getServer() {
+        return server;
+      }
+
+      public String getMethodName() {
+        return methodName;
+      }
     }
 
     static class ProtobufRpcEngineCallbackImpl
@@ -394,9 +412,9 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       private final long setupTime;
 
       ProtobufRpcEngineCallbackImpl() {
-        this.server = CURRENT_CALL_INFO.get().server;
+        this.server = CURRENT_CALL_INFO.get().getServer();
         this.call = Server.getCurCall().get();
-        this.methodName = CURRENT_CALL_INFO.get().methodName;
+        this.methodName = CURRENT_CALL_INFO.get().getMethodName();
         this.setupTime = Time.now();
       }
 
@@ -417,7 +435,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
     }
 
     @InterfaceStability.Unstable
-    public static ProtobufRpcEngineCallback2 registerForDeferredResponse() {
+    public static ProtobufRpcEngineCallback2 registerForDeferredResponse2() {
       ProtobufRpcEngineCallback2 callback = new ProtobufRpcEngineCallbackImpl();
       CURRENT_CALLBACK.set(callback);
       return callback;
@@ -451,6 +469,17 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       this.verbose = verbose;
       registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
           protocolImpl);
+    }
+
+    //Use the latest protobuf rpc invoker itself as that is backward compatible.
+    private static final RpcInvoker RPC_INVOKER = new ProtoBufRpcInvoker();
+
+    @Override
+    protected RpcInvoker getServerRpcInvoker(RPC.RpcKind rpcKind) {
+      if (rpcKind == RPC.RpcKind.RPC_PROTOCOL_BUFFER) {
+        return RPC_INVOKER;
+      }
+      return super.getServerRpcInvoker(rpcKind);
     }
 
     /**
@@ -524,6 +553,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
             methodName, declaringClassProtoName, clientVersion);
       }
 
+      @SuppressWarnings("deprecation")
       protected Writable call(RPC.Server server, String connectionProtocolName,
           RpcWritable.Buffer request, long receiveTime, String methodName,
           String declaringClassProtoName, long clientVersion) throws Exception {
@@ -534,6 +564,21 @@ public class ProtobufRpcEngine2 implements RpcEngine {
 
         ProtoClassProtoImpl protocolImpl = getProtocolImpl(server,
                               declaringClassProtoName, clientVersion);
+        if (protocolImpl.isShadedPBImpl()) {
+          return call(server, connectionProtocolName, request, methodName,
+              protocolImpl);
+        }
+        //Legacy protobuf implementation. Handle using legacy (Non-shaded)
+        // protobuf classes.
+        return ProtobufRpcEngine.Server
+            .processCall(server, connectionProtocolName, request, methodName,
+                protocolImpl);
+      }
+
+      private RpcWritable call(RPC.Server server,
+          String connectionProtocolName, RpcWritable.Buffer request,
+          String methodName, ProtoClassProtoImpl protocolImpl)
+          throws Exception {
         BlockingService service = (BlockingService) protocolImpl.protocolImpl;
         MethodDescriptor methodDescriptor = service.getDescriptorForType()
             .findMethodByName(methodName);

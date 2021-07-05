@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -70,7 +71,7 @@ public class TestZKDelegationTokenSecretManager {
   protected TestingServer zkServer;
 
   @Rule
-  public Timeout globalTimeout = new Timeout(300000);
+  public Timeout globalTimeout = new Timeout(300000, TimeUnit.MILLISECONDS);
 
   @Before
   public void setup() throws Exception {

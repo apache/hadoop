@@ -2111,6 +2111,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.avoid.read.slow.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid reading from &quot;slow&quot; datanodes.
+    Slow datanodes will be moved to the end of the node list returned
+    for reading.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.avoid.write.stale.datanode</name>
   <value>false</value>
   <description>
@@ -5192,32 +5202,6 @@
     in seconds.  If this value is greater than the property
     dfs.namenode.stale.datanode.interval, then the calculated value above
     is used.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.timeout.ms</name>
-  <value>4</value>
-  <description>
-    Timeout value in ms for the StorageInfo compaction run.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.interval.ms</name>
-  <value>600000</value>
-  <description>
-    The thread for checking the StorageInfo for defragmentation will
-    run periodically.  The time between runs is determined by this
-    property.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.ratio</name>
-  <value>0.75</value>
-  <description>
-    The defragmentation threshold for the StorageInfo.
   </description>
 </property>
 

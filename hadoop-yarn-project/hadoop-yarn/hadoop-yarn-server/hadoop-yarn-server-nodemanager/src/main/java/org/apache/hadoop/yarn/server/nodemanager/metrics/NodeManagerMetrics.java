@@ -100,6 +100,8 @@ public class NodeManagerMetrics {
   MutableGaugeFloat nodeCpuUtilization;
   @Metric("Current GPU utilization")
   MutableGaugeFloat nodeGpuUtilization;
+  @Metric("Current running apps")
+  MutableGaugeInt applicationsRunning;
 
   @Metric("Missed localization requests in bytes")
       MutableCounterLong localizedCacheMissBytes;
@@ -185,6 +187,14 @@ public class NodeManagerMetrics {
 
   public void endReInitingContainer() {
     containersReIniting.decr();
+  }
+
+  public void runningApplication() {
+    applicationsRunning.incr();
+  }
+
+  public void endRunningApplication() {
+    applicationsRunning.decr();
   }
 
   public void pausedContainer() {

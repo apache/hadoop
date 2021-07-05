@@ -75,11 +75,11 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import java.util.function.Supplier;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.tools.DFSck;
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -794,41 +794,48 @@ public class DFSTestUtil {
 
   /**
    * Wait for the given file to reach the given replication factor.
-   * @throws TimeoutException if we fail to sufficiently replicate the file
+   *
+   * @param fs the defined filesystem.
+   * @param fileName being written.
+   * @param replFactor desired replication
+   * @throws IOException getting block locations
+   * @throws InterruptedException during sleep
+   * @throws TimeoutException if 40 seconds passed before reaching the desired
+   *                          replication.
    */
-  public static void waitReplication(FileSystem fs, Path fileName, short replFactor)
+  public static void waitReplication(FileSystem fs, Path fileName,
+      short replFactor)
       throws IOException, InterruptedException, TimeoutException {
     boolean correctReplFactor;
-    final int ATTEMPTS = 40;
-    int count = 0;
-
+    int attempt = 0;
     do {
       correctReplFactor = true;
+      if (attempt++ > 0) {
+        Thread.sleep(1000);
+      }
       BlockLocation locs[] = fs.getFileBlockLocations(
-        fs.getFileStatus(fileName), 0, Long.MAX_VALUE);
-      count++;
-      for (int j = 0; j < locs.length; j++) {
-        String[] hostnames = locs[j].getNames();
+          fs.getFileStatus(fileName), 0, Long.MAX_VALUE);
+      for (int currLoc = 0; currLoc < locs.length; currLoc++) {
+        String[] hostnames = locs[currLoc].getNames();
         if (hostnames.length != replFactor) {
+          LOG.info(
+              "Block {} of file {} has replication factor {} "
+                  + "(desired {}); locations: {}",
+              currLoc, fileName, hostnames.length, replFactor,
+              Joiner.on(' ').join(hostnames));
           correctReplFactor = false;
-          System.out.println("Block " + j + " of file " + fileName
-              + " has replication factor " + hostnames.length
-              + " (desired " + replFactor + "); locations "
-              + Joiner.on(' ').join(hostnames));
-          Thread.sleep(1000);
           break;
         }
       }
-      if (correctReplFactor) {
-        System.out.println("All blocks of file " + fileName
-            + " verified to have replication factor " + replFactor);
-      }
-    } while (!correctReplFactor && count < ATTEMPTS);
+    } while (!correctReplFactor && attempt < 40);
 
-    if (count == ATTEMPTS) {
-      throw new TimeoutException("Timed out waiting for " + fileName +
-          " to reach " + replFactor + " replicas");
+    if (!correctReplFactor) {
+      throw new TimeoutException("Timed out waiting for file ["
+          + fileName + "] to reach [" + replFactor + "] replicas");
     }
+
+    LOG.info("All blocks of file {} verified to have replication factor {}",
+        fileName, replFactor);
   }
   
   /** delete directory and everything underneath it.*/

@@ -378,34 +378,4 @@
       </plugin>
     </plugins>
   </build>
-  <!-- TODO: Remove this profile when hamlet was removed. -->
-  <profiles>
-    <profile>
-      <id>java9</id>
-      <activation>
-        <jdk>[9,)</jdk>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <excludes>
-                <exclude>org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
-              </excludes>
-              <testExcludes>
-                <exclude>org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
-              </testExcludes>
-            </configuration>
-          </plugin>
-          <plugin>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <configuration>
-              <excludePackageNames>org.apache.hadoop.yarn.webapp.hamlet</excludePackageNames>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>

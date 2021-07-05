@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.DefaultPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.FSPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;

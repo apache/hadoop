@@ -19,6 +19,7 @@ package org.apache.hadoop.util;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Rule;
@@ -32,7 +33,7 @@ import static org.junit.Assert.*;
  */
 public class TestCrcUtil {
   @Rule
-  public Timeout globalTimeout = new Timeout(10000);
+  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
   private Random rand = new Random(1234);
 

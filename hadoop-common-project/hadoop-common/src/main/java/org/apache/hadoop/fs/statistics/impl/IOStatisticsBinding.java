@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -95,6 +96,15 @@ public final class IOStatisticsBinding {
    */
   public static IOStatistics emptyStatistics() {
     return EmptyIOStatistics.getInstance();
+  }
+
+  /**
+   * Get the shared instance of the immutable empty statistics
+   * store.
+   * @return an empty statistics object.
+   */
+  public static IOStatisticsStore emptyStatisticsStore() {
+    return EmptyIOStatisticsStore.getInstance();
   }
 
   /**
@@ -571,6 +581,38 @@ public final class IOStatisticsBinding {
         tracker.close();
       }
     };
+  }
+
+  /**
+   * Given a Java supplier, evaluate it while
+   * tracking the duration of the operation and success/failure.
+   * @param factory factory of duration trackers
+   * @param statistic statistic key
+   * @param input input callable.
+   * @param <B> return type.
+   * @return the output of the supplier.
+   */
+  public static <B> B trackDurationOfSupplier(
+      @Nullable DurationTrackerFactory factory,
+      String statistic,
+      Supplier<B> input) {
+    // create the tracker outside try-with-resources so
+    // that failures can be set in the catcher.
+    DurationTracker tracker = createTracker(factory, statistic);
+    try {
+      // exec the input function and return its value
+      return input.get();
+    } catch (RuntimeException e) {
+      // input function failed: note it
+      tracker.failed();
+      // and rethrow
+      throw e;
+    } finally {
+      // update the tracker.
+      // this is called after any catch() call will have
+      // set the failed flag.
+      tracker.close();
+    }
   }
 
   /**

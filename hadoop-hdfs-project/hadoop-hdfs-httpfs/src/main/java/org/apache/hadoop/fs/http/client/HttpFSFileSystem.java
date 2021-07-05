@@ -64,6 +64,7 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthentica
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.hadoop.util.HttpExceptionUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -73,7 +74,6 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import java.io.BufferedInputStream;
@@ -122,7 +122,6 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACLSPEC_PARAM = "aclspec";
   public static final String DESTINATION_PARAM = "destination";
   public static final String RECURSIVE_PARAM = "recursive";
-  public static final String SKIP_TRASH_PARAM = "skiptrash";
   public static final String SOURCES_PARAM = "sources";
   public static final String OWNER_PARAM = "owner";
   public static final String GROUP_PARAM = "group";

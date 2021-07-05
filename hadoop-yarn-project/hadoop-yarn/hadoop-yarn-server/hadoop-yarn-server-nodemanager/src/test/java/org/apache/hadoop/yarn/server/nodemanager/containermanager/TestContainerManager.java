@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.records.LocalizationState;
 import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;

@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,10 +66,10 @@ public class ContentSummaryProcessor {
     this.abfsStore = abfsStore;
   }
 
-  public ContentSummary getContentSummary(Path path)
+  public ContentSummary getContentSummary(Path path, TracingContext tracingContext)
           throws IOException, ExecutionException, InterruptedException {
     try {
-      processDirectoryTree(path);
+      processDirectoryTree(path, tracingContext);
       while (!queue.isEmpty() || numTasks.get() > 0) {
         try {
           completionService.take().get();
@@ -97,15 +98,15 @@ public class ContentSummaryProcessor {
    * @throws IOException: listStatus error
    * @throws InterruptedException: error while inserting into queue
    */
-  private void processDirectoryTree(Path path)
+  private void processDirectoryTree(Path path, TracingContext tracingContext)
       throws IOException, InterruptedException {
-    FileStatus[] fileStatuses = abfsStore.listStatus(path);
+    FileStatus[] fileStatuses = abfsStore.listStatus(path, tracingContext);
 
     for (FileStatus fileStatus : fileStatuses) {
       if (fileStatus.isDirectory()) {
         queue.put(fileStatus);
         processDirectory();
-        conditionalSubmitTaskToExecutor();
+        conditionalSubmitTaskToExecutor(tracingContext);
       } else {
         processFile(fileStatus);
       }
@@ -129,14 +130,14 @@ public class ContentSummaryProcessor {
    * Submit task for processing a subdirectory based on current size of
    * filestatus queue and number of already submitted tasks
    */
-  private synchronized void conditionalSubmitTaskToExecutor() {
+  private synchronized void conditionalSubmitTaskToExecutor(TracingContext tracingContext) {
     if (!queue.isEmpty() && numTasks.get() < MAX_THREAD_COUNT) {
       numTasks.incrementAndGet();
       completionService.submit(() -> {
         FileStatus fileStatus1;
         while ((fileStatus1 = queue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS))
                 != null) {
-          processDirectoryTree(fileStatus1.getPath());
+          processDirectoryTree(fileStatus1.getPath(), new TracingContext(tracingContext));
         }
         return null;
       });

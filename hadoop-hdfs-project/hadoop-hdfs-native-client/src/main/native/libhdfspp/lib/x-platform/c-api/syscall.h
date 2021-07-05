@@ -24,5 +24,8 @@
  */
 
 int x_platform_syscall_write_to_stdout(const char* msg);
+int x_platform_syscall_create_and_open_temp_file(char* pattern,
+                                                 size_t pattern_len);
+int x_platform_syscall_close_file(int fd);
 
 #endif  // NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_C_API_SYSCALL_H

@@ -31,11 +31,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+
+import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_LIST;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 
 
 /**
  * MultipartUtils upload-specific functions for use by S3AFileSystem and Hadoop
  * CLI.
+ * The Audit span active when
+ * {@link #listMultipartUploads(StoreContext, AmazonS3, String, int)}
+ * was invoked is retained for all subsequent operations.
  */
 public final class MultipartUtils {
 
@@ -48,32 +57,46 @@ public final class MultipartUtils {
   /**
    * List outstanding multipart uploads.
    * Package private: S3AFileSystem and tests are the users of this.
+   *
+   * @param storeContext store context
    * @param s3 AmazonS3 client to use.
-   * @param bucketName name of S3 bucket to use.
-   * @param maxKeys maximum batch size to request at a time from S3.
    * @param prefix optional key prefix to narrow search.  If null then whole
    *               bucket will be searched.
+   * @param maxKeys maximum batch size to request at a time from S3.
    * @return an iterator of matching uploads
    */
-  static MultipartUtils.UploadIterator listMultipartUploads(AmazonS3 s3,
-      Invoker invoker, String bucketName, int maxKeys, @Nullable String prefix)
+  static MultipartUtils.UploadIterator listMultipartUploads(
+      final StoreContext storeContext,
+      AmazonS3 s3,
+      @Nullable String prefix,
+      int maxKeys)
       throws IOException {
-    return new MultipartUtils.UploadIterator(s3, invoker, bucketName, maxKeys,
+    return new MultipartUtils.UploadIterator(storeContext,
+        s3,
+        maxKeys,
         prefix);
   }
 
   /**
    * Simple RemoteIterator wrapper for AWS `listMultipartUpload` API.
    * Iterates over batches of multipart upload metadata listings.
+   * All requests are in the StoreContext's active span
+   * at the time the iterator was constructed.
    */
   static class ListingIterator implements
       RemoteIterator<MultipartUploadListing> {
 
-    private final String bucketName;
     private final String prefix;
+
+    private final RequestFactory requestFactory;
+
     private final int maxKeys;
     private final AmazonS3 s3;
     private final Invoker invoker;
+
+    private final AuditSpan auditSpan;
+
+    private final StoreContext storeContext;
 
     /**
      * Most recent listing results.
@@ -85,16 +108,24 @@ public final class MultipartUtils {
      */
     private boolean firstListing = true;
 
-    private int listCount = 1;
+    /**
+     * Count of list calls made.
+     */
+    private int listCount = 0;
 
-    ListingIterator(AmazonS3 s3, Invoker invoker, String bucketName,
-        int maxKeys, @Nullable String prefix) throws IOException {
+    ListingIterator(final StoreContext storeContext,
+        AmazonS3 s3,
+        @Nullable String prefix,
+        int maxKeys) throws IOException {
+      this.storeContext = storeContext;
       this.s3 = s3;
-      this.bucketName = bucketName;
+      this.requestFactory = storeContext.getRequestFactory();
       this.maxKeys = maxKeys;
       this.prefix = prefix;
-      this.invoker = invoker;
+      this.invoker = storeContext.getInvoker();
+      this.auditSpan = storeContext.getActiveAuditSpan();
 
+      // request the first listing.
       requestNextBatch();
     }
 
@@ -138,31 +169,36 @@ public final class MultipartUtils {
 
     @Override
     public String toString() {
-      return "Upload iterator: prefix " + prefix + "; list count " +
-          listCount + "; isTruncated=" + listing.isTruncated();
+      return "Upload iterator: prefix " + prefix
+          + "; list count " + listCount
+          + "; upload count " + listing.getMultipartUploads().size()
+          + "; isTruncated=" + listing.isTruncated();
     }
 
     @Retries.RetryTranslated
     private void requestNextBatch() throws IOException {
-      ListMultipartUploadsRequest req =
-          new ListMultipartUploadsRequest(bucketName);
-      if (prefix != null) {
-        req.setPrefix(prefix);
-      }
-      if (!firstListing) {
-        req.setKeyMarker(listing.getNextKeyMarker());
-        req.setUploadIdMarker(listing.getNextUploadIdMarker());
-      }
-      req.setMaxUploads(listCount);
+      try (AuditSpan span = auditSpan.activate()) {
+        ListMultipartUploadsRequest req = requestFactory
+            .newListMultipartUploadsRequest(prefix);
+        if (!firstListing) {
+          req.setKeyMarker(listing.getNextKeyMarker());
+          req.setUploadIdMarker(listing.getNextUploadIdMarker());
+        }
+        req.setMaxUploads(maxKeys);
 
-      LOG.debug("[{}], Requesting next {} uploads prefix {}, " +
-          "next key {}, next upload id {}", listCount, maxKeys, prefix,
-          req.getKeyMarker(), req.getUploadIdMarker());
-      listCount++;
+        LOG.debug("[{}], Requesting next {} uploads prefix {}, " +
+            "next key {}, next upload id {}", listCount, maxKeys, prefix,
+            req.getKeyMarker(), req.getUploadIdMarker());
+        listCount++;
 
-      listing = invoker.retry("listMultipartUploads", prefix, true,
-          () -> s3.listMultipartUploads(req));
-      LOG.debug("New listing state: {}", this);
+        listing = invoker.retry("listMultipartUploads", prefix, true,
+            trackDurationOfOperation(storeContext.getInstrumentation(),
+                MULTIPART_UPLOAD_LIST.getSymbol(),
+                () -> s3.listMultipartUploads(req)));
+        LOG.debug("Listing found {} upload(s)",
+            listing.getMultipartUploads().size());
+        LOG.debug("New listing state: {}", this);
+      }
     }
   }
 
@@ -174,6 +210,10 @@ public final class MultipartUtils {
   public static class UploadIterator
       implements RemoteIterator<MultipartUpload> {
 
+    /**
+     * Iterator for issuing new upload list requests from
+     * where the previous one ended.
+     */
     private ListingIterator lister;
     /** Current listing: the last upload listing we fetched. */
     private MultipartUploadListing listing;
@@ -181,11 +221,15 @@ public final class MultipartUtils {
     private ListIterator<MultipartUpload> batchIterator;
 
     @Retries.RetryTranslated
-    public UploadIterator(AmazonS3 s3, Invoker invoker, String bucketName,
-        int maxKeys, @Nullable String prefix)
+    public UploadIterator(
+        final StoreContext storeContext,
+        AmazonS3 s3,
+        int maxKeys,
+        @Nullable String prefix)
         throws IOException {
 
-      lister = new ListingIterator(s3, invoker, bucketName, maxKeys, prefix);
+      lister = new ListingIterator(storeContext, s3, prefix,
+          maxKeys);
       requestNextBatch();
     }
 

@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -188,7 +188,9 @@ public class ITestAzureBlobFileSystemCheckAccess
     //  acts as noop
     AzureBlobFileSystemStore mockAbfsStore =
         Mockito.mock(AzureBlobFileSystemStore.class);
-    Mockito.when(mockAbfsStore.getIsNamespaceEnabled()).thenReturn(true);
+    Mockito.when(mockAbfsStore
+        .getIsNamespaceEnabled(getTestTracingContext(getFileSystem(), false)))
+        .thenReturn(true);
     Field abfsStoreField = AzureBlobFileSystem.class.getDeclaredField(
         "abfsStore");
     abfsStoreField.setAccessible(true);

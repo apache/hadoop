@@ -23,7 +23,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -49,6 +48,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Set;
 import java.util.HashSet;
 
+import java.io.IOException;
+
 public class TestCapacitySchedulerNewQueueAutoCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -59,7 +60,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   private MockRM mockRM = null;
   private CapacityScheduler cs;
   private CapacitySchedulerConfiguration csConf;
-  private CapacitySchedulerAutoQueueHandler autoQueueHandler;
+  private CapacitySchedulerQueueManager autoQueueHandler;
   private AutoCreatedQueueDeletionPolicy policy = new
       AutoCreatedQueueDeletionPolicy();
 
@@ -114,8 +115,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     policy.init(cs.getConfiguration(), cs.getRMContext(), cs);
     mockRM.start();
     cs.start();
-    autoQueueHandler = new CapacitySchedulerAutoQueueHandler(
-        cs.getCapacitySchedulerQueueManager());
+    autoQueueHandler = cs.getCapacitySchedulerQueueManager();
     mockRM.registerNode("h1:1234", MAX_MEMORY * GB); // label = x
   }
 
@@ -147,6 +147,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
     Assert.assertEquals(400 * GB,
         c.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
+    Assert.assertEquals(((LeafQueue)c).getUserLimitFactor(), -1, 1e-6);
+    Assert.assertEquals(((LeafQueue)c).getMaxAMResourcePerQueuePercent(), 1, 1e-6);
 
     // Now add another queue-d, in the same hierarchy
     createQueue("root.d-auto");
@@ -608,6 +610,34 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertEquals(50, e1.getMaxApplications());
   }
 
+  @Test(expected = SchedulerDynamicEditException.class)
+  public void testAutoCreateQueueWithAmbiguousNonFullPathParentName()
+      throws Exception {
+    startScheduler();
+
+    createQueue("root.a.a");
+    createQueue("a.a");
+  }
+
+  @Test
+  public void testAutoCreateQueueIfFirstExistingParentQueueIsNotStatic()
+      throws Exception {
+    startScheduler();
+
+    // create a dynamic ParentQueue
+    createQueue("root.a.a-parent-auto.a1-leaf-auto");
+    Assert.assertNotNull(cs.getQueue("root.a.a-parent-auto"));
+
+    // create a new dynamic LeafQueue under the existing ParentQueue
+    createQueue("root.a.a-parent-auto.a2-leaf-auto");
+
+    CSQueue a2Leaf = cs.getQueue("a2-leaf-auto");
+
+    // Make sure a2-leaf-auto is under a-parent-auto
+    Assert.assertEquals("root.a.a-parent-auto",
+        a2Leaf.getParent().getQueuePath());
+  }
+
   @Test
   public void testAutoCreateQueueIfAmbiguousQueueNames() throws Exception {
     startScheduler();
@@ -668,6 +698,29 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals("weight is not explicitly set", 4f,
         a2.getQueueCapacities().getWeight(), 1e-6);
+
+    csConf.setBoolean(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
+        "root.a") + CapacitySchedulerConfiguration
+        .AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE, false);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    LeafQueue a3 = createQueue("root.a.a3");
+    Assert.assertFalse("auto queue deletion should be turned off on a3",
+        a3.isEligibleForAutoDeletion());
+
+    // Set the capacity of label TEST
+    csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
+        "root.c") + "accessible-node-labels.TEST.capacity", "6w");
+    csConf.setQueues("root", new String[]{"a", "b", "c"});
+    csConf.setAutoQueueCreationV2Enabled("root.c", true);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    LeafQueue c1 = createQueue("root.c.c1");
+    Assert.assertEquals("weight is not set for label TEST", 6f,
+        c1.getQueueCapacities().getWeight("TEST"), 1e-6);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    c1 = (LeafQueue) cs.getQueue("root.c.c1");
+    Assert.assertEquals("weight is not set for label TEST", 6f,
+        c1.getQueueCapacities().getWeight("TEST"), 1e-6);
+
   }
 
   @Test
@@ -1109,8 +1162,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         "when its dynamic parent is removed", bAutoLeaf);
   }
 
-  protected LeafQueue createQueue(String queuePath) throws YarnException {
-    return autoQueueHandler.autoCreateQueue(
+  protected LeafQueue createQueue(String queuePath) throws YarnException,
+      IOException {
+    return autoQueueHandler.createQueue(
         CSQueueUtils.extractQueuePath(queuePath));
   }
 

@@ -76,7 +76,8 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
       out.hflush();
 
       // GET the file.
-      in = fs.getAbfsStore().openFileForRead(testFilePath, fs.getFsStatistics());
+      in = fs.getAbfsStore().openFileForRead(testFilePath,
+          fs.getFsStatistics(), getTestTracingContext(fs, false));
       int res = in.read();
       LOG.info("Result of Read: {}", res);
 

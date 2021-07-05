@@ -118,13 +118,13 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.InstrumentedReadWriteLock;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1129,6 +1129,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
     try {
+      LOG.debug("moving block {} from {} to {}", block,
+            replicaInfo.getVolume(), volumeRef.getVolume());
       moveBlock(block, replicaInfo, volumeRef, useVolumeOnSameMount);
       datanode.getMetrics().incrReplaceBlockOpOnSameHost();
       if (useVolumeOnSameMount) {
@@ -1631,6 +1633,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       if (ref == null) {
         ref = volumes.getNextVolume(storageType, storageId, b.getNumBytes());
       }
+      LOG.debug("Creating Rbw, block: {} on volume: {}", b, ref.getVolume());
 
       FsVolumeImpl v = (FsVolumeImpl) ref.getVolume();
       // create an rbw file to hold block in the designated volume
@@ -1904,6 +1907,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ReplicaInPipeline newReplicaInfo;
       try {
         newReplicaInfo = v.createTemporary(b);
+        LOG.debug("creating temporary for block: {} on volume: {}",
+            b, ref.getVolume());
       } catch (IOException e) {
         IOUtils.cleanupWithLogger(null, ref);
         throw e;
@@ -2148,18 +2153,17 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * Gets a list of references to the finalized blocks for the given block pool,
-   * sorted by blockID.
+   * Gets a list of references to the finalized blocks for the given block pool.
    * <p>
    * Callers of this function should call
    * {@link FsDatasetSpi#acquireDatasetLock()} to avoid blocks' status being
    * changed during list iteration.
    * </p>
    * @return a list of references to the finalized blocks for the given block
-   *         pool. The list is sorted by blockID.
+   *         pool.
    */
   @Override
-  public List<ReplicaInfo> getSortedFinalizedBlocks(String bpid) {
+  public List<ReplicaInfo> getFinalizedBlocks(String bpid) {
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
       final List<ReplicaInfo> finalized = new ArrayList<ReplicaInfo>(
           volumeMap.size(bpid));

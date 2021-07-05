@@ -109,10 +109,11 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -218,7 +219,10 @@ public class FSEditLog implements LogsPurgeable {
   private static final ThreadLocal<TransactionId> myTransactionId = new ThreadLocal<TransactionId>() {
     @Override
     protected synchronized TransactionId initialValue() {
-      return new TransactionId(Long.MAX_VALUE);
+      // If an RPC call did not generate any transactions,
+      // logSync() should exit without syncing
+      // Therefore the initial value of myTransactionId should be 0
+      return new TransactionId(0L);
     }
   };
 
@@ -463,6 +467,7 @@ public class FSEditLog implements LogsPurgeable {
       // wait if an automatic sync is scheduled
       waitIfAutoSyncScheduled();
 
+      beginTransaction(op);
       // check if it is time to schedule an automatic sync
       needsSync = doEditTransaction(op);
       if (needsSync) {
@@ -477,9 +482,11 @@ public class FSEditLog implements LogsPurgeable {
   }
 
   synchronized boolean doEditTransaction(final FSEditLogOp op) {
-    long start = beginTransaction();
-    op.setTransactionId(txid);
+    LOG.debug("doEditTx() op={} txid={}", op, txid);
+    assert op.hasTransactionId() :
+      "Transaction id is not set for " + op + " EditLog.txId=" + txid;
 
+    long start = monotonicNow();
     try {
       editLogStream.write(op);
     } catch (IOException ex) {
@@ -523,7 +530,7 @@ public class FSEditLog implements LogsPurgeable {
     return editLogStream.shouldForceSync();
   }
   
-  private long beginTransaction() {
+  protected void beginTransaction(final FSEditLogOp op) {
     assert Thread.holdsLock(this);
     // get a new transactionId
     txid++;
@@ -533,7 +540,9 @@ public class FSEditLog implements LogsPurgeable {
     //
     TransactionId id = myTransactionId.get();
     id.txid = txid;
-    return monotonicNow();
+    if(op != null) {
+      op.setTransactionId(txid);
+    }
   }
   
   private void endTransaction(long start) {
@@ -650,7 +659,7 @@ public class FSEditLog implements LogsPurgeable {
   }
 
   protected void logSync(long mytxid) {
-    long syncStart = 0;
+    long lastJournalledTxId = HdfsServerConstants.INVALID_TXID;
     boolean sync = false;
     long editsBatchedInSync = 0;
     try {
@@ -677,8 +686,16 @@ public class FSEditLog implements LogsPurgeable {
           // now, this thread will do the sync.  track if other edits were
           // included in the sync - ie. batched.  if this is the only edit
           // synced then the batched count is 0
-          editsBatchedInSync = txid - synctxid - 1;
-          syncStart = txid;
+          lastJournalledTxId = editLogStream.getLastJournalledTxId();
+          LOG.debug("logSync(tx) synctxid={} lastJournalledTxId={} mytxid={}",
+              synctxid, lastJournalledTxId, mytxid);
+          assert lastJournalledTxId <= txid : "lastJournalledTxId exceeds txid";
+          // The stream has already been flushed, or there are no active streams
+          // We still try to flush up to mytxid
+          if(lastJournalledTxId <= synctxid) {
+            lastJournalledTxId = mytxid;
+          }
+          editsBatchedInSync = lastJournalledTxId - synctxid - 1;
           isSyncRunning = true;
           sync = true;
 
@@ -738,7 +755,7 @@ public class FSEditLog implements LogsPurgeable {
       // Prevent RuntimeException from blocking other log edit sync 
       synchronized (this) {
         if (sync) {
-          synctxid = syncStart;
+          synctxid = lastJournalledTxId;
           for (JournalManager jm : journalSet.getJournalManagers()) {
             /**
              * {@link FileJournalManager#lastReadableTxId} is only meaningful
@@ -746,7 +763,7 @@ public class FSEditLog implements LogsPurgeable {
              * other types of {@link JournalManager}.
              */
             if (jm instanceof FileJournalManager) {
-              ((FileJournalManager)jm).setLastReadableTxId(syncStart);
+              ((FileJournalManager)jm).setLastReadableTxId(synctxid);
             }
           }
           isSyncRunning = false;
@@ -1618,7 +1635,8 @@ public class FSEditLog implements LogsPurgeable {
    * store yet.
    */   
   synchronized void logEdit(final int length, final byte[] data) {
-    long start = beginTransaction();
+    beginTransaction(null);
+    long start = monotonicNow();
 
     try {
       editLogStream.writeRaw(data, 0, length);

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.util.Progressable;
@@ -30,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
+import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -86,9 +88,14 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
   public void testWriteOperationHelperPartLimits() throws Throwable {
     S3AFileSystem s3a = mock(S3AFileSystem.class);
     when(s3a.getBucket()).thenReturn("bucket");
+    when(s3a.getRequestFactory())
+        .thenReturn(MockS3AFileSystem.REQUEST_FACTORY);
+    final Configuration conf = new Configuration();
     WriteOperationHelper woh = new WriteOperationHelper(s3a,
-        new Configuration(),
-        new EmptyS3AStatisticsContext());
+        conf,
+        new EmptyS3AStatisticsContext(),
+        noopAuditor(conf),
+        AuditTestSupport.NOOP_SPAN);
     ByteArrayInputStream inputStream = new ByteArrayInputStream(
         "a".getBytes());
     // first one works

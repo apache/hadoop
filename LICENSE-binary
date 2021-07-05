@@ -249,7 +249,7 @@ commons-cli:commons-cli:1.2
 commons-codec:commons-codec:1.11
 commons-collections:commons-collections:3.2.2
 commons-daemon:commons-daemon:1.0.13
-commons-io:commons-io:2.5
+commons-io:commons-io:2.8.0
 commons-lang:commons-lang:2.6
 commons-logging:commons-logging:1.1.3
 commons-net:commons-net:3.6
@@ -468,8 +468,8 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk15on:1.68
-org.bouncycastle:bcprov-jdk15on:1.68
+org.bouncycastle:bcpkix-jdk15on:1.60
+org.bouncycastle:bcprov-jdk15on:1.60
 org.checkerframework:checker-qual:2.5.2
 org.codehaus.mojo:animal-sniffer-annotations:1.17
 org.jruby.jcodings:jcodings:1.0.13
@@ -502,7 +502,7 @@ javax.xml.bind:jaxb-api:2.2.11
 Eclipse Public License 1.0
 --------------------------
 
-junit:junit:4.12
+junit:junit:4.13.2
 
 
 HSQL License

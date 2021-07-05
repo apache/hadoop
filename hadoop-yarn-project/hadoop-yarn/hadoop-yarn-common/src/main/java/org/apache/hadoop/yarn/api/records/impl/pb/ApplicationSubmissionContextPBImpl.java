@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,6 +32,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -50,13 +54,15 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ReservationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
-
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable
 public class ApplicationSubmissionContextPBImpl 
 extends ApplicationSubmissionContext {
+  private static volatile Boolean forceLowerCaseTags;
+
   ApplicationSubmissionContextProto proto = 
       ApplicationSubmissionContextProto.getDefaultInstance();
   ApplicationSubmissionContextProto.Builder builder = null;
@@ -75,14 +81,26 @@ extends ApplicationSubmissionContext {
 
   public ApplicationSubmissionContextPBImpl() {
     builder = ApplicationSubmissionContextProto.newBuilder();
+    initLowerCaseConfig();
   }
 
   public ApplicationSubmissionContextPBImpl(
       ApplicationSubmissionContextProto proto) {
     this.proto = proto;
     viaProto = true;
+    initLowerCaseConfig();
   }
-  
+
+  private static void initLowerCaseConfig() {
+    if (forceLowerCaseTags == null) {
+      Configuration conf = new Configuration();
+
+      forceLowerCaseTags =
+          conf.getBoolean(APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION,
+              DEFAULT_APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION);
+    }
+  }
+
   public synchronized ApplicationSubmissionContextProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
@@ -287,7 +305,8 @@ extends ApplicationSubmissionContext {
     // Convert applicationTags to lower case and add
     this.applicationTags = new TreeSet<>();
     for (String tag : tags) {
-      this.applicationTags.add(StringUtils.toLowerCase(tag));
+      this.applicationTags.add(
+          forceLowerCaseTags ? StringUtils.toLowerCase(tag) : tag);
     }
   }
 
@@ -718,5 +737,10 @@ extends ApplicationSubmissionContext {
     initApplicationSchedulingProperties();
     this.schedulingProperties.clear();
     this.schedulingProperties.putAll(schedulingPropertyMap);
+  }
+
+  @VisibleForTesting
+  static void setForceLowerCaseTags(boolean convert) {
+    ApplicationSubmissionContextPBImpl.forceLowerCaseTags = convert;
   }
 }

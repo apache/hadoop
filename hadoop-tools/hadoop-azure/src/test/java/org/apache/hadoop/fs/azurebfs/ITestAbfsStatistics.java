@@ -21,12 +21,16 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.Map;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 
 /**
  * Tests AzureBlobFileSystem Statistics.
@@ -36,6 +40,14 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
   private static final int NUMBER_OF_OPS = 10;
 
   public ITestAbfsStatistics() throws Exception {
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    super.setup();
+    // Setting IOStats to INFO level, to see the IOStats after close().
+    getFileSystem().getConf().set(IOSTATISTICS_LOGGING_LEVEL,
+        IOSTATISTICS_LOGGING_LEVEL_INFO);
   }
 
   /**
