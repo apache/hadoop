@@ -417,7 +417,6 @@ abstract class SocketIOWithTimeout {
     }
     
     private static AtomicBoolean trimming = new AtomicBoolean(false);
-    private static volatile long lastTrimTime = Time.now();
 
     /**
      * Closes selectors that are idle for IDLE_TIMEOUT (10 sec). It does not
@@ -441,7 +440,6 @@ abstract class SocketIOWithTimeout {
         }
       }
 
-      lastTrimTime = now;
       trimming.set(false);
     }
   }
