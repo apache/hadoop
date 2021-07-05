@@ -238,10 +238,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // fCursor is the current file pointer. Thus maximum we can
       // go back and read from buffer is fCursor - limit.
       // There maybe case that we read less than requested data.
-      long bytesPresentInBuffer = fCursor - limit;
-      if (nextReadPos >= bytesPresentInBuffer && nextReadPos <= fCursor) {
+      long filePosAtStartOfBuffer = fCursor - limit;
+      if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
         // Determining position in buffer from where data is to be read.
-        bCursor = (int) (nextReadPos - bytesPresentInBuffer);
+        bCursor = (int) (nextReadPos - filePosAtStartOfBuffer);
 
         // When bCursor == limit, buffer will be filled again.
         // So in this case we are not actually reading from buffer.
