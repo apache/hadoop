@@ -127,6 +127,7 @@ public class ITestAbfsInputStreamStatistics
        */
       for (int i = 0; i < OPERATIONS; i++) {
         in.seek(0);
+        in.read();
         in.seek(ONE_MB);
       }
 
@@ -155,7 +156,7 @@ public class ITestAbfsInputStreamStatistics
        * are in buffer.
        *
        * seekInBuffer - Since all seeks were in buffer, the seekInBuffer
-       * would be equal to 2 * OPERATIONS.
+       * would be equal to OPERATIONS.
        *
        */
       assertEquals("Mismatch in seekOps value", 2 * OPERATIONS,
@@ -168,7 +169,7 @@ public class ITestAbfsInputStreamStatistics
           OPERATIONS * ONE_MB, stats.getBytesBackwardsOnSeek());
       assertEquals("Mismatch in bytesSkippedOnSeek value",
           0, stats.getBytesSkippedOnSeek());
-      assertEquals("Mismatch in seekInBuffer value", 2 * OPERATIONS,
+      assertEquals("Mismatch in seekInBuffer value", OPERATIONS,
           stats.getSeekInBuffer());
 
       in.close();
@@ -260,6 +261,7 @@ public class ITestAbfsInputStreamStatistics
             .withReadBufferSize(getConfiguration().getReadBufferSize())
             .withReadAheadQueueDepth(getConfiguration().getReadAheadQueueDepth())
             .withStreamStatistics(null)
+            .withReadAheadRange(getConfiguration().getReadAheadRange())
             .build();
 
     AbfsOutputStream out = null;
