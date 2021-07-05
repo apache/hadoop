@@ -413,8 +413,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   public void testSequentialReadAfterReverseSeekPerformance()
           throws Exception {
-    Path testPath = getUniquePath(TEST_FILE_PREFIX +
-        "_testSequentialReadAfterReverseSeekPerformance");
+    Path testPath = getUniquePath(
+        TEST_FILE_PREFIX + "_testSequentialReadAfterReverseSeekPerformance");
     assumeHugeFileExists(testPath);
     final int maxAttempts = 10;
     final double maxAcceptableRatio = 1.01;
