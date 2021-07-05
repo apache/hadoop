@@ -685,6 +685,9 @@
       fs.azure.account.key.*
       fs.azure.oauth2.*
       fs.adl.oauth2.*
+      fs.gs.encryption.*
+      fs.gs.proxy.*
+      fs.gs.auth.*
       credential$
       oauth.*secret
       oauth.*password
@@ -1068,6 +1071,15 @@
   <value>org.apache.hadoop.fs.http.HttpFileSystem</value>
   <description>The HttpFileSystem for view file system overload scheme
    when child file system and ViewFSOverloadScheme's schemes are http.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.gs.impl</name>
+  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
+  <description>The GoogleHadoopFS/Google Cloud Storage file system for view
+   file system overload scheme when child file system and ViewFSOverloadScheme's
+   schemes are gs.
   </description>
 </property>
 
@@ -2264,6 +2276,13 @@
     This setting provides better performance compared to blob-specific saskeys.
   </description>
 </property>
+
+<property>
+  <name>fs.AbstractFileSystem.gs.impl</name>
+  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
+  <description>The AbstractFileSystem for gs: uris.</description>
+</property>
+
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
