@@ -253,7 +253,7 @@ public class NameNodeHttpServer {
     httpServer.addInternalServlet(IsNameNodeActiveServlet.SERVLET_NAME,
         IsNameNodeActiveServlet.PATH_SPEC,
         IsNameNodeActiveServlet.class);
-    httpServer.addInternalServlet("topology",
+    httpServer.addInternalServlet(NetworkTopologyServlet.SERVLET_NAME,
         NetworkTopologyServlet.PATH_SPEC, NetworkTopologyServlet.class);
   }
 

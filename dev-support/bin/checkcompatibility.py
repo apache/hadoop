@@ -175,7 +175,7 @@ def run_java_acc(src_name, src_jars, dst_name, dst_jars, annotations):
 
   if annotations is not None:
     annotations_path = os.path.join(get_scratch_dir(), "annotations.txt")
-    with file(annotations_path, "w") as f:
+    with open(annotations_path, "w") as f:
       for ann in annotations:
         print(ann, file=f)
     args += ["-annotations-list", annotations_path]

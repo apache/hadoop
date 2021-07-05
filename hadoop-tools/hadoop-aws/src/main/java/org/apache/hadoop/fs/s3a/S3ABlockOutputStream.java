@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
@@ -55,12 +56,12 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
-import org.apache.hadoop.fs.s3a.impl.LogExactlyOnce;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Progressable;
 
 import static java.util.Objects.requireNonNull;
@@ -134,6 +135,8 @@ class S3ABlockOutputStream extends OutputStream implements
 
   /**
    * Write operation helper; encapsulation of the filesystem operations.
+   * This contains the audit span for the operation, and activates/deactivates
+   * it within calls.
    */
   private final WriteOperations writeOperationHelper;
 
@@ -393,6 +396,7 @@ class S3ABlockOutputStream extends OutputStream implements
         final List<PartETag> partETags =
             multiPartUpload.waitForAllPartUploads();
         bytes = bytesSubmitted;
+
         // then complete the operation
         if (putTracker.aboutToComplete(multiPartUpload.getUploadId(),
             partETags,
@@ -777,6 +781,12 @@ class S3ABlockOutputStream extends OutputStream implements
             uploadData.getUploadStream(),
             uploadData.getFile(),
             0L);
+      } catch (SdkBaseException aws) {
+        // catch and translate
+        IOException e = translateException("upload", key, aws);
+        // failure to start the upload.
+        noteUploadFailure(e);
+        throw e;
       } catch (IOException e) {
         // failure to start the upload.
         noteUploadFailure(e);

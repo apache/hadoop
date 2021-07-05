@@ -19,8 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
@@ -33,6 +31,8 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 
 import org.slf4j.Logger;
 
@@ -81,7 +81,7 @@ class BPOfferService {
    * this can be null. If non-null, this must always refer to a member
    * of the {@link #bpServices} list.
    */
-  private BPServiceActor bpServiceToActive = null;
+  private volatile BPServiceActor bpServiceToActive = null;
   
   /**
    * The list of all actors for namenodes in this nameservice, regardless

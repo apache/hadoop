@@ -1104,8 +1104,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
     // check if the target is a slow node
     if (dataNodePeerStatsEnabled && excludeSlowNodesEnabled) {
-      Set<Node> nodes = DatanodeManager.getSlowNodes();
-      if (nodes.contains(node)) {
+      Set<String> slowNodesUuidSet = DatanodeManager.getSlowNodesUuidSet();
+      if (slowNodesUuidSet.contains(node.getDatanodeUuid())) {
         logNodeIsNotChosen(node, NodeNotChosenReason.NODE_SLOW);
         return false;
       }

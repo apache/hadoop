@@ -23,14 +23,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+
 /**
  * A subclass of {@link AbstractStoreOperation} which
  * provides a method {@link #execute()} that may be invoked
  * exactly once.
+ * It declares itself a {@code CallableRaisingIOE} and
+ * can be handed straight to methods which take those
+ * as parameters.
  * @param <T> return type of executed operation.
  */
 public abstract class ExecutingStoreOperation<T>
-    extends AbstractStoreOperation {
+    extends AbstractStoreOperation
+    implements CallableRaisingIOE<T> {
 
   /**
    * Used to stop any re-entrancy of the rename.
@@ -39,11 +46,34 @@ public abstract class ExecutingStoreOperation<T>
   private final AtomicBoolean executed = new AtomicBoolean(false);
 
   /**
-   * constructor.
+   * Constructor.
+   * Picks up the active audit span from the store context and
+   * stores it for later.
    * @param storeContext store context.
    */
   protected ExecutingStoreOperation(final StoreContext storeContext) {
-    super(storeContext);
+    this(storeContext, storeContext.getActiveAuditSpan());
+  }
+
+  /**
+   * Constructor.
+   * @param storeContext store context.
+   * @param auditSpan active span
+   */
+  protected ExecutingStoreOperation(
+      final StoreContext storeContext,
+      final AuditSpan auditSpan) {
+    super(storeContext, auditSpan);
+  }
+
+  /**
+   * Apply calls {@link #execute()}.
+   * @return the result.
+   * @throws IOException IO problem
+   */
+  @Override
+  public final T apply() throws IOException {
+    return execute();
   }
 
   /**
@@ -53,17 +83,19 @@ public abstract class ExecutingStoreOperation<T>
    * @return the result.
    * @throws IOException IO problem
    */
-  public abstract T execute() throws IOException ;
+  public abstract T execute() throws IOException;
 
   /**
    * Check that the operation has not been invoked twice.
    * This is an atomic check.
+   * After the check: activates the span.
    * @throws IllegalStateException on a second invocation.
    */
   protected void executeOnlyOnce() {
     Preconditions.checkState(
         !executed.getAndSet(true),
         "Operation attempted twice");
+    activateAuditSpan();
   }
 
 }

@@ -124,4 +124,10 @@ public final class InternalCommitterConstants {
       "Job/task context does not contain a unique ID in "
           + SPARK_WRITE_UUID;
 
+  /**
+   * The MR job ID; copies from MRJobConfig so that it can be
+   * referred to without needing hadoop-mapreduce on the classpath.
+   */
+  public static final String MR_JOB_ID = "mapreduce.job.id";
+
 }

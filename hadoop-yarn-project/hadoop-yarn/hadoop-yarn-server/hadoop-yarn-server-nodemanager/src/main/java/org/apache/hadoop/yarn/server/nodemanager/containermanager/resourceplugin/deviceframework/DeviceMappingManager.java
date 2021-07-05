@@ -21,9 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -33,6 +31,8 @@ import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.DevicePluginScheduler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -207,7 +207,7 @@ public class DeviceMappingManager {
       }
 
       return new DeviceAllocation(resourceName, assignedDevices,
-          Sets.difference(allowedDevices, assignedDevices));
+          Sets.differenceInTreeSets(allowedDevices, assignedDevices));
     }
     return new DeviceAllocation(resourceName, null,
         allAllowedDevices.get(resourceName));
@@ -327,7 +327,7 @@ public class DeviceMappingManager {
       }
       // Pass in unmodifiable set
       Set<Device> dpsAllocated = dps.allocateDevices(
-          Sets.difference(allowed, used.keySet()),
+          Sets.differenceInTreeSets(allowed, used.keySet()),
           count,
           ImmutableMap.copyOf(env));
       if (dpsAllocated.size() != count) {

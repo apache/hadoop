@@ -72,7 +72,7 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.util.functional.CommonCallableSupplier.submit;

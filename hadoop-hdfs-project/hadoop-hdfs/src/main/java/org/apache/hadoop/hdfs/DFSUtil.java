@@ -73,6 +73,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -106,8 +108,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 @InterfaceAudience.Private
@@ -156,23 +156,36 @@ public class DFSUtil {
 
   /**
    * Comparator for sorting DataNodeInfo[] based on
-   * stale, decommissioned and entering_maintenance states.
-   * Order: live {@literal ->} stale {@literal ->} entering_maintenance
-   * {@literal ->} decommissioned
+   * slow, stale, entering_maintenance and decommissioned states.
+   * Order: live {@literal ->} slow {@literal ->} stale {@literal ->}
+   * entering_maintenance {@literal ->} decommissioned
    */
   @InterfaceAudience.Private 
-  public static class ServiceAndStaleComparator extends ServiceComparator {
+  public static class StaleAndSlowComparator extends ServiceComparator {
+    private final boolean avoidStaleDataNodesForRead;
     private final long staleInterval;
+    private final boolean avoidSlowDataNodesForRead;
+    private final Set<String> slowNodesUuidSet;
 
     /**
      * Constructor of ServiceAndStaleComparator
-     * 
+     * @param avoidStaleDataNodesForRead
+     *          Whether or not to avoid using stale DataNodes for reading.
      * @param interval
      *          The time interval for marking datanodes as stale is passed from
-     *          outside, since the interval may be changed dynamically
+     *          outside, since the interval may be changed dynamically.
+     * @param avoidSlowDataNodesForRead
+     *          Whether or not to avoid using slow DataNodes for reading.
+     * @param slowNodesUuidSet
+     *          Slow DataNodes UUID set.
      */
-    public ServiceAndStaleComparator(long interval) {
+    public StaleAndSlowComparator(
+        boolean avoidStaleDataNodesForRead, long interval,
+        boolean avoidSlowDataNodesForRead, Set<String> slowNodesUuidSet) {
+      this.avoidStaleDataNodesForRead = avoidStaleDataNodesForRead;
       this.staleInterval = interval;
+      this.avoidSlowDataNodesForRead = avoidSlowDataNodesForRead;
+      this.slowNodesUuidSet = slowNodesUuidSet;
     }
 
     @Override
@@ -183,9 +196,22 @@ public class DFSUtil {
       }
 
       // Stale nodes will be moved behind the normal nodes
-      boolean aStale = a.isStale(staleInterval);
-      boolean bStale = b.isStale(staleInterval);
-      return aStale == bStale ? 0 : (aStale ? 1 : -1);
+      if (avoidStaleDataNodesForRead) {
+        boolean aStale = a.isStale(staleInterval);
+        boolean bStale = b.isStale(staleInterval);
+        ret = aStale == bStale ? 0 : (aStale ? 1 : -1);
+        if (ret != 0) {
+          return ret;
+        }
+      }
+
+      // Slow nodes will be moved behind the normal nodes
+      if (avoidSlowDataNodesForRead) {
+        boolean aSlow = slowNodesUuidSet.contains(a.getDatanodeUuid());
+        boolean bSlow = slowNodesUuidSet.contains(b.getDatanodeUuid());
+        ret = aSlow == bSlow ? 0 : (aSlow ? 1 : -1);
+      }
+      return ret;
     }
   }    
     

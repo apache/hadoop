@@ -282,11 +282,10 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----13---> <-------17------> <----13-----> <------17------->
-        "    SSD_QUOTA     REM_SSD_QUOTA    DISK_QUOTA    REM_DISK_QUOTA " +
-        // <----13---> <-------17------>
-        "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
-        " NVDIMM_QUOTA  REM_NVDIMM_QUOTA " +
+        // <----14----> <-------18-------> <-----14-----> <-------18------->
+        "     SSD_QUOTA      REM_SSD_QUOTA     DISK_QUOTA     REM_DISK_QUOTA " +
+        " ARCHIVE_QUOTA  REM_ARCHIVE_QUOTA PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
+        "  NVDIMM_QUOTA   REM_NVDIMM_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -311,8 +310,8 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----13---> <-------17------>
-        "    SSD_QUOTA     REM_SSD_QUOTA " +
+        // <----14----> <-------18------->
+        "     SSD_QUOTA      REM_SSD_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -337,12 +336,12 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----13---> <-------17------>
-        "    SSD_QUOTA     REM_SSD_QUOTA " +
-        "   DISK_QUOTA    REM_DISK_QUOTA " +
-        "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA " +
+        // <----14----> <-------18------->
+        "     SSD_QUOTA      REM_SSD_QUOTA " +
+        "    DISK_QUOTA     REM_DISK_QUOTA " +
+        " ARCHIVE_QUOTA  REM_ARCHIVE_QUOTA " +
         "PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
-        " NVDIMM_QUOTA  REM_NVDIMM_QUOTA " +
+        "  NVDIMM_QUOTA   REM_NVDIMM_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -405,9 +404,9 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----13---> <------17------->
-        "    SSD_QUOTA     REM_SSD_QUOTA " +
-        "   DISK_QUOTA    REM_DISK_QUOTA " +
+        // <----14----> <------18-------->
+        "     SSD_QUOTA      REM_SSD_QUOTA " +
+        "    DISK_QUOTA     REM_DISK_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);

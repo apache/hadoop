@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,18 +43,16 @@ import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
+import org.apache.hadoop.util.Lists;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 
 public class TestNNStorageRetentionManager {
@@ -306,7 +305,7 @@ public class TestNNStorageRetentionManager {
     Mockito.verify(mockPurger, Mockito.atLeast(0))
       .markStale(staleLogsCaptor.capture());
 
-    Set<String> capturedPaths = Sets.newLinkedHashSet();
+    Set<String> capturedPaths = new LinkedHashSet<>();
     // Check images
     for (FSImageFile captured : imagesPurgedCaptor.getAllValues()) {
       capturedPaths.add(fileToPath(captured.getFile()));
@@ -336,9 +335,9 @@ public class TestNNStorageRetentionManager {
 
   private class TestCaseDescription {
     private final Map<File, FakeRoot> dirRoots = Maps.newLinkedHashMap();
-    private final Set<File> expectedPurgedLogs = Sets.newLinkedHashSet();
-    private final Set<File> expectedPurgedImages = Sets.newLinkedHashSet();
-    private final Set<File> expectedStaleLogs = Sets.newLinkedHashSet();
+    private final Set<File> expectedPurgedLogs = new LinkedHashSet<>();
+    private final Set<File> expectedPurgedImages = new LinkedHashSet<>();
+    private final Set<File> expectedStaleLogs = new LinkedHashSet<>();
 
     private class FakeRoot {
       final NameNodeDirType type;

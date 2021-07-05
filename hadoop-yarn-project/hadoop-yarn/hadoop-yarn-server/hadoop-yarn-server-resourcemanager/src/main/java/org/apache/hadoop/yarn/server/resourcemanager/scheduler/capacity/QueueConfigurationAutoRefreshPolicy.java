@@ -140,7 +140,7 @@ public class QueueConfigurationAutoRefreshPolicy
           LOG.error("Can't refresh queue: " + e);
           if (!lastReloadAttemptFailed) {
             LOG.error("Failed to reload capacity scheduler config file - " +
-                "will use existing conf.", e.getMessage());
+                "will use existing conf. Message: {}", e.getMessage());
           }
           lastReloadAttempt = clock.getTime();
           lastReloadAttemptFailed = true;

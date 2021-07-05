@@ -173,7 +173,7 @@ public class TestCrcCorruption {
       final DataNode dn = cluster.getDataNodes().get(dnIdx);
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       List<ReplicaInfo> replicas =
-          dn.getFSDataset().getSortedFinalizedBlocks(bpid);
+          dn.getFSDataset().getFinalizedBlocks(bpid);
       assertTrue("Replicas do not exist", !replicas.isEmpty());
 
       for (int idx = 0; idx < replicas.size(); idx++) {

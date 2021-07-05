@@ -23,13 +23,17 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import com.google.gson.Gson;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+
+import static org.apache.hadoop.yarn.util.StringHelper.PATH_JOINER;
 
 @XmlRootElement(name = "appAttempt")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -51,8 +55,8 @@ public class AppAttemptInfo {
   public AppAttemptInfo() {
   }
 
-  public AppAttemptInfo(ResourceManager rm, RMAppAttempt attempt, String user,
-      String schemePrefix) {
+  public AppAttemptInfo(ResourceManager rm, RMAppAttempt attempt,
+      Boolean hasAccess, String user, String schemePrefix) {
     this.startTime = 0;
     this.containerId = "";
     this.nodeHttpAddress = "";
@@ -64,15 +68,29 @@ public class AppAttemptInfo {
       this.id = attempt.getAppAttemptId().getAttemptId();
       this.startTime = attempt.getStartTime();
       this.finishedTime = attempt.getFinishTime();
+      this.appAttemptState = attempt.getAppAttemptState();
+      this.appAttemptId = attempt.getAppAttemptId().toString();
       Container masterContainer = attempt.getMasterContainer();
-      if (masterContainer != null) {
+      if (masterContainer != null && hasAccess) {
         this.containerId = masterContainer.getId().toString();
         this.nodeHttpAddress = masterContainer.getNodeHttpAddress();
         this.nodeId = masterContainer.getNodeId().toString();
-        this.logsLink = WebAppUtils.getRunningLogURL(schemePrefix
-            + masterContainer.getNodeHttpAddress(),
-            masterContainer.getId().toString(), user);
 
+        Configuration conf = rm.getRMContext().getYarnConfiguration();
+        String logServerUrl = conf.get(YarnConfiguration.YARN_LOG_SERVER_URL);
+        if ((this.appAttemptState == RMAppAttemptState.FAILED ||
+            this.appAttemptState == RMAppAttemptState.FINISHED ||
+            this.appAttemptState == RMAppAttemptState.KILLED) &&
+            logServerUrl != null) {
+          this.logsLink = PATH_JOINER.join(logServerUrl,
+               masterContainer.getNodeId().toString(),
+               masterContainer.getId().toString(),
+               masterContainer.getId().toString(), user);
+        } else {
+          this.logsLink = WebAppUtils.getRunningLogURL(schemePrefix
+               + masterContainer.getNodeHttpAddress(),
+               masterContainer.getId().toString(), user);
+        }
         Gson gson = new Gson();
         this.exportPorts = gson.toJson(masterContainer.getExposedPorts());
 
@@ -90,8 +108,6 @@ public class AppAttemptInfo {
           }
         }
       }
-      this.appAttemptId = attempt.getAppAttemptId().toString();
-      this.appAttemptState = attempt.getAppAttemptState();
     }
   }
 

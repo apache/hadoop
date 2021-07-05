@@ -57,6 +57,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -65,7 +66,6 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;

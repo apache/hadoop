@@ -29,13 +29,18 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -53,12 +58,14 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.TestFsck;
 import org.apache.hadoop.hdfs.tools.GetGroups;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -489,6 +496,117 @@ public class TestObserverNode {
     assertTrue(result.contains("The filesystem under path '/' is CORRUPT"));
   }
 
+  /**
+   * The test models the race of two mkdirs RPC calls on the same path to
+   * Active NameNode. The first arrived call will journal a mkdirs transaction.
+   * The subsequent call hitting the NameNode before the mkdirs transaction is
+   * synced will see that the directory already exists, but will obtain
+   * lastSeenStateId smaller than the txId of the mkdirs transaction
+   * since the latter hasn't been synced yet.
+   * This causes stale read from Observer for the second client.
+   * See HDFS-15915.
+   */
+  @Test
+  public void testMkdirsRaceWithObserverRead() throws Exception {
+    dfs.mkdir(testPath, FsPermission.getDefault());
+    assertSentTo(0);
+    dfsCluster.rollEditLogAndTail(0);
+    dfs.getFileStatus(testPath);
+    assertSentTo(2);
+
+    // Create a spy on FSEditLog, which delays MkdirOp transaction by 100 mec
+    FSEditLog spyEditLog = NameNodeAdapter.spyDelayMkDirTransaction(
+        dfsCluster.getNameNode(0), 100);
+
+    final int numThreads = 4;
+    ClientState[] clientStates = new ClientState[numThreads];
+    final ExecutorService threadPool =
+        HadoopExecutors.newFixedThreadPool(numThreads);
+    final Future<?>[] futures = new Future<?>[numThreads];
+
+    Configuration conf2 = new Configuration(conf);
+    // Disable FS cache so that different DFS clients are used
+    conf2.setBoolean("fs.hdfs.impl.disable.cache", true);
+
+    for (int i = 0; i < numThreads; i++) {
+      clientStates[i] = new ClientState();
+      futures[i] = threadPool.submit(new MkDirRunner(conf2, clientStates[i]));
+    }
+
+    Thread.sleep(150); // wait until mkdir is logged
+    long activStateId =
+        dfsCluster.getNameNode(0).getFSImage().getLastAppliedOrWrittenTxId();
+    dfsCluster.rollEditLogAndTail(0);
+    boolean finished = true;
+    // wait for all dispatcher threads to finish
+    for (Future<?> future : futures) {
+      try {
+        future.get();
+      } catch (ExecutionException e) {
+        finished = false;
+        LOG.warn("MkDirRunner thread failed", e.getCause());
+      }
+    }
+    assertTrue("Not all threads finished", finished);
+    threadPool.shutdown();
+
+    assertEquals("Active and Observer stateIds don't match",
+        dfsCluster.getNameNode(0).getFSImage().getLastAppliedOrWrittenTxId(),
+        dfsCluster.getNameNode(2).getFSImage().getLastAppliedOrWrittenTxId());
+    for (int i = 0; i < numThreads; i++) {
+      assertTrue("Client #" + i
+          + " lastSeenStateId=" + clientStates[i].lastSeenStateId
+          + " activStateId=" + activStateId
+          + "\n" + clientStates[i].fnfe,
+          clientStates[i].lastSeenStateId >= activStateId &&
+          clientStates[i].fnfe == null);
+    }
+
+    // Restore edit log
+    Mockito.reset(spyEditLog);
+  }
+
+  static class ClientState {
+    private long lastSeenStateId = -7;
+    private FileNotFoundException fnfe;
+  }
+
+  static class MkDirRunner implements Runnable {
+    private static final Path DIR_PATH =
+        new Path("/TestObserverNode/testMkdirsRaceWithObserverRead");
+
+    private DistributedFileSystem fs;
+    private ClientState clientState;
+
+    MkDirRunner(Configuration conf, ClientState cs) throws IOException {
+      super();
+      fs = (DistributedFileSystem) FileSystem.get(conf);
+      clientState = cs;
+    }
+
+    @Override
+    public void run() {
+      try {
+        fs.mkdirs(DIR_PATH);
+        clientState.lastSeenStateId = HATestUtil.getLastSeenStateId(fs);
+        assertSentTo(fs, 0);
+
+        FileStatus stat = fs.getFileStatus(DIR_PATH);
+        assertSentTo(fs, 2);
+        assertTrue("Should be a directory", stat.isDirectory());
+      } catch (FileNotFoundException ioe) {
+        clientState.fnfe = ioe;
+      } catch (Exception e) {
+        fail("Unexpected exception: " + e);
+      }
+    }
+  }
+
+  private static void assertSentTo(DistributedFileSystem fs, int nnIdx)
+      throws IOException {
+    assertTrue("Request was not sent to the expected namenode " + nnIdx,
+        HATestUtil.isSentToAnyOfNameNodes(fs, dfsCluster, nnIdx));
+  }
 
   private void assertSentTo(int nnIdx) throws IOException {
     assertTrue("Request was not sent to the expected namenode " + nnIdx,

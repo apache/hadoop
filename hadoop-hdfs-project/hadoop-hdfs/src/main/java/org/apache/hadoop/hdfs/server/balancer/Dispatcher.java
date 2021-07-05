@@ -398,6 +398,7 @@ public class Dispatcher {
         LOG.info("Successfully moved " + this);
       } catch (IOException e) {
         LOG.warn("Failed to move " + this, e);
+        nnc.getBlocksFailed().incrementAndGet();
         target.getDDatanode().setHasFailure();
         // Check that the failure is due to block pinning errors.
         if (e instanceof BlockPinningException) {

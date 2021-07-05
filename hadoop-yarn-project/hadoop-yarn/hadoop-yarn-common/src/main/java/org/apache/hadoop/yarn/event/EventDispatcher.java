@@ -161,4 +161,8 @@ public class EventDispatcher<T extends Event> extends
   protected boolean isStopped() {
     return this.stopped;
   }
+
+  public int getEventQueueSize() {
+    return eventQueue.size();
+  }
 }

@@ -38,9 +38,7 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,9 +79,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   private static HttpServer2 server;
   private static final int MAX_THREADS = 10;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-  
   @SuppressWarnings("serial")
   public static class EchoMapServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
@@ -368,11 +363,11 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @Test
-  public void testHttpResonseInvalidValueType() throws Exception {
+  public void testHttpResonseInvalidValueType() {
     Configuration conf = new Configuration();
     boolean xFrameEnabled = true;
-    exception.expect(IllegalArgumentException.class);
-    createServer(xFrameEnabled, "Hadoop", conf);
+    assertThrows(IllegalArgumentException.class, () ->
+        createServer(xFrameEnabled, "Hadoop", conf));
   }
 
 

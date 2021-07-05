@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -46,9 +47,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
-
 
 /**
  * Unit tests for FSQueueConverter.
@@ -151,7 +149,7 @@ public class TestFSQueueConverter {
     converter.convertQueueHierarchy(rootQueue);
 
     // root children
-    assertEquals("root children", "default,admins,users,misc",
+    assertEquals("root children", "admins,users,misc,default",
         csConfig.get(PREFIX + "root.queues"));
 
     // root.admins children

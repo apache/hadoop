@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 import java.io.IOException;
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.shell.PathData;
 import org.junit.Rule;
@@ -33,7 +34,7 @@ import org.junit.Test;
 public class TestAnd {
 
   @Rule
-  public Timeout globalTimeout = new Timeout(10000);
+  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
   // test all expressions passing
   @Test

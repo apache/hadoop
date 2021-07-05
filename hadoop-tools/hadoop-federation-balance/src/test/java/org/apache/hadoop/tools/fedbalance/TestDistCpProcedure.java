@@ -98,7 +98,7 @@ public class TestDistCpProcedure {
     }
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 90000)
   public void testSuccessfulDistCpProcedure() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =

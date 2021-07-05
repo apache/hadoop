@@ -1081,4 +1081,16 @@ public final class Constants {
    */
   public static final String XA_HEADER_PREFIX = "header.";
 
+  /**
+   * AWS S3 region for the bucket. When set bypasses the construction of
+   * region through endpoint url.
+   */
+  public static final String AWS_REGION = "fs.s3a.endpoint.region";
+
+  /**
+   * The special S3 region which can be used to talk to any bucket.
+   * Value {@value}.
+   */
+  public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
+
 }

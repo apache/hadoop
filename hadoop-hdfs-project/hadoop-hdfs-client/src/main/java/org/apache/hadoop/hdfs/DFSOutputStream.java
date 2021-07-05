@@ -483,9 +483,10 @@ public class DFSOutputStream extends FSOutputSummer
       currentPacket = createPacket(packetSize, chunksPerPacket, getStreamer()
           .getBytesCurBlock(), getStreamer().getAndIncCurrentSeqno(), false);
       DFSClient.LOG.debug("WriteChunk allocating new packet seqno={},"
-              + " src={}, packetSize={}, chunksPerPacket={}, bytesCurBlock={}",
+              + " src={}, packetSize={}, chunksPerPacket={}, bytesCurBlock={},"
+              + " output stream={}",
           currentPacket.getSeqno(), src, packetSize, chunksPerPacket,
-          getStreamer().getBytesCurBlock() + ", " + this);
+          getStreamer().getBytesCurBlock(), this);
     }
   }
 

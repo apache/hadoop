@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
@@ -58,6 +59,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
 /**
  * This is a test suite designed to verify that directory markers do
@@ -223,7 +225,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     assume("unguarded FS only",
         !fs.hasMetadataStore());
     s3client = fs.getAmazonS3ClientForTesting("markers");
-
     bucket = fs.getBucket();
     Path base = new Path(methodPath(), "base");
 
@@ -653,7 +654,9 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   }
 
   /**
-   * Execute an operation; transate AWS exceptions.
+   * Execute an operation; translate AWS exceptions.
+   * Wraps the operation in an audit span, so that low-level
+   * calls can be safely made.
    * @param op operation
    * @param call call to make
    * @param <T> returned type
@@ -662,7 +665,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    */
   private <T> T exec(String op, Callable<T> call) throws Exception {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    try {
+    try (AuditSpan span = getSpanSource().createSpan(op, null, null)) {
       return call.call();
     } catch (AmazonClientException ex) {
       throw S3AUtils.translateException(op, "", ex);
@@ -749,9 +752,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
       RemoteIterator<T> status) throws IOException {
 
     List<FileStatus> l = new ArrayList<>();
-    while (status.hasNext()) {
-      l.add(status.next());
-    }
+    foreach(status, st -> l.add(st));
     return dump(l);
   }
 

@@ -62,7 +62,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsClient abfsClient =  fs.getAbfsClient();
 
     try {
-      AbfsRestOperation op = abfsClient.listPath("/", true, LIST_MAX_RESULTS, "===========");
+      AbfsRestOperation op = abfsClient
+          .listPath("/", true, LIST_MAX_RESULTS, "===========",
+              getTestTracingContext(fs, true));
       Assert.assertTrue(false);
     } catch (AbfsRestOperationException ex) {
       Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
@@ -135,7 +137,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private List<ListResultEntrySchema> listPath(String directory)
       throws IOException {
     return getFileSystem().getAbfsClient()
-        .listPath(directory, false, getListMaxResults(), null).getResult()
+        .listPath(directory, false, getListMaxResults(), null,
+            getTestTracingContext(getFileSystem(), true)).getResult()
         .getListResultSchema().paths();
   }
 
