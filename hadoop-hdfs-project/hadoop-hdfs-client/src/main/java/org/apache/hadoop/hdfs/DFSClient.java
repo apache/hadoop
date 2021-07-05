@@ -2648,7 +2648,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * set the modification and access time of a file
+   * set the modification and access time of a file.
    *
    * @see ClientProtocol#setTimes(String, long, long)
    */
