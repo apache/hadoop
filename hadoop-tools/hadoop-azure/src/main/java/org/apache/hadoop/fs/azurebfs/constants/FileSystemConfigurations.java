@@ -111,6 +111,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_DELETE_CONSIDERED_IDEMPOTENT = true;
   public static final int DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS = 5 * 60 * 1000; // 5 mins
 
+  public static final int STREAM_ID_LEN = 12;
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
 
   private FileSystemConfigurations() {}

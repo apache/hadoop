@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
@@ -133,26 +134,29 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
 
     // Use abfsStore in this test to verify the  ERROR code in AbfsRestOperationException
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+    TracingContext tracingContext = getTestTracingContext(fs, true);
     // TEST READ FS
-    Map<String, String> properties = abfsStore.getFilesystemProperties();
+    Map<String, String> properties = abfsStore.getFilesystemProperties(tracingContext);
     // TEST READ FOLDER
     assertTrue(fs.exists(existedFolderPath));
 
     // TEST DELETE FOLDER
     try {
-      abfsStore.delete(existedFolderPath, true);
+      abfsStore.delete(existedFolderPath, true, tracingContext);
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
     }
 
     // TEST READ  FILE
-    try (InputStream inputStream = abfsStore.openFileForRead(existedFilePath, null)) {
+    try (InputStream inputStream = abfsStore
+        .openFileForRead(existedFilePath, null, tracingContext)) {
       assertTrue(inputStream.read() != 0);
     }
 
     // TEST WRITE FILE
     try {
-      abfsStore.openFileForWrite(existedFilePath, fs.getFsStatistics(), true);
+      abfsStore.openFileForWrite(existedFilePath, fs.getFsStatistics(), true,
+          tracingContext);
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
     } finally {

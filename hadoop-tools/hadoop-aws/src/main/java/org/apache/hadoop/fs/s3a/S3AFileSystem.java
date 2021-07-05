@@ -713,6 +713,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Get FS Statistic for this S3AFS instance.
+   *
+   * @return FS statistic instance.
+   */
+  @VisibleForTesting
+  public FileSystem.Statistics getFsStatistics() {
+    return statistics;
+  }
+
+  /**
    * Get current listing instance.
    * @return this instance's listing.
    */

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.extdataset;
 
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 public class ExternalReplica implements Replica {
 
@@ -61,5 +62,10 @@ public class ExternalReplica implements Replica {
   @Override
   public boolean isOnTransientStorage() {
     return false;
+  }
+
+  @Override
+  public FsVolumeSpi getVolume() {
+    return null;
   }
 }
