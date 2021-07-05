@@ -154,7 +154,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
       remoteReadOperationsOldVal = remoteReadOperationsNewVal;
 
       // Seek backward such that data is read from remote.
-      newSeek -= 105;
+      newSeek -= 106;
       in.seek(newSeek);
       assertGetPosition(newSeek, in.getPos());
       assertDataAtPos(newSeek, (byte) in.read());
