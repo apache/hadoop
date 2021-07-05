@@ -433,7 +433,8 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
             response, "UTF8"))) {
-          for (String line; (line = reader.readLine()) != null; ) {
+          String line;
+          while ((line = reader.readLine()) != null) {
             JSONObject obj = new JSONObject(line);
             if (obj.has("token")) {
               reader.close();
