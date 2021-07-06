@@ -54,7 +54,9 @@ import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
@@ -175,6 +177,10 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private boolean isHealthy;
   private Timer compactionTimer;
 
+  private volatile Clock clock = SystemClock.getInstance();
+  @VisibleForTesting
+  protected NMLeveldbStateStoreOpDurations opDurations;
+
   /**
    * Map of containerID vs List of unknown key suffixes.
    */
@@ -183,6 +189,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   public NMLeveldbStateStoreService() {
     super(NMLeveldbStateStoreService.class.getName());
+    opDurations = NMLeveldbStateStoreOpDurations.getInstance();
   }
 
   @Override
@@ -446,6 +453,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainer(ContainerId containerId, int containerVersion,
       long startTime, StartContainerRequest startRequest) throws IOException {
+    long start = clock.getTime();
     String idStr = containerId.toString();
     LOG.debug("storeContainer: containerId= {}, startRequest= {}",
         idStr, startRequest);
@@ -473,6 +481,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerStateDuration(clock.getTime() - start);
   }
 
   @VisibleForTesting
@@ -486,6 +495,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainerQueued(ContainerId containerId) throws IOException {
+    long start = clock.getTime();
     LOG.debug("storeContainerQueued: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
@@ -496,10 +506,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerQueuedStateDuration(clock.getTime() - start);
   }
 
   private void removeContainerQueued(ContainerId containerId)
       throws IOException {
+    long start = clock.getTime();
     LOG.debug("removeContainerQueued: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
@@ -510,10 +522,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveContainerQueuedDuration(clock.getTime() - start);
   }
 
   @Override
   public void storeContainerPaused(ContainerId containerId) throws IOException {
+    long start = clock.getTime();
     LOG.debug("storeContainerPaused: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
@@ -524,11 +538,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerPausedStateDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void removeContainerPaused(ContainerId containerId)
       throws IOException {
+    long start = clock.getTime();
     LOG.debug("removeContainerPaused: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
@@ -539,11 +556,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveContainerPausedStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void storeContainerDiagnostics(ContainerId containerId,
       StringBuilder diagnostics) throws IOException {
+    long start = clock.getTime();
     LOG.debug("storeContainerDiagnostics: containerId={}, diagnostics=",
         containerId, diagnostics);
 
@@ -555,11 +574,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerDiagnosticsStateDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeContainerLaunched(ContainerId containerId)
       throws IOException {
+    long start = clock.getTime();
     LOG.debug("storeContainerLaunched: containerId={}", containerId);
 
     // Removing the container if queued for backward compatibility reasons
@@ -572,11 +594,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerLaunchedStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void storeContainerUpdateToken(ContainerId containerId,
       ContainerTokenIdentifier containerTokenIdentifier) throws IOException {
+    long start = clock.getTime();
     LOG.debug("storeContainerUpdateToken: containerId={}", containerId);
 
     String keyUpdateToken = CONTAINERS_KEY_PREFIX + containerId.toString()
@@ -600,11 +624,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerUpdateTokenStateDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeContainerKilled(ContainerId containerId)
       throws IOException {
+    long start = clock.getTime();
     LOG.debug("storeContainerKilled: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
@@ -615,11 +642,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerKilledStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void storeContainerCompleted(ContainerId containerId,
       int exitCode) throws IOException {
+    long start = clock.getTime();
     LOG.debug("storeContainerCompleted: containerId={}", containerId);
 
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
@@ -630,11 +659,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerCompletedStateDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeContainerRemainingRetryAttempts(ContainerId containerId,
       int remainingRetryAttempts) throws IOException {
+    long start = clock.getTime();
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_REMAIN_RETRIES_KEY_SUFFIX;
     try {
@@ -643,11 +675,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerRemainingRetryAttemptsDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeContainerRestartTimes(ContainerId containerId,
       List<Long> restartTimes) throws IOException {
+    long start = clock.getTime();
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_RESTART_TIMES_SUFFIX;
     try {
@@ -655,11 +690,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     } catch (DBException e) {
       throw new IOException(e);
     }
+    opDurations.addStoreContainerRestartTimesDuration(clock.getTime() - start);
   }
 
   @Override
   public void storeContainerWorkDir(ContainerId containerId,
       String workDir) throws IOException {
+    long start = clock.getTime();
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_WORK_DIR_KEY_SUFFIX;
     try {
@@ -668,11 +705,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerWorkDirStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void storeContainerLogDir(ContainerId containerId,
       String logDir) throws IOException {
+    long start = clock.getTime();
     String key = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_LOG_DIR_KEY_SUFFIX;
     try {
@@ -681,11 +720,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerLogDirStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void removeContainer(ContainerId containerId)
       throws IOException {
+    long start = clock.getTime();
     LOG.debug("removeContainer: containerId={}", containerId);
 
     String keyPrefix = CONTAINERS_KEY_PREFIX + containerId.toString();
@@ -719,6 +760,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveContainerStateDuration(clock.getTime() - start);
   }
 
 
@@ -758,15 +800,18 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public RecoveredApplicationsState loadApplicationsState()
       throws IOException {
+    long start = clock.getTime();
     RecoveredApplicationsState state = new RecoveredApplicationsState();
     state.it = new ApplicationStateIterator();
     cleanupDeprecatedFinishedApps();
+    opDurations.addLoadApplicationsStateDuration(clock.getTime() - start);
     return state;
   }
 
   @Override
   public void storeApplication(ApplicationId appId,
       ContainerManagerApplicationProto p) throws IOException {
+    long start = clock.getTime();
     LOG.debug("storeApplication: appId={}, proto={}", appId, p);
 
     String key = APPLICATIONS_KEY_PREFIX + appId;
@@ -776,13 +821,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreApplicationStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void removeApplication(ApplicationId appId)
       throws IOException {
+    long start = clock.getTime();
     LOG.debug("removeApplication: appId={}", appId);
-
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
@@ -796,6 +842,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveApplicationStateDuration(clock.getTime() - start);
   }
 
 
@@ -845,10 +892,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public RecoveredLocalizationState loadLocalizationState()
       throws IOException {
+    long start = clock.getTime();
     RecoveredLocalizationState state = new RecoveredLocalizationState();
     state.publicTrackerState = loadResourceTrackerState(
         LOCALIZATION_PUBLIC_KEY_PREFIX);
     state.it = new UserResourcesIterator();
+    opDurations.addLoadLocalizationStateDuration(clock.getTime() - start);
     return state;
   }
 
@@ -996,6 +1045,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void startResourceLocalization(String user, ApplicationId appId,
       LocalResourceProto proto, Path localPath) throws IOException {
+    long start = clock.getTime();
     String key = getResourceStartedKey(user, appId, localPath.toString());
     try {
       db.put(bytes(key), proto.toByteArray());
@@ -1003,11 +1053,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreStartResourceLocalizationDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void finishResourceLocalization(String user, ApplicationId appId,
       LocalizedResourceProto proto) throws IOException {
+    long start = clock.getTime();
     String localPath = proto.getLocalPath();
     String startedKey = getResourceStartedKey(user, appId, localPath);
     String completedKey = getResourceCompletedKey(user, appId, localPath);
@@ -1025,11 +1078,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreFinishResourceLocalizationDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void removeLocalizedResource(String user, ApplicationId appId,
       Path localPath) throws IOException {
+    long start = clock.getTime();
     String localPathStr = localPath.toString();
     String startedKey = getResourceStartedKey(user, appId, localPathStr);
     String completedKey = getResourceCompletedKey(user, appId, localPathStr);
@@ -1047,6 +1103,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveLocalizedResourceStateDuration(
+  clock.getTime() - start);
   }
 
   private String getResourceStartedKey(String user, ApplicationId appId,
@@ -1110,14 +1168,18 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public RecoveredDeletionServiceState loadDeletionServiceState()
       throws IOException {
+    long start = clock.getTime();
     RecoveredDeletionServiceState state = new RecoveredDeletionServiceState();
     state.it = new DeletionStateIterator();
+    opDurations.addLoadDeletionServiceStateDuration(
+  clock.getTime() - start);
     return state;
   }
 
   @Override
   public void storeDeletionTask(int taskId,
       DeletionServiceDeleteTaskProto taskProto) throws IOException {
+    long start = clock.getTime();
     String key = DELETION_TASK_KEY_PREFIX + taskId;
     try {
       db.put(bytes(key), taskProto.toByteArray());
@@ -1125,10 +1187,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addsStoreDeletionTaskStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void removeDeletionTask(int taskId) throws IOException {
+    long start = clock.getTime();
     String key = DELETION_TASK_KEY_PREFIX + taskId;
     try {
       db.delete(bytes(key));
@@ -1136,6 +1200,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveDeletionTaskStateDuration(clock.getTime() - start);
   }
 
   private MasterKey getMasterKey(String dbKey) throws IOException {
@@ -1196,36 +1261,48 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public RecoveredNMTokensState loadNMTokensState() throws IOException {
+    long start = clock.getTime();
     RecoveredNMTokensState state = new RecoveredNMTokensState();
     state.currentMasterKey = getMasterKey(NM_TOKENS_KEY_PREFIX
                                           + CURRENT_MASTER_KEY_SUFFIX);
     state.previousMasterKey = getMasterKey(NM_TOKENS_KEY_PREFIX
                                             + PREV_MASTER_KEY_SUFFIX);
     state.it = new NMTokensStateIterator();
+    opDurations.addLoadNMTokensStateDuration(clock.getTime() - start);
     return state;
   }
 
   @Override
   public void storeNMTokenCurrentMasterKey(MasterKey key)
       throws IOException {
+    long start = clock.getTime();
     storeMasterKey(NM_TOKENS_CURRENT_MASTER_KEY, key);
+    opDurations.addStoreNMTokenCurrentMasterKeyDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeNMTokenPreviousMasterKey(MasterKey key)
       throws IOException {
+    long start = clock.getTime();
     storeMasterKey(NM_TOKENS_PREV_MASTER_KEY, key);
+    opDurations.addStoreNMTokenPreviousMasterKeyDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeNMTokenApplicationMasterKey(
       ApplicationAttemptId attempt, MasterKey key) throws IOException {
+    long start = clock.getTime();
     storeMasterKey(NM_TOKENS_KEY_PREFIX + attempt, key);
+    opDurations.addStoreNMTokenApplicationMasterKeyDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void removeNMTokenApplicationMasterKey(
       ApplicationAttemptId attempt) throws IOException {
+    long start = clock.getTime();
     String key = NM_TOKENS_KEY_PREFIX + attempt;
     try {
       db.delete(bytes(key));
@@ -1233,6 +1310,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveNMTokenApplicationMasterKeyDuration(
+  clock.getTime() - start);
   }
 
   private MasterKey parseMasterKey(byte[] keyData) throws IOException {
@@ -1303,30 +1382,39 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public RecoveredContainerTokensState loadContainerTokensState()
       throws IOException {
+    long start = clock.getTime();
     RecoveredContainerTokensState state = new RecoveredContainerTokensState();
     state.currentMasterKey = getMasterKey(CONTAINER_TOKENS_KEY_PREFIX
         + CURRENT_MASTER_KEY_SUFFIX);
     state.previousMasterKey = getMasterKey(CONTAINER_TOKENS_KEY_PREFIX
         + PREV_MASTER_KEY_SUFFIX);
     state.it = new ContainerTokensStateIterator();
+    opDurations.addLoadContainerTokensStateDuration(clock.getTime() - start);
     return state;
   }
 
   @Override
   public void storeContainerTokenCurrentMasterKey(MasterKey key)
       throws IOException {
+    long start = clock.getTime();
     storeMasterKey(CONTAINER_TOKEN_SECRETMANAGER_CURRENT_MASTER_KEY, key);
+    opDurations.addStoreContainerTokenCurrentMasterKeyDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeContainerTokenPreviousMasterKey(MasterKey key)
       throws IOException {
+    long start = clock.getTime();
     storeMasterKey(CONTAINER_TOKEN_SECRETMANAGER_PREV_MASTER_KEY, key);
+    opDurations.addStoreContainerTokenPreviousMasterKeyDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeContainerToken(ContainerId containerId, Long expTime)
       throws IOException {
+    long start = clock.getTime();
     String key = CONTAINER_TOKENS_KEY_PREFIX + containerId;
     try {
       db.put(bytes(key), bytes(expTime.toString()));
@@ -1334,11 +1422,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreContainerTokenStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void removeContainerToken(ContainerId containerId)
       throws IOException {
+    long start = clock.getTime();
     String key = CONTAINER_TOKENS_KEY_PREFIX + containerId;
     try {
       db.delete(bytes(key));
@@ -1346,11 +1436,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveContainerTokenDuration(clock.getTime() - start);
   }
 
 
   @Override
   public RecoveredLogDeleterState loadLogDeleterState() throws IOException {
+    long start = clock.getTime();
     RecoveredLogDeleterState state = new RecoveredLogDeleterState();
     state.logDeleterMap = new HashMap<ApplicationId, LogDeleterProto>();
     LeveldbIterator iter = null;
@@ -1384,12 +1476,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         iter.close();
       }
     }
+    opDurations.addLoadLogDeleterStateDuration(clock.getTime() - start);
     return state;
   }
 
   @Override
   public void storeLogDeleter(ApplicationId appId, LogDeleterProto proto)
       throws IOException {
+    long start = clock.getTime();
     String key = getLogDeleterKey(appId);
     try {
       db.put(bytes(key), proto.toByteArray());
@@ -1397,10 +1491,12 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreLogDeleterStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void removeLogDeleter(ApplicationId appId) throws IOException {
+    long start = clock.getTime();
     String key = getLogDeleterKey(appId);
     try {
       db.delete(bytes(key));
@@ -1408,12 +1504,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveLogDeleterStateDuration(clock.getTime() - start);
   }
 
   @Override
   public void storeAssignedResources(Container container,
       String resourceType, List<Serializable> assignedResources)
       throws IOException {
+    long start = clock.getTime();
     if (LOG.isDebugEnabled()) {
       LOG.debug(
           "storeAssignedResources: containerId=" + container.getContainerId()
@@ -1437,7 +1535,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
-
+    opDurations.addStoreAssignedResourcesDuration(clock.getTime() - start);
     // update container resource mapping.
     updateContainerResourceMapping(container, resourceType, assignedResources);
   }
@@ -1492,6 +1590,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public RecoveredAMRMProxyState loadAMRMProxyState() throws IOException {
+    long start = clock.getTime();
     RecoveredAMRMProxyState result = new RecoveredAMRMProxyState();
     Set<String> unknownKeys = new HashSet<>();
     LeveldbIterator iter = null;
@@ -1562,7 +1661,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     } catch (DBException e) {
       throw new IOException(e);
     }
-
+    opDurations.addLoadAMRMProxyStateDuration(clock.getTime() - start);
     return result;
   }
 
@@ -1585,11 +1684,15 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeAMRMProxyCurrentMasterKey(MasterKey key) throws IOException {
+    long start = clock.getTime();
     storeMasterKey(AMRMPROXY_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX, key);
+    opDurations.addStoreAMRMProxyCurrentMasterKeyDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeAMRMProxyNextMasterKey(MasterKey key) throws IOException {
+    long start = clock.getTime();
     String dbkey = AMRMPROXY_KEY_PREFIX + NEXT_MASTER_KEY_SUFFIX;
     if (key == null) {
       // When key is null, delete the entry instead
@@ -1602,11 +1705,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       return;
     }
     storeMasterKey(dbkey, key);
+    opDurations.addStoreAMRMProxyNextMasterKeyDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void storeAMRMProxyAppContextEntry(ApplicationAttemptId attempt,
       String key, byte[] data) throws IOException {
+    long start = clock.getTime();
     String fullkey = AMRMPROXY_KEY_PREFIX + attempt + "/" + key;
     try {
       db.put(bytes(fullkey), data);
@@ -1614,11 +1720,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addStoreAMRMProxyAppContextEntryDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void removeAMRMProxyAppContextEntry(ApplicationAttemptId attempt,
       String key) throws IOException {
+    long start = clock.getTime();
     String fullkey = AMRMPROXY_KEY_PREFIX + attempt + "/" + key;
     try {
       db.delete(bytes(fullkey));
@@ -1626,11 +1735,14 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveAMRMProxyAppContextEntryDuration(
+  clock.getTime() - start);
   }
 
   @Override
   public void removeAMRMProxyAppContext(ApplicationAttemptId attempt)
       throws IOException {
+    long start = clock.getTime();
     Set<String> candidates = new HashSet<>();
     String keyPrefix = AMRMPROXY_KEY_PREFIX + attempt + "/";
     LeveldbIterator iter = null;
@@ -1664,6 +1776,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       markStoreUnHealthy(e);
       throw new IOException(e);
     }
+    opDurations.addRemoveAMRMProxyAppContextDuration(
+  clock.getTime() - start);
   }
 
   @Override
