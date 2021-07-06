@@ -501,8 +501,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Get a lease and start automatic renewal */
-  private void beginFileLease(final long inodeId, final DFSOutputStream out)
-      throws IOException {
+  private void beginFileLease(final long inodeId, final DFSOutputStream out) {
     synchronized (filesBeingWritten) {
       putFileBeingWritten(inodeId, out);
       LeaseRenewer renewer = getLeaseRenewer();
@@ -527,7 +526,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       }
     }
   }
-
 
   /** Put a file. Only called from LeaseRenewer, where proper locking is
    *  enforced to consistently update its local dfsclients array and
@@ -853,7 +851,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     public boolean isManaged(Token<?> token) throws IOException {
       return true;
     }
-
   }
 
   /**
@@ -886,7 +883,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return getLocatedBlocks(src, start, dfsClientConf.getPrefetchSize());
   }
 
-  /*
+  /**
    * This is just a wrapper around callGetBlockLocations, but non-static so that
    * we can stub it out for tests.
    */
@@ -1038,7 +1035,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       FileSystem.Statistics stats) throws IOException {
     return open(src, buffersize, verifyChecksum);
   }
-
 
   /**
    * Create an input stream that obtains a nodelist from the
@@ -1240,7 +1236,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return create(src, permission, flag, createParent, replication, blockSize,
         progress, buffersize, checksumOpt, favoredNodes, null);
   }
-
 
   /**
    * Same as {@link #create(String, FsPermission, EnumSet, boolean, short, long,
@@ -1606,6 +1601,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           SnapshotAccessControlException.class);
     }
   }
+
   /**
    * Rename file or directory.
    * @see ClientProtocol#rename2(String, String, Options.Rename...)
@@ -1678,7 +1674,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  /** Implemented using getFileInfo(src)
+  /**
+   * Implemented using getFileInfo(src)
    */
   public boolean exists(String src) throws IOException {
     checkOpen();
@@ -1752,7 +1749,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
- /**
+  /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    * @param needBlockToken Include block tokens in {@link LocatedBlocks}.
@@ -1776,6 +1773,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           UnresolvedPathException.class);
     }
   }
+
   /**
    * Close status of a file
    * @return true if file is already closed
@@ -2235,7 +2233,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-
   /**
    * Allow snapshot on a directory.
    *
@@ -2283,6 +2280,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw re.unwrapRemoteException();
     }
   }
+
   /**
    * Get the difference between two snapshots of a directory iteratively.
    * @see ClientProtocol#getSnapshotDiffReportListing
@@ -2483,8 +2481,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  /**
-   */
   @Deprecated
   public boolean mkdirs(String src) throws IOException {
     return mkdirs(src, null, true);
@@ -2650,8 +2646,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           SnapshotAccessControlException.class);
     }
   }
+
   /**
-   * set the modification and access time of a file
+   * set the modification and access time of a file.
    *
    * @see ClientProtocol#setTimes(String, long, long)
    */
@@ -2676,12 +2673,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     public DFSDataInputStream(DFSInputStream in) throws IOException {
       super(in);
     }
-  }
-
-  void reportChecksumFailure(String file, ExtendedBlock blk, DatanodeInfo dn) {
-    DatanodeInfo [] dnArr = { dn };
-    LocatedBlock [] lblocks = { new LocatedBlock(blk, dnArr) };
-    reportChecksumFailure(file, lblocks);
   }
 
   // just reports checksum failure and ignores any exception during the report.
