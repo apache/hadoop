@@ -259,7 +259,7 @@ public class TestBalancerWithHANameNodes {
     LogCapturer log =LogCapturer.captureLogs(
         LoggerFactory.getLogger(NameNodeConnector.class));
     // We needs to assert datanode info from ANN and SNN, so the
-    // heartbeat should disabled for the duration of method execution
+    // heartbeat should disabled for the duration of method execution.
     copiedConf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 60000);
     cluster = new MiniDFSCluster.Builder(copiedConf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -276,55 +276,84 @@ public class TestBalancerWithHANameNodes {
       String nsId = DFSUtilClient.getNameServiceIds(conf)
           .toArray()[0].toString();
 
-      // request to active namenode
+      // Request to active namenode.
       NameNodeConnector nncActive = new NameNodeConnector(
           "nncActive", namenode,
           nsId, new Path("/test"),
           null, conf, NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
-      DatanodeStorageReport[] ldspFromAnn =
+      DatanodeStorageReport[] datanodeStorageReportFromAnn =
           nncActive.getLiveDatanodeStorageReport();
       assertTrue(!log.getOutput().contains(
           "Request #getLiveDatanodeStorageReport to Standby NameNode success"));
       nncActive.close();
 
-      // request to standby namenode
+      // Request to standby namenode.
       conf.setBoolean(DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY,
           true);
       NameNodeConnector nncStandby = new NameNodeConnector(
           "nncStandby", namenode,
           nsId, new Path("/test"),
           null, conf, NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
-      DatanodeStorageReport[] ldspFromSnn =
+      DatanodeStorageReport[] datanodeStorageReportFromSnn =
           nncStandby.getLiveDatanodeStorageReport();
       assertTrue(log.getOutput().contains(
           "Request #getLiveDatanodeStorageReport to Standby NameNode success"));
       nncStandby.close();
 
-      // assert datanode info
-      assertEquals(ldspFromAnn[0].getDatanodeInfo().getDatanodeReport(),
-          ldspFromSnn[0].getDatanodeInfo().getDatanodeReport());
-      assertEquals(ldspFromAnn[1].getDatanodeInfo().getDatanodeReport(),
-          ldspFromSnn[1].getDatanodeInfo().getDatanodeReport());
+      // Assert datanode info.
+      assertEquals(
+          datanodeStorageReportFromAnn[0].getDatanodeInfo()
+              .getDatanodeReport(),
+          datanodeStorageReportFromSnn[0].getDatanodeInfo()
+              .getDatanodeReport());
+      assertEquals(
+          datanodeStorageReportFromAnn[1].getDatanodeInfo()
+              .getDatanodeReport(),
+          datanodeStorageReportFromSnn[1].getDatanodeInfo()
+              .getDatanodeReport());
 
-      // assert all fields datanode storage info
+      // Assert all fields datanode storage info.
       for (int i = 0; i < TEST_CAPACITIES.length; i++) {
         assertEquals(
-            ldspFromAnn[i].getStorageReports()[0].getStorage().toString(),
-            ldspFromSnn[i].getStorageReports()[0].getStorage().toString());
-        assertEquals(ldspFromAnn[i].getStorageReports()[0].getCapacity(),
-            ldspFromSnn[i].getStorageReports()[0].getCapacity());
-        assertEquals(ldspFromAnn[i].getStorageReports()[0].getBlockPoolUsed(),
-            ldspFromSnn[i].getStorageReports()[0].getBlockPoolUsed());
-        assertEquals(ldspFromAnn[i].getStorageReports()[0].getDfsUsed(),
-            ldspFromSnn[i].getStorageReports()[0].getDfsUsed());
-        assertEquals(ldspFromAnn[i].getStorageReports()[0].getRemaining(),
-            ldspFromSnn[i].getStorageReports()[0].getRemaining());
-        assertEquals(ldspFromAnn[i].getStorageReports()[0].getMount(),
-            ldspFromSnn[i].getStorageReports()[0].getMount());
-        assertEquals(ldspFromAnn[i].getStorageReports()[0].getNonDfsUsed(),
-            ldspFromSnn[i].getStorageReports()[0].getNonDfsUsed());
-        assertEquals(ldspFromAnn[i].getStorageReports()[0].isFailed(),
-            ldspFromSnn[i].getStorageReports()[0].isFailed());
+            datanodeStorageReportFromAnn[i].getStorageReports()[0]
+                .getStorage().toString(),
+            datanodeStorageReportFromSnn[i].getStorageReports()[0]
+                .getStorage().toString());
+        assertEquals(
+            datanodeStorageReportFromAnn[i].getStorageReports()[0]
+                .getCapacity(),
+            datanodeStorageReportFromSnn[i].getStorageReports()[0]
+                .getCapacity());
+        assertEquals(
+            datanodeStorageReportFromAnn[i].getStorageReports()[0]
+                .getBlockPoolUsed(),
+            datanodeStorageReportFromSnn[i].getStorageReports()[0]
+                .getBlockPoolUsed());
+        assertEquals(
+            datanodeStorageReportFromAnn[i].getStorageReports()[0]
+                .getDfsUsed(),
+            datanodeStorageReportFromSnn[i].getStorageReports()[0]
+                .getDfsUsed());
+        assertEquals(
+            datanodeStorageReportFromAnn[i].getStorageReports()[0]
+                .getRemaining(),
+            datanodeStorageReportFromSnn[i].getStorageReports()[0]
+                .getRemaining());
+        assertEquals(
+            datanodeStorageReportFromAnn[i].getStorageReports()[0]
+                .getMount(),
+            datanodeStorageReportFromSnn[i].getStorageReports()[0]
+                .getMount());
+        assertEquals(
+            datanodeStorageReportFromAnn[i].getStorageReports()[0]
+                .getNonDfsUsed(),
+            datanodeStorageReportFromSnn[i].getStorageReports()[0]
+                .getNonDfsUsed());
+        assertEquals(
+            datanodeStorageReportFromAnn[i].getStorageReports()[0]
+                .isFailed(),
+            datanodeStorageReportFromSnn[i].getStorageReports()[0]
+                .isFailed());
       }
     } finally {
       cluster.shutdown();
