@@ -1715,14 +1715,17 @@ public class MRAppMaster extends CompositeService {
       appMaster.notifyIsLastAMRetry(appMaster.isLastAMRetry);
       appMaster.stop();
       try {
-        JobContext jobContext = appMaster.getJobContextFromConf(appMaster.getConfig());
+        JobContext jobContext = appMaster
+                .getJobContextFromConf(appMaster.getConfig());
         appMaster.committer.abortJob(jobContext, State.KILLED);
       } catch (FileNotFoundException e) {
-        System.out.println("Previous job temporary files do not exist, no clean up was necessary.");
+          System.out.println("Previous job temporary " +
+                "files do not exist, no clean up was necessary.");
       } catch (Exception e) {
         // the clean up of a previous attempt is not critical to the success
         // of this job - only logging the error
-        System.err.println("Error while trying to clean up previous job's temporary files" + e);
+        System.err.println("Error while trying to " +
+                "clean up previous job's temporary files" + e);
       }
     }
   }
