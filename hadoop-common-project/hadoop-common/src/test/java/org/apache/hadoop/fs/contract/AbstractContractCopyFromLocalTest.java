@@ -63,7 +63,6 @@ public abstract class AbstractContractCopyFromLocalTest extends
         Path dest = copyFromLocal(file, true);
 
         assertPathExists("uploaded file not found", dest);
-        // TODO: Should this be assertFileExists?
         assertTrue("source file deleted", Files.exists(file.toPath()));
 
         FileSystem fs = getFileSystem();
@@ -159,19 +158,30 @@ public abstract class AbstractContractCopyFromLocalTest extends
     public void testSrcIsDirWithOverwriteOptions() throws Throwable {
         describe("Source is a directory, destination exists and" +
                 "should be overwritten.");
+        // Disabling checksum because overwriting directories does not
+        // overwrite checksums
+        FileSystem fs = getFileSystem();
+        fs.setVerifyChecksum(false);
+
         File source = createTempDirectory("source");
-        String contents = "child file";
+        Path sourcePath = new Path(source.toURI());
+        String contents = "test file";
         File child = createTempFile(source, "child", contents);
 
-        copyFromLocal(source, false);
-        // TODO: Fix local FS
+        Path dest = path(source.getName()).getParent();
+        fs.copyFromLocalFile(sourcePath, dest);
         intercept(PathExistsException.class,
-                () -> copyFromLocal(source, false));
+                () -> fs.copyFromLocalFile(false, false,
+                        sourcePath, dest));
 
-        copyFromLocal(source, true);
+        String updated = "updated contents";
+        FileUtils.write(child, updated, ASCII);
+        fs.copyFromLocalFile(false, true, sourcePath, dest);
+
         assertPathExists("Parent directory not copied", fileToPath(source));
         assertFileTextEquals(fileToPath(child, source.getParentFile()),
-                contents);
+                updated);
+        getFileSystem().setVerifyChecksum(true);
     }
 
     @Test

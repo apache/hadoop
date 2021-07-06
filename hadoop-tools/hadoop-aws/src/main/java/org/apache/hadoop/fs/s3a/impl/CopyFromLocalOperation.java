@@ -98,19 +98,19 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     private final Path source;
 
     /**
-     * Destination path, expected to be
-     */
-    private final Path destination;
-
-    /**
      * Async operations executor
      */
     private final ListeningExecutorService executor;
 
     /**
+     * Destination path
+     */
+    private Path destination;
+
+    /**
      * Destination file status
      */
-    private FileStatus dstStatus;
+    private FileStatus destStatus;
 
     public CopyFromLocalOperation(
             final StoreContext storeContext,
@@ -144,10 +144,13 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
             throws IOException, PathExistsException {
         LOG.debug("Copying local file from {} to {}", source, destination);
         File sourceFile = callbacks.pathToFile(source);
-        try {
-            dstStatus = callbacks.getFileStatus(destination);
-        } catch (FileNotFoundException e) {
-            dstStatus = null;
+        updateDestStatus(destination);
+
+        // Handles bar/ -> foo/ => foo/bar and bar/ -> foo/bar/ => foo/bar/bar
+        if (getDestStatus().isPresent() && getDestStatus().get().isDirectory()
+                && sourceFile.isDirectory()) {
+            destination = new Path(destination, sourceFile.getName());
+            updateDestStatus(destination);
         }
 
         checkSource(sourceFile);
@@ -159,6 +162,21 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
         }
 
         return null;
+    }
+
+    /**
+     * Does a {@link CopyFromLocalOperationCallbacks#getFileStatus(Path)}
+     * operation on the provided destination and updates the internal status of
+     * destPath property
+     *
+     * @throws IOException if getFileStatus fails
+     */
+    private void updateDestStatus(Path dest) throws IOException {
+        try {
+            destStatus = callbacks.getFileStatus(dest);
+        } catch (FileNotFoundException e) {
+            destStatus = null;
+        }
     }
 
     /**
@@ -340,7 +358,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     }
 
     private Optional<FileStatus> getDestStatus() {
-        return Optional.ofNullable(dstStatus);
+        return Optional.ofNullable(destStatus);
     }
 
     /**
