@@ -389,7 +389,7 @@ public class TestDistCpProcedure {
         .setDiffThreshold(diffThreshold).build();
   }
 
-  interface Call {
+  protected interface Call {
     void execute() throws IOException, RetryException;
   }
 
@@ -400,7 +400,7 @@ public class TestDistCpProcedure {
    * @param target the target stage.
    * @param call the function executing the procedure.
    */
-  private static void executeProcedure(DistCpProcedure procedure, Stage target,
+  protected static void executeProcedure(DistCpProcedure procedure, Stage target,
       Call call) throws IOException {
     Stage stage = Stage.PRE_CHECK;
     procedure.updateStage(stage);
