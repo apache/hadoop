@@ -1774,6 +1774,36 @@ public class TestTaskAttempt{
   }
 
   @Test
+  public void testKillingTaskWhenContainerCleanup() {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+    TaskId maptaskId = MRBuilderUtils.newTaskId(taImpl.getID().getTaskId()
+        .getJobId(), 1, TaskType.MAP);
+    TaskAttemptId mapTAId =
+        MRBuilderUtils.newTaskAttemptId(maptaskId, 0);
+
+    // move in two steps to the desired state (cannot get there directly)
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_DONE));
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_FINISHING_CONTAINER",
+        TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+        taImpl.getInternalState());
+
+    taImpl.handle(new TaskAttemptEvent(taImpl.getID(),
+        TaskAttemptEventType.TA_TIMED_OUT));
+    assertEquals("Task attempt's internal state is not " +
+        "SUCCESS_CONTAINER_CLEANUP",
+        TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+        taImpl.getInternalState());
+
+    taImpl.handle(new TaskAttemptKillEvent(mapTAId, "", true));
+    assertEquals("Task attempt is not in KILLED state",
+        TaskAttemptState.KILLED,
+        taImpl.getState());
+  }
+
+  @Test
   public void testTooManyFetchFailureWhileContainerCleanup() {
     MockEventHandler eventHandler = new MockEventHandler();
     TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
