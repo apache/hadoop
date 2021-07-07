@@ -70,14 +70,15 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     invoker = new Invoker(new S3ARetryPolicy(getConfiguration()),
         Invoker.NO_OP
     );
-    ifCSEThenSkip();
+    skipIfClientSideEncryption();
     Assume.assumeTrue("No metadata store in test filesystem",
         getFileSystem().hasMetadataStore());
   }
 
   @Override
   public void teardown() throws Exception {
-    if (getFileSystem().getAmazonS3Client() instanceof InconsistentAmazonS3Client) {
+    if (getFileSystem()
+        .getAmazonS3Client() instanceof InconsistentAmazonS3Client) {
       clearInconsistency(getFileSystem());
     }
     super.teardown();

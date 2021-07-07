@@ -242,7 +242,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
 
   @Test
   public void testTimeToOpenAndReadWholeFileBlocks() throws Throwable {
-    ifCSEThenSkip();
+    skipIfClientSideEncryption();
     requireCSVTestData();
     int blockSize = _1MB;
     describe("Open the test file %s and read it in blocks of size %d",
@@ -349,7 +349,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   @Test
   public void testReadWithNormalPolicy() throws Throwable {
     describe("Read big blocks with a big readahead");
-    ifCSEThenSkip();
+    skipIfClientSideEncryption();
     executeSeekReadSequence(BIG_BLOCK_SIZE, BIG_BLOCK_SIZE * 2,
         S3AInputPolicy.Normal);
     assertStreamOpenedExactlyOnce();
@@ -358,7 +358,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   @Test
   public void testDecompressionSequential128K() throws Throwable {
     describe("Decompress with a 128K readahead");
-    ifCSEThenSkip();
+    skipIfClientSideEncryption();
     executeDecompression(128 * _1KB, S3AInputPolicy.Sequential);
     assertStreamOpenedExactlyOnce();
   }
@@ -461,7 +461,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
 
   @Test
   public void testRandomIORandomPolicy() throws Throwable {
-    ifCSEThenSkip();
+    skipIfClientSideEncryption();
     executeRandomIO(S3AInputPolicy.Random, (long) RANDOM_IO_SEQUENCE.length);
     assertEquals("streams aborted in " + streamStatistics,
         0, streamStatistics.getAborted());
@@ -469,7 +469,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
 
   @Test
   public void testRandomIONormalPolicy() throws Throwable {
-    ifCSEThenSkip();
+    skipIfClientSideEncryption();
     long expectedOpenCount = RANDOM_IO_SEQUENCE.length;
     executeRandomIO(S3AInputPolicy.Normal, expectedOpenCount);
     assertEquals("streams aborted in " + streamStatistics,

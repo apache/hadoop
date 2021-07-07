@@ -1682,3 +1682,105 @@ com.amazonaws.SdkClientException: Unable to execute HTTP request:
 
 When this happens, try to set `fs.s3a.connection.request.timeout` to a larger value or disable it
 completely by setting it to `0`.
+
+### <a name="client-side-encryption"></a> S3 Client Side Encryption
+
+What happens if you try to read unencrypted data using client side encryption?
+An exception would be thrown like this:
+```
+java.lang.SecurityException: Instruction file not found for S3 object with bucket name: ap-south-cse, key: unencryptedData.txt
+	at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.decipher(S3CryptoModuleAE.java:190)
+	at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.getObjectSecurely(S3CryptoModuleAE.java:136)
+	at com.amazonaws.services.s3.AmazonS3EncryptionClientV2.getObject(AmazonS3EncryptionClientV2.java:241)
+	at org.apache.hadoop.fs.s3a.S3AFileSystem$InputStreamCallbacksImpl.getObject(S3AFileSystem.java:1462)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$reopen$0(S3AInputStream.java:217)
+	at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:216)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:382)
+	at org.apache.hadoop.fs.s3a.Invoker.lambda$maybeRetry$3(Invoker.java:230)
+	at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+	at org.apache.hadoop.fs.s3a.Invoker.lambda$maybeRetry$5(Invoker.java:354)
+	at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:414)
+	at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:350)
+	at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:228)
+	at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:272)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:374)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:493)
+	at java.io.DataInputStream.read(DataInputStream.java:100)
+	at org.apache.hadoop.io.IOUtils.copyBytes(IOUtils.java:94)
+	at org.apache.hadoop.io.IOUtils.copyBytes(IOUtils.java:68)
+	at org.apache.hadoop.io.IOUtils.copyBytes(IOUtils.java:129)
+	at org.apache.hadoop.fs.shell.Display$Cat.printToStdout(Display.java:101)
+	at org.apache.hadoop.fs.shell.Display$Cat.processPath(Display.java:96)
+	at org.apache.hadoop.fs.shell.Command.processPathInternal(Command.java:370)
+	at org.apache.hadoop.fs.shell.Command.processPaths(Command.java:333)
+	at org.apache.hadoop.fs.shell.Command.processPathArgument(Command.java:306)
+	at org.apache.hadoop.fs.shell.Command.processArgument(Command.java:288)
+	at org.apache.hadoop.fs.shell.Command.processArguments(Command.java:272)
+	at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:121)
+	at org.apache.hadoop.fs.shell.Command.run(Command.java:179)
+	at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
+	at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:81)
+	at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
+	at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
+```
+
+If KMS Key ID is not provided alongside the CSE method = CSE-KMS:
+```
+2021-07-07 11:33:04,550 WARN fs.FileSystem: Failed to initialize fileystem
+s3a://ap-south-cse/: java.lang.IllegalArgumentException: CSE-KMS
+method requires KMS key ID. Use fs.s3a.cse.kms.key-id property to set it.
+-ls: CSE-KMS method requires KMS key ID. Use fs.s3a.cse.kms.key-id property to
+ set it.
+```
+
+KMS key ID used to PUT(encrypt) the data, should be the one used to GET the
+ data, if not, then:
+ ```
+cat: open s3a://ap-south-cse/encryptedData.txt at 0 on
+s3a://ap-south-cse/encryptedData.txt:
+com.amazonaws.services.kms.model.IncorrectKeyException: The key ID in the
+request does not identify a CMK that can perform this operation. (Service: AWSKMS;
+Status Code: 400; ErrorCode: IncorrectKeyException;
+Request ID: da21aa8a-f00d-467c-94a0-32b627d32bc0; Proxy: null):IncorrectKeyException:
+The key ID in the request does not identify a CMK that can perform this
+operation. (Service: AWSKMS ; Status Code: 400; Error Code: IncorrectKeyException;
+Request ID: da21aa8a-f00d-467c-94a0-32b627d32bc0; Proxy: null)
+```
+
+If KMS key ID is made for a different region than the S3 bucket used for
+storing data:
+```
+mkdir: PUT 0-byte object  on testmkdir:
+com.amazonaws.services.kms.model.NotFoundException: Key
+'arn:aws:kms:ap-south-1:152813717728:key/<KMS_KEY_ID>'
+does not exist (Service: AWSKMS; Status Code: 400; Error Code: NotFoundException;
+Request ID: 279db85d-864d-4a38-9acd-d892adb504c0; Proxy: null):NotFoundException:
+Key 'arn:aws:kms:ap-south-1:152813717728:key/<KMS_KEY_ID>'
+does not exist(Service: AWSKMS; Status Code: 400; Error Code: NotFoundException;
+Request ID: 279db85d-864d-4a38-9acd-d892adb504c0; Proxy: null)
+```
+
+If Range get is not supported for a CSE algorithm or is disabled:
+```
+java.lang.SecurityException: Unable to perform range get request: Range get support has been disabled. See https://docs.aws.amazon.com/general/latest/gr/aws_sdk_cryptography.html
+
+	at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.assertCanGetPartialObject(S3CryptoModuleAE.java:446)
+	at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.getObjectSecurely(S3CryptoModuleAE.java:117)
+	at com.amazonaws.services.s3.AmazonS3EncryptionClientV2.getObject(AmazonS3EncryptionClientV2.java:241)
+	at org.apache.hadoop.fs.s3a.S3AFileSystem$InputStreamCallbacksImpl.getObject(S3AFileSystem.java:1462)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$reopen$0(S3AInputStream.java:217)
+	at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:216)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:382)
+	at org.apache.hadoop.fs.s3a.Invoker.lambda$maybeRetry$3(Invoker.java:230)
+	at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+	at org.apache.hadoop.fs.s3a.Invoker.lambda$maybeRetry$5(Invoker.java:354)
+	at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:414)
+	at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:350)
+	at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:228)
+	at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:272)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:374)
+	at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:408)
+	at java.io.DataInputStream.readByte(DataInputStream.java:265)
+```

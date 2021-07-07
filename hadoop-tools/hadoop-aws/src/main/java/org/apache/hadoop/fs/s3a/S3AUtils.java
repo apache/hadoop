@@ -86,8 +86,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3AFileSystem.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -529,7 +529,7 @@ public final class S3AUtils {
       boolean isCSEEnabled) {
     long size = summary.getSize();
     // check if cse is enabled; strip out constant padding length.
-    if(isCSEEnabled && size >= CSE_PADDING_LENGTH) {
+    if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
       size -= CSE_PADDING_LENGTH;
     }
     return createFileStatus(keyPath,

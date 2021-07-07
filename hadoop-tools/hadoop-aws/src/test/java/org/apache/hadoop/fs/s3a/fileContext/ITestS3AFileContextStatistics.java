@@ -16,7 +16,6 @@ package org.apache.hadoop.fs.s3a.fileContext;
 import java.net.URI;
 
 import com.amazonaws.services.s3.model.CryptoStorageMode;
-import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Before;
 
 import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_METHOD;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 
 /**
  * S3a implementation of FCStatisticsBaseTest.
@@ -82,10 +82,12 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   protected void verifyWrittenBytes(FileSystem.Statistics stats) {
     //No extra bytes are written
     long expectedBlockSize = blockSize;
-    if(conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) != null) {
-      expectedBlockSize += 16 + 130;
+    if (conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) != null) {
+      // Adding padding length and KMS key generation bytes written.
+      expectedBlockSize += CSE_PADDING_LENGTH + 130;
     }
-    Assert.assertEquals(expectedBlockSize, stats.getBytesWritten());
+    Assert.assertEquals("Mismatch in bytes written", expectedBlockSize,
+        stats.getBytesWritten());
   }
 
   @Override

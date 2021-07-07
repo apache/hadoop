@@ -126,4 +126,12 @@ public final class InternalConstants {
    */
   public static final String AWS_REGION_SYSPROP = "aws.region";
 
+  /**
+   * S3 client side encryption adds padding to the content length of constant
+   * length of 16 bytes (at the moment, since we have only 1 content
+   * encryption algorithm). Use this to subtract while listing the content
+   * length when certain conditions are met.
+   */
+  public static final int CSE_PADDING_LENGTH = 16;
+
 }

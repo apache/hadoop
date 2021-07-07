@@ -27,6 +27,7 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Builder;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.AmazonS3EncryptionClientV2Builder;
@@ -122,19 +123,19 @@ public class DefaultS3ClientFactory extends Configured
       awsConf.setUserAgentSuffix(parameters.getUserAgentSuffix());
     }
 
-    if (conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) == null) {
-      try {
+    try {
+      if (conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) == null) {
         return buildAmazonS3Client(
             awsConf,
             parameters);
-      } catch (SdkClientException e) {
-        // SDK refused to build.
-        throw translateException("creating AWS S3 client", uri.toString(), e);
+      } else {
+        return buildAmazonS3EncryptionClient(
+            awsConf,
+            parameters);
       }
-    } else {
-      return newAmazonS3EncryptionClient(
-          awsConf,
-          parameters);
+    } catch (SdkClientException e) {
+      // SDK refused to build.
+      throw translateException("creating AWS S3 client", uri.toString(), e);
     }
   }
 
@@ -147,7 +148,7 @@ public class DefaultS3ClientFactory extends Configured
    *
    * @return new AmazonS3 client.
    */
-  protected AmazonS3 newAmazonS3EncryptionClient(
+  protected AmazonS3 buildAmazonS3EncryptionClient(
       final ClientConfiguration awsConf,
       final S3ClientCreationParameters parameters){
 
@@ -165,38 +166,24 @@ public class DefaultS3ClientFactory extends Configured
 
     EncryptionMaterialsProvider materialsProvider =
         new KMSEncryptionMaterialsProvider(kmsKeyId);
-
     builder.withEncryptionMaterialsProvider(materialsProvider);
-    builder.withCredentials(parameters.getCredentialSet())
-        .withClientConfiguration(awsConf)
-        .withPathStyleAccessEnabled(parameters.isPathStyleAccess());
+    //Configure basic params of a S3 builder.
+    configureBasicParams(builder, awsConf, parameters);
 
-    // if metrics are not null, then add in the builder.
-    if (parameters.getMetrics() != null) {
-      LOG.debug("Creating Amazon client with AWS metrics");
-      builder.withMetricsCollector(
-          new AwsStatisticsCollector(parameters.getMetrics()));
-    }
+    // Configuring endpoint.
+    AmazonS3EncryptionClientV2Builder.EndpointConfiguration epr
+        = createEndpointConfiguration(parameters.getEndpoint(),
+        awsConf, getConf().getTrimmed(AWS_REGION));
+    configureEndpoint(builder, epr);
 
-    // Create cryptoConfig
+    // Create cryptoConfig.
     CryptoConfigurationV2 cryptoConfigurationV2 =
         new CryptoConfigurationV2(CryptoMode.AuthenticatedEncryption)
             .withRangeGetMode(CryptoRangeGetMode.ALL);
-
-    // Setting the endpoint and KMS region in cryptoConfig
-    AmazonS3EncryptionClientV2Builder.EndpointConfiguration epr
-        = createEndpointConfiguration(parameters.getEndpoint(), awsConf, getConf().getTrimmed(AWS_REGION));
     if (epr != null) {
-      LOG.debug(
-          "Building the AmazonS3 Encryption client with endpoint configs");
-      builder.withEndpointConfiguration(epr);
       cryptoConfigurationV2
           .withAwsKmsRegion(RegionUtils.getRegion(epr.getSigningRegion()));
-      LOG.debug("KMS region used: {}",
-          cryptoConfigurationV2.getAwsKmsRegion());
-    } else {
-      // forcefully look for the region; extra HEAD call required.
-      builder.setForceGlobalBucketAccessEnabled(true);
+      LOG.debug("KMS region used: {}", cryptoConfigurationV2.getAwsKmsRegion());
     }
     builder.withCryptoConfiguration(cryptoConfigurationV2);
     client = builder.build();
@@ -220,33 +207,60 @@ public class DefaultS3ClientFactory extends Configured
       final ClientConfiguration awsConf,
       final S3ClientCreationParameters parameters) {
     AmazonS3ClientBuilder b = AmazonS3Client.builder();
-    b.withCredentials(parameters.getCredentialSet());
-    b.withClientConfiguration(awsConf);
-    b.withPathStyleAccessEnabled(parameters.isPathStyleAccess());
-
-    if (parameters.getMetrics() != null) {
-      b.withMetricsCollector(
-          new AwsStatisticsCollector(parameters.getMetrics()));
-    }
-    if (parameters.getRequestHandlers() != null) {
-      b.withRequestHandlers(
-          parameters.getRequestHandlers().toArray(new RequestHandler2[0]));
-    }
-    if (parameters.getMonitoringListener() != null) {
-      b.withMonitoringListener(parameters.getMonitoringListener());
-    }
+    configureBasicParams(b, awsConf, parameters);
 
     // endpoint set up is a PITA
     AwsClientBuilder.EndpointConfiguration epr
         = createEndpointConfiguration(parameters.getEndpoint(),
         awsConf, getConf().getTrimmed(AWS_REGION));
+    configureEndpoint(b, epr);
+    final AmazonS3 client = b.build();
+    return client;
+  }
+
+  /**
+   * A method to configure basic AmazonS3Builder parameters.
+   *
+   * @param builder    Instance of AmazonS3Builder used.
+   * @param awsConf    ClientConfiguration used.
+   * @param parameters Parameters used to set in the builder.
+   */
+  private void configureBasicParams(AmazonS3Builder builder,
+      ClientConfiguration awsConf, S3ClientCreationParameters parameters) {
+    builder.withCredentials(parameters.getCredentialSet());
+    builder.withClientConfiguration(awsConf);
+    builder.withPathStyleAccessEnabled(parameters.isPathStyleAccess());
+
+    if (parameters.getMetrics() != null) {
+      builder.withMetricsCollector(
+          new AwsStatisticsCollector(parameters.getMetrics()));
+    }
+    if (parameters.getRequestHandlers() != null) {
+      builder.withRequestHandlers(
+          parameters.getRequestHandlers().toArray(new RequestHandler2[0]));
+    }
+    if (parameters.getMonitoringListener() != null) {
+      builder.withMonitoringListener(parameters.getMonitoringListener());
+    }
+
+  }
+
+  /**
+   * A method to configure endpoint and Region for an AmazonS3Builder.
+   *
+   * @param builder Instance of AmazonS3Builder used.
+   * @param epr     EndpointConfiguration used to set in builder.
+   */
+  private void configureEndpoint(
+      AmazonS3Builder builder,
+      AmazonS3Builder.EndpointConfiguration epr) {
     if (epr != null) {
       // an endpoint binding was constructed: use it.
-      b.withEndpointConfiguration(epr);
+      builder.withEndpointConfiguration(epr);
     } else {
       // no idea what the endpoint is, so tell the SDK
       // to work it out at the cost of an extra HEAD request
-      b.withForceGlobalBucketAccessEnabled(true);
+      builder.withForceGlobalBucketAccessEnabled(true);
       // HADOOP-17771 force set the region so the build process doesn't halt.
       String region = getConf().getTrimmed(AWS_REGION, AWS_S3_CENTRAL_REGION);
       LOG.debug("fs.s3a.endpoint.region=\"{}\"", region);
@@ -254,7 +268,7 @@ public class DefaultS3ClientFactory extends Configured
         // there's either an explicit region or we have fallen back
         // to the central one.
         LOG.debug("Using default endpoint; setting region to {}", region);
-        b.setRegion(region);
+        builder.setRegion(region);
       } else {
         // no region.
         // allow this if people really want it; it is OK to rely on this
@@ -263,8 +277,6 @@ public class DefaultS3ClientFactory extends Configured
         LOG.debug(SDK_REGION_CHAIN_IN_USE);
       }
     }
-    final AmazonS3 client = b.build();
-    return client;
   }
 
   /**

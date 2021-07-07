@@ -325,12 +325,14 @@ class S3ABlockOutputStream extends OutputStream implements
 
   /**
    * Start an asynchronous upload of the current block.
+   *
    * @param isLast true, if part being uploaded is last and client side
    *               encryption is enabled.
    * @throws IOException Problems opening the destination for upload,
-   * initializing the upload, or if a previous operation has failed.
+   *                     initializing the upload, or if a previous operation has failed.
    */
-  private synchronized void uploadCurrentBlock(Boolean isLast) throws IOException {
+  private synchronized void uploadCurrentBlock(boolean isLast)
+      throws IOException {
     Preconditions.checkState(hasActiveBlock(), "No active block");
     LOG.debug("Writing block # {}", blockCount);
     initMultipartUpload();

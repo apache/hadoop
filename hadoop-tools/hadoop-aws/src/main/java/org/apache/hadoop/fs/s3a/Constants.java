@@ -1095,13 +1095,17 @@ public final class Constants {
 
   /**
    * S3 client-side encryption(CSE) method.
+   * <p>
+   * Value: {@value}
    */
   public static final String CLIENT_SIDE_ENCRYPTION_METHOD =
       "fs.s3a.cse.method";
 
   /**
    * Key ID for KMS S3 CSE method.
+   * <p>
+   * Value: {@value}
    */
   public static final String CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID =
-      "fs.s3a.cse.kms.keyId";
+      "fs.s3a.cse.kms.key-id";
 }

@@ -240,7 +240,6 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   }
 
   /**
-<<<<<<< HEAD
    * Create a span from the source; returns a no-op if
    * creation fails or the source is null.
    * Uses the test method name for the span.
@@ -265,7 +264,7 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   /**
    *  Method to assume that S3 client side encryption is disabled on a test.
    */
-  public void ifCSEThenSkip() {
+  public void skipIfClientSideEncryption() {
     Assume.assumeTrue("Skipping test if CSE is enabled",
         !getFileSystem().isCSEEnabled());
   }

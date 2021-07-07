@@ -197,17 +197,17 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       } catch (IOException e) {
         throw new RuntimeException("Failed to get current Ugi", e);
       }
-      if(bucketName.equals("kms")) {
+      if (bucketName.equals("kms")) {
         AWS4Signer realKMSSigner = new AWS4Signer();
         realKMSSigner.setServiceName("kms");
-        if(lastStoreValue != null) {
+        if (lastStoreValue != null) {
           realKMSSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
         }
         realKMSSigner.sign(request, credentials);
       } else {
         AWSS3V4Signer realSigner = new AWSS3V4Signer();
         realSigner.setServiceName("s3");
-        if(lastStoreValue != null) {
+        if (lastStoreValue != null) {
           realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
         }
         realSigner.sign(request, credentials);

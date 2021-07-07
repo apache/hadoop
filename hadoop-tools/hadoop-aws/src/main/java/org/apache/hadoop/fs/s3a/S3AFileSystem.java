@@ -81,6 +81,7 @@ import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -213,6 +214,7 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
@@ -358,14 +360,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       AuditIntegration.stubAuditManager();
 
   /**
-   * S3 client side encryption adds padding to the content length of constant
-   * length of 16 bytes(at the moment, since we have only 1 content
-   * encryption algorithm). Use this to subtract while listing the content
-   * length when certain conditions are met.
-   */
-  public static final int CSE_PADDING_LENGTH = 16;
-
-  /**
    * Is this S3AFS instance using S3 client side encryption?
    */
   private boolean isCSEEnabled;
@@ -429,12 +423,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           getEncryptionAlgorithm(bucket, conf),
           getServerSideEncryptionKey(bucket, getConf())));
 
-      // If CSE method is set then CSE is enabled.
-      isCSEEnabled = conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) != null;
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       instrumentation = new S3AInstrumentation(uri);
       initializeStatisticsBinding();
-
+      // If CSE method is set then CSE is enabled.
+      isCSEEnabled = conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) != null;
+      LOG.debug("Client Side Encryption enabled: {}", isCSEEnabled);
+      setCSEGauge(isCSEEnabled);
       // Username is the current user at the time the FS was instantiated.
       owner = UserGroupInformation.getCurrentUser();
       username = owner.getShortUserName();
@@ -525,7 +520,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       blockOutputActiveBlocks = intOption(conf,
           FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
       // If CSE is enabled, do multipart uploads serially.
-      if(isCSEEnabled) {
+      if (isCSEEnabled) {
         blockOutputActiveBlocks = 1;
       }
       LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
@@ -572,6 +567,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       cleanupWithLogger(LOG, span);
       stopAllServices();
       throw e;
+    }
+  }
+
+  /**
+   * Set the client side encryption gauge to 0 or 1, indicating if CSE is
+   * enabled through the gauge or not.
+   *
+   * @param isCSEEnabled Boolean that tells if CSE is enabled or not in the FS.
+   */
+  private void setCSEGauge(boolean isCSEEnabled) {
+    IOStatisticsStore ioStatisticsStore =
+        (IOStatisticsStore) getIOStatistics();
+    if (isCSEEnabled) {
+      ioStatisticsStore
+          .setGauge(CLIENT_SIDE_ENCRYPTION_ENABLED.getSymbol(), 1L);
+    } else {
+      ioStatisticsStore
+          .setGauge(CLIENT_SIDE_ENCRYPTION_ENABLED.getSymbol(), 0L);
     }
   }
 
@@ -4496,6 +4509,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           .append(getInstrumentation().toString())
           .append("}");
     }
+    sb.append(", ClientSideEncryption=").append(isCSEEnabled);
     sb.append('}');
     return sb.toString();
   }
@@ -5107,10 +5121,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     case SelectConstants.S3_SELECT_CAPABILITY:
       // select is only supported if enabled and client side encryption is
-      // disabled
-      if(!isCSEEnabled) {
-        return SelectBinding.isSelectEnabled(getConf());
-      }
+      // disabled.
+      return !isCSEEnabled && SelectBinding.isSelectEnabled(getConf());
 
     case CommonPathCapabilities.FS_CHECKSUMS:
       // capability depends on FS configuration
@@ -5257,7 +5269,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private void requireSelectSupport(final Path source) throws
       UnsupportedOperationException {
-    if (!SelectBinding.isSelectEnabled(getConf())) {
+    if (!isCSEEnabled && !SelectBinding.isSelectEnabled(getConf())) {
 
       throw new UnsupportedOperationException(
           SelectConstants.SELECT_UNSUPPORTED);
