@@ -110,6 +110,10 @@ final class BalancerParameters {
     return this.sortTopNodes;
   }
 
+  long getHotBlockTimeInterval() {
+    return this.hotBlockTimeInterval;
+  }
+
   @Override
   public String toString() {
     return String.format("%s.%s [%s," + " threshold = %s,"
