@@ -31,4 +31,5 @@ public class TestFedBalance {
     assertNotNull(conf.get(SCHEDULER_JOURNAL_URI));
     assertNotNull(conf.get(WORK_THREAD_NUM));
   }
+
 }
