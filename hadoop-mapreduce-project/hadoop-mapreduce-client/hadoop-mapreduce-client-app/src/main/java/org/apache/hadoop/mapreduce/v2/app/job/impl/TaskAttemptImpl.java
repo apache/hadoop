@@ -492,10 +492,15 @@ public abstract class TaskAttemptImpl implements
           TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
           TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
           DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
+      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+          EnumSet.of(TaskAttemptStateInternal.SUCCEEDED,
+              TaskAttemptStateInternal.KILLED),
+          TaskAttemptEventType.TA_KILL,
+          new KilledAfterSuccessTransition())
       // Ignore-able events
      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
          TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-         EnumSet.of(TaskAttemptEventType.TA_KILL,
+         EnumSet.of(
              TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_FAILMSG_BY_CLIENT,
              TaskAttemptEventType.TA_TIMED_OUT,
