@@ -47,7 +47,7 @@ Usage
   the mount entry. The second one is the target path which must include the
   target cluster.
 
-    bash$ /bin/hadoop rbfbalance -router submit /foo/src hdfs://namespace-1/foo/dst
+    bash$ /bin/hadoop rbfbalance submit /foo/src hdfs://namespace-1/foo/dst
 
   It copies data from hdfs://namespace-0/foo/src to hdfs://namespace-1/foo/dst
   incrementally and finally updates the mount entry to:
