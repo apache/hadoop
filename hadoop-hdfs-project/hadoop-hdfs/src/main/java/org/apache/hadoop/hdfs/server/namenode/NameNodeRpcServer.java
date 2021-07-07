@@ -411,6 +411,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
             DFS_NAMENODE_LIFELINE_HANDLER_RATIO_DEFAULT);
         lifelineHandlerCount = Math.max(
             (int)(handlerCount * lifelineHandlerRatio), 1);
+        handlerCount = handlerCount - lifelineHandlerCount;
       }
       lifelineRpcServer = new RPC.Builder(conf)
           .setProtocol(HAServiceProtocolPB.class)

@@ -3588,6 +3588,11 @@ public abstract class Server {
     return readThreads;
   }
 
+  @VisibleForTesting
+  public int getHandlerCount() {
+    return handlerCount;
+  }
+
   /**
    * When the read or write buffer size is larger than this limit, i/o will be 
    * done in chunks of this size. Most RPC requests and responses would be
