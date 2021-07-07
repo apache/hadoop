@@ -91,19 +91,27 @@ public class TestRouterYarnClientUtils {
     ArrayList<GetApplicationsResponse> responses = new ArrayList<>();
     responses.add(getApplicationsResponse(1, true));
 
-    // Check response if partial results are disabled
-    GetApplicationsResponse result = RouterYarnClientUtils.
-        mergeApplications(responses, false);
-    Assert.assertNotNull(result);
-    Assert.assertTrue(result.getApplicationList().isEmpty());
-
     // Check response if partial results are enabled
-    result = RouterYarnClientUtils.
+    GetApplicationsResponse result = RouterYarnClientUtils.
         mergeApplications(responses, true);
     Assert.assertNotNull(result);
     Assert.assertEquals(1, result.getApplicationList().size());
-    String appName = result.getApplicationList().iterator().next().getName();
+    ApplicationReport appReport = result.getApplicationList().iterator().next();
+    String appName = appReport.getName();
     Assert.assertTrue(appName.startsWith(PARTIAL_REPORT));
+
+    // Check ApplicationResourceUsageReport merge
+    ApplicationResourceUsageReport resourceUsageReport =
+        appReport.getApplicationResourceUsageReport();
+
+    Assert.assertEquals(2, resourceUsageReport.getNumUsedContainers());
+    Assert.assertEquals(4, resourceUsageReport.getNumReservedContainers());
+
+    // Check response if partial results are disabled
+    result = RouterYarnClientUtils.
+        mergeApplications(responses, false);
+    Assert.assertNotNull(result);
+    Assert.assertTrue(result.getApplicationList().isEmpty());
   }
 
   /**

@@ -121,7 +121,6 @@ public final class RouterYarnClientUtils {
   private static ApplicationReport mergeUAMWithUAM(ApplicationReport uam1,
       ApplicationReport uam2){
     uam1.setName(PARTIAL_REPORT + uam1.getApplicationId());
-    mergeAMWithUAM(uam1, uam1);
     mergeAMWithUAM(uam1, uam2);
     return uam1;
   }
@@ -170,6 +169,7 @@ public final class RouterYarnClientUtils {
         amResourceReport.getClusterUsagePercentage() +
             uamResourceReport.getClusterUsagePercentage());
 
+    am.setApplicationResourceUsageReport(amResourceReport);
     am.getApplicationTags().addAll(uam.getApplicationTags());
   }
 
